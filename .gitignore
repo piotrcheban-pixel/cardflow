@@ -1,0 +1,33 @@
+# Flutter / Dart
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+*.iml
+.idea/
+.metadata
+*.log
+coverage/
+test/failures/
+
+# FVM: версия фиксируется через .fvmrc, сам SDK не коммитим
+.fvm/flutter_sdk
+.fvm/versions
+.fvm/lefthook
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Секреты и локальное окружение
+.env
+.env.*
+*.jks
+*.keystore
+key.properties
+secrets/
+
+# Временные артефакты агента
+work/
