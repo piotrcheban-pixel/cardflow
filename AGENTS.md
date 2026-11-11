@@ -15,7 +15,8 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
 - `data/` — drift, репозитории, импорт/экспорт.
 - `api/` — провайдеры, DTO, валидация, промпты, парсеры файлов.
 - `ui/` — экраны, виджеты, локализация. Компоненты M3 Expressive — только через слой `lib/ui/m3e/` (библиотеку можно заменить). Токены движения — `lib/ui/motion.dart`.
-- Модели immutable (`freezed`/`const`), роутинг `GoRouter` (см. ADR), HTTP `Dio`. Состояние — по ADR-002.
+- Модели immutable (`freezed`/`const`), роутинг `GoRouter` (см. ADR), HTTP `Dio`. Состояние — Riverpod 3 без кодогенерации (ADR-002).
+- **Material-виджеты — только `package:material_ui/material_ui.dart`** (ADR-001), `package:flutter/material.dart` в `lib/` запрещён. M3E-компоненты — только через `lib/ui/m3e/`, библиотека `material_3_expressive` больше нигде не импортируется.
 - Никаких литералов пользовательского текста в виджетах: только `AppLocalizations` из `lib/l10n/app_ru.arb`.
 
 ## Жёсткие запреты
@@ -46,4 +47,6 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
 ## Факты хоста (обновлять при изменении)
 
 - Windows 11; Android SDK/JDK/Xcode отсутствуют → локально проверяем `flutter test/analyze` и `flutter build windows`; остальные сборки — CI/известное ограничение.
+- FVM 4.3.2; Flutter 3.47.9 (Dart 3.13.7). Все команды — через `fvm` (`fvm flutter …`).
+- Windows-сборка CardFlow пока падает из-за отсутствия ATL в VS Build Tools (`atlstr.h` у `flutter_secure_storage_windows`); bare Flutter-проект собирается успешно → это ограничение хоста, не кода (KNOWN_LIMITATIONS L2b).
 - Хуки DSH (block-hardcoded-secret, block-destructive-command, confirm-git-push, GateGuard) на момент итерации 0 не подключены — известное ограничение; создавать/обходить их самостоятельно нельзя.

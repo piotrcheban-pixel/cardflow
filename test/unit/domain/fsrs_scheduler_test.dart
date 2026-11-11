@@ -141,4 +141,63 @@ void main() {
       expect(first, second);
     });
   });
+
+  group('SchedulingCard: валидация, ошибки и сериализация', () {
+    test('равные карточки равны и имеют одинаковый hashCode', () {
+      final card = SchedulingCard.newCard(cardId: 'card-1', now: now);
+      final restored = SchedulingCard.fromJson(card.toJson());
+
+      expect(restored, card);
+      expect(restored.hashCode, card.hashCode);
+    });
+
+    test('fromWireName отвергает неизвестное состояние', () {
+      expect(() => CardState.fromWireName('archived'), throwsArgumentError);
+    });
+
+    test('fromJson восстанавливает карточку без lastReview', () {
+      final json = SchedulingCard.newCard(cardId: 'card-1', now: now).toJson();
+      final restored = SchedulingCard.fromJson(json);
+
+      expect(restored.lastReview, isNull);
+      expect(restored.state, CardState.newState);
+      expect(restored.step, 0);
+    });
+
+    test('toJson хранит UTC-время в ISO-8601 и состояние строкой SPEC', () {
+      final card = SchedulingCard.newCard(cardId: 'card-1', now: now);
+      final json = card.toJson();
+
+      expect(json['due'], now.toIso8601String());
+      expect(json['state'], 'new');
+      expect(json['lastReview'], isNull);
+    });
+
+    test('toString содержит идентификатор и состояние', () {
+      final card = SchedulingCard.newCard(cardId: 'card-1', now: now);
+
+      expect(card.toString(), contains('card-1'));
+      expect(card.toString(), contains('new'));
+    });
+
+    test('конструктор требует UTC для due и lastReview', () {
+      expect(
+        () => SchedulingCard(
+          cardId: 'card-1',
+          state: CardState.learning,
+          due: DateTime(2026, 11, 11, 12),
+        ),
+        throwsA(isA<AssertionError>()),
+      );
+      expect(
+        () => SchedulingCard(
+          cardId: 'card-1',
+          state: CardState.review,
+          due: now,
+          lastReview: DateTime(2026, 11, 10, 12),
+        ),
+        throwsA(isA<AssertionError>()),
+      );
+    });
+  });
 }

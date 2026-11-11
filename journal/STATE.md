@@ -1,24 +1,27 @@
 # STATE — текущее состояние CardFlow
 
-**Дата:** 2026-11-11 · **Итерация:** 0 (Каркас) · **Шаг цикла:** 1 (План) → выполняется
-**Автономность:** ИТЕРАЦИИ · **Режим:** остановка после отчёта по итерации 0
+**Дата:** 2026-11-11 · **Итерация:** 0 (Каркас) · **Шаг цикла:** 7 (улучшение/отчёт) · **Режим:** ИТЕРАЦИИ (после отчёта — стоп)
+**Факты:** Flutter 3.47.9 stable / Dart 3.13.7 через FVM 4.3.2 (`.fvmrc`); Windows 11; VS Build Tools 2026 (без ATL); Android SDK/JDK, Xcode, Linux — отсутствуют; ключей API нет (absent).
 
-## Статус «Следующее действие»
+## Следующее действие
 
-Следующее действие: установить Flutter 3.47.9 (закреплён через FVM) → `flutter create` 5 платформ → локализация ru → guard-тесты → FSRS-тест.
+Принять находки независимого ревью (`journal/iteration-0/review.md`), исправить blocker/critical/high, выполнить финальный прогон тестов/анализатора/покрытия, сделать checkpoint-коммит и отчёт владельцу — затем стоп.
 
-## Что уже сделано (проверено в этой сессии)
+## Сделано в итерации 0 (проверено в сессии)
 
-- Репозиторий инициализирован (`git init`, `main`), локальные имя/почта git заданы.
-- `SPEC.md` скопирован в корень (sha256 совпадает с `work/SPEC.md`); `docs/agent-prompt.md` — сохранённая копия стартового промпта (разделы 0–14).
-- Создан скелет каталогов: `docs/`, `docs/decisions/`, `journal/iteration-0/`, `lib/{domain,data,api,ui}`, `test/{unit,widget,integration,golden,guards}`, `.github/workflows/`.
-- Написаны `.gitignore`, `AGENTS.md`, `journal/iteration-0/plan.md`, `journal/KNOWN_LIMITATIONS.md`.
-- FVM 4.3.2 установлен standalone в `C:\Users\piotr\fvm`, PATH пользователя обновлён; `fvm list` работает.
-- Идёт скачивание Flutter SDK 3.47.9 stable (Dart 3.13.7), sha256 будет сверен до распаковки.
-- Запущен `deps-researcher` (task-1): проверка пакетов на pub.dev → `docs/dependencies.md`, ADR-001/002/003.
+- Репозиторий: `git init`, SPEC.md в корне, docs/agent-prompt.md (копия промпта 0–14), AGENTS.md, .gitignore, README.
+- Тулчейн: Flutter 3.47.9 (sha256 сверен) + FVM 4.3.2; `.fvmrc`; junction `.fvm/versions/3.47.9`.
+- `flutter create --org ru.example` под 5 платформ (android/ios/linux/macos/windows), 123 файла.
+- Локализация ru: `lib/l10n/app_ru.arb`, gen-l10n, `supportedLocales: [ru]`, Material-база `material_ui` + русские системные строки (widget-тест).
+- Домен FSRS: `Rating`, `CardState`, `SchedulingCard` (JSON), `FsrsMapper`, `Scheduler`/`FsrsScheduler` — 17 тестов (интервалы 4 оценок, маппинг, иммутабельность, сериализация). ADR-004 — конфигурация по умолчанию.
+- UI: `CardFlowApp`/`HomeShell` (без мёртвых кнопок), `AppTheme` (ColorScheme.fromSeed), токены `AppMotion` (380/0.8, 700/0.9, effects 1.0), фасад `lib/ui/m3e/m3e.dart` + сверка с `M3EMotion`.
+- Guard-тесты: no_webview (по lock/yaml/импортам + самопроверки), ru_strings (ARB + `Text(...)` литералы + самопроверки ICU), no_secrets (репозиторий + самопроверки) — 24 теста.
+- CI-матрица `.github/workflows/ci.yml` (quality/test/build-desktop/build-mobile), YAML валиден; прогон невозможен — нет remote.
+- Документы: docs/dependencies.md (+§7 фактическое состояние), ADR-001 (+addendum статуса), ADR-002, ADR-003, ADR-004, dependency-spike.md, plan/verify/summary.
+- Доказательства: `journal/iteration-0/verify.md` — 58 тестов зелёные, analyze 0 issues, coverage 99.3%, формат применён; Windows-сборка CardFlow блокирована ATL (L2b), bare-проект собирается.
 
 ## Открытые вопросы / риски
 
-- Flutter ещё не распакован; FVM-кэш пуст (`C:\Users\piotr\fvm\versions`).
-- Хуки DSH не подключены, навыки Flutter недоступны → известные ограничения L4/L5.
-- Нет git-remote → CI-прогон невозможен (L3); Android SDK/JDK/Xcode нет (L2).
+- Нет вопросов, требующих решения владельца: все развилки закрыты ADR-001…004.
+- Известные ограничения: `journal/KNOWN_LIMITATIONS.md` (L1–L8: ключи, платформы, ATL, CI, хуки, навыки, M3E-runtime, .doc/.xls, DnD).
+- Следующая итерация 1 (Колоды + drift): завершить спайк S2 (`M3EMaterialApp` + M3E-экран), S3 (drift/sqlite3 native assets на Windows), добавить `drift_flutter`/открытие БД, CRUD колод, миграции, .zip импорт/экспорт.

@@ -11,14 +11,16 @@
 | Flutter | **3.47.9 stable** (релиз 2026-10-29, hash `c197ca5199e9ee5661e865596c9c07294dfab51c`) | [releases_windows.json](https://storage.googleapis.com/flutter_infra_release/releases/releases_windows.json) |
 | Dart | **3.13.7** (поставляется с Flutter 3.47.9) | там же, поле `dart_sdk_version` |
 | FVM | 4.3.2, конфиг `.fvmrc` = `{"flutter": "3.47.9"}` | проверено в рабочем дереве |
-| `environment:sdk` | `^3.13.0` | требование `material_ui` 1.11.0 (`sdk: ^3.13.0`) |
-| `environment:flutter` | `>=3.47.0` | требование `material_ui` 1.11.0 / `material_3_expressive` 1.2.0 / `pdfrx` 2.12.0 |
+| `environment:sdk` | `^3.13.7` | фактический pubspec (итерация 0); удовлетворяет требованию `material_ui` 1.11.0 (`sdk: ^3.13.0`) |
+| `environment:flutter` | `>=3.47.0` | фактический pubspec; требование `material_ui` 1.11.0 / `material_3_expressive` 1.2.0 / `pdfrx` 2.12.0 |
 
 > Все команды — только через FVM (`fvm flutter pub get`, `fvm flutter test`, …), см. `AGENTS.md`.
 
 ## 1. Ключевое архитектурное решение по базе Material
 
 `go_router` 18.1.4, `flutter_riverpod` 3.5.0 и `pdfrx` 2.12.0 **уже зависят от `material_ui` ^1.0.0** (первоисточники: pubspec пакетов + CHANGELOG go_router «18.0.0 — Migrates to material_ui and cupertino_ui», CHANGELOG flutter_riverpod «3.5.0 — Migrated Material imports to package:material_ui/material_ui.dart»). Поэтому приложение строим на официальном пакете `material_ui` 1.11.0 (publisher `flutter.dev`), а не на `package:flutter/material.dart`. Это описано в **ADR-001**.
+
+> **Статус реализации (итерация 0):** миграция выполнена — `lib/ui/app.dart` и `lib/ui/theme/app_theme.dart` импортируют `package:material_ui/material_ui.dart`, локализация — `GlobalMaterialLocalizations.delegates` из `material_ui`; widget-тест проверяет русские системные строки («Отмена», «Вставить», «ОК»). `M3EMaterialApp` пока не используется: первый M3E-экран появится в итерации 1 (spike S2 продолжается там).
 
 ## 2. Основные зависимости (runtime)
 
@@ -28,7 +30,7 @@
 | [material_3_expressive](https://pub.dev/packages/material_3_expressive) | `^1.2.0` | M3 Expressive-компоненты за `lib/ui/m3e/` (ADR-001) | Android, iOS, Linux, macOS, Windows, Web | MIT | approved · needs-runtime-spike |
 | [fsrs](https://pub.dev/packages/fsrs) | `^2.0.1` | FSRS-6: 21 вес, `desiredRetention`, `learningSteps` (A3, A7) | чистый Dart (все) | MIT | **approved** (API выписан в спайке) |
 | [drift](https://pub.dev/packages/drift) | `^2.35.4` | типобезопасная SQLite + миграции (A3, A5) | чистый Dart (все) | MIT | approved |
-| [drift_flutter](https://pub.dev/packages/drift_flutter) | `^0.3.1` | открытие БД на Flutter-платформах (офиц. рекомендация drift 2.35.4) | flutter-пакет (все) | MIT | approved · тянет EOL-заглушки `sqlite3_flutter_libs ^0.6.0+eol`/`sqlcipher_flutter_libs ^0.7.0+eol` — вручную не добавлять |
+| [drift_flutter](https://pub.dev/packages/drift_flutter) | `^0.3.1` | открытие БД на Flutter-платформах (офиц. рекомендация drift 2.35.4) | flutter-пакет (все) | MIT | approved · **не добавлен в итерации 0** (вручную не подключали: тянет EOL-заглушки; решение по открытию БД и native assets — итерация 1) |
 | [sqlite3](https://pub.dev/packages/sqlite3) | `^3.9.1` | нативная SQLite через FFI + Dart hooks (native assets) | все | MIT | approved · needs-runtime-spike (native assets на 5 платформах) |
 | [dio](https://pub.dev/packages/dio) | `^5.11.1` | HTTP + перехватчики/ретраи (A8.2, A8.6) | чистый Dart | MIT | approved |
 | [flutter_secure_storage](https://pub.dev/packages/flutter_secure_storage) | `^11.2.0` | ключи API только здесь (A1.3, A8.6) | Android, iOS, Linux, macOS, Windows, Web | BSD-3-Clause | approved · minSdk 23; Android `allowBackup=false` |
@@ -38,7 +40,7 @@
 | [xml](https://pub.dev/packages/xml) | `^7.1.0` | разбор XML внутри DOCX/PPTX/ODT/XLSX (A8.3) | чистый Dart | MIT | approved |
 | [excel_plus](https://pub.dev/packages/excel_plus) | `^2.29.2` | XLSX (замена устаревшего `excel`); читает и legacy `.xls` (BIFF8) — кандидат для ADR-003 | чистый Dart | MIT | approved · needs-runtime-spike (A8.3 «формулы по кэшированному значению», фикстуры) |
 | [file_picker](https://pub.dev/packages/file_picker) | `^13.3.3` | пикер файлов (A6.8/A8.3) | Android, iOS, Linux, macOS, Windows, Web | MIT | approved |
-| [desktop_drop](https://pub.dev/packages/desktop_drop) | `^0.9.2` | drag-n-drop на ПК (A3) | Android, iOS, Linux, macOS, Windows, Web | Apache-2.0 | approved (выбран вместо `super_drag_and_drop`) |
+| [desktop_drop](https://pub.dev/packages/desktop_drop) | **`^0.8.4`** (факт; кандидат был `^0.9.2`) | drag-n-drop на ПК (A3) | Android, iOS, Linux, macOS, Windows, Web | Apache-2.0 | approved с ограничением: `desktop_drop >=0.9.0` требует `cross_file ^0.4.0`, а `file_picker >=12` — `cross_file ^0.3.5+4`; совместная версия невозможна. Взят 0.8.4 (`cross_file ^0.3.4+2`). `super_drag_and_drop` 0.9.1 не разрешился (старый `super_native_extensions`); его ветка 0.1.9+3 неприемлема. Пересмотреть в итерации 3c |
 | [url_launcher](https://pub.dev/packages/url_launcher) | `^6.3.3` | «Где взять ключ», лицензии — системный браузер (A3) | Android, iOS, Linux, macOS, Windows, Web | BSD-3-Clause | approved |
 | [pdfrx](https://pub.dev/packages/pdfrx) | `^2.12.0` | текстовый слой PDF через PDFium/FFI (A8.3) | Android, iOS, Linux, macOS, Windows, Web | MIT (PDFium — BSD-3-Clause) | approved · needs-runtime-spike (Windows: Developer Mode для сборки) |
 | [go_router](https://pub.dev/packages/go_router) | `^18.1.4` | роутинг (AGENTS) | все (flutter) | BSD-3-Clause | approved · требует `material_ui ^1.0.0` |
@@ -50,7 +52,7 @@
 | [intl](https://pub.dev/packages/intl) | `^0.20.3` | даты/числа/ICU-плюрализация | чистый Dart | BSD-3-Clause | approved · **жёстко** `^0.20.3`: `flutter_localizations` 3.47.9 пинит этот constraint |
 | [path](https://pub.dev/packages/path) | `^1.9.1` | пути к файлам | чистый Dart | BSD-3-Clause | approved |
 | [collection](https://pub.dev/packages/collection) | `^1.19.1` | утилиты коллекций | чистый Dart | BSD-3-Clause | approved |
-| [enough_convert](https://pub.dev/packages/enough_convert) | `^1.7.1` | кодировки для TXT/MD/RTF (A8.3): Windows-1251 (cp1251) и **KOI8-R**/KOI8-U, ISO-8859, DOS, GBK, Big5 | чистый Dart | MPL-2.0 | approved · needs-runtime-spike (проверить cp1251 и KOI8-R на фикстурах) |
+| [enough_convert](https://pub.dev/packages/enough_convert) | `^1.7.1` | кодировки для TXT/MD/RTF (A8.3): Windows-1251 (cp1251) и **KOI8-R**/KOI8-U, ISO-8859, DOS, GBK, Big5 | чистый Dart | MPL-2.0 | approved · **добавить в итерации 3a** (сейчас не нужен) · needs-runtime-spike (проверить cp1251 и KOI8-R на фикстурах) |
 | `flutter` | SDK | UI | — | BSD-3-Clause | approved |
 | `flutter_localizations` | SDK | системные строки Flutter/Material для `ru` | — | BSD-3-Clause | approved · делегаты — из `material_ui` (см. ADR-001) |
 | [freezed_annotation](https://pub.dev/packages/freezed_annotation) | `^3.1.0` | аннотации для `*.freezed.dart` | чистый Dart | MIT | approved (runtime-зависимость) |
@@ -85,7 +87,9 @@
 | [m3e_design](https://pub.dev/packages/m3e_design) `0.2.1` / [m3e_collection](https://pub.dev/packages/m3e_collection) `0.3.7` / [m3_expressive](https://pub.dev/packages/m3_expressive) `1.0.0` / [expressive_m3](https://pub.dev/packages/expressive_m3) `0.2.0` / [m3e_core](https://pub.dev/packages/m3e_core) `1.1.5` | см. ADR-001 | не выбраны как M3E-база |
 | [webview_flutter](https://pub.dev/packages/webview_flutter), [flutter_inappwebview](https://pub.dev/packages/flutter_inappwebview), [flutter_html](https://pub.dev/packages/flutter_html) | — | **запрещены SPEC A3/AGENTS**, включая транзитивные |
 
-## 5. Предлагаемый блок `pubspec.yaml` (для Lead; сам pubspec не правится в этой задаче)
+## 5. Предлагаемый блок `pubspec.yaml` (исходная рекомендация спайка)
+
+> **Фактический `pubspec.yaml` после итерации 0 — в разделе 7.** Этот блок — исходная рекомендация; от неё есть отступления (desktop_drop, drift_flutter, enough_convert, annotations перенесены в dependencies), зафиксированные в §7.
 
 ```yaml
 environment:
@@ -159,3 +163,26 @@ dev_dependencies:
 6. **pdfrx и Windows:** для сборки на Windows **обязательно включён Developer Mode** (README pdfrx); сборка требует C-тулчейна (VS Build Tools на хосте есть по факту итерации 0). Зафиксировать в `KNOWN_LIMITATIONS.md`, если Developer Mode выключен.
 7. **needs-runtime-spike** (проверить после установки Flutter 3.47.9): `fvm flutter pub get` (весь граф), `material_ui`+`material_3_expressive` (сборка минимального экрана, ru-локаль), `drift`+`sqlite3` (открытие БД на Windows), `pdfrx` (извлечение текста `PdfPage.loadText()`), `json_schema` (валидация A8.4), `flutter_math_fork` (рендер формулы с кириллицей), `excel_plus` (чтение XLSX-фикстуры, кэшированные значения формул), `enough_convert` (cp1251 и KOI8-R), `fsrs` (интервалы для 4 оценок).
 8. **Версии — стабильные на 2026-11-11**; при `pub get` допустимы только патч-обновления в рамках указанных caret-constraint'ов. Любой breakout — через ADR.
+
+## 7. Фактическое состояние после итерации 0 (2026-11-11)
+
+Источник — `pubspec.yaml` / `pubspec.lock` рабочего дерева; проверено `fvm flutter pub get` (успех) и `fvm flutter analyze` (0 issues), `fvm flutter test` (58 тестов зелёные, покрытие рукописного `lib/` — 99.3%).
+
+**Фактические версии DIRECT-зависимостей (из pubspec.lock):**
+
+`material_ui 1.11.0`, `material_3_expressive 1.2.0`, `fsrs 2.0.1`, `drift 2.35.4`, `sqlite3 3.9.1`, `flutter_riverpod 3.5.0`, `riverpod 3.5.0` (транзитивно), `go_router 18.1.4`, `dio 5.11.1`, `flutter_secure_storage 11.2.0`, `json_schema 5.2.2`, `archive 4.6.0`, `xml 7.0.1`, `excel_plus 2.29.2`, `pdfrx 2.12.0`, `file_picker 13.3.3`, `desktop_drop 0.8.4`, `url_launcher 6.3.3`, `flutter_math_fork 0.7.4`, `path_provider 2.1.6`, `dynamic_color 2.1.0`, `uuid 4.6.0`, `crypto 3.0.8`, `collection 1.19.1`, `intl 0.20.3`, `freezed_annotation 3.1.0`, `json_annotation 4.12.0`; dev: `build_runner 2.17.1`, `drift_dev 2.35.3`, `freezed 4.0.3`, `json_serializable 6.15.2`, `mocktail 1.0.5`, `flutter_lints 6.0.0`.
+
+**Отступления от исходной рекомендации §2/§5 и причины:**
+
+| Отступление | Причина | Статус |
+|---|---|---|
+| `desktop_drop` 0.8.4 вместо 0.9.2 | конфликт `cross_file`: `desktop_drop >=0.9.0` → `^0.4.0`, `file_picker >=12` → `^0.3.5+4`; версии несовместимы. 0.8.4 использует `cross_file ^0.3.4+2` | зафиксировано; пересмотр в итерации 3c (DnD-экран) |
+| `drift_flutter` не добавлен | тянет EOL-заглушки (`sqlite3_flutter_libs 0.6.0+eol`); открытие БД планируется вручную через `sqlite3` 3.9.1 (native assets) | решение и спайк S3 — итерация 1 |
+| `sqlite3_flutter_libs` не добавлен | EOL (описание пакета); SQLite ставится пакетом `sqlite3 ^3.9.1` через Dart build hooks | проверено: `dart run tool/coverage_check.dart` собрал native assets на Windows |
+| `enough_convert` не добавлен | нужен только парсерам кодировок в итерации 3a | добавить в 3a |
+| `freezed_annotation`, `json_annotation` | перенесены из dev_dependencies в dependencies: сгенерированный код импортирует их из `lib/` | исправлено в pubspec |
+| `flutter` SDK-пакет: Material-импорты | `lib/` использует `package:material_ui/material_ui.dart` (ADR-001); `package:flutter/material.dart` в `lib/` не встречается | выполнено, проверено ревью |
+| `desktop_drop`/`super_drag_and_drop` | выбран один пакет (SPEC A3), `super_drag_and_drop` удалён из pubspec | выполнено |
+| `test ^1.33.0` не добавлен | `flutter_test` уже даёт test API; отдельный `test` не нужен | осознанное отступление |
+
+**Runtime-спайки, выполненные в итерации 0:** S1 (`pub get` графа — успех), S2 частично (M3E-библиотека компилируется, токены `M3EMotion` совпадают со SPEC A4.4 в тесте; `M3EMaterialApp` — итерация 1), S3 частично (native assets `sqlite3` собрались при `dart run`), S9 (FSRS: интервалы 4 оценок, см. тесты). Не выполнены: S4–S8, S10 — вынесены в итерации 1/3a/3b/5 (см. `journal/iteration-0/dependency-spike.md` §7 и `journal/KNOWN_LIMITATIONS.md`).

@@ -98,3 +98,11 @@ SPEC A3 задаёт правило: «M3 Expressive: официальные к�
 - m3e_collection: https://pub.dev/packages/m3e_collection · m3e_design: https://pub.dev/packages/m3e_design · m3_expressive: https://pub.dev/packages/m3_expressive · expressive_m3: https://pub.dev/packages/expressive_m3 · m3e_core: https://pub.dev/packages/m3e_core
 - go_router CHANGELOG (миграция 18.0.0): https://github.com/flutter/packages/blob/main/packages/go_router/CHANGELOG.md
 - flutter_riverpod CHANGELOG 3.5.0: https://github.com/rrousselGit/riverpod/blob/master/packages/flutter_riverpod/CHANGELOG.md
+
+## Статус реализации (итерация 0, 2026-11-11)
+
+- Миграция Material-базы на `material_ui` 1.11.0 **выполнена**: `lib/ui/app.dart`, `lib/ui/theme/app_theme.dart` импортируют `package:material_ui/material_ui.dart`; `package:flutter/material.dart` в `lib/` не используется. Делегаты локализации — `GlobalMaterialLocalizations.delegates` из `material_ui`, свой ARB — через gen-l10n. Проверено widget-тестом: локаль `ru`, системные строки «Отмена»/«Вставить»/«ОК».
+- Изолирующий слой `lib/ui/m3e/m3e.dart` создан; UI импортирует M3E-библиотеку только через него. Токены движения сверены: `M3EMotion.expressiveSpatialDefault` = 380/0.8, `spatialDefault` = 700/0.9, `effectsDefault` = 1600/1.0 — совпадают с `lib/ui/motion.dart` и SPEC A4.4 (тест `test/unit/ui/m3e_tokens_test.dart`).
+- `M3EMaterialApp`/`M3ETheme` в корне пока не используются: в итерации 0 нет M3E-компонентов на экране. Это осознанно отложено до первого реального экрана (итерация 1, «Колоды»), где и завершается runtime-спайк S2: `M3EMaterialApp` + `M3EThemeData` + `ru` + выбор M3E-компонентов; при провале — fallback-план из раздела «Решение» (вариант 2).
+- Конфликт реэкспорта `CornerRounding`/`RoundedPolygon` пока не возникает: фасад экспортирует только `material_3_expressive`; при добавлении `material_ui` в тот же файл применить `hide CornerRounding, RoundedPolygon`.
+- В `AGENTS.md` добавлено правило: Material-импорты — только `material_ui`; M3E-компоненты — только через `lib/ui/m3e/`.

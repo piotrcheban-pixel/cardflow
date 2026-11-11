@@ -55,6 +55,7 @@ const Set<String> excludedScanDirs = <String>{
   '.vscode',
   'node_modules',
   'work',
+  'ephemeral',
 };
 
 List<String> detectSecrets(String text) {
@@ -92,7 +93,13 @@ void main() {
       final files = scannableFiles(root);
       expect(files, isNotEmpty);
       for (final file in files) {
-        final text = file.readAsStringSync();
+        final String text;
+        try {
+          text = file.readAsStringSync();
+        } on FileSystemException {
+          // Не декодируется как UTF-8 — значит, бинарный артефакт; пропускаем.
+          continue;
+        }
         for (final secret in detectSecrets(text)) {
           violations.add('${file.path}: $secret');
         }

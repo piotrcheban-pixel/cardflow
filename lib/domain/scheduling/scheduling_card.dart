@@ -41,7 +41,7 @@ class SchedulingCard {
   /// Создаёт снимок состояния.
   ///
   /// [due] и [lastReview] должны быть в UTC — FSRS-пакет принимает только UTC.
-  const SchedulingCard({
+  SchedulingCard({
     required this.cardId,
     required this.state,
     required this.due,
@@ -49,7 +49,11 @@ class SchedulingCard {
     this.stability,
     this.difficulty,
     this.lastReview,
-  });
+  }) : assert(due.isUtc, 'due должен быть в UTC'),
+       assert(
+         lastReview == null || lastReview.isUtc,
+         'lastReview должен быть в UTC',
+       );
 
   /// Создаёт новую карточку: состояние `new`, шаг 0, без истории повторений.
   factory SchedulingCard.newCard({
