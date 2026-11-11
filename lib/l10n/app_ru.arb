@@ -1,0 +1,7 @@
+{
+  "@@locale": "ru",
+  "appTitle": "CardFlow",
+  "@appTitle": {
+    "description": "Название приложения. Бренд, латиница допустима (SPEC 3.1)."
+  }
+}

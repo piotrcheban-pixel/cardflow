@@ -1,0 +1,144 @@
+import 'package:cardflow/domain/scheduling/scheduler.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+void main() {
+  final now = DateTime.utc(2026, 11, 11, 12);
+
+  group('SchedulingCard: снимок состояния для FSRS', () {
+    test('новая карточка имеет состояние new и due = now', () {
+      final card = SchedulingCard.newCard(cardId: 'card-1', now: now);
+      expect(card.cardId, 'card-1');
+      expect(card.state, CardState.newState);
+      expect(card.due, now);
+      expect(card.lastReview, isNull);
+      expect(card.step, 0);
+    });
+
+    test('toJson/fromJson сохраняют состояние без потерь', () {
+      final scheduler = FsrsScheduler();
+      final newCard = SchedulingCard.newCard(cardId: 'card-1', now: now);
+      final reviewed = scheduler.review(newCard, Rating.good, now: now).card;
+
+      final restored = SchedulingCard.fromJson(reviewed.toJson());
+
+      expect(restored, reviewed);
+      expect(restored.state, reviewed.state);
+      expect(restored.step, reviewed.step);
+      expect(restored.due, reviewed.due);
+      expect(restored.lastReview, reviewed.lastReview);
+      expect(restored.stability, reviewed.stability);
+      expect(restored.difficulty, reviewed.difficulty);
+    });
+  });
+
+  group('FsrsScheduler: интервалы и прогноз для кнопок A7.2', () {
+    test('прогноз содержит все четыре оценки в порядке Rating.values', () {
+      final scheduler = FsrsScheduler();
+      final card = SchedulingCard.newCard(cardId: 'card-1', now: now);
+
+      final preview = scheduler.previewIntervals(card, now: now);
+
+      expect(preview.keys.toList(), Rating.values);
+    });
+
+    test('для новой карточки интервалы соответствуют шагам обучения FSRS', () {
+      final scheduler = FsrsScheduler();
+      final card = SchedulingCard.newCard(cardId: 'card-1', now: now);
+
+      final preview = scheduler.previewIntervals(card, now: now);
+
+      // learningSteps по умолчанию: 1 минута и 10 минут.
+      expect(preview[Rating.again], const Duration(minutes: 1));
+      expect(preview[Rating.hard], const Duration(minutes: 5, seconds: 30));
+      expect(preview[Rating.good], const Duration(minutes: 10));
+      expect(preview[Rating.easy], const Duration(days: 16));
+    });
+
+    test('прогноз монотонен: Again < Hard < Good < Easy (A7.2)', () {
+      final scheduler = FsrsScheduler();
+      final card = SchedulingCard.newCard(cardId: 'card-1', now: now);
+
+      final preview = scheduler.previewIntervals(card, now: now);
+      final durations = <Rating, Duration>{
+        for (final rating in Rating.values) rating: preview[rating]!,
+      };
+
+      expect(durations[Rating.again]!, lessThan(durations[Rating.hard]!));
+      expect(durations[Rating.hard]!, lessThan(durations[Rating.good]!));
+      expect(durations[Rating.good]!, lessThan(durations[Rating.easy]!));
+    });
+
+    test('оценка Good переводит новую карточку на второй шаг обучения', () {
+      final scheduler = FsrsScheduler();
+      final card = SchedulingCard.newCard(cardId: 'card-1', now: now);
+
+      final outcome = scheduler.review(card, Rating.good, now: now);
+
+      expect(outcome.reviewedAt, now);
+      expect(outcome.card.state, CardState.learning);
+      expect(outcome.card.step, 1);
+      expect(outcome.card.due, now.add(const Duration(minutes: 10)));
+      expect(outcome.card.lastReview, now);
+      expect(outcome.card.stability, isNotNull);
+      expect(outcome.card.difficulty, isNotNull);
+    });
+
+    test('оценка Again возвращает карточку на первый шаг обучения', () {
+      final scheduler = FsrsScheduler();
+      final card = SchedulingCard.newCard(cardId: 'card-1', now: now);
+
+      final outcome = scheduler.review(card, Rating.again, now: now);
+
+      expect(outcome.card.state, CardState.learning);
+      expect(outcome.card.step, 0);
+      expect(outcome.card.due, now.add(const Duration(minutes: 1)));
+    });
+
+    test('оценка Easy сразу выводит карточку в повторение', () {
+      final scheduler = FsrsScheduler();
+      final card = SchedulingCard.newCard(cardId: 'card-1', now: now);
+
+      final outcome = scheduler.review(card, Rating.easy, now: now);
+
+      expect(outcome.card.state, CardState.review);
+      expect(outcome.card.step, isNull);
+      expect(outcome.card.due.difference(now), const Duration(days: 16));
+    });
+
+    test('исходная карточка не мутируется оценкой (иммутабельность)', () {
+      final scheduler = FsrsScheduler();
+      final card = SchedulingCard.newCard(cardId: 'card-1', now: now);
+
+      scheduler.review(card, Rating.easy, now: now);
+
+      expect(card.state, CardState.newState);
+      expect(card.lastReview, isNull);
+      expect(card.stability, isNull);
+      expect(card.due, now);
+    });
+
+    test('низкий desiredRetention даёт более длинный интервал', () {
+      final card = SchedulingCard.newCard(cardId: 'card-1', now: now);
+      final strict = FsrsScheduler(desiredRetention: 0.9);
+      final relaxed = FsrsScheduler(desiredRetention: 0.8);
+
+      final strictPreview = strict.previewIntervals(card, now: now);
+      final relaxedPreview = relaxed.previewIntervals(card, now: now);
+
+      expect(
+        relaxedPreview[Rating.easy]!,
+        greaterThan(strictPreview[Rating.easy]!),
+      );
+    });
+
+    test('fuzzing выключен по умолчанию: прогноз детерминирован', () {
+      final scheduler = FsrsScheduler();
+      final card = SchedulingCard.newCard(cardId: 'card-1', now: now);
+
+      final first = scheduler.previewIntervals(card, now: now);
+      final second = scheduler.previewIntervals(card, now: now);
+
+      expect(first, second);
+    });
+  });
+}

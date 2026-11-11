@@ -11,10 +11,9 @@ build/
 coverage/
 test/failures/
 
-# FVM: версия фиксируется через .fvmrc, сам SDK не коммитим
-.fvm/flutter_sdk
-.fvm/versions
-.fvm/lefthook
+# FVM: версия фиксируется через .fvmrc, сам SDK и служебные файлы не коммитим
+.fvm/
+.fvmrc.bak
 
 # OS
 .DS_Store
