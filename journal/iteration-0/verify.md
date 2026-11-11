@@ -108,3 +108,18 @@ L6 — golden-тестов в итерации 0 нет (по плану — с 
 L6c — dynamic color (A4.1) ещё не подключён в UI (пакет `dynamic_color` добавлен; настройка — итерация 7).
 L10 — `desktop_drop` 0.8.4 вместо 0.9.2 (конфликт `cross_file`), см. `docs/dependencies.md` §7.
 
+
+## 10. Пост-приёмка: исправление CI на GitHub Actions (2026-11-11, 23:20–00:05 MSK)
+
+Владелец создал репозиторий https://github.com/piotrcheban-pixel/cardflow (private) и запушил `main`. Первый прогон CI (run `43083107525`, commit `78c99be`) упал в 3 job'ах из 9:
+
+| Job | Ошибка | Причина | Исправление |
+|---|---|---|---|
+| `test (ubuntu-latest)`, `test (macos-latest)` | `74 tests passed, 1 failed` — `no_secrets` (скан репозитория) | **Баг guard-теста:** исключения каталогов проверялись по сегментам **абсолютного** пути. На раннерах GitHub Actions репозиторий лежит в `/home/runner/work/<repo>/<repo>` (macOS: `/Users/runner/work/...`), т.е. абсолютный путь содержит сегмент `work` из `excludedScanDirs` → отфильтровывались **все** файлы → `expect(files, isNotEmpty)` падал. На Windows-раннере путь `D:\a\cardflow\cardflow` без `work` — job `test (windows-latest)` прошёл | `scannableFiles`: обход с исключением каталогов **по имени при рекурсивном обходе** (относительно корня проекта), а не по сегментам абсолютного пути. Тот же латентный дефект исправлен в `guard_utils.repoFiles` (architecture/no_webview/ru_strings) |
+| `build linux` | `CMake: libsecret-1>=0.18.4 not found` (`flutter_secure_storage_linux`) | в CI-шаге установки Linux-зависимостей не было `libsecret-1-dev` | добавлен `libsecret-1-dev` в `apt-get install` |
+
+**TDD-фиксация бага:** сначала написан регрессионный тест «корень проекта внутри каталога `work` не скрывает файлы (регрессия CI)» — красный (`Actual: Set: []`), затем реализовано исправление — зелёный. Тестов теперь **76**.
+
+Дополнительно в CI добавлен шаг «Детали падения тестов (аннотация)»: при падении тестов хвост вывода публикуется как `::error`-аннотация check-run — причина видна через GitHub API/UI без полного лога (в первом прогоне лог падения приходилось восстанавливать по `check-runs`, т.к. endpoint `/jobs` отдавал 502).
+
+**Локальные доказательства после фикса:** `fvm flutter test --no-pub --coverage` → **76 passed**; `fvm flutter analyze --no-pub` → No issues found; `dart format` → 0 changed; покрытие рукописного `lib/` → **100% (135/135)**; CI YAML валиден (4 job'а).

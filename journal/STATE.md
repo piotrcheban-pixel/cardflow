@@ -1,11 +1,11 @@
 # STATE — текущее состояние CardFlow
 
 **Дата:** 2026-11-11 · **Итерация:** 0 (Каркас) — **завершена и принята по ревью** · **Шаг цикла:** 7 (улучшение/отчёт) · **Режим:** ИТЕРАЦИИ (после отчёта — стоп)
-**Факты:** Flutter 3.47.9 stable / Dart 3.13.7 через FVM 4.3.2 (`.fvmrc`); Windows 11; VS Build Tools 2026 (без ATL); Android SDK/JDK, Xcode, Linux — отсутствуют; ключей API нет (absent).
+**Факты:** Flutter 3.47.9 stable / Dart 3.13.7 через FVM 4.3.2 (`.fvmrc`); Windows 11; VS Build Tools 2026 (без ATL); Android SDK/JDK, Xcode, Linux — отсутствуют; ключей API нет (absent). GitHub-remote: `origin` → piotrcheban-pixel/cardflow (private), CI GitHub Actions.
 
 ## Следующее действие
 
-Итерация 0 закрыта: ревью принято (blocker/critical/high = 0), findings M1–M6 и документарные low устранены, финальный прогон выполнен, checkpoint-коммит сделан. Следующая сессия: итерация 1 («Колоды + БД») по `CONTINUE-PROMPT.md`; перед стартом сверить STATE.md с репозиторием.
+Итерация 0 закрыта: ревью принято (blocker/critical/high = 0), findings M1–M6 и документарные low устранены, финальный прогон выполнен, checkpoint-коммит сделан. Следующая сессия: итерация 1 («Колоды + БД») по `CONTINUE-PROMPT.md`; перед стартом сверить STATE.md с репозиторием. CI-прогон после исправления guard-теста и Linux-зависимостей: см. `journal/iteration-0/verify.md` §10.
 
 ## Сделано в итерации 0 (проверено в сессии)
 

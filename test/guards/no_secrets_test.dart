@@ -90,17 +90,28 @@ String decodeForScan(List<int> bytes) {
 
 List<File> scannableFiles(Directory root) {
   final result = <File>[];
-  for (final entity in root.listSync(recursive: true, followLinks: false)) {
-    if (entity is! File) continue;
-    final segments = entity.path.split(Platform.pathSeparator);
-    if (segments.any(excludedScanDirs.contains)) continue;
-    final name = entity.uri.pathSegments.last;
-    final ext = name.contains('.') ? name.substring(name.lastIndexOf('.')) : '';
-    if (binaryExtensions.contains(ext)) continue;
-    final length = entity.lengthSync();
-    if (length > 1024 * 1024) continue;
-    result.add(entity);
+
+  void walk(Directory directory) {
+    for (final entity in directory.listSync(followLinks: false)) {
+      final name = entity.uri.pathSegments.last;
+      if (entity is Directory) {
+        // Исключения проверяются по имени каталога при обходе, т.е. по пути
+        // ОТНОСИТЕЛЬНО корня проекта. Так репозиторий, лежащий на CI внутри
+        // /home/runner/work/..., не отфильтровывается целиком (регрессия CI).
+        if (!excludedScanDirs.contains(name)) walk(entity);
+        continue;
+      }
+      if (entity is! File) continue; // symlink'и не читаем
+      final extension = name.contains('.')
+          ? name.substring(name.lastIndexOf('.'))
+          : '';
+      if (binaryExtensions.contains(extension)) continue;
+      if (entity.lengthSync() > 1024 * 1024) continue;
+      result.add(entity);
+    }
   }
+
+  walk(root);
   return result;
 }
 
@@ -180,6 +191,32 @@ void main() {
         expect(
           detectSecrets(decodeForScan(<int>[0xff, 0xfe, 0x00, 0x41])),
           isEmpty,
+        );
+      },
+    );
+
+    test(
+      'корень проекта внутри каталога «work» не скрывает файлы (регрессия CI)',
+      () {
+        // GitHub Actions на Linux/macOS клонирует репозиторий в
+        // /home/runner/work/<repo>/<repo> — абсолютный путь содержит «work».
+        // Исключения должны проверяться по пути ОТНОСИТЕЛЬНО корня проекта,
+        // иначе на CI отфильтровываются все файлы и guard становится пустым.
+        final temp = Directory.systemTemp.createTempSync('cardflow_guard_');
+        addTearDown(() => temp.deleteSync(recursive: true));
+        final repo = Directory(
+          <String>[temp.path, 'work', 'cardflow'].join(Platform.pathSeparator),
+        )..createSync(recursive: true);
+        File(<String>[repo.path, 'pubspec.yaml'].join(Platform.pathSeparator))
+            .writeAsStringSync('name: cardflow');
+        File(<String>[repo.path, 'notes.md'].join(Platform.pathSeparator))
+            .writeAsStringSync('нет секретов');
+
+        final files = scannableFiles(repo);
+
+        expect(
+          files.map((file) => file.uri.pathSegments.last).toSet(),
+          containsAll(<String>['pubspec.yaml', 'notes.md']),
         );
       },
     );

@@ -35,6 +35,10 @@ String readRepoFile(String relativePath) {
 ///
 /// [relativeRoot] — путь от корня, например `lib`. [excludedDirs] — имена
 /// каталогов, которые не обходим (build, .dart_tool и т.п.).
+///
+/// Исключения проверяются по имени каталога при обходе (путь относительно
+/// корня проекта), поэтому репозиторий на CI в `/home/runner/work/...`
+/// не отфильтровывается целиком.
 List<File> repoFiles(
   String relativeRoot, {
   Set<String> excludedDirs = const <String>{},
@@ -48,14 +52,22 @@ List<File> repoFiles(
     ].join(Platform.pathSeparator),
   );
   if (!root.existsSync()) return result;
-  for (final entity in root.listSync(recursive: true, followLinks: false)) {
-    if (entity is! File) continue;
-    final path = entity.path;
-    final segments = path.split(Platform.pathSeparator);
-    if (segments.any(excludedDirs.contains)) continue;
-    if (include != null && !include(entity.uri.pathSegments.last)) continue;
-    result.add(entity);
+
+  void walk(Directory directory) {
+    for (final entity in directory.listSync(followLinks: false)) {
+      if (entity is Directory) {
+        if (!excludedDirs.contains(entity.uri.pathSegments.last)) {
+          walk(entity);
+        }
+        continue;
+      }
+      if (entity is! File) continue;
+      if (include != null && !include(entity.uri.pathSegments.last)) continue;
+      result.add(entity);
+    }
   }
+
+  walk(root);
   return result;
 }
 

@@ -50,4 +50,4 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
 - Windows 11; Android SDK/JDK/Xcode отсутствуют → локально проверяем `flutter test/analyze` и `flutter build windows`; остальные сборки — CI/известное ограничение.
 - FVM 4.3.2; Flutter 3.47.9 (Dart 3.13.7). Все команды — через `fvm` (`fvm flutter …`).
 - Windows-сборка CardFlow пока падает из-за отсутствия ATL в VS Build Tools (`atlstr.h` у `flutter_secure_storage_windows`); bare Flutter-проект собирается успешно → это ограничение хоста, не кода (KNOWN_LIMITATIONS L2b).
-- Хуки DSH (block-hardcoded-secret, block-destructive-command, confirm-git-push, GateGuard) на момент итерации 0 не подключены — известное ограничение; создавать/обходить их самостоятельно нельзя.
+- GitHub-remote: `origin` → `piotrcheban-pixel/cardflow` (private); CI — GitHub Actions (`.github/workflows/ci.yml`). Push выполняется по команде владельца (хука `confirm-git-push` нет).

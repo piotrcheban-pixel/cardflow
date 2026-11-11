@@ -62,7 +62,22 @@ jobs:
       - run: flutter pub get
       - run: flutter gen-l10n
       - name: Тесты (кроме golden)
-        run: flutter test --exclude-tags golden --coverage
+        shell: bash
+        run: |
+          set -o pipefail
+          flutter test --exclude-tags golden --coverage 2>&1 | tee test-output.log
+      - name: Детали падения тестов (аннотация)
+        if: failure()
+        shell: bash
+        run: |
+          # Публикуем хвост вывода тестов как аннотацию check-run, чтобы
+          # причина падения была видна без доступа к полному логу job.
+          if [ -f test-output.log ]; then
+            MSG=$(tail -n 120 test-output.log | sed -e 's/%/%25/g' -e 's/\r//g')
+            MSG="${MSG//$'\n'/%0A}"
+            MSG="${MSG:0:60000}"
+            echo "::error title=Детали падения тестов::$MSG"
+          fi
       - name: Покрытие рукописного кода >= 80%
         if: matrix.os == 'ubuntu-latest'
         run: dart run tool/coverage_check.dart --min=80
@@ -103,7 +118,9 @@ jobs:
         if: matrix.name == 'linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev liblzma-dev ninja-build
+          # libsecret-1-dev обязателен для flutter_secure_storage_linux
+          # (pkg-config: libsecret-1 >= 0.18.4), остальное — для Linux desktop.
+          sudo apt-get install -y libgtk-3-dev liblzma-dev ninja-build libsecret-1-dev
       - run: flutter pub get
       - run: flutter gen-l10n
       - run: ${{ matrix.command }}
