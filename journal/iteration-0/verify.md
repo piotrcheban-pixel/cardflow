@@ -91,7 +91,7 @@ python -c "yaml.safe_load('.github/workflows/ci.yml')" → jobs: quality, test, 
 | 9 | `STATE.md` заполнен, checkpoint-коммит, отчёт | **выполнено** | `journal/STATE.md`; коммиты `20698fe`, `ba4f37a` (+ финальный); отчёт владельцу |
 | 10 | `flutter analyze` 0 issues, `dart format`, тесты, покрытие ≥80% | **выполнено** | §3, §4 (100%) |
 | 11 | M3E-слой `lib/ui/m3e/` + токены движения | **частично** | фасад и сверка токенов M3E↔SPEC есть (тест); M3E-виджеты и `M3EMaterialApp` — итерация 1 (спайк S2) |
-| 12 | Сборки под доступные платформы | **частично** | Windows: тулчейн подтверждён bare-проектом, сборка CardFlow блокирована ATL (L2b); остальное — CI/не проверено |
+| 12 | Сборки под доступные платформы | **выполнено** | CI run `43098651759`: build linux/windows/macos/android/ios — success (5 платформ); локально Windows-сборка ограничена ATL (L2b) |
 | 13 | Хуки smoke-тест | **не проверено** | хуки не подключены (L4) |
 
 > **Пометка (L12 ревью):** задачи плана 0.3/0.5/0.7 (проект/FVM, AGENTS.md, CI) закрыты файлами и командами, а не тестами — это конфигурационные артефакты; их проверка — команды из §1/§6 и статический разбор CI, что указано в таблице.
@@ -123,3 +123,8 @@ L10 — `desktop_drop` 0.8.4 вместо 0.9.2 (конфликт `cross_file`),
 Дополнительно в CI добавлен шаг «Детали падения тестов (аннотация)»: при падении тестов хвост вывода публикуется как `::error`-аннотация check-run — причина видна через GitHub API/UI без полного лога (в первом прогоне лог падения приходилось восстанавливать по `check-runs`, т.к. endpoint `/jobs` отдавал 502).
 
 **Локальные доказательства после фикса:** `fvm flutter test --no-pub --coverage` → **76 passed**; `fvm flutter analyze --no-pub` → No issues found; `dart format` → 0 changed; покрытие рукописного `lib/` → **100% (135/135)**; CI YAML валиден (4 job'а).
+
+**Результат второго прогона CI (commit `018f6f8`, run `43098651759`):** ✅ **9/9 job'ов success** —
+`format + analyze (ubuntu)`, `test (ubuntu-latest)`, `test (windows-latest)`, `test (macos-latest)`,
+`build linux`, `build windows`, `build macos`, `build android`, `build ios`.
+То есть исправления подтверждены GitHub Actions: guard-тесты зелёные на всех трёх ОС, Linux-сборка с `libsecret-1-dev` проходит, а сборки под все 5 целевых платформ выполняются в CI.

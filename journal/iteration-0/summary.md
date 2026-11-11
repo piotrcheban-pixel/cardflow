@@ -50,3 +50,9 @@
 ## Следующее действие
 
 Итерация 1 («Колоды + БД»): завершить спайки S2 (`M3EMaterialApp` + M3E-экран) и S3 (drift/sqlite3 native assets на Windows), открытие БД, drift-схема и миграции по SPEC A5, CRUD колод, экран «Колоды» (поиск/фильтр/архив с undo), импорт/экспорт `.zip` без потерь.
+
+## CI на GitHub Actions (пост-приёмка)
+
+- Репозиторий: https://github.com/piotrcheban-pixel/cardflow (private). Первый прогон (`43083107525`) упал: guard `no_secrets` на Ubuntu/macOS (баг: исключения по сегментам абсолютного пути, а CI-путь `/home/runner/work/...` содержит `work`) и `build linux` (нет `libsecret-1-dev`). Исправлено в коммите `018f6f8` (регрессионный тест red→green, относительные пути в guard-обходе, `libsecret-1-dev`, шаг-аннотация деталей падения).
+- Второй прогон (`43098651759`, commit `018f6f8`): **9/9 job'ов success** — `format + analyze`, тесты на ubuntu/windows/macOS, сборки linux/windows/macOS/android/ios.
+- Итог: критерий «сборки под 5 ОС» теперь подтверждён CI, ограничение L3 (CI не запускался) снято.

@@ -5,7 +5,7 @@
 
 ## Следующее действие
 
-Итерация 0 закрыта: ревью принято (blocker/critical/high = 0), findings M1–M6 и документарные low устранены, финальный прогон выполнен, checkpoint-коммит сделан. Следующая сессия: итерация 1 («Колоды + БД») по `CONTINUE-PROMPT.md`; перед стартом сверить STATE.md с репозиторием. CI-прогон после исправления guard-теста и Linux-зависимостей: см. `journal/iteration-0/verify.md` §10.
+Итерация 0 закрыта: ревью принято (blocker/critical/high = 0), findings M1–M6 и документарные low устранены, финальный прогон выполнен, checkpoint-коммит сделан. Следующая сессия: итерация 1 («Колоды + БД») по `CONTINUE-PROMPT.md`; перед стартом сверить STATE.md с репозиторием. CI на GitHub Actions: run `43098651759` (commit `018f6f8`) — **9/9 job'ов success**, включая сборки linux/windows/macos/android/ios. Детали — `journal/iteration-0/verify.md` §10.
 
 ## Сделано в итерации 0 (проверено в сессии)
 
