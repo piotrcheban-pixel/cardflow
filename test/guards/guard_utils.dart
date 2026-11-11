@@ -66,12 +66,21 @@ List<String> findForbiddenPackages(
 ) {
   final found = <String>{};
   for (final prefix in forbiddenPrefixes) {
-    final pattern = RegExp(
-      '^\\s+${RegExp.escape(prefix)}(_[a-z0-9_]+)?\\s*:',
+    final escaped = RegExp.escape(prefix);
+    // Блочный YAML: `  package:` / `  package_plugin:`.
+    final blockPattern = RegExp(
+      '^\\s+($escaped(_[a-z0-9_]+)?)\\s*:',
       multiLine: true,
     );
-    for (final match in pattern.allMatches(source)) {
-      found.add(match.group(0)!.trim().replaceAll(':', '').trim());
+    // Кавычки: `"package":` / 'package':.
+    final quotedPattern = RegExp('''['"]($escaped(_[a-z0-9_]+)?)['"]\\s*:''');
+    // Flow-style YAML: `{package: …}` / `, package: …`.
+    final flowPattern = RegExp('[\\[{,]\\s*($escaped(_[a-z0-9_]+)?)\\s*:');
+    for (final pattern in <RegExp>[blockPattern, quotedPattern, flowPattern]) {
+      for (final match in pattern.allMatches(source)) {
+        final name = match.group(1);
+        if (name != null) found.add(name);
+      }
     }
   }
   return found.toList()..sort();

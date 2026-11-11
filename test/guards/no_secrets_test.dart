@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -42,6 +43,13 @@ const Set<String> binaryExtensions = <String>{
   '.docx',
   '.xlsx',
   '.pptx',
+  '.exp',
+  '.lib',
+  '.pdb',
+  '.obj',
+  '.ilk',
+  '.res',
+  '.snapshot',
 };
 
 /// Каталоги, которые не являются исходниками проекта.
@@ -69,6 +77,17 @@ List<String> detectSecrets(String text) {
   return found;
 }
 
+/// Декодирует файл для поиска секретов без «слепых зон»: UTF-8, при ошибке —
+/// latin1 (однобайтовая, декодирует любые байты). Так guard не пропускает
+/// файл в cp1251/битой кодировке, содержащий ключ.
+String decodeForScan(List<int> bytes) {
+  try {
+    return utf8.decode(bytes);
+  } on FormatException {
+    return latin1.decode(bytes);
+  }
+}
+
 List<File> scannableFiles(Directory root) {
   final result = <File>[];
   for (final entity in root.listSync(recursive: true, followLinks: false)) {
@@ -93,13 +112,7 @@ void main() {
       final files = scannableFiles(root);
       expect(files, isNotEmpty);
       for (final file in files) {
-        final String text;
-        try {
-          text = file.readAsStringSync();
-        } on FileSystemException {
-          // Не декодируется как UTF-8 — значит, бинарный артефакт; пропускаем.
-          continue;
-        }
+        final text = decodeForScan(file.readAsBytesSync());
         for (final secret in detectSecrets(text)) {
           violations.add('${file.path}: $secret');
         }
@@ -147,5 +160,28 @@ void main() {
       expect(lock, isNotEmpty);
       expect(detectSecrets(lock), isEmpty);
     });
+
+    test(
+      'decodeForScan декодирует UTF-8 и не-UTF-8 (latin1) без слепых зон',
+      () {
+        final fake = 'sk-${'proj-'}${'A' * 32}';
+        final utf8Bytes = utf8.encode('ключ = $fake');
+        final cp1251Bytes = <int>[
+          0xea,
+          0xeb,
+          0xfe,
+          0xf7,
+          0x20,
+          ...latin1.encode(fake),
+        ];
+
+        expect(decodeForScan(utf8Bytes), contains(fake));
+        expect(detectSecrets(decodeForScan(cp1251Bytes)), isNotEmpty);
+        expect(
+          detectSecrets(decodeForScan(<int>[0xff, 0xfe, 0x00, 0x41])),
+          isEmpty,
+        );
+      },
+    );
   });
 }

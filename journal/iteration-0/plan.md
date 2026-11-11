@@ -34,7 +34,7 @@
 | 0.5 | `AGENTS.md` — устойчивые правила | `AGENTS.md` | файл ≤ ~80 строк, покрывает TDD/секреты/архитектуру/русский UI |
 | 0.6 | Guard-тесты: no_webview (pubspec.lock+pubspec.yaml, включая транзитивные), ru_strings, no_secrets | `test/guards/*.dart` | тесты зелёные; no_webview проверен на подставленном фейковом lock (smoke в самом тесте) |
 | 0.7 | CI-матрица ubuntu/windows/macos + iOS/macOS сборка без подписи | `.github/workflows/ci.yml` | YAML валиден (разбор в тесте/локально), remote отсутствует → запуск в CI не проверен (KNOWN_LIMITATIONS) |
-| 0.8 | Первый падающий тест: маппинг Again/Hard/Good/Easy → FSRS + минимальный `Scheduler` | `test/unit/domain/scheduler_rating_test.dart`, `lib/domain/...` | красный прогон зафиксирован до реализации; затем зелёный |
+| 0.8 | Первый падающий тест: маппинг Again/Hard/Good/Easy → FSRS + минимальный `Scheduler` | `test/unit/domain/rating_test.dart`, `test/unit/domain/fsrs_scheduler_test.dart`, `lib/domain/...` | красный прогон зафиксирован до реализации; затем зелёный |
 | 0.9 | Каркас архитектуры `lib/{domain,data,api,ui}` (+ `lib/ui/m3e/`, `lib/ui/motion.dart` — токены движения) | файлы-заглушки без мёртвого UI | `flutter analyze` чистый; нет WebView; нет литералов в UI |
 | 0.10 | Покрытие ≥80% рукописного кода | `coverage/lcov.info` | `fvm flutter test --coverage` + расчёт по рукописным файлам |
 | 0.11 | Журнал, ADR, известные ограничения, verify/review/summary, checkpoint-коммит | `journal/STATE.md`, `KNOWN_LIMITATIONS.md`, `journal/iteration-0/*`, коммит | артефакты существуют, доказательства в журнале — только реальные команды этой сессии |

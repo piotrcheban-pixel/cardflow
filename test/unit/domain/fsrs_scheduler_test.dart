@@ -200,4 +200,118 @@ void main() {
       );
     });
   });
+
+  group(
+    'FsrsScheduler: прогноз совпадает с фактическим планированием (A7.2)',
+    () {
+      test('для новой карточки: previewIntervals == due после review', () {
+        final scheduler = FsrsScheduler();
+        final card = SchedulingCard.newCard(cardId: 'card-1', now: now);
+        final preview = scheduler.previewIntervals(card, now: now);
+
+        for (final rating in Rating.values) {
+          final outcome = scheduler.review(card, rating, now: now);
+          expect(
+            outcome.card.due.difference(now),
+            preview[rating],
+            reason: 'оценка $rating',
+          );
+        }
+      });
+
+      test('для карточки в повторении: прогноз равен факту', () {
+        final scheduler = FsrsScheduler();
+        final newCard = SchedulingCard.newCard(cardId: 'card-1', now: now);
+        final reviewCard = scheduler
+            .review(newCard, Rating.easy, now: now)
+            .card;
+        final later = now.add(const Duration(days: 17));
+        final preview = scheduler.previewIntervals(reviewCard, now: later);
+
+        for (final rating in Rating.values) {
+          final outcome = scheduler.review(reviewCard, rating, now: later);
+          expect(
+            outcome.card.due.difference(later),
+            preview[rating],
+            reason: 'оценка $rating',
+          );
+        }
+      });
+    },
+  );
+
+  group('FsrsScheduler: переходы состояний (SPEC A5)', () {
+    test('второй Good в обучении переводит карточку в review', () {
+      final scheduler = FsrsScheduler();
+      final card = SchedulingCard.newCard(cardId: 'card-1', now: now);
+      final first = scheduler.review(card, Rating.good, now: now).card;
+      expect(first.state, CardState.learning);
+      expect(first.step, 1);
+
+      final second = scheduler
+          .review(first, Rating.good, now: now.add(const Duration(minutes: 10)))
+          .card;
+      expect(second.state, CardState.review);
+      expect(second.step, isNull);
+    });
+
+    test('Again из review переводит в relearning с шагом 0', () {
+      final scheduler = FsrsScheduler();
+      final card = SchedulingCard.newCard(cardId: 'card-1', now: now);
+      final reviewCard = scheduler.review(card, Rating.easy, now: now).card;
+      expect(reviewCard.state, CardState.review);
+
+      final relearning = scheduler
+          .review(
+            reviewCard,
+            Rating.again,
+            now: now.add(const Duration(days: 17)),
+          )
+          .card;
+      expect(relearning.state, CardState.relearning);
+      expect(relearning.step, 0);
+      expect(relearning.due, now.add(const Duration(days: 17, minutes: 10)));
+    });
+
+    test('Good из relearning завершает переобучение (review)', () {
+      final scheduler = FsrsScheduler();
+      final card = SchedulingCard.newCard(cardId: 'card-1', now: now);
+      final reviewCard = scheduler.review(card, Rating.easy, now: now).card;
+      final afterAgain = scheduler
+          .review(
+            reviewCard,
+            Rating.again,
+            now: now.add(const Duration(days: 17)),
+          )
+          .card;
+      final afterGood = scheduler
+          .review(
+            afterAgain,
+            Rating.good,
+            now: now.add(const Duration(days: 17, minutes: 10)),
+          )
+          .card;
+
+      expect(afterGood.state, CardState.review);
+      expect(afterGood.step, isNull);
+    });
+  });
+
+  group('FsrsScheduler: UTC-нормализация', () {
+    test('локальный now приводится к UTC в reviewedAt и due', () {
+      final scheduler = FsrsScheduler();
+      final card = SchedulingCard.newCard(cardId: 'card-1', now: now);
+      final localNow = DateTime(2026, 11, 11, 15); // локальное время хоста
+
+      final outcome = scheduler.review(card, Rating.good, now: localNow);
+
+      expect(outcome.reviewedAt.isUtc, isTrue);
+      expect(outcome.reviewedAt, localNow.toUtc());
+      expect(outcome.card.due.isUtc, isTrue);
+      expect(
+        outcome.card.due,
+        localNow.toUtc().add(const Duration(minutes: 10)),
+      );
+    });
+  });
 }

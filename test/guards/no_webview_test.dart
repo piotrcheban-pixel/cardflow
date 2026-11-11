@@ -126,6 +126,21 @@ packages:
       );
     });
 
+    test('находит запрещённый пакет в кавычках и flow-style YAML', () {
+      expect(
+        forbiddenPackagesIn('{"webview_flutter": "^4.0.0"}'),
+        contains('webview_flutter'),
+      );
+      expect(
+        forbiddenPackagesIn("dependencies: {flutter_html: ^3.0.0}"),
+        contains('flutter_html'),
+      );
+      expect(
+        forbiddenPackagesIn("'flutter_inappwebview_android': any"),
+        contains('flutter_inappwebview_android'),
+      );
+    });
+
     test('реальный pubspec.lock проекта существует и непустой', () {
       final lock = File(
         '${projectRoot().path}${Platform.pathSeparator}pubspec.lock',

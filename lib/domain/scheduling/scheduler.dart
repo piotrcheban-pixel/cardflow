@@ -115,19 +115,16 @@ class FsrsScheduler implements Scheduler {
   static SchedulingCard _fromFsrsCard(
     fsrs.Card reviewed, {
     required String originalCardId,
-  }) {
-    final isNew =
-        reviewed.state == fsrs.State.learning && reviewed.lastReview == null;
-    return SchedulingCard(
-      cardId: originalCardId,
-      state: isNew
-          ? CardState.newState
-          : FsrsMapper.fromFsrsState(reviewed.state),
-      step: reviewed.step,
-      stability: reviewed.stability,
-      difficulty: reviewed.difficulty,
-      due: reviewed.due.toUtc(),
-      lastReview: reviewed.lastReview?.toUtc(),
-    );
-  }
+  }) => SchedulingCard(
+    cardId: originalCardId,
+    // После reviewCard() lastReview всегда установлен, поэтому состояния
+    // FSRS learning/review/relearning маппятся 1:1; «new» существует только
+    // до первого повторения (см. SchedulingCard.newCard).
+    state: FsrsMapper.fromFsrsState(reviewed.state),
+    step: reviewed.step,
+    stability: reviewed.stability,
+    difficulty: reviewed.difficulty,
+    due: reviewed.due.toUtc(),
+    lastReview: reviewed.lastReview?.toUtc(),
+  );
 }

@@ -37,20 +37,21 @@
 | [json_schema](https://pub.dev/packages/json_schema) | `^5.2.2` | локальная валидация ответа модели по A8.4 | чистый Dart | Boost-1.0 (LICENSE в репо; pub.dev license-tag отсутствует) | needs-runtime-spike; fallback `json_schema_builder ^0.1.7` |
 | [flutter_math_fork](https://pub.dev/packages/flutter_math_fork) | `^0.7.4` | единственный разрешённый LaTeX-рендер (A1/AGENTS) | Android, iOS, Linux, macOS, Windows, Web | Apache-2.0 | approved · needs-runtime-spike (релиз 2025-05-21, проверить на Flutter 3.47) |
 | [archive](https://pub.dev/packages/archive) | `^4.6.0` | `.zip` экспорт/импорт; ZIP-контейнер DOCX/PPTX/ODT/XLSX (A8.3) | чистый Dart | MIT | approved |
-| [xml](https://pub.dev/packages/xml) | `^7.1.0` | разбор XML внутри DOCX/PPTX/ODT/XLSX (A8.3) | чистый Dart | MIT | approved |
+| [xml](https://pub.dev/packages/xml) | `^7.0.1` (факт; кандидат был 7.1.0 ниже sdk-constraint) | разбор XML внутри DOCX/PPTX/ODT/XLSX (A8.3) | чистый Dart | MIT | approved |
 | [excel_plus](https://pub.dev/packages/excel_plus) | `^2.29.2` | XLSX (замена устаревшего `excel`); читает и legacy `.xls` (BIFF8) — кандидат для ADR-003 | чистый Dart | MIT | approved · needs-runtime-spike (A8.3 «формулы по кэшированному значению», фикстуры) |
-| [file_picker](https://pub.dev/packages/file_picker) | `^13.3.3` | пикер файлов (A6.8/A8.3) | Android, iOS, Linux, macOS, Windows, Web | MIT | approved |
+| [file_picker](https://pub.dev/packages/file_picker) | `^13.3.3` | пикер файлов (A6.8/A8.3) | Android, iOS, Linux, macOS, Windows, Web | MIT | approved · версия ниже 12 конфликтует с `desktop_drop 0.9.x`; берём 13.3.3 + `desktop_drop 0.8.4` (см. §7) |
 | [desktop_drop](https://pub.dev/packages/desktop_drop) | **`^0.8.4`** (факт; кандидат был `^0.9.2`) | drag-n-drop на ПК (A3) | Android, iOS, Linux, macOS, Windows, Web | Apache-2.0 | approved с ограничением: `desktop_drop >=0.9.0` требует `cross_file ^0.4.0`, а `file_picker >=12` — `cross_file ^0.3.5+4`; совместная версия невозможна. Взят 0.8.4 (`cross_file ^0.3.4+2`). `super_drag_and_drop` 0.9.1 не разрешился (старый `super_native_extensions`); его ветка 0.1.9+3 неприемлема. Пересмотреть в итерации 3c |
 | [url_launcher](https://pub.dev/packages/url_launcher) | `^6.3.3` | «Где взять ключ», лицензии — системный браузер (A3) | Android, iOS, Linux, macOS, Windows, Web | BSD-3-Clause | approved |
 | [pdfrx](https://pub.dev/packages/pdfrx) | `^2.12.0` | текстовый слой PDF через PDFium/FFI (A8.3) | Android, iOS, Linux, macOS, Windows, Web | MIT (PDFium — BSD-3-Clause) | approved · needs-runtime-spike (Windows: Developer Mode для сборки) |
 | [go_router](https://pub.dev/packages/go_router) | `^18.1.4` | роутинг (AGENTS) | все (flutter) | BSD-3-Clause | approved · требует `material_ui ^1.0.0` |
 | [flutter_riverpod](https://pub.dev/packages/flutter_riverpod) | `^3.5.0` | управление состоянием, manual providers без кодогенерации (ADR-002) | все (flutter) | MIT | **approved** |
-| [riverpod](https://pub.dev/packages/riverpod) | `^3.5.0` | `ProviderContainer`/провайдеры в чистых Dart-тестах domain | чистый Dart | MIT | approved |
+| [riverpod](https://pub.dev/packages/riverpod) | `^3.5.0` (транзитивно) | `ProviderContainer`/провайдеры в чистых Dart-тестах domain | чистый Dart | MIT | approved · приходит транзитивно с `flutter_riverpod`; в pubspec не добавлялся |
 | [path_provider](https://pub.dev/packages/path_provider) | `^2.1.6` | каталоги БД/медиа | Android, iOS, Linux, macOS, Windows | BSD-3-Clause | approved |
 | [uuid](https://pub.dev/packages/uuid) | `^4.6.0` | `TEXT PRIMARY KEY` id (A5) | чистый Dart | MIT | approved |
 | [crypto](https://pub.dev/packages/crypto) | `^3.0.8` | `content_hash` (A5, дедупликация A8.5) | чистый Dart | BSD-3-Clause | approved |
 | [intl](https://pub.dev/packages/intl) | `^0.20.3` | даты/числа/ICU-плюрализация | чистый Dart | BSD-3-Clause | approved · **жёстко** `^0.20.3`: `flutter_localizations` 3.47.9 пинит этот constraint |
-| [path](https://pub.dev/packages/path) | `^1.9.1` | пути к файлам | чистый Dart | BSD-3-Clause | approved |
+| [dynamic_color](https://pub.dev/packages/dynamic_color) | `^2.1.0` | dynamic color (A4.1): Android 12+ / Linux / macOS / Windows; публикатор material.io, Apache-2.0 | Android, Linux, macOS, Windows (на iOS — no-op) | Apache-2.0 | approved · **пока не используется**, подключается в итерации 7 (KNOWN_LIMITATIONS L6c) |
+| [path](https://pub.dev/packages/path) | `^1.9.1` (транзитивно) | пути к файлам | чистый Dart | BSD-3-Clause | approved · транзитивная зависимость; прямой необходимости в pubspec пока нет |
 | [collection](https://pub.dev/packages/collection) | `^1.19.1` | утилиты коллекций | чистый Dart | BSD-3-Clause | approved |
 | [enough_convert](https://pub.dev/packages/enough_convert) | `^1.7.1` | кодировки для TXT/MD/RTF (A8.3): Windows-1251 (cp1251) и **KOI8-R**/KOI8-U, ISO-8859, DOS, GBK, Big5 | чистый Dart | MPL-2.0 | approved · **добавить в итерации 3a** (сейчас не нужен) · needs-runtime-spike (проверить cp1251 и KOI8-R на фикстурах) |
 | `flutter` | SDK | UI | — | BSD-3-Clause | approved |
@@ -67,7 +68,6 @@
 | [freezed](https://pub.dev/packages/freezed) | `^4.0.3` | immutable-модели | MIT | approved (sdk `>=3.13.0` — совпадает с пином) |
 | [json_serializable](https://pub.dev/packages/json_serializable) | `^6.15.2` | JSON-сериализация | BSD-3-Clause | approved |
 | [flutter_lints](https://pub.dev/packages/flutter_lints) | `^6.0.0` | анализатор | BSD-3-Clause | approved |
-| [test](https://pub.dev/packages/test) | `^1.33.0` | юнит-тесты domain | BSD-3-Clause | approved |
 | [mocktail](https://pub.dev/packages/mocktail) | `^1.0.5` | моки (без кодогенерации) | MIT | approved |
 
 ## 4. Отклонённые / заменённые пакеты

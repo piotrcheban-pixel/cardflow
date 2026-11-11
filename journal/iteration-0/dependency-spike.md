@@ -268,6 +268,8 @@ final Map<Rating, Duration> forecast = {
 
 ## 9. Факты после записи документов (наблюдение 2026-11-11 19:06–19:08, файлы Lead; не правились — вне write-scope)
 
+> **Статус на момент приёмки итерации 0:** все перечисленные ниже несоответствия pubspec исправлены Lead'ом (super_drag_and_drop удалён, annotations перенесены в dependencies, lock пересобран, desktop_drop зафиксирован 0.8.4 из-за конфликта cross_file, nough_convert/drift_flutter отложены до итераций 3a/1). Фактическое состояние — docs/dependencies.md §7.
+
 Lead параллельно создал Flutter-проект. На момент проверки: `pubspec.yaml` (mtime 19:06:48), `pubspec.lock` (19:06:37), `.dart_tool/package_config.json` (19:06:37) существуют → `pub get` выполнялся, **но lock старше pubspec** (после `pub get` в pubspec добавлены `desktop_drop: 0.8.4` и `super_drag_and_drop: ^0.1.9+3`, которых в lock/package_config нет) → требуется повторный `fvm flutter pub get`.
 
 Разрешённые версии **совпадают с рекомендациями** этого спайка: `material_ui 1.11.0`, `material_3_expressive 1.2.0`, `fsrs 2.0.1`, `drift 2.35.4`, `sqlite3 3.9.1`, `dio 5.11.1`, `flutter_secure_storage 11.2.0`, `go_router 18.1.4`, `flutter_riverpod 3.5.0` (+`riverpod 3.5.0` транзитивно), `json_schema 5.2.2`, `pdfrx 2.12.0`, `excel_plus 2.29.2`, `flutter_math_fork 0.7.4`, `intl 0.20.3`, `freezed 4.0.3`, `cupertino_ui 1.1.6`, `motor 1.1.0`. `pubspec.lock` sdk: dart `>=3.13.7 <4.0.0`, flutter `>=3.47.0`.

@@ -15,6 +15,7 @@
 | L5 | Навыки `tdd-workflow`, `dart-flutter-patterns`, `flutter-dart-code-review`, `material-3-skill`, `api-design`, `security-review`, `verification-loop`, `coding-standards` недоступны | в каталоге навыков сессии их нет (проверено) | работа по правилам `docs/agent-prompt.md` | когда навыки появятся в каталоге |
 | L6 | Golden-тесты не прогоняются локально | в итерации 0 golden-тестов нет; стандартные шрифты Flutter не содержат кириллицы | при появлении golden: тег `golden`, явный шрифт с кириллицей, Linux CI | на Linux CI |
 | L6b | M3E-виджеты (`M3EMaterialApp`, `M3ETheme`) ещё не используются в UI | в итерации 0 нет ни одного экрана с компонентами; спайк S2 завершается в итерации 1 | фасад `lib/ui/m3e/`, токены сверены тестом; fallback-план в ADR-001 | итерация 1 (экран «Колоды») |
+| L6c | Dynamic color (A4.1) ещё не подключён в UI | настройка внешнего вида — итерация 7; пакет `dynamic_color` 2.1.0 (Apache-2.0, material.io) добавлен заранее | тема пока строится из бренд-сида (`ColorScheme.fromSeed`); переключатель будет в настройках | итерация 7 |
 
 ## Продукт (перенесено из SPEC / ADR)
 

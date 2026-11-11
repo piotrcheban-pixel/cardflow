@@ -57,6 +57,20 @@ void main() {
       );
     });
 
+    test('обратный маппинг состояний покрывает все состояния FSRS', () {
+      // В fsrs 2.0.1 State.new нет — проверяем и это условие совместимости.
+      expect(fsrs.State.values, hasLength(3));
+      expect(FsrsMapper.fromFsrsState(fsrs.State.learning), CardState.learning);
+      expect(FsrsMapper.fromFsrsState(fsrs.State.review), CardState.review);
+      expect(
+        FsrsMapper.fromFsrsState(fsrs.State.relearning),
+        CardState.relearning,
+      );
+      for (final state in fsrs.State.values) {
+        expect(FsrsMapper.toFsrsState(FsrsMapper.fromFsrsState(state)), state);
+      }
+    });
+
     test('проводные имена состояний соответствуют SPEC A5', () {
       expect(CardState.newState.wireName, 'new');
       expect(CardState.learning.wireName, 'learning');

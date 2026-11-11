@@ -77,6 +77,27 @@ void main(List<String> args) {
     'порог ${minPercent.toStringAsFixed(1)}%',
   );
 
+  // Предупреждение о рукописных файлах lib/, не попавших в lcov
+  // (например, точка входа lib/main.dart не исполняется в тестах).
+  final measured = handwritten
+      .map((record) => record.path.replaceAll(r'\', '/'))
+      .toSet();
+  final missing = <String>[];
+  final libDir = Directory('lib');
+  if (libDir.existsSync()) {
+    for (final entity in libDir.listSync(recursive: true, followLinks: false)) {
+      if (entity is! File) continue;
+      final path = entity.path.replaceAll(r'\', '/');
+      if (!path.endsWith('.dart')) continue;
+      if (generated.any((pattern) => pattern.hasMatch(path))) continue;
+      if (measured.contains(path)) continue;
+      missing.add(path);
+    }
+  }
+  if (missing.isNotEmpty) {
+    stdout.writeln('\nНе измерены (нет в lcov): ${missing.join(', ')}');
+  }
+
   if (percent + 1e-9 < minPercent) {
     stderr.writeln(
       'ПОКРЫТИЕ НИЖЕ ПОРОГА: ${percent.toStringAsFixed(1)}% < $minPercent%',

@@ -27,19 +27,21 @@ fvm flutter test test/unit/domain/rating_test.dart test/unit/domain/fsrs_schedul
 ```
 Причина падения — ожидаемая: тесты написаны до реализации (`lib/domain/scheduling/*`, `lib/ui/motion.dart`, `lib/ui/app.dart` отсутствовали).
 
+> **Оговорка о типе красной фазы (найдено ревью, L3):** для новых модулей падение красной фазы — уровня компиляции (типы/файлы отсутствуют), assertion-level красный прогон до появления API невозможен. Для итераций 1+ красная фаза пишется на существующий код с проверкой поведения (assertion-level), это зафиксировано как процессное улучшение в `AGENTS.md`/журнале.
+
 ## 3. Зелёная фаза (шаг 3)
 
 | Проверка | Команда | Результат |
 |---|---|---|
-| Полный прогон тестов | `fvm flutter test` | **58 passed**, 0 failed (EXIT 0) |
+| Полный прогон тестов | `fvm flutter test` | **75 passed**, 0 failed (EXIT 0) |
 | Анализатор | `fvm flutter analyze` | **No issues found!** (ran in 11.2s), EXIT 0 |
 | Форматирование | `fvm dart format .` | `Formatted 21 files (0 changed)` |
 | Локализация | `fvm flutter gen-l10n` | EXIT 0, сгенерированы `lib/l10n/app_localizations.dart`, `app_localizations_ru.dart`; повторный `gen-l10n` идемпотентен (хеши не меняются), `dart format` на сгенерированных файлах — 0 изменений |
 | pub get | `fvm flutter pub get` | `Got dependencies!`, EXIT 0 |
-| Guard-тесты | `fvm flutter test test/guards` | 24 passed (no_webview 11, ru_strings 7, no_secrets 6) |
+| Guard-тесты | `fvm flutter test test/guards` | 34 passed (architecture 6, no_webview 9, ru_strings 11, no_secrets 8) |
 | Формат-детекторы guard-тестов | самопроверки внутри guard-файлов | ловят подставные нарушения (транзитивный `flutter_inappwebview_android`, английский текст, литерал в `Text(...)`, фейковый ключ) |
 
-Состав тестов: домен FSRS (маппинг оценок/состояний, интервалы 4 оценок, иммутабельность, сериализация, assert UTC, ошибки `fromWireName`) — 23; motion/M3E-токены — 8; локализация — 3; guard-тесты — 24. Всего 58.
+Состав тестов: домен FSRS (маппинг оценок/состояний, интервалы 4 оценок, совпадение прогноза с фактом, переходы learning/review/relearning, иммутабельность, сериализация, assert UTC, нормализация локального now→UTC, ошибки) — 30; motion/M3E-токены — 8; локализация — 3; guard-тесты (no_webview, ru_strings, no_secrets, architecture) — 34. Всего 75.
 
 Найденный и исправленный в ходе verify дефект: guard `no_secrets` падал на бинарных артефактах сборки (`windows/flutter/ephemeral/*.dll.exp`, ошибка UTF-8). Исправлено: каталог `ephemeral` исключён, не декодирующиеся файлы пропускаются (с комментарием). Это доказывает, что guard-тест действительно работает на реальном дереве, а не только на синтетике.
 
@@ -50,9 +52,9 @@ fvm flutter test --coverage
 fvm dart run tool/coverage_check.dart --min=80
 → 94.4% fsrs_mapper.dart, 100% rating.dart, 100% scheduler.dart, 100% scheduling_card.dart,
   100% app.dart, 100% motion.dart, 100% app_theme.dart
-→ Итого: 99.3% (135/136), порог 80.0% — ПОРОГ ПРОЙДЕН
+→ Итого: 100.0% (135/135), порог 80.0% — ПОРОГ ПРОЙДЕН
 ```
-Сгенерированные файлы (`app_localizations*.dart`, `*.g.dart`, `*.freezed.dart`) из подсчёта исключены.
+Сгенерированные файлы (`app_localizations*.dart`, `*.g.dart`, `*.freezed.dart`) из подсчёта исключены. Инструмент предупреждает о рукописных файлах вне lcov: `lib/main.dart` (точка входа `runApp`, не исполняется тестами) и `lib/ui/m3e/m3e.dart` (только `export`) — в процент не входят, т.к. не содержат исполняемых строк.
 
 ## 5. Сборки и платформы
 
@@ -83,14 +85,16 @@ python -c "yaml.safe_load('.github/workflows/ci.yml')" → jobs: quality, test, 
 | 3 | `SPEC.md` и `docs/agent-prompt.md` на месте | **выполнено** | `SPEC.md` в корне (sha256 = `work/SPEC.md`), `docs/agent-prompt.md` — копия разделов 0–14 |
 | 4 | `docs/dependencies.md` + ADR-001/002/003 | **выполнено** | файлы на месте; ADR-004 (FSRS defaults) добавлен; `docs/dependencies.md` §7 — фактическое состояние |
 | 5 | Локализация `ru`: ARB, `supportedLocales: [ru]`, `flutter_localizations` | **выполнено** | `lib/l10n/app_ru.arb`, gen-l10n, widget-тест: локаль `ru`, «Отмена»/«Вставить»/«ОК» из material_ui |
-| 6 | Guard-тесты зелёные (WebView, ru-строки, секреты) | **выполнено** | `fvm flutter test test/guards` — 24 passed; самопроверки детекторов |
+| 6 | Guard-тесты зелёные (WebView, ru-строки, секреты) | **выполнено** | `fvm flutter test test/guards` — 34 passed; дополнительно `architecture_test.dart` (запрет framework-Material, M3E только в lib/ui/m3e/, domain без Flutter) |
 | 7 | CI-матрица ubuntu + windows + macos | **выполнено (файл), запуск не проверен** | `ci.yml` валиден (pyyaml), 4 job'а; прогон — L3 |
-| 8 | Первый тест FSRS: красный → зелёный, `Scheduler`-адаптер | **выполнено** | §2 (красный: EXIT 1, нет `lib/`), §3 (58 passed); `lib/domain/scheduling/scheduler.dart` |
+| 8 | Первый тест FSRS: красный → зелёный, `Scheduler`-адаптер | **выполнено** | §2 (красный: EXIT 1, нет `lib/`), §3 (75 passed); `lib/domain/scheduling/scheduler.dart` |
 | 9 | `STATE.md` заполнен, checkpoint-коммит, отчёт | **выполнено** | `journal/STATE.md`; коммиты `20698fe`, `ba4f37a` (+ финальный); отчёт владельцу |
-| 10 | `flutter analyze` 0 issues, `dart format`, тесты, покрытие ≥80% | **выполнено** | §3, §4 (99.3%) |
+| 10 | `flutter analyze` 0 issues, `dart format`, тесты, покрытие ≥80% | **выполнено** | §3, §4 (100%) |
 | 11 | M3E-слой `lib/ui/m3e/` + токены движения | **частично** | фасад и сверка токенов M3E↔SPEC есть (тест); M3E-виджеты и `M3EMaterialApp` — итерация 1 (спайк S2) |
 | 12 | Сборки под доступные платформы | **частично** | Windows: тулчейн подтверждён bare-проектом, сборка CardFlow блокирована ATL (L2b); остальное — CI/не проверено |
 | 13 | Хуки smoke-тест | **не проверено** | хуки не подключены (L4) |
+
+> **Пометка (L12 ревью):** задачи плана 0.3/0.5/0.7 (проект/FVM, AGENTS.md, CI) закрыты файлами и командами, а не тестами — это конфигурационные артефакты; их проверка — команды из §1/§6 и статический разбор CI, что указано в таблице.
 
 ## 9. Не проверено и почему (см. `journal/KNOWN_LIMITATIONS.md`)
 
@@ -101,3 +105,6 @@ L3 — CI не запускался (нет GitHub-remote).
 L4 — хуки DSH не подключены, smoke-тест невозможен.
 L5 — навыки Flutter из промпта отсутствуют в каталоге DSH.
 L6 — golden-тестов в итерации 0 нет (по плану — с первыми экранами; тогда Linux CI + явный шрифт).
+L6c — dynamic color (A4.1) ещё не подключён в UI (пакет `dynamic_color` добавлен; настройка — итерация 7).
+L10 — `desktop_drop` 0.8.4 вместо 0.9.2 (конфликт `cross_file`), см. `docs/dependencies.md` §7.
+

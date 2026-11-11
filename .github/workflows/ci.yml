@@ -41,7 +41,7 @@ jobs:
       - name: Форматирование (dart format)
         run: dart format --output=none --set-exit-if-changed .
       - name: Анализатор (0 issues)
-        run: flutter analyze --no-fatal-infos
+        run: flutter analyze
 
   test:
     name: test (${{ matrix.os }})

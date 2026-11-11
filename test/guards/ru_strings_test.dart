@@ -63,7 +63,11 @@ List<String> latinOutsideAllowList(String message) {
   final sorted = [...allowedLatinTokens]
     ..sort((a, b) => b.length.compareTo(a.length));
   for (final token in sorted) {
-    text = text.replaceAll(token, ' ');
+    // Слово-целиком: «PDF» в «PDF-файл» разрешён, «MDX» — нет (не allow-list).
+    text = text.replaceAll(
+      RegExp('(?<![A-Za-z])${RegExp.escape(token)}(?![A-Za-z])'),
+      ' ',
+    );
   }
   for (final keyword in _icuKeywords) {
     text = text.replaceAll(RegExp('\\b$keyword\\b'), ' ');
@@ -74,15 +78,27 @@ List<String> latinOutsideAllowList(String message) {
       .toList();
 }
 
-/// Ищет прямые строковые литералы, переданные в `Text(...)`.
+/// Ищет строковые литералы, переданные в текстовые виджеты напрямую:
+/// `Text('…')`, `SelectableText('…')`, `Text.rich(TextSpan(text: '…'))`.
 List<String> hardcodedTextLiterals(String dartSource) {
-  final pattern = RegExp('''\\bText\\s*\\(\\s*(?:const\\s+)?['"]''');
-  return pattern
-      .allMatches(dartSource)
+  final patterns = <RegExp>[
+    RegExp('''\\b(?:Text|SelectableText)\\s*\\(\\s*(?:const\\s+)?['"]'''),
+    RegExp(
+      '''\\bText\\.rich\\s*\\(\\s*(?:const\\s+)?TextSpan\\s*\\(\\s*text\\s*:\\s*['"]''',
+    ),
+  ];
+  final matches = <int>[];
+  for (final pattern in patterns) {
+    for (final match in pattern.allMatches(dartSource)) {
+      matches.add(match.start);
+    }
+  }
+  matches.sort();
+  return matches
       .map(
-        (match) => dartSource.substring(
-          match.start,
-          (match.start + 40).clamp(0, dartSource.length),
+        (start) => dartSource.substring(
+          start,
+          (start + 40).clamp(0, dartSource.length),
         ),
       )
       .toList();
@@ -175,6 +191,12 @@ void main() {
       expect(latinOutsideAllowList('Экспорт в XLSX-файл'), isEmpty);
     });
 
+    test('allow-list действует по границам слов: MDX не разрешён', () {
+      expect(latinOutsideAllowList('Файл MDX'), isNotEmpty);
+      expect(latinOutsideAllowList('Формат MD'), isEmpty);
+      expect(latinOutsideAllowList('Файл PDF-документ'), isEmpty);
+    });
+
     test('понимает ICU-плюрализацию и подстановки', () {
       const message =
           '{count, plural, =0{нет карточек} one{одна карточка} few{# карточки} many{# карточек} other{# карточки}}';
@@ -192,6 +214,18 @@ void main() {
       expect(hardcodedTextLiterals("Text(\n  'Привет',\n)"), hasLength(1));
       expect(hardcodedTextLiterals('Text(l10n.appTitle)'), isEmpty);
       expect(hardcodedTextLiterals('Text(context.l10n.appTitle)'), isEmpty);
+    });
+
+    test('ловит литералы в SelectableText и Text.rich', () {
+      expect(hardcodedTextLiterals("SelectableText('Привет')"), hasLength(1));
+      expect(
+        hardcodedTextLiterals("Text.rich(TextSpan(text: 'Привет'))"),
+        hasLength(1),
+      );
+      expect(
+        hardcodedTextLiterals('Text.rich(TextSpan(text: l10n.appTitle))'),
+        isEmpty,
+      );
     });
 
     test('ARB существует по ожидаемому пути', () {

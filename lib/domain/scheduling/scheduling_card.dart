@@ -41,6 +41,9 @@ class SchedulingCard {
   /// Создаёт снимок состояния.
   ///
   /// [due] и [lastReview] должны быть в UTC — FSRS-пакет принимает только UTC.
+  /// Инвариант проверяется `assert` (debug); в release его обеспечивает
+  /// адаптер `FsrsScheduler`, который всегда приводит время через `toUtc()`
+  /// (осознанное решение: не платить проверкой за каждую карточку в hot path).
   SchedulingCard({
     required this.cardId,
     required this.state,
