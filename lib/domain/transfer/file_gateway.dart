@@ -1,0 +1,27 @@
+import 'dart:typed_data';
+
+/// Абстракция файловых операций для импорта/экспорта `.zip`.
+///
+/// UI вызывает её через `fileGatewayProvider`; в widget-тестах подменяется
+/// фейком (плагин `file_picker` в тестах не поднимается). Реализация —
+/// `FilePickerGateway` в `lib/data/transfer/`.
+///
+/// Контракт сохранения спроектирован под `file_picker` 13.3.3: на мобильных
+/// платформах `saveFile` сам записывает байты и возвращает `content://`-URI
+/// (dart:io с ним не работает), на desktop — путь к файлу. Поэтому «выбрать
+/// путь» и «записать» объединены в один вызов [saveZipFile] (ADR-006).
+abstract interface class FileGateway {
+  /// Открывает системный пикер и возвращает путь к выбранному `.zip`
+  /// (или `null`, если пользователь отменил выбор).
+  Future<String?> pickZipToImport();
+
+  /// Предлагает сохранить zip под именем [suggestedFileName] с содержимым
+  /// [bytes]; возвращает `true`, если файл сохранён, `false` — при отмене.
+  Future<bool> saveZipFile({
+    required String suggestedFileName,
+    required Uint8List bytes,
+  });
+
+  /// Читает файл целиком (для пути, полученного из [pickZipToImport]).
+  Future<Uint8List> readFile(String path);
+}
