@@ -823,6 +823,28 @@ void main() {
       );
     });
 
+    test('пустое имя колоды → invalidMeta (M10)', () {
+      final bytes = _validZip(
+        meta: _metaMap(deck: _deckMap(name: '')),
+      );
+
+      expect(
+        () => _codec.decode(bytes),
+        _throwsArchiveError(ArchiveErrorCode.invalidMeta),
+      );
+    });
+
+    test('пробельное имя колоды → invalidMeta (M10)', () {
+      final bytes = _validZip(
+        meta: _metaMap(deck: _deckMap(name: '   ')),
+      );
+
+      expect(
+        () => _codec.decode(bytes),
+        _throwsArchiveError(ArchiveErrorCode.invalidMeta),
+      );
+    });
+
     test('неизвестные ключи meta игнорируются (forward-compat)', () {
       final meta = _metaMap()..['future_field'] = <String, Object?>{'a': 1};
 
@@ -1035,6 +1057,9 @@ void main() {
     for (final String name in <String>[
       '../evil.json',
       '/абс/evil.json',
+      r'C:\evil.json',
+      'C:/evil.json',
+      r'media\evil',
       'media/../evil',
       'media/a/b',
       'extra.txt',
@@ -1110,6 +1135,39 @@ void main() {
 
       expect(
         () => codec.decode(_validZip()),
+        _throwsArchiveError(ArchiveErrorCode.tooLarge),
+      );
+    });
+
+    test('число zip-записей больше maxEntries → tooLarge (M8)', () {
+      final bytes = _validZip(
+        cards: <Map<String, Object?>>[
+          _cardMap(media: <Object?>[_mediaRef()]),
+        ],
+        media: <String, List<int>>{
+          'media/media-1': <int>[1],
+        },
+      ); // meta.json + cards.json + media/media-1 = 3 записи
+      final codec = ZipDeckArchiveCodec(maxEntries: 2);
+
+      expect(
+        () => codec.decode(bytes),
+        _throwsArchiveError(ArchiveErrorCode.tooLarge),
+      );
+    });
+
+    test('maxEntries проверяется раньше имён записей (M8)', () {
+      final bytes = _zipOf(
+        metaRaw: jsonEncode(_metaMap()),
+        cardsRaw: jsonEncode(<String, Object?>{'cards': []}),
+        extra: <String, List<int>>{
+          'extra.txt': <int>[1],
+        },
+      ); // 3 записи, одна с недопустимым именем
+      final codec = ZipDeckArchiveCodec(maxEntries: 2);
+
+      expect(
+        () => codec.decode(bytes),
         _throwsArchiveError(ArchiveErrorCode.tooLarge),
       );
     });

@@ -11,13 +11,14 @@ import 'package:cardflow/ui/state/app_providers.dart';
 import 'package:cardflow/ui/state/decks_ui_providers.dart';
 
 /// Действие контекстного меню карточки колоды.
-enum _DeckMenuAction { rename, export, delete }
+enum _DeckMenuAction { archive, rename, export, delete }
 
 /// Экран «Колоды» (SPEC A6.2).
 ///
-/// Поиск, чипы фильтра, карточки колод на `M3ECard`, архив свайпом с
-/// undo-снекбаром, контекстное меню (переименовать/экспорт/удалить),
-/// Split-кнопка и Extended FAB создания, импорт ZIP. Строки — из ARB.
+/// Поиск, чипы фильтра, карточки колод на `M3ECard`, архив свайпом или из
+/// контекстного меню (доступность, M11) с undo-снекбаром, контекстное меню
+/// (архивировать/переименовать/экспорт/удалить), Split-кнопка и Extended FAB
+/// создания, импорт ZIP. Строки — из ARB.
 class DecksScreen extends ConsumerWidget {
   /// Создаёт экран.
   const DecksScreen({super.key});
@@ -202,6 +203,12 @@ class DecksScreen extends ConsumerWidget {
                   Navigator.of(sheetContext).pop(_DeckMenuAction.export),
             ),
             ListTile(
+              leading: const Icon(Icons.archive_outlined),
+              title: Text(l10n.deckActionArchive),
+              onTap: () =>
+                  Navigator.of(sheetContext).pop(_DeckMenuAction.archive),
+            ),
+            ListTile(
               leading: const Icon(Icons.delete_outline),
               title: Text(l10n.delete),
               onTap: () =>
@@ -213,6 +220,8 @@ class DecksScreen extends ConsumerWidget {
     );
     if (action == null || !context.mounted) return;
     switch (action) {
+      case _DeckMenuAction.archive:
+        await _archiveDeck(context, ref, summary);
       case _DeckMenuAction.rename:
         await renameDeck(context, ref, deck: summary.deck);
       case _DeckMenuAction.export:

@@ -288,9 +288,10 @@ class DriftDeckTransferService implements DeckTransferService {
     return unique;
   }
 
-  /// `content_hash` карточки: из архива или вычисленный (SPEC A5/A8.5).
+  /// `content_hash` карточки: **всегда пересчитывается** из `front`/`back`
+  /// (M9: значению `content_hash` из архива не доверяем; SPEC A5/A8.5).
   String _effectiveContentHash(Card card) =>
-      card.contentHash ?? contentHashOf(front: card.front, back: card.back);
+      contentHashOf(front: card.front, back: card.back);
 
   /// Относительный путь нового медиафайла: `media/<uuid>` + безопасное
   /// расширение исходного пути (MIME всё равно хранится в таблице).

@@ -287,3 +287,91 @@ No issues found! (10.8s)
 запись `content://` на mobile (только фейковый `FilePickerPlatform`); Android/iOS-сборки
 локально недоступны (известное ограничение хоста).
 
+---
+
+# Fix-итерация по ревью (task-5): H1 / M8 / M9 / M10
+
+**Дата:** 2026-11-12 · **Основание:** независимое ревью итерации 1 (findings H1, M8, M9,
+M10), `journal/iteration-1/review.md` (полная версия появится у Lead). Контракт домена
+уже поправлен Lead'ом: `DeckArchiveLimits.maxEntries = 10000`, dartdoc
+`FileGateway.readFile` требует проверку размера до чтения. Домен не менялся.
+
+## 13. Что исправлено
+
+| Finding | Исправление | Файл |
+|---|---|---|
+| **H1** (OOM на больших архивах) | `FilePickerGateway.readFile`: `File(path).length()` до `readAsBytes`; `length > maxFileBytes` → `ArchiveException(tooLarge)`. Лимит инжектируемый: `FilePickerGateway({maxFileBytes = DeckArchiveLimits.maxImportBytes})`. | `file_picker_gateway.dart` |
+| **M8** (нет лимита на число записей) | `ZipDeckArchiveCodec.decode`: после безопасного чтения zip и **до** валидации имён/содержимого — `archive.files.length > maxEntries` → `tooLarge`. Параметр `maxEntries` инжектируемый (default `DeckArchiveLimits.maxEntries`). | `zip_deck_archive_codec.dart` |
+| **M9** (доверие `content_hash` из архива) | `DriftDeckTransferService`: `content_hash` **всегда пересчитывается** `contentHashOf(front, back)`; по нему же дедупликация и запись в БД. `previewImport` использует тот же пересчёт (одинаково с `importZip`). | `drift_deck_transfer_service.dart` |
+| **M10** (пустое имя колоды) | decode: `deck.name.trim().isEmpty` → `invalidMeta`; `importZip` `deckName` уже триммится, пустой после trim = нет override (добавлен тест). | `zip_deck_archive_codec.dart`, `drift_deck_transfer_service.dart` |
+
+Добавлены тесты: H1 — 2 шт. (файл больше лимита → `tooLarge`; файл ровно в лимите
+читается); M8 — 2 шт. (N+1 записей → `tooLarge`; проверка раньше имён записей);
+M9 — 2 шт. (подменённый хеш пересчитывается; дубликаты по пересчитанному хешу);
+M10 — 3 шт. (пустое/пробельное имя в meta → `invalidMeta`; `deckName` из пробелов =
+нет override). Все ранее зелёные тесты сохранены.
+
+## 14. Красная фаза fix-итерации (assertion-level)
+
+После добавления тестов + только сигнатур инжектируемых параметров (поведение ещё
+не реализовано) — 7 новых тестов красные, фрагменты:
+
+```text
+fvm flutter test test/unit/data/transfer
+00:01 +135 -7: Some tests failed.
+
+[E] FilePickerGateway: readFile файл больше лимита → tooLarge до чтения в память (H1)
+  Expected: throws <Instance of 'ArchiveException'> with `code`:
+            ArchiveErrorCode:<ArchiveErrorCode.tooLarge>
+    Actual: <Closure: () => Future<Uint8List>>
+
+[E] importZip подменённый content_hash из архива пересчитывается (M9)
+  Expected: '3f76c91c9b90b2a5e2765e8c6bd447517ab5613ac34a0c0b6eb374d50b3a893f'
+    Actual: 'подменённый-хеш'
+
+[E] importZip дубликаты определяются по пересчитанному хешу (M9)
+  Expected: <1>
+    Actual: <2>
+
+[E] decode — meta.json пустое имя колоды → invalidMeta (M10)
+  Expected: throws <Instance of 'ArchiveException'> with `code`:
+            ArchiveErrorCode:<ArchiveErrorCode.invalidMeta>
+    Actual: <Closure: () => DeckArchive>
+
+[E] decode — число zip-записей больше maxEntries → tooLarge (M8)
+  Expected: throws <Instance of 'ArchiveException'> with `code`:
+            ArchiveErrorCode:<ArchiveErrorCode.tooLarge>
+    Actual: <Closure: () => DeckArchive>
+```
+
+Затем реализованы проверки → зелёный.
+
+## 15. Зелёный прогон после fix-итерации
+
+```text
+fvm flutter test test/unit/data/transfer
+00:00 +142: All tests passed!
+  (кодек 70, MediaStore 31, FileGateway 18, DriftDeckTransferService 23)
+
+fvm dart format lib/data/transfer test/unit/data/transfer
+Formatted 8 files (0 changed)
+
+fvm dart analyze lib/data/transfer test/unit/data/transfer
+No issues found!
+
+fvm flutter test test/guards
+00:00 +35: All tests passed!
+
+fvm flutter analyze
+No issues found! (4.8s)
+```
+
+Промежуточный прогон общего analyze показал 2 чужих issue вне scope
+(`lib/data/decks/drift_deck_repository.dart` — параллельные правки Lead/data-drift);
+на финальном прогоне они устранены, общий analyze — 0 issues.
+
+Замечание по семантике: decode проверяет `deck.name.trim().isNotEmpty`, но сохраняет
+имя как есть (без обрезки) — lossless; тримминг применяется только к `deckName`-override
+при импорте.
+
+

@@ -86,3 +86,25 @@ Future<void> insertCardRow(
         ),
       );
 }
+
+/// Вставляет строку медиа напрямую в БД (SPEC A5: `media`).
+Future<void> insertMediaRow(
+  AppDatabase db, {
+  required String id,
+  required String cardId,
+  required String path,
+  String mimeType = 'image/png',
+  int size = 0,
+}) {
+  return db
+      .into(db.media)
+      .insert(
+        MediaCompanion.insert(
+          id: id,
+          cardId: cardId,
+          path: path,
+          mimeType: mimeType,
+          size: size,
+        ),
+      );
+}

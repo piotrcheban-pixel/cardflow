@@ -736,6 +736,48 @@ void main() {
       );
     });
 
+    test('подменённый content_hash из архива пересчитывается (M9)', () async {
+      final card = _basicCard(
+        mediaIds: const <String>[],
+        contentHash: 'подменённый-хеш',
+      );
+      final bytes = _codec.encode(_archive(cards: <Card>[card]));
+
+      final result = await service.importZip(bytes);
+
+      final imported = (await cardRowsOf(result.deckId)).single;
+      final expected = contentHashOf(front: card.front, back: card.back);
+      expect(imported.contentHash, expected);
+      expect(imported.contentHash, isNot('подменённый-хеш'));
+    });
+
+    test('дубликаты определяются по пересчитанному хешу (M9)', () async {
+      final first = _basicCard(
+        mediaIds: const <String>[],
+        contentHash: 'подменённый-1',
+      );
+      final second = _basicCard(
+        id: 'card-2',
+        mediaIds: const <String>[],
+        contentHash: 'подменённый-2',
+      );
+      final bytes = _codec.encode(_archive(cards: <Card>[first, second]));
+
+      final preview = await service.previewImport(bytes);
+      expect(preview.cardsCount, 1);
+      expect(preview.duplicatesCount, 1);
+
+      final result = await service.importZip(bytes);
+      expect(result.importedCards, 1);
+      expect(result.skippedDuplicates, 1);
+      final cards = await cardRowsOf(result.deckId);
+      expect(cards, hasLength(1));
+      expect(
+        cards.single.contentHash,
+        contentHashOf(front: first.front, back: first.back),
+      );
+    });
+
     test('deckName переопределяет имя колоды из архива', () async {
       final bytes = _codec.encode(_archive(cards: const <Card>[]));
 
@@ -745,6 +787,17 @@ void main() {
         db.decks,
       )..where((table) => table.id.equals(result.deckId))).getSingle();
       expect(deckRow.name, 'Моё имя');
+    });
+
+    test('deckName из пробелов = нет override (M10)', () async {
+      final bytes = _codec.encode(_archive(cards: const <Card>[]));
+
+      final result = await service.importZip(bytes, deckName: '   ');
+
+      final deckRow = await (db.select(
+        db.decks,
+      )..where((table) => table.id.equals(result.deckId))).getSingle();
+      expect(deckRow.name, 'Колода из архива');
     });
 
     test('импорт архивной колоды сохраняет archived_at', () async {

@@ -1,9 +1,15 @@
 // Тесты DriftDeckRepository: CRUD, архив, поиск/фильтры/порядок, счётчики,
-// каскад. Семантика — SPEC A6.2 + ADR-007 (см. domain/decks/deck_query.dart).
+// каскад, очистка медиа при удалении колоды (M5). Семантика — SPEC A6.2 +
+// ADR-007 (см. domain/decks/deck_query.dart).
+import 'dart:io';
+import 'dart:typed_data';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:path/path.dart' as p;
 
 import 'package:cardflow/data/db/app_database.dart';
 import 'package:cardflow/data/decks/drift_deck_repository.dart';
+import 'package:cardflow/data/transfer/media_store.dart';
 import 'package:cardflow/domain/decks/deck.dart';
 import 'package:cardflow/domain/decks/deck_query.dart';
 import 'package:cardflow/domain/decks/deck_summary.dart';
@@ -186,6 +192,144 @@ void main() {
     test('удаление несуществующей колоды — no-op', () async {
       await repository.deleteDeck('нет-такой');
       expect(await db.select(db.decks).get(), isEmpty);
+    });
+  });
+
+  group('deleteDeck: media-строки и файлы (M5)', () {
+    late Directory mediaRoot;
+    late MediaStore store;
+
+    setUp(() async {
+      mediaRoot = await Directory.systemTemp.createTemp('cardflow-media-test');
+      store = MediaStore(mediaRoot);
+    });
+
+    tearDown(() async {
+      if (await mediaRoot.exists()) {
+        await mediaRoot.delete(recursive: true);
+      }
+    });
+
+    /// Файл медиа на диске по относительному пути внутри хранилища.
+    File mediaFile(String relativePath) =>
+        File(p.joinAll(<String>[mediaRoot.path, ...relativePath.split('/')]));
+
+    Future<void> writeMedia(String relativePath) => store.writeMedia(
+      relativePath: relativePath,
+      bytes: Uint8List.fromList(<int>[1, 2, 3]),
+    );
+
+    DriftDeckRepository repositoryWithMedia() =>
+        DriftDeckRepository(db, clock: clock.now, mediaStore: store);
+
+    test(
+      'удаляет media-строки и файлы карточек колоды, не трогая соседние',
+      () async {
+        final mediaRepository = repositoryWithMedia();
+        final deck = await mediaRepository.createDeck(name: 'С медиа');
+        await insertCardRow(db, id: 'card-media-1', deckId: deck.id);
+        await insertCardRow(db, id: 'card-media-2', deckId: deck.id);
+        await writeMedia('card-media-1/picture.png');
+        await writeMedia('card-media-2/voice.mp3');
+        await insertMediaRow(
+          db,
+          id: 'media-1',
+          cardId: 'card-media-1',
+          path: 'card-media-1/picture.png',
+        );
+        await insertMediaRow(
+          db,
+          id: 'media-2',
+          cardId: 'card-media-2',
+          path: 'card-media-2/voice.mp3',
+          mimeType: 'audio/mpeg',
+        );
+
+        final neighbour = await mediaRepository.createDeck(name: 'Соседняя');
+        await insertCardRow(db, id: 'card-neighbour', deckId: neighbour.id);
+        await writeMedia('card-neighbour/keep.png');
+        await insertMediaRow(
+          db,
+          id: 'media-neighbour',
+          cardId: 'card-neighbour',
+          path: 'card-neighbour/keep.png',
+        );
+
+        await mediaRepository.deleteDeck(deck.id);
+
+        final mediaRows = await db.select(db.media).get();
+        expect(mediaRows.map((row) => row.id), <String>['media-neighbour']);
+        expect((await db.select(db.cards).get()).map((row) => row.id), <String>[
+          'card-neighbour',
+        ]);
+        expect(await mediaRepository.deckById(deck.id), isNull);
+
+        expect(mediaFile('card-media-1/picture.png').existsSync(), isFalse);
+        expect(mediaFile('card-media-2/voice.mp3').existsSync(), isFalse);
+        expect(mediaFile('card-neighbour/keep.png').existsSync(), isTrue);
+      },
+    );
+
+    test(
+      'без mediaStore: media-строки удаляются, файлы остаются (best-effort)',
+      () async {
+        // `repository` из setUp создан без mediaStore — файлы удалить нечем.
+        final deck = await repository.createDeck(name: 'Без хранилища');
+        await insertCardRow(db, id: 'card-1', deckId: deck.id);
+        await writeMedia('card-1/file.bin');
+        await insertMediaRow(
+          db,
+          id: 'media-1',
+          cardId: 'card-1',
+          path: 'card-1/file.bin',
+        );
+
+        await repository.deleteDeck(deck.id);
+
+        expect(await db.select(db.media).get(), isEmpty);
+        expect(mediaFile('card-1/file.bin').existsSync(), isTrue);
+      },
+    );
+
+    test(
+      'удаление несуществующей колоды идемпотентно, медиа соседей не тронуты',
+      () async {
+        final mediaRepository = repositoryWithMedia();
+        final neighbour = await mediaRepository.createDeck(name: 'Соседняя');
+        await insertCardRow(db, id: 'card-neighbour', deckId: neighbour.id);
+        await writeMedia('card-neighbour/keep.png');
+        await insertMediaRow(
+          db,
+          id: 'media-neighbour',
+          cardId: 'card-neighbour',
+          path: 'card-neighbour/keep.png',
+        );
+
+        await mediaRepository.deleteDeck('нет-такой');
+        await mediaRepository.deleteDeck('нет-такой');
+
+        expect(await mediaRepository.deckById(neighbour.id), isNotNull);
+        expect((await db.select(db.media).get()).single.id, 'media-neighbour');
+        expect(mediaFile('card-neighbour/keep.png').existsSync(), isTrue);
+      },
+    );
+
+    test('удаление терпимо к уже отсутствующему файлу медиа', () async {
+      final mediaRepository = repositoryWithMedia();
+      final deck = await mediaRepository.createDeck(name: 'Битое медиа');
+      await insertCardRow(db, id: 'card-1', deckId: deck.id);
+      // Файла на диске нет — удаление не должно падать.
+      await insertMediaRow(
+        db,
+        id: 'media-missing',
+        cardId: 'card-1',
+        path: 'card-1/missing.png',
+      );
+
+      await mediaRepository.deleteDeck(deck.id);
+
+      expect(await db.select(db.media).get(), isEmpty);
+      expect(await mediaRepository.deckById(deck.id), isNull);
     });
   });
 

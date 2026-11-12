@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/misc.dart' show StreamProviderFamily;
 
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/decks/deck.dart';
@@ -76,30 +75,41 @@ decksFiltersVisibleProvider =
     );
 
 /// Сводки колод по текущему запросу (loading/error/data — в [AsyncValue]).
-final StreamProvider<List<DeckSummary>> deckSummariesProvider =
-    StreamProvider<List<DeckSummary>>((ref) {
-      final DeckQuery query = ref.watch(decksQueryProvider);
-      return ref.watch(deckRepositoryProvider).watchSummaries(query: query);
-    });
+///
+/// `autoDispose`: при уходе с экрана подписка снимается, при возврате данные
+/// перезапрашиваются (актуальность `due`-счётчиков, KNOWN L10/M13).
+final deckSummariesProvider = StreamProvider.autoDispose<List<DeckSummary>>((
+  ref,
+) {
+  final DeckQuery query = ref.watch(decksQueryProvider);
+  return ref.watch(deckRepositoryProvider).watchSummaries(query: query);
+});
 
 /// Конкретная колода; `null` — колода удалена/не найдена.
-final StreamProviderFamily<Deck?, String> deckProvider =
-    StreamProvider.family<Deck?, String>((ref, String deckId) {
-      return ref.watch(deckRepositoryProvider).watchDeck(deckId);
-    });
+///
+/// `autoDispose`: при уходе с экрана подписка на поток снимается, ресурсы
+/// не держатся (fix-итерация по ревью M13).
+final deckProvider = StreamProvider.autoDispose.family<Deck?, String>((
+  ref,
+  String deckId,
+) {
+  return ref.watch(deckRepositoryProvider).watchDeck(deckId);
+});
 
 /// Карточки колоды (для экрана колоды, порядок — `created_at`).
-final StreamProviderFamily<List<Card>, String> deckCardsProvider =
-    StreamProvider.family<List<Card>, String>((ref, String deckId) {
-      return ref.watch(cardRepositoryProvider).watchCards(deckId);
-    });
+final deckCardsProvider = StreamProvider.autoDispose.family<List<Card>, String>(
+  (ref, String deckId) {
+    return ref.watch(cardRepositoryProvider).watchCards(deckId);
+  },
+);
 
 /// Сводка по конкретной колоде (счётчики шапки экрана колоды).
 ///
 /// Считается репозиторием; включая архивные, чтобы экран открывался и для
-/// колоды, которую только что восстановили после undo.
-final StreamProviderFamily<DeckSummary?, String> deckSummaryProvider =
-    StreamProvider.family<DeckSummary?, String>((ref, String deckId) {
+/// колоды, которую только что восстановили после undo. `autoDispose` — как
+/// у [deckProvider].
+final deckSummaryProvider = StreamProvider.autoDispose
+    .family<DeckSummary?, String>((ref, String deckId) {
       final repository = ref.watch(deckRepositoryProvider);
       return repository
           .watchSummaries(query: const DeckQuery(includeArchived: true))

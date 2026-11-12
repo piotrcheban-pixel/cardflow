@@ -10,6 +10,7 @@ import 'package:uuid/uuid.dart';
 
 import 'package:cardflow/data/db/app_database.dart';
 import 'package:cardflow/data/db/epoch.dart';
+import 'package:cardflow/data/transfer/media_store.dart';
 import 'package:cardflow/domain/decks/deck.dart';
 import 'package:cardflow/domain/decks/deck_query.dart';
 import 'package:cardflow/domain/decks/deck_repository.dart';
@@ -22,13 +23,25 @@ class DriftDeckRepository implements DeckRepository {
   ///
   /// [clock] — источник текущего времени (для детерминированных тестов);
   /// по умолчанию — `DateTime.now`.
-  DriftDeckRepository(this.database, {DateTime Function()? clock})
-    : _clock = clock ?? DateTime.now;
+  ///
+  /// [mediaStore] — хранилище медиафайлов: при удалении колоды (SPEC A5, M5)
+  /// после коммита best-effort удаляются файлы медиа. Если `null`, строки
+  /// `media` из БД всё равно удаляются, а файлы на диске остаются (известное
+  /// поведение без доступа к хранилищу).
+  DriftDeckRepository(
+    this.database, {
+    DateTime Function()? clock,
+    this.mediaStore,
+  }) : _clock = clock ?? DateTime.now;
 
   /// БД приложения.
   final AppDatabase database;
 
   final DateTime Function() _clock;
+
+  /// Хранилище медиафайлов; `null` — файлы при удалении колоды не трогаются
+  /// (строки `media` из БД удаляются всегда).
+  final MediaStore? mediaStore;
 
   static const Uuid _uuid = Uuid();
 
@@ -163,11 +176,57 @@ GROUP BY d.id
 
   @override
   Future<void> deleteDeck(String id) async {
-    // Карточки удаляются каскадом средствами SQLite (`ON DELETE CASCADE`,
-    // FK включены в `AppDatabase.beforeOpen`).
-    await (database.delete(
-      database.decks,
-    )..where((table) => table.id.equals(id))).go();
+    // M5: `media` не связан с `cards` внешним ключом (SPEC A5), поэтому строки
+    // медиа удаляем явно — до удаления колоды (карточки удалит каскад FK).
+    // В одной транзакции собираем пути файлов, чтобы после коммита удалить их
+    // best-effort через MediaStore.
+    final mediaPaths = await database.transaction<List<String>>(() async {
+      final cards = await (database.select(
+        database.cards,
+      )..where((table) => table.deckId.equals(id))).get();
+      final cardIds = cards.map((card) => card.id).toList(growable: false);
+      final List<String> paths;
+      if (cardIds.isEmpty) {
+        paths = const <String>[];
+      } else {
+        final mediaRows = await (database.select(
+          database.media,
+        )..where((table) => table.cardId.isIn(cardIds))).get();
+        paths = mediaRows.map((row) => row.path).toList(growable: false);
+        await (database.delete(
+          database.media,
+        )..where((table) => table.cardId.isIn(cardIds))).go();
+      }
+      // Карточки удаляются каскадом средствами SQLite (`ON DELETE CASCADE`,
+      // FK включены в `AppDatabase.beforeOpen`).
+      await (database.delete(
+        database.decks,
+      )..where((table) => table.id.equals(id))).go();
+      return paths;
+    });
+
+    final store = mediaStore;
+    if (store == null || mediaPaths.isEmpty) {
+      return;
+    }
+    // Файлы удаляются только после успешного коммита БД: ошибка файловой
+    // системы не должна откатывать удаление колоды.
+    await Future.wait<void>(<Future<void>>[
+      for (final path in mediaPaths) _deleteMediaFile(store, path),
+    ]);
+  }
+
+  /// Best-effort удаление файла медиа: ошибки не ломают [deleteDeck].
+  ///
+  /// Строки `media` к этому моменту уже удалены коммитом; файл мог быть удалён
+  /// ранее, путь — устаревшим/небезопасным, либо файловая система недоступна.
+  Future<void> _deleteMediaFile(MediaStore store, String path) async {
+    try {
+      await store.deleteMedia(path);
+    } catch (_) {
+      // Намеренно проглатываем: очистка «висящих» файлов не критична.
+      return;
+    }
   }
 
   /// Текущий момент в UTC с точностью до миллисекунд (как в БД SPEC A5).

@@ -23,5 +23,9 @@ abstract interface class FileGateway {
   });
 
   /// Читает файл целиком (для пути, полученного из [pickZipToImport]).
+  ///
+  /// Обязан проверить размер файла ДО чтения в память: файл больше
+  /// [DeckArchiveLimits.maxImportBytes] → [ArchiveException] с кодом
+  /// `tooLarge` (защита от OOM на больших архивах).
   Future<Uint8List> readFile(String path);
 }

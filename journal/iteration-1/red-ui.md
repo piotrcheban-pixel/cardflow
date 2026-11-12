@@ -117,3 +117,33 @@ Harness: `ProviderScope` не нужен для спайка; `MaterialApp` (`ma
 test/widget test/helpers test/unit/ui` → 25 files, 0 changed (стабильно при
 повторе). Red-логи: `build/red-widget-ui.log`, `build/red-unit-archive.log`,
 `build/red-unit-filename.log`.
+
+## 4. Fix-итерация по ревью: M11 — «Архивировать» в меню (доступность)
+
+**Finding M11:** архив колоды был доступен только свайпом влево — недоступно
+для screen reader / клавиатуры. Добавлен пункт контекстного меню (long-press
+на карточке колоды) «Архивировать»: та же логика `archiveDeck` + undo-снекбар
+(переиспользован хелпер `showArchivedUndoSnackbar` из `deck_actions.dart`),
+строка ARB `deckActionArchive`.
+
+TDD — тест написан до реализации:
+
+`fvm flutter test test/widget/decks/decks_screen_test.dart --plain-name "контекстное меню"`
+до добавления пункта меню:
+
+```
+Expected: exactly one matching candidate
+  Actual: _TextWidgetFinder:<Found 0 widgets with text "Архивировать": []>
+00:01 +0 -1: Колоды: контекстное меню долгое нажатие: Переименовать / Экспорт / Архивировать / Удалить [E]
+00:01 +0 -2: Колоды: контекстное меню архивирование из контекстного меню: undo возвращает колоду [E]
+00:02 +3 -2: Some tests failed.
+```
+
+После реализации:
+
+```
+00:04 +16: All tests passed!   // decks_screen_test.dart (16 тестов)
+fvm flutter analyze → No issues found!
+fvm flutter test test/widget test/unit/ui test/guards → +99: All tests passed!
+```
+

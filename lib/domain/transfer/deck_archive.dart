@@ -31,6 +31,10 @@ abstract final class DeckArchiveLimits {
 
   /// Максимальный размер `meta.json`/`cards.json`, байт (32 МБ).
   static const int maxJsonEntryBytes = 32 * 1024 * 1024;
+
+  /// Максимальное количество записей в zip-архиве (защита от DoS архивом
+  /// из миллионов пустых записей).
+  static const int maxEntries = 10000;
 }
 
 /// Колода в составе архива (`meta.json`).

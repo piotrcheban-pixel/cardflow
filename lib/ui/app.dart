@@ -6,6 +6,49 @@ import 'package:cardflow/ui/m3e/m3e.dart';
 import 'package:cardflow/ui/router/app_router.dart';
 import 'package:cardflow/ui/theme/app_theme.dart';
 
+/// Экран критической ошибки старта (например, если БД не открылась).
+///
+/// Показывается вместо приложения, если инициализация БД/хранилища упала:
+/// пользователю — только сообщение из ARB, без сырых исключений (SPEC A8.6).
+class StartupErrorApp extends StatelessWidget {
+  /// Создаёт экран ошибки старта.
+  const StartupErrorApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
+      debugShowCheckedModeBanner: false,
+      locale: const Locale('ru'),
+      supportedLocales: AppLocalizations.supportedLocales,
+      localizationsDelegates: <LocalizationsDelegate<dynamic>>[
+        AppLocalizations.delegate,
+        ...GlobalMaterialLocalizations.delegates,
+      ],
+      theme: AppTheme.light(),
+      darkTheme: AppTheme.dark(),
+      themeMode: ThemeMode.system,
+      home: Builder(
+        builder: (context) {
+          final l10n = AppLocalizations.of(context);
+          return Scaffold(
+            body: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  l10n.databaseOpenError,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
 /// Корневое приложение CardFlow: единственная локаль — `ru` (SPEC 3.1, 3.5).
 ///
 /// База Material — официальный пакет `material_ui` (ADR-001). Системные строки

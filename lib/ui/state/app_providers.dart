@@ -26,8 +26,14 @@ final appDatabaseProvider = Provider<AppDatabase>((ref) {
 });
 
 /// Репозиторий колод.
+///
+/// MediaStore передаётся, чтобы удаление колоды чистило и файлы медиа
+/// (fix-итерация по ревью M5), а не только строки БД.
 final deckRepositoryProvider = Provider<DeckRepository>((ref) {
-  return DriftDeckRepository(ref.watch(appDatabaseProvider));
+  return DriftDeckRepository(
+    ref.watch(appDatabaseProvider),
+    mediaStore: ref.watch(mediaStoreProvider),
+  );
 });
 
 /// Репозиторий карточек.

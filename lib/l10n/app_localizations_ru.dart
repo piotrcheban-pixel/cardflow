@@ -93,6 +93,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get deckExport => 'Экспорт';
 
   @override
+  String get deckActionArchive => 'Архивировать';
+
+  @override
   String get decksCreateMenuTooltip => 'Другие способы создания';
 
   @override
@@ -262,7 +265,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get archiveErrorInvalidCards => 'Карточки в архиве повреждены.';
 
   @override
-  String get archiveErrorTooLarge => 'Архив слишком большой для импорта.';
+  String get archiveErrorTooLarge => 'Архив слишком большой.';
 
   @override
   String get archiveErrorMediaMissing => 'В архиве не хватает медиафайлов.';
@@ -276,4 +279,8 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get archiveErrorUnknown =>
       'Не удалось выполнить операцию с архивом. Попробуйте ещё раз.';
+
+  @override
+  String get databaseOpenError =>
+      'Не удалось открыть базу данных. Перезапустите приложение.';
 }

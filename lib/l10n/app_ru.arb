@@ -108,6 +108,10 @@
   "@deckExport": {
     "description": "Пункт меню колоды: экспортировать в ZIP."
   },
+  "deckActionArchive": "Архивировать",
+  "@deckActionArchive": {
+    "description": "Пункт меню колоды: отправить колоду в архив (альтернатива свайпу, доступность)."
+  },
   "decksCreateMenuTooltip": "Другие способы создания",
   "@decksCreateMenuTooltip": {
     "description": "Подсказка второй (меню) сегмента Split-кнопки «Создать»."
@@ -307,7 +311,7 @@
   "@archiveErrorInvalidCards": {
     "description": "Ошибка импорта: некорректные карточки архива."
   },
-  "archiveErrorTooLarge": "Архив слишком большой для импорта.",
+  "archiveErrorTooLarge": "Архив слишком большой.",
   "@archiveErrorTooLarge": {
     "description": "Ошибка импорта: превышены лимиты размера архива."
   },
@@ -326,5 +330,9 @@
   "archiveErrorUnknown": "Не удалось выполнить операцию с архивом. Попробуйте ещё раз.",
   "@archiveErrorUnknown": {
     "description": "Общая ошибка операции с архивом без подробностей исключения."
+  },
+  "databaseOpenError": "Не удалось открыть базу данных. Перезапустите приложение.",
+  "@databaseOpenError": {
+    "description": "Критическая ошибка старта: БД не открылась (без сырых исключений)."
   }
 }

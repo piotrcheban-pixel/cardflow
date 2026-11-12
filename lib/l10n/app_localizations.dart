@@ -256,6 +256,12 @@ abstract class AppLocalizations {
   /// **'Экспорт'**
   String get deckExport;
 
+  /// Пункт меню колоды: отправить колоду в архив (альтернатива свайпу, доступность).
+  ///
+  /// In ru, this message translates to:
+  /// **'Архивировать'**
+  String get deckActionArchive;
+
   /// Подсказка второй (меню) сегмента Split-кнопки «Создать».
   ///
   /// In ru, this message translates to:
@@ -475,7 +481,7 @@ abstract class AppLocalizations {
   /// Ошибка импорта: превышены лимиты размера архива.
   ///
   /// In ru, this message translates to:
-  /// **'Архив слишком большой для импорта.'**
+  /// **'Архив слишком большой.'**
   String get archiveErrorTooLarge;
 
   /// Ошибка импорта/экспорта: отсутствует медиафайл.
@@ -501,6 +507,12 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Не удалось выполнить операцию с архивом. Попробуйте ещё раз.'**
   String get archiveErrorUnknown;
+
+  /// Критическая ошибка старта: БД не открылась (без сырых исключений).
+  ///
+  /// In ru, this message translates to:
+  /// **'Не удалось открыть базу данных. Перезапустите приложение.'**
+  String get databaseOpenError;
 }
 
 class _AppLocalizationsDelegate

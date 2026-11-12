@@ -51,6 +51,10 @@ void main() {
       expect(deckArchiveFileName('', fallbackName: fallback), 'Колода.zip');
     });
 
+    test('непригодное запасное имя заменяется брендовым fallback', () {
+      expect(deckArchiveFileName('   ', fallbackName: '   '), 'cardflow.zip');
+    });
+
     test('имя только из недопустимых символов заменяется запасным', () {
       expect(
         deckArchiveFileName('///:::', fallbackName: fallback),

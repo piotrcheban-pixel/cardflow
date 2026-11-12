@@ -18,7 +18,7 @@ String deckArchiveFileName(String deckName, {required String fallbackName}) {
     base = _sanitize(fallbackName);
   }
   if (base.isEmpty) {
-    base = 'колода';
+    base = 'cardflow';
   }
   if (base.length > _maxBaseLength) {
     base = base.substring(0, _maxBaseLength).trim();

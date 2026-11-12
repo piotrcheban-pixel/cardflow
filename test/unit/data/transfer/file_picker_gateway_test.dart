@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:cardflow/data/transfer/file_picker_gateway.dart';
+import 'package:cardflow/domain/transfer/deck_archive.dart';
 import 'package:cardflow/domain/transfer/file_gateway.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -250,6 +251,32 @@ void main() {
       await File(path).writeAsBytes(bytes);
 
       expect(await gateway.readFile(path), bytes);
+    });
+
+    test('файл больше лимита → tooLarge до чтения в память (H1)', () async {
+      final path = p.join(tempDir.path, 'большой.zip');
+      await File(path).writeAsBytes(Uint8List(8));
+      final limited = FilePickerGateway(maxFileBytes: 4);
+
+      expect(
+        () => limited.readFile(path),
+        throwsA(
+          isA<ArchiveException>().having(
+            (ArchiveException error) => error.code,
+            'code',
+            ArchiveErrorCode.tooLarge,
+          ),
+        ),
+      );
+    });
+
+    test('файл ровно в лимите читается (H1)', () async {
+      final path = p.join(tempDir.path, 'ровно.bin');
+      final bytes = Uint8List.fromList(<int>[1, 2, 3, 4]);
+      await File(path).writeAsBytes(bytes);
+      final limited = FilePickerGateway(maxFileBytes: 4);
+
+      expect(await limited.readFile(path), bytes);
     });
 
     test('отсутствующий файл → FileSystemException', () {

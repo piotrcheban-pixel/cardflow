@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
 
+import 'package:cardflow/domain/transfer/deck_archive.dart';
 import 'package:cardflow/domain/transfer/file_gateway.dart';
 
 /// Добавляет расширение `.zip`, если его ещё нет (сравнение без учёта
@@ -29,7 +30,13 @@ String ensureZipExtension(String fileName) {
 /// в API нет.
 class FilePickerGateway implements FileGateway {
   /// Создаёт шлюз.
-  FilePickerGateway();
+  ///
+  /// [maxFileBytes] — предел размера читаемого файла (по умолчанию
+  /// [DeckArchiveLimits.maxImportBytes]); больше — `tooLarge` до чтения.
+  FilePickerGateway({this.maxFileBytes = DeckArchiveLimits.maxImportBytes});
+
+  /// Максимальный размер файла, который разрешено читать в память.
+  final int maxFileBytes;
 
   @override
   Future<String?> pickZipToImport() async {
@@ -58,7 +65,19 @@ class FilePickerGateway implements FileGateway {
   }
 
   @override
-  Future<Uint8List> readFile(String path) => File(path).readAsBytes();
+  Future<Uint8List> readFile(String path) async {
+    final file = File(path);
+    // Размер проверяется ДО чтения в память (контракт FileGateway, H1):
+    // большой .zip не должен приводить к OOM.
+    final length = await file.length();
+    if (length > maxFileBytes) {
+      throw ArchiveException(
+        ArchiveErrorCode.tooLarge,
+        details: 'readFile: $path размером $length > $maxFileBytes байт',
+      );
+    }
+    return file.readAsBytes();
+  }
 
   /// Гарантирует, что байты оказались в файле.
   ///

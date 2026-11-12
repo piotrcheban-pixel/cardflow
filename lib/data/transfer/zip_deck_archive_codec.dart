@@ -33,6 +33,7 @@ class ZipDeckArchiveCodec implements DeckArchiveCodec {
     this.maxImportBytes = DeckArchiveLimits.maxImportBytes,
     this.maxUncompressedBytes = DeckArchiveLimits.maxUncompressedBytes,
     this.maxJsonEntryBytes = DeckArchiveLimits.maxJsonEntryBytes,
+    this.maxEntries = DeckArchiveLimits.maxEntries,
   });
 
   /// Максимальный размер входного zip-файла, байт.
@@ -43,6 +44,9 @@ class ZipDeckArchiveCodec implements DeckArchiveCodec {
 
   /// Максимальный размер `meta.json`/`cards.json`, байт.
   final int maxJsonEntryBytes;
+
+  /// Максимальное количество записей в zip-архиве.
+  final int maxEntries;
 
   @override
   Uint8List encode(DeckArchive archive) {
@@ -147,7 +151,16 @@ class ZipDeckArchiveCodec implements DeckArchiveCodec {
       );
     }
 
-    final entries = _validateEntries(_decodeZip(zipBytes));
+    final rawArchive = _decodeZip(zipBytes);
+    // Лимит количества записей (M8): проверяется до валидации содержимого,
+    // чтобы архив из миллионов записей не съел память/время.
+    if (rawArchive.files.length > maxEntries) {
+      throw ArchiveException(
+        ArchiveErrorCode.tooLarge,
+        details: 'decode: записей ${rawArchive.files.length} > $maxEntries',
+      );
+    }
+    final entries = _validateEntries(rawArchive);
     final metaFile = entries[DeckArchiveEntries.meta];
     if (metaFile == null) {
       throw const ArchiveException(
@@ -634,9 +647,17 @@ class ZipDeckArchiveCodec implements DeckArchiveCodec {
         details: 'meta.deck.id: пустая строка',
       );
     }
+    final name = _requiredString(json, 'name', code, 'meta.deck');
+    // M10: пустое/пробельное имя колоды недопустимо.
+    if (name.trim().isEmpty) {
+      throw const ArchiveException(
+        code,
+        details: 'meta.deck.name: пустое имя колоды',
+      );
+    }
     return ArchiveDeck(
       id: id,
-      name: _requiredString(json, 'name', code, 'meta.deck'),
+      name: name,
       settings: _requiredMap(json, 'settings', code, 'meta.deck'),
       createdAt: _requiredDateTimeMs(json, 'created_at', code, 'meta.deck'),
       updatedAt: _requiredDateTimeMs(json, 'updated_at', code, 'meta.deck'),

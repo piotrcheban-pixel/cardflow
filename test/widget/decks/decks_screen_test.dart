@@ -334,7 +334,33 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    testWidgets('долгое нажатие: Переименовать / Экспорт / Удалить', (
+    testWidgets(
+      'долгое нажатие: Переименовать / Экспорт / Архивировать / Удалить',
+      (WidgetTester tester) async {
+        final FakeDeckRepository repository = FakeDeckRepository(
+          summaries: <DeckSummary>[
+            makeSummary(id: 'deck-1', name: 'Испанский'),
+          ],
+        );
+
+        await pumpDecks(tester, repository: repository);
+        await tester.pumpAndSettle();
+        final AppLocalizations l10n = l10nOf(tester);
+
+        await openContextMenu(tester);
+        expect(find.text(l10n.deckRename), findsOneWidget);
+        expect(find.text(l10n.deckExport), findsOneWidget);
+        expect(
+          find.text(l10n.deckActionArchive),
+          findsOneWidget,
+          reason:
+              'Архив должен быть доступен не только свайпом (доступность, M11)',
+        );
+        expect(find.text(l10n.delete), findsOneWidget);
+      },
+    );
+
+    testWidgets('архивирование из контекстного меню: undo возвращает колоду', (
       WidgetTester tester,
     ) async {
       final FakeDeckRepository repository = FakeDeckRepository(
@@ -346,9 +372,19 @@ void main() {
       final AppLocalizations l10n = l10nOf(tester);
 
       await openContextMenu(tester);
-      expect(find.text(l10n.deckRename), findsOneWidget);
-      expect(find.text(l10n.deckExport), findsOneWidget);
-      expect(find.text(l10n.delete), findsOneWidget);
+      await tester.tap(find.text(l10n.deckActionArchive));
+      await tester.pumpAndSettle();
+
+      expect(repository.archivedIds, <String>['deck-1']);
+      expect(find.text('Испанский'), findsNothing);
+      expect(find.text(l10n.deckArchivedMessage), findsOneWidget);
+      expect(find.text(l10n.undo), findsOneWidget);
+
+      await tester.tap(find.text(l10n.undo));
+      await tester.pumpAndSettle();
+
+      expect(repository.unarchivedIds, <String>['deck-1']);
+      expect(find.text('Испанский'), findsOneWidget);
     });
 
     testWidgets('переименование меняет имя колоды', (
