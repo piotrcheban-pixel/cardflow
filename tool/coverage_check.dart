@@ -22,11 +22,18 @@ void main(List<String> args) {
     exit(2);
   }
 
-  final generated = <RegExp>[
+  // Исключения из покрытия (ADR-005, addendum):
+  //  - сгенерированный код — не пишется руками;
+  //  - `lib/data/db/tables.dart` — декларативный DSL drift: геттеры колонок
+  //    заменяются сгенерированными полями `$...Table`, пользовательские
+  //    геттеры в рантайме не исполняются (0/89 строк законно). Сама схема
+  //    проверяется schema-тестом по PRAGMA/sqlite_master, а не покрытием.
+  final excluded = <RegExp>[
     RegExp(r'\.g\.dart$'),
     RegExp(r'\.freezed\.dart$'),
     RegExp(r'\.mocks\.dart$'),
     RegExp(r'app_localizations(_[a-z]+)?\.dart$'),
+    RegExp(r'^lib/data/db/tables\.dart$'),
   ];
 
   final records = <_FileCoverage>[];
@@ -49,7 +56,7 @@ void main(List<String> args) {
   final handwritten = records.where((record) {
     final path = record.path.replaceAll(r'\', '/');
     if (!path.startsWith('lib/')) return false;
-    return !generated.any((pattern) => pattern.hasMatch(path));
+    return !excluded.any((pattern) => pattern.hasMatch(path));
   }).toList()..sort((a, b) => a.path.compareTo(b.path));
 
   if (handwritten.isEmpty) {
@@ -89,7 +96,7 @@ void main(List<String> args) {
       if (entity is! File) continue;
       final path = entity.path.replaceAll(r'\', '/');
       if (!path.endsWith('.dart')) continue;
-      if (generated.any((pattern) => pattern.hasMatch(path))) continue;
+      if (excluded.any((pattern) => pattern.hasMatch(path))) continue;
       if (measured.contains(path)) continue;
       missing.add(path);
     }
