@@ -1,27 +1,24 @@
 # STATE — текущее состояние CardFlow
 
-**Дата:** 2026-11-11 · **Итерация:** 0 (Каркас) — **завершена и принята по ревью** · **Шаг цикла:** 7 (улучшение/отчёт) · **Режим:** ИТЕРАЦИИ (после отчёта — стоп)
-**Факты:** Flutter 3.47.9 stable / Dart 3.13.7 через FVM 4.3.2 (`.fvmrc`); Windows 11; VS Build Tools 2026 (без ATL); Android SDK/JDK, Xcode, Linux — отсутствуют; ключей API нет (absent). GitHub-remote: `origin` → piotrcheban-pixel/cardflow (private), CI GitHub Actions.
+**Дата:** 2026-11-12 · **Итерация:** 1 (Колоды + БД) — **завершена**, отчёт владельцу → стоп · **Шаг цикла:** 7 (улучшение/отчёт) · **Режим:** ИТЕРАЦИИ
+**Факты:** Flutter 3.47.9 / Dart 3.13.7 (FVM 4.3.2); Windows 11; **локальная Windows-сборка работает** (`cardflow.exe`); Android SDK/JDK, Xcode, Linux — отсутствуют; ключей API нет (absent). GitHub-remote `origin` → piotrcheban-pixel/cardflow; CI-прогон итерации 1 не выполнялся (push — по команде владельца).
 
 ## Следующее действие
 
-Итерация 0 закрыта: ревью принято (blocker/critical/high = 0), findings M1–M6 и документарные low устранены, финальный прогон выполнен, checkpoint-коммит сделан. Следующая сессия: итерация 1 («Колоды + БД») по `CONTINUE-PROMPT.md`; перед стартом сверить STATE.md с репозиторием. CI на GitHub Actions: run `43098651759` (commit `018f6f8`) — **9/9 job'ов success**, включая сборки linux/windows/macos/android/ios. Детали — `journal/iteration-0/verify.md` §10.
+Итерация 1 закрыта. Следующая сессия: **итерация 2 «Классический режим»** (SPEC A7.2/A6.4: ReviewSessionScaffold, 4 кнопки с прогнозом, undo, `review_logs`, обновление `due`/`fsrs_json` в одной транзакции; создание/редактирование карточек). Перед стартом сверить STATE.md с репозиторием (`git status`, `git log`, тесты).
 
-## Сделано в итерации 0 (проверено в сессии)
+## Итерация 1 — итог
 
-- Репозиторий: `git init`, SPEC.md в корне, docs/agent-prompt.md (копия промпта 0–14), AGENTS.md, .gitignore, README.
-- Тулчейн: Flutter 3.47.9 (sha256 сверен) + FVM 4.3.2; `.fvmrc`; junction `.fvm/versions/3.47.9`.
-- `flutter create --org ru.example` под 5 платформ (android/ios/linux/macos/windows), 123 файла.
-- Локализация ru: `lib/l10n/app_ru.arb`, gen-l10n, `supportedLocales: [ru]`, Material-база `material_ui` + русские системные строки (widget-тест).
-- Домен FSRS: `Rating`, `CardState`, `SchedulingCard` (JSON), `FsrsMapper`, `Scheduler`/`FsrsScheduler` — тесты маппинга, интервалов и переходов (интервалы 4 оценок, маппинг, иммутабельность, сериализация). ADR-004 — конфигурация по умолчанию.
-- UI: `CardFlowApp`/`HomeShell` (без мёртвых кнопок), `AppTheme` (ColorScheme.fromSeed), токены `AppMotion` (380/0.8, 700/0.9, effects 1.0), фасад `lib/ui/m3e/m3e.dart` + сверка с `M3EMotion`.
-- Guard-тесты: no_webview (lock/yaml блочный+кавычки+flow, импорты, самопроверки), ru_strings (ARB, `Text/SelectableText/Text.rich`, ICU, самопроверки), no_secrets (скан всех текстовых файлов с latin1-фолбэком, самопроверки), architecture (запрет framework-Material, M3E-изоляция, domain без Flutter) — 34 теста.
-- CI-матрица `.github/workflows/ci.yml` (quality/test/build-desktop/build-mobile), YAML валиден; прогон невозможен — нет remote.
-- Документы: docs/dependencies.md (+§7 фактическое состояние), ADR-001 (+addendum статуса), ADR-002, ADR-003, ADR-004, dependency-spike.md, plan/verify/summary.
-- Доказательства: `journal/iteration-0/verify.md` — 75 тестов зелёные, analyze 0 issues, coverage 100% (135/135), формат применён; Windows-сборка CardFlow блокирована ATL (L2b), bare-проект собирается.
+- **План/реализация:** drift-схема A5 (10 таблиц/3 индекса/schemaVersion=1/миграции, ADR-005), CRUD колод + поиск/фильтры/архив, `.zip`-формат v1 (ADR-006, `docs/archive-format.md`), экраны «Колоды»/«Колода» на M3E (ADR-007), GoRouter/ProviderScope/БД в `main`.
+- **Доказательства (эта сессия):** `fvm flutter test --coverage` → **378 тестов зелёные**; покрытие **96,0% (1666/1736)**; `fvm flutter analyze` → **0 issues**; `dart format` → 0 changed; `fvm flutter build windows --release` → **cardflow.exe собран** (L2b снят); guard-тесты 35/35.
+- **Ревью:** независимый reviewer — H1 + M1–M13; после fix-итерации blocker/critical/high = 0; отчёт `journal/iteration-1/review.md`; детали закрытия — `verify.md` §3.
+- **Отступления:** red-фаза для Lead-контрактов/migration-тестов — компиляционная (зафиксировано в verify §4); `table.dart` вне покрытия (ADR-005 addendum); M7 → L13 (отложено).
+- **Коммиты:** `ef93a80` (план/ADR), `6f6482b` (домен), `197ff36` (data-drift), `d4b9e89` (transfer), `aafc448` (UI+интеграция), далее `fix:` (findings ревью) и `docs:` (verify/summary/review/STATE).
 
-## Открытые вопросы / риски
+## Открытые вопросы к владельцу
 
-- Нет вопросов, требующих решения владельца: все развилки закрыты ADR-001…004.
-- Известные ограничения: `journal/KNOWN_LIMITATIONS.md` (L1–L8: ключи, платформы, ATL, CI, хуки, навыки, M3E-runtime, .doc/.xls, DnD).
-- Следующая итерация 1 (Колоды + drift): завершить спайк S2 (`M3EMaterialApp` + M3E-экран), S3 (drift/sqlite3 native assets на Windows), добавить `drift_flutter`/открытие БД, CRUD колод, миграции, .zip импорт/экспорт.
+Только из списка «только владелец» — вопросов нет: формат `.zip` v1 зафиксирован ADR-006 (публичный контракт, менять только с версией); `.doc/.xls` — ADR-003 в силе; платных зависимостей не добавлялось; удаление функций из SPEC не предлагалось. Push/CI-прогон — по отдельной команде владельца.
+
+## Известные ограничения (актуальные)
+
+L1 (ключи API), L4 (хуки), L5 (навыки), L6 (golden), L6c (dynamic color — итерация 7), L7 (.doc/.xls), L8 (DnD-версия), **L9** (CI итерации 1 не прогонялся), **L9b** (сборки 4 платформ — CI), **L10** (устаревание due-счётчиков), **L11** (живые диалоги file_picker/mobile), **L12** (screen-reader/golden M3E), **L13** (двойной decode/UI-изолят). L2b (ATL) снят, L3 снят в итерации 0.

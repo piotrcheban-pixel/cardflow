@@ -177,7 +177,7 @@ dev_dependencies:
 | Отступление | Причина | Статус |
 |---|---|---|
 | `desktop_drop` 0.8.4 вместо 0.9.2 | конфликт `cross_file`: `desktop_drop >=0.9.0` → `^0.4.0`, `file_picker >=12` → `^0.3.5+4`; версии несовместимы. 0.8.4 использует `cross_file ^0.3.4+2` | зафиксировано; пересмотр в итерации 3c (DnD-экран) |
-| `drift_flutter` не добавлен | тянет EOL-заглушки (`sqlite3_flutter_libs 0.6.0+eol`); открытие БД планируется вручную через `sqlite3` 3.9.1 (native assets) | решение и спайк S3 — итерация 1 |
+| `drift_flutter` не добавлен | тянет EOL-заглушки (`sqlite3_flutter_libs 0.6.0+eol`); открытие БД — вручную через `sqlite3` 3.9.1 (native assets) | **подтверждено в итерации 1 (ADR-005):** спайк S3 успешен, `openAppDatabase()` работает; CI-сборки — до пуша |
 | `sqlite3_flutter_libs` не добавлен | EOL (описание пакета); SQLite ставится пакетом `sqlite3 ^3.9.1` через Dart build hooks | проверено: `dart run tool/coverage_check.dart` собрал native assets на Windows |
 | `enough_convert` не добавлен | нужен только парсерам кодировок в итерации 3a | добавить в 3a |
 | `freezed_annotation`, `json_annotation` | перенесены из dev_dependencies в dependencies: сгенерированный код импортирует их из `lib/` | исправлено в pubspec |
@@ -186,3 +186,21 @@ dev_dependencies:
 | `test ^1.33.0` не добавлен | `flutter_test` уже даёт test API; отдельный `test` не нужен | осознанное отступление |
 
 **Runtime-спайки, выполненные в итерации 0:** S1 (`pub get` графа — успех), S2 частично (M3E-библиотека компилируется, токены `M3EMotion` совпадают со SPEC A4.4 в тесте; `M3EMaterialApp` — итерация 1), S3 частично (native assets `sqlite3` собрались при `dart run`), S9 (FSRS: интервалы 4 оценок, см. тесты). Не выполнены: S4–S8, S10 — вынесены в итерации 1/3a/3b/5 (см. `journal/iteration-0/dependency-spike.md` §7 и `journal/KNOWN_LIMITATIONS.md`).
+
+## 8. Фактическое состояние после итерации 1 (2026-11-12)
+
+Источник — `pubspec.yaml`/`pubspec.lock` рабочего дерева; проверено в сессии итерации 1 (команды и вывод — `journal/iteration-1/verify.md`).
+
+**Изменения зависимостей:** добавлен прямой `path ^1.9.1` (BSD-3-Clause; был транзитивным) — нужен для склейки путей к БД/медиа (`lib/data/db/database_opener.dart`, `lib/data/transfer/media_store.dart`); в §2 указан как «прямой необходимости пока нет» — теперь необходимость появилась. Новых сторонних пакетов в итерации 1 **не добавлялось**.
+
+**Runtime-спайки итерации 1:**
+
+| Спайк | Результат |
+|---|---|
+| S2 — M3 Expressive на реальном экране | **успешен:** под M3ETheme работают `M3ECard`, `M3EChip` (filter), `M3ESnackbar`, `M3EExtendedFab`, `M3ESplitButton`; `M3EMaterialApp` не используется — не принимает `routerConfig`/GoRouter (ADR-007). Замен на `material_ui` не потребовалось. |
+| S3 — нативный SQLite | **успешен:** `sqlite3` 3.9.1 (libsqlite3 3.54.1) native assets работают и в `dart run`, и в `flutter test`; `drift` `NativeDatabase` + `path_provider` без `drift_flutter` (ADR-005). |
+| S2b — `file_picker` 13.3.3 | **API-drift:** `saveFile` — статический, сам записывает байты и возвращает `Uri?` (на mobile `content://`); параметры `type`/`allowedExtensions` помечены deprecated и не используются. Контракт `FileGateway.saveZipFile(...)` (ADR-006 п.9) учитывает это. |
+
+**Фактические версии direct-зависимостей:** без изменений относительно §7 плюс `path 1.9.1`. `drift` 2.35.4 / `drift_dev` 2.35.3, `sqlite3` 3.9.1 (libsqlite3 3.54.1), `archive` 4.6.0, `file_picker` 13.3.3 — фактические из pubspec.lock.
+
+**CI:** прогон для итерации 1 не выполнялся (push — только по команде владельца). Сборки под 5 платформ с native assets — известное ограничение L9/L9b до прогона CI.

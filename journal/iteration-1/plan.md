@@ -84,3 +84,22 @@ Red-вывод должен содержать «ожидалось: X, полу
 5. `feat(ui): decks and deck screens on M3E with widget tests, go_router wiring`
 6. `fix: review findings ...`
 7. `docs: iteration 1 verify, review, summary and state`
+
+## 8. Фактическое выполнение (итог, 2026-11-12)
+
+| Задача | Статус | Подтверждение |
+|---|---|---|
+| 1.1 Контракты домена | выполнено | `lib/domain/**`, unit-тесты; коммит `6f6482b` |
+| 1.2 ADR-005/006/007 + archive-format + dependencies §8 | выполнено | `docs/decisions/**`, `docs/archive-format.md`; ADR-007 после спайка S2 |
+| 1.3 drift-схема/миграции/репозитории | выполнено (data-drift) | 60 тестов, schema/migration-тесты; коммит `197ff36` |
+| 1.4 ZIP-кодек/MediaStore/FileGateway | выполнено (archive-zip) | 142 теста transfer (после fix-итерации); коммит `d4b9e89` + fix |
+| 1.5 DriftDeckTransferService | выполнено (archive-zip) | export/preview/import, интеграционный roundtrip; fix H1/M8/M9/M10 |
+| 1.6 Экран «Колоды» | выполнено (ui-decks) | 16 widget-тестов; коммит `aafc448` + fix M11 |
+| 1.7 Экран «Колода» | выполнено (ui-decks) | widget-тесты; коммит `aafc448` |
+| 1.8 M3E runtime-спайк S2 | выполнено | M3ECard/M3EChip/M3ESnackbar/M3EExtendedFab/M3ESplitButton; ADR-007; тест spike |
+| 1.9 Интеграция main/app/router/провайдеры | выполнено | GoRouter, ProviderScope, M3ETheme; `test/integration/`, `test/widget/app_test.dart` |
+| 1.10 Ревью (code+security) | выполнено | reviewer: H1 + M1–M13; blocker/critical/high = 0 после фиксов |
+| 1.11 Верификация | выполнено | `verify.md`: 374 теста, analyze 0, format 0, покрытие 96,0%, build windows OK |
+| 1.12 Память/ретро | выполнено | `summary.md`, STATE, AGENTS (улучшение процесса) |
+
+**Отступления от плана:** (а) `FileGateway`-контракт изменён в середине итерации из-за API `file_picker 13.3.3` (`saveZipFile` вместо pick+write) — зафиксировано в ADR-006; (б) добавлена fix-итерация по findings ревью (task-5/6/7 + Lead) — отдельный коммит `fix:`; (в) `tables.dart` исключён из покрытия (ADR-005 addendum).
