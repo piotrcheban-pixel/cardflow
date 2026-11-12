@@ -3,5 +3,328 @@
   "appTitle": "CardFlow",
   "@appTitle": {
     "description": "Название приложения. Бренд, латиница допустима (SPEC 3.1)."
+  },
+  "cancel": "Отмена",
+  "@cancel": {
+    "description": "Кнопка отмены в диалогах (общая)."
+  },
+  "save": "Сохранить",
+  "@save": {
+    "description": "Кнопка сохранения в диалогах (общая)."
+  },
+  "delete": "Удалить",
+  "@delete": {
+    "description": "Кнопка удаления в диалогах (общая)."
+  },
+  "undo": "Отменить",
+  "@undo": {
+    "description": "Действие снекбара: отменить последнюю операцию (архив колоды)."
+  },
+  "retry": "Повторить",
+  "@retry": {
+    "description": "Кнопка повторной загрузки после ошибки."
+  },
+  "genericError": "Не удалось выполнить действие. Попробуйте ещё раз.",
+  "@genericError": {
+    "description": "Общая ошибка операции без подробностей исключения."
+  },
+  "decksTitle": "Мои колоды",
+  "@decksTitle": {
+    "description": "Заголовок экрана «Колоды» (SPEC A6.2)."
+  },
+  "decksSearchTooltip": "Поиск",
+  "@decksSearchTooltip": {
+    "description": "Подсказка иконки поиска на экране «Колоды»."
+  },
+  "decksFilterTooltip": "Фильтр",
+  "@decksFilterTooltip": {
+    "description": "Подсказка иконки фильтра на экране «Колоды»."
+  },
+  "decksSearchHint": "Поиск колод",
+  "@decksSearchHint": {
+    "description": "Подсказка поля поиска колод."
+  },
+  "decksSearchClearTooltip": "Очистить поиск",
+  "@decksSearchClearTooltip": {
+    "description": "Подсказка кнопки очистки поиска."
+  },
+  "deckFilterAll": "Все",
+  "@deckFilterAll": {
+    "description": "Чип фильтра: все активные колоды."
+  },
+  "deckFilterNew": "Новые",
+  "@deckFilterNew": {
+    "description": "Чип фильтра: колоды с новыми карточками."
+  },
+  "deckFilterInProgress": "В процессе",
+  "@deckFilterInProgress": {
+    "description": "Чип фильтра: колоды с карточками в процессе изучения."
+  },
+  "deckFilterDue": "Просроченные",
+  "@deckFilterDue": {
+    "description": "Чип фильтра: колоды с просроченными карточками."
+  },
+  "decksEmptyTitle": "Пока нет колод",
+  "@decksEmptyTitle": {
+    "description": "Пустое состояние списка колод."
+  },
+  "decksEmptyMessage": "Создайте колоду вручную или импортируйте её из ZIP-архива.",
+  "@decksEmptyMessage": {
+    "description": "Пояснение в пустом состоянии списка колод."
+  },
+  "decksNoResults": "Ничего не найдено",
+  "@decksNoResults": {
+    "description": "Пустой результат поиска/фильтра по колодам."
+  },
+  "decksErrorTitle": "Не удалось загрузить колоды",
+  "@decksErrorTitle": {
+    "description": "Состояние ошибки загрузки списка колод (без сырых исключений)."
+  },
+  "decksCreateButton": "Создать",
+  "@decksCreateButton": {
+    "description": "Основная кнопка создания колоды (Split button)."
+  },
+  "decksCreateDeckFab": "Создать колоду",
+  "@decksCreateDeckFab": {
+    "description": "Расширенная FAB-кнопка создания колоды."
+  },
+  "decksCreateManual": "Вручную",
+  "@decksCreateManual": {
+    "description": "Пункт меню создания: ввести название вручную."
+  },
+  "decksImportZip": "Импорт ZIP",
+  "@decksImportZip": {
+    "description": "Пункт меню/кнопка импорта колоды из ZIP-архива."
+  },
+  "decksMenuTooltip": "Действия с колодой",
+  "@decksMenuTooltip": {
+    "description": "Подсказка кнопки меню действий с колодой."
+  },
+  "deckRename": "Переименовать",
+  "@deckRename": {
+    "description": "Пункт меню колоды: переименовать."
+  },
+  "deckExport": "Экспорт",
+  "@deckExport": {
+    "description": "Пункт меню колоды: экспортировать в ZIP."
+  },
+  "decksCreateMenuTooltip": "Другие способы создания",
+  "@decksCreateMenuTooltip": {
+    "description": "Подсказка второй (меню) сегмента Split-кнопки «Создать»."
+  },
+  "deckCardCount": "{count, plural, =0{Нет карточек} one{{count} карточка} few{{count} карточки} many{{count} карточек} other{{count} карточки}}",
+  "@deckCardCount": {
+    "description": "Количество карточек в колоде (плюрализация).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deckDueCount": "К повторению: {count}",
+  "@deckDueCount": {
+    "description": "Счётчик просроченных карточек (на карточке колоды и экране колоды).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deckNewCount": "Новые: {count}",
+  "@deckNewCount": {
+    "description": "Счётчик новых карточек на экране колоды.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deckInProgressCount": "В процессе: {count}",
+  "@deckInProgressCount": {
+    "description": "Счётчик карточек в процессе изучения на экране колоды.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deckCreateDialogTitle": "Новая колода",
+  "@deckCreateDialogTitle": {
+    "description": "Заголовок диалога создания колоды."
+  },
+  "deckRenameDialogTitle": "Переименовать колоду",
+  "@deckRenameDialogTitle": {
+    "description": "Заголовок диалога переименования колоды."
+  },
+  "deckNameLabel": "Название колоды",
+  "@deckNameLabel": {
+    "description": "Подпись поля названия колоды."
+  },
+  "deckNameEmptyError": "Введите название колоды",
+  "@deckNameEmptyError": {
+    "description": "Ошибка валидации: пустое название колоды."
+  },
+  "deckDeleteDialogTitle": "Удалить колоду?",
+  "@deckDeleteDialogTitle": {
+    "description": "Заголовок диалога подтверждения удаления колоды."
+  },
+  "deckDeleteDialogMessage": "Колода «{name}» и все её карточки будут удалены без возможности восстановления.",
+  "@deckDeleteDialogMessage": {
+    "description": "Пояснение в диалоге удаления колоды.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "deckArchivedMessage": "Колода в архиве",
+  "@deckArchivedMessage": {
+    "description": "Сообщение снекбара после архивации колоды (с действием «Отменить»)."
+  },
+  "deckExportSuccess": "Колода экспортирована",
+  "@deckExportSuccess": {
+    "description": "Сообщение снекбара об успешном экспорте колоды."
+  },
+  "deckImportSuccess": "Колода импортирована",
+  "@deckImportSuccess": {
+    "description": "Сообщение снекбара об успешном импорте колоды."
+  },
+  "deckDefaultFileName": "Колода",
+  "@deckDefaultFileName": {
+    "description": "Запасное имя файла экспорта, если название колоды пустое после очистки."
+  },
+  "deckNotFound": "Колода не найдена",
+  "@deckNotFound": {
+    "description": "Состояние экрана колоды, если колода удалена или не существует."
+  },
+  "deckErrorTitle": "Не удалось загрузить колоду",
+  "@deckErrorTitle": {
+    "description": "Состояние ошибки загрузки экрана колоды (без сырых исключений)."
+  },
+  "deckCardsEmpty": "В колоде пока нет карточек",
+  "@deckCardsEmpty": {
+    "description": "Пустое состояние списка карточек на экране колоды."
+  },
+  "deckCardsEmptyHint": "Карточки появятся после создания, генерации или импорта.",
+  "@deckCardsEmptyHint": {
+    "description": "Пояснение к пустому списку карточек колоды."
+  },
+  "cardTagsLine": "Теги: {tags}",
+  "@cardTagsLine": {
+    "description": "Строка тегов карточки на экране колоды.",
+    "placeholders": {
+      "tags": {
+        "type": "String"
+      }
+    }
+  },
+  "cardStateNew": "Новая",
+  "@cardStateNew": {
+    "description": "Подпись состояния карточки: новая."
+  },
+  "cardStateLearning": "Изучается",
+  "@cardStateLearning": {
+    "description": "Подпись состояния карточки: изучается."
+  },
+  "cardStateReview": "В повторении",
+  "@cardStateReview": {
+    "description": "Подпись состояния карточки: в повторении."
+  },
+  "cardStateRelearning": "Переизучается",
+  "@cardStateRelearning": {
+    "description": "Подпись состояния карточки: переизучается."
+  },
+  "importPreviewTitle": "Импорт колоды",
+  "@importPreviewTitle": {
+    "description": "Заголовок диалога предпросмотра импорта."
+  },
+  "importPreviewDeckName": "Колода: {name}",
+  "@importPreviewDeckName": {
+    "description": "Имя импортируемой колоды в предпросмотре.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "importPreviewFormatVersion": "Версия формата: {version}",
+  "@importPreviewFormatVersion": {
+    "description": "Версия формата архива в предпросмотре импорта.",
+    "placeholders": {
+      "version": {
+        "type": "int"
+      }
+    }
+  },
+  "importPreviewCards": "{count, plural, =0{Карточек нет} one{{count} карточка} few{{count} карточки} many{{count} карточек} other{{count} карточки}}",
+  "@importPreviewCards": {
+    "description": "Количество карточек в предпросмотре импорта.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "importPreviewDuplicates": "{count, plural, =0{Дубликатов нет} one{{count} дубликат} few{{count} дубликата} many{{count} дубликатов} other{{count} дубликата}}",
+  "@importPreviewDuplicates": {
+    "description": "Количество дубликатов, которые будут пропущены при импорте.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "importPreviewMedia": "{count, plural, =0{Без медиафайлов} one{{count} медиафайл} few{{count} медиафайла} many{{count} медиафайлов} other{{count} медиафайла}}",
+  "@importPreviewMedia": {
+    "description": "Количество медиафайлов в предпросмотре импорта.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "importConfirm": "Импортировать",
+  "@importConfirm": {
+    "description": "Кнопка подтверждения импорта в диалоге предпросмотра."
+  },
+  "archiveErrorUnsupportedVersion": "Версия архива не поддерживается. Обновите CardFlow.",
+  "@archiveErrorUnsupportedVersion": {
+    "description": "Ошибка импорта: неизвестная версия формата архива."
+  },
+  "archiveErrorCorruptZip": "Не удалось прочитать архив: файл повреждён.",
+  "@archiveErrorCorruptZip": {
+    "description": "Ошибка импорта: файл не является корректным ZIP-архивом."
+  },
+  "archiveErrorMissingEntry": "В архиве нет обязательных файлов.",
+  "@archiveErrorMissingEntry": {
+    "description": "Ошибка импорта: в архиве отсутствует обязательная запись."
+  },
+  "archiveErrorInvalidMeta": "Метаданные архива повреждены.",
+  "@archiveErrorInvalidMeta": {
+    "description": "Ошибка импорта: некорректный meta.json."
+  },
+  "archiveErrorInvalidCards": "Карточки в архиве повреждены.",
+  "@archiveErrorInvalidCards": {
+    "description": "Ошибка импорта: некорректные карточки архива."
+  },
+  "archiveErrorTooLarge": "Архив слишком большой для импорта.",
+  "@archiveErrorTooLarge": {
+    "description": "Ошибка импорта: превышены лимиты размера архива."
+  },
+  "archiveErrorMediaMissing": "В архиве не хватает медиафайлов.",
+  "@archiveErrorMediaMissing": {
+    "description": "Ошибка импорта/экспорта: отсутствует медиафайл."
+  },
+  "archiveErrorDeckNotFound": "Колода не найдена в архиве.",
+  "@archiveErrorDeckNotFound": {
+    "description": "Ошибка экспорта: колода не найдена."
+  },
+  "archiveErrorInvalidEntryName": "В архиве недопустимое имя файла.",
+  "@archiveErrorInvalidEntryName": {
+    "description": "Ошибка импорта: недопустимое имя записи (zip-slip)."
+  },
+  "archiveErrorUnknown": "Не удалось выполнить операцию с архивом. Попробуйте ещё раз.",
+  "@archiveErrorUnknown": {
+    "description": "Общая ошибка операции с архивом без подробностей исключения."
   }
 }
