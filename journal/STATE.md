@@ -13,7 +13,7 @@
 - **Доказательства (эта сессия):** `fvm flutter test --coverage` → **378 тестов зелёные**; покрытие **96,0% (1666/1736)**; `fvm flutter analyze` → **0 issues**; `dart format` → 0 changed; `fvm flutter build windows --release` → **cardflow.exe собран** (L2b снят); guard-тесты 35/35.
 - **Ревью:** независимый reviewer — H1 + M1–M13; после fix-итерации blocker/critical/high = 0; отчёт `journal/iteration-1/review.md`; детали закрытия — `verify.md` §3.
 - **Отступления:** red-фаза для Lead-контрактов/migration-тестов — компиляционная (зафиксировано в verify §4); `table.dart` вне покрытия (ADR-005 addendum); M7 → L13 (отложено).
-- **Коммиты:** `ef93a80` (план/ADR), `6f6482b` (домен), `197ff36` (data-drift), `d4b9e89` (transfer), `aafc448` (UI+интеграция), далее `fix:` (findings ревью) и `docs:` (verify/summary/review/STATE).
+- **Коммиты:** `ef93a80` (план/ADR), `6f6482b` (домен), `197ff36` (data-drift), `d4b9e89` (transfer), `aafc448` (UI+интеграция), `4b827ed` (fix findings ревью), `2f8b744` (verify/summary/review/STATE/доки). Рабочее дерево — clean.
 
 ## Открытые вопросы к владельцу
 
