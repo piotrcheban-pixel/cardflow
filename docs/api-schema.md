@@ -42,7 +42,7 @@
 
 | Провайдер | Механизм | Проекция схемы | Ключевые поля |
 |---|---|---|---|
-| OpenAI | Chat Completions, `response_format: {type: "json_schema", json_schema: {name, strict: true, schema}}` | канон как есть (union с `null` и `additionalProperties` допустимы в strict) | `choices[0].message.content`, `message.refusal`, `choices[0].finish_reason`, `usage.prompt_tokens/completion_tokens` |
+| OpenAI | Chat Completions, `response_format: {type: "json_schema", json_schema: {name, strict: true, schema}}` | канон как есть (strict **требует** `additionalProperties: false` и все свойства в `required`; nullable — union с `null`) | `choices[0].message.content`, `message.refusal`, `choices[0].finish_reason`, `usage.prompt_tokens/completion_tokens` |
 | Gemini | `generateContent`, `generationConfig: {responseMimeType: "application/json", responseSchema}` | union `[T,"null"]` → `{type: T, nullable: true}`; типы — `STRING/NUMBER/INTEGER/BOOLEAN/ARRAY/OBJECT`; `additionalProperties` удаляется; `propertyOrdering` = порядок свойств | `candidates[0].content.parts[].text`, `candidates[0].finishReason`, `promptFeedback.blockReason`, `usageMetadata.*` |
 | Anthropic | `messages` + `tools` (`emit_cards`) + `tool_choice: {type: "tool", name: "emit_cards"}` | union → `anyOf: [{type: T}, {type: "null"}]`; `additionalProperties` сохраняется | `content[]` с `{type: "tool_use", name: "emit_cards", input.cards}`, `stop_reason`, `usage.input_tokens/output_tokens` |
 
@@ -50,9 +50,11 @@
 
 - OpenAI: `POST https://api.openai.com/v1/chat/completions`, `Authorization: Bearer <key>`.
 - Gemini: `POST https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent`,
-  `x-goog-api-key: <key>` (ключ **не** в URL — SPEC A8.6).
+  `x-goog-api-key: <key>` (ключ **не** в URL — SPEC A8.6); `generationConfig.maxOutputTokens` передаётся.
 - Anthropic: `POST https://api.anthropic.com/v1/messages`, `x-api-key: <key>`,
   `anthropic-version: 2023-06-01`, `max_tokens` обязателен.
+- Лимит ответа OpenAI не передаётся: ограничение — `<limit>` карточек в сообщении, а обрезание
+  распознаётся по `finish_reason` (у части моделей параметр устарел, сверка с живым API — L1).
 
 ## 3. Причины остановки и ошибки провайдеров
 
@@ -60,7 +62,7 @@
 |---|---|---|---|---|
 | Обрезано по лимиту | `finish_reason == "length"` | `finishReason == "MAX_TOKENS"` | `stop_reason == "max_tokens"` | `truncated` (3c дробит фрагмент пополам) |
 | Отказ модели | `message.refusal != null` | `SAFETY`, `RECITATION`, `BLOCKLIST`, `PROHIBITED_CONTENT`, `SPII`, `blockReason` | `stop_reason == "refusal"` | `refused` |
-| Пустой ответ | `content` пуст/`null` | нет `candidates`, нет текста | нет текстового/`tool_use` контента | `emptyResponse` |
+| Пустой ответ | `content` пуст/`null` | нет `candidates`, нет текста | — (для Anthropic пустой `content` — это `invalidResponse`: нет `tool_use`) | `emptyResponse` (OpenAI/Gemini) |
 | Нет структурированного ответа | не JSON / схема | не JSON / схема | нет `tool_use` с `emit_cards` | `invalidResponse` |
 
 ## 4. Локальная валидация (A8.4)
@@ -105,7 +107,11 @@
 
 - Максимум 4 попытки. 429 — пауза по `Retry-After` (секунды или HTTP-date), иначе экспоненциальный
   backoff с full jitter (`base 1 s`, `cap 30 s`); 5xx/таймауты/сеть — тот же backoff.
-- 400/401/403 (и прочие 4xx), отмена, ошибки разбора и схемы — без повторов.
+- **Осознанный cap (ADR-012 §1):** если `Retry-After` больше `maxRetryAfter` (60 с), автоматический
+  повтор не выполняется — пользователь видит «Повтор через N секунд» и повторяет вручную; UI не
+  блокируется на минуты. `maxRetryAfter` настраивается в `RetryPolicy`.
+- 400/401/403 (и прочие 4xx), отмена, ошибки разбора и схемы — без повторов. Отмена прерывает и
+  паузу перед повтором (не ждёт backoff/`Retry-After`).
 - Таймауты: соединение 15 с, отправка 60 с, приём 180 с.
 
 ## 7. Безопасность

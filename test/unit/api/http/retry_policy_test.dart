@@ -101,6 +101,33 @@ void main() {
       );
     });
 
+    test('429: maxRetryAfter настраивается (cap — осознанное решение)', () {
+      final retry = RetryPolicy(
+        maxRetryAfter: const Duration(seconds: 5),
+        jitter: () => 1.0,
+      );
+      expect(
+        retry
+            .decide(
+              attempt: 1,
+              statusCode: 429,
+              retryAfter: const Duration(seconds: 4),
+            )
+            .delay,
+        const Duration(seconds: 4),
+      );
+      expect(
+        retry
+            .decide(
+              attempt: 1,
+              statusCode: 429,
+              retryAfter: const Duration(seconds: 6),
+            )
+            .shouldRetry,
+        isFalse,
+      );
+    });
+
     test('429 с огромным Retry-After: автоматического повтора нет', () {
       final retry = policy();
       final decision = retry.decide(
