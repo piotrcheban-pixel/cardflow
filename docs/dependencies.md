@@ -53,7 +53,7 @@
 | [dynamic_color](https://pub.dev/packages/dynamic_color) | `^2.1.0` | dynamic color (A4.1): Android 12+ / Linux / macOS / Windows; публикатор material.io, Apache-2.0 | Android, Linux, macOS, Windows (на iOS — no-op) | Apache-2.0 | approved · **пока не используется**, подключается в итерации 7 (KNOWN_LIMITATIONS L6c) |
 | [path](https://pub.dev/packages/path) | `^1.9.1` (транзитивно) | пути к файлам | чистый Dart | BSD-3-Clause | approved · транзитивная зависимость; прямой необходимости в pubspec пока нет |
 | [collection](https://pub.dev/packages/collection) | `^1.19.1` | утилиты коллекций | чистый Dart | BSD-3-Clause | approved |
-| [enough_convert](https://pub.dev/packages/enough_convert) | `^1.7.1` | кодировки для TXT/MD/RTF (A8.3): Windows-1251 (cp1251) и **KOI8-R**/KOI8-U, ISO-8859, DOS, GBK, Big5 | чистый Dart | MPL-2.0 | approved · **добавить в итерации 3a** (сейчас не нужен) · needs-runtime-spike (проверить cp1251 и KOI8-R на фикстурах) |
+| [enough_convert](https://pub.dev/packages/enough_convert) | `^1.7.1` | кодировки для TXT/MD/RTF (A8.3): Windows-1251 (cp1251) и **KOI8-R**/KOI8-U, ISO-8859, DOS, GBK, Big5 | чистый Dart | MPL-2.0 | approved · **добавлен в итерации 3a**; покрыт тестами (spike S-ENC, RTF/TXT-тесты) |
 | `flutter` | SDK | UI | — | BSD-3-Clause | approved |
 | `flutter_localizations` | SDK | системные строки Flutter/Material для `ru` | — | BSD-3-Clause | approved · делегаты — из `material_ui` (см. ADR-001) |
 | [freezed_annotation](https://pub.dev/packages/freezed_annotation) | `^3.1.0` | аннотации для `*.freezed.dart` | чистый Dart | MIT | approved (runtime-зависимость) |
@@ -179,7 +179,7 @@ dev_dependencies:
 | `desktop_drop` 0.8.4 вместо 0.9.2 | конфликт `cross_file`: `desktop_drop >=0.9.0` → `^0.4.0`, `file_picker >=12` → `^0.3.5+4`; версии несовместимы. 0.8.4 использует `cross_file ^0.3.4+2` | зафиксировано; пересмотр в итерации 3c (DnD-экран) |
 | `drift_flutter` не добавлен | тянет EOL-заглушки (`sqlite3_flutter_libs 0.6.0+eol`); открытие БД — вручную через `sqlite3` 3.9.1 (native assets) | **подтверждено в итерации 1 (ADR-005):** спайк S3 успешен, `openAppDatabase()` работает; CI-сборки — до пуша |
 | `sqlite3_flutter_libs` не добавлен | EOL (описание пакета); SQLite ставится пакетом `sqlite3 ^3.9.1` через Dart build hooks | проверено: `dart run tool/coverage_check.dart` собрал native assets на Windows |
-| `enough_convert` не добавлен | нужен только парсерам кодировок в итерации 3a | добавить в 3a |
+| `enough_convert` не добавлен | нужен только парсерам кодировок в итерации 3a | **добавлен в итерации 3a** (2026-11-13) |
 | `freezed_annotation`, `json_annotation` | перенесены из dev_dependencies в dependencies: сгенерированный код импортирует их из `lib/` | исправлено в pubspec |
 | `flutter` SDK-пакет: Material-импорты | `lib/` использует `package:material_ui/material_ui.dart` (ADR-001); `package:flutter/material.dart` в `lib/` не встречается | выполнено, проверено ревью |
 | `desktop_drop`/`super_drag_and_drop` | выбран один пакет (SPEC A3), `super_drag_and_drop` удалён из pubspec | выполнено |
@@ -219,13 +219,13 @@ dev_dependencies:
 | S-PDF — `pdfrx` 2.12.0 | **успешен:** `pdfrxInitialize()` (Dart-вариант, без Flutter-binding) + `PdfDocument.openData` + `page.loadText()` → текст «Hello CardFlow PDF» из программно собранного PDF |
 | S-PDF-isolate — `Isolate.run` | **успешен:** извлечение текста PDF работает внутри отдельного изолята (`pdfrxInitialize` внутри изолята) — A8.3 «тяжёлые файлы в изоляте» выполнимо для всех форматов |
 
-**Риск CI:** тесты PDF-парсера будут грузить нативные PDFium (Dart native assets) на Linux/Windows/macOS; локально на Windows спайк зелёный, поведение на остальных ОС проверит CI-прогон итерации 3a.
+**CI/L26 (подтверждено прогоном 43484685899):** тесты PDF-парсера в `flutter test` на Linux/macOS не получают PDFium из native assets; исправлено CI-бутстрапом pinned PDFium (`bblanchon/pdfium-binaries` `chromium/8125`, sha256, `PDFIUM_PATH`) на всех трёх ОС — см. §10, ADR-010 §11 и `journal/iteration-3a/fix-l26.md`.
 
 ## 10. Фактическое состояние после итерации 3a (2026-11-13)
 
 **Новых пакетов, кроме `enough_convert ^1.7.1` (добавлен на шаге спайков), не добавлялось.** Парсеры A8.3 собраны на уже проверенных зависимостях: `archive` 4.6.0 + `xml` 7.0.1 (DOCX/PPTX/ODT, ZIP-хелпер), `excel_plus` 2.29.2 (XLSX), `pdfrx` 2.12.0 (PDF), `enough_convert` 1.7.1 (cp1251/KOI8-R), собственный минимальный RTF-конвертер (внешних пакетов нет — требование SPEC A8.3).
 
-**Runtime-проверки итерации 3a** (`fvm flutter test`, локально Windows, 595 тестов):
+**Runtime-проверки итерации 3a** (`fvm flutter test --exclude-tags golden`, локально Windows, **603 теста**):
 
 | Пакет | Результат |
 |---|---|
@@ -237,4 +237,4 @@ dev_dependencies:
 
 **Покрытие нового кода** (`fvm dart run tool/coverage_check.dart --min=80`): итого **95.3% (3152/3309)**; по новым файлам: `file_parsing_service` 100%, `odt_parser` 100%, `parsed_document_builder` 100%, `xml_local_names` 100%, `parsed_document` 100%, `pdf_parser` 85.3%, `docx_parser` 98.7%, `pptx_parser` 98.2%, `zip_xml` 96.8%, `txt_parser` 96.3%, `xlsx_parser` 94.7%, `rtf_parser` 89.0%, `document_format` 94.1%.
 
-**CI:** прогон итерации 3a ещё не выполнялся (push — по команде владельца); pdfrx/PDFium native assets на Linux/macOS подтверждаются CI — известное ограничение L26.
+**CI:** прогон итерации 3a [`43484685899`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43484685899) выявил L26 (PDFium не грузился в `flutter test` на Linux/macOS); фикс — PDFium-бутстрап на всех трёх ОС (pinned `chromium/8125` + sha256 + `PDFIUM_PATH`) и guard `test/guards/ci_pdfium_test.dart` (ADR-010 §11). Зелёный прогон после фикса — критерий снятия L26.

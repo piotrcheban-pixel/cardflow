@@ -99,13 +99,32 @@ UI-слой маппит код в ARB (`lib/ui/generation/parser_error_message.
 ### 9. PDF и pdfrx
 
 - Используется `pdfrx` 2.12.0 (MIT) — виджеты не используются; в изоляте вызывается `pdfrxInitialize()`
-  (Dart-инициализация, PDFium из `pdfium_dart` native assets); `pdfrxFlutterInitialize()` не нужен.
+  (Dart-инициализация); `pdfrxFlutterInitialize()` не нужен.
+- **Откуда PDFium:** в приложении — native assets (`pdfium_dart`, Windows/Linux/Android) или XCFramework
+  (iOS/macOS, через `pdfium_flutter`); в **`flutter test`** native assets PDFium не дают (L26), поэтому CI
+  job `test` скачивает pinned релиз `bblanchon/pdfium-binaries` `chromium/8125` (тот же, что в build-hook
+  `pdfium_dart` 0.4.1), проверяет sha256 и экспортирует `PDFIUM_PATH`; `pdfrxInitialize()` читает переменную
+  и грузит модуль по явному пути.
 - `passwordProvider: () => null` → запароленный PDF → `unreadableFile`; `PdfException` → `unreadableFile`.
 
 ### 10. Итерационные границы
 
 - В итерации 3a **нет UI-экрана**: парсеры + сервис + ARB-сообщения + маппинг ошибок; экран A6.8, drag-n-drop
   и прогресс — итерация 3c. Мёртвых кнопок не добавляем.
+
+### 11. Политика покрытия PDF в CI (L26)
+
+- **PDF-тесты не скипаются и не тегируются.** Ситуация «PDFium недоступен» — это красный job, который чинится
+  инфраструктурой CI, а не тихое отключение покрытия. Политику защищает guard `test/guards/ci_pdfium_test.dart`:
+  матрица ОС (`ubuntu/windows/macos`), команда тестов (`--exclude-tags golden` без дополнительных фильтров),
+  отсутствие `skip`/тегов/`testOn` в PDF-тестах, наличие PDFium-бутстрапа с sha256 до шага тестов.
+- PDFium в CI — **pinned** `bblanchon/pdfium-binaries` `chromium/8125`: тот же релиз скачивает build-hook
+  `pdfium_dart` 0.4.1. При обновлении `pdfium_dart`/`pdfrx` обновлять пин в `.github/workflows/ci.yml`
+  (URL, имена ассетов и три sha256) в том же коммите; иначе PDF-тесты могут грузить несовместимый API.
+- **Остаточные риски (осознанно):** сеть до GitHub releases (сбой → красный job, не skip); macOS-ассет только
+  arm64 (`macos-latest`); iOS-тестов PDF нет (iOS покрыт сборкой); реальные PDF-файлы и лимиты 25 МБ — L23/L25.
+- `.gitattributes` (`* text=auto eol=lf`) — общий инвариант: guard-тесты читают файлы и сверяют точные
+  маркеры; CRLF из checkout-а на Windows ломал L26-guard (ревью B1).
 
 ## Последствия
 

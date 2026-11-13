@@ -95,9 +95,20 @@ for (final outcome in outcomes) {
 - Интеграционный срез: производственный сервис с реальным `Isolate.run` — все форматы, ошибки по файлам,
   сохранение кода `ParserException` из изолята.
 
+### PDF в CI (L26)
+
+PDF-тесты реально выполняются на всех трёх ОС (ubuntu/windows/macos), без skip и тегов. В `flutter test`
+PDFium не находится сам (native assets не дают `libpdfium` на Linux/macOS, на macOS Dart-загрузчик
+`pdfium_dart` не поддерживает платформу), поэтому job `test` скачивает pinned релиз
+`bblanchon/pdfium-binaries` `chromium/8125` (тот же, что build-hook `pdfium_dart` 0.4.1), сверяет sha256 и
+экспортирует `PDFIUM_PATH`; `pdfrxInitialize()` грузит модуль по явному пути (ADR-010 §9, §11).
+Инварианты (матрица ОС, команда тестов, отсутствие skip/тегов, шаг с sha256 до тестов, `.gitattributes`
+eol=lf) защищает guard `test/guards/ci_pdfium_test.dart`. Остаточные риски — сеть до GitHub releases,
+только arm64 на macOS, нет iOS-тестов — зафиксированы в `journal/KNOWN_LIMITATIONS.md` L26.
+
 ## Ограничения
 
 Реальные файлы Word/LibreOffice/PDF с устройства не проверялись (фикстуры программные); вложенные таблицы
 DOCX уплощаются в текст ячейки; нумерация списков DOCX не извлекается; объём 25 МБ и производительность/OOM
-не проверялись; pdfrx/PDFium в тестах на Linux/macOS CI проверяется прогоном итерации 3a. Подробно —
+не проверялись; PDF-тесты в CI идут на всех трёх ОС через pinned PDFium (L26, ADR-010 §11). Подробно —
 `journal/KNOWN_LIMITATIONS.md` L7, L23–L27.
