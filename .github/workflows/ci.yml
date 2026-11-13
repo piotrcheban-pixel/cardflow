@@ -7,9 +7,10 @@ name: CI
 # Прогон итерации 2 упал инфраструктурно: "No space left on device" на раннере.
 # Поэтому перед `flutter pub get` каждый job освобождает диск ("Free disk space"),
 # а Android-сборка дополнительно чистит кэш Gradle перед сборкой.
-# PDF-тесты на Linux/macOS (L26) получают PDFium явно: job test скачивает pinned
-# релиз bblanchon/pdfium-binaries (chromium/8125, тот же, что в build-hook
-# pdfium_dart) и экспортирует PDFIUM_PATH -> pdfrxInitialize() грузит модуль.
+# PDF-тесты (L26) получают PDFium явно и пинованно на всех трёх ОС: job test
+# скачивает релиз bblanchon/pdfium-binaries chromium/8125 (тот же, что в
+# build-hook pdfium_dart), проверяет sha256 и экспортирует PDFIUM_PATH ->
+# pdfrxInitialize() грузит модуль по явному пути.
 
 on:
   push:
@@ -119,30 +120,70 @@ jobs:
         # flutter test на Linux/macOS не находит PDFium сам (L26): Flutter engine
         # cache не содержит libpdfium, у pdfium_dart в тестовом окружении нет
         # bundled native asset, на macOS чистый Dart-загрузчик платформу не
-        # поддерживает. Скачиваем тот же релиз PDFium, что использует build-hook
-        # pdfium_dart 0.4.1 (bblanchon/pdfium-binaries, chromium/8125), и отдаём
-        # его pdfrx через PDFIUM_PATH: pdfrxInitialize() читает переменную и
-        # грузит модуль по явному пути. На Windows PDFium находится сам.
+        # поддерживает. Скачиваем тот же pinned релиз PDFium, что использует
+        # build-hook pdfium_dart 0.4.1 (bblanchon/pdfium-binaries, chromium/8125),
+        # сверяем sha256 и отдаём pdfrx через PDFIUM_PATH: pdfrxInitialize()
+        # читает переменную и грузит модуль по явному пути.
         if: runner.os != 'Windows'
         shell: bash
         run: |
           set -euo pipefail
           case "$RUNNER_OS" in
-            Linux) asset="pdfium-linux-x64.tgz"; lib="lib/libpdfium.so" ;;
-            macOS) asset="pdfium-mac-arm64.tgz"; lib="lib/libpdfium.dylib" ;;
-            *) echo "PDFium bootstrap не нужен для $RUNNER_OS"; exit 0 ;;
+            Linux)
+              asset="pdfium-linux-x64.tgz"
+              lib="lib/libpdfium.so"
+              sha="e1c3ce6e270cb5e0c20816b379ad9f2c1309972697c505f508de92bf5e7d6659" ;;
+            macOS)
+              asset="pdfium-mac-arm64.tgz"
+              lib="lib/libpdfium.dylib"
+              sha="4939bd935ac83ddc09a3a4f038bc43a19cea1660316a3667f26cb07a070e139d" ;;
+            *)
+              echo "PDFium: неожиданная ОС $RUNNER_OS"
+              exit 1 ;;
           esac
+          tgz="$RUNNER_TEMP/pdfium.tgz"
+          curl -fsSL --connect-timeout 20 --max-time 180 --retry 3 --retry-delay 2 \
+            -o "$tgz" \
+            "https://github.com/bblanchon/pdfium-binaries/releases/download/chromium%2F8125/$asset"
+          if command -v sha256sum >/dev/null 2>&1; then
+            echo "$sha  $tgz" | sha256sum -c -
+          else
+            echo "$sha  $tgz" | shasum -a 256 -c -
+          fi
           dir="$RUNNER_TEMP/pdfium"
           mkdir -p "$dir"
-          curl -fsSL --retry 3 -o "$RUNNER_TEMP/pdfium.tgz" \
-            "https://github.com/bblanchon/pdfium-binaries/releases/download/chromium%2F8125/$asset"
-          tar -xzf "$RUNNER_TEMP/pdfium.tgz" -C "$dir"
+          tar -xzf "$tgz" -C "$dir"
           if [ ! -f "$dir/$lib" ]; then
             echo "PDFium: в архиве $asset нет $lib"
             exit 1
           fi
           echo "PDFIUM_PATH=$dir/$lib" >> "$GITHUB_ENV"
           echo "PDFium для тестов: $dir/$lib"
+      - name: PDFium для PDF-тестов (Windows)
+        # Явный бутстрап и на Windows: тот же pinned релиз PDFium, что и для
+        # Linux/macOS (L26), — механизм загрузки в flutter test не должен
+        # зависеть от неявного native-assets окружения раннера.
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $asset = 'pdfium-win-x64.tgz'
+          $sha = '9a964261760cff52570aabf038ab346d3a5034dd8b30d0d5fe8861235d356b8b'
+          $tgz = Join-Path $env:RUNNER_TEMP 'pdfium.tgz'
+          Invoke-WebRequest -Uri "https://github.com/bblanchon/pdfium-binaries/releases/download/chromium%2F8125/$asset" -OutFile $tgz -TimeoutSec 180
+          $actual = (Get-FileHash -Path $tgz -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actual -ne $sha) {
+            throw "PDFium: sha256 не совпал: $actual (ожидался $sha)"
+          }
+          $dir = Join-Path $env:RUNNER_TEMP 'pdfium'
+          New-Item -ItemType Directory -Force -Path $dir | Out-Null
+          tar -xzf $tgz -C $dir
+          $lib = Join-Path $dir 'bin/pdfium.dll'
+          if (-not (Test-Path $lib)) {
+            throw "PDFium: в архиве $asset нет bin/pdfium.dll"
+          }
+          "PDFIUM_PATH=$lib" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          Write-Output "PDFium для тестов: $lib"
       - run: flutter pub get
       - run: flutter gen-l10n
       - name: Тесты (кроме golden)

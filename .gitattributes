@@ -1,0 +1,4 @@
+# Единые переводы строк в рабочем дереве: checkout на Windows не должен
+# превращать файлы в CRLF. Guard-тесты читают workflow/файлы и сверяют точные
+# маркеры (L26: guard CI-PDFium; ревью B1) — CRLF ломал их на test (windows).
+* text=auto eol=lf
