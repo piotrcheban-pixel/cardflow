@@ -20,6 +20,16 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   32 МБ запись / 120 МБ сумма) до разбора; ошибки — только `ParserErrorCode` → строка ARB
   (`lib/ui/generation/parser_error_message.dart`), `details`/сырые исключения в UI не попадают. `.doc/.xls`
   не поддерживаются (ADR-003). Парсинг — в `Isolate.run`; ошибка файла не блокирует остальные.
+- **API-слой генерации** (SPEC A8.1/A8.2/A8.4–A8.6, ADR-011/ADR-012):
+  канон-схема ответа и её проекции — `lib/api/generation/` (`card_json_schema.dart`, `provider_schema.dart`);
+  три адаптера провайдеров — `lib/api/providers/` (чистые `buildRequest`/`parseResponse`, без сети и UI);
+  промпт `gen-ru-v2` скрыт в коде (`system_prompt.dart`), пользовательское сообщение — `generation_prompt.dart`;
+  контентные правила A8.4 — `card_content_validator.dart` (пометки `CardIssueCode`, карточка не отбрасывается);
+  HTTP — только через `GenerationTransport` (`lib/api/http/generation_http_client.dart`) с `RetryPolicy`
+  и `RedactingLogInterceptor`. Ошибки — только `GenerationErrorCode` → строка ARB
+  (`lib/ui/generation/generation_error_message.dart`). Ключи — только `ApiKeyStore` (secure storage).
+  LaTeX-проверка `flutter_math_fork` допустима только в `lib/api/generation/latex_checker.dart` и инжектируется
+  в валидатор; остальной `lib/api/` от Flutter не зависит.
 - `ui/` — экраны, виджеты, локализация. Компоненты M3 Expressive — только через слой `lib/ui/m3e/` (библиотеку можно заменить). Токены движения — `lib/ui/motion.dart`.
 - Модели immutable (`freezed`/`const`), роутинг `GoRouter` (см. ADR), HTTP `Dio`. Состояние — Riverpod 3 без кодогенерации (ADR-002).
 - **Material-виджеты — только `package:material_ui/material_ui.dart`** (ADR-001), `package:flutter/material.dart` в `lib/` запрещён. M3E-компоненты — только через `lib/ui/m3e/`, библиотека `material_3_expressive` больше нигде не импортируется.
@@ -29,7 +39,7 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
 
 - Локаль только `ru`; `supportedLocales: [Locale('ru')]`; системные строки Flutter — через `GlobalMaterialLocalizations`.
 - Никаких WebView/HTML-обёрток, включая транзитивные зависимости (guard-тест по `pubspec.lock`). LaTeX — только `flutter_math_fork`.
-- Ключи API — только `flutter_secure_storage`; вне кода, логов, БД, экспорта, git. В логах редактировать `Authorization`, `x-api-key`, `x-goog-api-key`. Значения ключей не выводить в терминал; проверка — present/absent.
+- Ключи API — только `flutter_secure_storage` (контракт `ApiKeyStore`); вне кода, логов, БД, экспорта, git. В логах редактировать `Authorization`, `x-api-key`, `x-goog-api-key` (и query `key`/`api_key`) через `lib/api/http/log_redaction.dart`; **тела запросов/ответов генерации не логируются вообще** (материалы и ответ модели), перехватчик — только debug. Значения ключей не выводить в терминал; проверка — present/absent.
 - Сырые ошибки API/исключения пользователю не показывать — только сообщения из ARB.
 - Никаких мёртвых кнопок и заглушек: функция либо работает, либо её нет (фича-флаг выключен).
 - Нельзя ослаблять/удалять тесты, отключать анализатор, ставить `// ignore:` без ADR, понижать порог покрытия.
@@ -58,12 +68,17 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
 - **Ретроспектива итерации 3a:** каждый high/medium из ревью закрывается отдельным fix-коммитом и **новым тестом**
   (или программной фикстурой — например, запароленный PDF/архив с >10 000 записей), а не только правкой кода;
   главные риски парсеров снимаются спайком до плана (pdfrx в изоляте, `cachedValue`, `innerText`).
+- **Ретроспектива итерации 3b:** гейт формата — `fvm dart format lib test` (пишет файлы) + проверка
+  `fvm dart format --set-exit-if-changed lib test` **без** `--output=none` (он не пишет и маскирует расхождение —
+  ложное «0 changed» нашлось на ревью); параллельные слои — тесты-спецификация red-фазы как неизменяемый
+  контракт и исполнители с непересекающимися write-scope (адаптеры; HTTP/безопасность), Lead — ядро и проводка.
 
 ## Факты хоста (обновлять при изменении)
 
 - Windows 11; Android SDK/JDK/Xcode отсутствуют → локально проверяем `flutter test/analyze` и `flutter build windows`; остальные сборки — CI/известное ограничение.
 - FVM 4.3.2; Flutter 3.47.9 (Dart 3.13.7). Все команды — через `fvm` (`fvm flutter …`).
 - **Windows-сборка CardFlow работает локально (итерация 1, 2026-11-12):** `fvm flutter build windows --release` → `√ Built build\windows\x64\runner\Release\cardflow.exe` (VS BuildTools 18.12/MSVC 14.52; прежняя ошибка ATL снята, устаревший `build/windows` удалён). Если сборка падает на компиляторе — сначала очистить `build/windows` (stale CMakeCache).
+- **API-слой генерации проверен локально (итерация 3b, 2026-11-13):** `fvm flutter test --exclude-tags golden` → **745 тестов**; покрытие **95.0% (3808/4007)**; `analyze` 0; `dart format` 0 changed; `fvm flutter build windows --release` — ок. Спайки: `json_schema 5.2.2` валидирует A8.4 (S1), проверка LaTeX — `Math.tex(...).parseError` без рендера (S2), fake `HttpClientAdapter` Dio 5.11.1 для retry/429/5xx/отмены без сети (S3) — `journal/iteration-3b/spikes.md`. Живые вызовы провайдеров не проверялись (L1/L30).
 - GitHub-remote: `origin` → `piotrcheban-pixel/cardflow` (private); CI — GitHub Actions (`.github/workflows/ci.yml`). Push выполняется по команде владельца (хука `confirm-git-push` нет).
 - **PDF-тесты и PDFium в CI (L26, с 2026-11-13):** job `test` скачивает pinned PDFium
   (`bblanchon/pdfium-binaries` `chromium/8125` — тот же релиз, что build-hook `pdfium_dart` 0.4.1) на всех трёх ОС,
