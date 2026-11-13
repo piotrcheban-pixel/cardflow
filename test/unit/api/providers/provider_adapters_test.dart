@@ -7,6 +7,7 @@ import 'package:cardflow/api/providers/anthropic_adapter.dart';
 import 'package:cardflow/api/providers/gemini_adapter.dart';
 import 'package:cardflow/api/providers/generation_provider_adapter.dart';
 import 'package:cardflow/api/providers/openai_adapter.dart';
+import 'package:cardflow/api/providers/provider_json.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
 import 'package:cardflow/domain/generation/generation_provider.dart';
 import 'package:cardflow/domain/generation/generation_result.dart';
@@ -459,6 +460,15 @@ void main() {
         adapters.map((adapter) => adapter.provider).toSet(),
         GenerationProvider.values.toSet(),
       );
+    });
+
+    test('jsonIntOrNull устойчив к нечисловым и неконечным значениям', () {
+      expect(jsonIntOrNull(null), isNull);
+      expect(jsonIntOrNull('42'), isNull);
+      expect(jsonIntOrNull(42), 42);
+      expect(jsonIntOrNull(42.0), 42);
+      expect(jsonIntOrNull(double.infinity), isNull);
+      expect(jsonIntOrNull(double.nan), isNull);
     });
 
     test('Request/Response — immutable-значения с полями', () {

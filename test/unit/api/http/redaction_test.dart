@@ -95,6 +95,8 @@ void main() {
       expect(logs, isNotEmpty);
       expect(joined, contains('POST'));
       expect(joined, contains('api.openai.com'));
+      expect(joined.toLowerCase(), contains('authorization'));
+      expect(joined, contains(redactedValue));
       expect(joined, isNot(contains('SECRET-HEADER')));
       expect(joined, isNot(contains('SECRET-QUERY')));
       expect(joined, isNot(contains('СЕКРЕТНЫЙ-МАТЕРИАЛ')));

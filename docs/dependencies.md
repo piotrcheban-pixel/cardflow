@@ -255,6 +255,6 @@ dev_dependencies:
 | S2 — `flutter_math_fork` 0.7.4, проверка LaTeX | **успешен:** `Math.tex(expression).parseError` — публичное поле; валидная формула → null, `\frac{`/`\unknowncommand{x}` → ошибка; без `WidgetsBinding`, в `flutter test` |
 | S3 — fake `HttpClientAdapter` Dio 5.11.1 | **успешен:** `ResponseBody.fromString`/`fromBytes` + `validateStatus`; Dio сам бросает `DioException` для не-2xx → retry/429/5xx/401/отмена тестируются без сети |
 
-**Проверки в прогоне итерации 3b** (`fvm flutter test --exclude-tags golden`): см. `journal/iteration-3b/verify.md`
-и §12 ниже (обновляется по факту verify).
+**Проверки итерации 3b:** полный прогон, покрытие, Windows-сборка и сверка критериев C1–C15 —
+`journal/iteration-3b/verify.md`; итог — `journal/iteration-3b/summary.md`.
 

@@ -28,7 +28,13 @@ class RedactingLogInterceptor extends Interceptor {
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
     options.extra[startTimeExtraKey] = now();
-    sink('HTTP ${options.method} ${redactUriForLog(options.uri)}');
+    final headers = redactHeadersForLog(
+      options.headers.map((key, value) => MapEntry(key, value.toString())),
+    );
+    sink(
+      'HTTP ${options.method} ${redactUriForLog(options.uri)} '
+      'headers: $headers',
+    );
     handler.next(options);
   }
 

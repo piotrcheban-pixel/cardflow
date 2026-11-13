@@ -65,6 +65,7 @@ class GeminiAdapter implements GenerationProviderAdapter {
         'generationConfig': <String, Object?>{
           'responseMimeType': 'application/json',
           'responseSchema': geminiCardSchema(),
+          'maxOutputTokens': maxOutputTokens,
         },
       },
     );

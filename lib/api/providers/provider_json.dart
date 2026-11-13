@@ -24,7 +24,14 @@ List<Object?>? jsonListOrNull(Object? value) =>
     value is List ? List<Object?>.of(value) : null;
 
 /// Число из JSON в `int`; `null` для отсутствующего/нечислового значения.
-int? jsonIntOrNull(Object? value) => value is num ? value.toInt() : null;
+///
+/// Нечисловые и неконечные значения (`Infinity`/`NaN`, которые может дать
+/// `1e999` в недоверенном JSON) не бросают `UnsupportedError`, а дают `null`.
+int? jsonIntOrNull(Object? value) {
+  if (value is int) return value;
+  if (value is double && value.isFinite) return value.toInt();
+  return null;
+}
 
 /// Ошибка «невалидный ответ провайдера» (`invalidResponse`).
 ///

@@ -173,6 +173,126 @@ void main() {
     expect(adapter.requests, isEmpty);
   });
 
+  test(
+    'production-граф: Gemini — ключ в заголовке, responseSchema, разбор ответа',
+    () async {
+      const geminiKey = 'test-key-gemini';
+      final adapter = FakeHttpAdapter(
+        (options) => jsonResponse(<String, Object?>{
+          'candidates': <Object?>[
+            <String, Object?>{
+              'content': <String, Object?>{
+                'parts': <Object?>[
+                  <String, Object?>{
+                    'text': jsonEncode(<String, Object?>{
+                      'cards': <Object?>[cardJson()],
+                    }),
+                  },
+                ],
+              },
+              'finishReason': 'STOP',
+            },
+          ],
+          'usageMetadata': <String, Object?>{
+            'promptTokenCount': 5,
+            'candidatesTokenCount': 6,
+            'totalTokenCount': 11,
+          },
+        }),
+      );
+      final container = containerWith(
+        dioWithAdapter(adapter),
+        keyStore: FakeApiKeyStore(<GenerationProvider, String>{
+          GenerationProvider.gemini: geminiKey,
+        }),
+      );
+
+      final result = await container
+          .read(cardGenerationServiceProvider)
+          .generate(
+            const GenerationRequest(
+              provider: GenerationProvider.gemini,
+              model: 'gemini-test',
+              materialsText: 'Материал лекции',
+              limit: 5,
+            ),
+          );
+
+      expect(result.cards, hasLength(1));
+      expect(result.usage.totalTokens, 11);
+      expect(adapter.requests, hasLength(1));
+      final sent = adapter.requests.single;
+      expect(
+        sent.uri.toString(),
+        'https://generativelanguage.googleapis.com/v1beta/models/'
+        'gemini-test:generateContent',
+      );
+      expect(sent.headers['x-goog-api-key'], geminiKey);
+      expect(sent.uri.toString(), isNot(contains(geminiKey)));
+      final body = jsonDecode(sent.data! as String) as Map<String, Object?>;
+      final config = body['generationConfig']! as Map<String, Object?>;
+      expect(config['responseMimeType'], 'application/json');
+      expect(
+        config,
+        containsPair('responseSchema', isA<Map<String, Object?>>()),
+      );
+    },
+  );
+
+  test(
+    'production-граф: Anthropic — x-api-key, tool_use и разбор ответа',
+    () async {
+      const anthropicKey = 'test-key-anthropic';
+      final adapter = FakeHttpAdapter(
+        (options) => jsonResponse(<String, Object?>{
+          'content': <Object?>[
+            <String, Object?>{
+              'type': 'tool_use',
+              'id': 'toolu_1',
+              'name': 'emit_cards',
+              'input': <String, Object?>{
+                'cards': <Object?>[cardJson()],
+              },
+            },
+          ],
+          'stop_reason': 'tool_use',
+          'usage': <String, Object?>{'input_tokens': 7, 'output_tokens': 3},
+        }),
+      );
+      final container = containerWith(
+        dioWithAdapter(adapter),
+        keyStore: FakeApiKeyStore(<GenerationProvider, String>{
+          GenerationProvider.anthropic: anthropicKey,
+        }),
+      );
+
+      final result = await container
+          .read(cardGenerationServiceProvider)
+          .generate(
+            const GenerationRequest(
+              provider: GenerationProvider.anthropic,
+              model: 'claude-test',
+              materialsText: 'Материал лекции',
+              limit: 5,
+            ),
+          );
+
+      expect(result.cards, hasLength(1));
+      expect(result.usage.totalTokens, 10);
+      expect(adapter.requests, hasLength(1));
+      final sent = adapter.requests.single;
+      expect(sent.uri.toString(), 'https://api.anthropic.com/v1/messages');
+      expect(sent.headers['x-api-key'], anthropicKey);
+      expect(sent.headers['anthropic-version'], '2023-06-01');
+      final body = jsonDecode(sent.data! as String) as Map<String, Object?>;
+      expect(body['max_tokens'], 8192);
+      expect(body['tool_choice'], <String, Object?>{
+        'type': 'tool',
+        'name': 'emit_cards',
+      });
+    },
+  );
+
   test('production Dio: таймауты A8.6 и redaction-перехватчик', () {
     final container = ProviderContainer();
     addTearDown(container.dispose);

@@ -77,6 +77,17 @@ abstract interface class GenerationProviderAdapter {
   `tools: [{name: "emit_cards", input_schema: …}]`, `tool_choice: {type: "tool", name: "emit_cards"}`;
   проверяются `stop_reason` (`max_tokens` → обрезано, `refusal` → отказ) и наличие `tool_use`-блока:
   его отсутствие — невалидный ответ. `max_tokens` передаётся из запроса (требование Anthropic).
+- `maxOutputTokens` контракта: Anthropic — обязательный `max_tokens`; Gemini — `generationConfig.maxOutputTokens`;
+  OpenAI — **не передаётся** осознанно (у части моделей параметр устарел/несовместим; ограничение —
+  `<limit>` карточек, обрезание распознаётся по `finish_reason`; сверка с живым API — L1).
+
+**Flutter в API-слое.** `lib/api/` в целом не зависит от Flutter, но проверка LaTeX по SPEC A8.4 требует
+`flutter_math_fork` (рендер-пакет). Разрешённая точка входа — только
+`lib/api/generation/latex_checker.dart` (`Math.tex(...).parseError`); валидатор получает проверку
+функцией `latexChecker` (инъекция), поэтому остальная логика валидации остаётся чистой и тестируемой.
+Architecture guard (`test/guards/architecture_test.dart`) проверяет `lib/domain/`; для `lib/api/` правило
+фиксируется здесь: не тянуть `package:flutter/material.dart`/`material_ui` в API, Flutter — только для
+LaTeX-проверки.
 
 `parseResponse` бросает `GenerationException` с кодом (см. п. 5); «обрезано» — отдельный код `truncated`,
 чтобы итерация 3c могла делить фрагмент пополам (A8.5 шаг 8), не разбирая провайдерные детали.
