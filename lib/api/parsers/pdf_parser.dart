@@ -65,17 +65,25 @@ class PdfParser implements DocumentParser {
         );
       }
       final List<String> pageTexts = <String>[];
+      int pageErrors = 0;
       for (final PdfPage page in document.pages) {
         String text = '';
         try {
           final PdfPageRawText? raw = await page.loadText();
           text = raw?.fullText.trim() ?? '';
         } on Object {
+          pageErrors++;
           text = '';
         }
         pageTexts.add(text);
       }
       if (pageTexts.every((String text) => text.isEmpty)) {
+        if (pageErrors > 0) {
+          throw const ParserException(
+            ParserErrorCode.unreadableFile,
+            details: 'Не удалось извлечь текст ни одной страницы PDF',
+          );
+        }
         throw const ParserException(
           ParserErrorCode.scannedPdf,
           details: 'Текстовый слой PDF пуст — вероятно, скан',

@@ -51,7 +51,7 @@ class DocxParser implements DocumentParser {
       format: format,
       fileName: fileName,
     );
-    for (final XmlElement block in body.childElements) {
+    for (final XmlElement block in _blocks(body)) {
       switch (block.name.local) {
         case 'p':
           final String? heading = _headingTitle(block);
@@ -69,6 +69,26 @@ class DocxParser implements DocumentParser {
       }
     }
     return builder.build();
+  }
+
+  /// Блочные элементы тела документа в порядке следования.
+  ///
+  /// Помимо прямых `w:p`/`w:tbl` разворачивает контейнеры content controls
+  /// (`w:sdt` → `w:sdtContent`) и `w:customXml`, иначе текст из них теряется.
+  Iterable<XmlElement> _blocks(XmlElement container) sync* {
+    for (final XmlElement child in container.childElements) {
+      switch (child.name.local) {
+        case 'p':
+        case 'tbl':
+          yield child;
+        case 'sdt':
+        case 'sdtContent':
+        case 'customXml':
+          yield* _blocks(child);
+        default:
+          continue;
+      }
+    }
   }
 
   /// Заголовок абзаца, если стиль `w:pStyle` — Heading*/Title.
@@ -99,9 +119,15 @@ class DocxParser implements DocumentParser {
   }
 
   /// Текст абзаца: `w:t` со всеми прогонами, `w:tab` → `\t`, `w:br`/`w:cr` → `\n`.
+  ///
+  /// Узлы поддерева `w:pPr` (таб-стопы `w:tabs/w:tab`, рамки и т.п.) — разметка,
+  /// а не текст абзаца, поэтому пропускаются.
   String _paragraphText(XmlElement paragraph) {
     final StringBuffer buffer = StringBuffer();
     for (final XmlElement element in paragraph.descendantElements) {
+      if (_insideParagraphProperties(element, paragraph)) {
+        continue;
+      }
       switch (element.name.local) {
         case 't':
           buffer.write(element.innerText);
@@ -113,6 +139,21 @@ class DocxParser implements DocumentParser {
       }
     }
     return buffer.toString();
+  }
+
+  /// Лежит ли [element] внутри `w:pPr` абзаца [paragraph].
+  bool _insideParagraphProperties(
+    XmlElement element,
+    XmlElement paragraph,
+  ) {
+    XmlNode? node = element.parent;
+    while (node != null && node != paragraph) {
+      if (node is XmlElement && node.name.local == 'pPr') {
+        return true;
+      }
+      node = node.parent;
+    }
+    return false;
   }
 
   /// Строки таблицы: ячейки через `\t`, пустые хвостовые ячейки убираются.

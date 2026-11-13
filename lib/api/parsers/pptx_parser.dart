@@ -30,7 +30,9 @@ class PptxParser implements DocumentParser {
     required String fileName,
   }) async {
     final SecureZip zip = SecureZip(bytes);
-    final List<String> slides = _orderedSlideEntries(zip);
+    final List<String> slides = _orderedSlideEntries(
+      zip,
+    ).where(zip.contains).toList();
     if (slides.isEmpty) {
       throw const ParserException(
         ParserErrorCode.unreadableFile,
@@ -44,9 +46,6 @@ class PptxParser implements DocumentParser {
       metadata: ParsedDocumentMetadata(slideCount: slides.length),
     );
     for (final String slideEntry in slides) {
-      if (!zip.contains(slideEntry)) {
-        continue;
-      }
       final List<String> lines = _slideLines(zip.readXml(slideEntry));
       builder.startSection();
       builder.addLines(lines);
@@ -140,3 +139,4 @@ class PptxParser implements DocumentParser {
     return lines;
   }
 }
+

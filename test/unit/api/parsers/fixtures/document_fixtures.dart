@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
+import 'package:crypto/crypto.dart' as crypto;
 import 'package:enough_convert/enough_convert.dart';
 
 /// Программные фикстуры документов для тестов парсеров (SPEC A8.3).
@@ -374,3 +375,208 @@ Uint8List cp1251Bytes(String text) =>
 /// KOI8-R.
 Uint8List koi8rBytes(String text) =>
     Uint8List.fromList(const Koi8rCodec().encode(text));
+
+/// RTF-представление текста в KOI8-R через `\'hh`.
+String rtfEscapedKoi8r(String text) {
+  final List<int> bytes = const Koi8rCodec().encode(text);
+  return bytes
+      .map((int byte) => "\\'${byte.toRadixString(16).padLeft(2, '0')}")
+      .join();
+}
+
+/// Абзац DOCX с таб-стопами в `w:pPr` (разметка не должна попадать в текст).
+String docxParagraphWithTabStops(String text, {int position = 720}) =>
+    '<w:p><w:pPr><w:tabs><w:tab w:val="left" w:pos="$position"/>'
+    '</w:tabs></w:pPr><w:r><w:t xml:space="preserve">'
+    '${xmlEscape(text)}</w:t></w:r></w:p>';
+
+/// Блок content control (`w:sdt`) с абзацами.
+String docxSdt(List<String> paragraphs) =>
+    '<w:sdt><w:sdtPr/><w:sdtContent>'
+    '${paragraphs.map((String p) => docxParagraph(p)).join()}'
+    '</w:sdtContent></w:sdt>';
+
+/// Блок `w:customXml` с абзацами.
+String docxCustomXml(List<String> paragraphs) =>
+    '<w:customXml w:element="item">'
+    '${paragraphs.map((String p) => docxParagraph(p)).join()}'
+    '</w:customXml>';
+
+/// Собирает ODT с произвольным XML внутри `office:text`.
+Uint8List buildOdtRaw({required String bodyXml}) => zipFixture(<String, String>{
+  'mimetype': 'application/vnd.oasis.opendocument.text',
+  'content.xml': '''
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<office:document-content
+    xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0"
+    xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0">
+  <office:body><office:text>$bodyXml</office:text></office:body>
+</office:document-content>''',
+});
+
+/// Оглавление ODT: `text:table-of-content` → `text:index-body`.
+String odtTableOfContent(List<String> entries) =>
+    '<text:table-of-content><text:index-body>'
+    '${entries.map((String entry) => '<text:p>${xmlEscape(entry)}</text:p>').join()}'
+    '</text:index-body></text:table-of-content>';
+
+/// Примечание рецензента ODT (`office:annotation`).
+String odtAnnotation(String text) =>
+    '<office:annotation><text:p>${xmlEscape(text)}</text:p></office:annotation>';
+
+/// Ячейка XLSX с формулой без кэшированного значения.
+String xlsxFormulaWithoutCache(String reference, String formula) =>
+    '<c r="$reference"><f>${xmlEscape(formula)}</f></c>';
+
+/// PDF из нескольких страниц; пустая строка — страница без текстового слоя.
+Uint8List buildPdfPages(List<String> pageTexts) {  final int pageCount = pageTexts.length;
+  final int fontNumber = 3 + 2 * pageCount;
+  final StringBuffer buffer = StringBuffer('%PDF-1.4\n');
+  final List<int> offsets = <int>[];
+
+  final List<String> kids = <String>[
+    for (int i = 0; i < pageCount; i++) '${3 + 2 * i} 0 R',
+  ];
+  final List<String> objects = <String>[
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    '<< /Type /Pages /Kids [${kids.join(' ')}] /Count $pageCount >>',
+    for (int i = 0; i < pageCount; i++) ...<String>[
+      '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] '
+          '/Contents ${4 + 2 * i} 0 R '
+          '/Resources << /Font << /F1 $fontNumber 0 R >> >> >>',
+      if (pageTexts[i].isEmpty)
+        '<< /Length 0 >>\nstream\n\nendstream'
+      else
+        () {
+          final String content =
+              'BT /F1 24 Tf 72 720 Td (${pageTexts[i]}) Tj ET';
+          return '<< /Length ${content.length} >>\n'
+              'stream\n$content\nendstream';
+        }(),
+    ],
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+  ];
+  for (int i = 0; i < objects.length; i++) {
+    offsets.add(buffer.length);
+    buffer.write('${i + 1} 0 obj\n${objects[i]}\nendobj\n');
+  }
+  final int xrefOffset = buffer.length;
+  buffer.write('xref\n0 ${objects.length + 1}\n');
+  buffer.write('0000000000 65535 f \n');
+  for (final int offset in offsets) {
+    buffer.write('${offset.toString().padLeft(10, '0')} 00000 n \n');
+  }
+  buffer.write(
+    'trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\n'
+    'startxref\n$xrefOffset\n%%EOF\n',
+  );
+  return Uint8List.fromList(latin1.encode(buffer.toString()));
+}
+
+
+// --- Зашифрованный PDF (стандартный security handler V1/R2, RC4 40 бит) ---
+
+/// Стандартный padding-пароль PDF (PDF 1.7, Algorithm 2).
+const List<int> _pdfPasswordPadding = <int>[
+  0x28, 0xBF, 0x4E, 0x5E, 0x4E, 0x75, 0x8A, 0x41, 0x64, 0x00, 0x4E, 0x56,
+  0xFF, 0xFA, 0x01, 0x08, 0x2E, 0x2E, 0x00, 0xB6, 0xD0, 0x68, 0x3E, 0x80,
+  0x2F, 0x0C, 0xA9, 0xFE, 0x64, 0x53, 0x69, 0x7A,
+];
+
+List<int> _padPdfPassword(String password) {
+  final List<int> bytes = <int>[
+    ...latin1.encode(password),
+    ..._pdfPasswordPadding,
+  ];
+  return bytes.take(32).toList();
+}
+
+List<int> _md5Bytes(List<int> data) => crypto.md5.convert(data).bytes;
+
+List<int> _rc4(List<int> key, List<int> data) {
+  final List<int> state = List<int>.generate(256, (int i) => i);
+  int j = 0;
+  for (int i = 0; i < 256; i++) {
+    j = (j + state[i] + key[i % key.length]) & 0xFF;
+    final int tmp = state[i];
+    state[i] = state[j];
+    state[j] = tmp;
+  }
+  final List<int> output = List<int>.filled(data.length, 0);
+  int i = 0;
+  j = 0;
+  for (int k = 0; k < data.length; k++) {
+    i = (i + 1) & 0xFF;
+    j = (j + state[i]) & 0xFF;
+    final int tmp = state[i];
+    state[i] = state[j];
+    state[j] = tmp;
+    output[k] = data[k] ^ state[(state[i] + state[j]) & 0xFF];
+  }
+  return output;
+}
+
+String _hexString(List<int> bytes) =>
+    bytes.map((int b) => b.toRadixString(16).padLeft(2, '0')).join();
+
+/// Минимальный PDF, зашифрованный паролем (открытие без пароля → ошибка).
+///
+/// Считает `/O` и `/U` по Algorithm 2/3 PDF для пользовательского пароля
+/// [userPassword]; [ownerPassword] — пароль владельца. Нужен для проверки
+/// ветки «запароленный PDF → unreadableFile».
+Uint8List buildEncryptedPdf({
+  required String userPassword,
+  required String ownerPassword,
+}) {
+  final List<int> userPad = _padPdfPassword(userPassword);
+  final List<int> ownerPad = _padPdfPassword(ownerPassword);
+  final List<int> ownerKey = _md5Bytes(ownerPad).sublist(0, 5);
+  final List<int> o = _rc4(ownerKey, userPad);
+  final List<int> fileId = List<int>.generate(
+    16,
+    (int i) => (i * 37 + 11) & 0xFF,
+  );
+  const int permissions = -4;
+  final List<int> permissionsLe = <int>[
+    permissions & 0xFF,
+    (permissions >> 8) & 0xFF,
+    (permissions >> 16) & 0xFF,
+    (permissions >> 24) & 0xFF,
+  ];
+  final List<int> key = _md5Bytes(<int>[
+    ...userPad,
+    ...o,
+    ...permissionsLe,
+    ...fileId,
+  ]).sublist(0, 5);
+  final List<int> u = _rc4(key, _pdfPasswordPadding);
+
+  final StringBuffer buffer = StringBuffer('%PDF-1.4\n');
+  final List<int> offsets = <int>[];
+  final List<String> objects = <String>[
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] '
+        '/Contents 4 0 R >>',
+    '<< /Length 0 >>\nstream\n\nendstream',
+    '<< /Filter /Standard /V 1 /R 2 /Length 40 '
+        '/O <${_hexString(o)}> /U <${_hexString(u)}> /P $permissions >>',
+  ];
+  for (int i = 0; i < objects.length; i++) {
+    offsets.add(buffer.length);
+    buffer.write('${i + 1} 0 obj\n${objects[i]}\nendobj\n');
+  }
+  final int xrefOffset = buffer.length;
+  buffer.write('xref\n0 ${objects.length + 1}\n');
+  buffer.write('0000000000 65535 f \n');
+  for (final int offset in offsets) {
+    buffer.write('${offset.toString().padLeft(10, '0')} 00000 n \n');
+  }
+  final String fileIdHex = _hexString(fileId);
+  buffer.write(
+    'trailer\n<< /Size ${objects.length + 1} /Root 1 0 R '
+    '/Encrypt 5 0 R /ID [<$fileIdHex> <$fileIdHex>] >>\n'
+    'startxref\n$xrefOffset\n%%EOF\n',
+  );
+  return Uint8List.fromList(latin1.encode(buffer.toString()));
+}

@@ -1,11 +1,11 @@
 # STATE — текущее состояние CardFlow
 
-**Дата:** 2026-11-13 · **Итерация:** 3a «Парсеры» — **в работе**, шаг 3 (зелёная фаза) · **Предыдущая:** 2 «Классический режим» завершена; CI-хотфикс «No space left on device» закрыт зелёным прогоном · **Режим:** ИТЕРАЦИИ
+**Дата:** 2026-11-13 · **Итерация:** 3a «Парсеры» — **в работе**, шаг 4 (ревью снимка) · **Предыдущая:** 2 «Классический режим» завершена; CI-хотфикс «No space left on device» закрыт зелёным прогоном · **Режим:** ИТЕРАЦИИ
 **Факты:** Flutter 3.47.9 / Dart 3.13.7 (FVM 4.3.2); Windows 11; локальная Windows-сборка работает; Android SDK/JDK, Xcode, Linux — отсутствуют; ключей API нет (absent). GitHub-remote `origin` → piotrcheban-pixel/cardflow; локальный `main` = `origin/main` (HEAD `ff32590` + коммиты итерации 3a), рабочее дерево clean. **Последний CI — зелёный:** прогон [`43468349877`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43468349877) attempt 4 — все 9 job success (quality, test×3, build linux/windows/macos/android/ios). В `build android` фикс диска дал 13G → 23G свободного места, `flutter build apk` собрался; `build ios` получил раннер с 4-й попытки (job перезапускался, label не менялся). Push — по команде владельца.
 
 ## Следующее действие
 
-Итерация 3a, шаг 3 (зелёная фаза) по слоям: домен (T1–T4) → zip/XML + OOXML-парсеры (T6–T9) → XLSX/TXT/RTF/PDF (T10–T13) → сервис (T14) → ARB-маппинг (T15) → интеграция (T18). Красная фаза: `+12 -70` (82 новых теста), `analyze` чистый — `journal/iteration-3a/red-parsers.md`. После слоёв — полный прогон, ревью, verify.
+Итерация 3a: зелёная фаза завершена (коммиты `6c3a019` red, `ba13128`/`7501ffe`/`e12d819` green; 566 тестов, analyze 0, format 0). Сейчас — независимое ревью снимка `e12d819` (teammate `parser-reviewer`, отчёт `journal/iteration-3a/review.md`); Lead не правит код до завершения. Далее: fix-итерация findings → verify → docs/parsers.md + summary + STATE/AGENTS + ретроспектива.
 
 ## CI-хотфикс после итерации 2 — закрыт
 

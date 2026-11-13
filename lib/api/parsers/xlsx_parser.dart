@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:cardflow/api/parsers/document_parser.dart';
 import 'package:cardflow/api/parsers/parsed_document_builder.dart';
+import 'package:cardflow/api/parsers/zip_xml.dart';
 import 'package:cardflow/domain/text/document_format.dart';
 import 'package:cardflow/domain/text/parsed_document.dart';
 import 'package:cardflow/domain/text/parser_exception.dart';
@@ -10,8 +11,13 @@ import 'package:excel_plus/excel_plus.dart';
 /// Парсер XLSX через `excel_plus` (SPEC A8.3).
 ///
 /// Листы → разделы (title = имя листа); строки → строки, ячейки через `\t`;
-/// формулы — по кэшированному значению (`FormulaCellValue.cachedValue`),
-/// даты — `yyyy-MM-dd`.
+/// формулы — по кэшированному значению `FormulaCellValue.cachedValue`
+/// (если кэша нет — исходная формула с `=`, чтобы не терять данные);
+/// даты (в т.ч. с временем) — `yyyy-MM-dd`.
+///
+/// Перед разбором байты проходят те же ZIP-лимиты, что DOCX/PPTX/ODT
+/// (`SecureZip`): XLSX — тоже ZIP-контейнер (ADR-010 §4), защита от zip-bomb
+/// должна применяться ко всем четырём форматам.
 class XlsxParser implements DocumentParser {
   /// Создаёт парсер XLSX.
   const XlsxParser();
@@ -24,6 +30,8 @@ class XlsxParser implements DocumentParser {
     Uint8List bytes, {
     required String fileName,
   }) async {
+    // Проверка структуры и лимитов контейнера до передачи в excel_plus.
+    SecureZip(bytes);
     Excel workbook;
     try {
       workbook = Excel.decodeBytes(bytes);
@@ -63,20 +71,31 @@ class XlsxParser implements DocumentParser {
     return builder.build();
   }
 
-  /// Текст ячейки: формула — кэш, дата — `yyyy-MM-dd`, иначе `toString`.
+  /// Текст ячейки: формула — кэш (иначе `=формула`), дата — `yyyy-MM-dd`.
   String _cellText(Data? data) {
     final CellValue? value = data?.value;
     if (value == null) {
       return '';
     }
     if (value is FormulaCellValue) {
-      return (value.cachedValue ?? '').trim();
+      final String? cached = value.cachedValue;
+      if (cached != null && cached.isNotEmpty) {
+        return cached.trim();
+      }
+      return '=${value.formula}'.trim();
     }
     if (value is DateCellValue) {
-      final String month = value.month.toString().padLeft(2, '0');
-      final String day = value.day.toString().padLeft(2, '0');
-      return '${value.year.toString().padLeft(4, '0')}-$month-$day';
+      return _formatDate(value.year, value.month, value.day);
+    }
+    if (value is DateTimeCellValue) {
+      return _formatDate(value.year, value.month, value.day);
     }
     return value.toString().trim();
+  }
+
+  String _formatDate(int year, int month, int day) {
+    final String paddedMonth = month.toString().padLeft(2, '0');
+    final String paddedDay = day.toString().padLeft(2, '0');
+    return '${year.toString().padLeft(4, '0')}-$paddedMonth-$paddedDay';
   }
 }

@@ -12,9 +12,21 @@ import 'package:xml/xml.dart';
 /// Парсер ODT: `archive` + `xml`, `content.xml` (SPEC A8.3).
 ///
 /// `text:h` — заголовки разделов (title), `text:p` — абзацы → строки.
+/// Служебные поддеревья (оглавление `text:index-body`/`text:table-of-content`,
+/// примечания `office:annotation`, отслеживаемые изменения) пропускаются,
+/// иначе оглавление дублирует текст, а комментарии рецензентов попадают
+/// в материал для генерации карточек.
 class OdtParser implements DocumentParser {
   /// Создаёт парсер ODT.
   const OdtParser();
+
+  /// Служебные элементы, чьё поддерево не является текстом документа.
+  static const Set<String> _serviceElements = <String>{
+    'index-body',
+    'table-of-content',
+    'annotation',
+    'tracked-changes',
+  };
 
   @override
   DocumentFormat get format => DocumentFormat.odt;
@@ -42,6 +54,9 @@ class OdtParser implements DocumentParser {
       if (localName != 'h' && localName != 'p') {
         continue;
       }
+      if (_insideServiceElement(element)) {
+        continue;
+      }
       final String text = collapseWhitespace(element.innerText);
       if (localName == 'h') {
         builder.startSection(title: text.isEmpty ? null : text);
@@ -49,5 +64,15 @@ class OdtParser implements DocumentParser {
       builder.addLine(text);
     }
     return builder.build();
+  }
+
+  /// Лежит ли [element] внутри служебного поддерева (оглавление/примечание).
+  bool _insideServiceElement(XmlElement element) {
+    for (final XmlElement ancestor in element.ancestorElements) {
+      if (_serviceElements.contains(ancestor.name.local)) {
+        return true;
+      }
+    }
+    return false;
   }
 }

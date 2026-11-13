@@ -80,4 +80,31 @@ void main() {
       ),
     );
   });
+
+  test('многостраничный PDF: страницы → разделы, пустая страница пропускается', () async {
+    final ParsedDocument document = await parse(
+      buildPdfPages(<String>['First page', '', 'Third page']),
+    );
+    expect(document.metadata.pageCount, 3);
+    expect(document.sections, hasLength(2));
+    expect(document.text, 'First page\n\nThird page');
+  });
+
+  test('запароленный PDF → ParserException(unreadableFile)', () async {
+    await expectLater(
+      parse(
+        buildEncryptedPdf(
+          userPassword: 'secret-user',
+          ownerPassword: 'secret-owner',
+        ),
+      ),
+      throwsA(
+        isA<ParserException>().having(
+          (ParserException e) => e.code,
+          'code',
+          ParserErrorCode.unreadableFile,
+        ),
+      ),
+    );
+  });
 }

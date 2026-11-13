@@ -107,8 +107,7 @@ void main() {
       );
     });
 
-    test('несоответствие сигнатуры → ParserException(unreadableFile)', () {
-      const List<DocumentFormat> zipFormats = <DocumentFormat>[
+    test('несоответствие сигнатуры → ParserException(unreadableFile)', () {      const List<DocumentFormat> zipFormats = <DocumentFormat>[
         DocumentFormat.docx,
         DocumentFormat.xlsx,
         DocumentFormat.pptx,
@@ -154,6 +153,35 @@ void main() {
       );
       expect(
         () => verifyDocumentSignature(DocumentFormat.md, bytes),
+        returnsNormally,
+      );
+    });
+
+    test('ZIP-сигнатура строгая: PK\\x05\\x06 (пустой архив) — не контейнер', () {
+      expect(
+        () => verifyDocumentSignature(
+          DocumentFormat.docx,
+          Uint8List.fromList(<int>[0x50, 0x4B, 0x05, 0x06]),
+        ),
+        throwsA(
+          isA<ParserException>().having(
+            (ParserException e) => e.code,
+            'code',
+            ParserErrorCode.unreadableFile,
+          ),
+        ),
+      );
+    });
+
+    test('RTF с ведущими пробельными байтами принимается', () {
+      expect(
+        () => verifyDocumentSignature(
+          DocumentFormat.rtf,
+          Uint8List.fromList(<int>[
+            ...'  \r\n\t'.codeUnits,
+            ...'{\\rtf1\\ansi Текст}'.codeUnits,
+          ]),
+        ),
         returnsNormally,
       );
     });

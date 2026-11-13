@@ -17,9 +17,10 @@ class ParsedDocument {
     required this.format,
     required this.fileName,
     required this.text,
-    required this.sections,
-    this.metadata = const ParsedDocumentMetadata(),
-  }) {
+    required List<ParsedSection> sections,
+    ParsedDocumentMetadata metadata = const ParsedDocumentMetadata(),
+  }) : sections = List<ParsedSection>.unmodifiable(sections),
+       metadata = _immutableMetadata(metadata) {
     if (text.trim().isEmpty) {
       throw ArgumentError.value(
         text,
@@ -27,15 +28,15 @@ class ParsedDocument {
         'Текст документа не может быть пустым',
       );
     }
-    if (sections.isEmpty) {
+    if (this.sections.isEmpty) {
       throw ArgumentError.value(
-        sections,
+        this.sections,
         'sections',
         'Документ должен содержать хотя бы один раздел',
       );
     }
     int previousEnd = 0;
-    for (final ParsedSection section in sections) {
+    for (final ParsedSection section in this.sections) {
       if (section.start < 0 || section.end > text.length) {
         throw ArgumentError(
           'Границы раздела ${section.start}..${section.end} '
@@ -110,4 +111,18 @@ class ParsedDocumentMetadata {
 
   /// Определённая кодировка текста (TXT/MD): `utf-8`, `utf-8-bom`, ...
   final String? encoding;
+}
+
+/// Копия метаданных с неизменяемым списком имён листов (модели immutable).
+ParsedDocumentMetadata _immutableMetadata(ParsedDocumentMetadata metadata) {
+  final List<String>? sheetNames = metadata.sheetNames;
+  if (sheetNames == null) {
+    return metadata;
+  }
+  return ParsedDocumentMetadata(
+    pageCount: metadata.pageCount,
+    slideCount: metadata.slideCount,
+    sheetNames: List<String>.unmodifiable(sheetNames),
+    encoding: metadata.encoding,
+  );
 }

@@ -78,4 +78,21 @@ void main() {
       ),
     );
   });
+
+  test('оглавление и примечания рецензента пропускаются', () async {
+    final ParsedDocument document = await parse(
+      buildOdtRaw(
+        bodyXml:
+            '${odtTableOfContent(<String>['Оглавление: Раздел 1'])}'
+            '<text:h text:outline-level="1">Раздел 1</text:h>'
+            '<text:p>Текст</text:p>'
+            '${odtAnnotation('Примечание рецензента')}',
+      ),
+    );
+    expect(
+      document.text,
+      'Раздел 1\nТекст',
+      reason: 'TOC не дублирует текст, комментарии не попадают в материал',
+    );
+  });
 }

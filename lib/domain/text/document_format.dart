@@ -44,7 +44,7 @@ DocumentFormat? documentFormatFromFileName(String fileName) {
   return null;
 }
 
-const List<int> _zipSignature = <int>[0x50, 0x4B];
+const List<int> _zipSignature = <int>[0x50, 0x4B, 0x03, 0x04];
 const List<int> _pdfSignature = <int>[0x25, 0x50, 0x44, 0x46, 0x2D];
 const String _rtfSignature = '{\\rtf';
 
@@ -59,7 +59,7 @@ void verifyDocumentSignature(DocumentFormat format, List<int> bytes) {
     case DocumentFormat.xlsx:
     case DocumentFormat.pptx:
     case DocumentFormat.odt:
-      if (!_startsWith(bytes, _zipSignature) || !_hasZipMarker(bytes)) {
+      if (!_startsWith(bytes, _zipSignature)) {
         throw const ParserException(
           ParserErrorCode.unreadableFile,
           details: 'Файл не является ZIP-контейнером OOXML/ODF',
@@ -73,7 +73,8 @@ void verifyDocumentSignature(DocumentFormat format, List<int> bytes) {
         );
       }
     case DocumentFormat.rtf:
-      if (!_startsWithAscii(bytes, _rtfSignature)) {
+      // RTF-поток может начинаться с пробельных символов до `{\rtf`.
+      if (!_startsWithAsciiSkippingWhitespace(bytes, _rtfSignature)) {
         throw const ParserException(
           ParserErrorCode.unreadableFile,
           details: 'Файл не является RTF (нет сигнатуры {\\rtf)',
@@ -99,21 +100,23 @@ bool _startsWith(List<int> bytes, List<int> prefix) {
   return true;
 }
 
-/// Проверяет байты 3–4 ZIP-заголовка (`\x03\x04`, `\x05\x06`, `\x07\x08`).
-bool _hasZipMarker(List<int> bytes) {
-  if (bytes.length < 4) {
-    return false;
-  }
-  final int marker = bytes[2];
-  final int tail = bytes[3];
-  return (marker == 0x03 || marker == 0x05 || marker == 0x07) &&
-      (tail == 0x04 || tail == 0x06 || tail == 0x08);
-}
-
-bool _startsWithAscii(List<int> bytes, String prefix) {
-  if (bytes.length < prefix.length) {
-    return false;
+/// Проверка ASCII-сигнатуры с пропуском ведущих пробельных байтов (для RTF).
+bool _startsWithAsciiSkippingWhitespace(List<int> bytes, String prefix) {
+  int offset = 0;
+  while (offset < bytes.length && _isWhitespaceByte(bytes[offset])) {
+    offset++;
   }
   final List<int> expected = latin1.encode(prefix);
-  return _startsWith(bytes, expected);
+  if (bytes.length - offset < expected.length) {
+    return false;
+  }
+  for (int i = 0; i < expected.length; i++) {
+    if (bytes[offset + i] != expected[i]) {
+      return false;
+    }
+  }
+  return true;
 }
+
+bool _isWhitespaceByte(int byte) =>
+    byte == 0x20 || byte == 0x09 || byte == 0x0A || byte == 0x0D;

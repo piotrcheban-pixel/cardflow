@@ -40,7 +40,11 @@ class SecureZip {
     : _limits = limits {
     arc.Archive archive;
     try {
-      archive = arc.ZipDecoder().decodeBytes(bytes);
+      archive = arc.ZipDecoder().decodeBytes(
+        bytes,
+        verify: true,
+        throwOnError: true,
+      );
     } on Object catch (error) {
       throw ParserException(
         ParserErrorCode.unreadableFile,
@@ -175,3 +179,4 @@ String _decodeUtf16(List<int> bytes, {required bool littleEndian}) {
   }
   return String.fromCharCodes(codeUnits);
 }
+

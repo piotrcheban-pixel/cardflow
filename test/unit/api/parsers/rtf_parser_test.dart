@@ -99,4 +99,56 @@ void main() {
       ),
     );
   });
+
+  test('\\*-группы пропускаются, обычные группы сохраняются', () async {
+    final ParsedDocument leaked = await parse(
+      buildRtf('{\\*\\unknown secret} visible'),
+    );
+    expect(leaked.text, 'visible', reason: 'содержимое \\*-группы не текст');
+
+    final ParsedDocument nextGroup = await parse(
+      buildRtf('{\\*\\unknown x}{Real Group} after'),
+    );
+    expect(nextGroup.text, 'Real Group after');
+
+    final ParsedDocument field = await parse(
+      buildRtf(
+        '{\\field{\\*\\fldinst HYPERLINK "http://x"}{\\fldrslt Link text}} tail',
+      ),
+    );
+    expect(
+      field.text,
+      'Link text tail',
+      reason: 'видимый текст поля/гиперссылки сохраняется',
+    );
+  });
+
+  test('сырые CR/LF RTF-потока игнорируются', () async {
+    final ParsedDocument document = await parse(
+      buildRtf('Hello\r\nWorld\\par End'),
+    );
+    expect(document.text, 'HelloWorld\nEnd');
+  });
+
+  test('\\ucN ограничен группой и восстанавливается на выходе', () async {
+    final ParsedDocument document = await parse(
+      buildRtf('{\\uc0\\u1040\\u1041} \\u1042?'),
+    );
+    expect(document.text, 'АБ В');
+  });
+
+  test('ansicpg 20866 декодирует KOI8-R', () async {
+    const String russian = 'Привет как дела';
+    final ParsedDocument document = await parse(
+      buildRtf(rtfEscapedKoi8r(russian), codepage: 20866),
+    );
+    expect(document.text, russian);
+  });
+
+  test('control symbols \\~, \\_ и \\- обрабатываются', () async {
+    final ParsedDocument document = await parse(
+      buildRtf('a\\~b a\\_b a\\-b'),
+    );
+    expect(document.text, 'a b a-b ab');
+  });
 }

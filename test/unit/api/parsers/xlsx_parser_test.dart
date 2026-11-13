@@ -119,4 +119,41 @@ void main() {
       ),
     );
   });
+
+  test('архив с более 10000 записей отвергается ZIP-лимитами (ADR-010)', () async {
+    final Uint8List manyEntries = zipFixture(<String, String>{
+      for (int i = 0; i < 10001; i++) 'f$i.txt': '',
+    });
+    await expectLater(
+      parse(manyEntries),
+      throwsA(
+        isA<ParserException>().having(
+          (ParserException e) => e.code,
+          'code',
+          ParserErrorCode.unreadableFile,
+        ),
+      ),
+    );
+  });
+
+  test('формула без кэша не теряется: выводится =формула', () async {
+    final ParsedDocument document = await parse(
+      buildXlsx(<String, String>{
+        'Лист1': xlsxRow(1, <String>[xlsxNumberCell('A1', 5)]) +
+            xlsxRow(2, <String>[xlsxFormulaWithoutCache('A2', 'A1*2')]),
+      }),
+    );
+    expect(document.text, '5\n=A1*2');
+  });
+
+  test('дата с временем нормализуется к yyyy-MM-dd (ADR-010)', () async {
+    final ParsedDocument document = await parse(
+      buildXlsx(<String, String>{
+        'Лист1': xlsxRow(1, <String>[
+          xlsxDateCell('A1', '2024-06-16T12:00:00'),
+        ]),
+      }),
+    );
+    expect(document.text, '2024-06-16');
+  });
 }

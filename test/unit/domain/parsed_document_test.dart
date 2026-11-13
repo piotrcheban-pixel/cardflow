@@ -127,5 +127,21 @@ void main() {
         throwsArgumentError,
       );
     });
+
+    test('модель immutable: разделы и имена листов нельзя изменить', () {
+      final ParsedDocument document = build(
+        metadata: const ParsedDocumentMetadata(
+          sheetNames: <String>['Лист1'],
+        ),
+      );
+      expect(
+        () => document.sections.add(const ParsedSection(start: 0, end: 1)),
+        throwsUnsupportedError,
+      );
+      expect(
+        () => document.metadata.sheetNames!.add('Лист2'),
+        throwsUnsupportedError,
+      );
+    });
   });
 }

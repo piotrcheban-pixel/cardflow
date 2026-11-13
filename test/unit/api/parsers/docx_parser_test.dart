@@ -128,4 +128,28 @@ void main() {
       ),
     );
   });
+
+  test('таб-стопы в w:pPr не попадают в текст абзаца', () async {
+    final ParsedDocument document = await parse(
+      buildDocx(
+        bodyXml:
+            docxParagraph('Первый') +
+            docxParagraphWithTabStops('Второй с табстопом'),
+      ),
+    );
+    expect(document.text, 'Первый\nВторой с табстопом');
+  });
+
+  test('текст в w:sdt (content control) и w:customXml не теряется', () async {
+    final ParsedDocument document = await parse(
+      buildDocx(
+        bodyXml:
+            docxParagraph('Первый') +
+            docxSdt(<String>['Внутри sdt']) +
+            docxCustomXml(<String>['Внутри customXml']) +
+            docxParagraph('Последний'),
+      ),
+    );
+    expect(document.text, 'Первый\nВнутри sdt\nВнутри customXml\nПоследний');
+  });
 }
