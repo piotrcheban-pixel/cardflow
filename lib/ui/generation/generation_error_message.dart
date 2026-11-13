@@ -24,9 +24,7 @@ String generationErrorCodeMessage(
     GenerationErrorCode.rateLimited =>
       retryAfter == null
           ? l10n.generationErrorRateLimitedNoDelay
-          : l10n.generationErrorRateLimited(
-              math.max(0, retryAfter.inSeconds),
-            ),
+          : l10n.generationErrorRateLimited(math.max(0, retryAfter.inSeconds)),
     GenerationErrorCode.serverUnavailable =>
       l10n.generationErrorServerUnavailable,
     GenerationErrorCode.timeout ||
@@ -35,7 +33,8 @@ String generationErrorCodeMessage(
     GenerationErrorCode.emptyResponse => l10n.generationErrorEmptyResponse,
     GenerationErrorCode.truncated ||
     GenerationErrorCode.refused ||
-    GenerationErrorCode.invalidResponse => l10n.generationErrorUnexpectedResponse,
+    GenerationErrorCode.invalidResponse =>
+      l10n.generationErrorUnexpectedResponse,
   };
 }
 
