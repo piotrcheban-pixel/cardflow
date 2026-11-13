@@ -511,4 +511,55 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get parserErrorEmptyText => 'В файле нет текста';
+
+  @override
+  String get generationErrorMissingApiKey =>
+      'Ключ доступа не задан. Добавьте ключ в настройках';
+
+  @override
+  String get generationErrorInvalidApiKey =>
+      'Ключ доступа недействителен. Проверьте ключ в настройках';
+
+  @override
+  String get generationErrorBadRequest =>
+      'Запрос отклонён. Проверьте выбранную модель и ключ в настройках';
+
+  @override
+  String generationErrorRateLimited(int seconds) {
+    String _temp0 = intl.Intl.pluralLogic(
+      seconds,
+      locale: localeName,
+      other: '# секунды',
+      many: '# секунд',
+      few: '# секунды',
+      one: '# секунду',
+    );
+    return 'Превышен лимит запросов. Повтор через $_temp0';
+  }
+
+  @override
+  String get generationErrorRateLimitedNoDelay =>
+      'Превышен лимит запросов. Попробуйте позже';
+
+  @override
+  String get generationErrorServerUnavailable =>
+      'Провайдер временно недоступен. Попробуйте позже';
+
+  @override
+  String get generationErrorNoConnection => 'Нет подключения к интернету';
+
+  @override
+  String get generationErrorCancelled => 'Генерация отменена';
+
+  @override
+  String get generationErrorEmptyResponse =>
+      'Нейросеть вернула пустой ответ. Попробуйте ещё раз';
+
+  @override
+  String get generationErrorUnexpectedResponse =>
+      'Нейросеть вернула неожиданный ответ. Попробовать снова?';
+
+  @override
+  String get generationErrorGeneric =>
+      'Не удалось получить карточки. Попробуйте ещё раз';
 }

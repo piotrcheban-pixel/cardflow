@@ -909,6 +909,72 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'В файле нет текста'**
   String get parserErrorEmptyText;
+
+  /// Генерация: ключ API не задан (SPEC A8.6).
+  ///
+  /// In ru, this message translates to:
+  /// **'Ключ доступа не задан. Добавьте ключ в настройках'**
+  String get generationErrorMissingApiKey;
+
+  /// Генерация: провайдер отверг ключ (HTTP 401/403, SPEC A8.6).
+  ///
+  /// In ru, this message translates to:
+  /// **'Ключ доступа недействителен. Проверьте ключ в настройках'**
+  String get generationErrorInvalidApiKey;
+
+  /// Генерация: запрос отвергнут (HTTP 400/404/422, SPEC A8.6).
+  ///
+  /// In ru, this message translates to:
+  /// **'Запрос отклонён. Проверьте выбранную модель и ключ в настройках'**
+  String get generationErrorBadRequest;
+
+  /// Генерация: HTTP 429 с Retry-After, пауза в секундах (SPEC A8.6).
+  ///
+  /// In ru, this message translates to:
+  /// **'Превышен лимит запросов. Повтор через {seconds, plural, one{# секунду} few{# секунды} many{# секунд} other{# секунды}}'**
+  String generationErrorRateLimited(int seconds);
+
+  /// Генерация: HTTP 429 без Retry-After (SPEC A8.6).
+  ///
+  /// In ru, this message translates to:
+  /// **'Превышен лимит запросов. Попробуйте позже'**
+  String get generationErrorRateLimitedNoDelay;
+
+  /// Генерация: HTTP 5xx после всех попыток (SPEC A8.6).
+  ///
+  /// In ru, this message translates to:
+  /// **'Провайдер временно недоступен. Попробуйте позже'**
+  String get generationErrorServerUnavailable;
+
+  /// Генерация: таймаут или сетевая ошибка (SPEC A8.6).
+  ///
+  /// In ru, this message translates to:
+  /// **'Нет подключения к интернету'**
+  String get generationErrorNoConnection;
+
+  /// Генерация: пользователь отменил запрос (SPEC A6.8/A8.5).
+  ///
+  /// In ru, this message translates to:
+  /// **'Генерация отменена'**
+  String get generationErrorCancelled;
+
+  /// Генерация: модель вернула пустой контент (SPEC A8.6).
+  ///
+  /// In ru, this message translates to:
+  /// **'Нейросеть вернула пустой ответ. Попробуйте ещё раз'**
+  String get generationErrorEmptyResponse;
+
+  /// Генерация: обрезано/отказ/невалидный ответ модели (SPEC A8.6).
+  ///
+  /// In ru, this message translates to:
+  /// **'Нейросеть вернула неожиданный ответ. Попробовать снова?'**
+  String get generationErrorUnexpectedResponse;
+
+  /// Генерация: прочая ошибка без отдельного кода (SPEC A8.6).
+  ///
+  /// In ru, this message translates to:
+  /// **'Не удалось получить карточки. Попробуйте ещё раз'**
+  String get generationErrorGeneric;
 }
 
 class _AppLocalizationsDelegate
