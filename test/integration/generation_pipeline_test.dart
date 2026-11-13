@@ -9,6 +9,7 @@ import 'package:cardflow/domain/generation/generation_error.dart';
 import 'package:cardflow/domain/generation/generation_provider.dart';
 import 'package:cardflow/domain/generation/generation_request.dart';
 import 'package:cardflow/domain/generation/generation_result.dart';
+import 'package:cardflow/domain/generation/openai_compatible_settings.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
 
 import '../helpers/fake_http_adapter.dart';
@@ -49,7 +50,11 @@ void main() {
     },
   };
 
-  ProviderContainer containerWith(Dio dio, {FakeApiKeyStore? keyStore}) {
+  ProviderContainer containerWith(
+    Dio dio, {
+    FakeApiKeyStore? keyStore,
+    FakeGenerationSettingsStore? settingsStore,
+  }) {
     final container = ProviderContainer(
       overrides: [
         generationDioProvider.overrideWithValue(dio),
@@ -58,6 +63,9 @@ void main() {
               FakeApiKeyStore(<GenerationProvider, String>{
                 GenerationProvider.openai: openAiKey,
               }),
+        ),
+        generationSettingsStoreProvider.overrideWithValue(
+          settingsStore ?? FakeGenerationSettingsStore(),
         ),
       ],
     );
@@ -293,6 +301,109 @@ void main() {
     },
   );
 
+  test(
+    'production-граф: OpenAI-compatible без ключа — локальный endpoint без Authorization',
+    () async {
+      final adapter = FakeHttpAdapter(
+        (options) => jsonResponse(openAiSuccessPayload()),
+      );
+      final container = containerWith(
+        dioWithAdapter(adapter),
+        keyStore: FakeApiKeyStore(),
+        settingsStore: FakeGenerationSettingsStore(
+          const OpenAiCompatibleSettings(
+            baseUrl: 'http://localhost:11434/v1',
+            model: 'qwen2.5',
+          ),
+        ),
+      );
+
+      final GenerationResult result = await container
+          .read(cardGenerationServiceProvider)
+          .generate(
+            const GenerationRequest(
+              provider: GenerationProvider.openaiCompatible,
+              model: 'игнорируется',
+              materialsText: 'Материал лекции',
+              limit: 5,
+            ),
+          );
+
+      expect(result.cards, hasLength(1));
+      expect(result.model, 'qwen2.5');
+      expect(adapter.requests, hasLength(1));
+      final sent = adapter.requests.single;
+      expect(
+        sent.uri.toString(),
+        'http://localhost:11434/v1/chat/completions',
+      );
+      expect(sent.headers.containsKey('Authorization'), isFalse);
+      final body = jsonDecode(sent.data! as String) as Map<String, Object?>;
+      expect(body['model'], 'qwen2.5');
+      final format = body['response_format']! as Map<String, Object?>;
+      expect(format['type'], 'json_schema');
+    },
+  );
+
+  test(
+    'production-граф: OpenAI-compatible strict 400 → fallback без response_format',
+    () async {
+      var calls = 0;
+      final adapter = FakeHttpAdapter((options) {
+        calls++;
+        if (calls == 1) {
+          return jsonResponse(<String, Object?>{
+            'error': 'response_format is not supported',
+          }, statusCode: 400);
+        }
+        return jsonResponse(openAiSuccessPayload());
+      });
+      final container = containerWith(
+        dioWithAdapter(adapter),
+        keyStore: FakeApiKeyStore(<GenerationProvider, String>{
+          GenerationProvider.openaiCompatible: 'deepseek-test-key',
+        }),
+        settingsStore: FakeGenerationSettingsStore(
+          const OpenAiCompatibleSettings(
+            baseUrl: 'https://api.deepseek.com',
+            model: 'deepseek-chat',
+          ),
+        ),
+      );
+
+      final GenerationResult result = await container
+          .read(cardGenerationServiceProvider)
+          .generate(
+            const GenerationRequest(
+              provider: GenerationProvider.openaiCompatible,
+              model: 'игнорируется',
+              materialsText: 'Материал лекции',
+              limit: 5,
+            ),
+          );
+
+      expect(result.cards, hasLength(1));
+      expect(adapter.requests, hasLength(2));
+      final first = adapter.requests[0];
+      final second = adapter.requests[1];
+      expect(
+        first.uri.toString(),
+        'https://api.deepseek.com/chat/completions',
+      );
+      expect(first.headers['Authorization'], 'Bearer deepseek-test-key');
+      final firstBody =
+          jsonDecode(first.data! as String) as Map<String, Object?>;
+      expect(
+        (firstBody['response_format']! as Map<String, Object?>)['type'],
+        'json_schema',
+      );
+      final secondBody =
+          jsonDecode(second.data! as String) as Map<String, Object?>;
+      expect(secondBody.containsKey('response_format'), isFalse);
+      expect(secondBody['model'], 'deepseek-chat');
+    },
+  );
+
   test('production Dio: таймауты A8.6 и redaction-перехватчик', () {
     final container = ProviderContainer();
     addTearDown(container.dispose);
@@ -304,9 +415,14 @@ void main() {
     expect(dio.interceptors.whereType<RedactingLogInterceptor>(), hasLength(1));
   });
 
-  test('production-граф собирает 3 адаптера (OpenAI/Gemini/Anthropic)', () {
+  test('production-граф собирает 4 адаптера (включая OpenAI-compatible)', () {
     final container = ProviderContainer(
-      overrides: [apiKeyStoreProvider.overrideWithValue(FakeApiKeyStore())],
+      overrides: [
+        apiKeyStoreProvider.overrideWithValue(FakeApiKeyStore()),
+        generationSettingsStoreProvider.overrideWithValue(
+          FakeGenerationSettingsStore(),
+        ),
+      ],
     );
     addTearDown(container.dispose);
     final service = container.read(cardGenerationServiceProvider);

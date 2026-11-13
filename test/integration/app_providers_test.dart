@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cardflow/data/cards/drift_card_repository.dart';
 import 'package:cardflow/data/db/app_database.dart';
 import 'package:cardflow/data/decks/drift_deck_repository.dart';
+import 'package:cardflow/data/generation/drift_generation_settings_store.dart';
 import 'package:cardflow/data/review/drift_review_repository.dart';
 import 'package:cardflow/data/transfer/drift_deck_transfer_service.dart';
 import 'package:cardflow/data/transfer/file_picker_gateway.dart';
@@ -15,6 +16,7 @@ import 'package:cardflow/data/transfer/media_store.dart';
 import 'package:cardflow/data/transfer/zip_deck_archive_codec.dart';
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/decks/deck_query.dart';
+import 'package:cardflow/domain/generation/openai_compatible_settings.dart';
 import 'package:cardflow/domain/scheduling/scheduler.dart';
 import 'package:cardflow/domain/transfer/deck_archive.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
@@ -67,6 +69,27 @@ void main() {
     );
     expect(container.read(fileGatewayProvider), isA<FilePickerGateway>());
     expect(container.read(mediaStoreProvider), isA<MediaStore>());
+    expect(
+      container.read(generationSettingsStoreProvider),
+      isA<DriftGenerationSettingsStore>(),
+    );
+  });
+
+  test('настройки OpenAI-совместимого сервера идут через реальную БД', () async {
+    final store = container.read(generationSettingsStoreProvider);
+    await store.writeOpenAiCompatible(
+      const OpenAiCompatibleSettings(
+        baseUrl: 'http://localhost:1234/v1',
+        model: 'lm-studio-model',
+      ),
+    );
+
+    final fromGraph = await container
+        .read(generationSettingsStoreProvider)
+        .readOpenAiCompatible();
+    expect(fromGraph.baseUrl, 'http://localhost:1234/v1');
+    expect(fromGraph.model, 'lm-studio-model');
+    expect(await database.select(database.appSettings).get(), hasLength(1));
   });
 
   test(

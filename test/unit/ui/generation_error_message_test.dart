@@ -90,6 +90,25 @@ void main() {
     );
   });
 
+  test('ненастроенный OpenAI-совместимый сервер — своё сообщение', () {
+    expect(
+      generationErrorCodeMessage(
+        l10n,
+        GenerationErrorCode.providerNotConfigured,
+      ),
+      l10n.generationErrorProviderNotConfigured,
+    );
+    expect(
+      generationErrorCodeMessage(
+        l10n,
+        GenerationErrorCode.providerNotConfigured,
+      ),
+      isNot(
+        generationErrorCodeMessage(l10n, GenerationErrorCode.missingApiKey),
+      ),
+    );
+  });
+
   test(
     'timeout и network — «нет подключения»; ошибки модели — отдельные строки',
     () {
