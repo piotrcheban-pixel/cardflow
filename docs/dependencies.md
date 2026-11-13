@@ -220,3 +220,21 @@ dev_dependencies:
 | S-PDF-isolate — `Isolate.run` | **успешен:** извлечение текста PDF работает внутри отдельного изолята (`pdfrxInitialize` внутри изолята) — A8.3 «тяжёлые файлы в изоляте» выполнимо для всех форматов |
 
 **Риск CI:** тесты PDF-парсера будут грузить нативные PDFium (Dart native assets) на Linux/Windows/macOS; локально на Windows спайк зелёный, поведение на остальных ОС проверит CI-прогон итерации 3a.
+
+## 10. Фактическое состояние после итерации 3a (2026-11-13)
+
+**Новых пакетов, кроме `enough_convert ^1.7.1` (добавлен на шаге спайков), не добавлялось.** Парсеры A8.3 собраны на уже проверенных зависимостях: `archive` 4.6.0 + `xml` 7.0.1 (DOCX/PPTX/ODT, ZIP-хелпер), `excel_plus` 2.29.2 (XLSX), `pdfrx` 2.12.0 (PDF), `enough_convert` 1.7.1 (cp1251/KOI8-R), собственный минимальный RTF-конвертер (внешних пакетов нет — требование SPEC A8.3).
+
+**Runtime-проверки итерации 3a** (`fvm flutter test`, локально Windows, 595 тестов):
+
+| Пакет | Результат |
+|---|---|
+| `enough_convert` 1.7.1 | Windows-1251 и KOI8-R encode/decode — работает; RTF `'hh` с codepage 1251/20866/21866 и TXT-определение кодировки покрыты тестами |
+| `archive` 4.6.0 | `ZipDecoder` в строгом режиме (`verify: true, throwOnError: true`) корректно отвергает повреждённый/обрезанный ZIP (`SecureZip`); `ZipEncoder` — фикстуры в тестах |
+| `xml` 7.0.1 | разбор OOXML/ODF, `innerText` (в 7.x `.value` у элемента нет); поиск по локальным именам и `r:id` — работает |
+| `excel_plus` 2.29.2 | `FormulaCellValue.cachedValue` (кэш формулы), `DateCellValue`/`DateTimeCellValue`, inlineStr, несколько листов — работает; формула без кэша отдаётся как `=формула` (ADR-010 §5) |
+| `pdfrx` 2.12.0 | `pdfrxInitialize()` + `PdfDocument.openData` + `page.loadText()` — работает в `flutter test` на Windows, в том числе внутри `Isolate.run`; скан → `scannedPdf`, запароленный PDF (V1/R2 RC4 40-bit фикстура) → `unreadableFile`, многостраничный PDF — ок |
+
+**Покрытие нового кода** (`fvm dart run tool/coverage_check.dart --min=80`): итого **95.3% (3152/3309)**; по новым файлам: `file_parsing_service` 100%, `odt_parser` 100%, `parsed_document_builder` 100%, `xml_local_names` 100%, `parsed_document` 100%, `pdf_parser` 85.3%, `docx_parser` 98.7%, `pptx_parser` 98.2%, `zip_xml` 96.8%, `txt_parser` 96.3%, `xlsx_parser` 94.7%, `rtf_parser` 89.0%, `document_format` 94.1%.
+
+**CI:** прогон итерации 3a ещё не выполнялся (push — по команде владельца); pdfrx/PDFium native assets на Linux/macOS подтверждаются CI — известное ограничение L26.

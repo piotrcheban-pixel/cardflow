@@ -1,30 +1,42 @@
 # STATE — текущее состояние CardFlow
 
-**Дата:** 2026-11-13 · **Итерация:** 3a «Парсеры» — **в работе**, шаг 4 (ревью снимка) · **Предыдущая:** 2 «Классический режим» завершена; CI-хотфикс «No space left on device» закрыт зелёным прогоном · **Режим:** ИТЕРАЦИИ
-**Факты:** Flutter 3.47.9 / Dart 3.13.7 (FVM 4.3.2); Windows 11; локальная Windows-сборка работает; Android SDK/JDK, Xcode, Linux — отсутствуют; ключей API нет (absent). GitHub-remote `origin` → piotrcheban-pixel/cardflow; локальный `main` = `origin/main` (HEAD `ff32590` + коммиты итерации 3a), рабочее дерево clean. **Последний CI — зелёный:** прогон [`43468349877`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43468349877) attempt 4 — все 9 job success (quality, test×3, build linux/windows/macos/android/ios). В `build android` фикс диска дал 13G → 23G свободного места, `flutter build apk` собрался; `build ios` получил раннер с 4-й попытки (job перезапускался, label не менялся). Push — по команде владельца.
+**Дата:** 2026-11-13 · **Итерация:** 3a «Парсеры» — **завершена** (verify/summary), ждёт push по команде владельца · **Следующая:** 3b «Провайдеры» · **Режим:** ИТЕРАЦИИ
+**Факты:** Flutter 3.47.9 / Dart 3.13.7 (FVM 4.3.2); Windows 11; локальная Windows-сборка работает; Android SDK/JDK, Xcode, Linux — отсутствуют; ключей API нет (absent). GitHub-remote `origin` → piotrcheban-pixel/cardflow; локальный `main` = `origin/main` + коммиты итерации 3a (`4b91adc`…`ecf845a` + docs), рабочее дерево clean. Последний CI — зелёный: прогон [`43468349877`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43468349877) attempt 4 — все 9 job success (включая `build android` после фикса диска и `build ios` с 4-й попытки L22). Прогон итерации 3a в CI **ещё не выполнялся** (push — по команде владельца).
 
 ## Следующее действие
 
-Итерация 3a: зелёная фаза завершена (коммиты `6c3a019` red, `ba13128`/`7501ffe`/`e12d819` green; 566 тестов, analyze 0, format 0). Сейчас — независимое ревью снимка `e12d819` (teammate `parser-reviewer`, отчёт `journal/iteration-3a/review.md`); Lead не правит код до завершения. Далее: fix-итерация findings → verify → docs/parsers.md + summary + STATE/AGENTS + ретроспектива.
+1. **Push итерации 3a** (по команде владельца): `git push origin main` → дождаться CI-прогона.
+   Первым делом смотреть `test` (Linux/Windows/macOS): там впервые в CI собираются native assets **pdfrx/PDFium**
+   для PDF-тестов (L26). При падении только PDF-тестов на какой-то ОС — платформенный skip + `KNOWN_LIMITATIONS`,
+   тесты не удалять; при падении по другой причине — разбирать лог.
+2. После зелёного CI — **итерация 3b «Провайдеры»** (SPEC A8.2/A8.3: 3 адаптера OpenAI/Gemini/Anthropic,
+   строгая схема, локальная валидация, retry/backoff, 429/5xx/401, редактирование логов; ключей API нет —
+   mock/контрактные тесты, live — skip). Перед стартом сверить STATE с репозиторием.
 
-## CI-хотфикс после итерации 2 — закрыт
+## Итерация 3a — итог
 
-- **Падение:** аннотация check-run `build android` прогона [`43451932776`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43451932776) — `System.IO.IOException: No space left on device : '/home/runner/actions-runner/cached/2.338.2/_diag/Worker_20261113-160553-utc.log'` (упал сам раннер; `test (macos-latest)` не получил раннер — GitHub capacity).
-- **Фикс `7d124aa`:** `Free disk space` во всех 4 job'ах до `flutter pub get` (Linux: dotnet/android SDK/ghc/boost/CodeQL + `docker image prune --all`; macOS: Android SDK/Homebrew cache/dotnet), `df -h` до/после; Android SDK сохраняется в android-job (`KEEP_ANDROID_SDK`); `rm -rf ~/.gradle/caches` перед Android-сборкой. `java-version: '21'` не менялся.
-- **Результат (attempt 4):** все 9 job success; в `build android` — `df` 13G → 23G после очистки, `Android SDK сохранён`, `✓ Built build/app/outputs/flutter-apk/app-debug.apk` (Gradle 544.6s). `build ios` cancelled в attempts 1–3 (L22), success с 4-й попытки. Детали — `journal/iteration-2/ci-infra-fix.md`.
-
-## Итерация 2 — итог
-
-- **План/реализация:** ADR-008 (классическая сессия: очередь due+new, одна оценка на карточку, немедленная транзакция, undo), ADR-009 (ручная форма: поля/типы/валидация/удаление); домен (`CardDraft`, `CardSchedulingMapper`, `ReviewQueue`), data (`DriftCardRepository` CRUD, `DriftReviewRepository` транзакции/undo, перепривязка `fsrs_json` при импорте), UI (ReviewSessionScaffold A6.4, 4 кнопки с прогнозом A7.2, 3D-flip, haptics, форма карточки, «Начать сессию», маршруты).
-- **Доказательства:** `fvm flutter test` → **484 теста зелёные**; `analyze` → 0 issues; `dart format` → 0 changed (110 files); покрытие **95,3% (2523/2648)**; guard 35/35; `build windows --release` → `cardflow.exe`. FSRS-числа: `journal/iteration-2/fsrs-intervals.md`.
-- **Ревью:** blocker 0 / critical 0 / high 1 (H1, импорт `fsrs_json`), medium 3; fix-итерация закрыла всё (`journal/iteration-2/review-fixes.md`), low задокументированы (L18–L20). Отчёты: `review.md`, `verify.md`, `summary.md`.
-- **Коммиты:** `68b1c1b` (L9/L9b + CI), `e96e76b` (план/ADR), `350222e` (красная фаза), `6d6fa02` (домен+data), `c589e8a` (UI), `d5495f2` (fix findings), `+ docs`, `7d124aa` (CI-хотфикс диска), `74da42e`/`ff32590`/`+ docs` (доказательства и зелёный прогон). Рабочее дерево — clean.
-- **Отступления:** не реализованы (не отрисованы) — настройки сессии и другие режимы (4/6), «Изменить/Отложить/Флаг» в сессии, requeue learning (ADR-008), neighbor-squish (L18), stale-счётчики due/«Новые» (L10/L19), cloze-редактор (5), свайп-удаление/приостановка (6).
+- **Сделано:** нативные парсеры A8.3 (`lib/api/parsers/`): PDF (pdfrx/PDFium в изоляте), DOCX/PPTX/ODT
+  (archive+xml), XLSX (excel_plus: листы, кэш формул, даты), TXT/MD (BOM/UTF-8/cp1251/KOI8-R), RTF
+  (собственный конвертер); `ParsedDocument` с нормализацией и границами разделов (домен `lib/domain/text/`);
+  `FileParsingService` (лимит 25 МБ, сигнатуры, `Isolate.run`, ошибки по файлу); ARB-сообщения ошибок.
+  ADR-010 (+дополнения), `docs/parsers.md`, `docs/dependencies.md` §9–§10.
+- **Доказательства:** `fvm flutter test` → **595 тестов зелёные** (+111); `analyze` 0; `format` 0 (142 файла);
+  покрытие **95.3% (3152/3309)**; новые парсеры 85.3–100%; `build windows --release` → `cardflow.exe`;
+  ревью `journal/iteration-3a/review.md` — 0 blocker/critical, 2 high/8 medium/9 low → fix `ecf845a`.
+- **Ревью:** независимый reviewer (fresh context) на снимке `e12d819`; высокие находки: RTF `\*`-группы
+  (потеря видимого текста полей) и XLSX без ZIP-лимитов (zip-bomb/OOM) — исправлены с тестами; mediums M1–M8
+  закрыты; lows L1–L3/L6/L8 исправлены, L4/L5/L7/L9 задокументированы/закрыты (L7 — docs, L9 — ADR).
+- **Коммиты:** `4b91adc` (enough_convert), `27fadd7` (план/ADR-010/спайки), `6c3a019` (красная фаза +12/−70),
+  `ba13128` (домен), `7501ffe` (DOCX/PPTX/ODT), `e12d819` (XLSX/TXT/RTF/PDF/сервис/ARB), `ecf845a` (fix ревью),
+  `+ docs` (verify/summary/parsers.md/STATE/AGENTS). Рабочее дерево — clean.
+- **Не проверено:** CI-прогон 3a (L26), реальные Word/LibreOffice/PDF-файлы (L23), 25 МБ/OOM (L25);
+  вложенные таблицы DOCX уплощаются и нумерация списков не извлекается (L24); формула без кэша → `=формула` (L27).
 
 ## Открытые вопросы к владельцу
 
-Нет. Платных зависимостей нет (PDF — pdfrx, MIT); формат `.zip` v1 не менялся; удаление функций SPEC не предлагалось. Push — по отдельной команде в конце итерации.
+Нет. Платных зависимостей нет (PDF — pdfrx/MIT; RTF — собственный конвертер); SPEC не менялся; удаление
+функций не предлагалось. Push/CI-прогон итерации 3a — по отдельной команде.
 
 ## Известные ограничения (актуальные)
 
-L1 (ключи API), L2 (локальные сборки платформ), L4 (хуки), L5 (навыки), L6 (golden), L6c (dynamic color — итерация 7), L7 (.doc/.xls), L8 (DnD-версия), L10 (устаревание due-счётчиков), L11 (живые диалоги file_picker/mobile), L12 (screen-reader/golden M3E), L13 (двойной decode/UI-изолят), L14 (длины при импорте), L15/L16/L17, L18 (neighbor-squish), L19 (семантика «Новые» vs очередь), L20 (сессия без requeue). **L21/L22 сняты** зелёным прогоном `43468349877`; L9/L9b сняты (CI итерации 1), L2b/L3/L6b сняты ранее.
+L1 (ключи API), L2 (локальные сборки платформ), L4 (хуки), L5 (навыки), L6 (golden), L6c (dynamic color — итерация 7), L7 (.doc/.xls), L8 (DnD-версия), L10 (устаревание due-счётчиков), L11 (живые диалоги file_picker/mobile), L12 (screen-reader/golden M3E), L13 (двойной decode/UI-изолят), L14 (длины при импорте), L15/L16/L17, L18 (neighbor-squish), L19 (семантика «Новые» vs очередь), L20 (сессия без requeue), **L23** (реальные файлы не проверялись), **L24** (вложенные таблицы DOCX/нумерация), **L25** (25 МБ/производительность/OOM), **L26** (pdfrx в CI Linux/macOS — до прогона 3a), **L27** (формула без кэша → `=формула`). L9/L9b/L21/L22 сняты, L2b/L3/L6b сняты ранее.
