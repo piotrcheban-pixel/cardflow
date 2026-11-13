@@ -19,6 +19,8 @@ String generationErrorCodeMessage(
 }) {
   return switch (code) {
     GenerationErrorCode.missingApiKey => l10n.generationErrorMissingApiKey,
+    GenerationErrorCode.providerNotConfigured =>
+      l10n.generationErrorProviderNotConfigured,
     GenerationErrorCode.invalidApiKey => l10n.generationErrorInvalidApiKey,
     GenerationErrorCode.badRequest => l10n.generationErrorBadRequest,
     GenerationErrorCode.rateLimited =>

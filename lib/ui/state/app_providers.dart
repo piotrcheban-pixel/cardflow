@@ -9,10 +9,12 @@ import 'package:cardflow/api/http/retry_policy.dart';
 import 'package:cardflow/api/providers/anthropic_adapter.dart';
 import 'package:cardflow/api/providers/gemini_adapter.dart';
 import 'package:cardflow/api/providers/openai_adapter.dart';
+import 'package:cardflow/api/providers/openai_compatible_adapter.dart';
 import 'package:cardflow/api/providers/generation_provider_adapter.dart';
 import 'package:cardflow/data/cards/drift_card_repository.dart';
 import 'package:cardflow/data/db/app_database.dart';
 import 'package:cardflow/data/decks/drift_deck_repository.dart';
+import 'package:cardflow/data/generation/drift_generation_settings_store.dart';
 import 'package:cardflow/data/review/drift_review_repository.dart';
 import 'package:cardflow/data/security/secure_api_key_store.dart';
 import 'package:cardflow/data/transfer/drift_deck_transfer_service.dart';
@@ -22,6 +24,8 @@ import 'package:cardflow/data/transfer/zip_deck_archive_codec.dart';
 import 'package:cardflow/domain/cards/card_repository.dart';
 import 'package:cardflow/domain/decks/deck_repository.dart';
 import 'package:cardflow/domain/generation/api_key_store.dart';
+import 'package:cardflow/domain/generation/generation_settings_store.dart';
+import 'package:cardflow/domain/generation/openai_compatible_settings.dart';
 import 'package:cardflow/domain/review/review_repository.dart';
 import 'package:cardflow/domain/scheduling/scheduler.dart';
 import 'package:cardflow/domain/transfer/archive_codec.dart';
@@ -93,12 +97,26 @@ final apiKeyStoreProvider = Provider<ApiKeyStore>((ref) {
   return SecureApiKeyStore(FlutterSecureKeyValueStore());
 });
 
-/// Адаптеры провайдеров для сервиса генерации (SPEC A8.2).
+/// Хранилище настроек OpenAI-совместимого сервера (`app_settings`, ADR-013).
+final generationSettingsStoreProvider = Provider<GenerationSettingsStore>((ref) {
+  return DriftGenerationSettingsStore(ref.watch(appDatabaseProvider));
+});
+
+/// Текущие настройки OpenAI-совместимого сервера для экрана настроек.
+final openAiCompatibleSettingsProvider =
+    FutureProvider<OpenAiCompatibleSettings>((ref) {
+      return ref
+          .watch(generationSettingsStoreProvider)
+          .readOpenAiCompatible();
+    });
+
+/// Адаптеры провайдеров для сервиса генерации (SPEC A8.2, ADR-013).
 const List<GenerationProviderAdapter> generationAdapters =
     <GenerationProviderAdapter>[
       OpenAiAdapter(),
       GeminiAdapter(),
       AnthropicAdapter(),
+      OpenAiCompatibleAdapter(),
     ];
 
 /// Dio для вызовов провайдеров генерации: таймауты и redaction-перехватчик.
@@ -128,11 +146,12 @@ final generationHttpClientProvider = Provider<GenerationHttpClient>((ref) {
   );
 });
 
-/// Сервис генерации карточек (адаптеры 3 провайдеров + валидация A8.4).
+/// Сервис генерации карточек (адаптеры провайдеров + валидация A8.4).
 final cardGenerationServiceProvider = Provider<CardGenerationService>((ref) {
   return CardGenerationService(
     adapters: generationAdapters,
     apiKeyStore: ref.watch(apiKeyStoreProvider),
     httpClient: ref.watch(generationHttpClientProvider),
+    generationSettingsStore: ref.watch(generationSettingsStoreProvider),
   );
 });

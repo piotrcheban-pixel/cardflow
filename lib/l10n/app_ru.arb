@@ -623,6 +623,10 @@
   "@generationErrorMissingApiKey": {
     "description": "Генерация: ключ API не задан (SPEC A8.6)."
   },
+  "generationErrorProviderNotConfigured": "Сервер не настроен. Укажите адрес и модель в настройках",
+  "@generationErrorProviderNotConfigured": {
+    "description": "Генерация: у OpenAI-совместимого сервера не заданы адрес или модель (ADR-013)."
+  },
   "generationErrorInvalidApiKey": "Ключ доступа недействителен. Проверьте ключ в настройках",
   "@generationErrorInvalidApiKey": {
     "description": "Генерация: провайдер отверг ключ (HTTP 401/403, SPEC A8.6)."
@@ -667,5 +671,73 @@
   "generationErrorGeneric": "Не удалось получить карточки. Попробуйте ещё раз",
   "@generationErrorGeneric": {
     "description": "Генерация: прочая ошибка без отдельного кода (SPEC A8.6)."
+  },
+  "settingsTitle": "Настройки генерации",
+  "@settingsTitle": {
+    "description": "Заголовок экрана настроек генерации (A6.6, API-блок; ADR-013)."
+  },
+  "settingsOpenAiCompatibleTitle": "OpenAI-совместимый сервер",
+  "@settingsOpenAiCompatibleTitle": {
+    "description": "Название провайдера OpenAI-compatible на экране настроек (ADR-013)."
+  },
+  "settingsOpenAiCompatibleDescription": "Подходит для облачных и локальных серверов, совместимых с OpenAI",
+  "@settingsOpenAiCompatibleDescription": {
+    "description": "Пояснение к провайдеру OpenAI-compatible: DeepSeek, Ollama, LM Studio и другие (ADR-013)."
+  },
+  "settingsServerAddressLabel": "Адрес сервера",
+  "@settingsServerAddressLabel": {
+    "description": "Подпись поля base_url OpenAI-совместимого сервера."
+  },
+  "settingsServerAddressHint": "Полный адрес, при необходимости — с версией API",
+  "@settingsServerAddressHint": {
+    "description": "Подсказка поля base_url: например /v1 для локальных серверов."
+  },
+  "settingsModelLabel": "Модель",
+  "@settingsModelLabel": {
+    "description": "Подпись поля модели OpenAI-совместимого сервера."
+  },
+  "settingsModelHint": "Имя модели на сервере",
+  "@settingsModelHint": {
+    "description": "Подсказка поля модели OpenAI-совместимого сервера."
+  },
+  "settingsApiKeyLabel": "Ключ доступа (необязательно)",
+  "@settingsApiKeyLabel": {
+    "description": "Подпись поля ключа OpenAI-совместимого сервера (локальным серверам ключ не нужен)."
+  },
+  "settingsApiKeyHelper": "Ключ хранится в защищённом хранилище и не показывается. Введите новый ключ, чтобы заменить, или оставьте поле пустым, чтобы удалить",
+  "@settingsApiKeyHelper": {
+    "description": "Пояснение к полю ключа: ключ не отображается, пустое поле = удалить сохранённый ключ."
+  },
+  "settingsApiKeyConfigured": "Ключ доступа сохранён",
+  "@settingsApiKeyConfigured": {
+    "description": "Индикатор: для OpenAI-совместимого сервера сохранён ключ доступа."
+  },
+  "settingsSaved": "Настройки сервера сохранены",
+  "@settingsSaved": {
+    "description": "Снекбар после сохранения настроек сервера."
+  },
+  "settingsSaveError": "Не удалось сохранить настройки. Попробуйте ещё раз",
+  "@settingsSaveError": {
+    "description": "Ошибка сохранения настроек сервера (без сырых исключений)."
+  },
+  "settingsLoadError": "Не удалось загрузить настройки. Попробуйте ещё раз",
+  "@settingsLoadError": {
+    "description": "Ошибка загрузки настроек сервера (без сырых исключений)."
+  },
+  "settingsAddressEmptyError": "Укажите адрес сервера",
+  "@settingsAddressEmptyError": {
+    "description": "Валидация: адрес OpenAI-совместимого сервера пустой."
+  },
+  "settingsAddressInvalidError": "Проверьте адрес: нужен полный адрес с протоколом",
+  "@settingsAddressInvalidError": {
+    "description": "Валидация: адрес сервера не является корректным http/https URL."
+  },
+  "settingsModelEmptyError": "Укажите модель",
+  "@settingsModelEmptyError": {
+    "description": "Валидация: имя модели OpenAI-совместимого сервера пустое."
+  },
+  "settingsOpenTooltip": "Настройки генерации",
+  "@settingsOpenTooltip": {
+    "description": "Подсказка иконки перехода в настройки генерации."
   }
 }

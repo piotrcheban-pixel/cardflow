@@ -916,6 +916,12 @@ abstract class AppLocalizations {
   /// **'Ключ доступа не задан. Добавьте ключ в настройках'**
   String get generationErrorMissingApiKey;
 
+  /// Генерация: у OpenAI-совместимого сервера не заданы адрес или модель (ADR-013).
+  ///
+  /// In ru, this message translates to:
+  /// **'Сервер не настроен. Укажите адрес и модель в настройках'**
+  String get generationErrorProviderNotConfigured;
+
   /// Генерация: провайдер отверг ключ (HTTP 401/403, SPEC A8.6).
   ///
   /// In ru, this message translates to:
@@ -975,6 +981,108 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Не удалось получить карточки. Попробуйте ещё раз'**
   String get generationErrorGeneric;
+
+  /// Заголовок экрана настроек генерации (A6.6, API-блок; ADR-013).
+  ///
+  /// In ru, this message translates to:
+  /// **'Настройки генерации'**
+  String get settingsTitle;
+
+  /// Название провайдера OpenAI-compatible на экране настроек (ADR-013).
+  ///
+  /// In ru, this message translates to:
+  /// **'OpenAI-совместимый сервер'**
+  String get settingsOpenAiCompatibleTitle;
+
+  /// Пояснение к провайдеру OpenAI-compatible: DeepSeek, Ollama, LM Studio и другие (ADR-013).
+  ///
+  /// In ru, this message translates to:
+  /// **'Подходит для облачных и локальных серверов, совместимых с OpenAI'**
+  String get settingsOpenAiCompatibleDescription;
+
+  /// Подпись поля base_url OpenAI-совместимого сервера.
+  ///
+  /// In ru, this message translates to:
+  /// **'Адрес сервера'**
+  String get settingsServerAddressLabel;
+
+  /// Подсказка поля base_url: например /v1 для локальных серверов.
+  ///
+  /// In ru, this message translates to:
+  /// **'Полный адрес, при необходимости — с версией API'**
+  String get settingsServerAddressHint;
+
+  /// Подпись поля модели OpenAI-совместимого сервера.
+  ///
+  /// In ru, this message translates to:
+  /// **'Модель'**
+  String get settingsModelLabel;
+
+  /// Подсказка поля модели OpenAI-совместимого сервера.
+  ///
+  /// In ru, this message translates to:
+  /// **'Имя модели на сервере'**
+  String get settingsModelHint;
+
+  /// Подпись поля ключа OpenAI-совместимого сервера (локальным серверам ключ не нужен).
+  ///
+  /// In ru, this message translates to:
+  /// **'Ключ доступа (необязательно)'**
+  String get settingsApiKeyLabel;
+
+  /// Пояснение к полю ключа: ключ не отображается, пустое поле = удалить сохранённый ключ.
+  ///
+  /// In ru, this message translates to:
+  /// **'Ключ хранится в защищённом хранилище и не показывается. Введите новый ключ, чтобы заменить, или оставьте поле пустым, чтобы удалить'**
+  String get settingsApiKeyHelper;
+
+  /// Индикатор: для OpenAI-совместимого сервера сохранён ключ доступа.
+  ///
+  /// In ru, this message translates to:
+  /// **'Ключ доступа сохранён'**
+  String get settingsApiKeyConfigured;
+
+  /// Снекбар после сохранения настроек сервера.
+  ///
+  /// In ru, this message translates to:
+  /// **'Настройки сервера сохранены'**
+  String get settingsSaved;
+
+  /// Ошибка сохранения настроек сервера (без сырых исключений).
+  ///
+  /// In ru, this message translates to:
+  /// **'Не удалось сохранить настройки. Попробуйте ещё раз'**
+  String get settingsSaveError;
+
+  /// Ошибка загрузки настроек сервера (без сырых исключений).
+  ///
+  /// In ru, this message translates to:
+  /// **'Не удалось загрузить настройки. Попробуйте ещё раз'**
+  String get settingsLoadError;
+
+  /// Валидация: адрес OpenAI-совместимого сервера пустой.
+  ///
+  /// In ru, this message translates to:
+  /// **'Укажите адрес сервера'**
+  String get settingsAddressEmptyError;
+
+  /// Валидация: адрес сервера не является корректным http/https URL.
+  ///
+  /// In ru, this message translates to:
+  /// **'Проверьте адрес: нужен полный адрес с протоколом'**
+  String get settingsAddressInvalidError;
+
+  /// Валидация: имя модели OpenAI-совместимого сервера пустое.
+  ///
+  /// In ru, this message translates to:
+  /// **'Укажите модель'**
+  String get settingsModelEmptyError;
+
+  /// Подсказка иконки перехода в настройки генерации.
+  ///
+  /// In ru, this message translates to:
+  /// **'Настройки генерации'**
+  String get settingsOpenTooltip;
 }
 
 class _AppLocalizationsDelegate

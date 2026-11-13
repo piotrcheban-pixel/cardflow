@@ -517,6 +517,10 @@ class AppLocalizationsRu extends AppLocalizations {
       'Ключ доступа не задан. Добавьте ключ в настройках';
 
   @override
+  String get generationErrorProviderNotConfigured =>
+      'Сервер не настроен. Укажите адрес и модель в настройках';
+
+  @override
   String get generationErrorInvalidApiKey =>
       'Ключ доступа недействителен. Проверьте ключ в настройках';
 
@@ -562,4 +566,61 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get generationErrorGeneric =>
       'Не удалось получить карточки. Попробуйте ещё раз';
+
+  @override
+  String get settingsTitle => 'Настройки генерации';
+
+  @override
+  String get settingsOpenAiCompatibleTitle => 'OpenAI-совместимый сервер';
+
+  @override
+  String get settingsOpenAiCompatibleDescription =>
+      'Подходит для облачных и локальных серверов, совместимых с OpenAI';
+
+  @override
+  String get settingsServerAddressLabel => 'Адрес сервера';
+
+  @override
+  String get settingsServerAddressHint =>
+      'Полный адрес, при необходимости — с версией API';
+
+  @override
+  String get settingsModelLabel => 'Модель';
+
+  @override
+  String get settingsModelHint => 'Имя модели на сервере';
+
+  @override
+  String get settingsApiKeyLabel => 'Ключ доступа (необязательно)';
+
+  @override
+  String get settingsApiKeyHelper =>
+      'Ключ хранится в защищённом хранилище и не показывается. Введите новый ключ, чтобы заменить, или оставьте поле пустым, чтобы удалить';
+
+  @override
+  String get settingsApiKeyConfigured => 'Ключ доступа сохранён';
+
+  @override
+  String get settingsSaved => 'Настройки сервера сохранены';
+
+  @override
+  String get settingsSaveError =>
+      'Не удалось сохранить настройки. Попробуйте ещё раз';
+
+  @override
+  String get settingsLoadError =>
+      'Не удалось загрузить настройки. Попробуйте ещё раз';
+
+  @override
+  String get settingsAddressEmptyError => 'Укажите адрес сервера';
+
+  @override
+  String get settingsAddressInvalidError =>
+      'Проверьте адрес: нужен полный адрес с протоколом';
+
+  @override
+  String get settingsModelEmptyError => 'Укажите модель';
+
+  @override
+  String get settingsOpenTooltip => 'Настройки генерации';
 }
