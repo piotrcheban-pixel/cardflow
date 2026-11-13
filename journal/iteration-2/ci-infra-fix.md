@@ -5,11 +5,40 @@
 ## Диагноз
 
 Прогон CI после push итерации 2 упал не по коду и не по существу workflow:
-на раннере закончилось место. В логе раннера —
-`/home/runner/actions-runner/cached/.../Worker_*.log` — ошибка
-`No space left on device`. Логи недоступны из сессии (репозиторий private,
-`gh` CLI на хосте нет, GitHub API без токена), поэтому причина принята по
-сообщению владельца и по типовой природе ошибки: переполнение диска раннера.
+на раннере закончилось место. Источник — прогон
+[`43451932776`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43451932776)
+(commit `1b7d156`, push в `main`, 13.11.2026, 3 попытки). Данные получены
+read-only через GitHub API (сохранённые учётные данные git credential manager;
+секреты не выводились, `gh` CLI на хосте нет).
+
+**Job `build android`, аннотация check-run:**
+
+```
+Unhandled exception. System.IO.IOException: No space left on device :
+'/home/runner/actions-runner/cached/2.338.2/_diag/Worker_20261113-160553-utc.log'
+   at GitHub.Runner.Worker.Program.Main(String[] args)
+```
+
+Это падение **самого раннера** (GitHub Runner Worker) при записи своего
+диагностического лога: диск раннера был заполнен. Шаги #1–#7 (`checkout`,
+`fvm`, `setup-java`, `flutter-action`, `pub get`, `gen-l10n`) прошли, шаг #8
+`Сборка Android (debug, без подписи)` завершился failure, job-лог Android
+оборван на этапе распаковки кэшей `subosito/flutter-action` (16:06:34) —
+раннер не смог дописать лог; загрузка job-лога через API: 404/пустой blob.
+Остальные job'ы прогона зелёные: `format + analyze`, `test (ubuntu)` /
+`test (windows)`, `build linux` / `build windows` / `build macos` / `build ios`.
+
+**Вторая независимая проблема (не диск):** job `test (macos-latest)` не
+получил раннер — аннотация `The job was not acquired by Runner of type hosted
+even after multiple attempts` + notice про capacity constraints macOS arm64;
+job был в очереди ~15 мин и завершился cancelled вместе с прогоном. К диску
+отношения не имеет; при новом прогоне может проявиться снова (GitHub capacity),
+это отдельный внешний риск для «зелёного CI».
+
+**Вывод:** инфраструктурная ошибка диска, а не `invalid source release: 21`;
+цель фикса (освободить диск до `flutter pub get`) совпадает с местом падения
+по времени — раннер заполнился уже на распаковке кэшей Flutter после
+`setup-java`.
 
 ## Изменения (`.github/workflows/ci.yml`)
 
@@ -46,12 +75,17 @@
 
 ## Не проверено и почему
 
-- **Реальный прогон CI** — нет: push выполняется только по команде владельца.
-  До нового прогона нельзя утверждать, что зелёный.
+- **Реальный прогон CI после фикса** — нет: push выполняется только по команде
+  владельца. До нового прогона нельзя утверждать, что CI зелёный.
+- **Достаточность освобождённого места** — проверится `df -h` нового прогона.
 - **Android-сборка** (`flutter build apk`) — на хосте нет Android SDK/JDK;
   проверка только на CI.
-- **Достаточность освобождённого места** — по df-выводу нового прогона.
-- **Лог исходного падения** — недоступен (private repo, нет токена/gh).
+- **Текст самой ошибки `flutter build apk`** — в логе отсутствует: раннер
+  упал от ENOSPC и не дописал job-лог (шаг #8 без лога); достоверна только
+  аннотация про `No space left on device`.
+- **`test (macos-latest)`** — внешний GitHub-capacity: job не получил раннер
+  (`not acquired ... even after multiple attempts`), к фиксу диска отношения
+  не имеет; риск повторения — см. `journal/KNOWN_LIMITATIONS.md` L22.
 
 ## Следующее действие
 
