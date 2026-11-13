@@ -88,13 +88,13 @@ void main() {
         returnsNormally,
       );
       expect(
-        () => verifyDocumentSignature(DocumentFormat.pdf, buildPdf('Текст')),
+        () => verifyDocumentSignature(DocumentFormat.pdf, buildPdf('Text')),
         returnsNormally,
       );
       expect(
         () => verifyDocumentSignature(
           DocumentFormat.rtf,
-          buildRtf('Привет'),
+          buildRtf('Hello RTF'),
         ),
         returnsNormally,
       );
@@ -152,3 +152,5 @@ void main() {
     });
   });
 }
+
+

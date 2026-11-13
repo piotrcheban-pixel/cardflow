@@ -8,13 +8,45 @@ import 'package:cardflow/domain/text/document_format.dart';
 /// `start`/`end` в [text] и используются чанкингом генерации.
 class ParsedDocument {
   /// Создаёт документ и проверяет инварианты.
+  ///
+  /// Бросает [ArgumentError], если текст пуст, список разделов пуст, границы
+  /// раздела выходят за текст, раздел пуст или разделы идут не по порядку /
+  /// пересекаются. Парсеры обязаны отдавать валидный документ, поэтому это
+  /// нарушение программиста, а не пользовательская ошибка.
   ParsedDocument({
     required this.format,
     required this.fileName,
     required this.text,
     required this.sections,
     this.metadata = const ParsedDocumentMetadata(),
-  });
+  }) {
+    if (text.trim().isEmpty) {
+      throw ArgumentError.value(text, 'text', 'Текст документа не может быть пустым');
+    }
+    if (sections.isEmpty) {
+      throw ArgumentError.value(
+        sections,
+        'sections',
+        'Документ должен содержать хотя бы один раздел',
+      );
+    }
+    int previousEnd = 0;
+    for (final ParsedSection section in sections) {
+      if (section.start < 0 || section.end > text.length) {
+        throw ArgumentError('Границы раздела ${section.start}..${section.end} '
+            'выходят за текст длиной ${text.length}');
+      }
+      if (section.start >= section.end) {
+        throw ArgumentError('Раздел должен быть непустым: '
+            '${section.start}..${section.end}');
+      }
+      if (section.start < previousEnd) {
+        throw ArgumentError('Разделы должны идти по порядку и не пересекаться: '
+            '${section.start}..${section.end} после ${previousEnd}');
+      }
+      previousEnd = section.end;
+    }
+  }
 
   /// Формат источника.
   final DocumentFormat format;

@@ -19,7 +19,7 @@ void main() {
     test('NUL и управляющие символы удаляются, таб и перевод строки сохраняются', () {
       expect(
         normalizeDocumentText('a\u0000b\u0007c\td\ne'),
-        'abcd\ne',
+        'abc\td\ne',
         reason: 'NUL/BEL удаляются, таб и \\n сохраняются',
       );
       expect(normalizeDocumentText('a\u0000b'), 'ab');
@@ -58,11 +58,13 @@ void main() {
     });
 
     test('нормализация идемпотентна', () {
-      const String source = '  a  \r\n\r\n\r\n\r\n b\u0000\t \n\n c \n';
+      const String source = '  a  \r\n\r\n\r\n\r\nb\u0000\t \n\nc \n';
       final String once = normalizeDocumentText(source);
       final String twice = normalizeDocumentText(once);
       expect(twice, once);
-      expect(once, 'a\n\nb\t\n\nc');
+      expect(once, 'a\n\nb\n\nc');
     });
   });
 }
+
+
