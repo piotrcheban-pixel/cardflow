@@ -19,13 +19,15 @@ class CardResponseSchema {
   /// Проверяет [json] (декодированный JSON).
   ///
   /// Возвращает пустой список, если ответ валиден; иначе — описания нарушений
-  /// (пути внутри JSON, без значений пользовательских данных).
+  /// (пути внутри JSON; используются только в диагностике, не в UI).
   List<String> validate(Object? json) {
-    throw UnimplementedError('CardResponseSchema.validate');
+    final results = schema.validate(json);
+    if (results.isValid) return const <String>[];
+    return results.errors
+        .map((error) => error.toString())
+        .toList(growable: false);
   }
 
   /// Валиден ли [json] по канонической схеме.
-  bool isValid(Object? json) {
-    throw UnimplementedError('CardResponseSchema.isValid');
-  }
+  bool isValid(Object? json) => schema.validate(json).isValid;
 }

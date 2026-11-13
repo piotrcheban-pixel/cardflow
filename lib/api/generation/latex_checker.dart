@@ -9,13 +9,54 @@ import 'package:flutter_math_fork/flutter_math.dart';
 /// Незакрытые разделители в список не попадают — их наличие проверяет
 /// [latexIsValid]. Пустые формулы пропускаются.
 List<String> extractLatexFormulas(String text) {
-  throw UnimplementedError('extractLatexFormulas');
+  final formulas = <String>[];
+  var index = 0;
+  while (index < text.length) {
+    if (text.startsWith(r'$$', index)) {
+      final end = text.indexOf(r'$$', index + 2);
+      if (end < 0) break;
+      final expression = text.substring(index + 2, end).trim();
+      if (expression.isNotEmpty) formulas.add(expression);
+      index = end + 2;
+    } else if (text[index] == r'$') {
+      final end = text.indexOf(r'$', index + 1);
+      if (end < 0) break;
+      final expression = text.substring(index + 1, end).trim();
+      if (expression.isNotEmpty) formulas.add(expression);
+      index = end + 1;
+    } else {
+      index++;
+    }
+  }
+  return formulas;
 }
 
 /// Валиден ли LaTeX в [text]: все формулы парсятся `flutter_math_fork`,
 /// незакрытых разделителей нет.
 bool latexIsValid(String text) {
-  throw UnimplementedError('latexIsValid');
+  var index = 0;
+  while (index < text.length) {
+    if (text.startsWith(r'$$', index)) {
+      final end = text.indexOf(r'$$', index + 2);
+      if (end < 0) return false;
+      final expression = text.substring(index + 2, end).trim();
+      if (expression.isNotEmpty && !isLatexExpressionParsable(expression)) {
+        return false;
+      }
+      index = end + 2;
+    } else if (text[index] == r'$') {
+      final end = text.indexOf(r'$', index + 1);
+      if (end < 0) return false;
+      final expression = text.substring(index + 1, end).trim();
+      if (expression.isNotEmpty && !isLatexExpressionParsable(expression)) {
+        return false;
+      }
+      index = end + 1;
+    } else {
+      index++;
+    }
+  }
+  return true;
 }
 
 /// Парсится ли одно LaTeX-выражение (без рендера, через `Math.tex`).

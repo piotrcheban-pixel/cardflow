@@ -11,5 +11,34 @@ String buildGenerationUserContent({
   String? wishes,
   required int limit,
 }) {
-  throw UnimplementedError('buildGenerationUserContent');
+  final materials = materialsText.trim();
+  if (materials.isEmpty) {
+    throw ArgumentError.value(
+      materialsText,
+      'materialsText',
+      'Материалы для генерации не должны быть пустыми',
+    );
+  }
+  if (limit < 1) {
+    throw ArgumentError.value(limit, 'limit', 'Лимит карточек должен быть ≥ 1');
+  }
+
+  final buffer = StringBuffer()
+    ..write('<materials>\n')
+    ..write(materials)
+    ..write('\n</materials>');
+
+  final trimmedWishes = wishes?.trim();
+  if (trimmedWishes != null && trimmedWishes.isNotEmpty) {
+    buffer
+      ..write('\n<wishes>\n')
+      ..write(trimmedWishes)
+      ..write('\n</wishes>');
+  }
+
+  buffer
+    ..write('\n<limit>')
+    ..write(limit)
+    ..write('</limit>');
+  return buffer.toString();
 }
