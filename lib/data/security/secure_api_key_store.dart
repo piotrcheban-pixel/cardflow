@@ -31,19 +31,14 @@ class FlutterSecureKeyValueStore implements SecureKeyValueStore {
   final FlutterSecureStorage storage;
 
   @override
-  Future<String?> read(String key) {
-    throw UnimplementedError('FlutterSecureKeyValueStore.read');
-  }
+  Future<String?> read(String key) => storage.read(key: key);
 
   @override
-  Future<void> write(String key, String value) {
-    throw UnimplementedError('FlutterSecureKeyValueStore.write');
-  }
+  Future<void> write(String key, String value) =>
+      storage.write(key: key, value: value);
 
   @override
-  Future<void> delete(String key) {
-    throw UnimplementedError('FlutterSecureKeyValueStore.delete');
-  }
+  Future<void> delete(String key) => storage.delete(key: key);
 }
 
 /// Хранилище ключей API CardFlow в secure storage.
@@ -59,17 +54,27 @@ class SecureApiKeyStore implements ApiKeyStore {
       'cardflow.api_key.${provider.wireName}';
 
   @override
-  Future<String?> read(GenerationProvider provider) {
-    throw UnimplementedError('SecureApiKeyStore.read');
+  Future<String?> read(GenerationProvider provider) async {
+    final value = await store.read(storageKey(provider));
+    if (value == null) return null;
+    final normalized = value.trim();
+    return normalized.isEmpty ? null : normalized;
   }
 
   @override
   Future<void> write(GenerationProvider provider, String apiKey) {
-    throw UnimplementedError('SecureApiKeyStore.write');
+    final normalized = apiKey.trim();
+    if (normalized.isEmpty) {
+      throw ArgumentError.value(
+        apiKey,
+        'apiKey',
+        'Ключ API не может быть пустым',
+      );
+    }
+    return store.write(storageKey(provider), normalized);
   }
 
   @override
-  Future<void> delete(GenerationProvider provider) {
-    throw UnimplementedError('SecureApiKeyStore.delete');
-  }
+  Future<void> delete(GenerationProvider provider) =>
+      store.delete(storageKey(provider));
 }

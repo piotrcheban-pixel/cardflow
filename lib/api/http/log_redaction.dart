@@ -25,10 +25,72 @@ const Set<String> sensitiveQueryParameterNames = <String>{
 
 /// Заменяет значения секретных заголовков на [redactedValue].
 Map<String, String> redactHeadersForLog(Map<String, String> headers) {
-  throw UnimplementedError('redactHeadersForLog');
+  return <String, String>{
+    for (final entry in headers.entries)
+      entry.key: sensitiveHeaderNames.contains(entry.key.trim().toLowerCase())
+          ? redactedValue
+          : entry.value,
+  };
 }
 
 /// Возвращает URI для лога: секретные query-значения и userinfo заменены.
 String redactUriForLog(Uri uri) {
-  throw UnimplementedError('redactUriForLog');
+  final text = uri.toString();
+  return _redactQuery(_redactUserInfo(text));
+}
+
+/// Заменяет userinfo (`user:password@`) в authority на [redactedValue].
+String _redactUserInfo(String text) {
+  final schemeIndex = text.indexOf('://');
+  if (schemeIndex < 0) return text;
+
+  final authorityStart = schemeIndex + 3;
+  var authorityEnd = text.length;
+  for (final delimiter in const <String>['/', '?', '#']) {
+    final index = text.indexOf(delimiter, authorityStart);
+    if (index >= 0 && index < authorityEnd) authorityEnd = index;
+  }
+
+  final authority = text.substring(authorityStart, authorityEnd);
+  final atIndex = authority.lastIndexOf('@');
+  if (atIndex < 0) return text;
+
+  return '${text.substring(0, authorityStart)}$redactedValue@'
+      '${text.substring(authorityStart + atIndex + 1)}';
+}
+
+/// Заменяет значения секретных query-параметров, сохраняя остальную query.
+String _redactQuery(String text) {
+  final fragmentIndex = text.indexOf('#');
+  final queryIndex = text.indexOf('?');
+  if (queryIndex < 0 || (fragmentIndex >= 0 && fragmentIndex < queryIndex)) {
+    return text;
+  }
+
+  final queryEnd = fragmentIndex >= 0 ? fragmentIndex : text.length;
+  final query = text.substring(queryIndex + 1, queryEnd);
+  final redactedQuery = query.split('&').map(_redactQueryPart).join('&');
+  return '${text.substring(0, queryIndex + 1)}$redactedQuery'
+      '${text.substring(queryEnd)}';
+}
+
+/// Заменяет значение одного параметра query, если его имя секретное.
+String _redactQueryPart(String part) {
+  final separator = part.indexOf('=');
+  if (separator < 0) return part;
+
+  final rawName = part.substring(0, separator);
+  if (!sensitiveQueryParameterNames.contains(_decodedName(rawName))) {
+    return part;
+  }
+  return '$rawName=$redactedValue';
+}
+
+/// Декодирует имя параметра для сравнения без учёта регистра.
+String _decodedName(String rawName) {
+  try {
+    return Uri.decodeQueryComponent(rawName).toLowerCase();
+  } on FormatException {
+    return rawName.toLowerCase();
+  }
 }

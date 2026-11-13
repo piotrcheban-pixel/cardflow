@@ -4,6 +4,9 @@
 /// чистая и детерминируемая (инжектируемые jitter/now) — покрывается unit-тестами.
 library;
 
+import 'dart:io';
+import 'dart:math' as math;
+
 /// Решение о повторе после неудачной попытки.
 class RetryDecision {
   /// Повторить через [delay].
@@ -28,7 +31,24 @@ class RetryDecision {
 /// Возвращает `null`, если заголовок отсутствует/невалиден; отрицательное
 /// значение приводится к нулю.
 Duration? parseRetryAfter(String? headerValue, {DateTime Function()? now}) {
-  throw UnimplementedError('parseRetryAfter');
+  final value = headerValue?.trim();
+  if (value == null || value.isEmpty) return null;
+
+  final seconds = int.tryParse(value);
+  if (seconds != null) {
+    return seconds < 0 ? Duration.zero : Duration(seconds: seconds);
+  }
+
+  final DateTime date;
+  try {
+    date = HttpDate.parse(value);
+  } on FormatException {
+    return null;
+  } on HttpException {
+    return null;
+  }
+  final remaining = date.difference((now ?? DateTime.now)());
+  return remaining.isNegative ? Duration.zero : remaining;
 }
 
 /// Политика повторов (SPEC A8.6, ADR-012 §1).
@@ -74,11 +94,47 @@ class RetryPolicy {
     bool isConnectionError = false,
     Duration? retryAfter,
   }) {
-    throw UnimplementedError('RetryPolicy.decide');
+    if (attempt < 1) {
+      throw ArgumentError.value(
+        attempt,
+        'attempt',
+        'Номер попытки начинается с 1',
+      );
+    }
+    if (attempt >= maxAttempts) return const RetryDecision.giveUp();
+
+    if (statusCode == 429) {
+      if (retryAfter != null) {
+        final pause = retryAfter.isNegative ? Duration.zero : retryAfter;
+        if (pause > maxRetryAfter) return const RetryDecision.giveUp();
+        return RetryDecision.retry(pause);
+      }
+      return RetryDecision.retry(_backoffDelay(attempt));
+    }
+
+    final isServerError =
+        statusCode != null && statusCode >= 500 && statusCode < 600;
+    if (!isServerError && !isTimeout && !isConnectionError) {
+      return const RetryDecision.giveUp();
+    }
+    return RetryDecision.retry(_backoffDelay(attempt));
+  }
+
+  /// Экспоненциальный backoff с full jitter: `jitter * min(maxDelay,
+  /// baseDelay * 2^(attempt-1))` (ADR-012 §1).
+  Duration _backoffDelay(int attempt) {
+    final capMicros = maxDelay.inMicroseconds.toDouble();
+    final baseMicros = baseDelay.inMicroseconds.toDouble();
+    final rawMicros = baseMicros * math.pow(2.0, attempt - 1);
+    final cappedMicros = rawMicros.isFinite
+        ? math.min(rawMicros, capMicros)
+        : capMicros;
+    final factor = jitter().clamp(0.0, 1.0);
+    return Duration(microseconds: (cappedMicros * factor).round());
   }
 }
 
 /// Значение jitter по умолчанию — равномерное [0, 1).
-double _defaultJitter() {
-  throw UnimplementedError('_defaultJitter');
-}
+final math.Random _random = math.Random();
+
+double _defaultJitter() => _random.nextDouble();
