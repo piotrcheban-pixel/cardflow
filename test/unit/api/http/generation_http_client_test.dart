@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
@@ -221,6 +222,43 @@ void main() {
     );
     expect(adapter.requests, hasLength(1));
     expect(delays, isEmpty);
+  });
+
+  test('отмена во время паузы перед повтором прерывает ожидание', () async {
+    final adapter = FakeHttpAdapter(
+      (options) => jsonResponse(<String, Object?>{'e': 1}, statusCode: 500),
+    );
+    final cancelToken = CancelToken();
+    final pauseStarted = Completer<void>();
+    final client = GenerationHttpClient(
+      dio: dioWithAdapter(adapter),
+      retryPolicy: RetryPolicy(jitter: () => 1.0),
+      delay: (Duration duration) {
+        if (!pauseStarted.isCompleted) pauseStarted.complete();
+        return Completer<void>().future;
+      },
+    );
+
+    final future = client.postJson(request, cancelToken: cancelToken);
+    await pauseStarted.future;
+    cancelToken.cancel();
+
+    await expectLater(future, throwsGeneration(GenerationErrorCode.cancelled));
+    expect(adapter.requests, hasLength(1));
+  });
+
+  test('уже отменённый токен не отправляет запрос', () async {
+    final adapter = FakeHttpAdapter(
+      (options) => jsonResponse(<String, Object?>{'cards': <Object?>[]}),
+    );
+    final cancelToken = CancelToken()..cancel();
+    final client = clientWith(dioWithAdapter(adapter));
+
+    await expectLater(
+      client.postJson(request, cancelToken: cancelToken),
+      throwsGeneration(GenerationErrorCode.cancelled),
+    );
+    expect(adapter.requests, isEmpty);
   });
 
   test('не-JSON и JSON-не-объект → invalidResponse без повторов', () async {

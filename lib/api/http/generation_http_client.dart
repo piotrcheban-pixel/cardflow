@@ -61,10 +61,7 @@ class GenerationHttpClient implements GenerationTransport {
         return _decodeJsonObject(response);
       } on DioException catch (error) {
         if (error.type == DioExceptionType.cancel) {
-          throw const GenerationException(
-            GenerationErrorCode.cancelled,
-            details: 'запрос отменён',
-          );
+          throw _cancelled();
         }
         final retryAfter = _retryAfterOf(error);
         final decision = retryPolicy.decide(
@@ -77,11 +74,42 @@ class GenerationHttpClient implements GenerationTransport {
         if (!decision.shouldRetry) {
           throw _toGenerationException(error, retryAfter: retryAfter);
         }
-        await delay(decision.delay);
+        await _waitBeforeRetry(decision.delay, cancelToken);
         attempt++;
       }
     }
   }
+
+  /// Выдерживает паузу перед повтором, прерывая её при отмене (SPEC A6.8).
+  ///
+  /// Без гонки с `cancelToken.whenCancel` кнопка «Отмена» ждала бы конца
+  /// backoff/`Retry-After` (до 30–60 с) — недопустимо для A6.8/A8.5 шага 6.
+  Future<void> _waitBeforeRetry(
+    Duration duration,
+    CancelToken? cancelToken,
+  ) async {
+    final pause = delay(duration);
+    if (cancelToken == null) {
+      await pause;
+      return;
+    }
+    if (cancelToken.isCancelled) throw _cancelled();
+    final pauseFinished = pause.then<GenerationException?>((_) => null);
+    final cancelled = cancelToken.whenCancel.then<GenerationException>(
+      (_) => _cancelled(),
+      onError: (Object _) => _cancelled(),
+    );
+    final first = await Future.any<GenerationException?>(
+      <Future<GenerationException?>>[pauseFinished, cancelled],
+    );
+    if (first != null) throw first;
+  }
+
+  /// Ошибка отмены пользователем (SPEC A8.6).
+  static GenerationException _cancelled() => const GenerationException(
+    GenerationErrorCode.cancelled,
+    details: 'запрос отменён',
+  );
 
   /// Опции POST: JSON-тело и явная проверка 2xx (ADR-012 §2).
   Options _optionsFor(ProviderRequest request) {
@@ -146,10 +174,7 @@ class GenerationHttpClient implements GenerationTransport {
   /// Немедленная отмена: повтор не выполняется (SPEC A8.6).
   void _throwIfCancelled(CancelToken? cancelToken) {
     if (cancelToken != null && cancelToken.isCancelled) {
-      throw const GenerationException(
-        GenerationErrorCode.cancelled,
-        details: 'запрос отменён до отправки',
-      );
+      throw _cancelled();
     }
   }
 
@@ -162,10 +187,7 @@ class GenerationHttpClient implements GenerationTransport {
   }) {
     switch (error.type) {
       case DioExceptionType.cancel:
-        return const GenerationException(
-          GenerationErrorCode.cancelled,
-          details: 'запрос отменён',
-        );
+        return _cancelled();
       case DioExceptionType.connectionTimeout:
       case DioExceptionType.sendTimeout:
       case DioExceptionType.receiveTimeout:
