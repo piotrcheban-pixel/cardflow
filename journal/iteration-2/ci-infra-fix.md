@@ -93,3 +93,48 @@ Push фикса `7d124aa` (по команде владельца) → дожд�
 - зелёный CI → итерация 3a «Парсеры» по `journal/STATE.md`;
 - если Android упадёт снова — открыть лог job'а; при `invalid source release: 21`
   перевести `java-version` в `build-mobile` на `'17'` (отдельный коммит + проверка YAML).
+
+## Итог: новый прогон зелёный (2026-11-13)
+
+После push (`ff32590`) запущен прогон
+[`43468349877`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43468349877).
+
+**Попытки:** attempt 1 — 8/9 success, `build ios` cancelled (L22: hosted macOS
+arm64 runner не получен за ~15 мин); повторный запуск job'а → attempt 2 —
+снова cancelled (L22, тот же текст аннотации); повтор → attempt 3 — снова
+cancelled; повтор → **attempt 4 — success, все 9 job'ов зелёные**. Label
+`macos-latest` не менялся (по указанию владельца — только перезапуск).
+
+| Job | attempt 4 |
+|---|---|
+| format + analyze (ubuntu) | success |
+| test (ubuntu-latest) | success |
+| test (windows-latest) | success |
+| test (macos-latest) | success |
+| build linux | success |
+| build windows | success |
+| build macos (macos-latest) | success |
+| **build android** | **success** — `✓ Built build/app/outputs/flutter-apk/app-debug.apk` |
+| build ios | success |
+
+**Доказательство работы фикса в `build android` (лог job'а):**
+
+```
+== df -h до очистки ==
+/dev/root        72G   60G   13G  83% /
+Android SDK сохранён: нужен для flutter build apk
+== df -h после очистки ==
+/dev/root        72G   49G   23G  69% /
+...
+Run flutter build apk --debug
+Running Gradle task 'assembleDebug'...  544.6s
+✓ Built build/app/outputs/flutter-apk/app-debug.apk
+```
+
+Освобождено **+10 ГБ** (13G → 23G свободно), Gradle-сборка прошла с первого
+раза — ранее при тех же 13G свободного места раннер падал с ENOSPC. Шаг
+`Free disk space (Android Gradle cache)` выполнился перед сборкой (на свежем
+раннере кэша ещё не было — `df` не изменился, как и ожидалось).
+
+**Снято:** L21 (фикс диска проверен зелёным прогоном), L22 (macOS-раннеры
+получены после перезапусков; коду/конфигурации не требовалось изменений).
