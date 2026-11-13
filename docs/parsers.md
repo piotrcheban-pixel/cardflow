@@ -104,7 +104,7 @@ PDFium не находится сам (native assets не дают `libpdfium` �
 экспортирует `PDFIUM_PATH`; `pdfrxInitialize()` грузит модуль по явному пути (ADR-010 §9, §11).
 Инварианты (матрица ОС, команда тестов, отсутствие skip/тегов, шаг с sha256 до тестов, `.gitattributes`
 eol=lf) защищает guard `test/guards/ci_pdfium_test.dart`. Остаточные риски — сеть до GitHub releases,
-только arm64 на macOS, нет iOS-тестов — зафиксированы в `journal/KNOWN_LIMITATIONS.md` L26.
+только arm64 на macOS, нет iOS-тестов — были в L26, который **снят зелёным прогоном [43491786199](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43491786199)** (PDF-тесты прошли на всех трёх ОС; остаточные риски — в L26).
 
 ## Ограничения
 

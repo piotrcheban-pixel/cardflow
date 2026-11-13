@@ -175,3 +175,18 @@ JSON Schema — OK; actionlint 1.7.12 — 0 findings; `bash -n` всех bash-ш
 
 **Снятие L26** — только по зелёному CI-прогону после push: `test (ubuntu-latest)` и `test (macos-latest)`
 должны пройти с реально выполненными PDF-тестами, все 9 job success.
+
+## Снято: зелёный прогон 43491786199
+
+После push `bc820a2` (fix-итерация + доки) прогон [43491786199](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43491786199) — **attempt 1, conclusion=success, все 9 job success** (L22 не проявился: `build ios` и `test (macos-latest)` получили раннеры с первой попытки; `build android` — диск-фикс подтверждён повторно).
+
+PDF-тесты **реально выполнились на всех трёх ОС** (не skip) — из логов job'ов:
+
+| ОС | PDFium из `PDFIUM_PATH` | PDF-тесты | Итог |
+|---|---|---|---|
+| ubuntu-latest | `/home/runner/work/_temp/pdfium/lib/libpdfium.so` | 6 `pdf_parser_test` + 3 `file_parsing_pipeline_test` ✅ | `603 tests passed` |
+| macos-latest | `/Users/runner/work/_temp/pdfium/lib/libpdfium.dylib` | то же ✅ | `603 tests passed` |
+| windows-latest | `D:\a\_temp\pdfium\bin\pdfium.dll` | то же ✅ | `603 tests passed` |
+
+Сценарии, которые теперь покрыты в CI на Linux/macOS (ранее падали до выполнения): текстовый слой PDF, страницы → разделы (`pageCount`), скан → `scannedPdf`, битый PDF → `unreadableFile`, многостраничный PDF с пустой страницей, запароленный PDF (V1/R2 RC4 40-bit) → `unreadableFile`, production-сервис с реальным `Isolate.run` (все форматы + код ошибки из изолята).
+

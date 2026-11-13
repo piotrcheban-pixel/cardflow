@@ -125,6 +125,8 @@ UI-слой маппит код в ARB (`lib/ui/generation/parser_error_message.
   arm64 (`macos-latest`); iOS-тестов PDF нет (iOS покрыт сборкой); реальные PDF-файлы и лимиты 25 МБ — L23/L25.
 - `.gitattributes` (`* text=auto eol=lf`) — общий инвариант: guard-тесты читают файлы и сверяют точные
   маркеры; CRLF из checkout-а на Windows ломал L26-guard (ревью B1).
+- **Проверено:** зелёный прогон [43491786199](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43491786199) — 9/9 job success, PDF-тесты выполнены на
+  ubuntu/macos/windows (603 теста), PDFium загружен из `PDFIUM_PATH`.
 
 ## Последствия
 
