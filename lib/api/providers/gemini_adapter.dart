@@ -41,6 +41,8 @@ class GeminiAdapter implements GenerationProviderAdapter {
     required String systemPrompt,
     required String userContent,
     required int maxOutputTokens,
+    String? baseUrl,
+    bool strictSchema = true,
   }) {
     return ProviderRequest(
       uri: Uri.https(_host, '/v1beta/models/$model:generateContent'),

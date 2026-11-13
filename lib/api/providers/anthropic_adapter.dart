@@ -41,6 +41,8 @@ class AnthropicAdapter implements GenerationProviderAdapter {
     required String systemPrompt,
     required String userContent,
     required int maxOutputTokens,
+    String? baseUrl,
+    bool strictSchema = true,
   }) {
     return ProviderRequest(
       uri: _endpoint,

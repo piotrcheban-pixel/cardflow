@@ -42,12 +42,22 @@ abstract interface class GenerationProviderAdapter {
   GenerationProvider get provider;
 
   /// Строит запрос к provider API.
+  ///
+  /// [baseUrl] — базовый адрес OpenAI-совместимого сервера (ADR-013);
+  /// используется только адаптером `OpenAiCompatibleAdapter`, остальные
+  /// адаптеры его игнорируют.
+  ///
+  /// [strictSchema] — включать ли `response_format` со strict-схемой; только
+  /// для OpenAI-совместимого провайдера (fallback для серверов без поддержки
+  /// strict), остальные адаптеры игнорируют.
   ProviderRequest buildRequest({
     required String apiKey,
     required String model,
     required String systemPrompt,
     required String userContent,
     required int maxOutputTokens,
+    String? baseUrl,
+    bool strictSchema = true,
   });
 
   /// Разбирает ответ провайдера; причины остановки/отказы → `GenerationException`.
