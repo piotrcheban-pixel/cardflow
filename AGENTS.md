@@ -81,7 +81,16 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
 - Windows 11; Android SDK/JDK/Xcode отсутствуют → локально проверяем `flutter test/analyze` и `flutter build windows`; остальные сборки — CI/известное ограничение.
 - FVM 4.3.2; Flutter 3.47.9 (Dart 3.13.7). Все команды — через `fvm` (`fvm flutter …`).
 - **Windows-сборка CardFlow работает локально (итерация 1, 2026-11-12):** `fvm flutter build windows --release` → `√ Built build\windows\x64\runner\Release\cardflow.exe` (VS BuildTools 18.12/MSVC 14.52; прежняя ошибка ATL снята, устаревший `build/windows` удалён). Если сборка падает на компиляторе — сначала очистить `build/windows` (stale CMakeCache).
-- **API-слой генерации проверен локально (итерация 3b, 2026-11-13):** `fvm flutter test --exclude-tags golden` → **745 тестов**; покрытие **95.0% (3808/4007)**; `analyze` 0; `dart format` 0 changed; `fvm flutter build windows --release` — ок. Спайки: `json_schema 5.2.2` валидирует A8.4 (S1), проверка LaTeX — `Math.tex(...).parseError` без рендера (S2), fake `HttpClientAdapter` Dio 5.11.1 для retry/429/5xx/отмены без сети (S3) — `journal/iteration-3b/spikes.md`. Живые вызовы провайдеров не проверялись (L1/L30).
+- **API-слой генерации проверен локально (итерация 3b + ADR-013, 2026-11-13):**
+  `fvm flutter test --exclude-tags golden` → **800 тестов зелёные + 1 live skipped**; покрытие
+  **95.1% (4071/4279)**; `analyze` 0; `dart format` 0 changed; `fvm flutter build windows --release` — ок.
+  CI: 3b — run [`43501572437`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43501572437),
+  OpenAI-compatible — run [`43505863077`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43505863077),
+  оба 9/9 job success. Спайки: `json_schema 5.2.2` валидирует A8.4 (S1), проверка LaTeX —
+  `Math.tex(...).parseError` без рендера (S2), fake `HttpClientAdapter` Dio 5.11.1 для retry/429/5xx/отмены
+  без сети (S3) — `journal/iteration-3b/spikes.md`. Живые вызовы провайдеров не проверялись (L1/L30):
+  владелец выбрал env-переменную `DEEPSEEK_API_KEY`, но в процессе агента её нет; live-тест готов
+  (`test/live/`, тег `live`, self-skip без ключа).
 - GitHub-remote: `origin` → `piotrcheban-pixel/cardflow` (private); CI — GitHub Actions (`.github/workflows/ci.yml`). Push выполняется по команде владельца (хука `confirm-git-push` нет).
 - **PDF-тесты и PDFium в CI (L26, с 2026-11-13):** job `test` скачивает pinned PDFium
   (`bblanchon/pdfium-binaries` `chromium/8125` — тот же релиз, что build-hook `pdfium_dart` 0.4.1) на всех трёх ОС,
@@ -89,4 +98,4 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   `test/guards/ci_pdfium_test.dart`. При обновлении `pdfium_dart`/`pdfrx` синхронно обновлять пин, ассеты и sha256
   в `.github/workflows/ci.yml` (ADR-010 §11). В корне `.gitattributes` `* text=auto eol=lf`: guard-тесты сверяют
   точные маркеры файлов, CRLF из checkout-а ломал L26-guard на Windows.
-- **CI и диск раннера (с 2026-11-13):** перед `flutter pub get` все job'ы выполняют шаг `Free disk space` (Linux: dotnet/android SDK/ghc/boost/CodeQL + `docker image prune --all`; macOS: Android SDK/Homebrew cache/dotnet) с `df -h` до/после; Android-сборка дополнительно чистит `~/.gradle/caches` перед сборкой. Android SDK в android-job сохраняется (`KEEP_ANDROID_SDK`) — без него `flutter build apk` не работает. Последний зелёный прогон — `43468349877` (9/9 job success; до фикса `build android` падал с ENOSPC на раннере).
+- **CI и диск раннера (с 2026-11-13):** перед `flutter pub get` все job'ы выполняют шаг `Free disk space` (Linux: dotnet/android SDK/ghc/boost/CodeQL + `docker image prune --all`; macOS: Android SDK/Homebrew cache/dotnet) с `df -h` до/после; Android-сборка дополнительно чистит `~/.gradle/caches` перед сборкой. Android SDK в android-job сохраняется (`KEEP_ANDROID_SDK`) — без него `flutter build apk` не работает. Последний зелёный прогон — `43505863077` (9/9 job success; коммит `b850f6c`, итерация 3b + ADR-013).
