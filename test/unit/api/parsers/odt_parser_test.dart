@@ -53,9 +53,7 @@ void main() {
     await expectLater(
       parse(
         buildOdt(
-          blocks: <({String text, bool heading})>[
-            (text: '', heading: false),
-          ],
+          blocks: <({String text, bool heading})>[(text: '', heading: false)],
         ),
       ),
       throwsA(
@@ -81,4 +79,3 @@ void main() {
     );
   });
 }
-

@@ -61,7 +61,10 @@ void main() {
   group('verifyDocumentSignature: сигнатуры контейнеров', () {
     test('валидные контейнеры проходят проверку', () {
       expect(
-        () => verifyDocumentSignature(DocumentFormat.docx, buildDocx(bodyXml: '')),
+        () => verifyDocumentSignature(
+          DocumentFormat.docx,
+          buildDocx(bodyXml: ''),
+        ),
         returnsNormally,
       );
       expect(
@@ -74,16 +77,22 @@ void main() {
       expect(
         () => verifyDocumentSignature(
           DocumentFormat.pptx,
-          buildPptx(slideTexts: <List<String>>[<String>['Слайд']]),
+          buildPptx(
+            slideTexts: <List<String>>[
+              <String>['Слайд'],
+            ],
+          ),
         ),
         returnsNormally,
       );
       expect(
         () => verifyDocumentSignature(
           DocumentFormat.odt,
-          buildOdt(blocks: <({String text, bool heading})>[
-            (text: 'Абзац', heading: false),
-          ]),
+          buildOdt(
+            blocks: <({String text, bool heading})>[
+              (text: 'Абзац', heading: false),
+            ],
+          ),
         ),
         returnsNormally,
       );
@@ -92,10 +101,8 @@ void main() {
         returnsNormally,
       );
       expect(
-        () => verifyDocumentSignature(
-          DocumentFormat.rtf,
-          buildRtf('Hello RTF'),
-        ),
+        () =>
+            verifyDocumentSignature(DocumentFormat.rtf, buildRtf('Hello RTF')),
         returnsNormally,
       );
     });
@@ -152,5 +159,3 @@ void main() {
     });
   });
 }
-
-

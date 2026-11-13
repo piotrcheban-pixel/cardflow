@@ -53,43 +53,43 @@ void main() {
       ),
     );
 
-    expect(
-      document.text,
-      'До таблицы\nСтолица\tМосква\nРека\tВолга',
-    );
+    expect(document.text, 'До таблицы\nСтолица\tМосква\nРека\tВолга');
   });
 
-  test('заголовки открывают разделы; текст до заголовка — раздел без title', () async {
-    final ParsedDocument document = await parse(
-      buildDocx(
-        bodyXml:
-            docxParagraph('Вступление без заголовка') +
-            docxParagraph('Глава 1', style: 'Heading1') +
-            docxParagraph('Текст главы') +
-            docxParagraph('Глава 2', style: 'Heading1') +
-            docxParagraph('Ещё текст'),
-      ),
-    );
+  test(
+    'заголовки открывают разделы; текст до заголовка — раздел без title',
+    () async {
+      final ParsedDocument document = await parse(
+        buildDocx(
+          bodyXml:
+              docxParagraph('Вступление без заголовка') +
+              docxParagraph('Глава 1', style: 'Heading1') +
+              docxParagraph('Текст главы') +
+              docxParagraph('Глава 2', style: 'Heading1') +
+              docxParagraph('Ещё текст'),
+        ),
+      );
 
-    expect(document.sections, hasLength(3));
-    expect(document.sections[0].title, isNull);
-    expect(document.sections[1].title, 'Глава 1');
-    expect(document.sections[2].title, 'Глава 2');
-    expect(
-      document.text.substring(
-        document.sections[1].start,
-        document.sections[1].end,
-      ),
-      'Глава 1\nТекст главы',
-    );
-    expect(
-      document.text.substring(
-        document.sections[2].start,
-        document.sections[2].end,
-      ),
-      'Глава 2\nЕщё текст',
-    );
-  });
+      expect(document.sections, hasLength(3));
+      expect(document.sections[0].title, isNull);
+      expect(document.sections[1].title, 'Глава 1');
+      expect(document.sections[2].title, 'Глава 2');
+      expect(
+        document.text.substring(
+          document.sections[1].start,
+          document.sections[1].end,
+        ),
+        'Глава 1\nТекст главы',
+      );
+      expect(
+        document.text.substring(
+          document.sections[2].start,
+          document.sections[2].end,
+        ),
+        'Глава 2\nЕщё текст',
+      );
+    },
+  );
 
   test('w:tab и w:br внутри абзаца дают табуляцию и перевод строки', () async {
     final ParsedDocument document = await parse(

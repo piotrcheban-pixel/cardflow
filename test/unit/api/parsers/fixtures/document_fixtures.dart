@@ -54,7 +54,10 @@ String docxParagraph(String text, {String? style}) {
 /// Абзац DOCX из нескольких runs (проверка склейки `w:t`).
 String docxParagraphRuns(List<String> runs) {
   final String content = runs
-      .map((String run) => '<w:r><w:t xml:space="preserve">${xmlEscape(run)}</w:t></w:r>')
+      .map(
+        (String run) =>
+            '<w:r><w:t xml:space="preserve">${xmlEscape(run)}</w:t></w:r>',
+      )
       .join();
   return '<w:p>$content</w:p>';
 }
@@ -63,7 +66,8 @@ String docxParagraphRuns(List<String> runs) {
 String docxTable(List<List<String>> rows) {
   final String content = rows
       .map(
-        (List<String> cells) => '<w:tr>${cells.map((String cell) => '<w:tc>${docxParagraph(cell)}</w:tc>').join()}</w:tr>',
+        (List<String> cells) =>
+            '<w:tr>${cells.map((String cell) => '<w:tc>${docxParagraph(cell)}</w:tc>').join()}</w:tr>',
       )
       .join();
   return '<w:tbl>$content</w:tbl>';
@@ -73,7 +77,8 @@ String docxTable(List<List<String>> rows) {
 Uint8List buildDocx({required String bodyXml}) => zipFixture(<String, String>{
   '[Content_Types].xml': _contentTypesDocx,
   '_rels/.rels': _relsDocx,
-  'word/document.xml': '''
+  'word/document.xml':
+      '''
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
   <w:body>$bodyXml</w:body>
@@ -128,9 +133,9 @@ Uint8List buildPptx({
   for (int i = 0; i < slideTexts.length; i++) {
     files['ppt/slides/slide${i + 1}.xml'] = pptxSlideXml(slideTexts[i]);
   }
-  final List<int> order = presentationOrder ?? <int>[
-    for (int i = 0; i < slideTexts.length; i++) i + 1,
-  ];
+  final List<int> order =
+      presentationOrder ??
+      <int>[for (int i = 0; i < slideTexts.length; i++) i + 1];
   final StringBuffer rels = StringBuffer(
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
     '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">',
@@ -162,9 +167,7 @@ Uint8List buildPptx({
 }
 
 /// Собирает ODT с заголовками и абзацами.
-Uint8List buildOdt({
-  required List<({String text, bool heading})> blocks,
-}) {
+Uint8List buildOdt({required List<({String text, bool heading})> blocks}) {
   final String content = blocks
       .map(
         (({String text, bool heading}) block) => block.heading
@@ -179,7 +182,8 @@ Uint8List buildOdt({
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
   <Default Extension="xhtml" ContentType="application/xhtml+xml"/>
 </Types>''',
-    'content.xml': '''
+    'content.xml':
+        '''
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <office:document-content
     xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0"
@@ -198,11 +202,8 @@ String xlsxNumberCell(String reference, num value) =>
     '<c r="$reference"><v>$value</v></c>';
 
 /// Ячейка XLSX с формулой и кэшированным значением.
-String xlsxFormulaCell(
-  String reference,
-  String formula,
-  String cachedValue,
-) => '<c r="$reference"><f>${xmlEscape(formula)}</f><v>$cachedValue</v></c>';
+String xlsxFormulaCell(String reference, String formula, String cachedValue) =>
+    '<c r="$reference"><f>${xmlEscape(formula)}</f><v>$cachedValue</v></c>';
 
 /// Ячейка XLSX с датой (OOXML `t="d"`, ISO-8601).
 String xlsxDateCell(String reference, String isoDate) =>
@@ -216,7 +217,8 @@ String xlsxRow(int rowNumber, List<String> cells) =>
 Uint8List buildXlsx(Map<String, String> sheets) {
   final List<String> sheetNames = sheets.keys.toList();
   final Map<String, String> files = <String, String>{
-    '[Content_Types].xml': '''
+    '[Content_Types].xml':
+        '''
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
   <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
@@ -229,7 +231,8 @@ ${sheetNames.asMap().entries.map((MapEntry<int, String> entry) => '  <Override P
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
 </Relationships>''',
-    'xl/workbook.xml': '''
+    'xl/workbook.xml':
+        '''
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"
           xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
@@ -250,7 +253,8 @@ ${sheetNames.asMap().entries.map((MapEntry<int, String> entry) => '  <Override P
   rels.write('</Relationships>');
   files['xl/_rels/workbook.xml.rels'] = rels.toString();
   sheets.forEach((String name, String sheetData) {
-    files['xl/worksheets/sheet${sheetNames.indexOf(name) + 1}.xml'] = '''
+    files['xl/worksheets/sheet${sheetNames.indexOf(name) + 1}.xml'] =
+        '''
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
   <sheetData>$sheetData</sheetData>
@@ -318,9 +322,7 @@ Uint8List buildPdfWithoutText() {
 /// Собирает RTF-документ с заданным телом (latin1-совместимым; кириллица —
 /// через [rtfEscapedCp1251]/[rtfUnicodeChar]).
 Uint8List buildRtf(String body, {int codepage = 1251}) =>
-    Uint8List.fromList(
-      latin1.encode('{\\rtf1\\ansi\\ansicpg$codepage $body}'),
-    );
+    Uint8List.fromList(latin1.encode('{\\rtf1\\ansi\\ansicpg$codepage $body}'));
 
 /// RTF-представление текста в cp1251 через `\'hh` (для ANSI-ветки).
 String rtfEscapedCp1251(String text) {
@@ -340,12 +342,8 @@ String rtfUnicodeChar(int codeUnit) {
 Uint8List utf8Bytes(String text) => Uint8List.fromList(utf8.encode(text));
 
 /// UTF-8 с BOM (EF BB BF).
-Uint8List utf8BomBytes(String text) => Uint8List.fromList(<int>[
-  0xEF,
-  0xBB,
-  0xBF,
-  ...utf8.encode(text),
-]);
+Uint8List utf8BomBytes(String text) =>
+    Uint8List.fromList(<int>[0xEF, 0xBB, 0xBF, ...utf8.encode(text)]);
 
 /// UTF-16 LE с BOM (FF FE).
 Uint8List utf16LeBomBytes(String text) {
@@ -376,5 +374,3 @@ Uint8List cp1251Bytes(String text) =>
 /// KOI8-R.
 Uint8List koi8rBytes(String text) =>
     Uint8List.fromList(const Koi8rCodec().encode(text));
-
-

@@ -40,37 +40,34 @@ void main() {
   });
 
   group('FileParsingService.parseAll: порядок, успех и ошибки по файлам', () {
-    test('порядок файлов сохраняется, успехи и ошибки не блокируют друг друга', () async {
-      final FileParsingService service = FileParsingService(
-        isolateRunner: _recordingRunner,
-      );
+    test(
+      'порядок файлов сохраняется, успехи и ошибки не блокируют друг друга',
+      () async {
+        final FileParsingService service = FileParsingService(
+          isolateRunner: _recordingRunner,
+        );
 
-      final List<ParsingOutcome> outcomes = await service.parseAll(
-        <FileParsingInput>[
-          _input('первый.txt', utf8Bytes('Первый файл')),
-          _input('старый.doc', <int>[0xD0, 0xCF, 0x11, 0xE0]),
-          _input('второй.txt', utf8Bytes('Второй файл')),
-        ],
-      );
+        final List<ParsingOutcome> outcomes = await service.parseAll(
+          <FileParsingInput>[
+            _input('первый.txt', utf8Bytes('Первый файл')),
+            _input('старый.doc', <int>[0xD0, 0xCF, 0x11, 0xE0]),
+            _input('второй.txt', utf8Bytes('Второй файл')),
+          ],
+        );
 
-      expect(outcomes, hasLength(3));
-      expect(outcomes[0], isA<ParsedFileSuccess>());
-      expect(
-        (outcomes[0] as ParsedFileSuccess).document.text,
-        'Первый файл',
-      );
-      expect(outcomes[1], isA<ParsedFileFailure>());
-      expect(
-        (outcomes[1] as ParsedFileFailure).code,
-        ParserErrorCode.unsupportedFormat,
-      );
-      expect(
-        (outcomes[1] as ParsedFileFailure).fileName,
-        'старый.doc',
-      );
-      expect(outcomes[2], isA<ParsedFileSuccess>());
-      expect(_isolateRuns, 2, reason: 'Парсинг успешных файлов — в изоляте');
-    });
+        expect(outcomes, hasLength(3));
+        expect(outcomes[0], isA<ParsedFileSuccess>());
+        expect((outcomes[0] as ParsedFileSuccess).document.text, 'Первый файл');
+        expect(outcomes[1], isA<ParsedFileFailure>());
+        expect(
+          (outcomes[1] as ParsedFileFailure).code,
+          ParserErrorCode.unsupportedFormat,
+        );
+        expect((outcomes[1] as ParsedFileFailure).fileName, 'старый.doc');
+        expect(outcomes[2], isA<ParsedFileSuccess>());
+        expect(_isolateRuns, 2, reason: 'Парсинг успешных файлов — в изоляте');
+      },
+    );
 
     test('пустой список файлов → пустой список результатов', () async {
       final FileParsingService service = FileParsingService(
@@ -111,10 +108,7 @@ void main() {
         _input('конспект.txt', utf8Bytes('Пять!')),
       );
       expect(outcome, isA<ParsedFileFailure>());
-      expect(
-        (outcome as ParsedFileFailure).code,
-        ParserErrorCode.fileTooLarge,
-      );
+      expect((outcome as ParsedFileFailure).code, ParserErrorCode.fileTooLarge);
       expect(_isolateRuns, 0);
     });
 
@@ -153,25 +147,25 @@ void main() {
       final ParsingOutcome outcome = await service.parseFile(
         _input('пустой.txt', utf8Bytes('   ')),
       );
-      expect(
-        (outcome as ParsedFileFailure).code,
-        ParserErrorCode.emptyText,
-      );
+      expect((outcome as ParsedFileFailure).code, ParserErrorCode.emptyText);
     });
 
-    test('неожиданное исключение парсера → unreadableFile без утечки текста', () async {
-      final FileParsingService service = FileParsingService(
-        parsers: <DocumentParser>[const _UnexpectedFailureParser()],
-        isolateRunner: _recordingRunner,
-      );
-      final ParsingOutcome outcome = await service.parseFile(
-        _input('документ.docx', buildDocxFromParagraphs(<String>['Текст'])),
-      );
-      expect(outcome, isA<ParsedFileFailure>());
-      final ParsedFileFailure failure = outcome as ParsedFileFailure;
-      expect(failure.code, ParserErrorCode.unreadableFile);
-      expect(failure.toString(), isNot(contains('boom')));
-    });
+    test(
+      'неожиданное исключение парсера → unreadableFile без утечки текста',
+      () async {
+        final FileParsingService service = FileParsingService(
+          parsers: <DocumentParser>[const _UnexpectedFailureParser()],
+          isolateRunner: _recordingRunner,
+        );
+        final ParsingOutcome outcome = await service.parseFile(
+          _input('документ.docx', buildDocxFromParagraphs(<String>['Текст'])),
+        );
+        expect(outcome, isA<ParsedFileFailure>());
+        final ParsedFileFailure failure = outcome as ParsedFileFailure;
+        expect(failure.code, ParserErrorCode.unreadableFile);
+        expect(failure.toString(), isNot(contains('boom')));
+      },
+    );
 
     test('успешный результат содержит документ с именем файла', () async {
       final FileParsingService service = FileParsingService(

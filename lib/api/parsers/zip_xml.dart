@@ -36,10 +36,8 @@ class SecureZip {
   ///
   /// Бросает [ParserException] ([ParserErrorCode.unreadableFile]), если архив
   /// повреждён или превышает лимиты.
-  SecureZip(
-    List<int> bytes, {
-    SecureZipLimits limits = const SecureZipLimits(),
-  }) : _limits = limits {
+  SecureZip(List<int> bytes, {SecureZipLimits limits = const SecureZipLimits()})
+    : _limits = limits {
     arc.Archive archive;
     try {
       archive = arc.ZipDecoder().decodeBytes(bytes);
@@ -120,13 +118,7 @@ class SecureZip {
         details: 'В архиве нет обязательной записи «$name»',
       );
     }
-    final List<int>? content = file.content;
-    if (content == null) {
-      throw ParserException(
-        ParserErrorCode.unreadableFile,
-        details: 'Не удалось распаковать запись «$name»',
-      );
-    }
+    final List<int> content = file.content;
     final Uint8List bytes = Uint8List.fromList(content);
     if (bytes.length > _limits.maxEntryBytes) {
       throw ParserException(
@@ -179,9 +171,7 @@ String _decodeUtf16(List<int> bytes, {required bool littleEndian}) {
   for (int i = 0; i < bytes.length; i += 2) {
     final int first = bytes[i];
     final int second = bytes[i + 1];
-    codeUnits.add(
-      littleEndian ? (second << 8) | first : (first << 8) | second,
-    );
+    codeUnits.add(littleEndian ? (second << 8) | first : (first << 8) | second);
   }
   return String.fromCharCodes(codeUnits);
 }

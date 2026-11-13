@@ -25,7 +25,10 @@ class PptxParser implements DocumentParser {
   DocumentFormat get format => DocumentFormat.pptx;
 
   @override
-  Future<ParsedDocument> parse(Uint8List bytes, {required String fileName}) async {
+  Future<ParsedDocument> parse(
+    Uint8List bytes, {
+    required String fileName,
+  }) async {
     final SecureZip zip = SecureZip(bytes);
     final List<String> slides = _orderedSlideEntries(zip);
     if (slides.isEmpty) {
@@ -60,11 +63,10 @@ class PptxParser implements DocumentParser {
         zip.readXml(relsEntry),
       );
       final List<String> order = <String>[];
-      for (final XmlElement slideId
-          in descendantElementsByLocalName(
-            zip.readXml(presentationEntry),
-            'sldId',
-          )) {
+      for (final XmlElement slideId in descendantElementsByLocalName(
+        zip.readXml(presentationEntry),
+        'sldId',
+      )) {
         final String? relationshipId = attributeValueByPrefix(
           slideId,
           'id',
@@ -103,8 +105,10 @@ class PptxParser implements DocumentParser {
   /// Карта `Relationship Id → Target` из XML-файла связей.
   Map<String, String> _relationshipTargets(XmlDocument rels) {
     final Map<String, String> targets = <String, String>{};
-    for (final XmlElement relationship
-        in descendantElementsByLocalName(rels, 'Relationship')) {
+    for (final XmlElement relationship in descendantElementsByLocalName(
+      rels,
+      'Relationship',
+    )) {
       final String? id = attributeValueByLocalName(relationship, 'Id');
       final String? target = attributeValueByLocalName(relationship, 'Target');
       if (id != null && target != null) {
@@ -117,10 +121,15 @@ class PptxParser implements DocumentParser {
   /// Строки слайда: абзацы `a:p`, текст `a:t`.
   List<String> _slideLines(XmlDocument slide) {
     final List<String> lines = <String>[];
-    for (final XmlElement paragraph
-        in descendantElementsByLocalName(slide, 'p')) {
+    for (final XmlElement paragraph in descendantElementsByLocalName(
+      slide,
+      'p',
+    )) {
       final StringBuffer buffer = StringBuffer();
-      for (final XmlElement text in descendantElementsByLocalName(paragraph, 't')) {
+      for (final XmlElement text in descendantElementsByLocalName(
+        paragraph,
+        't',
+      )) {
         buffer.write(text.innerText);
       }
       final String line = collapseWhitespace(buffer.toString());
@@ -131,4 +140,3 @@ class PptxParser implements DocumentParser {
     return lines;
   }
 }
-

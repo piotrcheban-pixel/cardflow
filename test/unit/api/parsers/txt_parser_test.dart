@@ -81,17 +81,19 @@ void main() {
     );
   });
 
-  test('текст из пробелов/переводов строк → ParserException(emptyText)', () async {
-    await expectLater(
-      parseTxt(utf8Bytes('   \r\n\t\n  ')),
-      throwsA(
-        isA<ParserException>().having(
-          (ParserException e) => e.code,
-          'code',
-          ParserErrorCode.emptyText,
+  test(
+    'текст из пробелов/переводов строк → ParserException(emptyText)',
+    () async {
+      await expectLater(
+        parseTxt(utf8Bytes('   \r\n\t\n  ')),
+        throwsA(
+          isA<ParserException>().having(
+            (ParserException e) => e.code,
+            'code',
+            ParserErrorCode.emptyText,
+          ),
         ),
-      ),
-    );
-  });
+      );
+    },
+  );
 }
-

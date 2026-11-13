@@ -1,3 +1,4 @@
+import 'dart:isolate';
 import 'dart:typed_data';
 
 import 'package:cardflow/api/parsers/document_parser.dart';
@@ -94,15 +95,71 @@ class FileParsingService {
   final int maxFileBytes;
 
   /// Разбирает один файл.
-  Future<ParsingOutcome> parseFile(FileParsingInput input) {
-    throw UnimplementedError(
-      'FileParsingService.parseFile (parsers=${_parsers.length}, '
-      'isolate=${isolateRunner != null})',
-    );
+  ///
+  /// Никогда не бросает исключение: любые ошибки файла превращаются в
+  /// [ParsedFileFailure] с кодом из [ParserErrorCode].
+  Future<ParsingOutcome> parseFile(FileParsingInput input) async {
+    final String fileName = input.fileName;
+    try {
+      final DocumentFormat? format = documentFormatFromFileName(fileName);
+      if (format == null || !format.isSupportedForParsing) {
+        return ParsedFileFailure(
+          fileName: fileName,
+          code: ParserErrorCode.unsupportedFormat,
+        );
+      }
+      if (input.bytes.length > maxFileBytes) {
+        return ParsedFileFailure(
+          fileName: fileName,
+          code: ParserErrorCode.fileTooLarge,
+        );
+      }
+      verifyDocumentSignature(format, input.bytes);
+      final DocumentParser? parser = _parserFor(format);
+      if (parser == null) {
+        return ParsedFileFailure(
+          fileName: fileName,
+          code: ParserErrorCode.unsupportedFormat,
+        );
+      }
+      final Uint8List bytes = input.bytes;
+      final ParsedDocument document = await _runInIsolate(
+        () => parser.parse(bytes, fileName: fileName),
+      );
+      return ParsedFileSuccess(document);
+    } on ParserException catch (error) {
+      return ParsedFileFailure(fileName: fileName, code: error.code);
+    } on Object {
+      return ParsedFileFailure(
+        fileName: fileName,
+        code: ParserErrorCode.unreadableFile,
+      );
+    }
   }
 
   /// Разбирает файлы по порядку; ошибка одного файла не прерывает остальные.
-  Future<List<ParsingOutcome>> parseAll(List<FileParsingInput> files) {
-    throw UnimplementedError('FileParsingService.parseAll');
+  Future<List<ParsingOutcome>> parseAll(List<FileParsingInput> files) async {
+    final List<ParsingOutcome> outcomes = <ParsingOutcome>[];
+    for (final FileParsingInput file in files) {
+      outcomes.add(await parseFile(file));
+    }
+    return outcomes;
+  }
+
+  DocumentParser? _parserFor(DocumentFormat format) {
+    for (final DocumentParser parser in _parsers) {
+      if (parser.format == format) {
+        return parser;
+      }
+    }
+    return null;
+  }
+
+  Future<T> _runInIsolate<T>(Future<T> Function() task) {
+    final IsolateRunner runner = isolateRunner ?? _isolateRunner;
+    return runner(task);
   }
 }
+
+/// Production-запуск парсинга в отдельном изоляте (`Isolate.run`).
+Future<T> _isolateRunner<T>(Future<T> Function() task) => Isolate.run(task);

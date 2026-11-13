@@ -20,7 +20,10 @@ class OdtParser implements DocumentParser {
   DocumentFormat get format => DocumentFormat.odt;
 
   @override
-  Future<ParsedDocument> parse(Uint8List bytes, {required String fileName}) async {
+  Future<ParsedDocument> parse(
+    Uint8List bytes, {
+    required String fileName,
+  }) async {
     final SecureZip zip = SecureZip(bytes);
     if (!zip.contains('content.xml')) {
       throw const ParserException(
@@ -48,4 +51,3 @@ class OdtParser implements DocumentParser {
     return builder.build();
   }
 }
-

@@ -12,10 +12,8 @@ void main() {
     format: DocumentFormat.txt,
     fileName: 'конспект.txt',
     text: text,
-    sections: sections ??
-        <ParsedSection>[
-          ParsedSection(start: 0, end: text.length),
-        ],
+    sections:
+        sections ?? <ParsedSection>[ParsedSection(start: 0, end: text.length)],
     metadata: metadata,
   );
 
@@ -75,9 +73,7 @@ void main() {
       expect(
         () => build(
           text: '   \n\t\n',
-          sections: <ParsedSection>[
-            const ParsedSection(start: 0, end: 6),
-          ],
+          sections: <ParsedSection>[const ParsedSection(start: 0, end: 6)],
         ),
         throwsArgumentError,
       );
@@ -90,17 +86,13 @@ void main() {
     test('границы раздела должны лежать в тексте', () {
       expect(
         () => build(
-          sections: <ParsedSection>[
-            const ParsedSection(start: 0, end: 9999),
-          ],
+          sections: <ParsedSection>[const ParsedSection(start: 0, end: 9999)],
         ),
         throwsArgumentError,
       );
       expect(
         () => build(
-          sections: <ParsedSection>[
-            const ParsedSection(start: -1, end: 5),
-          ],
+          sections: <ParsedSection>[const ParsedSection(start: -1, end: 5)],
         ),
         throwsArgumentError,
       );
@@ -109,9 +101,7 @@ void main() {
     test('start должен быть меньше end (непустые разделы)', () {
       expect(
         () => build(
-          sections: <ParsedSection>[
-            const ParsedSection(start: 3, end: 3),
-          ],
+          sections: <ParsedSection>[const ParsedSection(start: 3, end: 3)],
         ),
         throwsArgumentError,
       );

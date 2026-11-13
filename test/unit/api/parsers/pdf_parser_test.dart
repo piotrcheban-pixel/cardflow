@@ -27,40 +27,49 @@ void main() {
     expect(parser.format, DocumentFormat.pdf);
   });
 
-  test('текстовый слой извлекается, страница → раздел, pageCount в метаданных', () async {
-    final ParsedDocument document = await parse(buildPdf('Hello CardFlow PDF'));
+  test(
+    'текстовый слой извлекается, страница → раздел, pageCount в метаданных',
+    () async {
+      final ParsedDocument document = await parse(
+        buildPdf('Hello CardFlow PDF'),
+      );
 
-    expect(document.text, 'Hello CardFlow PDF');
-    expect(document.metadata.pageCount, 1);
-    expect(document.sections, hasLength(1));
-    expect(
-      document.text.substring(
-        document.sections.single.start,
-        document.sections.single.end,
-      ),
-      'Hello CardFlow PDF',
-    );
-  });
-
-  test('PDF без текстового слоя (скан) → ParserException(scannedPdf)', () async {
-    await expectLater(
-      parse(buildPdfWithoutText()),
-      throwsA(
-        isA<ParserException>().having(
-          (ParserException e) => e.code,
-          'code',
-          ParserErrorCode.scannedPdf,
+      expect(document.text, 'Hello CardFlow PDF');
+      expect(document.metadata.pageCount, 1);
+      expect(document.sections, hasLength(1));
+      expect(
+        document.text.substring(
+          document.sections.single.start,
+          document.sections.single.end,
         ),
-      ),
-    );
-  });
+        'Hello CardFlow PDF',
+      );
+    },
+  );
+
+  test(
+    'PDF без текстового слоя (скан) → ParserException(scannedPdf)',
+    () async {
+      await expectLater(
+        parse(buildPdfWithoutText()),
+        throwsA(
+          isA<ParserException>().having(
+            (ParserException e) => e.code,
+            'code',
+            ParserErrorCode.scannedPdf,
+          ),
+        ),
+      );
+    },
+  );
 
   test('битый PDF → ParserException(unreadableFile)', () async {
     await expectLater(
       parse(
-        Uint8List.fromList(
-          <int>[...'%PDF-1.4\n'.codeUnits, ...'это не pdf-структура'.codeUnits],
-        ),
+        Uint8List.fromList(<int>[
+          ...'%PDF-1.4\n'.codeUnits,
+          ...'это не pdf-структура'.codeUnits,
+        ]),
       ),
       throwsA(
         isA<ParserException>().having(

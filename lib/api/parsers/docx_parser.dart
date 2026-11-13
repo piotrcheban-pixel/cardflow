@@ -18,13 +18,19 @@ class DocxParser implements DocumentParser {
   const DocxParser();
 
   /// Стили абзаца, которые считаются заголовками разделов.
-  static const List<String> _headingStylePrefixes = <String>['heading', 'title'];
+  static const List<String> _headingStylePrefixes = <String>[
+    'heading',
+    'title',
+  ];
 
   @override
   DocumentFormat get format => DocumentFormat.docx;
 
   @override
-  Future<ParsedDocument> parse(Uint8List bytes, {required String fileName}) async {
+  Future<ParsedDocument> parse(
+    Uint8List bytes, {
+    required String fileName,
+  }) async {
     final SecureZip zip = SecureZip(bytes);
     if (!zip.contains('word/document.xml')) {
       throw const ParserException(
@@ -154,4 +160,3 @@ class DocxParser implements DocumentParser {
     return paragraphs.join(' ');
   }
 }
-

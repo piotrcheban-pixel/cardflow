@@ -79,7 +79,13 @@ void main() {
 
   test('пустая презентация → ParserException(emptyText)', () async {
     await expectLater(
-      parse(buildPptx(slideTexts: <List<String>>[<String>['']])),
+      parse(
+        buildPptx(
+          slideTexts: <List<String>>[
+            <String>[''],
+          ],
+        ),
+      ),
       throwsA(
         isA<ParserException>().having(
           (ParserException e) => e.code,

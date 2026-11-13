@@ -6,7 +6,13 @@ import 'package:cardflow/l10n/app_localizations.dart';
 /// Пользователю показываются только строки из ARB; `ParserException.details`
 /// и сырые исключения не выводятся. Функция чистая — покрывается unit-тестом.
 String parserErrorCodeMessage(AppLocalizations l10n, ParserErrorCode code) {
-  throw UnimplementedError('parserErrorCodeMessage');
+  return switch (code) {
+    ParserErrorCode.unsupportedFormat => l10n.parserErrorUnsupportedFormat,
+    ParserErrorCode.fileTooLarge => l10n.parserErrorFileTooLarge,
+    ParserErrorCode.unreadableFile => l10n.parserErrorUnreadableFile,
+    ParserErrorCode.scannedPdf => l10n.parserErrorScannedPdf,
+    ParserErrorCode.emptyText => l10n.parserErrorEmptyText,
+  };
 }
 
 /// Сообщение для произвольной ошибки парсинга.
@@ -14,5 +20,8 @@ String parserErrorCodeMessage(AppLocalizations l10n, ParserErrorCode code) {
 /// [ParserException] маппится по коду; всё остальное — общая строка из ARB,
 /// без текста исключения.
 String parserErrorMessage(AppLocalizations l10n, Object error) {
-  throw UnimplementedError('parserErrorMessage');
+  if (error is ParserException) {
+    return parserErrorCodeMessage(l10n, error.code);
+  }
+  return l10n.parserErrorUnreadableFile;
 }

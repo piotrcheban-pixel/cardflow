@@ -16,19 +16,25 @@ void main() {
   });
 
   group('normalizeDocumentText: невидимые символы', () {
-    test('NUL и управляющие символы удаляются, таб и перевод строки сохраняются', () {
-      expect(
-        normalizeDocumentText('a\u0000b\u0007c\td\ne'),
-        'abc\td\ne',
-        reason: 'NUL/BEL удаляются, таб и \\n сохраняются',
-      );
-      expect(normalizeDocumentText('a\u0000b'), 'ab');
-      expect(normalizeDocumentText('a\u0007b'), 'ab');
-      expect(normalizeDocumentText('a\tb'), 'a\tb');
-    });
+    test(
+      'NUL и управляющие символы удаляются, таб и перевод строки сохраняются',
+      () {
+        expect(
+          normalizeDocumentText('a\u0000b\u0007c\td\ne'),
+          'abc\td\ne',
+          reason: 'NUL/BEL удаляются, таб и \\n сохраняются',
+        );
+        expect(normalizeDocumentText('a\u0000b'), 'ab');
+        expect(normalizeDocumentText('a\u0007b'), 'ab');
+        expect(normalizeDocumentText('a\tb'), 'a\tb');
+      },
+    );
 
     test('неразрывный пробел становится обычным', () {
-      expect(normalizeDocumentText('Москва\u00A0— столица'), 'Москва — столица');
+      expect(
+        normalizeDocumentText('Москва\u00A0— столица'),
+        'Москва — столица',
+      );
     });
   });
 
@@ -51,10 +57,7 @@ void main() {
     });
 
     test('общие пробелы по краям текста обрезаются', () {
-      expect(
-        normalizeDocumentText('  \n\n текст \n\n  '),
-        'текст',
-      );
+      expect(normalizeDocumentText('  \n\n текст \n\n  '), 'текст');
     });
 
     test('нормализация идемпотентна', () {
@@ -66,5 +69,3 @@ void main() {
     });
   });
 }
-
-

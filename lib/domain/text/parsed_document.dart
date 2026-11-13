@@ -21,7 +21,11 @@ class ParsedDocument {
     this.metadata = const ParsedDocumentMetadata(),
   }) {
     if (text.trim().isEmpty) {
-      throw ArgumentError.value(text, 'text', 'Текст документа не может быть пустым');
+      throw ArgumentError.value(
+        text,
+        'text',
+        'Текст документа не может быть пустым',
+      );
     }
     if (sections.isEmpty) {
       throw ArgumentError.value(
@@ -33,16 +37,22 @@ class ParsedDocument {
     int previousEnd = 0;
     for (final ParsedSection section in sections) {
       if (section.start < 0 || section.end > text.length) {
-        throw ArgumentError('Границы раздела ${section.start}..${section.end} '
-            'выходят за текст длиной ${text.length}');
+        throw ArgumentError(
+          'Границы раздела ${section.start}..${section.end} '
+          'выходят за текст длиной ${text.length}',
+        );
       }
       if (section.start >= section.end) {
-        throw ArgumentError('Раздел должен быть непустым: '
-            '${section.start}..${section.end}');
+        throw ArgumentError(
+          'Раздел должен быть непустым: '
+          '${section.start}..${section.end}',
+        );
       }
       if (section.start < previousEnd) {
-        throw ArgumentError('Разделы должны идти по порядку и не пересекаться: '
-            '${section.start}..${section.end} после ${previousEnd}');
+        throw ArgumentError(
+          'Разделы должны идти по порядку и не пересекаться: '
+          '${section.start}..${section.end} после $previousEnd',
+        );
       }
       previousEnd = section.end;
     }

@@ -65,12 +65,18 @@ void main() {
         ),
         FileParsingInput(
           fileName: 'старый.doc',
-          bytes: Uint8List.fromList(<int>[0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1]),
+          bytes: Uint8List.fromList(<int>[
+            0xD0,
+            0xCF,
+            0x11,
+            0xE0,
+            0xA1,
+            0xB1,
+            0x1A,
+            0xE1,
+          ]),
         ),
-        FileParsingInput(
-          fileName: 'битый.docx',
-          bytes: utf8Bytes('не zip'),
-        ),
+        FileParsingInput(fileName: 'битый.docx', bytes: utf8Bytes('не zip')),
       ],
     );
 
@@ -80,7 +86,11 @@ void main() {
         .whereType<ParsedFileSuccess>()
         .map((ParsedFileSuccess success) => success.document)
         .toList();
-    expect(documents, hasLength(7), reason: '7 поддерживаемых форматов разобраны');
+    expect(
+      documents,
+      hasLength(7),
+      reason: '7 поддерживаемых форматов разобраны',
+    );
 
     expect(
       documents.map((ParsedDocument d) => d.format).toSet(),
@@ -131,5 +141,3 @@ void main() {
     expect(buildRtf('x').length, greaterThan(0));
   });
 }
-
-

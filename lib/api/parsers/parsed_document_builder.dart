@@ -101,7 +101,9 @@ class ParsedDocumentBuilder {
 
   void _flushCurrent() {
     if (_hasCurrent && _lines.isNotEmpty) {
-      _drafts.add(_SectionDraft(title: _title, lines: List<String>.unmodifiable(_lines)));
+      _drafts.add(
+        _SectionDraft(title: _title, lines: List<String>.unmodifiable(_lines)),
+      );
     }
     _lines = <String>[];
   }

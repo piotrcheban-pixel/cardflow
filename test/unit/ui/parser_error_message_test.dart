@@ -58,9 +58,15 @@ void main() {
     }
   });
 
-  test('произвольная ошибка → общее сообщение из ARB без текста исключения', () {
-    final String message = parserErrorMessage(l10n, StateError('внутренний сбой'));
-    expect(message, l10n.parserErrorUnreadableFile);
-    expect(message, isNot(contains('внутренний сбой')));
-  });
+  test(
+    'произвольная ошибка → общее сообщение из ARB без текста исключения',
+    () {
+      final String message = parserErrorMessage(
+        l10n,
+        StateError('внутренний сбой'),
+      );
+      expect(message, l10n.parserErrorUnreadableFile);
+      expect(message, isNot(contains('внутренний сбой')));
+    },
+  );
 }
