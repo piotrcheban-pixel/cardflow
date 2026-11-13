@@ -1,7 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart' hide Card;
 
+import 'package:cardflow/domain/cards/card.dart';
+import 'package:cardflow/domain/cards/card_draft.dart';
+import 'package:cardflow/domain/cards/card_repository.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
+import 'package:cardflow/ui/decks/deck_actions.dart';
+import 'package:cardflow/ui/state/app_providers.dart';
 
 /// Результат работы формы карточки (для сообщений на экране колоды).
 enum CardFormResult {
@@ -17,9 +23,11 @@ enum CardFormResult {
 
 /// Экран создания/редактирования карточки (SPEC A6.3, ADR-009).
 ///
-/// Красная фаза итерации 2: заглушка — поля, валидация, сохранение и удаление
-/// появятся в зелёной фазе.
-class CardFormScreen extends ConsumerWidget {
+/// Поля: front (обязателен, ≤500), back (обязателен, ≤2000), hint, теги (≤3),
+/// тип (`basic`/`basic_reversed`, при редактировании неизменяем) и
+/// `source_excerpt` для кнопки «Почему?». Сохранение — через репозиторий;
+/// удаление — с подтверждением.
+class CardFormScreen extends ConsumerStatefulWidget {
   /// Создаёт форму; [cardId] == null — создание новой карточки.
   const CardFormScreen({required this.deckId, this.cardId, super.key});
 
@@ -30,13 +38,353 @@ class CardFormScreen extends ConsumerWidget {
   final String? cardId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CardFormScreen> createState() => _CardFormScreenState();
+}
+
+class _CardFormScreenState extends ConsumerState<CardFormScreen> {
+  final TextEditingController _front = TextEditingController();
+  final TextEditingController _back = TextEditingController();
+  final TextEditingController _hint = TextEditingController();
+  final TextEditingController _tags = TextEditingController();
+  final TextEditingController _sourceExcerpt = TextEditingController();
+
+  Card? _card;
+  bool _loading = false;
+  bool _loadFailed = false;
+  bool _saving = false;
+  CardType _cardType = CardType.basic;
+  Map<CardDraftField, CardValidationError> _errors =
+      const <CardDraftField, CardValidationError>{};
+
+  bool get _isEditing => widget.cardId != null;
+
+  @override
+  void initState() {
+    super.initState();
+    if (_isEditing) {
+      _loading = true;
+      _loadCard();
+    }
+  }
+
+  @override
+  void dispose() {
+    _front.dispose();
+    _back.dispose();
+    _hint.dispose();
+    _tags.dispose();
+    _sourceExcerpt.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadCard() async {
+    setState(() {
+      _loading = true;
+      _loadFailed = false;
+    });
+    try {
+      final Card? card = await ref
+          .read(cardRepositoryProvider)
+          .cardById(widget.cardId!);
+      if (!mounted) return;
+      if (card == null) {
+        setState(() {
+          _loading = false;
+          _loadFailed = true;
+        });
+        return;
+      }
+      _front.text = card.front;
+      _back.text = card.back;
+      _hint.text = card.hint ?? '';
+      _tags.text = card.tags.join(', ');
+      _sourceExcerpt.text = card.sourceExcerpt ?? '';
+      setState(() {
+        _card = card;
+        _cardType = card.cardType;
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _loadFailed = true;
+      });
+    }
+  }
+
+  Future<void> _save() async {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final CardDraft draft = CardDraft(
+      front: _front.text,
+      back: _back.text,
+      hint: _hint.text,
+      tags: CardDraft.parseTags(_tags.text),
+      cardType: _cardType,
+      sourceExcerpt: _sourceExcerpt.text,
+    );
+    final Map<CardDraftField, CardValidationError> errors = draft.validate();
+    if (errors.isNotEmpty) {
+      setState(() => _errors = errors);
+      return;
+    }
+    setState(() {
+      _errors = const <CardDraftField, CardValidationError>{};
+      _saving = true;
+    });
+    final CardDraft normalized = draft.normalized();
+    try {
+      final CardRepository repository = ref.read(cardRepositoryProvider);
+      final DateTime now = DateTime.now();
+      if (_isEditing) {
+        await repository.updateCard(card: _card!, draft: normalized, now: now);
+      } else {
+        await repository.createCards(
+          deckId: widget.deckId,
+          draft: normalized,
+          now: now,
+        );
+      }
+      if (!mounted) return;
+      context.pop(_isEditing ? CardFormResult.updated : CardFormResult.created);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      showAppMessage(context, l10n.cardFormSaveError);
+    }
+  }
+
+  Future<void> _confirmDelete() async {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final bool confirmed =
+        (await showDialog<bool>(
+          context: context,
+          builder: (BuildContext dialogContext) => AlertDialog(
+            title: Text(l10n.cardDeleteDialogTitle),
+            content: Text(l10n.cardDeleteDialogMessage),
+            actions: <Widget>[
+              TextButton(
+                key: const ValueKey<String>('card-delete-cancel'),
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                child: Text(l10n.cancel),
+              ),
+              FilledButton(
+                key: const ValueKey<String>('card-delete-confirm'),
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+                child: Text(l10n.delete),
+              ),
+            ],
+          ),
+        )) ??
+        false;
+    if (!confirmed || !mounted) return;
+    try {
+      await ref.read(cardRepositoryProvider).deleteCard(widget.cardId!);
+      if (!mounted) return;
+      context.pop(CardFormResult.deleted);
+    } catch (_) {
+      if (!mounted) return;
+      showAppMessage(context, l10n.cardFormDeleteError);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: Text(cardId == null ? l10n.cardFormTitleNew : l10n.cardFormTitleEdit),
+        title: Text(
+          _isEditing ? l10n.cardFormTitleEdit : l10n.cardFormTitleNew,
+        ),
+        actions: _isEditing && _card != null
+            ? <Widget>[
+                IconButton(
+                  key: const ValueKey<String>('card-form-delete'),
+                  tooltip: l10n.cardDeleteTooltip,
+                  icon: const Icon(Icons.delete_outline),
+                  onPressed: _confirmDelete,
+                ),
+              ]
+            : null,
       ),
-      body: const SizedBox.shrink(),
+      body: _buildBody(context, l10n),
+      bottomNavigationBar:
+          _loading || _loadFailed || (_isEditing && _card == null)
+          ? null
+          : SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                child: FilledButton(
+                  key: const ValueKey<String>('card-form-save'),
+                  onPressed: _saving ? null : _save,
+                  child: Text(l10n.save),
+                ),
+              ),
+            ),
     );
+  }
+
+  Widget _buildBody(BuildContext context, AppLocalizations l10n) {
+    if (_loading) return const Center(child: CircularProgressIndicator());
+    if (_loadFailed || (_isEditing && _card == null)) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Icon(
+                Icons.error_outline,
+                size: 48,
+                color: Theme.of(context).colorScheme.error,
+              ),
+              const SizedBox(height: 12),
+              Text(l10n.cardFormLoadError, textAlign: TextAlign.center),
+              const SizedBox(height: 12),
+              TextButton(onPressed: _loadCard, child: Text(l10n.retry)),
+            ],
+          ),
+        ),
+      );
+    }
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          _textField(
+            key: const ValueKey<String>('card-form-front'),
+            controller: _front,
+            label: l10n.cardFormFrontLabel,
+            errorText: _errorText(l10n, CardDraftField.front),
+            minLines: 1,
+            maxLines: 2,
+            autofocus: true,
+          ),
+          const SizedBox(height: 12),
+          _textField(
+            key: const ValueKey<String>('card-form-back'),
+            controller: _back,
+            label: l10n.cardFormBackLabel,
+            errorText: _errorText(l10n, CardDraftField.back),
+            minLines: 3,
+            maxLines: 6,
+          ),
+          const SizedBox(height: 12),
+          _textField(
+            key: const ValueKey<String>('card-form-hint'),
+            controller: _hint,
+            label: l10n.cardFormHintLabel,
+          ),
+          const SizedBox(height: 12),
+          _textField(
+            key: const ValueKey<String>('card-form-tags'),
+            controller: _tags,
+            label: l10n.cardFormTagsLabel,
+            errorText: _errorText(l10n, CardDraftField.tags),
+          ),
+          const SizedBox(height: 12),
+          _textField(
+            key: const ValueKey<String>('card-form-source'),
+            controller: _sourceExcerpt,
+            label: l10n.cardFormSourceExcerptLabel,
+            errorText: _errorText(l10n, CardDraftField.sourceExcerpt),
+            minLines: 2,
+            maxLines: 4,
+          ),
+          const SizedBox(height: 16),
+          _buildTypeSection(l10n),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTypeSection(AppLocalizations l10n) {
+    if (_isEditing) {
+      final String typeLabel = switch (_cardType) {
+        CardType.basic => l10n.cardTypeBasic,
+        CardType.basicReversed => l10n.cardTypeBasicReversed,
+        CardType.cloze => l10n.cardTypeCloze,
+      };
+      return InputDecorator(
+        decoration: InputDecoration(
+          labelText: l10n.cardFormTypeLabel,
+          helperText: l10n.cardFormTypeImmutable,
+          border: const OutlineInputBorder(),
+        ),
+        child: Text(typeLabel),
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(l10n.cardFormTypeLabel),
+        const SizedBox(height: 8),
+        SegmentedButton<CardType>(
+          segments: <ButtonSegment<CardType>>[
+            ButtonSegment<CardType>(
+              value: CardType.basic,
+              label: Text(l10n.cardTypeBasic),
+            ),
+            ButtonSegment<CardType>(
+              value: CardType.basicReversed,
+              label: Text(l10n.cardTypeBasicReversed),
+            ),
+          ],
+          selected: <CardType>{_cardType},
+          onSelectionChanged: (Set<CardType> selection) {
+            setState(() => _cardType = selection.first);
+          },
+        ),
+        if (_cardType == CardType.basicReversed) ...<Widget>[
+          const SizedBox(height: 8),
+          Text(
+            l10n.cardFormReversedHint,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _textField({
+    required Key key,
+    required TextEditingController controller,
+    required String label,
+    String? errorText,
+    int minLines = 1,
+    int maxLines = 1,
+    bool autofocus = false,
+  }) {
+    return TextField(
+      key: key,
+      controller: controller,
+      autofocus: autofocus,
+      minLines: minLines,
+      maxLines: maxLines,
+      textInputAction: maxLines == 1
+          ? TextInputAction.next
+          : TextInputAction.newline,
+      decoration: InputDecoration(
+        labelText: label,
+        errorText: errorText,
+        border: const OutlineInputBorder(),
+      ),
+    );
+  }
+
+  String? _errorText(AppLocalizations l10n, CardDraftField field) {
+    return switch (_errors[field]) {
+      CardValidationError.frontEmpty => l10n.cardFormFrontEmptyError,
+      CardValidationError.frontTooLong => l10n.cardFormFrontTooLongError,
+      CardValidationError.backEmpty => l10n.cardFormBackEmptyError,
+      CardValidationError.backTooLong => l10n.cardFormBackTooLongError,
+      CardValidationError.tagsTooMany => l10n.cardFormTagsTooManyError,
+      CardValidationError.sourceExcerptTooLong =>
+        l10n.cardFormSourceExcerptTooLongError,
+      null => null,
+    };
   }
 }

@@ -38,14 +38,16 @@ void main() {
   });
 
   Future<void> seedDeck() async {
-    await db.into(db.decks).insert(
-      DecksCompanion.insert(
-        id: 'deck-1',
-        name: 'Испанский',
-        createdAt: createdTime.millisecondsSinceEpoch,
-        updatedAt: createdTime.millisecondsSinceEpoch,
-      ),
-    );
+    await db
+        .into(db.decks)
+        .insert(
+          DecksCompanion.insert(
+            id: 'deck-1',
+            name: 'Испанский',
+            createdAt: createdTime.millisecondsSinceEpoch,
+            updatedAt: createdTime.millisecondsSinceEpoch,
+          ),
+        );
   }
 
   test('граф провайдеров итерации 2: реальные реализации', () {
@@ -99,11 +101,10 @@ void main() {
     final cards = await cardRepository.cardsByDeck('deck-1');
     expect(cards, hasLength(2));
     final queue = ReviewQueue.build(cards, now: reviewTime);
-    expect(
-      queue.map((Card card) => card.id),
-      <String>[second.id, first.id],
-      reason: 'сначала просроченная, затем новая (ADR-008)',
-    );
+    expect(queue.map((Card card) => card.id), <String>[
+      second.id,
+      first.id,
+    ], reason: 'сначала просроченная, затем новая (ADR-008)');
 
     final target = queue.first;
     final before = cards.singleWhere((Card card) => card.id == target.id);

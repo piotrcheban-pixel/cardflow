@@ -1,7 +1,9 @@
 import 'package:flutter/foundation.dart';
 
 import 'package:cardflow/domain/cards/card.dart';
+import 'package:cardflow/domain/cards/card_scheduling.dart';
 import 'package:cardflow/domain/review/review.dart';
+import 'package:cardflow/domain/review/review_queue.dart';
 import 'package:cardflow/domain/review/review_repository.dart';
 import 'package:cardflow/domain/scheduling/scheduler.dart';
 
@@ -109,7 +111,7 @@ class ReviewSessionEngine extends ChangeNotifier {
   /// Режим, записываемый в `review_logs.mode`.
   final String mode;
 
-  final ReviewSessionState _state = const ReviewSessionState(
+  ReviewSessionState _state = const ReviewSessionState(
     items: <ReviewSessionItem>[],
     index: 0,
     revealed: false,
@@ -117,26 +119,106 @@ class ReviewSessionEngine extends ChangeNotifier {
     undoCount: 0,
   );
 
+  final List<ReviewUndo> _undoStack = <ReviewUndo>[];
+  DateTime _shownAt = DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
+  bool _initialized = false;
+
   /// Текущее состояние сессии.
   ReviewSessionState get state => _state;
 
   /// Строит очередь и готовит первую карточку. Вызывается один раз экраном.
   void start() {
-    // Красная фаза: движок ещё не строит очередь.
+    if (_initialized) return;
+    final DateTime now = clock().toUtc();
+    final List<Card> queue = ReviewQueue.build(cards, now: now);
+    final List<ReviewSessionItem> items = <ReviewSessionItem>[
+      for (final Card card in queue)
+        ReviewSessionItem(
+          card: card,
+          scheduling: CardSchedulingMapper.toSchedulingCard(card, now: now),
+        ),
+    ];
+    _shownAt = now;
+    _initialized = true;
+    _emit(items: items, index: 0, revealed: false, busy: false);
   }
 
   /// Раскрывает ответ текущей карточки (тап/пробел).
   void reveal() {
-    // Красная фаза: раскрытие ещё не реализовано.
+    if (!_initialized || _state.isCompleted || _state.revealed) return;
+    _emit(index: _state.index, revealed: true, busy: _state.busy);
   }
 
   /// Оценивает текущую карточку и переходит к следующей.
   ///
   /// Возвращает `false`, если сессия завершена или идёт запись.
-  Future<bool> rate(Rating rating) async => false;
+  Future<bool> rate(Rating rating) async {
+    if (!_initialized || _state.busy || _state.isCompleted) return false;
+    final ReviewSessionItem item = _state.current!;
+    final DateTime reviewedAt = clock().toUtc();
+    final SchedulingCard outcome = scheduler
+        .review(item.scheduling, rating, now: reviewedAt)
+        .card;
+
+    _emit(index: _state.index, revealed: _state.revealed, busy: true);
+    final ReviewUndo undo;
+    try {
+      undo = await reviewRepository.recordReview(
+        cardId: item.card.id,
+        rating: rating,
+        reviewedAt: reviewedAt,
+        outcome: outcome,
+        mode: mode,
+        elapsed: reviewedAt.difference(_shownAt),
+      );
+    } catch (_) {
+      _emit(index: _state.index, revealed: _state.revealed, busy: false);
+      rethrow;
+    }
+    _undoStack.add(undo);
+    _shownAt = clock().toUtc();
+    _emit(index: _state.index + 1, revealed: false, busy: false);
+    return true;
+  }
 
   /// Откатывает последнюю оценку; `false` — откатывать нечего/идёт запись.
-  Future<bool> undo() async => false;
+  Future<bool> undo() async {
+    if (!_initialized || _state.busy || _undoStack.isEmpty) return false;
+    _emit(index: _state.index, revealed: _state.revealed, busy: true);
+    try {
+      await reviewRepository.undoReview(_undoStack.last);
+    } catch (_) {
+      _emit(index: _state.index, revealed: _state.revealed, busy: false);
+      rethrow;
+    }
+    _undoStack.removeLast();
+    _shownAt = clock().toUtc();
+    _emit(index: _state.index - 1, revealed: true, busy: false);
+    return true;
+  }
+
+  void _emit({
+    List<ReviewSessionItem>? items,
+    required int index,
+    required bool revealed,
+    required bool busy,
+  }) {
+    final List<ReviewSessionItem> queue = items ?? _state.items;
+    final ReviewSessionItem? current = index < queue.length
+        ? queue[index]
+        : null;
+    _state = ReviewSessionState(
+      items: queue,
+      index: index,
+      revealed: revealed,
+      busy: busy,
+      undoCount: _undoStack.length,
+      preview: current == null
+          ? null
+          : scheduler.previewIntervals(current.scheduling, now: clock()),
+    );
+    notifyListeners();
+  }
 
   @override
   String toString() =>

@@ -123,6 +123,7 @@ void main() {
     final AppLocalizations l10n = l10nOf(tester);
     await openCreateForm(tester);
 
+    await tester.ensureVisible(find.text(l10n.cardTypeBasicReversed));
     await tester.tap(find.text(l10n.cardTypeBasicReversed));
     await tester.pumpAndSettle();
     expect(find.text(l10n.cardFormReversedHint), findsOneWidget);

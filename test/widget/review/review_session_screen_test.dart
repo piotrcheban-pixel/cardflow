@@ -21,7 +21,10 @@ void main() {
   late FakeReviewRepository reviews;
   late FakeCardRepository cards;
 
-  List<Override> overridesFor(List<Card> deckCards, {FakeDeckRepository? decks}) {
+  List<Override> overridesFor(
+    List<Card> deckCards, {
+    FakeDeckRepository? decks,
+  }) {
     cards = FakeCardRepository(cards: deckCards);
     reviews = FakeReviewRepository();
     return decksOverrides(
@@ -88,7 +91,8 @@ void main() {
     expect(find.text(l10n.ratingHard), findsOneWidget);
     expect(find.text(l10n.ratingGood), findsOneWidget);
     expect(find.text(l10n.ratingEasy), findsOneWidget);
-    expect(find.text(l10n.reviewIntervalLessThanMinute), findsOneWidget);
+    expect(find.text(l10n.reviewIntervalMinutes(1)), findsOneWidget);
+    expect(find.text(l10n.reviewIntervalMinutes(6)), findsOneWidget);
     expect(find.text(l10n.reviewIntervalMinutes(10)), findsOneWidget);
     expect(find.text(l10n.reviewIntervalDays(16)), findsOneWidget);
   });
@@ -282,9 +286,7 @@ void main() {
     expect(find.text(l10n.reviewExitDialogTitle), findsOneWidget);
     expect(find.text(l10n.reviewExitDialogMessage), findsOneWidget);
 
-    await tester.tap(
-      find.byKey(const ValueKey<String>('review-exit-confirm')),
-    );
+    await tester.tap(find.byKey(const ValueKey<String>('review-exit-confirm')));
     await tester.pumpAndSettle();
     expect(find.byType(DeckScreen), findsOneWidget);
     expect(find.byType(ReviewSessionScreen), findsNothing);
@@ -298,9 +300,7 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey<String>('review-close')));
     await tester.pumpAndSettle();
-    await tester.tap(
-      find.byKey(const ValueKey<String>('review-exit-cancel')),
-    );
+    await tester.tap(find.byKey(const ValueKey<String>('review-exit-cancel')));
     await tester.pumpAndSettle();
 
     expect(find.text(l10n.reviewExitDialogTitle), findsNothing);

@@ -1,7 +1,9 @@
 import 'package:go_router/go_router.dart';
 
+import 'package:cardflow/ui/cards/card_form_screen.dart';
 import 'package:cardflow/ui/decks/deck_screen.dart';
 import 'package:cardflow/ui/decks/decks_screen.dart';
+import 'package:cardflow/ui/review/review_session_screen.dart';
 
 /// Имена маршрутов приложения (для тестов и навигации).
 abstract final class AppRoutes {
@@ -55,6 +57,26 @@ GoRouter createAppRouter({String initialLocation = AppRoutes.decksPath}) {
         name: AppRoutes.deck,
         builder: (context, state) =>
             DeckScreen(deckId: state.pathParameters['deckId']!),
+      ),
+      GoRoute(
+        path: '/decks/:deckId/study',
+        name: AppRoutes.study,
+        builder: (context, state) =>
+            ReviewSessionScreen(deckId: state.pathParameters['deckId']!),
+      ),
+      GoRoute(
+        path: '/decks/:deckId/cards/new',
+        name: AppRoutes.cardNew,
+        builder: (context, state) =>
+            CardFormScreen(deckId: state.pathParameters['deckId']!),
+      ),
+      GoRoute(
+        path: '/decks/:deckId/cards/:cardId/edit',
+        name: AppRoutes.cardEdit,
+        builder: (context, state) => CardFormScreen(
+          deckId: state.pathParameters['deckId']!,
+          cardId: state.pathParameters['cardId'],
+        ),
       ),
     ],
   );

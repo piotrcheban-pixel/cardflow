@@ -57,10 +57,10 @@ void main() {
     // Новые карточки: Again 1 мин, Good 10 мин (шаги обучения ADR-004).
     expect(state.preview![Rating.again], const Duration(minutes: 1));
     expect(state.preview![Rating.good], const Duration(minutes: 10));
-    expect(
-      ReviewQueue.build(cards, now: start).map((Card c) => c.id),
-      <String>['card-1', 'card-2'],
-    );
+    expect(ReviewQueue.build(cards, now: start).map((Card c) => c.id), <String>[
+      'card-1',
+      'card-2',
+    ]);
   });
 
   test('повторный start не пересобирает сессию', () {
@@ -82,6 +82,7 @@ void main() {
 
   test('rate пишет оценку и переходит к следующей карточке', () async {
     engine.start();
+    repository.previousCard = cards.first;
     advance(const Duration(seconds: 5));
 
     final ok = await engine.rate(Rating.good);
@@ -90,7 +91,9 @@ void main() {
     expect(repository.ratings, <Rating>[Rating.good]);
     expect(repository.cardIds, <String>['card-1']);
     expect(repository.modes, <String>['classic']);
-    expect(repository.reviewedAts, <DateTime>[start.add(const Duration(seconds: 5))]);
+    expect(repository.reviewedAts, <DateTime>[
+      start.add(const Duration(seconds: 5)),
+    ]);
     expect(repository.elapsedTimes.single, const Duration(seconds: 5));
     expect(repository.outcomes.single.state, CardState.learning);
     expect(engine.state.index, 1);
