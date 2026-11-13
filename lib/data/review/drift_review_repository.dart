@@ -12,6 +12,7 @@ import 'package:cardflow/data/cards/card_row_mapper.dart';
 import 'package:cardflow/data/db/app_database.dart';
 import 'package:cardflow/data/db/epoch.dart';
 import 'package:cardflow/domain/cards/card.dart';
+import 'package:cardflow/domain/cards/card_scheduling.dart';
 import 'package:cardflow/domain/review/review.dart';
 import 'package:cardflow/domain/review/review_repository.dart';
 import 'package:cardflow/domain/scheduling/rating.dart';
@@ -45,17 +46,17 @@ class DriftReviewRepository implements ReviewRepository {
         throw StateError('Карточка не найдена: $cardId');
       }
       final Card previousCard = cardFromRow(row);
+      // Единый маппер outcome → карточка (L1 ревью итерации 2): репозиторий
+      // не дублирует поля, которые обновляет оценка.
+      final Card updatedCard = CardSchedulingMapper.applyOutcome(
+        previousCard,
+        outcome,
+        updatedAt: utcReviewedAt,
+      );
       final int written =
-          await (database.update(
-            database.cards,
-          )..where((table) => table.id.equals(cardId))).write(
-            CardsCompanion(
-              state: Value<String>(outcome.state.wireName),
-              fsrsJson: Value<String>(jsonEncode(outcome.toJson())),
-              due: Value<int>(toEpochMs(outcome.due)),
-              updatedAt: Value<int>(toEpochMs(utcReviewedAt)),
-            ),
-          );
+          await (database.update(database.cards)
+                ..where((table) => table.id.equals(cardId)))
+              .write(cardToCompanion(updatedCard));
       if (written != 1) {
         throw StateError('Карточка не обновлена: $cardId');
       }

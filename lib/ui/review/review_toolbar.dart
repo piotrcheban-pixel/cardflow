@@ -119,9 +119,8 @@ class _RatingButton extends StatelessWidget {
             foregroundColor: foreground,
             minimumSize: const Size(0, 52),
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(18),
-            ),
+            // SPEC A4.3: кнопки оценок — pill (full).
+            shape: const StadiumBorder(),
           ),
           onPressed: enabled ? onPressed : null,
           child: Text(

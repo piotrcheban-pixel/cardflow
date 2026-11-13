@@ -6,7 +6,7 @@
 
 ## Подготовительные рефакторинги (без изменения поведения, до красного прогона)
 
-- **T1:** единый `CardState` — дубликат enum из `domain/scheduling/scheduling_card.dart` удалён; канон — `domain/cards/card.dart`. `scheduling_card.dart` реэкспортирует `CardState`, поэтому импорты `scheduler.dart` в тестах не изменились. В существующих FSRS/rating-тестах переименовано только значение `newState` → `newCard` (поведение не менялось, тесты зелёные).
+- **T1:** единый `CardState` — дубликат enum из `domain/scheduling/scheduling_card.dart` удалён; канон — `domain/cards/card.dart`. `scheduling_card.dart` реэкспортирует `CardState`, поэтому импорты `scheduler.dart` в тестах не изменились. В существующих FSRS/rating-тестах переименовано значение `newState` → `newCard`, а `fromWireName` (дубликат enum) заменён на канонический `fromWire` с `FormatException` вместо `ArgumentError` (поведение парсинга неизменных данных не менялось; это не «только переименование», см. L12 ревью).
 - **T6:** общий маппер строк `cards` вынесен в `data/cards/card_row_mapper.dart`; `DriftCardRepository` использует его (карточки в списке/экспорте читаются как раньше). Существующие `card_repository_test` и `deck_zip_roundtrip_test` после этого зелёные.
 
 ## Что падает по ожидаемой причине

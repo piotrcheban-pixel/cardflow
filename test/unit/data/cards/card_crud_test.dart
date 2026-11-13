@@ -262,4 +262,39 @@ void main() {
       expect(await repository.cardById('нет-такой'), isNull);
     });
   });
+
+  group('валидация на границе data-слоя (L7 ревью)', () {
+    test('createCards: пустой front — ArgumentError, строк нет', () async {
+      await expectLater(
+        repository.createCards(
+          deckId: 'deck-1',
+          draft: const CardDraft(front: '', back: 'Ответ'),
+          now: now,
+        ),
+        throwsArgumentError,
+      );
+      expect(await repository.cardsByDeck('deck-1'), isEmpty);
+    });
+
+    test(
+      'updateCard: превышение длины — ArgumentError, карточка не меняется',
+      () async {
+        final original = (await repository.createCards(
+          deckId: 'deck-1',
+          draft: const CardDraft(front: 'Вопрос', back: 'Ответ'),
+          now: now,
+        )).single;
+
+        await expectLater(
+          repository.updateCard(
+            card: original,
+            draft: CardDraft(front: 'а' * 501, back: 'Ответ'),
+            now: now,
+          ),
+          throwsArgumentError,
+        );
+        expect(await repository.cardById(original.id), original);
+      },
+    );
+  });
 }

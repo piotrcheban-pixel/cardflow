@@ -207,4 +207,74 @@ void main() {
     await expectLater(reviews.undoReview(undo), throwsStateError);
     expect(await cards.cardById('card-1'), before);
   });
+
+  test(
+    'атомарность: ошибка вставки лога откатывает UPDATE карточки (C6)',
+    () async {
+      await insertCardRow(
+        db,
+        id: 'card-1',
+        deckId: 'deck-1',
+        createdAt: 100,
+        updatedAt: 100,
+      );
+      final before = (await cards.cardById('card-1'))!;
+      // Триггер падает на INSERT review_logs — уже после UPDATE cards.
+      await db.customStatement(
+        "CREATE TRIGGER fail_review_log BEFORE INSERT ON review_logs "
+        "BEGIN SELECT RAISE(ABORT, 'boom'); END;",
+      );
+      final outcome = outcomeFor(
+        SchedulingCard.newCard(cardId: 'card-1', now: now),
+        Rating.good,
+      );
+
+      await expectLater(
+        reviews.recordReview(
+          cardId: 'card-1',
+          rating: Rating.good,
+          reviewedAt: now,
+          outcome: outcome,
+          mode: reviewModeClassic,
+        ),
+        throwsA(anything),
+      );
+
+      expect(await cards.cardById('card-1'), before);
+      expect(await db.select(db.reviewLogs).get(), isEmpty);
+    },
+  );
+
+  test('атомарность: ошибка восстановления карточки откатывает undo', () async {
+    await insertCardRow(
+      db,
+      id: 'card-1',
+      deckId: 'deck-1',
+      createdAt: 100,
+      updatedAt: 100,
+    );
+    final outcome = outcomeFor(
+      SchedulingCard.newCard(cardId: 'card-1', now: now),
+      Rating.good,
+    );
+    final undo = await reviews.recordReview(
+      cardId: 'card-1',
+      rating: Rating.good,
+      reviewedAt: now,
+      outcome: outcome,
+      mode: reviewModeClassic,
+    );
+    // Карточки больше нет — UPDATE в undo не найдёт строку.
+    await (db.delete(
+      db.cards,
+    )..where((table) => table.id.equals('card-1'))).go();
+
+    await expectLater(reviews.undoReview(undo), throwsStateError);
+
+    expect(
+      await db.select(db.reviewLogs).get(),
+      hasLength(1),
+      reason: 'удаление лога должно откатиться вместе с транзакцией undo',
+    );
+  });
 }

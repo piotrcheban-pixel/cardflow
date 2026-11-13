@@ -202,7 +202,7 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
                   key: const ValueKey<String>('card-form-delete'),
                   tooltip: l10n.cardDeleteTooltip,
                   icon: const Icon(Icons.delete_outline),
-                  onPressed: _confirmDelete,
+                  onPressed: _saving ? null : _confirmDelete,
                 ),
               ]
             : null,
@@ -257,6 +257,7 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
             controller: _front,
             label: l10n.cardFormFrontLabel,
             errorText: _errorText(l10n, CardDraftField.front),
+            validationField: CardDraftField.front,
             minLines: 1,
             maxLines: 2,
             autofocus: true,
@@ -267,6 +268,7 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
             controller: _back,
             label: l10n.cardFormBackLabel,
             errorText: _errorText(l10n, CardDraftField.back),
+            validationField: CardDraftField.back,
             minLines: 3,
             maxLines: 6,
           ),
@@ -282,6 +284,7 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
             controller: _tags,
             label: l10n.cardFormTagsLabel,
             errorText: _errorText(l10n, CardDraftField.tags),
+            validationField: CardDraftField.tags,
           ),
           const SizedBox(height: 12),
           _textField(
@@ -289,6 +292,7 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
             controller: _sourceExcerpt,
             label: l10n.cardFormSourceExcerptLabel,
             errorText: _errorText(l10n, CardDraftField.sourceExcerpt),
+            validationField: CardDraftField.sourceExcerpt,
             minLines: 2,
             maxLines: 4,
           ),
@@ -354,6 +358,7 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
     required TextEditingController controller,
     required String label,
     String? errorText,
+    CardDraftField? validationField,
     int minLines = 1,
     int maxLines = 1,
     bool autofocus = false,
@@ -364,6 +369,7 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
       autofocus: autofocus,
       minLines: minLines,
       maxLines: maxLines,
+      onChanged: (_) => _clearError(validationField),
       textInputAction: maxLines == 1
           ? TextInputAction.next
           : TextInputAction.newline,
@@ -373,6 +379,18 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
         border: const OutlineInputBorder(),
       ),
     );
+  }
+
+  /// Сбрасывает ошибку поля при правке, чтобы она не висела до следующего Save.
+  void _clearError(CardDraftField? field) {
+    if (field == null || !_errors.containsKey(field)) return;
+    setState(() {
+      _errors = <CardDraftField, CardValidationError>{
+        for (final MapEntry<CardDraftField, CardValidationError> entry
+            in _errors.entries)
+          if (entry.key != field) entry.key: entry.value,
+      };
+    });
   }
 
   String? _errorText(AppLocalizations l10n, CardDraftField field) {

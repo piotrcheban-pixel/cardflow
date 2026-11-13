@@ -34,6 +34,7 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
   ReviewSessionEngine? _engine;
   bool _loading = true;
   bool _loadFailed = false;
+  bool _completionHapticPlayed = false;
 
   @override
   void initState() {
@@ -92,9 +93,14 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
   Future<void> _rate(Rating rating) async {
     final ReviewSessionEngine? engine = _engine;
     if (engine == null) return;
-    _playHaptic(rating);
     try {
-      await engine.rate(rating);
+      final bool rated = await engine.rate(rating);
+      if (!rated) return;
+      _playHaptic(rating);
+      if (engine.state.isCompleted && !_completionHapticPlayed) {
+        _completionHapticPlayed = true;
+        unawaited(HapticFeedback.mediumImpact());
+      }
     } catch (_) {
       if (mounted) {
         showAppMessage(context, AppLocalizations.of(context).reviewSaveError);
@@ -108,6 +114,7 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
     try {
       final bool undone = await engine.undo();
       if (undone && mounted) {
+        _completionHapticPlayed = false;
         showAppMessage(
           context,
           AppLocalizations.of(context).reviewUndoneMessage,
@@ -118,6 +125,16 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
         showAppMessage(context, AppLocalizations.of(context).reviewUndoError);
       }
     }
+  }
+
+  /// Раскрывает ответ с haptic `selectionClick` (SPEC A4.4: раскрытие карточки).
+  void _reveal() {
+    final ReviewSessionEngine? engine = _engine;
+    if (engine == null || engine.state.revealed || engine.state.isCompleted) {
+      return;
+    }
+    unawaited(HapticFeedback.selectionClick());
+    engine.reveal();
   }
 
   void _playHaptic(Rating rating) {
@@ -135,7 +152,7 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
     final LogicalKeyboardKey key = event.logicalKey;
     if (key == LogicalKeyboardKey.space) {
-      _engine?.reveal();
+      _reveal();
       return KeyEventResult.handled;
     }
     final Rating? rating = switch (key) {
@@ -209,37 +226,50 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
     final ReviewSessionState? state = _engine?.state;
-    final String? excerpt = state?.current?.card.sourceExcerpt;
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.reviewTitle),
-        actions: <Widget>[
-          IconButton(
-            key: const ValueKey<String>('review-undo'),
-            tooltip: l10n.reviewUndoTooltip,
-            icon: const Icon(Icons.undo),
-            onPressed: state != null && state.undoCount > 0 && !state.busy
-                ? _undo
-                : null,
-          ),
-          IconButton(
-            key: const ValueKey<String>('review-why'),
-            tooltip: l10n.reviewWhyTooltip,
-            icon: const Icon(Icons.info_outline),
-            onPressed: excerpt == null ? null : () => _showWhy(excerpt),
-          ),
-          IconButton(
-            key: const ValueKey<String>('review-close'),
-            tooltip: l10n.reviewCloseTooltip,
-            icon: const Icon(Icons.close),
-            onPressed: _confirmExit,
-          ),
-        ],
-      ),
-      body: Focus(
-        autofocus: true,
-        onKeyEvent: _handleKey,
-        child: _buildBody(context, l10n, state),
+    final String? rawExcerpt = state?.current?.card.sourceExcerpt;
+    final String? excerpt = (rawExcerpt == null || rawExcerpt.trim().isEmpty)
+        ? null
+        : rawExcerpt;
+    // Единая точка выхода (M2 ревью): системный back и кнопка AppBar не должны
+    // обходить диалог SPEC A6.4.
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (bool didPop, Object? result) {
+        if (didPop) return;
+        unawaited(_confirmExit());
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          automaticallyImplyLeading: false,
+          title: Text(l10n.reviewTitle),
+          actions: <Widget>[
+            IconButton(
+              key: const ValueKey<String>('review-undo'),
+              tooltip: l10n.reviewUndoTooltip,
+              icon: const Icon(Icons.undo),
+              onPressed: state != null && state.undoCount > 0 && !state.busy
+                  ? _undo
+                  : null,
+            ),
+            IconButton(
+              key: const ValueKey<String>('review-why'),
+              tooltip: l10n.reviewWhyTooltip,
+              icon: const Icon(Icons.info_outline),
+              onPressed: excerpt == null ? null : () => _showWhy(excerpt),
+            ),
+            IconButton(
+              key: const ValueKey<String>('review-close'),
+              tooltip: l10n.reviewCloseTooltip,
+              icon: const Icon(Icons.close),
+              onPressed: _confirmExit,
+            ),
+          ],
+        ),
+        body: Focus(
+          autofocus: true,
+          onKeyEvent: _handleKey,
+          child: _buildBody(context, l10n, state),
+        ),
       ),
     );
   }
@@ -276,7 +306,7 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
                   front: state.current!.card.front,
                   back: state.current!.card.back,
                   revealed: state.revealed,
-                  onTap: _engine!.reveal,
+                  onTap: _reveal,
                 ),
               ),
             ),

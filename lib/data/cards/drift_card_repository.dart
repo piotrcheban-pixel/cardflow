@@ -65,6 +65,13 @@ class DriftCardRepository implements CardRepository {
     required DateTime now,
   }) async {
     final CardDraft normalized = draft.normalized();
+    if (!normalized.isValid) {
+      throw ArgumentError.value(
+        draft,
+        'draft',
+        'Некорректный черновик карточки: ${normalized.validate().values.join(', ')}',
+      );
+    }
     final DateTime utcNow = now.toUtc();
     return database.transaction<List<Card>>(() async {
       if (normalized.cardType == CardType.basicReversed) {
@@ -119,6 +126,14 @@ class DriftCardRepository implements CardRepository {
         throw StateError('Карточка не найдена: ${card.id}');
       }
       final CardDraft normalized = draft.normalized();
+      if (!normalized.isValid) {
+        throw ArgumentError.value(
+          draft,
+          'draft',
+          'Некорректный черновик карточки: '
+              '${normalized.validate().values.join(', ')}',
+        );
+      }
       final Card updated = Card(
         id: existing.id,
         deckId: existing.deckId,

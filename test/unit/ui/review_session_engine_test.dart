@@ -226,4 +226,26 @@ void main() {
     expect(suspendedEngine.state.total, 1);
     expect(suspendedEngine.state.current!.card.id, 'card-1');
   });
+
+  test(
+    'dispose во время записи не дёргает notifyListeners (L11 ревью)',
+    () async {
+      engine.start();
+      repository.previousCard = cards.first;
+
+      // Подписываемся после синхронного busy-эмита начала записи: интересует
+      // только завершение записи уже после dispose.
+      final Future<bool> pending = engine.rate(Rating.good);
+      var notifications = 0;
+      engine.addListener(() => notifications++);
+      engine.dispose();
+
+      await expectLater(pending, completion(isTrue));
+      expect(
+        notifications,
+        0,
+        reason: 'после dispose слушатели не должны вызываться',
+      );
+    },
+  );
 }

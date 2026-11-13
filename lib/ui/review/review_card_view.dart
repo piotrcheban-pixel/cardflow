@@ -88,7 +88,7 @@ class _ReviewCardViewState extends State<ReviewCardView>
                 key: const ValueKey<String>('review-card-face'),
                 textAlign: TextAlign.center,
                 style: showBack
-                    ? theme.textTheme.headlineSmall
+                    ? theme.textTheme.bodyLarge?.copyWith(height: 1.6)
                     : theme.textTheme.headlineMedium,
               ),
             ),

@@ -9,6 +9,7 @@ import 'package:cardflow/data/transfer/media_store.dart';
 import 'package:cardflow/data/transfer/zip_deck_archive_codec.dart';
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/cards/content_hash.dart';
+import 'package:cardflow/domain/scheduling/scheduling_card.dart';
 import 'package:cardflow/domain/transfer/deck_archive.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
@@ -38,6 +39,27 @@ final RegExp _uuidV4 = RegExp(
   r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
 );
 
+/// Валидный `fsrs_json` (SchedulingCard) для фикстур.
+String _fsrsJson({
+  required String cardId,
+  required CardState state,
+  required DateTime due,
+  int? step,
+  double stability = 12.5,
+  double difficulty = 4.2,
+  DateTime? lastReview,
+}) => jsonEncode(
+  SchedulingCard(
+    cardId: cardId,
+    state: state,
+    step: step,
+    stability: stability,
+    difficulty: difficulty,
+    due: due,
+    lastReview: lastReview,
+  ).toJson(),
+);
+
 /// Карточка со всеми заполненными полями (кроме sibling).
 Card _basicCard({
   String id = 'card-1',
@@ -57,7 +79,12 @@ Card _basicCard({
   sourceDocId: 'doc-1',
   sourceExcerpt: '«Цитата из документа»',
   state: CardState.review,
-  fsrsJson: '{"stability":12.5}',
+  fsrsJson: _fsrsJson(
+    cardId: id,
+    state: CardState.review,
+    due: _due,
+    lastReview: _due.subtract(const Duration(days: 7)),
+  ),
   due: _due,
   suspended: true,
   buriedUntil: _buriedUntil,
@@ -90,6 +117,13 @@ Card _reversedFirst() => Card(
   cardType: CardType.basicReversed,
   tags: const <String>['пара'],
   state: CardState.learning,
+  fsrsJson: _fsrsJson(
+    cardId: 'card-r1',
+    state: CardState.learning,
+    step: 1,
+    due: _due,
+    lastReview: _due.subtract(const Duration(hours: 1)),
+  ),
   due: _due,
   siblingId: 'card-r2',
   createdAt: _cardCreatedAt,
@@ -103,6 +137,13 @@ Card _reversedSecond() => Card(
   back: 'Обратная B',
   cardType: CardType.basicReversed,
   state: CardState.learning,
+  fsrsJson: _fsrsJson(
+    cardId: 'card-r2',
+    state: CardState.learning,
+    step: 1,
+    due: _due,
+    lastReview: _due.subtract(const Duration(hours: 1)),
+  ),
   due: _due,
   siblingId: 'card-r1',
   createdAt: _cardCreatedAt,
@@ -120,6 +161,30 @@ List<Card> _sampleCards() => <Card>[
 String _hashOf(Card card) =>
     card.contentHash ?? contentHashOf(front: card.front, back: card.back);
 
+/// Сравнивает FSRS-снимки, игнорируя `cardId` (при импорте id новый, H1).
+void _expectSameScheduling(Card actual, Card expected) {
+  final String? actualRaw = actual.fsrsJson;
+  final String? expectedRaw = expected.fsrsJson;
+  expect(
+    actualRaw == null,
+    expectedRaw == null,
+    reason: 'наличие fsrs_json должно совпадать',
+  );
+  if (actualRaw == null || expectedRaw == null) return;
+  final SchedulingCard actualScheduling = SchedulingCard.fromJson(
+    jsonDecode(actualRaw) as Map<String, dynamic>,
+  );
+  final SchedulingCard expectedScheduling = SchedulingCard.fromJson(
+    jsonDecode(expectedRaw) as Map<String, dynamic>,
+  );
+  expect(actualScheduling.state, expectedScheduling.state);
+  expect(actualScheduling.step, expectedScheduling.step);
+  expect(actualScheduling.stability, expectedScheduling.stability);
+  expect(actualScheduling.difficulty, expectedScheduling.difficulty);
+  expect(actualScheduling.due, expectedScheduling.due);
+  expect(actualScheduling.lastReview, expectedScheduling.lastReview);
+}
+
 /// Сравнивает контент карточек, игнорируя id/deck_id/sibling/content_hash и
 /// конкретные id медиа (они обязаны меняться при импорте).
 void _expectSameCardContent(Card actual, Card expected) {
@@ -133,7 +198,7 @@ void _expectSameCardContent(Card actual, Card expected) {
   expect(actual.sourceDocId, expected.sourceDocId);
   expect(actual.sourceExcerpt, expected.sourceExcerpt);
   expect(actual.state, expected.state);
-  expect(actual.fsrsJson, expected.fsrsJson);
+  _expectSameScheduling(actual, expected);
   expect(actual.due, expected.due);
   expect(actual.suspended, expected.suspended);
   expect(actual.buriedUntil, expected.buriedUntil);
@@ -919,6 +984,78 @@ void main() {
 
       expect(await db.select(db.decks).get(), hasLength(1));
       expect(await db.select(db.cards).get(), hasLength(4));
+    });
+
+    test('H1: fsrs перепривязывается к новому id карточки', () async {
+      final archive = _archive(
+        cards: <Card>[_basicCard(mediaIds: const <String>[])],
+      );
+
+      final result = await service.importZip(_codec.encode(archive));
+
+      final CardRow row = (await db.select(db.cards).get()).single;
+      expect(row.deckId, result.deckId);
+      expect(row.id, isNot('card-1'), reason: 'при импорте всегда новый id');
+      final SchedulingCard scheduling = SchedulingCard.fromJson(
+        jsonDecode(row.fsrsJson!) as Map<String, dynamic>,
+      );
+      expect(
+        scheduling.cardId,
+        row.id,
+        reason: 'fsrs_json обязан ссылаться на новую карточку (H1 ревью)',
+      );
+      expect(scheduling.state, CardState.review);
+      expect(row.state, 'review', reason: 'state берётся из снимка FSRS');
+      expect(row.due, toEpochMs(_due), reason: 'due берётся из снимка FSRS');
+      expect(scheduling.due, _due);
+      expect(scheduling.lastReview, _due.subtract(const Duration(days: 7)));
+    });
+
+    test(
+      'H1: невалидный fsrs → invalidCards, транзакция откатывается',
+      () async {
+        final broken = Card(
+          id: 'broken-card',
+          deckId: 'deck-1',
+          front: 'Вопрос',
+          back: 'Ответ',
+          cardType: CardType.basic,
+          state: CardState.review,
+          fsrsJson: '{"stability":12.5}',
+          due: _due,
+          createdAt: _cardCreatedAt,
+          updatedAt: _cardUpdatedAt,
+        );
+
+        await expectLater(
+          service.importZip(_codec.encode(_archive(cards: <Card>[broken]))),
+          _throwsArchiveError(ArchiveErrorCode.invalidCards),
+        );
+
+        expect(await db.select(db.decks).get(), isEmpty);
+        expect(await db.select(db.cards).get(), isEmpty);
+      },
+    );
+
+    test('H1: fsrs = null нормализует state/due к новой карточке', () async {
+      final legacy = Card(
+        id: 'legacy-card',
+        deckId: 'deck-1',
+        front: 'Вопрос',
+        back: 'Ответ',
+        cardType: CardType.basic,
+        state: CardState.learning,
+        due: _due,
+        createdAt: _cardCreatedAt,
+        updatedAt: _cardUpdatedAt,
+      );
+
+      await service.importZip(_codec.encode(_archive(cards: <Card>[legacy])));
+
+      final CardRow row = (await db.select(db.cards).get()).single;
+      expect(row.fsrsJson, isNull);
+      expect(row.state, 'new', reason: 'инвариант A5: fsrs = null ⇒ new');
+      expect(row.due, isNull);
     });
   });
 }

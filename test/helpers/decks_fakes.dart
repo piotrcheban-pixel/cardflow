@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/cards/card_draft.dart';
 import 'package:cardflow/domain/cards/card_repository.dart';
+import 'package:cardflow/domain/cards/content_hash.dart';
 import 'package:cardflow/domain/decks/deck.dart';
 import 'package:cardflow/domain/decks/deck_query.dart';
 import 'package:cardflow/domain/decks/deck_repository.dart';
@@ -344,7 +345,7 @@ class FakeCardRepository implements CardRepository {
       buriedUntil: card.buriedUntil,
       flagged: card.flagged,
       siblingId: card.siblingId,
-      contentHash: card.contentHash,
+      contentHash: contentHashOf(front: draft.front, back: draft.back),
       createdAt: card.createdAt,
       updatedAt: now,
     );

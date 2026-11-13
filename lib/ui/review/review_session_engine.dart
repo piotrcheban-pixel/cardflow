@@ -122,9 +122,16 @@ class ReviewSessionEngine extends ChangeNotifier {
   final List<ReviewUndo> _undoStack = <ReviewUndo>[];
   DateTime _shownAt = DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
   bool _initialized = false;
+  bool _disposed = false;
 
   /// Текущее состояние сессии.
   ReviewSessionState get state => _state;
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
 
   /// Строит очередь и готовит первую карточку. Вызывается один раз экраном.
   void start() {
@@ -203,6 +210,9 @@ class ReviewSessionEngine extends ChangeNotifier {
     required bool revealed,
     required bool busy,
   }) {
+    // Асинхронная запись может завершиться уже после закрытия экрана: не
+    // дёргаем notifyListeners у освобождённого ChangeNotifier.
+    if (_disposed) return;
     final List<ReviewSessionItem> queue = items ?? _state.items;
     final ReviewSessionItem? current = index < queue.length
         ? queue[index]

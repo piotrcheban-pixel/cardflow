@@ -237,6 +237,88 @@ void main() {
           );
         }
       });
+
+      test('для карточки в обучении: прогноз равен факту', () {
+        final scheduler = FsrsScheduler();
+        final learning = scheduler
+            .review(
+              SchedulingCard.newCard(cardId: 'card-1', now: now),
+              Rating.good,
+              now: now,
+            )
+            .card;
+        final at = learning.due;
+        final preview = scheduler.previewIntervals(learning, now: at);
+
+        for (final rating in Rating.values) {
+          final outcome = scheduler.review(learning, rating, now: at);
+          expect(
+            outcome.card.due.difference(at),
+            preview[rating],
+            reason: 'оценка $rating',
+          );
+        }
+      });
+
+      test('для карточки в переобучении: прогноз равен факту', () {
+        final scheduler = FsrsScheduler();
+        final reviewCard = scheduler
+            .review(
+              SchedulingCard.newCard(cardId: 'card-1', now: now),
+              Rating.easy,
+              now: now,
+            )
+            .card;
+        final relearning = scheduler
+            .review(reviewCard, Rating.again, now: reviewCard.due)
+            .card;
+        final at = relearning.due;
+        final preview = scheduler.previewIntervals(relearning, now: at);
+
+        for (final rating in Rating.values) {
+          final outcome = scheduler.review(relearning, rating, now: at);
+          expect(
+            outcome.card.due.difference(at),
+            preview[rating],
+            reason: 'оценка $rating',
+          );
+        }
+      });
+
+      test('для всех состояний прогноз монотонен Again<Hard<Good<Easy', () {
+        final scheduler = FsrsScheduler();
+        final newCard = SchedulingCard.newCard(cardId: 'card-1', now: now);
+        final learning = scheduler.review(newCard, Rating.good, now: now).card;
+        final review = scheduler.review(newCard, Rating.easy, now: now).card;
+        final relearning = scheduler
+            .review(review, Rating.again, now: review.due)
+            .card;
+
+        for (final (String name, SchedulingCard card, DateTime at)
+            in <(String, SchedulingCard, DateTime)>[
+              ('new', newCard, now),
+              ('learning', learning, learning.due),
+              ('review', review, review.due),
+              ('relearning', relearning, relearning.due),
+            ]) {
+          final preview = scheduler.previewIntervals(card, now: at);
+          expect(
+            preview[Rating.again]!,
+            lessThan(preview[Rating.hard]!),
+            reason: '$name: Again < Hard',
+          );
+          expect(
+            preview[Rating.hard]!,
+            lessThan(preview[Rating.good]!),
+            reason: '$name: Hard < Good',
+          );
+          expect(
+            preview[Rating.good]!,
+            lessThan(preview[Rating.easy]!),
+            reason: '$name: Good < Easy',
+          );
+        }
+      });
     },
   );
 

@@ -9,6 +9,7 @@ import 'package:cardflow/data/db/epoch.dart';
 import 'package:cardflow/data/transfer/media_store.dart';
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/cards/content_hash.dart';
+import 'package:cardflow/domain/scheduling/scheduling_card.dart';
 import 'package:cardflow/domain/transfer/archive_codec.dart';
 import 'package:cardflow/domain/transfer/deck_archive.dart';
 import 'package:cardflow/domain/transfer/deck_transfer_service.dart';
@@ -226,6 +227,7 @@ class DriftDeckTransferService implements DeckTransferService {
       final newSiblingId = oldSiblingId == null
           ? null
           : newCardIds[oldSiblingId];
+      final _ImportedScheduling scheduling = _importScheduling(card, newCardId);
       cardCompanions.add(
         CardsCompanion.insert(
           id: newCardId,
@@ -240,9 +242,11 @@ class DriftDeckTransferService implements DeckTransferService {
           occlusionJson: Value<String?>(card.occlusionJson),
           sourceDocId: Value<String?>(card.sourceDocId),
           sourceExcerpt: Value<String?>(card.sourceExcerpt),
-          state: card.state.wireName,
-          fsrsJson: Value<String?>(card.fsrsJson),
-          due: Value<int?>(card.due == null ? null : toEpochMs(card.due!)),
+          state: scheduling.state.wireName,
+          fsrsJson: Value<String?>(scheduling.fsrsJson),
+          due: Value<int?>(
+            scheduling.due == null ? null : toEpochMs(scheduling.due!),
+          ),
           suspended: Value<int>(card.suspended ? 1 : 0),
           buriedUntil: Value<int?>(
             card.buriedUntil == null ? null : toEpochMs(card.buriedUntil!),
@@ -292,6 +296,54 @@ class DriftDeckTransferService implements DeckTransferService {
   /// (M9: значению `content_hash` из архива не доверяем; SPEC A5/A8.5).
   String _effectiveContentHash(Card card) =>
       contentHashOf(front: card.front, back: card.back);
+
+  /// Готовит FSRS-состояние карточки к импорту.
+  ///
+  /// `cards.fsrs_json` содержит `cardId` исходной карточки, а импорт всегда
+  /// выдаёт новые id (ADR-006): без перепривязки сессия импортированной колоды
+  /// не запускается (`CardSchedulingMapper` отвергает чужой `cardId`).
+  ///
+  /// Инвариант SPEC A5: `fsrs_json == null` ⇔ карточка новая (`state = new`,
+  /// `due = null`); архив без снимка нормализуется к нему. Если снимок есть,
+  /// он — источник правды для `state`/`due` (колонки из архива не доверяются).
+  /// Битый снимок — `invalidCards`: молча терять историю повторений нельзя.
+  _ImportedScheduling _importScheduling(Card card, String newCardId) {
+    final String? raw = card.fsrsJson;
+    if (raw == null || raw.trim().isEmpty) {
+      return const _ImportedScheduling(
+        fsrsJson: null,
+        state: CardState.newCard,
+        due: null,
+      );
+    }
+    final SchedulingCard scheduling;
+    try {
+      final Object? decoded = jsonDecode(raw);
+      if (decoded is! Map<String, dynamic>) {
+        throw const FormatException('fsrs_json — не JSON-объект');
+      }
+      scheduling = SchedulingCard.fromJson(decoded);
+    } catch (error) {
+      throw ArchiveException(
+        ArchiveErrorCode.invalidCards,
+        details: 'import: битый fsrs у карточки ${card.id}: $error',
+      );
+    }
+    final SchedulingCard rebound = SchedulingCard(
+      cardId: newCardId,
+      state: scheduling.state,
+      step: scheduling.step,
+      stability: scheduling.stability,
+      difficulty: scheduling.difficulty,
+      due: scheduling.due,
+      lastReview: scheduling.lastReview,
+    );
+    return _ImportedScheduling(
+      fsrsJson: jsonEncode(rebound.toJson()),
+      state: scheduling.state,
+      due: scheduling.due,
+    );
+  }
 
   /// Относительный путь нового медиафайла: `media/<uuid>` + безопасное
   /// расширение исходного пути (MIME всё равно хранится в таблице).
@@ -415,4 +467,17 @@ class _ImportedMedia {
     mimeType: mimeType,
     size: bytes.length,
   );
+}
+
+/// FSRS-состояние карточки, подготовленное к записи при импорте.
+class _ImportedScheduling {
+  const _ImportedScheduling({
+    required this.fsrsJson,
+    required this.state,
+    required this.due,
+  });
+
+  final String? fsrsJson;
+  final CardState state;
+  final DateTime? due;
 }

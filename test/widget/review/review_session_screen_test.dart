@@ -107,22 +107,53 @@ void main() {
     expect(find.text('Первый вопрос'), findsNothing);
   });
 
-  testWidgets('пробел раскрывает ответ, цифра 3 — оценка Good', (
+  testWidgets('пробел раскрывает ответ, клавиши 1–4 дают оценки', (
     WidgetTester tester,
   ) async {
-    final deckCards = twoCards();
+    final deckCards = <Card>[
+      makeCard(id: 'k1', deckId: 'deck-1', front: 'К1'),
+      makeCard(
+        id: 'k2',
+        deckId: 'deck-1',
+        front: 'К2',
+        createdAt: DateTime.utc(2026, 11, 13, 10, 1),
+      ),
+      makeCard(
+        id: 'k3',
+        deckId: 'deck-1',
+        front: 'К3',
+        createdAt: DateTime.utc(2026, 11, 13, 10, 2),
+      ),
+      makeCard(
+        id: 'k4',
+        deckId: 'deck-1',
+        front: 'К4',
+        createdAt: DateTime.utc(2026, 11, 13, 10, 3),
+      ),
+    ];
     await pumpSession(tester, overrides: overridesFor(deckCards));
-    reviews.previousCard = deckCards.first;
 
     await tester.sendKeyEvent(LogicalKeyboardKey.space);
     await tester.pumpAndSettle();
-    expect(find.text('Первый ответ'), findsOneWidget);
+    expect(find.text('Ответ'), findsOneWidget);
 
-    await tester.sendKeyEvent(LogicalKeyboardKey.digit3);
-    await tester.pumpAndSettle();
+    for (final LogicalKeyboardKey key in <LogicalKeyboardKey>[
+      LogicalKeyboardKey.digit1,
+      LogicalKeyboardKey.digit2,
+      LogicalKeyboardKey.digit3,
+      LogicalKeyboardKey.digit4,
+    ]) {
+      reviews.previousCard = deckCards.first;
+      await tester.sendKeyEvent(key);
+      await tester.pumpAndSettle();
+    }
 
-    expect(reviews.ratings, <Rating>[Rating.good]);
-    expect(find.text('Второй вопрос'), findsOneWidget);
+    expect(reviews.ratings, <Rating>[
+      Rating.again,
+      Rating.hard,
+      Rating.good,
+      Rating.easy,
+    ]);
   });
 
   testWidgets('кнопка «Знаю» пишет оценку и переходит к следующей', (
@@ -305,5 +336,147 @@ void main() {
 
     expect(find.text(l10n.reviewExitDialogTitle), findsNothing);
     expect(find.byType(ReviewSessionScreen), findsOneWidget);
+  });
+
+  group('haptics/дизайн/выход (fix-итерация ревью)', () {
+    testWidgets(
+      'haptics A4.4/A7.2: reveal, 4 оценки и завершение — через канал',
+      (WidgetTester tester) async {
+        final harness = tester.binding;
+        final List<Object?> haptics = <Object?>[];
+        harness.defaultBinaryMessenger.setMockMethodCallHandler(
+          SystemChannels.platform,
+          (MethodCall call) async {
+            if (call.method == 'HapticFeedback.vibrate') {
+              haptics.add(call.arguments);
+            }
+            return null;
+          },
+        );
+        addTearDown(
+          () => harness.defaultBinaryMessenger.setMockMethodCallHandler(
+            SystemChannels.platform,
+            null,
+          ),
+        );
+        final deckCards = <Card>[
+          makeCard(id: 'c1', deckId: 'deck-1', front: '1'),
+          makeCard(
+            id: 'c2',
+            deckId: 'deck-1',
+            front: '2',
+            createdAt: DateTime.utc(2026, 11, 13, 10, 1),
+          ),
+          makeCard(
+            id: 'c3',
+            deckId: 'deck-1',
+            front: '3',
+            createdAt: DateTime.utc(2026, 11, 13, 10, 2),
+          ),
+          makeCard(
+            id: 'c4',
+            deckId: 'deck-1',
+            front: '4',
+            createdAt: DateTime.utc(2026, 11, 13, 10, 3),
+          ),
+        ];
+        await pumpSession(tester, overrides: overridesFor(deckCards));
+        reviews.previousCard = deckCards[0];
+
+        await tester.tap(find.byKey(const ValueKey<String>('review-card')));
+        await tester.pumpAndSettle();
+        for (final String name in <String>['again', 'hard', 'good', 'easy']) {
+          await tester.tap(find.byKey(ValueKey<String>('review-rating-$name')));
+          await tester.pumpAndSettle();
+        }
+
+        expect(haptics, <Object?>[
+          'HapticFeedbackType.selectionClick',
+          'HapticFeedbackType.heavyImpact',
+          'HapticFeedbackType.lightImpact',
+          'HapticFeedbackType.lightImpact',
+          'HapticFeedbackType.selectionClick',
+          'HapticFeedbackType.mediumImpact',
+        ]);
+      },
+    );
+
+    testWidgets('цвета кнопок A7.2 и значение прогресса', (
+      WidgetTester tester,
+    ) async {
+      final deckCards = twoCards();
+      await pumpSession(tester, overrides: overridesFor(deckCards));
+      final BuildContext context = tester.element(
+        find.byType(ReviewSessionScreen),
+      );
+      final ColorScheme scheme = Theme.of(context).colorScheme;
+
+      Color? background(String name) => tester
+          .widget<FilledButton>(
+            find.byKey(ValueKey<String>('review-rating-$name')),
+          )
+          .style
+          ?.backgroundColor
+          ?.resolve(<WidgetState>{});
+      expect(background('again'), scheme.errorContainer);
+      expect(background('hard'), scheme.secondaryContainer);
+      expect(background('good'), scheme.primary);
+      expect(background('easy'), scheme.tertiaryContainer);
+
+      LinearProgressIndicator progress() =>
+          tester.widget<LinearProgressIndicator>(
+            find.byType(LinearProgressIndicator),
+          );
+      expect(progress().value, 0);
+      reviews.previousCard = deckCards.first;
+      await tester.tap(
+        find.byKey(const ValueKey<String>('review-rating-good')),
+      );
+      await tester.pumpAndSettle();
+      expect(progress().value, 0.5);
+    });
+
+    testWidgets('системный back открывает диалог выхода (M2)', (
+      WidgetTester tester,
+    ) async {
+      final deckCards = twoCards();
+      await tester.pumpWidget(
+        appWithRouter(
+          overrides: overridesFor(deckCards),
+          routes: decksRoutes(),
+          initialLocation: '/decks/deck-1',
+        ),
+      );
+      await tester.pumpAndSettle();
+      final AppLocalizations l10n = l10nOf(tester);
+      await tester.tap(find.text(l10n.reviewStartSession));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(l10n.reviewModeClassic));
+      await tester.pumpAndSettle();
+      expect(find.byType(ReviewSessionScreen), findsOneWidget);
+
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.reviewExitDialogTitle), findsOneWidget);
+      await tester.tap(
+        find.byKey(const ValueKey<String>('review-exit-cancel')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(ReviewSessionScreen), findsOneWidget);
+    });
+
+    testWidgets('«Почему?» неактивна при пустой цитате (L6)', (
+      WidgetTester tester,
+    ) async {
+      await pumpSession(
+        tester,
+        overrides: overridesFor(twoCards(sourceExcerpt: '   ')),
+      );
+      final IconButton why = tester.widget<IconButton>(
+        find.byKey(const ValueKey<String>('review-why')),
+      );
+      expect(why.onPressed, isNull);
+    });
   });
 }
