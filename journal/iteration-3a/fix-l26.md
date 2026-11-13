@@ -75,3 +75,68 @@ Failing tests:
 
 Skip/тег отклонены: они скрывают регрессии PDF-парсера на 2/3 CI-матрицы; вариант A даёт реальное
 покрытие при минимальном риске (pinned-релиз, тот же, что в build-hook).
+
+## Green: изменение workflow (коммит `6a43b93`)
+
+В job `test` (единственный, который гоняет тесты) после `subosito/flutter-action`
+добавлен шаг **«PDFium для PDF-тестов (Linux/macOS)»** (`if: runner.os != 'Windows'`):
+
+- `curl -fsSL --retry 3` качает `pdfium-linux-x64.tgz` / `pdfium-mac-arm64.tgz` из
+  `https://github.com/bblanchon/pdfium-binaries/releases/download/chromium%2F8125/...`;
+- `tar -xzf` во `$RUNNER_TEMP/pdfium`, проверяется наличие `lib/libpdfium.so` /
+  `lib/libpdfium.dylib`;
+- путь экспортируется как `PDFIUM_PATH=...` в `$GITHUB_ENV` → доступен шагу тестов;
+- на Windows шаг пропускается (там `pdfium.dll` находится сам).
+
+`pdfrxInitialize()` (pdfrx_engine) читает `PDFIUM_PATH` и передаёт путь в
+`getPdfium(modulePath: ...)` → `DynamicLibrary.open` по явному пути; на macOS это
+обходит ветку «Unsupported platform», на Linux — отсутствие `libpdfium.so` в кэше
+Flutter engine и `Native assets file not found`. Код приложения/парсеров не менялся.
+
+**Проверка YAML и окружения (локально):**
+
+| Проверка | Результат |
+|---|---|
+| PyYAML, семантика YAML 1.2 (`on` — строка) | OK |
+| JSON Schema SchemaStore `github-workflow.json` | OK |
+| `actionlint` 1.7.12 (`-shellcheck=`) | 0 findings |
+| `bash -n` всех `run`-блоков | OK |
+| Состав job'ов и шаги `quality`/`build-desktop`/`build-mobile` побайтово равны HEAD | OK |
+| Шаг `PDFium для PDF-тестов` — только в job `test`, до шага тестов | OK |
+| Ассеты `chromium/8125` существуют: `pdfium-linux-x64.tgz` (3.65 МБ), `pdfium-mac-arm64.tgz` (3.38 МБ) | OK |
+| Внутри архивов: `lib/libpdfium.so` / `lib/libpdfium.dylib`, `VERSION BUILD=8125` (совпадает с build-hook `pdfium_dart` 0.4.1) | OK |
+| `PDFIUM_PATH=<pdfium.dll>` → PDF-тесты локально проходят через явный путь модуля (механизм env-переменной) | OK |
+| Guard-тест `test/guards/ci_pdfium_test.dart` (красный до шага) | **3/3 зелёные** |
+
+## Verify (локально, Windows, снимок `6a43b93` + формат)
+
+| Команда | Результат |
+|---|---|
+| `fvm flutter test --exclude-tags golden --coverage` | **598 тестов, all passed** (+3 guard-теста L26 к 595) |
+| `fvm dart run tool/coverage_check.dart --min=80` | **95.3% (3152/3309)**, порог пройден |
+| `fvm flutter analyze` | 0 issues |
+| `fvm dart format --output=none --set-exit-if-changed .` | 0 changed (143 файла) |
+| `fvm flutter build windows --release` | `√ Built ... cardflow.exe` (8.6 s) |
+
+Локально на Windows PDF-тесты идут через тот же механизм и при заданном `PDFIUM_PATH`,
+и без него (Windows-загрузчик находит `pdfium.dll`); Linux/macOS-ветка проверяется
+только CI-прогоном — это и есть критерий приёмки фикса.
+
+## Критерий приёмки фикса
+
+1. `test (ubuntu-latest)` и `test (macos-latest)` — **success**, PDF-тесты реально выполняются
+   (не skip: guard-тест это фиксирует).
+2. Остальные 7 job'ов не сломались — все 9 job success в одном прогоне.
+3. `KNOWN_LIMITATIONS.md` L26 переформулирован по факту: что остаётся непокрытым и почему это
+   осознанный выбор.
+
+## Что остаётся непокрытым после фикса (осознанно)
+
+- **Сетевой доступ CI к GitHub releases** — шаг требует скачать pinned PDFium; при недоступности
+  GitHub releases job упадёт (не молчаливый skip — так и задумано, «красный, а не выключенный»).
+  Это тот же источник, откуда `pdfium_dart` build-hook берёт PDFium для сборок, поэтому риск общий.
+- **macOS arm64 только** (`macos-latest` = arm64): `pdfium-mac-x64.tgz` не скачивается, т.к. Intel-
+  macOS-раннеров в матрице нет; при возврате `macos-13` понадобится ветка x64.
+- **iOS tests** не гоняются (в матрице нет iOS-теста; iOS проверяется сборкой `build ios`, где PDFium
+  линкуется XCFramework-ом — это отдельный путь, не тестовый).
+- Реальные Word/LibreOffice/PDF-файлы (L23) и 25 МБ/OOM (L25) — по-прежнему непокрыты, не связано с L26.
