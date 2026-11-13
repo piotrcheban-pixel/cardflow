@@ -4,6 +4,7 @@ import 'package:cardflow/ui/cards/card_form_screen.dart';
 import 'package:cardflow/ui/decks/deck_screen.dart';
 import 'package:cardflow/ui/decks/decks_screen.dart';
 import 'package:cardflow/ui/review/review_session_screen.dart';
+import 'package:cardflow/ui/settings/generation_settings_screen.dart';
 
 /// Имена маршрутов приложения (для тестов и навигации).
 abstract final class AppRoutes {
@@ -22,6 +23,9 @@ abstract final class AppRoutes {
   /// Редактирование карточки.
   static const String cardEdit = 'cardEdit';
 
+  /// Настройки генерации (OpenAI-совместимый сервер, ADR-013).
+  static const String generationSettings = 'generationSettings';
+
   /// Путь списка колод.
   static const String decksPath = '/';
 
@@ -37,6 +41,9 @@ abstract final class AppRoutes {
   /// Путь редактирования карточки.
   static String cardEditPath(String deckId, String cardId) =>
       '/decks/$deckId/cards/$cardId/edit';
+
+  /// Путь экрана настроек генерации.
+  static const String generationSettingsPath = '/settings/generation';
 }
 
 /// Собирает маршрутизатор приложения (ADR: GoRouter).
@@ -77,6 +84,11 @@ GoRouter createAppRouter({String initialLocation = AppRoutes.decksPath}) {
           deckId: state.pathParameters['deckId']!,
           cardId: state.pathParameters['cardId'],
         ),
+      ),
+      GoRoute(
+        path: AppRoutes.generationSettingsPath,
+        name: AppRoutes.generationSettings,
+        builder: (context, state) => const GenerationSettingsScreen(),
       ),
     ],
   );

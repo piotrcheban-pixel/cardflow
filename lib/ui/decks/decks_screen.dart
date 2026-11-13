@@ -7,6 +7,7 @@ import 'package:cardflow/domain/decks/deck_summary.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/decks/deck_actions.dart';
 import 'package:cardflow/ui/m3e/m3e.dart';
+import 'package:cardflow/ui/router/app_router.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
 import 'package:cardflow/ui/state/decks_ui_providers.dart';
 
@@ -54,6 +55,11 @@ class DecksScreen extends ConsumerWidget {
             icon: const Icon(Icons.filter_list),
             onPressed: () =>
                 ref.read(decksFiltersVisibleProvider.notifier).toggle(),
+          ),
+          IconButton(
+            tooltip: l10n.settingsOpenTooltip,
+            icon: const Icon(Icons.settings_outlined),
+            onPressed: () => context.push(AppRoutes.generationSettingsPath),
           ),
         ],
       ),
