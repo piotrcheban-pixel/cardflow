@@ -6,12 +6,14 @@
 //
 // Маппинг строк — в `card_row_mapper.dart` (общий с `DriftReviewRepository`).
 import 'package:drift/drift.dart';
+import 'package:uuid/uuid.dart';
 
 import 'package:cardflow/data/cards/card_row_mapper.dart';
 import 'package:cardflow/data/db/app_database.dart';
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/cards/card_draft.dart';
 import 'package:cardflow/domain/cards/card_repository.dart';
+import 'package:cardflow/domain/cards/content_hash.dart';
 
 /// Репозиторий карточек поверх drift-БД.
 class DriftCardRepository implements CardRepository {
@@ -20,6 +22,8 @@ class DriftCardRepository implements CardRepository {
 
   /// БД приложения.
   final AppDatabase database;
+
+  static const Uuid _uuid = Uuid();
 
   @override
   Stream<List<Card>> watchCards(String deckId) {
@@ -59,10 +63,47 @@ class DriftCardRepository implements CardRepository {
     required String deckId,
     required CardDraft draft,
     required DateTime now,
-  }) {
-    throw UnimplementedError(
-      'DriftCardRepository.createCards: красная фаза итерации 2',
-    );
+  }) async {
+    final CardDraft normalized = draft.normalized();
+    final DateTime utcNow = now.toUtc();
+    return database.transaction<List<Card>>(() async {
+      if (normalized.cardType == CardType.basicReversed) {
+        final String firstId = _uuid.v4();
+        final String secondId = _uuid.v4();
+        final Card first = _newCard(
+          id: firstId,
+          deckId: deckId,
+          front: normalized.front,
+          back: normalized.back,
+          draft: normalized,
+          siblingId: secondId,
+          now: utcNow,
+        );
+        final Card second = _newCard(
+          id: secondId,
+          deckId: deckId,
+          front: normalized.back,
+          back: normalized.front,
+          draft: normalized,
+          siblingId: firstId,
+          now: utcNow,
+        );
+        await database.into(database.cards).insert(cardToCompanion(first));
+        await database.into(database.cards).insert(cardToCompanion(second));
+        return <Card>[first, second];
+      }
+      final Card card = _newCard(
+        id: _uuid.v4(),
+        deckId: deckId,
+        front: normalized.front,
+        back: normalized.back,
+        draft: normalized,
+        siblingId: null,
+        now: utcNow,
+      );
+      await database.into(database.cards).insert(cardToCompanion(card));
+      return <Card>[card];
+    });
   }
 
   @override
@@ -70,29 +111,92 @@ class DriftCardRepository implements CardRepository {
     required Card card,
     required CardDraft draft,
     required DateTime now,
-  }) {
-    throw UnimplementedError(
-      'DriftCardRepository.updateCard: красная фаза итерации 2',
-    );
+  }) async {
+    final DateTime utcNow = now.toUtc();
+    return database.transaction<Card>(() async {
+      final Card? existing = await cardById(card.id);
+      if (existing == null) {
+        throw StateError('Карточка не найдена: ${card.id}');
+      }
+      final CardDraft normalized = draft.normalized();
+      final Card updated = Card(
+        id: existing.id,
+        deckId: existing.deckId,
+        front: normalized.front,
+        back: normalized.back,
+        hint: normalized.hint,
+        cardType: existing.cardType,
+        tags: normalized.tags,
+        mediaIds: existing.mediaIds,
+        latex: existing.latex,
+        occlusionJson: existing.occlusionJson,
+        sourceDocId: existing.sourceDocId,
+        sourceExcerpt: normalized.sourceExcerpt,
+        state: existing.state,
+        fsrsJson: existing.fsrsJson,
+        due: existing.due,
+        suspended: existing.suspended,
+        buriedUntil: existing.buriedUntil,
+        flagged: existing.flagged,
+        siblingId: existing.siblingId,
+        contentHash: contentHashOf(
+          front: normalized.front,
+          back: normalized.back,
+        ),
+        createdAt: existing.createdAt,
+        updatedAt: utcNow,
+      );
+      final int written =
+          await (database.update(database.cards)
+                ..where((table) => table.id.equals(existing.id)))
+              .write(cardToCompanion(updated));
+      if (written != 1) {
+        throw StateError('Карточка не обновлена: ${card.id}');
+      }
+      return updated;
+    });
   }
 
   @override
   Future<void> deleteCard(String cardId) {
-    throw UnimplementedError(
-      'DriftCardRepository.deleteCard: красная фаза итерации 2',
-    );
+    return database.transaction<void>(() async {
+      final Card? existing = await cardById(cardId);
+      if (existing == null) return;
+      final String? siblingId = existing.siblingId;
+      if (siblingId != null) {
+        await (database.update(database.cards)
+              ..where((table) => table.id.equals(siblingId)))
+            .write(const CardsCompanion(siblingId: Value<String?>(null)));
+      }
+      await (database.delete(
+        database.cards,
+      )..where((table) => table.id.equals(cardId))).go();
+    });
   }
 
-  /// Собирает новую карточку в памяти (id/даты/хеш) — без записи в БД.
-  ///
-  /// Используется транзакцией `createCards` и тестами.
-  Card buildCard({
+  Card _newCard({
+    required String id,
     required String deckId,
+    required String front,
+    required String back,
     required CardDraft draft,
+    required String? siblingId,
     required DateTime now,
   }) {
-    throw UnimplementedError(
-      'DriftCardRepository.buildCard: красная фаза итерации 2',
+    return Card(
+      id: id,
+      deckId: deckId,
+      front: front,
+      back: back,
+      hint: draft.hint,
+      cardType: draft.cardType,
+      tags: draft.tags,
+      sourceExcerpt: draft.sourceExcerpt,
+      state: CardState.newCard,
+      siblingId: siblingId,
+      contentHash: contentHashOf(front: front, back: back),
+      createdAt: now,
+      updatedAt: now,
     );
   }
 }

@@ -85,47 +85,50 @@ void main() {
       expect(created.single.tags, <String>['тег']);
     });
 
-    test('basic_reversed: две строки с взаимными sibling_id (SPEC A5)', () async {
-      final created = await repository.createCards(
-        deckId: 'deck-1',
-        draft: const CardDraft(
-          front: 'Термин',
-          back: 'Определение',
-          cardType: CardType.basicReversed,
-        ),
-        now: now,
-      );
+    test(
+      'basic_reversed: две строки с взаимными sibling_id (SPEC A5)',
+      () async {
+        final created = await repository.createCards(
+          deckId: 'deck-1',
+          draft: const CardDraft(
+            front: 'Термин',
+            back: 'Определение',
+            cardType: CardType.basicReversed,
+          ),
+          now: now,
+        );
 
-      expect(created, hasLength(2));
-      final first = created[0];
-      final second = created[1];
-      expect(first.cardType, CardType.basicReversed);
-      expect(second.cardType, CardType.basicReversed);
-      expect(first.front, 'Термин');
-      expect(first.back, 'Определение');
-      expect(second.front, 'Определение');
-      expect(second.back, 'Термин');
-      expect(first.siblingId, second.id);
-      expect(second.siblingId, first.id);
-      expect(first.createdAt, now);
-      expect(second.createdAt, now);
-      expect(
-        first.contentHash,
-        contentHashOf(front: 'Термин', back: 'Определение'),
-      );
-      expect(
-        second.contentHash,
-        contentHashOf(front: 'Определение', back: 'Термин'),
-      );
+        expect(created, hasLength(2));
+        final first = created[0];
+        final second = created[1];
+        expect(first.cardType, CardType.basicReversed);
+        expect(second.cardType, CardType.basicReversed);
+        expect(first.front, 'Термин');
+        expect(first.back, 'Определение');
+        expect(second.front, 'Определение');
+        expect(second.back, 'Термин');
+        expect(first.siblingId, second.id);
+        expect(second.siblingId, first.id);
+        expect(first.createdAt, now);
+        expect(second.createdAt, now);
+        expect(
+          first.contentHash,
+          contentHashOf(front: 'Термин', back: 'Определение'),
+        );
+        expect(
+          second.contentHash,
+          contentHashOf(front: 'Определение', back: 'Термин'),
+        );
 
-      final rows = await repository.cardsByDeck('deck-1');
-      expect(rows, hasLength(2));
-      final byId = <String, Card>{
-        for (final Card card in rows) card.id: card,
-      };
-      expect(byId[first.id]!.siblingId, second.id);
-      expect(byId[second.id]!.siblingId, first.id);
-    });
+        final rows = await repository.cardsByDeck('deck-1');
+        expect(rows, hasLength(2));
+        final byId = <String, Card>{
+          for (final Card card in rows) card.id: card,
+        };
+        expect(byId[first.id]!.siblingId, second.id);
+        expect(byId[second.id]!.siblingId, first.id);
+      },
+    );
 
     test('созданные basic_reversed-карточки видны в потоке колоды', () async {
       await repository.createCards(

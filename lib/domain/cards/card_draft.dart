@@ -85,15 +85,65 @@ class CardDraft {
 
   /// Разбирает строку тегов из формы: запятые → trim → убрать `#` → пустые
   /// и дубликаты. Порядок сохраняется (SPEC A8.4).
-  static List<String> parseTags(String raw) => const <String>['red-phase'];
+  static List<String> parseTags(String raw) {
+    final result = <String>[];
+    for (final String part in raw.split(',')) {
+      var tag = part.trim();
+      while (tag.startsWith('#')) {
+        tag = tag.substring(1).trim();
+      }
+      if (tag.isEmpty || result.contains(tag)) continue;
+      result.add(tag);
+    }
+    return List<String>.unmodifiable(result);
+  }
 
   /// Нормализованный черновик: trim сторон, подсказки и цитаты; теги — как
   /// [parseTags]. Пустые подсказка/цитата → `null`.
-  CardDraft normalized() => this;
+  CardDraft normalized() {
+    final String normalizedHint = (hint ?? '').trim();
+    final String normalizedExcerpt = (sourceExcerpt ?? '').trim();
+    return CardDraft(
+      front: front.trim(),
+      back: back.trim(),
+      hint: normalizedHint.isEmpty ? null : normalizedHint,
+      tags: parseTags(tags.join(',')),
+      cardType: cardType,
+      sourceExcerpt: normalizedExcerpt.isEmpty ? null : normalizedExcerpt,
+    );
+  }
 
   /// Ошибки валидации по полям; пустая карта — черновик валиден.
-  Map<CardDraftField, CardValidationError> validate() =>
-      const <CardDraftField, CardValidationError>{};
+  ///
+  /// Валидация идёт по нормализованным значениям: пробелы по краям не делают
+  /// front непустым (SPEC A8.4, ADR-009).
+  Map<CardDraftField, CardValidationError> validate() {
+    final CardDraft value = normalized();
+    final errors = <CardDraftField, CardValidationError>{};
+    if (value.front.isEmpty) {
+      errors[CardDraftField.front] = CardValidationError.frontEmpty;
+    } else if (value.front.length > frontMaxLength) {
+      errors[CardDraftField.front] = CardValidationError.frontTooLong;
+    }
+    // У cloze back может быть пустым (SPEC A8.1, правило 3); длина проверяется
+    // для всех типов.
+    if (value.back.isEmpty) {
+      if (value.cardType != CardType.cloze) {
+        errors[CardDraftField.back] = CardValidationError.backEmpty;
+      }
+    } else if (value.back.length > backMaxLength) {
+      errors[CardDraftField.back] = CardValidationError.backTooLong;
+    }
+    if (value.tags.length > maxTags) {
+      errors[CardDraftField.tags] = CardValidationError.tagsTooMany;
+    }
+    final String? excerpt = value.sourceExcerpt;
+    if (excerpt != null && excerpt.length > sourceExcerptMaxLength) {
+      errors[CardDraftField.sourceExcerpt] =
+          CardValidationError.sourceExcerptTooLong;
+    }
+    return errors;
+  }
 
   /// Валиден ли черновик.
   bool get isValid => validate().isEmpty;

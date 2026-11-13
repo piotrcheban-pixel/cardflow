@@ -40,10 +40,7 @@ void main() {
       final cards = <Card>[
         card(id: 'ok'),
         card(id: 'suspended', suspended: true),
-        card(
-          id: 'buried',
-          buriedUntil: now.add(const Duration(hours: 1)),
-        ),
+        card(id: 'buried', buriedUntil: now.add(const Duration(hours: 1))),
         card(
           id: 'unburied',
           buriedUntil: now.subtract(const Duration(hours: 1)),
@@ -83,19 +80,13 @@ void main() {
 
     test('порядок: просроченные по due, затем новые по createdAt', () {
       final cards = <Card>[
-        card(
-          id: 'new-later',
-          createdAt: DateTime.utc(2026, 11, 12),
-        ),
+        card(id: 'new-later', createdAt: DateTime.utc(2026, 11, 12)),
         card(
           id: 'due-later',
           state: CardState.review,
           due: now.subtract(const Duration(hours: 1)),
         ),
-        card(
-          id: 'new-earlier',
-          createdAt: DateTime.utc(2026, 11, 11),
-        ),
+        card(id: 'new-earlier', createdAt: DateTime.utc(2026, 11, 11)),
         card(
           id: 'due-earlier',
           state: CardState.relearning,

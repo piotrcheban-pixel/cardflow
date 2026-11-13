@@ -94,8 +94,13 @@ void main() {
         1e-9,
       ),
     );
-    expect(log.actualDays, isNull, reason: 'первое повторение — фактического '
-        'интервала ещё нет');
+    expect(
+      log.actualDays,
+      isNull,
+      reason:
+          'первое повторение — фактического '
+          'интервала ещё нет',
+    );
     expect(log.elapsedMs, 7000);
 
     expect(undo.previousCard, before);
@@ -103,55 +108,61 @@ void main() {
     expect(undo.previousCard.fsrsJson, isNull);
   });
 
-  test('recordReview: actual_days считается от lastReview повторения', () async {
-    final firstReviewAt = now.subtract(const Duration(days: 1));
-    final first = outcomeFor(
-      SchedulingCard.newCard(cardId: 'card-1', now: firstReviewAt),
-      Rating.good,
-      at: firstReviewAt,
-    );
-    await insertCardRow(
-      db,
-      id: 'card-1',
-      deckId: 'deck-1',
-      state: first.state.wireName,
-      fsrsJson: jsonEncode(first.toJson()),
-      due: first.due.millisecondsSinceEpoch,
-      createdAt: 100,
-      updatedAt: 100,
-    );
-    final outcome = outcomeFor(first, Rating.good);
+  test(
+    'recordReview: actual_days считается от lastReview повторения',
+    () async {
+      final firstReviewAt = now.subtract(const Duration(days: 1));
+      final first = outcomeFor(
+        SchedulingCard.newCard(cardId: 'card-1', now: firstReviewAt),
+        Rating.good,
+        at: firstReviewAt,
+      );
+      await insertCardRow(
+        db,
+        id: 'card-1',
+        deckId: 'deck-1',
+        state: first.state.wireName,
+        fsrsJson: jsonEncode(first.toJson()),
+        due: first.due.millisecondsSinceEpoch,
+        createdAt: 100,
+        updatedAt: 100,
+      );
+      final outcome = outcomeFor(first, Rating.good);
 
-    await reviews.recordReview(
-      cardId: 'card-1',
-      rating: Rating.good,
-      reviewedAt: now,
-      outcome: outcome,
-      mode: reviewModeClassic,
-    );
-
-    final log = (await db.select(db.reviewLogs).get()).single;
-    expect(log.actualDays, closeTo(1.0, 1e-9));
-  });
-
-  test('recordReview: несуществующая карточка — ошибка, лог не пишется', () async {
-    final outcome = outcomeFor(
-      SchedulingCard.newCard(cardId: 'нет-такой', now: now),
-      Rating.good,
-    );
-
-    await expectLater(
-      reviews.recordReview(
-        cardId: 'нет-такой',
+      await reviews.recordReview(
+        cardId: 'card-1',
         rating: Rating.good,
         reviewedAt: now,
         outcome: outcome,
         mode: reviewModeClassic,
-      ),
-      throwsStateError,
-    );
-    expect(await db.select(db.reviewLogs).get(), isEmpty);
-  });
+      );
+
+      final log = (await db.select(db.reviewLogs).get()).single;
+      expect(log.actualDays, closeTo(1.0, 1e-9));
+    },
+  );
+
+  test(
+    'recordReview: несуществующая карточка — ошибка, лог не пишется',
+    () async {
+      final outcome = outcomeFor(
+        SchedulingCard.newCard(cardId: 'нет-такой', now: now),
+        Rating.good,
+      );
+
+      await expectLater(
+        reviews.recordReview(
+          cardId: 'нет-такой',
+          rating: Rating.good,
+          reviewedAt: now,
+          outcome: outcome,
+          mode: reviewModeClassic,
+        ),
+        throwsStateError,
+      );
+      expect(await db.select(db.reviewLogs).get(), isEmpty);
+    },
+  );
 
   test('undoReview: удаляет лог и восстанавливает снимок карточки', () async {
     await insertCardRow(

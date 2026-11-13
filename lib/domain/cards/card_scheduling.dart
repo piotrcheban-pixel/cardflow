@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'card.dart';
 import '../scheduling/scheduling_card.dart';
 
@@ -13,8 +15,33 @@ abstract final class CardSchedulingMapper {
   /// Если у карточки уже есть `fsrs_json` — состояние берётся из него (FSRS —
   /// источник правды по `stability`/`difficulty`/`lastReview`/`step`). Иначе
   /// карточка считается новой: `due = card.due ?? now`, шаг 0.
+  ///
+  /// Битый или чужой `fsrs_json` — [FormatException]: тихий сброс в «новую»
+  /// карточку потерял бы историю повторений.
   static SchedulingCard toSchedulingCard(Card card, {required DateTime now}) {
-    return SchedulingCard.newCard(cardId: card.id, now: now);
+    final String? raw = card.fsrsJson;
+    if (raw == null) {
+      return SchedulingCard.newCard(cardId: card.id, now: card.due ?? now);
+    }
+    final Object? decoded = jsonDecode(raw);
+    if (decoded is! Map<String, dynamic>) {
+      throw FormatException('fsrs_json должен быть JSON-объектом: $raw');
+    }
+    final SchedulingCard scheduling;
+    try {
+      scheduling = SchedulingCard.fromJson(decoded);
+    } on FormatException {
+      rethrow;
+    } catch (error) {
+      throw FormatException('Битый fsrs_json: $error');
+    }
+    if (scheduling.cardId != card.id) {
+      throw FormatException(
+        'fsrs_json принадлежит другой карточке: '
+        '${scheduling.cardId} != ${card.id}',
+      );
+    }
+    return scheduling;
   }
 
   /// Возвращает карточку с применённым результатом оценки: `state`,
@@ -24,6 +51,29 @@ abstract final class CardSchedulingMapper {
     SchedulingCard outcome, {
     required DateTime updatedAt,
   }) {
-    return card;
+    return Card(
+      id: card.id,
+      deckId: card.deckId,
+      front: card.front,
+      back: card.back,
+      hint: card.hint,
+      cardType: card.cardType,
+      tags: card.tags,
+      mediaIds: card.mediaIds,
+      latex: card.latex,
+      occlusionJson: card.occlusionJson,
+      sourceDocId: card.sourceDocId,
+      sourceExcerpt: card.sourceExcerpt,
+      state: outcome.state,
+      fsrsJson: jsonEncode(outcome.toJson()),
+      due: outcome.due,
+      suspended: card.suspended,
+      buriedUntil: card.buriedUntil,
+      flagged: card.flagged,
+      siblingId: card.siblingId,
+      contentHash: card.contentHash,
+      createdAt: card.createdAt,
+      updatedAt: updatedAt,
+    );
   }
 }

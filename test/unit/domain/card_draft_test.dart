@@ -8,10 +8,10 @@ import 'package:cardflow/domain/cards/card_draft.dart';
 void main() {
   group('CardDraft.parseTags (SPEC A8.4)', () {
     test('разбивает строку, убирает # и пустые, сохраняет порядок', () {
-      expect(
-        CardDraft.parseTags(' тег1, #тег2 ,, тег1  , # '),
-        <String>['тег1', 'тег2'],
-      );
+      expect(CardDraft.parseTags(' тег1, #тег2 ,, тег1  , # '), <String>[
+        'тег1',
+        'тег2',
+      ]);
     });
 
     test('пустая строка — пустой список', () {
@@ -20,31 +20,31 @@ void main() {
     });
 
     test('два тега с решёткой и дубликатами после нормализации', () {
-      expect(
-        CardDraft.parseTags('#а, б, #а, #б, в'),
-        <String>['а', 'б', 'в'],
-      );
+      expect(CardDraft.parseTags('#а, б, #а, #б, в'), <String>['а', 'б', 'в']);
     });
   });
 
   group('CardDraft.normalized', () {
-    test('trim полей, пустые hint/sourceExcerpt → null, теги нормализуются', () {
-      const draft = CardDraft(
-        front: '  Вопрос  ',
-        back: ' Ответ\n',
-        hint: '   ',
-        tags: <String>[' #тег ', ''],
-        sourceExcerpt: '  Цитата  ',
-      );
+    test(
+      'trim полей, пустые hint/sourceExcerpt → null, теги нормализуются',
+      () {
+        const draft = CardDraft(
+          front: '  Вопрос  ',
+          back: ' Ответ\n',
+          hint: '   ',
+          tags: <String>[' #тег ', ''],
+          sourceExcerpt: '  Цитата  ',
+        );
 
-      final normalized = draft.normalized();
+        final normalized = draft.normalized();
 
-      expect(normalized.front, 'Вопрос');
-      expect(normalized.back, 'Ответ');
-      expect(normalized.hint, isNull);
-      expect(normalized.tags, <String>['тег']);
-      expect(normalized.sourceExcerpt, 'Цитата');
-    });
+        expect(normalized.front, 'Вопрос');
+        expect(normalized.back, 'Ответ');
+        expect(normalized.hint, isNull);
+        expect(normalized.tags, <String>['тег']);
+        expect(normalized.sourceExcerpt, 'Цитата');
+      },
+    );
 
     test('нормализация не теряет тип карточки', () {
       const draft = CardDraft(
@@ -139,8 +139,7 @@ void main() {
         sourceExcerpt: 'ц' * 401,
       );
       expect(draft.validate(), <CardDraftField, CardValidationError>{
-        CardDraftField.sourceExcerpt:
-            CardValidationError.sourceExcerptTooLong,
+        CardDraftField.sourceExcerpt: CardValidationError.sourceExcerptTooLong,
       });
       expect(CardDraft.sourceExcerptMaxLength, 400);
     });
