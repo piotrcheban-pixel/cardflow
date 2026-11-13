@@ -10,8 +10,9 @@ Xcode, Linux — отсутствуют. **`DEEPSEEK_API_KEY`: present в Window
 **800 passed + 1 skipped**; `fvm flutter test test/live --tags live` → **1 passed** (DeepSeek, L30);
 `fvm flutter analyze` → No issues; `fvm dart format --set-exit-if-changed lib test` → 190 files, 0 changed.
 Покрытие 95.1% и `build windows --release` — из прогона 3b, в этой сессии не перемерялись.
-**CI:** 3b `43501572437`, ADR-013 `43505863077`, live-верификация L30 `43510331361` (коммит `a2568ea`) —
-все **9/9 job success**; прогон на финальном HEAD этой правки — статус в отчёте сессии.
+**CI:** 3b `43501572437`, ADR-013 `43505863077`, live-верификация L30 `43510331361` (`a2568ea`),
+host-facts `43511718280` (`384ca43`) — все **9/9 job success**; прогон на финальном HEAD этой правки —
+статус в отчёте сессии.
 
 ## Следующее действие
 
@@ -19,10 +20,12 @@ Xcode, Linux — отсутствуют. **`DEEPSEEK_API_KEY`: present в Window
    drag-n-drop/файловый picker, чанкинг по бюджету модели, оценка токенов, прогресс/отмена, дедупликация,
    `generation_jobs`, предпросмотр и импорт. Слой готов и подтверждён живьём (DeepSeek): `CardGenerationService`
    (+ OpenAI-compatible), `ApiKeyStore`, `GenerationSettingsStore`, `GenerationErrorCode`, `truncated`, `CancelToken`.
-2. **Остаток L30 (опционально, по согласованию):** живой success-путь DeepSeek закрыт 2026-11-14; открыты
-   живые 401/403/429, `Retry-After`, `truncated`/`refused`, OpenAI/Gemini/Anthropic (нет ключей, L1) и
-   Ollama/LM Studio (L32). Для 401/429 нужен согласованный способ (фальшивый ключ/нагрузка не подставлялись).
-3. Открытые вопросы к владельцу — только команда на старт 3c; вопрос по live-ключу DeepSeek закрыт.
+2. **L30 — success-путь DeepSeek закрыт 2026-11-14** (live-тест 1 passed). Живые 401/403/429/`Retry-After`/
+   `truncated`/`refused` **осознанно не проверяются** — решение владельца 2026-11-14 (ADR-014); остаток L30
+   остаётся известным ограничением, отдельного шага в плане нет. OpenAI/Gemini/Anthropic — L1, Ollama/LM
+   Studio — L32 (ключей/серверов нет).
+3. Открытые вопросы к владельцу — только команда на старт 3c; вопросы по live-ключу DeepSeek и по границам
+   live-проверки закрыты (ADR-014).
 
 ## Расширение 3b — OpenAI-compatible (ADR-013)
 
@@ -66,9 +69,9 @@ Xcode, Linux — отсутствуют. **`DEEPSEEK_API_KEY`: present в Window
 ## Открытые вопросы к владельцу
 
 1. Команда на старт 3c (после отчёта; 3c не начиналась).
-2. (Закрыт 2026-11-14) Live-ключ DeepSeek: `DEEPSEEK_API_KEY` присутствует в Windows User scope, live-тест
-   прошёл; отдельного вопроса больше нет. Остаток L30 (401/429/`Retry-After` живьём) — по согласованию,
-   если владелец захочет проверять их на живом API.
+2. (Закрыты 2026-11-14) Live-ключ DeepSeek — проверен живьём; границы live-проверки — **ADR-014**:
+   негативные контракты (401/403/429/`Retry-After`) живьём не проверяются, остаток L30 остаётся известным
+   ограничением. Вопросов к владельцу больше нет.
 
 ## Известные ограничения (актуальные)
 

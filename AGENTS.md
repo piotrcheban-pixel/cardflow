@@ -94,7 +94,8 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   (`[Environment]::GetEnvironmentVariable(...,'User')`) и передаётся **дочернему** процессу; значение не печатать.
   `fvm flutter test test/live --tags live` → **1 passed** (`deepseek-chat`, 3 карточки, 1231 токен): живой
   `/chat/completions`, Bearer, разбор ответа, валидация A8.4 и контентные правила. Детали —
-  `journal/iteration-3b/live-l30.md`. OpenAI/Gemini/Anthropic живьём не проверялись (L1).
+  `journal/iteration-3b/live-l30.md`. Негативные live-контракты (401/403/429/`Retry-After`) не проверяются —
+  ADR-014. OpenAI/Gemini/Anthropic живьём не проверялись (L1).
 - GitHub-remote: `origin` → `piotrcheban-pixel/cardflow` (private); CI — GitHub Actions (`.github/workflows/ci.yml`). Push выполняется по команде владельца (хука `confirm-git-push` нет).
 - **PDF-тесты и PDFium в CI (L26, с 2026-11-13):** job `test` скачивает pinned PDFium
   (`bblanchon/pdfium-binaries` `chromium/8125` — тот же релиз, что build-hook `pdfium_dart` 0.4.1) на всех трёх ОС,
@@ -102,4 +103,5 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   `test/guards/ci_pdfium_test.dart`. При обновлении `pdfium_dart`/`pdfrx` синхронно обновлять пин, ассеты и sha256
   в `.github/workflows/ci.yml` (ADR-010 §11). В корне `.gitattributes` `* text=auto eol=lf`: guard-тесты сверяют
   точные маркеры файлов, CRLF из checkout-а ломал L26-guard на Windows.
-- **CI и диск раннера (с 2026-11-13):** перед `flutter pub get` все job'ы выполняют шаг `Free disk space` (Linux: dotnet/android SDK/ghc/boost/CodeQL + `docker image prune --all`; macOS: Android SDK/Homebrew cache/dotnet) с `df -h` до/после; Android-сборка дополнительно чистит `~/.gradle/caches` перед сборкой. Android SDK в android-job сохраняется (`KEEP_ANDROID_SDK`) — без него `flutter build apk` не работает. Последний зелёный прогон (на момент записи) — `43510331361` (9/9 job success; коммит `a2568ea`, live-верификация L30).
+- **CI и диск раннера (с 2026-11-13):** перед `flutter pub get` все job'ы выполняют шаг `Free disk space` (Linux: dotnet/android SDK/ghc/boost/CodeQL + `docker image prune --all`; macOS: Android SDK/Homebrew cache/dotnet) с `df -h` до/после; Android-сборка дополнительно чистит `~/.gradle/caches` перед сборкой. Android SDK в android-job сохраняется (`KEEP_ANDROID_SDK`) — без него `flutter build apk` не работает. Прогоны docs-коммитов live-верификации L30 (`a2568ea`, `384ca43`) — 9/9 job success
+(`43510331361`, `43511718280`); актуальный статус — вкладка Actions репозитория.
