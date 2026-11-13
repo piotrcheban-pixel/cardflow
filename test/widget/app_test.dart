@@ -10,6 +10,7 @@ import 'package:cardflow/ui/decks/deck_screen.dart';
 import 'package:cardflow/ui/m3e/m3e.dart';
 import 'package:cardflow/ui/review/review_session_screen.dart';
 import 'package:cardflow/ui/router/app_router.dart';
+import 'package:cardflow/ui/settings/generation_settings_screen.dart';
 
 import '../helpers/decks_fakes.dart';
 import '../helpers/pump_app.dart';
@@ -129,6 +130,33 @@ void main() {
         expect(find.text('Вопрос production-роутера'), findsOneWidget);
       },
     );
+
+    testWidgets('production-роутер: кнопка настроек на «Колодах» открывает '
+        '«Настройки генерации» (ADR-013)', (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: decksOverrides(
+            deckRepository: FakeDeckRepository(
+              summaries: <DeckSummary>[
+                makeSummary(id: 'deck-1', name: 'Испанский', totalCards: 1),
+              ],
+            ),
+          ),
+          child: const CardFlowApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final AppLocalizations l10n = l10nOf(tester);
+
+      await tester.tap(find.byTooltip(l10n.settingsOpenTooltip));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(GenerationSettingsScreen), findsOneWidget);
+      expect(find.text(l10n.settingsTitle), findsOneWidget);
+      // Настройки читаются через production-провайдеры с фейками
+      // (без drift/secure storage в тесте).
+      expect(find.text(l10n.settingsOpenAiCompatibleTitle), findsOneWidget);
+    });
   });
 
   group('StartupErrorApp', () {

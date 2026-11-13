@@ -1,5 +1,7 @@
 import 'package:cardflow/domain/cards/card_repository.dart';
 import 'package:cardflow/domain/decks/deck_repository.dart';
+import 'package:cardflow/domain/generation/api_key_store.dart';
+import 'package:cardflow/domain/generation/generation_settings_store.dart';
 import 'package:cardflow/domain/review/review_repository.dart';
 import 'package:cardflow/domain/scheduling/scheduler.dart';
 import 'package:cardflow/domain/transfer/deck_transfer_service.dart';
@@ -19,6 +21,7 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'decks_fakes.dart';
+import 'generation_fakes.dart';
 import 'review_fakes.dart';
 
 /// Тестовый harness приложения CardFlow (итерация 1).
@@ -121,6 +124,10 @@ List<GoRoute> decksRoutes() {
 }
 
 /// Подменяет data-слой фейками (без БД, плагинов и сети).
+///
+/// [generationSettingsStore] и [apiKeyStore] по умолчанию — in-memory фейки
+/// (`FakeGenerationSettingsStore` / `FakeApiKeyStore`, ADR-013): экран настроек
+/// генерации не должен трогать drift и `flutter_secure_storage` в тестах.
 List<Override> decksOverrides({
   required DeckRepository deckRepository,
   CardRepository? cardRepository,
@@ -128,6 +135,8 @@ List<Override> decksOverrides({
   Scheduler? scheduler,
   DeckTransferService? transferService,
   FileGateway? fileGateway,
+  GenerationSettingsStore? generationSettingsStore,
+  ApiKeyStore? apiKeyStore,
 }) {
   return <Override>[
     deckRepositoryProvider.overrideWithValue(deckRepository),
@@ -142,6 +151,10 @@ List<Override> decksOverrides({
       transferService ?? FakeDeckTransferService(),
     ),
     fileGatewayProvider.overrideWithValue(fileGateway ?? FakeFileGateway()),
+    generationSettingsStoreProvider.overrideWithValue(
+      generationSettingsStore ?? FakeGenerationSettingsStore(),
+    ),
+    apiKeyStoreProvider.overrideWithValue(apiKeyStore ?? FakeApiKeyStore()),
   ];
 }
 
