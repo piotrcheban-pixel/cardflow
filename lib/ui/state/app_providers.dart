@@ -98,16 +98,16 @@ final apiKeyStoreProvider = Provider<ApiKeyStore>((ref) {
 });
 
 /// Хранилище настроек OpenAI-совместимого сервера (`app_settings`, ADR-013).
-final generationSettingsStoreProvider = Provider<GenerationSettingsStore>((ref) {
+final generationSettingsStoreProvider = Provider<GenerationSettingsStore>((
+  ref,
+) {
   return DriftGenerationSettingsStore(ref.watch(appDatabaseProvider));
 });
 
 /// Текущие настройки OpenAI-совместимого сервера для экрана настроек.
 final openAiCompatibleSettingsProvider =
     FutureProvider<OpenAiCompatibleSettings>((ref) {
-      return ref
-          .watch(generationSettingsStoreProvider)
-          .readOpenAiCompatible();
+      return ref.watch(generationSettingsStoreProvider).readOpenAiCompatible();
     });
 
 /// Адаптеры провайдеров для сервиса генерации (SPEC A8.2, ADR-013).

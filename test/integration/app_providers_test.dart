@@ -75,22 +75,25 @@ void main() {
     );
   });
 
-  test('настройки OpenAI-совместимого сервера идут через реальную БД', () async {
-    final store = container.read(generationSettingsStoreProvider);
-    await store.writeOpenAiCompatible(
-      const OpenAiCompatibleSettings(
-        baseUrl: 'http://localhost:1234/v1',
-        model: 'lm-studio-model',
-      ),
-    );
+  test(
+    'настройки OpenAI-совместимого сервера идут через реальную БД',
+    () async {
+      final store = container.read(generationSettingsStoreProvider);
+      await store.writeOpenAiCompatible(
+        const OpenAiCompatibleSettings(
+          baseUrl: 'http://localhost:1234/v1',
+          model: 'lm-studio-model',
+        ),
+      );
 
-    final fromGraph = await container
-        .read(generationSettingsStoreProvider)
-        .readOpenAiCompatible();
-    expect(fromGraph.baseUrl, 'http://localhost:1234/v1');
-    expect(fromGraph.model, 'lm-studio-model');
-    expect(await database.select(database.appSettings).get(), hasLength(1));
-  });
+      final fromGraph = await container
+          .read(generationSettingsStoreProvider)
+          .readOpenAiCompatible();
+      expect(fromGraph.baseUrl, 'http://localhost:1234/v1');
+      expect(fromGraph.model, 'lm-studio-model');
+      expect(await database.select(database.appSettings).get(), hasLength(1));
+    },
+  );
 
   test(
     'колода, созданная через репозиторий из провайдера, видна в потоке',

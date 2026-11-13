@@ -14,10 +14,7 @@ void main() {
       expect(GenerationProvider.openai.wireName, 'openai');
       expect(GenerationProvider.gemini.wireName, 'gemini');
       expect(GenerationProvider.anthropic.wireName, 'anthropic');
-      expect(
-        GenerationProvider.openaiCompatible.wireName,
-        'openai_compatible',
-      );
+      expect(GenerationProvider.openaiCompatible.wireName, 'openai_compatible');
       expect(GenerationProvider.values, hasLength(4));
     });
 

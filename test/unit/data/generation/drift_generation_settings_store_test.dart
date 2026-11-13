@@ -49,21 +49,24 @@ void main() {
     expect(jsonEncode(decoded), isNot(contains('apiKey')));
   });
 
-  test('битый JSON в строке настроек — пустые настройки, без исключения', () async {
-    await db
-        .into(db.appSettings)
-        .insert(
-          AppSettingsCompanion.insert(
-            key: 'generation.openai_compatible',
-            valueJson: 'не json',
-          ),
-        );
+  test(
+    'битый JSON в строке настроек — пустые настройки, без исключения',
+    () async {
+      await db
+          .into(db.appSettings)
+          .insert(
+            AppSettingsCompanion.insert(
+              key: 'generation.openai_compatible',
+              valueJson: 'не json',
+            ),
+          );
 
-    expect(
-      await store.readOpenAiCompatible(),
-      const OpenAiCompatibleSettings(),
-    );
-  });
+      expect(
+        await store.readOpenAiCompatible(),
+        const OpenAiCompatibleSettings(),
+      );
+    },
+  );
 
   test('JSON-объект с нестроковыми полями — терпим, поля пустые', () async {
     await db

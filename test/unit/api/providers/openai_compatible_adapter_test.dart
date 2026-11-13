@@ -58,7 +58,10 @@ void main() {
         );
         expect(request.headers['Content-Type'], 'application/json');
       }
-      expect(build(apiKey: ' test-key ').headers['Authorization'], 'Bearer test-key');
+      expect(
+        build(apiKey: ' test-key ').headers['Authorization'],
+        'Bearer test-key',
+      );
     });
 
     test('body как у OpenAI: model, system+user, strict json_schema', () {

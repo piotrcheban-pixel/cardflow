@@ -308,21 +308,24 @@ void main() {
       expect(transport.calls, 1);
     });
 
-    test('сервер не настроен (пустые настройки) → providerNotConfigured', () async {
-      final adapter = compatibleAdapter();
-      final service = serviceWith(
-        adapter: adapter,
-        transport: FakeGenerationTransport(response: <String, Object?>{}),
-        apiKeyStore: FakeApiKeyStore(),
-        settingsStore: FakeGenerationSettingsStore(),
-      );
+    test(
+      'сервер не настроен (пустые настройки) → providerNotConfigured',
+      () async {
+        final adapter = compatibleAdapter();
+        final service = serviceWith(
+          adapter: adapter,
+          transport: FakeGenerationTransport(response: <String, Object?>{}),
+          apiKeyStore: FakeApiKeyStore(),
+          settingsStore: FakeGenerationSettingsStore(),
+        );
 
-      await expectLater(
-        service.generate(compatibleRequest),
-        throwsGeneration(GenerationErrorCode.providerNotConfigured),
-      );
-      expect(adapter.buildCalls, 0);
-    });
+        await expectLater(
+          service.generate(compatibleRequest),
+          throwsGeneration(GenerationErrorCode.providerNotConfigured),
+        );
+        expect(adapter.buildCalls, 0);
+      },
+    );
 
     test('некорректный сохранённый base_url → providerNotConfigured', () async {
       final settingsStore = FakeGenerationSettingsStore(
@@ -341,30 +344,33 @@ void main() {
       );
     });
 
-    test('strict 400 → один fallback без response_format, ответ валиден', () async {
-      final fenced = '```json\n${cardsJson(<Map<String, Object?>>[])}\n```';
-      final adapter = compatibleAdapter(cardsJson: fenced);
-      final transport = FakeGenerationTransport(
-        response: <String, Object?>{},
-        errorsBeforeResponse: <Object?>[
-          const GenerationException(GenerationErrorCode.badRequest),
-        ],
-      );
-      final service = serviceWith(
-        adapter: adapter,
-        transport: transport,
-        apiKeyStore: FakeApiKeyStore(),
-        settingsStore: FakeGenerationSettingsStore(configured),
-      );
+    test(
+      'strict 400 → один fallback без response_format, ответ валиден',
+      () async {
+        final fenced = '```json\n${cardsJson(<Map<String, Object?>>[])}\n```';
+        final adapter = compatibleAdapter(cardsJson: fenced);
+        final transport = FakeGenerationTransport(
+          response: <String, Object?>{},
+          errorsBeforeResponse: <Object?>[
+            const GenerationException(GenerationErrorCode.badRequest),
+          ],
+        );
+        final service = serviceWith(
+          adapter: adapter,
+          transport: transport,
+          apiKeyStore: FakeApiKeyStore(),
+          settingsStore: FakeGenerationSettingsStore(configured),
+        );
 
-      final result = await service.generate(compatibleRequest);
+        final result = await service.generate(compatibleRequest);
 
-      expect(result.cards, isEmpty);
-      expect(transport.calls, 2);
-      expect(adapter.buildCalls, 2);
-      expect(adapter.buildArgs!.strictSchema, isFalse);
-      expect(adapter.buildArgs!.baseUrl, configured.baseUrl);
-    });
+        expect(result.cards, isEmpty);
+        expect(transport.calls, 2);
+        expect(adapter.buildCalls, 2);
+        expect(adapter.buildArgs!.strictSchema, isFalse);
+        expect(adapter.buildArgs!.baseUrl, configured.baseUrl);
+      },
+    );
 
     test('fallback тоже 400 → badRequest, не больше двух запросов', () async {
       final transport = FakeGenerationTransport(
@@ -388,45 +394,51 @@ void main() {
       expect(transport.calls, 2);
     });
 
-    test('без fallback-кода поведение прежнее: 5xx не повторяется сервисом', () async {
-      final transport = FakeGenerationTransport(
-        response: <String, Object?>{},
-        errorsBeforeResponse: <Object?>[
-          const GenerationException(GenerationErrorCode.serverUnavailable),
-        ],
-      );
-      final service = serviceWith(
-        adapter: compatibleAdapter(),
-        transport: transport,
-        apiKeyStore: FakeApiKeyStore(),
-        settingsStore: FakeGenerationSettingsStore(configured),
-      );
+    test(
+      'без fallback-кода поведение прежнее: 5xx не повторяется сервисом',
+      () async {
+        final transport = FakeGenerationTransport(
+          response: <String, Object?>{},
+          errorsBeforeResponse: <Object?>[
+            const GenerationException(GenerationErrorCode.serverUnavailable),
+          ],
+        );
+        final service = serviceWith(
+          adapter: compatibleAdapter(),
+          transport: transport,
+          apiKeyStore: FakeApiKeyStore(),
+          settingsStore: FakeGenerationSettingsStore(configured),
+        );
 
-      await expectLater(
-        service.generate(compatibleRequest),
-        throwsGeneration(GenerationErrorCode.serverUnavailable),
-      );
-      expect(transport.calls, 1);
-    });
+        await expectLater(
+          service.generate(compatibleRequest),
+          throwsGeneration(GenerationErrorCode.serverUnavailable),
+        );
+        expect(transport.calls, 1);
+      },
+    );
 
-    test('обычный подрядчик: badRequest не повторяется fallback-логикой', () async {
-      final transport = FakeGenerationTransport(
-        response: <String, Object?>{},
-        errorsBeforeResponse: <Object?>[
-          const GenerationException(GenerationErrorCode.badRequest),
-        ],
-      );
-      final service = serviceWith(
-        adapter: FakeProviderAdapter(provider: GenerationProvider.openai),
-        transport: transport,
-      );
+    test(
+      'обычный подрядчик: badRequest не повторяется fallback-логикой',
+      () async {
+        final transport = FakeGenerationTransport(
+          response: <String, Object?>{},
+          errorsBeforeResponse: <Object?>[
+            const GenerationException(GenerationErrorCode.badRequest),
+          ],
+        );
+        final service = serviceWith(
+          adapter: FakeProviderAdapter(provider: GenerationProvider.openai),
+          transport: transport,
+        );
 
-      await expectLater(
-        service.generate(request),
-        throwsGeneration(GenerationErrorCode.badRequest),
-      );
-      expect(transport.calls, 1);
-    });
+        await expectLater(
+          service.generate(request),
+          throwsGeneration(GenerationErrorCode.badRequest),
+        );
+        expect(transport.calls, 1);
+      },
+    );
 
     test('markdown вокруг JSON извлекается только у compatible-провайдера', () async {
       final tolerant = compatibleAdapter(
