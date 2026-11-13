@@ -598,5 +598,25 @@
   "deckAddCardTooltip": "Добавить карточку",
   "@deckAddCardTooltip": {
     "description": "Подсказка FAB mini «Добавить» на экране колоды (SPEC A6.3)."
+  },
+  "parserErrorUnreadableFile": "Не удалось прочитать файл",
+  "@parserErrorUnreadableFile": {
+    "description": "Ошибка парсинга: файл не удалось прочитать (SPEC A8.3)."
+  },
+  "parserErrorUnsupportedFormat": "Формат не поддерживается. Сохраните файл как DOCX или XLSX и попробуйте снова",
+  "@parserErrorUnsupportedFormat": {
+    "description": "Ошибка парсинга: формат не поддерживается, подсказка конвертировать (ADR-003)."
+  },
+  "parserErrorScannedPdf": "В файле нет текстового слоя. Похоже, это скан. Загрузите PDF с текстом",
+  "@parserErrorScannedPdf": {
+    "description": "Ошибка парсинга: PDF без текстового слоя, похоже на скан (SPEC A8.3)."
+  },
+  "parserErrorFileTooLarge": "Файл больше 25 МБ. Уменьшите файл и попробуйте снова",
+  "@parserErrorFileTooLarge": {
+    "description": "Ошибка парсинга: файл больше лимита 25 МБ (SPEC A8.3)."
+  },
+  "parserErrorEmptyText": "В файле нет текста",
+  "@parserErrorEmptyText": {
+    "description": "Ошибка парсинга: в документе нет извлекаемого текста."
   }
 }

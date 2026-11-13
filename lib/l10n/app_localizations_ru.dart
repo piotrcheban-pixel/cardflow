@@ -493,4 +493,22 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get deckAddCardTooltip => 'Добавить карточку';
+
+  @override
+  String get parserErrorUnreadableFile => 'Не удалось прочитать файл';
+
+  @override
+  String get parserErrorUnsupportedFormat =>
+      'Формат не поддерживается. Сохраните файл как DOCX или XLSX и попробуйте снова';
+
+  @override
+  String get parserErrorScannedPdf =>
+      'В файле нет текстового слоя. Похоже, это скан. Загрузите PDF с текстом';
+
+  @override
+  String get parserErrorFileTooLarge =>
+      'Файл больше 25 МБ. Уменьшите файл и попробуйте снова';
+
+  @override
+  String get parserErrorEmptyText => 'В файле нет текста';
 }

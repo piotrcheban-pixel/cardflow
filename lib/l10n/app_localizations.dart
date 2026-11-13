@@ -879,6 +879,36 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Добавить карточку'**
   String get deckAddCardTooltip;
+
+  /// Ошибка парсинга: файл не удалось прочитать (SPEC A8.3).
+  ///
+  /// In ru, this message translates to:
+  /// **'Не удалось прочитать файл'**
+  String get parserErrorUnreadableFile;
+
+  /// Ошибка парсинга: формат не поддерживается, подсказка конвертировать (ADR-003).
+  ///
+  /// In ru, this message translates to:
+  /// **'Формат не поддерживается. Сохраните файл как DOCX или XLSX и попробуйте снова'**
+  String get parserErrorUnsupportedFormat;
+
+  /// Ошибка парсинга: PDF без текстового слоя, похоже на скан (SPEC A8.3).
+  ///
+  /// In ru, this message translates to:
+  /// **'В файле нет текстового слоя. Похоже, это скан. Загрузите PDF с текстом'**
+  String get parserErrorScannedPdf;
+
+  /// Ошибка парсинга: файл больше лимита 25 МБ (SPEC A8.3).
+  ///
+  /// In ru, this message translates to:
+  /// **'Файл больше 25 МБ. Уменьшите файл и попробуйте снова'**
+  String get parserErrorFileTooLarge;
+
+  /// Ошибка парсинга: в документе нет извлекаемого текста.
+  ///
+  /// In ru, this message translates to:
+  /// **'В файле нет текста'**
+  String get parserErrorEmptyText;
 }
 
 class _AppLocalizationsDelegate
