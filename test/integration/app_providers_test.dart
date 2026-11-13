@@ -8,12 +8,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cardflow/data/cards/drift_card_repository.dart';
 import 'package:cardflow/data/db/app_database.dart';
 import 'package:cardflow/data/decks/drift_deck_repository.dart';
+import 'package:cardflow/data/review/drift_review_repository.dart';
 import 'package:cardflow/data/transfer/drift_deck_transfer_service.dart';
 import 'package:cardflow/data/transfer/file_picker_gateway.dart';
 import 'package:cardflow/data/transfer/media_store.dart';
 import 'package:cardflow/data/transfer/zip_deck_archive_codec.dart';
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/decks/deck_query.dart';
+import 'package:cardflow/domain/scheduling/scheduler.dart';
 import 'package:cardflow/domain/transfer/deck_archive.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
 
@@ -50,6 +52,11 @@ void main() {
   test('граф провайдеров собирается на реальных реализациях', () {
     expect(container.read(deckRepositoryProvider), isA<DriftDeckRepository>());
     expect(container.read(cardRepositoryProvider), isA<DriftCardRepository>());
+    expect(
+      container.read(reviewRepositoryProvider),
+      isA<DriftReviewRepository>(),
+    );
+    expect(container.read(schedulerProvider), isA<FsrsScheduler>());
     expect(
       container.read(deckArchiveCodecProvider),
       isA<ZipDeckArchiveCodec>(),

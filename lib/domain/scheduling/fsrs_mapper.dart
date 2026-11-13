@@ -32,7 +32,7 @@ abstract final class FsrsMapper {
   /// У FSRS 6 нет отдельного состояния `New`: новая карточка — это `learning`
   /// с шагом 0, поэтому `new` и `learning` отображаются одинаково.
   static fsrs.State toFsrsState(CardState state) => switch (state) {
-    CardState.newState || CardState.learning => fsrs.State.learning,
+    CardState.newCard || CardState.learning => fsrs.State.learning,
     CardState.review => fsrs.State.review,
     CardState.relearning => fsrs.State.relearning,
   };

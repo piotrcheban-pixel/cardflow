@@ -11,11 +11,30 @@ abstract final class AppRoutes {
   /// Экран конкретной колоды.
   static const String deck = 'deck';
 
+  /// Классическая сессия повторения.
+  static const String study = 'study';
+
+  /// Создание карточки.
+  static const String cardNew = 'cardNew';
+
+  /// Редактирование карточки.
+  static const String cardEdit = 'cardEdit';
+
   /// Путь списка колод.
   static const String decksPath = '/';
 
   /// Путь экрана колоды по id.
   static String deckPath(String deckId) => '/decks/$deckId';
+
+  /// Путь сессии по колоде.
+  static String studyPath(String deckId) => '/decks/$deckId/study';
+
+  /// Путь создания карточки в колоде.
+  static String cardNewPath(String deckId) => '/decks/$deckId/cards/new';
+
+  /// Путь редактирования карточки.
+  static String cardEditPath(String deckId, String cardId) =>
+      '/decks/$deckId/cards/$cardId/edit';
 }
 
 /// Собирает маршрутизатор приложения (ADR: GoRouter).

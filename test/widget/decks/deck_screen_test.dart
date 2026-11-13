@@ -2,8 +2,10 @@ import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/decks/deck_summary.dart';
 import 'package:cardflow/domain/transfer/deck_archive.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
+import 'package:cardflow/ui/cards/card_form_screen.dart';
 import 'package:cardflow/ui/decks/deck_screen.dart';
 import 'package:cardflow/ui/decks/decks_screen.dart';
+import 'package:cardflow/ui/review/review_session_screen.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart' hide Card;
 
@@ -283,6 +285,101 @@ void main() {
 
       expect(find.text(l10n.archiveErrorMediaMissing), findsOneWidget);
       expect(find.textContaining('сырой стектрейс'), findsNothing);
+    });
+  });
+
+  group('Колода: сессия и карточки (итерация 2)', () {
+    testWidgets('«Начать сессию»: выбор классического режима и переход', (
+      WidgetTester tester,
+    ) async {
+      final FakeDeckRepository repository = FakeDeckRepository(
+        summaries: <DeckSummary>[
+          makeSummary(
+            id: 'deck-1',
+            name: 'Испанский',
+            totalCards: 1,
+            newCards: 1,
+          ),
+        ],
+      );
+      final FakeCardRepository cards = FakeCardRepository(
+        cards: <Card>[
+          makeCard(id: 'card-1', deckId: 'deck-1', front: 'Вопрос'),
+        ],
+      );
+
+      await pumpDeck(tester, repository: repository, cards: cards);
+      await tester.pumpAndSettle();
+      final AppLocalizations l10n = l10nOf(tester);
+
+      await tester.tap(find.text(l10n.reviewStartSession));
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.reviewSessionModeTitle), findsOneWidget);
+      expect(find.text(l10n.reviewModeClassic), findsOneWidget);
+
+      await tester.tap(find.text(l10n.reviewModeClassic));
+      await tester.pumpAndSettle();
+      expect(find.byType(ReviewSessionScreen), findsOneWidget);
+      expect(find.text('Вопрос'), findsOneWidget);
+    });
+
+    testWidgets('«Начать сессию» без карточек — сообщение, без перехода', (
+      WidgetTester tester,
+    ) async {
+      final FakeDeckRepository repository = FakeDeckRepository(
+        summaries: <DeckSummary>[makeSummary(id: 'deck-1', name: 'Пустая')],
+      );
+
+      await pumpDeck(tester, repository: repository);
+      await tester.pumpAndSettle();
+      final AppLocalizations l10n = l10nOf(tester);
+
+      await tester.tap(find.text(l10n.reviewStartSession));
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.reviewStartEmptyMessage), findsOneWidget);
+      expect(find.byType(ReviewSessionScreen), findsNothing);
+    });
+
+    testWidgets('FAB «Добавить» открывает форму новой карточки', (
+      WidgetTester tester,
+    ) async {
+      final FakeDeckRepository repository = FakeDeckRepository(
+        summaries: <DeckSummary>[makeSummary(id: 'deck-1', name: 'Испанский')],
+      );
+
+      await pumpDeck(tester, repository: repository);
+      await tester.pumpAndSettle();
+      final AppLocalizations l10n = l10nOf(tester);
+
+      await tester.tap(find.byTooltip(l10n.deckAddCardTooltip));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(CardFormScreen), findsOneWidget);
+      expect(find.text(l10n.cardFormTitleNew), findsOneWidget);
+    });
+
+    testWidgets('тап по карточке открывает форму редактирования', (
+      WidgetTester tester,
+    ) async {
+      final FakeDeckRepository repository = FakeDeckRepository(
+        summaries: <DeckSummary>[makeSummary(id: 'deck-1', name: 'Испанский')],
+      );
+      final FakeCardRepository cards = FakeCardRepository(
+        cards: <Card>[
+          makeCard(id: 'card-1', deckId: 'deck-1', front: 'Вопрос-один'),
+        ],
+      );
+
+      await pumpDeck(tester, repository: repository, cards: cards);
+      await tester.pumpAndSettle();
+      final AppLocalizations l10n = l10nOf(tester);
+
+      await tester.tap(find.text('Вопрос-один'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(CardFormScreen), findsOneWidget);
+      expect(find.text(l10n.cardFormTitleEdit), findsOneWidget);
     });
   });
 }

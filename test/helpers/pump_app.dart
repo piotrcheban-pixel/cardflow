@@ -1,11 +1,15 @@
 import 'package:cardflow/domain/cards/card_repository.dart';
 import 'package:cardflow/domain/decks/deck_repository.dart';
+import 'package:cardflow/domain/review/review_repository.dart';
+import 'package:cardflow/domain/scheduling/scheduler.dart';
 import 'package:cardflow/domain/transfer/deck_transfer_service.dart';
 import 'package:cardflow/domain/transfer/file_gateway.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
+import 'package:cardflow/ui/cards/card_form_screen.dart';
 import 'package:cardflow/ui/decks/deck_screen.dart';
 import 'package:cardflow/ui/decks/decks_screen.dart';
 import 'package:cardflow/ui/m3e/m3e.dart';
+import 'package:cardflow/ui/review/review_session_screen.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
 import 'package:cardflow/ui/theme/app_theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,6 +19,7 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'decks_fakes.dart';
+import 'review_fakes.dart';
 
 /// Тестовый harness приложения CardFlow (итерация 1).
 ///
@@ -82,7 +87,7 @@ Widget appWithHome({required List<Override> overrides, required Widget home}) {
   );
 }
 
-/// Маршруты приложения итерации 1: «Колоды» (`/`) и «Колода» (`/decks/:id`).
+/// Маршруты приложения итерации 2: «Колоды», «Колода», сессия, форма карточки.
 List<GoRoute> decksRoutes() {
   return <GoRoute>[
     GoRoute(
@@ -95,6 +100,23 @@ List<GoRoute> decksRoutes() {
       builder: (BuildContext context, GoRouterState state) =>
           DeckScreen(deckId: state.pathParameters['id']!),
     ),
+    GoRoute(
+      path: '/decks/:id/study',
+      builder: (BuildContext context, GoRouterState state) =>
+          ReviewSessionScreen(deckId: state.pathParameters['id']!),
+    ),
+    GoRoute(
+      path: '/decks/:id/cards/new',
+      builder: (BuildContext context, GoRouterState state) =>
+          CardFormScreen(deckId: state.pathParameters['id']!),
+    ),
+    GoRoute(
+      path: '/decks/:id/cards/:cardId/edit',
+      builder: (BuildContext context, GoRouterState state) => CardFormScreen(
+        deckId: state.pathParameters['id']!,
+        cardId: state.pathParameters['cardId'],
+      ),
+    ),
   ];
 }
 
@@ -102,6 +124,8 @@ List<GoRoute> decksRoutes() {
 List<Override> decksOverrides({
   required DeckRepository deckRepository,
   CardRepository? cardRepository,
+  ReviewRepository? reviewRepository,
+  Scheduler? scheduler,
   DeckTransferService? transferService,
   FileGateway? fileGateway,
 }) {
@@ -110,6 +134,10 @@ List<Override> decksOverrides({
     cardRepositoryProvider.overrideWithValue(
       cardRepository ?? FakeCardRepository(),
     ),
+    reviewRepositoryProvider.overrideWithValue(
+      reviewRepository ?? FakeReviewRepository(),
+    ),
+    schedulerProvider.overrideWithValue(scheduler ?? FsrsScheduler()),
     deckTransferServiceProvider.overrideWithValue(
       transferService ?? FakeDeckTransferService(),
     ),

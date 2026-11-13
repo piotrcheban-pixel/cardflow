@@ -105,7 +105,7 @@ class FsrsScheduler implements Scheduler {
   static fsrs.Card _toFsrsCard(SchedulingCard card) => fsrs.Card(
     cardId: _intId(card.cardId),
     state: FsrsMapper.toFsrsState(card.state),
-    step: card.state == CardState.newState ? 0 : card.step,
+    step: card.state == CardState.newCard ? 0 : card.step,
     stability: card.stability,
     difficulty: card.difficulty,
     due: card.due.toUtc(),

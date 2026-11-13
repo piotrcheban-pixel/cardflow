@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:cardflow/domain/cards/card.dart';
+import 'package:cardflow/domain/cards/card_draft.dart';
 import 'package:cardflow/domain/cards/card_repository.dart';
 import 'package:cardflow/domain/decks/deck.dart';
 import 'package:cardflow/domain/decks/deck_query.dart';
@@ -62,22 +63,35 @@ Card makeCard({
   required String deckId,
   required String front,
   String back = 'Ответ',
+  String? hint,
   CardType cardType = CardType.basic,
   CardState state = CardState.newCard,
   List<String> tags = const <String>[],
   DateTime? due,
+  DateTime? createdAt,
+  DateTime? updatedAt,
+  String? sourceExcerpt,
+  String? fsrsJson,
+  String? siblingId,
+  bool suspended = false,
 }) {
+  final DateTime created = createdAt ?? fixturesNow;
   return Card(
     id: id,
     deckId: deckId,
     front: front,
     back: back,
+    hint: hint,
     cardType: cardType,
     state: state,
     tags: tags,
     due: due,
-    createdAt: fixturesNow,
-    updatedAt: fixturesNow,
+    sourceExcerpt: sourceExcerpt,
+    fsrsJson: fsrsJson,
+    siblingId: siblingId,
+    suspended: suspended,
+    createdAt: created,
+    updatedAt: updatedAt ?? created,
   );
 }
 
@@ -276,8 +290,65 @@ class FakeCardRepository implements CardRepository {
   final List<Card> _cards;
   final StreamController<void> _changes = StreamController<void>.broadcast();
 
+  /// Черновики, переданные в `createCards` (в порядке вызовов).
+  final List<CardDraft> createdDrafts = <CardDraft>[];
+
+  /// Колоды создания (в порядке вызовов).
+  final List<String> createdDeckIds = <String>[];
+
+  /// Карточки, переданные в `updateCard`.
+  final List<Card> updatedCards = <Card>[];
+
+  /// Id удалённых карточек (в порядке вызовов).
+  final List<String> deletedIds = <String>[];
+
+  /// Если задано — `cardsByDeck` бросает эту ошибку.
+  Object? cardsByDeckError;
+
+  /// Если задано — `createCards` бросает эту ошибку.
+  Object? createError;
+
+  /// Если задано — `updateCard` бросает эту ошибку.
+  Object? updateError;
+
+  /// Если задано — `deleteCard` бросает эту ошибку.
+  Object? deleteError;
+
+  int _createdCounter = 0;
+
   List<Card> _byDeck(String deckId) =>
       _cards.where((Card card) => card.deckId == deckId).toList();
+
+  void _emit() {
+    if (!_changes.isClosed) _changes.add(null);
+  }
+
+  Card _withContent(Card card, CardDraft draft, DateTime now) {
+    return Card(
+      id: card.id,
+      deckId: card.deckId,
+      front: draft.front,
+      back: draft.back,
+      hint: draft.hint,
+      cardType: card.cardType,
+      tags: draft.tags,
+      mediaIds: card.mediaIds,
+      latex: card.latex,
+      occlusionJson: card.occlusionJson,
+      sourceDocId: card.sourceDocId,
+      sourceExcerpt: draft.sourceExcerpt,
+      state: card.state,
+      fsrsJson: card.fsrsJson,
+      due: card.due,
+      suspended: card.suspended,
+      buriedUntil: card.buriedUntil,
+      flagged: card.flagged,
+      siblingId: card.siblingId,
+      contentHash: card.contentHash,
+      createdAt: card.createdAt,
+      updatedAt: now,
+    );
+  }
 
   @override
   Stream<List<Card>> watchCards(String deckId) async* {
@@ -288,7 +359,106 @@ class FakeCardRepository implements CardRepository {
   }
 
   @override
-  Future<List<Card>> cardsByDeck(String deckId) async => _byDeck(deckId);
+  Future<List<Card>> cardsByDeck(String deckId) async {
+    if (cardsByDeckError != null) throw cardsByDeckError!;
+    return _byDeck(deckId);
+  }
+
+  @override
+  Future<Card?> cardById(String id) async {
+    for (final Card card in _cards) {
+      if (card.id == id) return card;
+    }
+    return null;
+  }
+
+  @override
+  Future<List<Card>> createCards({
+    required String deckId,
+    required CardDraft draft,
+    required DateTime now,
+  }) async {
+    if (createError != null) throw createError!;
+    createdDrafts.add(draft);
+    createdDeckIds.add(deckId);
+    final String id = 'created-${++_createdCounter}';
+    final Card first = Card(
+      id: id,
+      deckId: deckId,
+      front: draft.front,
+      back: draft.back,
+      hint: draft.hint,
+      cardType: draft.cardType,
+      tags: draft.tags,
+      sourceExcerpt: draft.sourceExcerpt,
+      state: CardState.newCard,
+      createdAt: now,
+      updatedAt: now,
+    );
+    if (draft.cardType != CardType.basicReversed) {
+      _cards.add(first);
+      _emit();
+      return <Card>[first];
+    }
+    final String siblingId = '$id-sibling';
+    final Card second = Card(
+      id: siblingId,
+      deckId: deckId,
+      front: draft.back,
+      back: draft.front,
+      hint: draft.hint,
+      cardType: draft.cardType,
+      tags: draft.tags,
+      sourceExcerpt: draft.sourceExcerpt,
+      state: CardState.newCard,
+      siblingId: id,
+      createdAt: now,
+      updatedAt: now,
+    );
+    _cards.add(
+      Card(
+        id: id,
+        deckId: deckId,
+        front: draft.front,
+        back: draft.back,
+        hint: draft.hint,
+        cardType: draft.cardType,
+        tags: draft.tags,
+        sourceExcerpt: draft.sourceExcerpt,
+        state: CardState.newCard,
+        siblingId: siblingId,
+        createdAt: now,
+        updatedAt: now,
+      ),
+    );
+    _cards.add(second);
+    _emit();
+    return <Card>[_cards[_cards.length - 2], second];
+  }
+
+  @override
+  Future<Card> updateCard({
+    required Card card,
+    required CardDraft draft,
+    required DateTime now,
+  }) async {
+    if (updateError != null) throw updateError!;
+    updatedCards.add(card);
+    final Card updated = _withContent(card, draft, now);
+    final int index = _cards.indexWhere((Card item) => item.id == card.id);
+    if (index < 0) throw StateError('Карточка не найдена: ${card.id}');
+    _cards[index] = updated;
+    _emit();
+    return updated;
+  }
+
+  @override
+  Future<void> deleteCard(String cardId) async {
+    if (deleteError != null) throw deleteError!;
+    deletedIds.add(cardId);
+    _cards.removeWhere((Card card) => card.id == cardId);
+    _emit();
+  }
 }
 
 /// Фейковый сервис импорта/экспорта: настраиваемые результаты и ошибки.

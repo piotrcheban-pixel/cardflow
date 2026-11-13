@@ -334,5 +334,269 @@
   "databaseOpenError": "Не удалось открыть базу данных. Перезапустите приложение.",
   "@databaseOpenError": {
     "description": "Критическая ошибка старта: БД не открылась (без сырых исключений)."
+  },
+  "reviewTitle": "Повторение",
+  "@reviewTitle": {
+    "description": "Заголовок экрана классической сессии (SPEC A7.2)."
+  },
+  "reviewModeClassic": "Классический",
+  "@reviewModeClassic": {
+    "description": "Название классического режима повторения в листе выбора режима."
+  },
+  "reviewSessionModeTitle": "Выберите режим",
+  "@reviewSessionModeTitle": {
+    "description": "Заголовок bottom sheet выбора режима сессии (SPEC A6.3)."
+  },
+  "reviewStartSession": "Начать сессию",
+  "@reviewStartSession": {
+    "description": "Большая карточка запуска сессии на экране колоды (SPEC A6.3)."
+  },
+  "reviewStartEmptyMessage": "Нет карточек к повторению",
+  "@reviewStartEmptyMessage": {
+    "description": "Сообщение при попытке начать сессию, когда очередь пуста."
+  },
+  "reviewEmptyTitle": "Нет карточек к повторению",
+  "@reviewEmptyTitle": {
+    "description": "Пустое состояние экрана сессии."
+  },
+  "reviewEmptyMessage": "Все карточки на сегодня повторены. Возвращайтесь позже или добавьте новые.",
+  "@reviewEmptyMessage": {
+    "description": "Пояснение пустого состояния экрана сессии."
+  },
+  "reviewBack": "Назад",
+  "@reviewBack": {
+    "description": "Кнопка возврата из пустого/завершённого экрана сессии."
+  },
+  "reviewLoadError": "Не удалось загрузить карточки сессии.",
+  "@reviewLoadError": {
+    "description": "Ошибка загрузки карточек при старте сессии (без сырых исключений)."
+  },
+  "reviewUndoTooltip": "Отменить последнюю оценку",
+  "@reviewUndoTooltip": {
+    "description": "Подсказка кнопки undo в каркасе сессии (SPEC A6.4)."
+  },
+  "reviewUndoneMessage": "Оценка отменена",
+  "@reviewUndoneMessage": {
+    "description": "Сообщение после успешного undo оценки."
+  },
+  "reviewSaveError": "Не удалось сохранить оценку. Попробуйте ещё раз.",
+  "@reviewSaveError": {
+    "description": "Ошибка записи оценки в БД (без сырых исключений)."
+  },
+  "reviewUndoError": "Не удалось отменить оценку. Попробуйте ещё раз.",
+  "@reviewUndoError": {
+    "description": "Ошибка отката оценки (без сырых исключений)."
+  },
+  "reviewCloseTooltip": "Выйти из сессии",
+  "@reviewCloseTooltip": {
+    "description": "Подсказка крестика выхода из сессии (SPEC A6.4)."
+  },
+  "reviewExitDialogTitle": "Выйти из сессии?",
+  "@reviewExitDialogTitle": {
+    "description": "Заголовок диалога выхода из сессии (SPEC A6.4)."
+  },
+  "reviewExitDialogMessage": "Оценки сохраняются сразу, прогресс не потеряется.",
+  "@reviewExitDialogMessage": {
+    "description": "Пояснение в диалоге выхода: каждая оценка уже записана."
+  },
+  "reviewExitContinue": "Продолжить",
+  "@reviewExitContinue": {
+    "description": "Кнопка диалога выхода: остаться в сессии."
+  },
+  "reviewExitConfirm": "Выйти",
+  "@reviewExitConfirm": {
+    "description": "Кнопка диалога выхода: покинуть сессию."
+  },
+  "reviewWhyTooltip": "Почему?",
+  "@reviewWhyTooltip": {
+    "description": "Подсказка кнопки «Почему?» в каркасе сессии (SPEC A6.4)."
+  },
+  "reviewWhySheetTitle": "Почему эта карточка?",
+  "@reviewWhySheetTitle": {
+    "description": "Заголовок bottom sheet с цитатой исходника."
+  },
+  "reviewProgressLabel": "Прогресс сессии",
+  "@reviewProgressLabel": {
+    "description": "Семантическая подпись линейного прогресса классической сессии."
+  },
+  "reviewCompletedTitle": "Сессия завершена",
+  "@reviewCompletedTitle": {
+    "description": "Заголовок состояния завершённой сессии."
+  },
+  "reviewCompletedMessage": "{count, plural, =0{Нет оценённых карточек} one{{count} карточка повторена} few{{count} карточки повторено} many{{count} карточек повторено} other{{count} карточки повторено}}",
+  "@reviewCompletedMessage": {
+    "description": "Итог сессии: сколько карточек оценено.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "reviewDone": "Готово",
+  "@reviewDone": {
+    "description": "Кнопка завершения сессии."
+  },
+  "ratingAgain": "Не знаю",
+  "@ratingAgain": {
+    "description": "Кнопка оценки Again (SPEC A7.2)."
+  },
+  "ratingHard": "Сложно",
+  "@ratingHard": {
+    "description": "Кнопка оценки Hard (SPEC A7.2)."
+  },
+  "ratingGood": "Знаю",
+  "@ratingGood": {
+    "description": "Кнопка оценки Good (SPEC A7.2)."
+  },
+  "ratingEasy": "Легко",
+  "@ratingEasy": {
+    "description": "Кнопка оценки Easy (SPEC A7.2)."
+  },
+  "reviewIntervalLessThanMinute": "<1 мин",
+  "@reviewIntervalLessThanMinute": {
+    "description": "Прогноз интервала: меньше минуты (SPEC A7.2)."
+  },
+  "reviewIntervalMinutes": "{count} мин",
+  "@reviewIntervalMinutes": {
+    "description": "Прогноз интервала в минутах (SPEC A7.2).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "reviewIntervalHours": "{count} ч",
+  "@reviewIntervalHours": {
+    "description": "Прогноз интервала в часах (SPEC A7.2).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "reviewIntervalDays": "{count} д",
+  "@reviewIntervalDays": {
+    "description": "Прогноз интервала в днях (SPEC A7.2).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "cardFormTitleNew": "Новая карточка",
+  "@cardFormTitleNew": {
+    "description": "Заголовок формы создания карточки (SPEC A6.3)."
+  },
+  "cardFormTitleEdit": "Редактировать карточку",
+  "@cardFormTitleEdit": {
+    "description": "Заголовок формы редактирования карточки (SPEC A6.3)."
+  },
+  "cardFormFrontLabel": "Вопрос",
+  "@cardFormFrontLabel": {
+    "description": "Подпись поля front в форме карточки."
+  },
+  "cardFormBackLabel": "Ответ",
+  "@cardFormBackLabel": {
+    "description": "Подпись поля back в форме карточки."
+  },
+  "cardFormHintLabel": "Подсказка (необязательно)",
+  "@cardFormHintLabel": {
+    "description": "Подпись необязательного поля hint."
+  },
+  "cardFormTagsLabel": "Теги через запятую (необязательно)",
+  "@cardFormTagsLabel": {
+    "description": "Подпись поля тегов; больше трёх тегов запрещено (SPEC A8.4)."
+  },
+  "cardFormSourceExcerptLabel": "Цитата для кнопки «Почему?» (необязательно)",
+  "@cardFormSourceExcerptLabel": {
+    "description": "Подпись необязательного поля source_excerpt (SPEC A5)."
+  },
+  "cardFormTypeLabel": "Тип карточки",
+  "@cardFormTypeLabel": {
+    "description": "Подпись выбора типа карточки."
+  },
+  "cardTypeBasic": "Обычная",
+  "@cardTypeBasic": {
+    "description": "Тип карточки basic."
+  },
+  "cardTypeBasicReversed": "Двусторонняя",
+  "@cardTypeBasicReversed": {
+    "description": "Тип карточки basic_reversed."
+  },
+  "cardTypeCloze": "С пропусками",
+  "@cardTypeCloze": {
+    "description": "Тип карточки cloze (разметка — итерация 5)."
+  },
+  "cardFormReversedHint": "Будет создана вторая карточка с обратным вопросом.",
+  "@cardFormReversedHint": {
+    "description": "Подсказка при выборе двустороннего типа карточки (SPEC A5)."
+  },
+  "cardFormTypeImmutable": "Тип карточки нельзя изменить после создания.",
+  "@cardFormTypeImmutable": {
+    "description": "Пояснение при редактировании: тип карточки не меняется (ADR-009)."
+  },
+  "cardFormFrontEmptyError": "Введите вопрос",
+  "@cardFormFrontEmptyError": {
+    "description": "Ошибка валидации: пустой front (SPEC A8.4)."
+  },
+  "cardFormFrontTooLongError": "Не больше 500 символов",
+  "@cardFormFrontTooLongError": {
+    "description": "Ошибка валидации: front длиннее 500 символов (SPEC A8.4)."
+  },
+  "cardFormBackEmptyError": "Введите ответ",
+  "@cardFormBackEmptyError": {
+    "description": "Ошибка валидации: пустой back у basic/basic_reversed (ADR-009)."
+  },
+  "cardFormBackTooLongError": "Не больше 2000 символов",
+  "@cardFormBackTooLongError": {
+    "description": "Ошибка валидации: back длиннее 2000 символов (SPEC A8.4)."
+  },
+  "cardFormTagsTooManyError": "Не больше 3 тегов",
+  "@cardFormTagsTooManyError": {
+    "description": "Ошибка валидации: больше трёх тегов (SPEC A8.4)."
+  },
+  "cardFormSourceExcerptTooLongError": "Не больше 400 символов",
+  "@cardFormSourceExcerptTooLongError": {
+    "description": "Ошибка валидации: цитата «Почему?» длиннее 400 символов."
+  },
+  "cardFormSaveError": "Не удалось сохранить карточку. Попробуйте ещё раз.",
+  "@cardFormSaveError": {
+    "description": "Ошибка сохранения карточки (без сырых исключений)."
+  },
+  "cardFormLoadError": "Не удалось загрузить карточку.",
+  "@cardFormLoadError": {
+    "description": "Ошибка загрузки карточки в форме редактирования."
+  },
+  "cardFormDeleteError": "Не удалось удалить карточку. Попробуйте ещё раз.",
+  "@cardFormDeleteError": {
+    "description": "Ошибка удаления карточки (без сырых исключений)."
+  },
+  "cardDeleteDialogTitle": "Удалить карточку?",
+  "@cardDeleteDialogTitle": {
+    "description": "Заголовок диалога подтверждения удаления карточки."
+  },
+  "cardDeleteDialogMessage": "Карточка будет удалена без возможности восстановления.",
+  "@cardDeleteDialogMessage": {
+    "description": "Пояснение в диалоге удаления карточки."
+  },
+  "cardDeleteTooltip": "Удалить карточку",
+  "@cardDeleteTooltip": {
+    "description": "Подсказка кнопки удаления в форме редактирования."
+  },
+  "cardCreatedMessage": "Карточка создана",
+  "@cardCreatedMessage": {
+    "description": "Сообщение после создания карточки."
+  },
+  "cardUpdatedMessage": "Изменения сохранены",
+  "@cardUpdatedMessage": {
+    "description": "Сообщение после сохранения изменений карточки."
+  },
+  "cardDeletedMessage": "Карточка удалена",
+  "@cardDeletedMessage": {
+    "description": "Сообщение после удаления карточки."
+  },
+  "deckAddCardTooltip": "Добавить карточку",
+  "@deckAddCardTooltip": {
+    "description": "Подсказка FAB mini «Добавить» на экране колоды (SPEC A6.3)."
   }
 }

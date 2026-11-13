@@ -513,6 +513,372 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Не удалось открыть базу данных. Перезапустите приложение.'**
   String get databaseOpenError;
+
+  /// Заголовок экрана классической сессии (SPEC A7.2).
+  ///
+  /// In ru, this message translates to:
+  /// **'Повторение'**
+  String get reviewTitle;
+
+  /// Название классического режима повторения в листе выбора режима.
+  ///
+  /// In ru, this message translates to:
+  /// **'Классический'**
+  String get reviewModeClassic;
+
+  /// Заголовок bottom sheet выбора режима сессии (SPEC A6.3).
+  ///
+  /// In ru, this message translates to:
+  /// **'Выберите режим'**
+  String get reviewSessionModeTitle;
+
+  /// Большая карточка запуска сессии на экране колоды (SPEC A6.3).
+  ///
+  /// In ru, this message translates to:
+  /// **'Начать сессию'**
+  String get reviewStartSession;
+
+  /// Сообщение при попытке начать сессию, когда очередь пуста.
+  ///
+  /// In ru, this message translates to:
+  /// **'Нет карточек к повторению'**
+  String get reviewStartEmptyMessage;
+
+  /// Пустое состояние экрана сессии.
+  ///
+  /// In ru, this message translates to:
+  /// **'Нет карточек к повторению'**
+  String get reviewEmptyTitle;
+
+  /// Пояснение пустого состояния экрана сессии.
+  ///
+  /// In ru, this message translates to:
+  /// **'Все карточки на сегодня повторены. Возвращайтесь позже или добавьте новые.'**
+  String get reviewEmptyMessage;
+
+  /// Кнопка возврата из пустого/завершённого экрана сессии.
+  ///
+  /// In ru, this message translates to:
+  /// **'Назад'**
+  String get reviewBack;
+
+  /// Ошибка загрузки карточек при старте сессии (без сырых исключений).
+  ///
+  /// In ru, this message translates to:
+  /// **'Не удалось загрузить карточки сессии.'**
+  String get reviewLoadError;
+
+  /// Подсказка кнопки undo в каркасе сессии (SPEC A6.4).
+  ///
+  /// In ru, this message translates to:
+  /// **'Отменить последнюю оценку'**
+  String get reviewUndoTooltip;
+
+  /// Сообщение после успешного undo оценки.
+  ///
+  /// In ru, this message translates to:
+  /// **'Оценка отменена'**
+  String get reviewUndoneMessage;
+
+  /// Ошибка записи оценки в БД (без сырых исключений).
+  ///
+  /// In ru, this message translates to:
+  /// **'Не удалось сохранить оценку. Попробуйте ещё раз.'**
+  String get reviewSaveError;
+
+  /// Ошибка отката оценки (без сырых исключений).
+  ///
+  /// In ru, this message translates to:
+  /// **'Не удалось отменить оценку. Попробуйте ещё раз.'**
+  String get reviewUndoError;
+
+  /// Подсказка крестика выхода из сессии (SPEC A6.4).
+  ///
+  /// In ru, this message translates to:
+  /// **'Выйти из сессии'**
+  String get reviewCloseTooltip;
+
+  /// Заголовок диалога выхода из сессии (SPEC A6.4).
+  ///
+  /// In ru, this message translates to:
+  /// **'Выйти из сессии?'**
+  String get reviewExitDialogTitle;
+
+  /// Пояснение в диалоге выхода: каждая оценка уже записана.
+  ///
+  /// In ru, this message translates to:
+  /// **'Оценки сохраняются сразу, прогресс не потеряется.'**
+  String get reviewExitDialogMessage;
+
+  /// Кнопка диалога выхода: остаться в сессии.
+  ///
+  /// In ru, this message translates to:
+  /// **'Продолжить'**
+  String get reviewExitContinue;
+
+  /// Кнопка диалога выхода: покинуть сессию.
+  ///
+  /// In ru, this message translates to:
+  /// **'Выйти'**
+  String get reviewExitConfirm;
+
+  /// Подсказка кнопки «Почему?» в каркасе сессии (SPEC A6.4).
+  ///
+  /// In ru, this message translates to:
+  /// **'Почему?'**
+  String get reviewWhyTooltip;
+
+  /// Заголовок bottom sheet с цитатой исходника.
+  ///
+  /// In ru, this message translates to:
+  /// **'Почему эта карточка?'**
+  String get reviewWhySheetTitle;
+
+  /// Семантическая подпись линейного прогресса классической сессии.
+  ///
+  /// In ru, this message translates to:
+  /// **'Прогресс сессии'**
+  String get reviewProgressLabel;
+
+  /// Заголовок состояния завершённой сессии.
+  ///
+  /// In ru, this message translates to:
+  /// **'Сессия завершена'**
+  String get reviewCompletedTitle;
+
+  /// Итог сессии: сколько карточек оценено.
+  ///
+  /// In ru, this message translates to:
+  /// **'{count, plural, =0{Нет оценённых карточек} one{{count} карточка повторена} few{{count} карточки повторено} many{{count} карточек повторено} other{{count} карточки повторено}}'**
+  String reviewCompletedMessage(int count);
+
+  /// Кнопка завершения сессии.
+  ///
+  /// In ru, this message translates to:
+  /// **'Готово'**
+  String get reviewDone;
+
+  /// Кнопка оценки Again (SPEC A7.2).
+  ///
+  /// In ru, this message translates to:
+  /// **'Не знаю'**
+  String get ratingAgain;
+
+  /// Кнопка оценки Hard (SPEC A7.2).
+  ///
+  /// In ru, this message translates to:
+  /// **'Сложно'**
+  String get ratingHard;
+
+  /// Кнопка оценки Good (SPEC A7.2).
+  ///
+  /// In ru, this message translates to:
+  /// **'Знаю'**
+  String get ratingGood;
+
+  /// Кнопка оценки Easy (SPEC A7.2).
+  ///
+  /// In ru, this message translates to:
+  /// **'Легко'**
+  String get ratingEasy;
+
+  /// Прогноз интервала: меньше минуты (SPEC A7.2).
+  ///
+  /// In ru, this message translates to:
+  /// **'<1 мин'**
+  String get reviewIntervalLessThanMinute;
+
+  /// Прогноз интервала в минутах (SPEC A7.2).
+  ///
+  /// In ru, this message translates to:
+  /// **'{count} мин'**
+  String reviewIntervalMinutes(int count);
+
+  /// Прогноз интервала в часах (SPEC A7.2).
+  ///
+  /// In ru, this message translates to:
+  /// **'{count} ч'**
+  String reviewIntervalHours(int count);
+
+  /// Прогноз интервала в днях (SPEC A7.2).
+  ///
+  /// In ru, this message translates to:
+  /// **'{count} д'**
+  String reviewIntervalDays(int count);
+
+  /// Заголовок формы создания карточки (SPEC A6.3).
+  ///
+  /// In ru, this message translates to:
+  /// **'Новая карточка'**
+  String get cardFormTitleNew;
+
+  /// Заголовок формы редактирования карточки (SPEC A6.3).
+  ///
+  /// In ru, this message translates to:
+  /// **'Редактировать карточку'**
+  String get cardFormTitleEdit;
+
+  /// Подпись поля front в форме карточки.
+  ///
+  /// In ru, this message translates to:
+  /// **'Вопрос'**
+  String get cardFormFrontLabel;
+
+  /// Подпись поля back в форме карточки.
+  ///
+  /// In ru, this message translates to:
+  /// **'Ответ'**
+  String get cardFormBackLabel;
+
+  /// Подпись необязательного поля hint.
+  ///
+  /// In ru, this message translates to:
+  /// **'Подсказка (необязательно)'**
+  String get cardFormHintLabel;
+
+  /// Подпись поля тегов; больше трёх тегов запрещено (SPEC A8.4).
+  ///
+  /// In ru, this message translates to:
+  /// **'Теги через запятую (необязательно)'**
+  String get cardFormTagsLabel;
+
+  /// Подпись необязательного поля source_excerpt (SPEC A5).
+  ///
+  /// In ru, this message translates to:
+  /// **'Цитата для кнопки «Почему?» (необязательно)'**
+  String get cardFormSourceExcerptLabel;
+
+  /// Подпись выбора типа карточки.
+  ///
+  /// In ru, this message translates to:
+  /// **'Тип карточки'**
+  String get cardFormTypeLabel;
+
+  /// Тип карточки basic.
+  ///
+  /// In ru, this message translates to:
+  /// **'Обычная'**
+  String get cardTypeBasic;
+
+  /// Тип карточки basic_reversed.
+  ///
+  /// In ru, this message translates to:
+  /// **'Двусторонняя'**
+  String get cardTypeBasicReversed;
+
+  /// Тип карточки cloze (разметка — итерация 5).
+  ///
+  /// In ru, this message translates to:
+  /// **'С пропусками'**
+  String get cardTypeCloze;
+
+  /// Подсказка при выборе двустороннего типа карточки (SPEC A5).
+  ///
+  /// In ru, this message translates to:
+  /// **'Будет создана вторая карточка с обратным вопросом.'**
+  String get cardFormReversedHint;
+
+  /// Пояснение при редактировании: тип карточки не меняется (ADR-009).
+  ///
+  /// In ru, this message translates to:
+  /// **'Тип карточки нельзя изменить после создания.'**
+  String get cardFormTypeImmutable;
+
+  /// Ошибка валидации: пустой front (SPEC A8.4).
+  ///
+  /// In ru, this message translates to:
+  /// **'Введите вопрос'**
+  String get cardFormFrontEmptyError;
+
+  /// Ошибка валидации: front длиннее 500 символов (SPEC A8.4).
+  ///
+  /// In ru, this message translates to:
+  /// **'Не больше 500 символов'**
+  String get cardFormFrontTooLongError;
+
+  /// Ошибка валидации: пустой back у basic/basic_reversed (ADR-009).
+  ///
+  /// In ru, this message translates to:
+  /// **'Введите ответ'**
+  String get cardFormBackEmptyError;
+
+  /// Ошибка валидации: back длиннее 2000 символов (SPEC A8.4).
+  ///
+  /// In ru, this message translates to:
+  /// **'Не больше 2000 символов'**
+  String get cardFormBackTooLongError;
+
+  /// Ошибка валидации: больше трёх тегов (SPEC A8.4).
+  ///
+  /// In ru, this message translates to:
+  /// **'Не больше 3 тегов'**
+  String get cardFormTagsTooManyError;
+
+  /// Ошибка валидации: цитата «Почему?» длиннее 400 символов.
+  ///
+  /// In ru, this message translates to:
+  /// **'Не больше 400 символов'**
+  String get cardFormSourceExcerptTooLongError;
+
+  /// Ошибка сохранения карточки (без сырых исключений).
+  ///
+  /// In ru, this message translates to:
+  /// **'Не удалось сохранить карточку. Попробуйте ещё раз.'**
+  String get cardFormSaveError;
+
+  /// Ошибка загрузки карточки в форме редактирования.
+  ///
+  /// In ru, this message translates to:
+  /// **'Не удалось загрузить карточку.'**
+  String get cardFormLoadError;
+
+  /// Ошибка удаления карточки (без сырых исключений).
+  ///
+  /// In ru, this message translates to:
+  /// **'Не удалось удалить карточку. Попробуйте ещё раз.'**
+  String get cardFormDeleteError;
+
+  /// Заголовок диалога подтверждения удаления карточки.
+  ///
+  /// In ru, this message translates to:
+  /// **'Удалить карточку?'**
+  String get cardDeleteDialogTitle;
+
+  /// Пояснение в диалоге удаления карточки.
+  ///
+  /// In ru, this message translates to:
+  /// **'Карточка будет удалена без возможности восстановления.'**
+  String get cardDeleteDialogMessage;
+
+  /// Подсказка кнопки удаления в форме редактирования.
+  ///
+  /// In ru, this message translates to:
+  /// **'Удалить карточку'**
+  String get cardDeleteTooltip;
+
+  /// Сообщение после создания карточки.
+  ///
+  /// In ru, this message translates to:
+  /// **'Карточка создана'**
+  String get cardCreatedMessage;
+
+  /// Сообщение после сохранения изменений карточки.
+  ///
+  /// In ru, this message translates to:
+  /// **'Изменения сохранены'**
+  String get cardUpdatedMessage;
+
+  /// Сообщение после удаления карточки.
+  ///
+  /// In ru, this message translates to:
+  /// **'Карточка удалена'**
+  String get cardDeletedMessage;
+
+  /// Подсказка FAB mini «Добавить» на экране колоды (SPEC A6.3).
+  ///
+  /// In ru, this message translates to:
+  /// **'Добавить карточку'**
+  String get deckAddCardTooltip;
 }
 
 class _AppLocalizationsDelegate

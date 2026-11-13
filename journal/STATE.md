@@ -1,11 +1,17 @@
 # STATE — текущее состояние CardFlow
 
-**Дата:** 2026-11-13 · **Итерация:** 2 «Классический режим» — **в работе** · **Шаг цикла:** 2 (красная фаза) · **Режим:** ИТЕРАЦИИ
+**Дата:** 2026-11-13 · **Итерация:** 2 «Классический режим» — **в работе** · **Шаг цикла:** 3 (зелёная фаза) · **Режим:** ИТЕРАЦИИ
 **Факты:** Flutter 3.47.9 / Dart 3.13.7 (FVM 4.3.2); Windows 11; локальная Windows-сборка работает; Android SDK/JDK, Xcode, Linux — отсутствуют; ключей API нет (absent). GitHub-remote `origin` → piotrcheban-pixel/cardflow; `main == origin/main == 052d2a2`, рабочее дерево clean. **CI итерации 1 — зелёный** (run `43436887755`, все job: quality, test×3, build-desktop×3, build-mobile Android+iOS) → L9/L9b закрыты 2026-11-13. Базовый прогон перед итерацией 2: `fvm flutter test` → 378 тестов зелёные.
 
 ## Следующее действие
 
-Итерация 2, шаг 2 (красная фаза): падающие тесты на домен (маппинг `Card`↔`SchedulingCard`, очередь сессии, валидатор карточек), data (транзакция `review_logs`+`due`/`fsrs_json`, undo, CRUD карточек) и UI (ReviewSessionScaffold A6.4, 4 кнопки с прогнозом A7.2, undo, форма карточки). Скелеты API — с `UnimplementedError`, чтобы красная фаза была assertion-level.
+Итерация 2, шаг 3 (зелёная фаза) по слоям: домен (`CardDraft`, `CardSchedulingMapper`, `ReviewQueue`) → data (`DriftCardRepository` CRUD, `DriftReviewRepository` транзакции/undo) → UI (движок сессии, экран сессии, форма карточки, экран колоды, роутер) → интеграция. После каждого слоя — тесты + analyze/format + коммит.
+
+## Итерация 2 — шаг 2 (красная фаза) выполнен
+
+- Полный прогон: **390 passed, 77 failed** — падают только новые тесты, 0 регрессий существующих.
+- Доказательства: `journal/iteration-2/red-domain.md`, `red-data.md`, `red-ui.md` (фрагменты expected/actual); полный вывод `.dart_tool/red_phase_output.txt` (вне git).
+- До красного прогона сделаны рефакторинги без изменения поведения: T1 (единый `CardState`) и T6 (общий маппер строк `cards`).
 
 ## Итерация 2 — план (шаг 1 выполнен)
 

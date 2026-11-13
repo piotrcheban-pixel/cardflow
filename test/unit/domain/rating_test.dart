@@ -48,7 +48,7 @@ void main() {
     });
 
     test('маппинг состояний: new -> learning, остальные 1:1', () {
-      expect(FsrsMapper.toFsrsState(CardState.newState), fsrs.State.learning);
+      expect(FsrsMapper.toFsrsState(CardState.newCard), fsrs.State.learning);
       expect(FsrsMapper.toFsrsState(CardState.learning), fsrs.State.learning);
       expect(FsrsMapper.toFsrsState(CardState.review), fsrs.State.review);
       expect(
@@ -72,7 +72,7 @@ void main() {
     });
 
     test('проводные имена состояний соответствуют SPEC A5', () {
-      expect(CardState.newState.wireName, 'new');
+      expect(CardState.newCard.wireName, 'new');
       expect(CardState.learning.wireName, 'learning');
       expect(CardState.review.wireName, 'review');
       expect(CardState.relearning.wireName, 'relearning');

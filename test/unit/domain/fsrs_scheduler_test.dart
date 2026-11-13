@@ -8,7 +8,7 @@ void main() {
     test('новая карточка имеет состояние new и due = now', () {
       final card = SchedulingCard.newCard(cardId: 'card-1', now: now);
       expect(card.cardId, 'card-1');
-      expect(card.state, CardState.newState);
+      expect(card.state, CardState.newCard);
       expect(card.due, now);
       expect(card.lastReview, isNull);
       expect(card.step, 0);
@@ -111,7 +111,7 @@ void main() {
 
       scheduler.review(card, Rating.easy, now: now);
 
-      expect(card.state, CardState.newState);
+      expect(card.state, CardState.newCard);
       expect(card.lastReview, isNull);
       expect(card.stability, isNull);
       expect(card.due, now);
@@ -151,8 +151,8 @@ void main() {
       expect(restored.hashCode, card.hashCode);
     });
 
-    test('fromWireName отвергает неизвестное состояние', () {
-      expect(() => CardState.fromWireName('archived'), throwsArgumentError);
+    test('fromWire отвергает неизвестное состояние', () {
+      expect(() => CardState.fromWire('archived'), throwsFormatException);
     });
 
     test('fromJson восстанавливает карточку без lastReview', () {
@@ -160,7 +160,7 @@ void main() {
       final restored = SchedulingCard.fromJson(json);
 
       expect(restored.lastReview, isNull);
-      expect(restored.state, CardState.newState);
+      expect(restored.state, CardState.newCard);
       expect(restored.step, 0);
     });
 

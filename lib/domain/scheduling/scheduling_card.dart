@@ -1,42 +1,13 @@
-/// Состояние карточки на уровне приложения (SPEC A5):
-/// `new | learning | review | relearning`.
-///
-/// В пакете `fsrs` 2.0.1 отдельного состояния `New` нет — новые карточки живут
-/// в `learning` с шагом 0 и без последнего повторения; маппинг выполняет
-/// [FsrsMapper].
-enum CardState {
-  /// Новая карточка, ещё не выученная.
-  newState('new'),
+import '../cards/card.dart' show CardState;
 
-  /// Изучается (шаги обучения).
-  learning('learning'),
-
-  /// В долгосрочном повторении.
-  review('review'),
-
-  /// Переучивается после забывания.
-  relearning('relearning');
-
-  const CardState(this.wireName);
-
-  /// Строка для хранения в БД (SPEC A5).
-  final String wireName;
-
-  /// Восстанавливает состояние по строке из БД.
-  static CardState fromWireName(String value) => switch (value) {
-    'new' => CardState.newState,
-    'learning' => CardState.learning,
-    'review' => CardState.review,
-    'relearning' => CardState.relearning,
-    _ => throw ArgumentError('Неизвестное состояние карточки: $value'),
-  };
-}
+export '../cards/card.dart' show CardState;
 
 /// Иммутабельный снимок состояния карточки для планировщика и хранения
 /// в `cards.fsrs_json` (SPEC A5).
 ///
 /// Домен не зависит от Flutter и от пакета `fsrs`: преобразование выполняет
-/// адаптер в `scheduler.dart`.
+/// адаптер в `scheduler.dart`. Состояние — единый для проекта `CardState`
+/// из `domain/cards/card.dart` (дубликат enum устранён в итерации 2).
 class SchedulingCard {
   /// Создаёт снимок состояния.
   ///
@@ -66,7 +37,7 @@ class SchedulingCard {
     final utcNow = now.toUtc();
     return SchedulingCard(
       cardId: cardId,
-      state: CardState.newState,
+      state: CardState.newCard,
       due: utcNow,
       step: 0,
     );
@@ -110,7 +81,7 @@ class SchedulingCard {
     final lastReviewRaw = json['lastReview'] as String?;
     return SchedulingCard(
       cardId: json['cardId'] as String,
-      state: CardState.fromWireName(json['state'] as String),
+      state: CardState.fromWire(json['state'] as String),
       step: json['step'] as int?,
       stability: (json['stability'] as num?)?.toDouble(),
       difficulty: (json['difficulty'] as num?)?.toDouble(),

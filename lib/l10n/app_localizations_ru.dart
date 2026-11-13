@@ -283,4 +283,214 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get databaseOpenError =>
       'Не удалось открыть базу данных. Перезапустите приложение.';
+
+  @override
+  String get reviewTitle => 'Повторение';
+
+  @override
+  String get reviewModeClassic => 'Классический';
+
+  @override
+  String get reviewSessionModeTitle => 'Выберите режим';
+
+  @override
+  String get reviewStartSession => 'Начать сессию';
+
+  @override
+  String get reviewStartEmptyMessage => 'Нет карточек к повторению';
+
+  @override
+  String get reviewEmptyTitle => 'Нет карточек к повторению';
+
+  @override
+  String get reviewEmptyMessage =>
+      'Все карточки на сегодня повторены. Возвращайтесь позже или добавьте новые.';
+
+  @override
+  String get reviewBack => 'Назад';
+
+  @override
+  String get reviewLoadError => 'Не удалось загрузить карточки сессии.';
+
+  @override
+  String get reviewUndoTooltip => 'Отменить последнюю оценку';
+
+  @override
+  String get reviewUndoneMessage => 'Оценка отменена';
+
+  @override
+  String get reviewSaveError =>
+      'Не удалось сохранить оценку. Попробуйте ещё раз.';
+
+  @override
+  String get reviewUndoError =>
+      'Не удалось отменить оценку. Попробуйте ещё раз.';
+
+  @override
+  String get reviewCloseTooltip => 'Выйти из сессии';
+
+  @override
+  String get reviewExitDialogTitle => 'Выйти из сессии?';
+
+  @override
+  String get reviewExitDialogMessage =>
+      'Оценки сохраняются сразу, прогресс не потеряется.';
+
+  @override
+  String get reviewExitContinue => 'Продолжить';
+
+  @override
+  String get reviewExitConfirm => 'Выйти';
+
+  @override
+  String get reviewWhyTooltip => 'Почему?';
+
+  @override
+  String get reviewWhySheetTitle => 'Почему эта карточка?';
+
+  @override
+  String get reviewProgressLabel => 'Прогресс сессии';
+
+  @override
+  String get reviewCompletedTitle => 'Сессия завершена';
+
+  @override
+  String reviewCompletedMessage(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count карточки повторено',
+      many: '$count карточек повторено',
+      few: '$count карточки повторено',
+      one: '$count карточка повторена',
+      zero: 'Нет оценённых карточек',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get reviewDone => 'Готово';
+
+  @override
+  String get ratingAgain => 'Не знаю';
+
+  @override
+  String get ratingHard => 'Сложно';
+
+  @override
+  String get ratingGood => 'Знаю';
+
+  @override
+  String get ratingEasy => 'Легко';
+
+  @override
+  String get reviewIntervalLessThanMinute => '<1 мин';
+
+  @override
+  String reviewIntervalMinutes(int count) {
+    return '$count мин';
+  }
+
+  @override
+  String reviewIntervalHours(int count) {
+    return '$count ч';
+  }
+
+  @override
+  String reviewIntervalDays(int count) {
+    return '$count д';
+  }
+
+  @override
+  String get cardFormTitleNew => 'Новая карточка';
+
+  @override
+  String get cardFormTitleEdit => 'Редактировать карточку';
+
+  @override
+  String get cardFormFrontLabel => 'Вопрос';
+
+  @override
+  String get cardFormBackLabel => 'Ответ';
+
+  @override
+  String get cardFormHintLabel => 'Подсказка (необязательно)';
+
+  @override
+  String get cardFormTagsLabel => 'Теги через запятую (необязательно)';
+
+  @override
+  String get cardFormSourceExcerptLabel =>
+      'Цитата для кнопки «Почему?» (необязательно)';
+
+  @override
+  String get cardFormTypeLabel => 'Тип карточки';
+
+  @override
+  String get cardTypeBasic => 'Обычная';
+
+  @override
+  String get cardTypeBasicReversed => 'Двусторонняя';
+
+  @override
+  String get cardTypeCloze => 'С пропусками';
+
+  @override
+  String get cardFormReversedHint =>
+      'Будет создана вторая карточка с обратным вопросом.';
+
+  @override
+  String get cardFormTypeImmutable =>
+      'Тип карточки нельзя изменить после создания.';
+
+  @override
+  String get cardFormFrontEmptyError => 'Введите вопрос';
+
+  @override
+  String get cardFormFrontTooLongError => 'Не больше 500 символов';
+
+  @override
+  String get cardFormBackEmptyError => 'Введите ответ';
+
+  @override
+  String get cardFormBackTooLongError => 'Не больше 2000 символов';
+
+  @override
+  String get cardFormTagsTooManyError => 'Не больше 3 тегов';
+
+  @override
+  String get cardFormSourceExcerptTooLongError => 'Не больше 400 символов';
+
+  @override
+  String get cardFormSaveError =>
+      'Не удалось сохранить карточку. Попробуйте ещё раз.';
+
+  @override
+  String get cardFormLoadError => 'Не удалось загрузить карточку.';
+
+  @override
+  String get cardFormDeleteError =>
+      'Не удалось удалить карточку. Попробуйте ещё раз.';
+
+  @override
+  String get cardDeleteDialogTitle => 'Удалить карточку?';
+
+  @override
+  String get cardDeleteDialogMessage =>
+      'Карточка будет удалена без возможности восстановления.';
+
+  @override
+  String get cardDeleteTooltip => 'Удалить карточку';
+
+  @override
+  String get cardCreatedMessage => 'Карточка создана';
+
+  @override
+  String get cardUpdatedMessage => 'Изменения сохранены';
+
+  @override
+  String get cardDeletedMessage => 'Карточка удалена';
+
+  @override
+  String get deckAddCardTooltip => 'Добавить карточку';
 }

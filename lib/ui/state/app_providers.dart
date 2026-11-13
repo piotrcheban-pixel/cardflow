@@ -3,12 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cardflow/data/cards/drift_card_repository.dart';
 import 'package:cardflow/data/db/app_database.dart';
 import 'package:cardflow/data/decks/drift_deck_repository.dart';
+import 'package:cardflow/data/review/drift_review_repository.dart';
 import 'package:cardflow/data/transfer/drift_deck_transfer_service.dart';
 import 'package:cardflow/data/transfer/file_picker_gateway.dart';
 import 'package:cardflow/data/transfer/media_store.dart';
 import 'package:cardflow/data/transfer/zip_deck_archive_codec.dart';
 import 'package:cardflow/domain/cards/card_repository.dart';
 import 'package:cardflow/domain/decks/deck_repository.dart';
+import 'package:cardflow/domain/review/review_repository.dart';
+import 'package:cardflow/domain/scheduling/scheduler.dart';
 import 'package:cardflow/domain/transfer/archive_codec.dart';
 import 'package:cardflow/domain/transfer/deck_transfer_service.dart';
 import 'package:cardflow/domain/transfer/file_gateway.dart';
@@ -40,6 +43,14 @@ final deckRepositoryProvider = Provider<DeckRepository>((ref) {
 final cardRepositoryProvider = Provider<CardRepository>((ref) {
   return DriftCardRepository(ref.watch(appDatabaseProvider));
 });
+
+/// Запись повторений (review_logs + due/fsrs_json в одной транзакции).
+final reviewRepositoryProvider = Provider<ReviewRepository>((ref) {
+  return DriftReviewRepository(ref.watch(appDatabaseProvider));
+});
+
+/// Планировщик FSRS (ADR-004: конфигурация детерминированного прогноза).
+final schedulerProvider = Provider<Scheduler>((ref) => FsrsScheduler());
 
 /// Кодек `.zip`-архива колоды.
 final deckArchiveCodecProvider = Provider<DeckArchiveCodec>((ref) {

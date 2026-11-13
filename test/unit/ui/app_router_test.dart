@@ -5,34 +5,48 @@ import 'package:cardflow/ui/router/app_router.dart';
 
 void main() {
   group('AppRoutes', () {
-    test('пути стартового экрана и колоды', () {
+    test('пути списка, колоды, сессии и формы карточки', () {
       expect(AppRoutes.decksPath, '/');
       expect(AppRoutes.deckPath('deck-1'), '/decks/deck-1');
+      expect(AppRoutes.studyPath('deck-1'), '/decks/deck-1/study');
+      expect(AppRoutes.cardNewPath('deck-1'), '/decks/deck-1/cards/new');
+      expect(
+        AppRoutes.cardEditPath('deck-1', 'card-1'),
+        '/decks/deck-1/cards/card-1/edit',
+      );
     });
   });
 
   group('createAppRouter', () {
-    test('содержит маршруты «Колоды» и «Колода» с именами', () {
+    test('содержит 5 маршрутов итерации 2 с именами', () {
       final router = createAppRouter();
       addTearDown(router.dispose);
 
       final routes = router.configuration.routes;
-      expect(routes, hasLength(2));
-      final decksRoute = routes[0] as GoRoute;
-      final deckRoute = routes[1] as GoRoute;
-      expect(decksRoute.path, '/');
-      expect(decksRoute.name, AppRoutes.decks);
-      expect(deckRoute.path, '/decks/:deckId');
-      expect(deckRoute.name, AppRoutes.deck);
-    });
+      expect(routes, hasLength(5));
+      final paths = <String>[];
+      final names = <String?>[];
+      for (final route in routes) {
+        final goRoute = route as GoRoute;
+        paths.add(goRoute.path);
+        names.add(goRoute.name);
+      }
 
-    test('имена маршрутов заданы и уникальны', () {
-      final router = createAppRouter();
-      addTearDown(router.dispose);
-      final names = router.configuration.routes
-          .map((route) => (route as GoRoute).name)
-          .toList();
-      expect(names, containsAll(<String>[AppRoutes.decks, AppRoutes.deck]));
+      expect(paths, contains('/'));
+      expect(paths, contains('/decks/:deckId'));
+      expect(paths, contains('/decks/:deckId/study'));
+      expect(paths, contains('/decks/:deckId/cards/new'));
+      expect(paths, contains('/decks/:deckId/cards/:cardId/edit'));
+      expect(
+        names,
+        containsAll(<String>[
+          AppRoutes.decks,
+          AppRoutes.deck,
+          AppRoutes.study,
+          AppRoutes.cardNew,
+          AppRoutes.cardEdit,
+        ]),
+      );
       expect(names.toSet(), hasLength(names.length));
     });
   });
