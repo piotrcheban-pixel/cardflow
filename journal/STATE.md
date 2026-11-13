@@ -10,8 +10,8 @@ Xcode, Linux — отсутствуют. **`DEEPSEEK_API_KEY`: present в Window
 **800 passed + 1 skipped**; `fvm flutter test test/live --tags live` → **1 passed** (DeepSeek, L30);
 `fvm flutter analyze` → No issues; `fvm dart format --set-exit-if-changed lib test` → 190 files, 0 changed.
 Покрытие 95.1% и `build windows --release` — из прогона 3b, в этой сессии не перемерялись.
-**CI:** 3b `43501572437`, ADR-013 `43505863077` — 9/9 success; прогон на HEAD с live-документацией —
-статус в отчёте сессии.
+**CI:** 3b `43501572437`, ADR-013 `43505863077`, live-верификация L30 `43510331361` (коммит `a2568ea`) —
+все **9/9 job success**; прогон на финальном HEAD этой правки — статус в отчёте сессии.
 
 ## Следующее действие
 
