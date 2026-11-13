@@ -32,6 +32,7 @@
 - Guard-тесты 35/35; миграционные/schema-тесты; интеграционные тесты `test/integration/` (реальные drift-БД, кодек, MediaStore, граф провайдеров).
 - Независимое ревью: `journal/iteration-1/review.md` — blocker/critical/high = 0; H1 + M1–M13 закрыты/задокументированы.
 - Подробный отчёт по критериям — `journal/iteration-1/verify.md`.
+- **CI (добавлено 2026-11-13):** прогон GitHub Actions [`43436887755`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43436887755) — зелёный, все job success: `quality` (format + analyze), `test` × 3 ОС (ubuntu/windows/macos), `build-desktop` × 3 ОС, `build-mobile` Android + iOS. Коммит — `052d2a2` (= `origin/main`). Это закрывает L9 и L9b: сборки linux/macos/android/ios с native assets `sqlite3` подтверждены в CI. Статус — со слов владельца (репозиторий private, из окружения агента прогон независимо не проверяется: `gh` CLI/токен отсутствуют, анонимный fetch → 404).
 
 ## ADR итерации
 
@@ -44,7 +45,7 @@
 1. Session scaffold, 4 кнопки с прогнозом, undo, запись `review_logs`, обновление `due`/`fsrs_json` в одной транзакции (SPEC A7.2, A6.4).
 2. `Card`-редактирование/создание (сейчас карточки появляются только импортом) — форма, валидация, `content_hash` (A5).
 3. Кандидаты на закрытие ограничений: L10 (перезапрос due по таймеру), L13 (один decode + `Isolate.run`), L11/L12 — по мере появления устройств/CI.
-4. CI-прогон итериции 1 — после пуша по команде владельца (L9).
+4. ~~CI-прогон итерации 1 — после пуша по команде владельца (L9)~~ **закрыто 2026-11-13:** run [`43436887755`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43436887755) зелёный, L9/L9b сняты.
 
 ## Ретроспектива (шаг 7)
 

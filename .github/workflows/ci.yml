@@ -2,8 +2,8 @@ name: CI
 
 # Матрица SPEC B3/итерация 0: ubuntu + windows + macos.
 # Сборки iOS — на macOS-раннере без подписи.
-# ВАЖНО: GitHub-remote на момент итерации 0 отсутствует, прогон не выполнялся
-# (journal/KNOWN_LIMITATIONS.md, L3).
+# CI-прогон итерации 1 (run 43436887755, commit 052d2a2) — зелёный:
+# quality, test×3, build-desktop×3, build-mobile Android+iOS (L9/L9b сняты).
 
 on:
   push:
