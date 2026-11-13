@@ -204,3 +204,19 @@ dev_dependencies:
 **Фактические версии direct-зависимостей:** без изменений относительно §7 плюс `path 1.9.1`. `drift` 2.35.4 / `drift_dev` 2.35.3, `sqlite3` 3.9.1 (libsqlite3 3.54.1), `archive` 4.6.0, `file_picker` 13.3.3 — фактические из pubspec.lock.
 
 **CI:** прогон для итерации 1 не выполнялся (push — только по команде владельца). Сборки под 5 платформ с native assets — известное ограничение L9/L9b до прогона CI.
+
+## 9. Фактическое состояние после начала итерации 3a (2026-11-13)
+
+**Добавлено:** `enough_convert ^1.7.1` (MPL-2.0) — кодировки TXT/MD/RTF (A8.3): Windows-1251 и KOI8-R; в §2 значился как «добавить в итерации 3a» — добавлен. `fvm flutter pub get` → `+ enough_convert 1.7.1`, граф зависимостей разрешён.
+
+**Runtime-спайки итерации 3a** (`journal/iteration-3a/spikes.md`, `test/spike/parser_spike_test.dart`, 5/5 зелёные; файл спайка после прогона удалён):
+
+| Спайк | Результат |
+|---|---|
+| S-ENC — `enough_convert` 1.7.1 | **успешен:** `Windows1251Codec` и `Koi8rCodec` (именно так; не `Koi8RCodec`) encode/decode roundtrip для русского текста; `name` = `windows-1251`, `KOI8-R`. Encode ограничен картой символов (для фикстур учесть), decode — без ограничений |
+| S-OOXML — `archive` 4.6.0 + `xml` 7.0.1 | **успешен:** zip-контейнер DOCX/PPTX/ODT разбирается; в `xml` 7 у `XmlElement` нет значения в `.value` — текст берётся `element.innerText` |
+| S-XLSX — `excel_plus` 2.29.2 | **успешен:** `Excel.decodeBytes` читает минимальный XLSX; формула приходит как `FormulaCellValue`, `toString()` = формула, а **`cachedValue`** = значение из `<v>` (SPEC A8.3: «формулы — по кэшированному значению») |
+| S-PDF — `pdfrx` 2.12.0 | **успешен:** `pdfrxInitialize()` (Dart-вариант, без Flutter-binding) + `PdfDocument.openData` + `page.loadText()` → текст «Hello CardFlow PDF» из программно собранного PDF |
+| S-PDF-isolate — `Isolate.run` | **успешен:** извлечение текста PDF работает внутри отдельного изолята (`pdfrxInitialize` внутри изолята) — A8.3 «тяжёлые файлы в изоляте» выполнимо для всех форматов |
+
+**Риск CI:** тесты PDF-парсера будут грузить нативные PDFium (Dart native assets) на Linux/Windows/macOS; локально на Windows спайк зелёный, поведение на остальных ОС проверит CI-прогон итерации 3a.

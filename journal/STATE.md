@@ -1,11 +1,11 @@
 # STATE — текущее состояние CardFlow
 
-**Дата:** 2026-11-13 · **Итерация:** 3a «Парсеры» — **в работе**, шаг 1 (план) · **Предыдущая:** 2 «Классический режим» завершена; CI-хотфикс «No space left on device» закрыт зелёным прогоном · **Режим:** ИТЕРАЦИИ
+**Дата:** 2026-11-13 · **Итерация:** 3a «Парсеры» — **в работе**, шаг 2 (красная фаза) · **Предыдущая:** 2 «Классический режим» завершена; CI-хотфикс «No space left on device» закрыт зелёным прогоном · **Режим:** ИТЕРАЦИИ
 **Факты:** Flutter 3.47.9 / Dart 3.13.7 (FVM 4.3.2); Windows 11; локальная Windows-сборка работает; Android SDK/JDK, Xcode, Linux — отсутствуют; ключей API нет (absent). GitHub-remote `origin` → piotrcheban-pixel/cardflow; локальный `main` = `origin/main` (HEAD `ff32590` + коммиты итерации 3a), рабочее дерево clean. **Последний CI — зелёный:** прогон [`43468349877`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43468349877) attempt 4 — все 9 job success (quality, test×3, build linux/windows/macos/android/ios). В `build android` фикс диска дал 13G → 23G свободного места, `flutter build apk` собрался; `build ios` получил раннер с 4-й попытки (job перезапускался, label не менялся). Push — по команде владельца.
 
 ## Следующее действие
 
-Итерация 3a «Парсеры» (SPEC A8.3): шаг 1 — `journal/iteration-3a/plan.md` + ADR-010 (формат `ParsedDocument`, кодировки, RTF-конвертер, PDF через pdfrx, лимиты, изоляты) + `docs/dependencies.md` (добавление `enough_convert ^1.7.1`); далее шаги 2–7 по плану. Перед стартом: сверить STATE с репозиторием (сделано: clean, `origin/main` = локальный HEAD).
+Итерация 3a, шаг 2 (красная фаза): фикстуры `test/unit/api/parsers/fixtures/document_fixtures.dart`, тесты T1–T15/T18 и скелеты типов/парсеров → прогон, фрагменты «ожидалось/получено» в `journal/iteration-3a/red-parsers.md` → коммит `test:`. План — `journal/iteration-3a/plan.md`, решение — `ADR-010`, спайки — `journal/iteration-3a/spikes.md` (5/5 зелёные).
 
 ## CI-хотфикс после итерации 2 — закрыт
 
