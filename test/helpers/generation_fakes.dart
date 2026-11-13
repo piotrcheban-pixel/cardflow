@@ -5,6 +5,8 @@ import 'package:cardflow/api/providers/generation_provider_adapter.dart';
 import 'package:cardflow/domain/generation/api_key_store.dart';
 import 'package:cardflow/domain/generation/generation_provider.dart';
 import 'package:cardflow/domain/generation/generation_result.dart';
+import 'package:cardflow/domain/generation/generation_settings_store.dart';
+import 'package:cardflow/domain/generation/openai_compatible_settings.dart';
 
 /// In-memory хранилище ключей API для тестов (без платформы).
 class FakeApiKeyStore implements ApiKeyStore {
@@ -45,6 +47,36 @@ class FakeApiKeyStore implements ApiKeyStore {
   }
 }
 
+/// In-memory хранилище настроек OpenAI-совместимого сервера для тестов.
+class FakeGenerationSettingsStore implements GenerationSettingsStore {
+  /// Создаёт хранилище; [settings] — начальные настройки.
+  FakeGenerationSettingsStore([OpenAiCompatibleSettings? settings])
+    : _settings = settings ?? const OpenAiCompatibleSettings();
+
+  OpenAiCompatibleSettings _settings;
+
+  /// Сколько раз читали настройки.
+  int readCalls = 0;
+
+  /// Сколько раз писали настройки.
+  int writeCalls = 0;
+
+  /// Текущие настройки.
+  OpenAiCompatibleSettings get settings => _settings;
+
+  @override
+  Future<OpenAiCompatibleSettings> readOpenAiCompatible() async {
+    readCalls++;
+    return _settings;
+  }
+
+  @override
+  Future<void> writeOpenAiCompatible(OpenAiCompatibleSettings settings) async {
+    writeCalls++;
+    _settings = settings;
+  }
+}
+
 /// Аргументы, с которыми фейковый адаптер строил запрос.
 class RecordedBuildArgs {
   /// Создаёт запись аргументов.
@@ -54,6 +86,8 @@ class RecordedBuildArgs {
     required this.systemPrompt,
     required this.userContent,
     required this.maxOutputTokens,
+    this.baseUrl,
+    this.strictSchema = true,
   });
 
   /// Переданный ключ.
@@ -70,6 +104,12 @@ class RecordedBuildArgs {
 
   /// Переданный лимит ответа.
   final int maxOutputTokens;
+
+  /// Переданный базовый адрес OpenAI-совместимого сервера.
+  final String? baseUrl;
+
+  /// Переданный флаг strict-схемы.
+  final bool strictSchema;
 }
 
 /// Фейковый адаптер провайдера: запоминает аргументы и отдаёт заданный ответ.
@@ -114,6 +154,8 @@ class FakeProviderAdapter implements GenerationProviderAdapter {
     required String systemPrompt,
     required String userContent,
     required int maxOutputTokens,
+    String? baseUrl,
+    bool strictSchema = true,
   }) {
     buildCalls++;
     buildArgs = RecordedBuildArgs(
@@ -122,6 +164,8 @@ class FakeProviderAdapter implements GenerationProviderAdapter {
       systemPrompt: systemPrompt,
       userContent: userContent,
       maxOutputTokens: maxOutputTokens,
+      baseUrl: baseUrl,
+      strictSchema: strictSchema,
     );
     return request ??
         ProviderRequest(

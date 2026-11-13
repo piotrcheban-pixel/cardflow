@@ -7,6 +7,7 @@ import 'package:cardflow/api/providers/anthropic_adapter.dart';
 import 'package:cardflow/api/providers/gemini_adapter.dart';
 import 'package:cardflow/api/providers/generation_provider_adapter.dart';
 import 'package:cardflow/api/providers/openai_adapter.dart';
+import 'package:cardflow/api/providers/openai_compatible_adapter.dart';
 import 'package:cardflow/api/providers/provider_json.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
 import 'package:cardflow/domain/generation/generation_provider.dart';
@@ -450,11 +451,12 @@ void main() {
   });
 
   group('общий контракт адаптеров', () {
-    test('все три провайдера покрыты адаптерами', () {
+    test('все четыре провайдера покрыты адаптерами', () {
       const adapters = <GenerationProviderAdapter>[
         OpenAiAdapter(),
         GeminiAdapter(),
         AnthropicAdapter(),
+        OpenAiCompatibleAdapter(),
       ];
       expect(
         adapters.map((adapter) => adapter.provider).toSet(),
