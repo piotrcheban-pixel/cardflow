@@ -4,6 +4,9 @@ name: CI
 # Сборки iOS — на macOS-раннере без подписи.
 # CI-прогон итерации 1 (run 43436887755, commit 052d2a2) — зелёный:
 # quality, test×3, build-desktop×3, build-mobile Android+iOS (L9/L9b сняты).
+# Прогон итерации 2 упал инфраструктурно: "No space left on device" на раннере.
+# Поэтому перед `flutter pub get` каждый job освобождает диск ("Free disk space"),
+# а Android-сборка дополнительно чистит кэш Gradle перед сборкой.
 
 on:
   push:
@@ -27,6 +30,33 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      - name: Free disk space
+        if: runner.os == 'Linux' || runner.os == 'macOS'
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "== df -h до очистки =="
+          df -h
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            # ubuntu-latest несёт ~15 GB предустановленных toolchain'ов, которые
+            # проекту не нужны: удаляем их, чтобы раннер не упирался в диск.
+            sudo rm -rf /usr/share/dotnet
+            sudo rm -rf /usr/local/lib/android
+            sudo rm -rf /opt/ghc
+            sudo rm -rf /usr/local/share/boost
+            sudo rm -rf /opt/hostedtoolcache/CodeQL
+            if command -v docker >/dev/null 2>&1; then
+              sudo docker image prune --all --force || true
+            fi
+          elif [ "$RUNNER_OS" = "macOS" ]; then
+            # macOS-раннер самый тесный (~14 GB): Android SDK и кэш Homebrew
+            # проекту не нужны (iOS собирается без Android SDK).
+            sudo rm -rf /Users/runner/Library/Android/sdk
+            sudo rm -rf /Users/runner/Library/Caches/Homebrew
+            sudo rm -rf /usr/local/share/dotnet
+          fi
+          echo "== df -h после очистки =="
+          df -h
       - id: fvm
         uses: kuhnroyal/flutter-fvm-config-action@v3.3
       - uses: subosito/flutter-action@v2.23.0
@@ -52,6 +82,29 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
+      - name: Free disk space
+        if: runner.os == 'Linux' || runner.os == 'macOS'
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "== df -h до очистки =="
+          df -h
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            sudo rm -rf /usr/share/dotnet
+            sudo rm -rf /usr/local/lib/android
+            sudo rm -rf /opt/ghc
+            sudo rm -rf /usr/local/share/boost
+            sudo rm -rf /opt/hostedtoolcache/CodeQL
+            if command -v docker >/dev/null 2>&1; then
+              sudo docker image prune --all --force || true
+            fi
+          elif [ "$RUNNER_OS" = "macOS" ]; then
+            sudo rm -rf /Users/runner/Library/Android/sdk
+            sudo rm -rf /Users/runner/Library/Caches/Homebrew
+            sudo rm -rf /usr/local/share/dotnet
+          fi
+          echo "== df -h после очистки =="
+          df -h
       - id: fvm
         uses: kuhnroyal/flutter-fvm-config-action@v3.3
       - uses: subosito/flutter-action@v2.23.0
@@ -107,6 +160,29 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
+      - name: Free disk space
+        if: runner.os == 'Linux' || runner.os == 'macOS'
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "== df -h до очистки =="
+          df -h
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            sudo rm -rf /usr/share/dotnet
+            sudo rm -rf /usr/local/lib/android
+            sudo rm -rf /opt/ghc
+            sudo rm -rf /usr/local/share/boost
+            sudo rm -rf /opt/hostedtoolcache/CodeQL
+            if command -v docker >/dev/null 2>&1; then
+              sudo docker image prune --all --force || true
+            fi
+          elif [ "$RUNNER_OS" = "macOS" ]; then
+            sudo rm -rf /Users/runner/Library/Android/sdk
+            sudo rm -rf /Users/runner/Library/Caches/Homebrew
+            sudo rm -rf /usr/local/share/dotnet
+          fi
+          echo "== df -h после очистки =="
+          df -h
       - id: fvm
         uses: kuhnroyal/flutter-fvm-config-action@v3.3
       - uses: subosito/flutter-action@v2.23.0
@@ -138,6 +214,38 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
+      - name: Free disk space
+        if: runner.os == 'Linux' || runner.os == 'macOS'
+        shell: bash
+        env:
+          # /usr/local/lib/android нужен этой Android-сборке: без SDK упадёт
+          # `flutter build apk`, поэтому в android-job SDK сохраняем, а остальные
+          # Linux-job (quality/test/build-linux) его освобождают.
+          KEEP_ANDROID_SDK: ${{ matrix.name == 'android' }}
+        run: |
+          set -euo pipefail
+          echo "== df -h до очистки =="
+          df -h
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            sudo rm -rf /usr/share/dotnet
+            if [ "${KEEP_ANDROID_SDK:-false}" != "true" ]; then
+              sudo rm -rf /usr/local/lib/android
+            else
+              echo "Android SDK сохранён: нужен для flutter build apk"
+            fi
+            sudo rm -rf /opt/ghc
+            sudo rm -rf /usr/local/share/boost
+            sudo rm -rf /opt/hostedtoolcache/CodeQL
+            if command -v docker >/dev/null 2>&1; then
+              sudo docker image prune --all --force || true
+            fi
+          elif [ "$RUNNER_OS" = "macOS" ]; then
+            sudo rm -rf /Users/runner/Library/Android/sdk
+            sudo rm -rf /Users/runner/Library/Caches/Homebrew
+            sudo rm -rf /usr/local/share/dotnet
+          fi
+          echo "== df -h после очистки =="
+          df -h
       - id: fvm
         uses: kuhnroyal/flutter-fvm-config-action@v3.3
       - uses: actions/setup-java@v6.2.0
@@ -152,6 +260,18 @@ jobs:
           cache: true
       - run: flutter pub get
       - run: flutter gen-l10n
+      - name: Free disk space (Android Gradle cache)
+        if: matrix.name == 'android'
+        shell: bash
+        run: |
+          # Кэш Gradle раздувается до нескольких GB и переживает прогоны на
+          # self-hosted/cached раннере; перед сборкой начинаем с чистого кэша.
+          set -euo pipefail
+          echo "== df -h до очистки кэша Gradle =="
+          df -h
+          rm -rf "$HOME/.gradle/caches"
+          echo "== df -h после очистки кэша Gradle =="
+          df -h
       - name: Сборка Android (debug, без подписи)
         if: matrix.name == 'android'
         run: flutter build apk --debug
