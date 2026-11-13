@@ -7,6 +7,7 @@ import 'package:cardflow/domain/generation/generation_error.dart';
 import 'package:cardflow/domain/generation/generation_provider.dart';
 import 'package:cardflow/domain/generation/generation_request.dart';
 import 'package:cardflow/domain/generation/generation_result.dart';
+import 'package:cardflow/domain/generation/openai_compatible_settings.dart';
 
 import '../../../helpers/generation_fakes.dart';
 
@@ -38,6 +39,7 @@ void main() {
     required FakeProviderAdapter adapter,
     required FakeGenerationTransport transport,
     FakeApiKeyStore? apiKeyStore,
+    FakeGenerationSettingsStore? settingsStore,
     String systemPrompt = 'СИСТЕМНЫЙ ПРОМПТ',
   }) {
     return CardGenerationService(
@@ -47,6 +49,7 @@ void main() {
           FakeApiKeyStore(<GenerationProvider, String>{
             GenerationProvider.openai: 'test-key-openai',
           }),
+      generationSettingsStore: settingsStore ?? FakeGenerationSettingsStore(),
       httpClient: transport,
       systemPrompt: systemPrompt,
       promptVersion: 'gen-ru-v2',
@@ -263,5 +266,195 @@ void main() {
       result.usage,
       const TokenUsage(promptTokens: 3, completionTokens: 4, totalTokens: 7),
     );
+  });
+
+  group('OpenAI-compatible (ADR-013)', () {
+    const compatibleRequest = GenerationRequest(
+      provider: GenerationProvider.openaiCompatible,
+      model: 'модель-из-запроса',
+      materialsText: 'Материал лекции',
+      limit: 5,
+    );
+    const configured = OpenAiCompatibleSettings(
+      baseUrl: 'http://localhost:11434/v1',
+      model: 'qwen2.5',
+    );
+
+    FakeProviderAdapter compatibleAdapter({
+      String cardsJson = '{"cards":[]}',
+    }) => FakeProviderAdapter(
+      provider: GenerationProvider.openaiCompatible,
+      cardsJson: cardsJson,
+    );
+
+    test('настройки сервера переопределяют модель, ключ опционален', () async {
+      final adapter = compatibleAdapter();
+      final transport = FakeGenerationTransport(response: <String, Object?>{});
+      final service = serviceWith(
+        adapter: adapter,
+        transport: transport,
+        apiKeyStore: FakeApiKeyStore(),
+        settingsStore: FakeGenerationSettingsStore(configured),
+      );
+
+      final result = await service.generate(compatibleRequest);
+
+      expect(result.provider, GenerationProvider.openaiCompatible);
+      expect(result.model, 'qwen2.5');
+      expect(adapter.buildArgs!.baseUrl, 'http://localhost:11434/v1');
+      expect(adapter.buildArgs!.model, 'qwen2.5');
+      expect(adapter.buildArgs!.apiKey, isEmpty);
+      expect(adapter.buildArgs!.strictSchema, isTrue);
+      expect(transport.calls, 1);
+    });
+
+    test('сервер не настроен (пустые настройки) → providerNotConfigured', () async {
+      final adapter = compatibleAdapter();
+      final service = serviceWith(
+        adapter: adapter,
+        transport: FakeGenerationTransport(response: <String, Object?>{}),
+        apiKeyStore: FakeApiKeyStore(),
+        settingsStore: FakeGenerationSettingsStore(),
+      );
+
+      await expectLater(
+        service.generate(compatibleRequest),
+        throwsGeneration(GenerationErrorCode.providerNotConfigured),
+      );
+      expect(adapter.buildCalls, 0);
+    });
+
+    test('некорректный сохранённый base_url → providerNotConfigured', () async {
+      final settingsStore = FakeGenerationSettingsStore(
+        const OpenAiCompatibleSettings(baseUrl: 'ftp://x', model: 'm'),
+      );
+      final service = serviceWith(
+        adapter: compatibleAdapter(),
+        transport: FakeGenerationTransport(response: <String, Object?>{}),
+        apiKeyStore: FakeApiKeyStore(),
+        settingsStore: settingsStore,
+      );
+
+      await expectLater(
+        service.generate(compatibleRequest),
+        throwsGeneration(GenerationErrorCode.providerNotConfigured),
+      );
+    });
+
+    test('strict 400 → один fallback без response_format, ответ валиден', () async {
+      final fenced = '```json\n${cardsJson(<Map<String, Object?>>[])}\n```';
+      final adapter = compatibleAdapter(cardsJson: fenced);
+      final transport = FakeGenerationTransport(
+        response: <String, Object?>{},
+        errorsBeforeResponse: <Object?>[
+          const GenerationException(GenerationErrorCode.badRequest),
+        ],
+      );
+      final service = serviceWith(
+        adapter: adapter,
+        transport: transport,
+        apiKeyStore: FakeApiKeyStore(),
+        settingsStore: FakeGenerationSettingsStore(configured),
+      );
+
+      final result = await service.generate(compatibleRequest);
+
+      expect(result.cards, isEmpty);
+      expect(transport.calls, 2);
+      expect(adapter.buildCalls, 2);
+      expect(adapter.buildArgs!.strictSchema, isFalse);
+      expect(adapter.buildArgs!.baseUrl, configured.baseUrl);
+    });
+
+    test('fallback тоже 400 → badRequest, не больше двух запросов', () async {
+      final transport = FakeGenerationTransport(
+        response: <String, Object?>{},
+        errorsBeforeResponse: <Object?>[
+          const GenerationException(GenerationErrorCode.badRequest),
+          const GenerationException(GenerationErrorCode.badRequest),
+        ],
+      );
+      final service = serviceWith(
+        adapter: compatibleAdapter(),
+        transport: transport,
+        apiKeyStore: FakeApiKeyStore(),
+        settingsStore: FakeGenerationSettingsStore(configured),
+      );
+
+      await expectLater(
+        service.generate(compatibleRequest),
+        throwsGeneration(GenerationErrorCode.badRequest),
+      );
+      expect(transport.calls, 2);
+    });
+
+    test('без fallback-кода поведение прежнее: 5xx не повторяется сервисом', () async {
+      final transport = FakeGenerationTransport(
+        response: <String, Object?>{},
+        errorsBeforeResponse: <Object?>[
+          const GenerationException(GenerationErrorCode.serverUnavailable),
+        ],
+      );
+      final service = serviceWith(
+        adapter: compatibleAdapter(),
+        transport: transport,
+        apiKeyStore: FakeApiKeyStore(),
+        settingsStore: FakeGenerationSettingsStore(configured),
+      );
+
+      await expectLater(
+        service.generate(compatibleRequest),
+        throwsGeneration(GenerationErrorCode.serverUnavailable),
+      );
+      expect(transport.calls, 1);
+    });
+
+    test('обычный подрядчик: badRequest не повторяется fallback-логикой', () async {
+      final transport = FakeGenerationTransport(
+        response: <String, Object?>{},
+        errorsBeforeResponse: <Object?>[
+          const GenerationException(GenerationErrorCode.badRequest),
+        ],
+      );
+      final service = serviceWith(
+        adapter: FakeProviderAdapter(provider: GenerationProvider.openai),
+        transport: transport,
+      );
+
+      await expectLater(
+        service.generate(request),
+        throwsGeneration(GenerationErrorCode.badRequest),
+      );
+      expect(transport.calls, 1);
+    });
+
+    test('markdown вокруг JSON извлекается только у compatible-провайдера', () async {
+      final tolerant = compatibleAdapter(
+        cardsJson:
+            'Вот карточки:\n```json\n${cardsJson(<Map<String, Object?>>[])}\n```',
+      );
+      final service = serviceWith(
+        adapter: tolerant,
+        transport: FakeGenerationTransport(response: <String, Object?>{}),
+        apiKeyStore: FakeApiKeyStore(),
+        settingsStore: FakeGenerationSettingsStore(configured),
+      );
+      final result = await service.generate(compatibleRequest);
+      expect(result.cards, isEmpty);
+
+      final strict = FakeProviderAdapter(
+        provider: GenerationProvider.openai,
+        cardsJson:
+            'Вот карточки:\n```json\n${cardsJson(<Map<String, Object?>>[])}\n```',
+      );
+      final openAiService = serviceWith(
+        adapter: strict,
+        transport: FakeGenerationTransport(response: <String, Object?>{}),
+      );
+      await expectLater(
+        openAiService.generate(request),
+        throwsGeneration(GenerationErrorCode.invalidResponse),
+      );
+    });
   });
 }

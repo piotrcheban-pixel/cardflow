@@ -191,7 +191,8 @@ class FakeGenerationTransport implements GenerationTransport {
     this.response,
     this.error,
     this.callsBeforeResponse = 0,
-  });
+    List<Object?>? errorsBeforeResponse,
+  }) : _pendingErrors = <Object?>[...?errorsBeforeResponse];
 
   /// JSON-ответ по умолчанию.
   final Map<String, Object?>? response;
@@ -201,6 +202,9 @@ class FakeGenerationTransport implements GenerationTransport {
 
   /// Сколько первых вызовов «падать» (для проверки, что сервис не ретраит сам).
   final int callsBeforeResponse;
+
+  /// Ошибки первых вызовов по порядку (для проверки fallback в сервисе).
+  final List<Object?> _pendingErrors;
 
   /// Все отправленные запросы.
   final List<ProviderRequest> requests = <ProviderRequest>[];
@@ -215,6 +219,9 @@ class FakeGenerationTransport implements GenerationTransport {
   }) async {
     calls++;
     requests.add(request);
+    if (_pendingErrors.isNotEmpty) {
+      throw _pendingErrors.removeAt(0)!;
+    }
     if (calls <= callsBeforeResponse) {
       throw const FormatException('fake transient failure');
     }
