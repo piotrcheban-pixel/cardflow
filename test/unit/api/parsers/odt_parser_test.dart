@@ -34,7 +34,7 @@ void main() {
 
     expect(
       document.text,
-      'Вступление\nРаздел 1\nТекст раздела 1\nРаздел 2\nТекст раздела 2',
+      'Вступление\n\nРаздел 1\nТекст раздела 1\n\nРаздел 2\nТекст раздела 2',
     );
     expect(document.sections, hasLength(3));
     expect(document.sections[0].title, isNull);
@@ -81,3 +81,4 @@ void main() {
     );
   });
 }
+
