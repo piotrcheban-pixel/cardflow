@@ -1,8 +1,24 @@
 /// Адаптер Google Gemini `generateContent` со структурированным выводом (SPEC A8.2).
 library;
 
+import 'package:cardflow/api/generation/provider_schema.dart';
 import 'package:cardflow/api/providers/generation_provider_adapter.dart';
+import 'package:cardflow/api/providers/provider_json.dart';
+import 'package:cardflow/domain/generation/generation_error.dart';
 import 'package:cardflow/domain/generation/generation_provider.dart';
+import 'package:cardflow/domain/generation/generation_result.dart';
+
+/// Хост Generative Language API.
+const String _host = 'generativelanguage.googleapis.com';
+
+/// Причины остановки Gemini, означающие отказ/safety-фильтр (SPEC A8.2).
+const Set<String> _refusalFinishReasons = <String>{
+  'SAFETY',
+  'RECITATION',
+  'BLOCKLIST',
+  'PROHIBITED_CONTENT',
+  'SPII',
+};
 
 /// Gemini: `POST https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent`,
 /// ключ — только в заголовке `x-goog-api-key` (SPEC A8.6: не в URL),
@@ -26,11 +42,118 @@ class GeminiAdapter implements GenerationProviderAdapter {
     required String userContent,
     required int maxOutputTokens,
   }) {
-    throw UnimplementedError('GeminiAdapter.buildRequest');
+    return ProviderRequest(
+      uri: Uri.https(_host, '/v1beta/models/$model:generateContent'),
+      headers: <String, String>{
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey,
+      },
+      body: <String, Object?>{
+        'systemInstruction': <String, Object?>{
+          'parts': <Object?>[
+            <String, Object?>{'text': systemPrompt},
+          ],
+        },
+        'contents': <Object?>[
+          <String, Object?>{
+            'role': 'user',
+            'parts': <Object?>[
+              <String, Object?>{'text': userContent},
+            ],
+          },
+        ],
+        'generationConfig': <String, Object?>{
+          'responseMimeType': 'application/json',
+          'responseSchema': geminiCardSchema(),
+        },
+      },
+    );
   }
 
   @override
   ProviderRawResponse parseResponse(Map<String, Object?> json) {
-    throw UnimplementedError('GeminiAdapter.parseResponse');
+    final promptFeedback = jsonObjectOrNull(json['promptFeedback']);
+    final blockReason = promptFeedback?['blockReason'];
+    if (blockReason is String && blockReason.isNotEmpty) {
+      throw const GenerationException(GenerationErrorCode.refused);
+    }
+
+    final rawCandidates = json['candidates'];
+    if (rawCandidates == null) {
+      throw const GenerationException(GenerationErrorCode.emptyResponse);
+    }
+    final candidates = jsonListOrNull(rawCandidates);
+    if (candidates == null) {
+      throw invalidProviderResponse('Gemini', 'candidates не список');
+    }
+    if (candidates.isEmpty) {
+      throw const GenerationException(GenerationErrorCode.emptyResponse);
+    }
+    final candidate = jsonObjectOrNull(candidates.first);
+    if (candidate == null) {
+      throw invalidProviderResponse('Gemini', 'candidates[0] не объект');
+    }
+
+    final finishReason = candidate['finishReason'];
+    if (finishReason == 'MAX_TOKENS') {
+      throw const GenerationException(GenerationErrorCode.truncated);
+    }
+    if (finishReason is String &&
+        _refusalFinishReasons.contains(finishReason)) {
+      throw const GenerationException(GenerationErrorCode.refused);
+    }
+
+    final content = jsonObjectOrNull(candidate['content']);
+    if (content == null) {
+      throw const GenerationException(GenerationErrorCode.emptyResponse);
+    }
+    final rawParts = content['parts'];
+    if (rawParts == null) {
+      throw const GenerationException(GenerationErrorCode.emptyResponse);
+    }
+    final parts = jsonListOrNull(rawParts);
+    if (parts == null) {
+      throw invalidProviderResponse(
+        'Gemini',
+        'candidates[0].content.parts не список',
+      );
+    }
+    final buffer = StringBuffer();
+    for (final rawPart in parts) {
+      final part = jsonObjectOrNull(rawPart);
+      if (part == null) {
+        throw invalidProviderResponse(
+          'Gemini',
+          'candidates[0].content.parts[] не объект',
+        );
+      }
+      final text = part['text'];
+      if (text == null) continue;
+      if (text is! String) {
+        throw invalidProviderResponse(
+          'Gemini',
+          'candidates[0].content.parts[].text не строка',
+        );
+      }
+      buffer.write(text);
+    }
+    final cardsJson = buffer.toString();
+    if (cardsJson.trim().isEmpty) {
+      throw const GenerationException(GenerationErrorCode.emptyResponse);
+    }
+    return ProviderRawResponse(
+      cardsJson: cardsJson,
+      usage: _parseUsage(json['usageMetadata']),
+    );
   }
+}
+
+TokenUsage _parseUsage(Object? value) {
+  final usage = jsonObjectOrNull(value);
+  if (usage == null) return const TokenUsage();
+  return TokenUsage(
+    promptTokens: jsonIntOrNull(usage['promptTokenCount']),
+    completionTokens: jsonIntOrNull(usage['candidatesTokenCount']),
+    totalTokens: jsonIntOrNull(usage['totalTokenCount']),
+  );
 }
