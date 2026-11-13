@@ -7,6 +7,9 @@ name: CI
 # Прогон итерации 2 упал инфраструктурно: "No space left on device" на раннере.
 # Поэтому перед `flutter pub get` каждый job освобождает диск ("Free disk space"),
 # а Android-сборка дополнительно чистит кэш Gradle перед сборкой.
+# PDF-тесты на Linux/macOS (L26) получают PDFium явно: job test скачивает pinned
+# релиз bblanchon/pdfium-binaries (chromium/8125, тот же, что в build-hook
+# pdfium_dart) и экспортирует PDFIUM_PATH -> pdfrxInitialize() грузит модуль.
 
 on:
   push:
@@ -112,6 +115,34 @@ jobs:
           flutter-version: ${{ steps.fvm.outputs.FLUTTER_VERSION }}
           channel: stable
           cache: true
+      - name: PDFium для PDF-тестов (Linux/macOS)
+        # flutter test на Linux/macOS не находит PDFium сам (L26): Flutter engine
+        # cache не содержит libpdfium, у pdfium_dart в тестовом окружении нет
+        # bundled native asset, на macOS чистый Dart-загрузчик платформу не
+        # поддерживает. Скачиваем тот же релиз PDFium, что использует build-hook
+        # pdfium_dart 0.4.1 (bblanchon/pdfium-binaries, chromium/8125), и отдаём
+        # его pdfrx через PDFIUM_PATH: pdfrxInitialize() читает переменную и
+        # грузит модуль по явному пути. На Windows PDFium находится сам.
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$RUNNER_OS" in
+            Linux) asset="pdfium-linux-x64.tgz"; lib="lib/libpdfium.so" ;;
+            macOS) asset="pdfium-mac-arm64.tgz"; lib="lib/libpdfium.dylib" ;;
+            *) echo "PDFium bootstrap не нужен для $RUNNER_OS"; exit 0 ;;
+          esac
+          dir="$RUNNER_TEMP/pdfium"
+          mkdir -p "$dir"
+          curl -fsSL --retry 3 -o "$RUNNER_TEMP/pdfium.tgz" \
+            "https://github.com/bblanchon/pdfium-binaries/releases/download/chromium%2F8125/$asset"
+          tar -xzf "$RUNNER_TEMP/pdfium.tgz" -C "$dir"
+          if [ ! -f "$dir/$lib" ]; then
+            echo "PDFium: в архиве $asset нет $lib"
+            exit 1
+          fi
+          echo "PDFIUM_PATH=$dir/$lib" >> "$GITHUB_ENV"
+          echo "PDFium для тестов: $dir/$lib"
       - run: flutter pub get
       - run: flutter gen-l10n
       - name: Тесты (кроме golden)
