@@ -529,10 +529,10 @@ class AppLocalizationsRu extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       seconds,
       locale: localeName,
-      other: '# секунды',
-      many: '# секунд',
-      few: '# секунды',
-      one: '# секунду',
+      other: '$seconds секунды',
+      many: '$seconds секунд',
+      few: '$seconds секунды',
+      one: '$seconds секунду',
     );
     return 'Превышен лимит запросов. Повтор через $_temp0';
   }

@@ -631,7 +631,7 @@
   "@generationErrorBadRequest": {
     "description": "Генерация: запрос отвергнут (HTTP 400/404/422, SPEC A8.6)."
   },
-  "generationErrorRateLimited": "Превышен лимит запросов. Повтор через {seconds, plural, one{# секунду} few{# секунды} many{# секунд} other{# секунды}}",
+  "generationErrorRateLimited": "Превышен лимит запросов. Повтор через {seconds, plural, one{{seconds} секунду} few{{seconds} секунды} many{{seconds} секунд} other{{seconds} секунды}}",
   "@generationErrorRateLimited": {
     "description": "Генерация: HTTP 429 с Retry-After, пауза в секундах (SPEC A8.6).",
     "placeholders": {

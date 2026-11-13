@@ -931,7 +931,7 @@ abstract class AppLocalizations {
   /// Генерация: HTTP 429 с Retry-After, пауза в секундах (SPEC A8.6).
   ///
   /// In ru, this message translates to:
-  /// **'Превышен лимит запросов. Повтор через {seconds, plural, one{# секунду} few{# секунды} many{# секунд} other{# секунды}}'**
+  /// **'Превышен лимит запросов. Повтор через {seconds, plural, one{{seconds} секунду} few{{seconds} секунды} many{{seconds} секунд} other{{seconds} секунды}}'**
   String generationErrorRateLimited(int seconds);
 
   /// Генерация: HTTP 429 без Retry-After (SPEC A8.6).
