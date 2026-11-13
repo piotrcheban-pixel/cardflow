@@ -120,26 +120,30 @@ void main() {
     );
   });
 
-  test('архив с более 10000 записей отвергается ZIP-лимитами (ADR-010)', () async {
-    final Uint8List manyEntries = zipFixture(<String, String>{
-      for (int i = 0; i < 10001; i++) 'f$i.txt': '',
-    });
-    await expectLater(
-      parse(manyEntries),
-      throwsA(
-        isA<ParserException>().having(
-          (ParserException e) => e.code,
-          'code',
-          ParserErrorCode.unreadableFile,
+  test(
+    'архив с более 10000 записей отвергается ZIP-лимитами (ADR-010)',
+    () async {
+      final Uint8List manyEntries = zipFixture(<String, String>{
+        for (int i = 0; i < 10001; i++) 'f$i.txt': '',
+      });
+      await expectLater(
+        parse(manyEntries),
+        throwsA(
+          isA<ParserException>().having(
+            (ParserException e) => e.code,
+            'code',
+            ParserErrorCode.unreadableFile,
+          ),
         ),
-      ),
-    );
-  });
+      );
+    },
+  );
 
   test('формула без кэша не теряется: выводится =формула', () async {
     final ParsedDocument document = await parse(
       buildXlsx(<String, String>{
-        'Лист1': xlsxRow(1, <String>[xlsxNumberCell('A1', 5)]) +
+        'Лист1':
+            xlsxRow(1, <String>[xlsxNumberCell('A1', 5)]) +
             xlsxRow(2, <String>[xlsxFormulaWithoutCache('A2', 'A1*2')]),
       }),
     );

@@ -142,10 +142,7 @@ class DocxParser implements DocumentParser {
   }
 
   /// Лежит ли [element] внутри `w:pPr` абзаца [paragraph].
-  bool _insideParagraphProperties(
-    XmlElement element,
-    XmlElement paragraph,
-  ) {
+  bool _insideParagraphProperties(XmlElement element, XmlElement paragraph) {
     XmlNode? node = element.parent;
     while (node != null && node != paragraph) {
       if (node is XmlElement && node.name.local == 'pPr') {

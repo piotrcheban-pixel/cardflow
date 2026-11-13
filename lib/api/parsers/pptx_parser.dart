@@ -30,9 +30,9 @@ class PptxParser implements DocumentParser {
     required String fileName,
   }) async {
     final SecureZip zip = SecureZip(bytes);
-    final List<String> slides = _orderedSlideEntries(
-      zip,
-    ).where(zip.contains).toList();
+    final List<String> slides = _orderedSlideEntries(zip)
+        .where(zip.contains)
+        .toList();
     if (slides.isEmpty) {
       throw const ParserException(
         ParserErrorCode.unreadableFile,
@@ -139,4 +139,3 @@ class PptxParser implements DocumentParser {
     return lines;
   }
 }
-

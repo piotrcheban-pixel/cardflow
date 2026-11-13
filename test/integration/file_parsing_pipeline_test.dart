@@ -143,21 +143,17 @@ void main() {
 
   test('код ParserException сохраняется при выбросе внутри реального изолята', () async {
     final FileParsingService service = FileParsingService();
-    final List<ParsingOutcome> outcomes = await service.parseAll(
-      <FileParsingInput>[
-        // ZIP-сигнатура валидна, но это не DOCX: ParserException(unreadableFile)
-        // бросается парсером уже внутри Isolate.run.
-        FileParsingInput(
-          fileName: 'не-docx.docx',
-          bytes: zipFixture(<String, String>{'x.txt': 'y'}),
-        ),
-        // Скан без текстового слоя: ParserException(scannedPdf) из изолята.
-        FileParsingInput(
-          fileName: 'скан.pdf',
-          bytes: buildPdfWithoutText(),
-        ),
-      ],
-    );
+    final List<ParsingOutcome>
+    outcomes = await service.parseAll(<FileParsingInput>[
+      // ZIP-сигнатура валидна, но это не DOCX: ParserException(unreadableFile)
+      // бросается парсером уже внутри Isolate.run.
+      FileParsingInput(
+        fileName: 'не-docx.docx',
+        bytes: zipFixture(<String, String>{'x.txt': 'y'}),
+      ),
+      // Скан без текстового слоя: ParserException(scannedPdf) из изолята.
+      FileParsingInput(fileName: 'скан.pdf', bytes: buildPdfWithoutText()),
+    ]);
     expect(
       (outcomes[0] as ParsedFileFailure).code,
       ParserErrorCode.unreadableFile,

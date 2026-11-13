@@ -179,4 +179,3 @@ String _decodeUtf16(List<int> bytes, {required bool littleEndian}) {
   }
   return String.fromCharCodes(codeUnits);
 }
-

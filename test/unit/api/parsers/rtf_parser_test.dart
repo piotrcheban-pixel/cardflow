@@ -146,9 +146,7 @@ void main() {
   });
 
   test('control symbols \\~, \\_ и \\- обрабатываются', () async {
-    final ParsedDocument document = await parse(
-      buildRtf('a\\~b a\\_b a\\-b'),
-    );
+    final ParsedDocument document = await parse(buildRtf('a\\~b a\\_b a\\-b'));
     expect(document.text, 'a b a-b ab');
   });
 }

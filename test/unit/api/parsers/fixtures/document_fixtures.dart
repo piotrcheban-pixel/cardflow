@@ -405,7 +405,8 @@ String docxCustomXml(List<String> paragraphs) =>
 /// Собирает ODT с произвольным XML внутри `office:text`.
 Uint8List buildOdtRaw({required String bodyXml}) => zipFixture(<String, String>{
   'mimetype': 'application/vnd.oasis.opendocument.text',
-  'content.xml': '''
+  'content.xml':
+      '''
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <office:document-content
     xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0"
@@ -429,7 +430,8 @@ String xlsxFormulaWithoutCache(String reference, String formula) =>
     '<c r="$reference"><f>${xmlEscape(formula)}</f></c>';
 
 /// PDF из нескольких страниц; пустая строка — страница без текстового слоя.
-Uint8List buildPdfPages(List<String> pageTexts) {  final int pageCount = pageTexts.length;
+Uint8List buildPdfPages(List<String> pageTexts) {
+  final int pageCount = pageTexts.length;
   final int fontNumber = 3 + 2 * pageCount;
   final StringBuffer buffer = StringBuffer('%PDF-1.4\n');
   final List<int> offsets = <int>[];
@@ -473,14 +475,42 @@ Uint8List buildPdfPages(List<String> pageTexts) {  final int pageCount = pageTex
   return Uint8List.fromList(latin1.encode(buffer.toString()));
 }
 
-
 // --- Зашифрованный PDF (стандартный security handler V1/R2, RC4 40 бит) ---
 
 /// Стандартный padding-пароль PDF (PDF 1.7, Algorithm 2).
 const List<int> _pdfPasswordPadding = <int>[
-  0x28, 0xBF, 0x4E, 0x5E, 0x4E, 0x75, 0x8A, 0x41, 0x64, 0x00, 0x4E, 0x56,
-  0xFF, 0xFA, 0x01, 0x08, 0x2E, 0x2E, 0x00, 0xB6, 0xD0, 0x68, 0x3E, 0x80,
-  0x2F, 0x0C, 0xA9, 0xFE, 0x64, 0x53, 0x69, 0x7A,
+  0x28,
+  0xBF,
+  0x4E,
+  0x5E,
+  0x4E,
+  0x75,
+  0x8A,
+  0x41,
+  0x64,
+  0x00,
+  0x4E,
+  0x56,
+  0xFF,
+  0xFA,
+  0x01,
+  0x08,
+  0x2E,
+  0x2E,
+  0x00,
+  0xB6,
+  0xD0,
+  0x68,
+  0x3E,
+  0x80,
+  0x2F,
+  0x0C,
+  0xA9,
+  0xFE,
+  0x64,
+  0x53,
+  0x69,
+  0x7A,
 ];
 
 List<int> _padPdfPassword(String password) {
