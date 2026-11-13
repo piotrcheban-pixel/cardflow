@@ -20,9 +20,12 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   32 МБ запись / 120 МБ сумма) до разбора; ошибки — только `ParserErrorCode` → строка ARB
   (`lib/ui/generation/parser_error_message.dart`), `details`/сырые исключения в UI не попадают. `.doc/.xls`
   не поддерживаются (ADR-003). Парсинг — в `Isolate.run`; ошибка файла не блокирует остальные.
-- **API-слой генерации** (SPEC A8.1/A8.2/A8.4–A8.6, ADR-011/ADR-012):
+- **API-слой генерации** (SPEC A8.1/A8.2/A8.4–A8.6, ADR-011/ADR-012/ADR-013):
   канон-схема ответа и её проекции — `lib/api/generation/` (`card_json_schema.dart`, `provider_schema.dart`);
-  три адаптера провайдеров — `lib/api/providers/` (чистые `buildRequest`/`parseResponse`, без сети и UI);
+  адаптеры провайдеров — `lib/api/providers/` (OpenAI, Gemini, Anthropic и OpenAI-compatible; чистые
+  `buildRequest`/`parseResponse`, без сети и UI). У OpenAI-compatible `base_url` и `model` — настройки в
+  `app_settings` (`generation.openai_compatible`, `GenerationSettingsStore`), ключ опционален и только в
+  `ApiKeyStore`; strict `response_format` — с одним fallback без схемы и локальной проверкой A8.4;
   промпт `gen-ru-v2` скрыт в коде (`system_prompt.dart`), пользовательское сообщение — `generation_prompt.dart`;
   контентные правила A8.4 — `card_content_validator.dart` (пометки `CardIssueCode`, карточка не отбрасывается);
   HTTP — только через `GenerationTransport` (`lib/api/http/generation_http_client.dart`) с `RetryPolicy`
