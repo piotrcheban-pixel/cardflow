@@ -14,7 +14,11 @@ void main() {
       expect(GenerationProvider.openai.wireName, 'openai');
       expect(GenerationProvider.gemini.wireName, 'gemini');
       expect(GenerationProvider.anthropic.wireName, 'anthropic');
-      expect(GenerationProvider.values, hasLength(3));
+      expect(
+        GenerationProvider.openaiCompatible.wireName,
+        'openai_compatible',
+      );
+      expect(GenerationProvider.values, hasLength(4));
     });
 
     test('fromWire разбирает известные значения и падает на неизвестном', () {
@@ -44,6 +48,7 @@ void main() {
     test('все коды A8.6 присутствуют', () {
       expect(GenerationErrorCode.values.toSet(), <GenerationErrorCode>{
         GenerationErrorCode.missingApiKey,
+        GenerationErrorCode.providerNotConfigured,
         GenerationErrorCode.invalidApiKey,
         GenerationErrorCode.badRequest,
         GenerationErrorCode.rateLimited,
