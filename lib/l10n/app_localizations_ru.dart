@@ -582,7 +582,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get settingsServerAddressHint =>
-      'Полный адрес, при необходимости — с версией API';
+      'Полный адрес; версию укажите в пути, если сервер её требует';
 
   @override
   String get settingsModelLabel => 'Модель';

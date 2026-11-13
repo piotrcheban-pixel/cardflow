@@ -17,7 +17,7 @@ import '../helpers/generation_fakes.dart';
 ///
 /// Запуск — только при наличии ключа в окружении (иначе skip):
 ///   set DEEPSEEK_API_KEY=...            (значение не выводить в терминал)
-///   fvm flutter test test/live --run-skipped --tags live
+///   fvm flutter test test/live --tags live
 /// Необязательно: DEEPSEEK_BASE_URL (по умолчанию `https://api.deepseek.com`),
 /// DEEPSEEK_MODEL (по умолчанию `deepseek-chat`).
 void main() {

@@ -688,7 +688,7 @@
   "@settingsServerAddressLabel": {
     "description": "Подпись поля base_url OpenAI-совместимого сервера."
   },
-  "settingsServerAddressHint": "Полный адрес, при необходимости — с версией API",
+  "settingsServerAddressHint": "Полный адрес; версию укажите в пути, если сервер её требует",
   "@settingsServerAddressHint": {
     "description": "Подсказка поля base_url: например /v1 для локальных серверов."
   },

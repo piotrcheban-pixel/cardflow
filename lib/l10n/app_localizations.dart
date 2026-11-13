@@ -1009,7 +1009,7 @@ abstract class AppLocalizations {
   /// Подсказка поля base_url: например /v1 для локальных серверов.
   ///
   /// In ru, this message translates to:
-  /// **'Полный адрес, при необходимости — с версией API'**
+  /// **'Полный адрес; версию укажите в пути, если сервер её требует'**
   String get settingsServerAddressHint;
 
   /// Подпись поля модели OpenAI-совместимого сервера.
