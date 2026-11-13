@@ -24,7 +24,9 @@ void main() {
       return '';
     }
     final int next = workflow.indexOf('\n  build-desktop:', start);
-    return next < 0 ? workflow.substring(start) : workflow.substring(start, next);
+    return next < 0
+        ? workflow.substring(start)
+        : workflow.substring(start, next);
   }
 
   test('workflow: job test скачивает PDFium из pinned-релиза для Linux/macOS', () {
@@ -52,7 +54,8 @@ void main() {
     expect(
       job,
       contains("if: runner.os != 'Windows'"),
-      reason: 'на Windows PDFium работает без бутстрапа — шаг не должен его ломать',
+      reason:
+          'на Windows PDFium работает без бутстрапа — шаг не должен его ломать',
     );
   });
 
@@ -72,7 +75,8 @@ void main() {
     expect(
       workflow.indexOf('PDFium для PDF-тестов', buildMobile),
       -1,
-      reason: 'бутстрап PDFium нужен только job-у test (сборки не гоняют тесты)',
+      reason:
+          'бутстрап PDFium нужен только job-у test (сборки не гоняют тесты)',
     );
   });
 
