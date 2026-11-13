@@ -34,8 +34,8 @@
 | [sqlite3](https://pub.dev/packages/sqlite3) | `^3.9.1` | нативная SQLite через FFI + Dart hooks (native assets) | все | MIT | approved · needs-runtime-spike (native assets на 5 платформах) |
 | [dio](https://pub.dev/packages/dio) | `^5.11.1` | HTTP + перехватчики/ретраи (A8.2, A8.6) | чистый Dart | MIT | approved |
 | [flutter_secure_storage](https://pub.dev/packages/flutter_secure_storage) | `^11.2.0` | ключи API только здесь (A1.3, A8.6) | Android, iOS, Linux, macOS, Windows, Web | BSD-3-Clause | approved · minSdk 23; Android `allowBackup=false` |
-| [json_schema](https://pub.dev/packages/json_schema) | `^5.2.2` | локальная валидация ответа модели по A8.4 | чистый Dart | Boost-1.0 (LICENSE в репо; pub.dev license-tag отсутствует) | needs-runtime-spike; fallback `json_schema_builder ^0.1.7` |
-| [flutter_math_fork](https://pub.dev/packages/flutter_math_fork) | `^0.7.4` | единственный разрешённый LaTeX-рендер (A1/AGENTS) | Android, iOS, Linux, macOS, Windows, Web | Apache-2.0 | approved · needs-runtime-spike (релиз 2025-05-21, проверить на Flutter 3.47) |
+| [json_schema](https://pub.dev/packages/json_schema) | `^5.2.2` | локальная валидация ответа модели по A8.4 | чистый Dart | Boost-1.0 (LICENSE в репо; pub.dev license-tag отсутствует) | **approved** · runtime-спайк итерации 3b S1: каноническая схема A8.4 валидируется, нарушения ловятся (`ValidationResults.errors`); fallback `json_schema_builder` не нужен |
+| [flutter_math_fork](https://pub.dev/packages/flutter_math_fork) | `^0.7.4` | единственный разрешённый LaTeX-рендер (A1/AGENTS); проверка формул при генерации (A8.4) | Android, iOS, Linux, macOS, Windows, Web | Apache-2.0 | approved · спайк итерации 3b S2: `Math.tex(expression).parseError` проверяет валидность LaTeX без рендера и биндинга (`\frac{`/неизвестная команда → ошибка); сам рендер с кириллицей — итерации 5/6 |
 | [archive](https://pub.dev/packages/archive) | `^4.6.0` | `.zip` экспорт/импорт; ZIP-контейнер DOCX/PPTX/ODT/XLSX (A8.3) | чистый Dart | MIT | approved |
 | [xml](https://pub.dev/packages/xml) | `^7.0.1` (факт; кандидат был 7.1.0 ниже sdk-constraint) | разбор XML внутри DOCX/PPTX/ODT/XLSX (A8.3) | чистый Dart | MIT | approved |
 | [excel_plus](https://pub.dev/packages/excel_plus) | `^2.29.2` | XLSX (замена устаревшего `excel`); читает и legacy `.xls` (BIFF8) — кандидат для ADR-003 | чистый Dart | MIT | approved · needs-runtime-spike (A8.3 «формулы по кэшированному значению», фикстуры) |
@@ -161,7 +161,7 @@ dev_dependencies:
 4. **`sqlite3_flutter_libs` больше не нужен** (EOL). `drift_flutter 0.3.1` всё ещё объявляет его как no-op-заглушку `^0.6.0+eol`; это нормально, но в `pubspec.yaml` его добавлять не надо. Нативная SQLite теперь ставится `sqlite3 ^3.9.1` через Dart hooks (native assets) — проверить `flutter build windows` после установки Flutter.
 5. **Guard `no_webview`:** транзитивно приходят пакеты `web`, `web_socket_channel`, `flutter_web_plugins`, `file_picker_web` — это dart:js/веб-интероп, **не** WebView. Блокировать нужно только `webview_flutter`, `flutter_inappwebview` (`flutter_inappwebview_*`), `flutter_html` (`flutter_html_*`).
 6. **pdfrx и Windows:** для сборки на Windows **обязательно включён Developer Mode** (README pdfrx); сборка требует C-тулчейна (VS Build Tools на хосте есть по факту итерации 0). Зафиксировать в `KNOWN_LIMITATIONS.md`, если Developer Mode выключен.
-7. **needs-runtime-spike** (проверить после установки Flutter 3.47.9): `fvm flutter pub get` (весь граф), `material_ui`+`material_3_expressive` (сборка минимального экрана, ru-локаль), `drift`+`sqlite3` (открытие БД на Windows), `pdfrx` (извлечение текста `PdfPage.loadText()`), `json_schema` (валидация A8.4), `flutter_math_fork` (рендер формулы с кириллицей), `excel_plus` (чтение XLSX-фикстуры, кэшированные значения формул), `enough_convert` (cp1251 и KOI8-R), `fsrs` (интервалы для 4 оценок).
+7. **needs-runtime-spike** (проверить после установки Flutter 3.47.9): `fvm flutter pub get` (весь граф), `material_ui`+`material_3_expressive` (сборка минимального экрана, ru-локаль), `drift`+`sqlite3` (открытие БД на Windows), `pdfrx` (извлечение текста `PdfPage.loadText()`), `json_schema` (**выполнено — итерация 3b S1**), `flutter_math_fork` (**проверка формул — выполнено, итерация 3b S2**; рендер с кириллицей — итерации 5/6), `excel_plus` (чтение XLSX-фикстуры, кэшированные значения формул), `enough_convert` (cp1251 и KOI8-R), `fsrs` (интервалы для 4 оценок).
 8. **Версии — стабильные на 2026-11-11**; при `pub get` допустимы только патч-обновления в рамках указанных caret-constraint'ов. Любой breakout — через ADR.
 
 ## 7. Фактическое состояние после итерации 0 (2026-11-11)
@@ -185,7 +185,7 @@ dev_dependencies:
 | `desktop_drop`/`super_drag_and_drop` | выбран один пакет (SPEC A3), `super_drag_and_drop` удалён из pubspec | выполнено |
 | `test ^1.33.0` не добавлен | `flutter_test` уже даёт test API; отдельный `test` не нужен | осознанное отступление |
 
-**Runtime-спайки, выполненные в итерации 0:** S1 (`pub get` графа — успех), S2 частично (M3E-библиотека компилируется, токены `M3EMotion` совпадают со SPEC A4.4 в тесте; `M3EMaterialApp` — итерация 1), S3 частично (native assets `sqlite3` собрались при `dart run`), S9 (FSRS: интервалы 4 оценок, см. тесты). Не выполнены: S4–S8, S10 — вынесены в итерации 1/3a/3b/5 (см. `journal/iteration-0/dependency-spike.md` §7 и `journal/KNOWN_LIMITATIONS.md`).
+**Runtime-спайки, выполненные в итерации 0:** S1 (`pub get` графа — успех), S2 частично (M3E-библиотека компилируется, токены `M3EMotion` совпадают со SPEC A4.4 в тесте; `M3EMaterialApp` — итерация 1), S3 частично (native assets `sqlite3` собрались при `dart run`), S9 (FSRS: интервалы 4 оценок, см. тесты). **S6 (`json_schema`, валидация A8.4) выполнен в итерации 3b — см. §11; S7 (`flutter_math_fork`) — проверка формул выполнена в 3b, рендер с кириллицей — итерации 5/6.** Не выполнены: S4, S5, S8, S10 — вынесены в итерации 1/3a/3b/5 (см. `journal/iteration-0/dependency-spike.md` §7 и `journal/KNOWN_LIMITATIONS.md`).
 
 ## 8. Фактическое состояние после итерации 1 (2026-11-12)
 
@@ -238,3 +238,23 @@ dev_dependencies:
 **Покрытие нового кода** (`fvm dart run tool/coverage_check.dart --min=80`): итого **95.3% (3152/3309)**; по новым файлам: `file_parsing_service` 100%, `odt_parser` 100%, `parsed_document_builder` 100%, `xml_local_names` 100%, `parsed_document` 100%, `pdf_parser` 85.3%, `docx_parser` 98.7%, `pptx_parser` 98.2%, `zip_xml` 96.8%, `txt_parser` 96.3%, `xlsx_parser` 94.7%, `rtf_parser` 89.0%, `document_format` 94.1%.
 
 **CI:** прогон итерации 3a [`43484685899`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43484685899) выявил L26 (PDFium не грузился в `flutter test` на Linux/macOS); фикс — PDFium-бутстрап на всех трёх ОС (pinned `chromium/8125` + sha256 + `PDFIUM_PATH`) и guard `test/guards/ci_pdfium_test.dart` (ADR-010 §11). **Зелёный прогон после фикса — [43491786199](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43491786199)**: 9/9 job success, PDF-тесты реально прошли на ubuntu/macos/windows (по 603 теста), PDFium грузился из `PDFIUM_PATH`; L26 снят.
+
+## 11. Фактическое состояние после итерации 3b (2026-11-13)
+
+**Новых пакетов не добавлялось.** API-слой генерации собран на уже проверенных зависимостях:
+`dio` 5.11.1 (HTTP, собственный цикл ретраев + redaction-перехватчик), `json_schema` 5.2.2 (валидация A8.4),
+`flutter_math_fork` 0.7.4 (проверка формул A8.4), `flutter_secure_storage` 11.2.0 (ключи API). Собственных
+реализаций: каноническая схема и проекции под провайдеров (`lib/api/generation/`), retry-политика,
+санитайзеры логов, хранилище ключей поверх secure storage — внешние пакеты не добавлялись.
+
+**Runtime-спайки итерации 3b** (`journal/iteration-3b/spikes.md`):
+
+| Спайк | Результат |
+|---|---|
+| S1 — `json_schema` 5.2.2 против A8.4 | **успешен:** `JsonSchema.create(map)` + `validate(json).isValid`/`.errors`; валидная карточка → true, лишнее свойство/отсутствующий `required`/неверный тип → false с путями ошибок; работает в чистом Dart (`fvm dart run`) |
+| S2 — `flutter_math_fork` 0.7.4, проверка LaTeX | **успешен:** `Math.tex(expression).parseError` — публичное поле; валидная формула → null, `\frac{`/`\unknowncommand{x}` → ошибка; без `WidgetsBinding`, в `flutter test` |
+| S3 — fake `HttpClientAdapter` Dio 5.11.1 | **успешен:** `ResponseBody.fromString`/`fromBytes` + `validateStatus`; Dio сам бросает `DioException` для не-2xx → retry/429/5xx/401/отмена тестируются без сети |
+
+**Проверки в прогоне итерации 3b** (`fvm flutter test --exclude-tags golden`): см. `journal/iteration-3b/verify.md`
+и §12 ниже (обновляется по факту verify).
+
