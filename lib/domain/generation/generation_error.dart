@@ -9,6 +9,9 @@ enum GenerationErrorCode {
   /// Ключ API не задан в настройках.
   missingApiKey,
 
+  /// OpenAI-совместимый сервер не настроен: нет адреса или модели (ADR-013).
+  providerNotConfigured,
+
   /// Провайдер отверг ключ (HTTP 401/403).
   invalidApiKey,
 

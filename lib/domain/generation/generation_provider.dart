@@ -12,7 +12,14 @@ enum GenerationProvider {
   gemini('gemini'),
 
   /// Anthropic Messages + tool `emit_cards`.
-  anthropic('anthropic');
+  anthropic('anthropic'),
+
+  /// OpenAI-совместимый сервер с настраиваемым `base_url` (ADR-013).
+  ///
+  /// Покрывает DeepSeek, локальные Ollama / LM Studio и любой другой сервер
+  /// с Chat Completions API. Адрес и модель — из настроек (`app_settings`),
+  /// ключ — из secure storage и опционален (локальные серверы без ключа).
+  openaiCompatible('openai_compatible');
 
   const GenerationProvider(this.wireName);
 
