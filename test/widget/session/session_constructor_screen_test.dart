@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -485,6 +487,62 @@ void main() {
     expect(find.text('Старый'), findsNothing);
     await scrollTo(tester, find.text(l10n.constructorPresetsEmpty));
     expect(find.text(l10n.constructorPresetsEmpty), findsOneWidget);
+  });
+
+  testWidgets('режим переключается на ленту и маршрут меняется', (
+    WidgetTester tester,
+  ) async {
+    await pumpConstructor(
+      tester,
+      overrideList: overrides(),
+      location: '/constructor?deck=deck-1',
+    );
+    final AppLocalizations l10n = l10nOf(tester);
+
+    await scrollTo(tester, find.text(l10n.reviewModeFeed));
+    await tester.tap(find.text(l10n.reviewModeFeed));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey<String>('constructor-start')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('PLAN:c2,c1'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey<String>('constructor-start')),
+      findsNothing,
+    );
+  });
+
+  testWidgets('пока карточки колоды грузятся, старт недоступен', (
+    WidgetTester tester,
+  ) async {
+    final List<Override> overrideList = overrides();
+    cards.cardsByDeckGate = Completer<void>();
+    await pumpConstructor(tester, overrideList: overrideList);
+    final AppLocalizations l10n = l10nOf(tester);
+    expect(startEnabled(tester), isFalse, reason: 'колоды не выбраны');
+
+    await tester.tap(
+      find.byKey(const ValueKey<String>('constructor-deck-deck-1')),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    expect(
+      find.text(l10n.constructorAvailableCount(0)),
+      findsOneWidget,
+      reason: 'карточки ещё не загружены',
+    );
+    expect(
+      startEnabled(tester),
+      isFalse,
+      reason: 'нельзя начать сессию без загруженной выборки',
+    );
+
+    cards.cardsByDeckGate!.complete();
+    await tester.pumpAndSettle();
+
+    expect(startEnabled(tester), isTrue);
+    expect(find.text(l10n.constructorAvailableCount(2)), findsOneWidget);
   });
 
   testWidgets('нет колод — пустое состояние, старт недоступен', (

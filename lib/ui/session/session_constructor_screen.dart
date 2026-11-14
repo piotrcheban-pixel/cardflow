@@ -61,6 +61,7 @@ class _SessionConstructorScreenState
 
   bool _loading = true;
   bool _loadError = false;
+  bool _starting = false;
 
   @override
   void initState() {
@@ -237,6 +238,7 @@ class _SessionConstructorScreenState
   }
 
   Future<void> _start() async {
+    if (_starting) return;
     final SessionPlan plan = SessionBuilder.plan(
       cards: _selectedCards,
       config: _config,
@@ -244,12 +246,17 @@ class _SessionConstructorScreenState
       now: DateTime.now(),
     );
     if (plan.cards.isEmpty) return;
-    await context.push(
-      plan.mode == SessionMode.feed
-          ? AppRoutes.sessionFeedPath
-          : AppRoutes.sessionClassicPath,
-      extra: plan,
-    );
+    _starting = true;
+    try {
+      await context.push(
+        plan.mode == SessionMode.feed
+            ? AppRoutes.sessionFeedPath
+            : AppRoutes.sessionClassicPath,
+        extra: plan,
+      );
+    } finally {
+      _starting = false;
+    }
   }
 
   Future<void> _savePreset() async {
@@ -575,6 +582,7 @@ class _SessionConstructorScreenState
 
   Widget _buildBottomBar(AppLocalizations l10n) {
     final int available = _available.length;
+    final bool busy = _loading || _loadingDecks.isNotEmpty || _starting;
     return SafeArea(
       top: false,
       child: Padding(
@@ -595,7 +603,7 @@ class _SessionConstructorScreenState
               children: <Widget>[
                 TextButton(
                   key: const ValueKey<String>('constructor-save-preset'),
-                  onPressed: _loading || _selectedDecks.isEmpty
+                  onPressed: busy || _selectedDecks.isEmpty
                       ? null
                       : () => unawaited(_savePreset()),
                   child: Text(l10n.constructorSavePreset),
@@ -603,7 +611,7 @@ class _SessionConstructorScreenState
                 const Spacer(),
                 FilledButton(
                   key: const ValueKey<String>('constructor-start'),
-                  onPressed: _loading || available == 0
+                  onPressed: busy || available == 0
                       ? null
                       : () => unawaited(_start()),
                   child: Text(l10n.reviewStartSession),

@@ -525,6 +525,62 @@ void main() {
         <String>['a', 'b'],
       );
     });
+
+    test('перемешивание + интерливинг: колоды чередуются', () {
+      final List<Card> cards = <Card>[
+        makeCard(
+          id: 'a1',
+          deckId: 'deck-1',
+          front: 'A1',
+          createdAt: now.add(const Duration(minutes: 1)),
+        ),
+        makeCard(
+          id: 'a2',
+          deckId: 'deck-1',
+          front: 'A2',
+          createdAt: now.add(const Duration(minutes: 2)),
+        ),
+        makeCard(
+          id: 'a3',
+          deckId: 'deck-1',
+          front: 'A3',
+          createdAt: now.add(const Duration(minutes: 3)),
+        ),
+        makeCard(
+          id: 'b1',
+          deckId: 'deck-2',
+          front: 'B1',
+          createdAt: now.add(const Duration(minutes: 4)),
+        ),
+        makeCard(
+          id: 'b2',
+          deckId: 'deck-2',
+          front: 'B2',
+          createdAt: now.add(const Duration(minutes: 5)),
+        ),
+      ];
+
+      final List<Card> ordered = build(
+        cards,
+        config: twoDecks.copyWith(shuffle: true, interleave: true),
+        seed: 11,
+      );
+
+      expect(ordered.map((Card card) => card.deckId), <String>[
+        'deck-1',
+        'deck-2',
+        'deck-1',
+        'deck-2',
+        'deck-1',
+      ], reason: 'интерливинг выполняется после перемешивания (ADR-018 §2)');
+      expect(ordered.map((Card card) => card.id).toSet(), <String>{
+        'a1',
+        'a2',
+        'a3',
+        'b1',
+        'b2',
+      });
+    });
   });
 
   group('перемешивание', () {

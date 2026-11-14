@@ -3,7 +3,7 @@
 /// Чистые функции без Flutter и БД: UI отдаёт снимок карточек, конфиг и
 /// счётчики провалов — домен решает, какие карточки и в каком порядке войдут
 /// в сессию. Порядок операций: фильтры → базовый порядок → разминка →
-/// интерливинг → перемешивание → лимит (ADR-018 §2).
+/// перемешивание → интерливинг → лимит (ADR-018 §2).
 library;
 
 import 'dart:convert';
@@ -87,10 +87,12 @@ abstract final class SessionBuilder {
       ];
     }
 
-    if (config.interleave) rest = _interleave(rest);
     if (config.shuffle) {
       rest = _shuffle(rest, seed ?? now.microsecondsSinceEpoch);
     }
+    // Интерливинг после перемешивания: иначе случайный порядок снова смешал бы
+    // колоды и чередование (A7.19) перестало бы работать.
+    if (config.interleave) rest = _interleave(rest);
 
     final List<Card> ordered = <Card>[...warmup, ...rest];
     final int? cap = config.limit.isMinutes ? null : config.limit.value;

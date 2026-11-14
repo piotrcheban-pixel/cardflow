@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cardflow/domain/cards/card.dart';
+import 'package:cardflow/domain/review/review.dart'
+    show reviewModeClassic, reviewModeFeed;
 import 'package:cardflow/domain/session/session_config.dart';
 
 /// Красная фаза итерации 6: конфиг конструктора (SPEC A6.7, ADR-018) —
@@ -227,6 +229,8 @@ void main() {
 
   group('SessionMode', () {
     test('wire-имена совпадают со значениями review_logs.mode', () {
+      expect(SessionMode.classic.wireName, reviewModeClassic);
+      expect(SessionMode.feed.wireName, reviewModeFeed);
       expect(SessionMode.classic.wireName, 'classic');
       expect(SessionMode.feed.wireName, 'feed');
       expect(SessionMode.fromWire('feed'), SessionMode.feed);

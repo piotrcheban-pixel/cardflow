@@ -321,6 +321,9 @@ class FakeCardRepository implements CardRepository {
   /// Если задано — `cardsByDeck` бросает эту ошибку.
   Object? cardsByDeckError;
 
+  /// Если задано — `cardsByDeck` ждёт завершения (проверка состояния загрузки).
+  Completer<void>? cardsByDeckGate;
+
   /// Если задано — `createCards` бросает эту ошибку.
   Object? createError;
 
@@ -377,6 +380,8 @@ class FakeCardRepository implements CardRepository {
   @override
   Future<List<Card>> cardsByDeck(String deckId) async {
     if (cardsByDeckError != null) throw cardsByDeckError!;
+    final Completer<void>? gate = cardsByDeckGate;
+    if (gate != null) await gate.future;
     return _byDeck(deckId);
   }
 

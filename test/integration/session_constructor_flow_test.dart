@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:drift/drift.dart' show Value;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
@@ -14,7 +13,6 @@ import 'package:cardflow/domain/decks/deck_query.dart';
 import 'package:cardflow/domain/decks/deck_summary.dart';
 import 'package:cardflow/domain/review/review.dart';
 import 'package:cardflow/domain/scheduling/rating.dart';
-import 'package:cardflow/domain/session/leech_repository.dart';
 import 'package:cardflow/domain/session/session_builder.dart';
 import 'package:cardflow/domain/session/session_config.dart';
 import 'package:cardflow/domain/session/session_plan.dart';
@@ -168,8 +166,7 @@ void main() {
     final List<ReviewLogRow> logs = await db.select(db.reviewLogs).get();
     expect(logs, hasLength(9), reason: '8 провалов + 1 новая оценка');
     final ReviewLogRow latest = logs.reduce(
-      (ReviewLogRow a, ReviewLogRow b) =>
-          a.reviewedAt > b.reviewedAt ? a : b,
+      (ReviewLogRow a, ReviewLogRow b) => a.reviewedAt > b.reviewedAt ? a : b,
     );
     expect(latest.cardId, 'leech');
     expect(latest.rating, 3);
@@ -186,9 +183,7 @@ void main() {
       updatedAt: nowMs,
     );
     final SessionPlan plan = SessionBuilder.plan(
-      cards: await container
-          .read(cardRepositoryProvider)
-          .cardsByDeck('deck-1'),
+      cards: await container.read(cardRepositoryProvider).cardsByDeck('deck-1'),
       config: const SessionConfig(
         deckIds: <String>['deck-1'],
         mode: SessionMode.feed,
