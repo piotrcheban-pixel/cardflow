@@ -258,3 +258,15 @@ dev_dependencies:
 **Проверки итерации 3b:** полный прогон, покрытие, Windows-сборка и сверка критериев C1–C15 —
 `journal/iteration-3b/verify.md`; итог — `journal/iteration-3b/summary.md`.
 
+
+## 12. Фактическое состояние после итерации 7 (2026-11-14)
+
+**Новых пакетов нет.** Статистика и настройки собраны на существующих зависимостях: drift
+(`app_settings`), Riverpod без кодогенерации, `dynamic_color` 2.1.0 (впервые задействован — ADR-019),
+`url_launcher` 6.3.3 (политика приватности), стандартные `material_ui`-виджеты и `CustomPainter`
+(без графических библиотек). Ключ проверяется существующими адаптерами провайдеров и
+`GenerationHttpClient`.
+
+**Продуктовый ассет (не пакет):** `assets/fonts/OpenDyslexic-Regular.otf` (SIL Open Font License 1.1,
+`assets/fonts/OFL.txt`), объявлен в `pubspec.yaml` как семейство `OpenDyslexic`; используется только
+при включённом переключателе (ADR-019 §6). `flutter pub get` граф не изменил; `fvm flutter analyze` — 0.

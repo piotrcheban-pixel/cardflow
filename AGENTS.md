@@ -61,6 +61,19 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   пункт «Конструктор» в листе режимов колоды. Движки классики/ленты принимают `prebuilt` (план не
   пересобирается `ReviewQueue`); лимит минут — `Timer` экрана, по истечении «Время сессии истекло»,
   непройденные карточки не трогаются. Схема БД не менялась: таблица `session_presets` есть с schemaVersion=1.
+- **Статистика и настройки** (SPEC A6.1/A6.5/A6.6, ADR-019): оболочка — `lib/ui/shell/app_shell.dart`
+  (`NavigationBar` <600 px / `NavigationRail` ≥600 px, ветки `/`, `/statistics`, `/settings`;
+  «Сессия» скрыта без активной сессии). Настройки — `lib/domain/settings/` (`AppSettings`, JSON
+  `version=1` в `app_settings` ключ `app.settings`, клампы), `AppSettingsStore` + drift-реализация,
+  `AppSettingsController` (`save`, откат при ошибке), `appSettingsProvider`/`effectiveAppSettingsProvider`
+  в `app_providers.dart`; экран `lib/ui/settings/settings_screen.dart`; проверка ключа —
+  `lib/api/generation/api_key_verifier.dart` (минимальный запрос существующими адаптерами, наружу только
+  `ApiKeyCheckStatus`). Статистика — `lib/domain/statistics/` (`StatisticsCalculator`: удержание 30 дней,
+  карта 365, слабые темы ≥5 повторов и ≥20 % Again, прогноз 7 дней), `DriftStatisticsRepository`
+  (только чтение), `lib/ui/statistics/`. Применение — `lib/ui/app.dart` (тема/контраст/dynamic color/
+  OpenDyslexic/масштаб, `M3EThemeData.fromMaterial`), `schedulerProvider` (retention/шаги),
+  `ReviewQueue.build` (лимиты), экраны сессий (haptics/motion), генерация (модель по умолчанию).
+  Шрифт дислексии — `assets/fonts/OpenDyslexic-Regular.otf` (SIL OFL); политика — `docs/privacy.md`.
 - Модели immutable (`freezed`/`const`), роутинг `GoRouter` (см. ADR), HTTP `Dio`. Состояние — Riverpod 3 без кодогенерации (ADR-002).
 - **Material-виджеты — только `package:material_ui/material_ui.dart`** (ADR-001), `package:flutter/material.dart` в `lib/` запрещён. M3E-компоненты — только через `lib/ui/m3e/`, библиотека `material_3_expressive` больше нигде не импортируется.
 - Никаких литералов пользовательского текста в виджетах: только `AppLocalizations` из `lib/l10n/app_ru.arb`.
@@ -120,6 +133,11 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   оказывается тестом; блокировку действий во время загрузки проверять гейтом (`Completer`) в фейковом
   репозитории, а не полагаться на «быстрые» фейки; домен и его тесты писать до UI — тогда порядок
   фильтров/сборки не отлаживается в виджетах.
+- **Ретроспектива итерации 7:** настройка считается сделанной только с тестом **применения** (корень
+  приложения/планировщик/очередь/экран), а не только записи в store; в widget-тестах длинного списка
+  настроек идти сверху вниз (`scrollUntilVisible` не ищет выше текущей позиции); ряд провайдеров API
+  проверять на узкой ширине (`Wrap`/перенос вместо `Row` с двумя кнопками); M3E-тему проецировать из
+  Material-темы (`M3EThemeData.fromMaterial`), иначе M3E перекрывает шрифт дислексии и dynamic color.
 
 ## Факты хоста (обновлять при изменении)
 
@@ -185,3 +203,13 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   стык domain → сессии покрыт интеграционным тестом на production-графе и реальной drift-БД. Лимит минут —
   `Timer` экрана (L40), загрузка карточек конструктором — L41, ручная приёмка — L42. CI финального снимка —
   после push по команде владельца.
+- **Статистика и настройки проверены локально (итерация 7, 2026-11-14):** `fvm flutter test --coverage
+  --exclude-tags golden` → **1175 passed + 1 skipped**; покрытие **92.7% (8322/8977)**; `analyze` 0;
+  `dart format` 299 files 0 changed; `fvm flutter build windows --release` → `cardflow.exe` (61,7 с).
+  Ревью Lead снимка `85afff3` (L35): high/critical нет, M1–M2 закрыты `6a40180` с тестами (подписи месяцев
+  карты, нулевой столбик прогноза), M3 — L45. `dynamic_color` впервые задействован; OpenDyslexic (SIL OFL) —
+  `assets/fonts/`; политика приватности — `docs/privacy.md`. Схема БД/`format_version` не менялись
+  (`app.settings` — строка существующей `app_settings`), стык settings → scheduler/ReviewQueue/статистика
+  покрыт интеграционным тестом на production-графе и реальной drift-БД. Ограничения: L43 (dynamic color/
+  шрифт/размеры на ОС), L44 (объём статистики), L45 (дневные лимиты между сессиями), L46 (screen-reader
+  карты). CI — после push по команде владельца.
