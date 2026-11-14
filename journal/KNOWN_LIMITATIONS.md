@@ -3,12 +3,18 @@
 Формат: ограничение → причина → чем компенсировано в коде/тестах → когда снимается.
 Каждое ограничение подтверждено фактом в текущей сессии; «проверено живьём» без доказательства не пишется.
 
+**Статус CI (2026-11-14):** ограничений «CI/пуш не выполнялись» больше нет. Финальный снимок итерации 5
+`9bd09ad` — прогон [`43612309379`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43612309379):
+**9/9 job success** — `format + analyze`, `test` × 3 ОС, `build-desktop` × 3, `build-mobile` Android + iOS.
+Репозиторий переведён в **Public**, биллинг GitHub починен владельцем. Ранее сняты L3, L9, L9b, L21,
+L22, L26, L29; остаётся только **локальная** сборка не-Windows платформ на этом хосте (L2).
+
 ## Окружение
 
 | # | Ограничение | Причина | Компенсация | Снятие |
 |---|---|---|---|---|
 | L1 | Живые вызовы OpenAI / Gemini / Anthropic не проверялись | в окружении нет ключей API (проверено в итерации 0: present = нет; перепроверено 2026-11-14 — для этих трёх ключей нет) | mock/integration-тесты на адаптеры и пайплайн (итерация 3b: эталонные JSON-ответы, fake `HttpClientAdapter`, production-граф с fake key store); live-тесты под тегом `live` и skip без ключей (в 3b не добавлялись — ключей нет; для DeepSeek live-тест добавлен ADR-013 и **пройден 2026-11-14** — L30) | когда владелец даст ключи OpenAI/Gemini/Anthropic |
-| L2 | Сборки Android/iOS/macOS/Linux локально не выполняются | на хосте нет Android SDK/JDK, Xcode/macOS, Linux | снято для CI в итерации 0: run `43098651759` — success для `build linux`, `build windows`, `build macos`, `build android`, `build ios`; Windows-сборка дополнительно проверена локально в итерации 1 (L2b) | локальные сборки — при появлении SDK/тулчейнов |
+| L2 | Сборки Android/iOS/macOS/Linux **локально** не выполняются | на хосте нет Android SDK/JDK, Xcode/macOS, Linux | CI покрывает все платформы: прогон [`43612309379`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43612309379) (коммит `9bd09ad`, итерация 5) — **9/9 job success**, включая `build linux/windows/macos/android/ios` и `test` × 3 ОС; ранее — run `43098651759` (итерация 0). Windows-сборка дополнительно проверена локально в итерации 1 (L2b) | локальные сборки — при появлении SDK/тулчейнов; CI — на каждый push |
 | L2b | ~~Локально `flutter build windows` падает на ATL~~ **снято 2026-11-12 (итерация 1):** `fvm flutter build windows --release` → `√ Built build\windows\x64\runner\Release\cardflow.exe` (44 s). Причина прежней ошибки — устаревший CMakeCache; VS BuildTools 18.12 / MSVC 14.52, после удаления `build/windows` сборка проходит | — | — | — |
 | L3 | ~~CI фактически не запускался~~ **снято 2026-11-11**: репозиторий GitHub создан; прогон `43098651759` (commit `018f6f8`) — **9/9 success**. Детали: `journal/iteration-0/verify.md` §10 | — | — | — |
 | L4 | Хуки `block-hardcoded-secret`, `block-destructive-command`, `confirm-git-push`, GateGuard не срабатывают | в конфигурации DSH-профиля хуки не подключены (проверено) | правила соблюдаются вручную; guard-тест `no_secrets_test.dart` | когда владелец подключит хуки |

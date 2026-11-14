@@ -132,8 +132,10 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   fix-коммитом `9db83ab` с новыми тестами. Пайплайн: `GenerationPipeline` (оценка/чанкинг,
   последовательные вызовы, split-once, дедуп, partial/retry, `generation_jobs`); UI A6.8:
   `lib/ui/generation/`; входы — Split-меню «Колод» и Toolbar «Колоды». DnD — `desktop_drop 0.8.4`,
-  файлы — `file_picker 13.3.3`; реальный DnD-жест на ОС не проверялся (L33). CI-прогон 3c — после push.
-- GitHub-remote: `origin` → `piotrcheban-pixel/cardflow` (private); CI — GitHub Actions (`.github/workflows/ci.yml`). Push выполняется по команде владельца (хука `confirm-git-push` нет).
+  файлы — `file_picker 13.3.3`; реальный DnD-жест на ОС не проверялся (L33). CI 3c — run
+  [`43583803312`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43583803312) (`e5f64c4`), 9/9 success.
+- GitHub-remote: `origin` → `piotrcheban-pixel/cardflow` (**Public** с 2026-11-14, биллинг GitHub починен);
+  CI — GitHub Actions (`.github/workflows/ci.yml`). Push выполняется по команде владельца (хука `confirm-git-push` нет).
 - **PDF-тесты и PDFium в CI (L26, с 2026-11-13):** job `test` скачивает pinned PDFium
   (`bblanchon/pdfium-binaries` `chromium/8125` — тот же релиз, что build-hook `pdfium_dart` 0.4.1) на всех трёх ОС,
   сверяет sha256 и экспортирует `PDFIUM_PATH`; PDF-тесты не скипаются/не тегируются, инварианты защищает
@@ -148,11 +150,14 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   Ревью Lead (независимый reviewer недоступен — L35), fix `1857589`; push 2026-11-14: `origin/main` =
   `e90f660`, CI runs [`43587472135`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43587472135)
   и [`43588247850`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43588247850) — оба **9/9 success**.
-  После них docs-only run `43589108294` (`490eb80`) не стартовал (GitHub billing/spending limit — внешний
-  блокер владельца); код не выполнялся. Ограничения: L36 (таймер при покрытии маршрутом), L37 (реальные жесты).
+  После них run [`43589108294`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43589108294) (`490eb80`) —
+  9 job'ов failure без единого шага (GitHub billing/spending limit — внешний блокер владельца; снят 2026-11-14
+  переводом репозитория в Public и починкой биллинга). Ограничения: L36 (таймер при покрытии маршрутом), L37 (реальные жесты).
 - **Occlusion / Cloze / LaTeX проверены локально (итерация 5, 2026-11-14):** `fvm flutter test --coverage
   --exclude-tags golden` → **1020 passed + 1 skipped**; покрытие **93.1% (6468/6946)**; `analyze` 0;
   `dart format` 253 files 0 changed; `fvm flutter build windows --release` → `cardflow.exe` (56,2 с).
   Ревью Lead снимка `5af8f70` (L35), M1–M4 закрыты `0e4e11b` с тестами; L17 снят startup-GC, добавлены
   L38/L39. Схема БД/`format_version` не менялись, create → export → import покрыт интеграционным тестом.
-  Локальные коммиты не запушены, CI итерации 5 не запускался; реальные picker/рисование — L11/L38.
+  Push 2026-11-14: `origin/main = 9bd09ad` (7 коммитов итерации 5); CI run
+  [`43612309379`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43612309379) — **9/9 job success**
+  (`format + analyze`, `test` × 3 ОС, `build desktop` × 3, `build mobile` Android + iOS). Реальные picker/рисование — L11/L38.

@@ -1,7 +1,7 @@
 # Итерация 5 — итог
 
-**Дата:** 2026-11-14 · **Статус:** завершена (шаги 1–7) · **Ветка:** `main`, локально впереди
-`origin/main` на 6 коммитов (push не выполнялся).
+**Дата:** 2026-11-14 · **Статус:** завершена (шаги 1–7), запушена и подтверждена CI · **Ветка:** `main`,
+`origin/main = 9bd09ad`, прогон [`43612309379`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43612309379) — **9/9 success**.
 
 ## Что сделано
 
@@ -38,14 +38,15 @@
 | Guard-тесты | да | no_webview, ru_strings, no_secrets, architecture — зелёные в полном прогоне |
 | Ревью, high закрыты | да | `review.md`: high 0, M1–M4 исправлены с тестами; независимый reviewer недоступен (L35) |
 | Сборки доступной платформы | да | Windows release `cardflow.exe`, 56,2 с |
-| Критерии с доказательствами | да | `verify.md`; непроверенное — L6/L11/L12/L37/L38/L39, CI/L2 |
+| Критерии с доказательствами | да | `verify.md`; непроверенное — L6/L11/L12/L37/L38/L39; CI — 9/9 (L2 — только локальные сборки) |
 | STATE/summary/следующий шаг | да | этот файл + `STATE.md` |
 | Checkpoint-коммиты | да | plan, red, green, review-fix, verify, remember |
 
 ## Не проверено
 
 Golden (L6), live API (L1), реальные picker/жесты/устройства (L11/L37/L38), screen-reader масок
-(L12/L39), CI и не-Windows сборки (L2). Причины — `KNOWN_LIMITATIONS.md`.
+(L12/L39). CI и не-Windows сборки проверены прогоном [`43612309379`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43612309379)
+(9/9 success); L2 остаётся только для локальных сборок. Причины — `KNOWN_LIMITATIONS.md`.
 
 ## Следующее действие
 

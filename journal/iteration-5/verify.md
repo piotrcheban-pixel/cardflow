@@ -47,11 +47,13 @@ fvm flutter build windows --release
 - **Реальный system file picker, рисование пальцем/мышью, свайпы** — ручная приёмка устройства
   (L11, L37, L38); widget-тесты используют pointer events/fake platform.
 - **Screen-reader масок** — доступность итерации 7 (L12/L39).
-- **CI** не запускался: push не выполняется без отдельной команды владельца. Локальный Windows-release
-  подтверждает desktop-компиляцию; Android/iOS/macOS/Linux — CI (L2).
+- ~~**CI** не запускался~~ **снято 2026-11-14:** итерация 5 запушена (7 коммитов, HEAD `9bd09ad`),
+  прогон [`43612309379`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43612309379) —
+  **9/9 job success** (`format + analyze`, `test` × 3 ОС, `build desktop` × 3, `build mobile` Android + iOS).
+  Прежняя запись относилась к моменту до push; локальный Windows-release подтверждал только desktop.
 - **L36** (авто-продвижение под другим маршрутом) не менялся и остаётся ограничением.
 
 ## Вывод
 
 Шаги 1–5 итерации 5 завершены: локальные гейты зелёные, покрытие выше порога, Windows-сборка успешна.
-Остались remember и improve (шаги 6–7).
+Шаги 6–7 выполнены после verify (`summary.md`, `improve.md`); CI финального снимка `9bd09ad` — 9/9 success.
