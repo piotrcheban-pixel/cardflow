@@ -38,7 +38,10 @@
    фактов для карточек. Проверьте, что в файлах есть текст (не скан и не пустая форма); если текст
    есть — смените модель»). `generationErrorEmptyResponse` остаётся за кодом `emptyResponse`.
 5. **Live-тест** живого контракта DeepSeek: strict → 400, fallback → 200 с `max_tokens=8192`.
-6. Документы: `docs/decisions/ADR-021-compatible-empty-response.md`, `docs/api-schema.md` (v3),
+6. **Проверка подключения** (`ApiKeyVerifier`) — минимальный совместимый запрос: без strict-схемы и
+   без `max_tokens` (`sendMaxTokens: false`), чтобы серверы, требующие `max_completion_tokens`, не
+   давали ложный отказ при рабочей генерации.
+7. Документы: `docs/decisions/ADR-021-compatible-empty-response.md`, `docs/api-schema.md` (v3),
    `journal/KNOWN_LIMITATIONS.md` (L50, L51), `AGENTS.md` (слой API).
 
 ## Красная фаза (фрагмент вывода, `journal/iteration-7.6/red-phase.txt`)

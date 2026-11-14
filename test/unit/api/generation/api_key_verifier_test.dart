@@ -62,26 +62,30 @@ void main() {
       expect(transport.calls, 0);
     });
 
-    test(
-      'DeepSeek: ключ из хранилища в заголовке, запрос на api.deepseek.com',
-      () async {
-        keys = FakeApiKeyStore(<String, String>{'deepseek': 'sk-deepseek'});
-        final ApiKeyCheckResult result = await verifier().check(
-          testProviderAccount(presetId: 'deepseek'),
-        );
-        expect(result.status, ApiKeyCheckStatus.valid);
-        expect(transport.calls, 1);
-        expect(
-          transport.lastRequest!.headers['Authorization'],
-          'Bearer sk-deepseek',
-        );
-        expect(
-          transport.lastRequest!.uri.toString(),
-          'https://api.deepseek.com/chat/completions',
-        );
-        expect(transport.lastRequest!.uri.toString(), isNot(contains('sk-')));
-      },
-    );
+    test('DeepSeek: ключ из хранилища в заголовке, запрос на api.deepseek.com', () async {
+      keys = FakeApiKeyStore(<String, String>{'deepseek': 'sk-deepseek'});
+      final ApiKeyCheckResult result = await verifier().check(
+        testProviderAccount(presetId: 'deepseek'),
+      );
+      expect(result.status, ApiKeyCheckStatus.valid);
+      expect(transport.calls, 1);
+      expect(
+        transport.lastRequest!.headers['Authorization'],
+        'Bearer sk-deepseek',
+      );
+      expect(
+        transport.lastRequest!.uri.toString(),
+        'https://api.deepseek.com/chat/completions',
+      );
+      expect(transport.lastRequest!.uri.toString(), isNot(contains('sk-')));
+      // Проверка подключения — минимальный совместимый запрос: без strict-схемы
+      // и без `max_tokens` (ADR-021).
+      expect(transport.lastRequest!.body.containsKey('max_tokens'), isFalse);
+      expect(
+        transport.lastRequest!.body.containsKey('response_format'),
+        isFalse,
+      );
+    });
 
     test('Gemini и Anthropic используют свои заголовки и адреса', () async {
       keys = FakeApiKeyStore(<String, String>{

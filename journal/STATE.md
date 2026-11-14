@@ -30,6 +30,8 @@
 - `CardsJsonExtractor` (BOM, markdown, текст вокруг JSON) — вынесен из сервиса.
 - ARB `generationNoCardsFound` + экран генерации: пустой `cards` больше не выдаётся за пустой ответ.
 - Live-тест живого контракта DeepSeek (strict 400 → fallback 200 с `max_tokens=8192`).
+- `ApiKeyVerifier`: проверка подключения — без strict-схемы и без `max_tokens` (минимальный
+  совместимый запрос, чтобы не было ложного отказа при рабочей генерации).
 - `docs/api-schema.md` v3, KNOWN_LIMITATIONS L50/L51, AGENTS.md (слой API).
 
 **Доказательства:** `fvm flutter test --coverage --exclude-tags golden` → **1270 passed + 2 skipped**

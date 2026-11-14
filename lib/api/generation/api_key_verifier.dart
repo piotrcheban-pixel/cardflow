@@ -85,6 +85,9 @@ class ApiKeyVerifier {
       maxOutputTokens: 8,
       baseUrl: account.baseUrl.trim(),
       strictSchema: false,
+      // Проверка подключения — самый совместимый запрос: серверы, которые
+      // требуют `max_completion_tokens`, не должны давать ложный отказ (ADR-021).
+      sendMaxTokens: false,
     );
 
     try {
