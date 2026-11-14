@@ -373,4 +373,83 @@ void main() {
       reason: 'после dispose слушатели не должны вызываться',
     );
   });
+
+  group('очередь конструктора (prebuilt, ADR-018)', () {
+    test('порядок плана сохраняется, будущие due не отбрасываются', () {
+      final List<Card> planned = <Card>[
+        makeCard(
+          id: 'future',
+          deckId: 'deck-1',
+          front: 'Будущая',
+          state: CardState.review,
+          due: DateTime.utc(2026, 11, 20, 12),
+        ),
+        makeCard(id: 'fresh', deckId: 'deck-2', front: 'Новая'),
+      ];
+      final FeedSessionEngine prebuilt = FeedSessionEngine(
+        cards: planned,
+        scheduler: FsrsScheduler(),
+        reviewRepository: repository,
+        clock: now,
+        prebuilt: true,
+      );
+
+      prebuilt.start();
+
+      expect(prebuilt.state.total, 2);
+      expect(prebuilt.state.current!.card.id, 'future');
+      expect(prebuilt.state.items.map((FeedSessionItem item) => item.card.id), <
+        String
+      >['future', 'fresh']);
+    });
+
+    test('без prebuilt сохраняется поведение ADR-016', () {
+      final List<Card> planned = <Card>[
+        makeCard(
+          id: 'future',
+          deckId: 'deck-1',
+          front: 'Будущая',
+          state: CardState.review,
+          due: DateTime.utc(2026, 11, 20, 12),
+        ),
+        makeCard(id: 'fresh', deckId: 'deck-1', front: 'Новая'),
+      ];
+      final FeedSessionEngine feed = FeedSessionEngine(
+        cards: planned,
+        scheduler: FsrsScheduler(),
+        reviewRepository: repository,
+        clock: now,
+      );
+
+      feed.start();
+
+      expect(feed.state.total, 1);
+      expect(feed.state.current!.card.id, 'fresh');
+    });
+
+    test('оценка первой карточки плана переходит к следующей', () async {
+      final List<Card> planned = <Card>[
+        makeCard(id: 'first', deckId: 'deck-1', front: 'Первая'),
+        makeCard(
+          id: 'second',
+          deckId: 'deck-2',
+          front: 'Вторая',
+          createdAt: start.add(const Duration(minutes: 1)),
+        ),
+      ];
+      final FeedSessionEngine prebuilt = FeedSessionEngine(
+        cards: planned,
+        scheduler: FsrsScheduler(),
+        reviewRepository: repository,
+        clock: now,
+        prebuilt: true,
+      );
+      repository.previousCard = planned.first;
+      prebuilt.start();
+
+      expect(await prebuilt.rate(Rating.good), isTrue);
+      expect(prebuilt.state.current!.card.id, 'second');
+      expect(prebuilt.state.ratedCount, 1);
+    });
+  });
 }

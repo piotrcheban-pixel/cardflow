@@ -248,4 +248,86 @@ void main() {
       );
     },
   );
+
+  group('очередь конструктора (prebuilt, ADR-018)', () {
+    test('порядок плана сохраняется, будущие due не отбрасываются', () {
+      final DateTime future = DateTime.utc(2026, 11, 20, 12);
+      final List<Card> planned = <Card>[
+        makeCard(
+          id: 'future',
+          deckId: 'deck-1',
+          front: 'Будущая',
+          state: CardState.review,
+          due: future,
+        ),
+        makeCard(id: 'fresh', deckId: 'deck-2', front: 'Новая'),
+      ];
+      final ReviewSessionEngine prebuilt = ReviewSessionEngine(
+        cards: planned,
+        scheduler: FsrsScheduler(),
+        reviewRepository: repository,
+        clock: now,
+        prebuilt: true,
+      );
+
+      prebuilt.start();
+
+      expect(prebuilt.state.total, 2);
+      expect(prebuilt.state.current!.card.id, 'future');
+      expect(
+        ReviewQueue.build(planned, now: start).map((Card card) => card.id),
+        <String>['fresh'],
+        reason: 'без плана будущая due-карточка в очередь не входит',
+      );
+    });
+
+    test('без prebuilt сохраняется поведение ADR-008', () {
+      final List<Card> planned = <Card>[
+        makeCard(
+          id: 'future',
+          deckId: 'deck-1',
+          front: 'Будущая',
+          state: CardState.review,
+          due: DateTime.utc(2026, 11, 20, 12),
+        ),
+        makeCard(id: 'fresh', deckId: 'deck-1', front: 'Новая'),
+      ];
+      final ReviewSessionEngine classic = ReviewSessionEngine(
+        cards: planned,
+        scheduler: FsrsScheduler(),
+        reviewRepository: repository,
+        clock: now,
+      );
+
+      classic.start();
+
+      expect(classic.state.total, 1);
+      expect(classic.state.current!.card.id, 'fresh');
+    });
+
+    test('оценка в prebuilt-сессии пишется в репозиторий', () async {
+      final List<Card> planned = <Card>[
+        makeCard(
+          id: 'future',
+          deckId: 'deck-1',
+          front: 'Будущая',
+          state: CardState.review,
+          due: DateTime.utc(2026, 11, 20, 12),
+        ),
+      ];
+      final ReviewSessionEngine prebuilt = ReviewSessionEngine(
+        cards: planned,
+        scheduler: FsrsScheduler(),
+        reviewRepository: repository,
+        clock: now,
+        prebuilt: true,
+      );
+      repository.previousCard = planned.single;
+      prebuilt.start();
+
+      expect(await prebuilt.rate(Rating.good), isTrue);
+      expect(repository.cardIds, <String>['future']);
+      expect(prebuilt.state.isCompleted, isTrue);
+    });
+  });
 }

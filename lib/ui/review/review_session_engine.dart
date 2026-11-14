@@ -94,6 +94,7 @@ class ReviewSessionEngine extends ChangeNotifier {
     required this.reviewRepository,
     required this.clock,
     this.mode = reviewModeClassic,
+    this.prebuilt = false,
   });
 
   /// Снимок карточек колоды на момент старта сессии.
@@ -110,6 +111,11 @@ class ReviewSessionEngine extends ChangeNotifier {
 
   /// Режим, записываемый в `review_logs.mode`.
   final String mode;
+
+  /// `true` — [cards] уже отфильтрованы и упорядочены конструктором (A6.7,
+  /// ADR-018) и не пересобираются [ReviewQueue]; `false` — очередь строится
+  /// по ADR-008 (due/new).
+  final bool prebuilt;
 
   ReviewSessionState _state = const ReviewSessionState(
     items: <ReviewSessionItem>[],

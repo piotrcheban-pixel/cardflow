@@ -100,6 +100,7 @@ class FeedSessionEngine extends ChangeNotifier {
     required this.reviewRepository,
     required this.clock,
     this.mode = reviewModeFeed,
+    this.prebuilt = false,
   });
 
   /// Снимок карточек колоды на момент старта сессии.
@@ -116,6 +117,11 @@ class FeedSessionEngine extends ChangeNotifier {
 
   /// Режим, записываемый в `review_logs.mode`.
   final String mode;
+
+  /// `true` — [cards] уже отфильтрованы и упорядочены конструктором (A6.7,
+  /// ADR-018) и не пересобираются [ReviewQueue]; `false` — очередь строится
+  /// по ADR-016 (due/new).
+  final bool prebuilt;
 
   final List<ReviewUndo> _undoStack = <ReviewUndo>[];
   List<FeedSessionItem> _items = const <FeedSessionItem>[];
