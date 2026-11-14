@@ -1,7 +1,9 @@
 import 'package:flutter/foundation.dart';
 
 import 'package:cardflow/domain/cards/card.dart';
+import 'package:cardflow/domain/cards/card_scheduling.dart';
 import 'package:cardflow/domain/review/review.dart';
+import 'package:cardflow/domain/review/review_queue.dart';
 import 'package:cardflow/domain/review/review_repository.dart';
 import 'package:cardflow/domain/scheduling/scheduler.dart';
 
@@ -31,8 +33,8 @@ class FeedSessionItem {
   /// Оценка, если карточка уже оценена.
   final Rating? rating;
 
-  /// Копия с изменёнными полями (оценка сбрасывается только через undo —
-  /// отдельным конструктором).
+  /// Копия с изменёнными полями. Оценка сбрасывается только через undo —
+  /// отдельным конструктором (см. [FeedSessionEngine.undo]).
   FeedSessionItem copyWith({bool? revealed, bool? rated, Rating? rating}) {
     return FeedSessionItem(
       card: card,
@@ -60,7 +62,7 @@ class FeedSessionState {
   /// Индекс текущей страницы.
   final int index;
 
-  /// Идёт запись в БД.
+  /// Идёт запись в БД (жесты заблокированы).
   final bool busy;
 
   /// Сколько откатов доступно.
@@ -70,11 +72,12 @@ class FeedSessionState {
   int get total => items.length;
 
   /// Сколько карточек оценено.
-  int get ratedCount =>
-      items.where((FeedSessionItem item) => item.rated).length;
+  int get ratedCount => items.where((FeedSessionItem item) => item.rated).length;
 
-  /// Сессия завершена, когда оценены все карточки (ADR-016).
-  bool get isCompleted => items.every((FeedSessionItem item) => item.rated);
+  /// Сессия завершена, когда оценены все карточки (ADR-016); пустая очередь
+  /// тоже завершена — экран показывает отдельное пустое состояние.
+  bool get isCompleted =>
+      items.every((FeedSessionItem item) => item.rated);
 
   /// Текущая карточка; `null` после завершения.
   FeedSessionItem? get current =>
@@ -87,7 +90,8 @@ class FeedSessionState {
 /// Движок режима «Лента» (SPEC A7.3, ADR-016).
 ///
 /// Хранит снимок очереди и состояние карточек; записи повторений и undo идут
-/// через [ReviewRepository] (одна транзакция на оценку, SPEC A5).
+/// через [ReviewRepository] (одна транзакция на оценку, SPEC A5). Оценка
+/// фиксируется сразу, листание и авто-продвижение — без записи.
 class FeedSessionEngine extends ChangeNotifier {
   /// Создаёт движок поверх снимка карточек колоды.
   FeedSessionEngine({
@@ -104,40 +108,201 @@ class FeedSessionEngine extends ChangeNotifier {
   /// Планировщик интервалов.
   final Scheduler scheduler;
 
-  /// Порт записи повторений.
+  /// Порт записи повторений (транзакция на оценку).
   final ReviewRepository reviewRepository;
 
-  /// Источник текущего времени.
+  /// Источник текущего времени (в тестах — управляемый).
   final DateTime Function() clock;
 
   /// Режим, записываемый в `review_logs.mode`.
   final String mode;
 
-  FeedSessionState _state = const FeedSessionState(
-    items: <FeedSessionItem>[],
-    index: 0,
-    busy: false,
-    undoCount: 0,
-  );
+  final List<ReviewUndo> _undoStack = <ReviewUndo>[];
+  List<FeedSessionItem> _items = const <FeedSessionItem>[];
+  int _index = 0;
+  bool _busy = false;
+  bool _initialized = false;
+  bool _disposed = false;
+  DateTime _shownAt = DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
 
   /// Текущее состояние ленты.
-  FeedSessionState get state => _state;
+  FeedSessionState get state => FeedSessionState(
+    items: List<FeedSessionItem>.unmodifiable(_items),
+    index: _index,
+    busy: _busy,
+    undoCount: _undoStack.length,
+  );
 
-  /// Строит очередь. Вызывается один раз экраном.
-  void start() {}
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+
+  /// Строит очередь и готовит первую карточку. Вызывается один раз экраном.
+  void start() {
+    if (_initialized) return;
+    final DateTime now = clock().toUtc();
+    final List<Card> queue = ReviewQueue.build(cards, now: now);
+    _items = <FeedSessionItem>[
+      for (final Card card in queue)
+        FeedSessionItem(
+          card: card,
+          scheduling: CardSchedulingMapper.toSchedulingCard(card, now: now),
+        ),
+    ];
+    _index = 0;
+    _shownAt = now;
+    _initialized = true;
+    _emit();
+  }
 
   /// Переходит на страницу [index] без оценки (листание не засчитывается).
-  void visit(int index) {}
+  void visit(int index) {
+    if (!_initialized ||
+        index == _index ||
+        index < 0 ||
+        index >= _items.length) {
+      return;
+    }
+    _index = index;
+    _shownAt = clock().toUtc();
+    _emit();
+  }
 
   /// Раскрывает/скрывает ответ текущей карточки.
-  void toggleReveal() {}
+  void toggleReveal() {
+    if (!_initialized || _busy) return;
+    final FeedSessionItem? item = state.current;
+    if (item == null || item.rated) return;
+    _replaceItem(_index, item.copyWith(revealed: !item.revealed));
+    _emit();
+  }
 
-  /// Оценивает текущую карточку; `false` — нельзя оценить.
-  Future<bool> rate(Rating rating) async => false;
+  /// Оценивает текущую карточку и переходит к следующей неоценённой.
+  ///
+  /// Возвращает `false`, если оценивать нельзя (завершено/идёт запись/уже
+  /// оценено). Ошибка БД пробрасывается, состояние остаётся прежним.
+  Future<bool> rate(Rating rating) async {
+    if (!_initialized || _busy) return false;
+    final FeedSessionItem? item = state.current;
+    if (item == null || item.rated) return false;
+
+    final DateTime reviewedAt = clock().toUtc();
+    final SchedulingCard outcome = scheduler
+        .review(item.scheduling, rating, now: reviewedAt)
+        .card;
+
+    _busy = true;
+    _emit();
+    final ReviewUndo undo;
+    try {
+      undo = await reviewRepository.recordReview(
+        cardId: item.card.id,
+        rating: rating,
+        reviewedAt: reviewedAt,
+        outcome: outcome,
+        mode: mode,
+        elapsed: reviewedAt.difference(_shownAt),
+      );
+    } catch (_) {
+      _busy = false;
+      _emit();
+      rethrow;
+    }
+    _undoStack.add(undo);
+    _replaceItem(_index, item.copyWith(rated: true, rating: rating));
+    final int? next = _nextUnratedIndex();
+    if (next != null) {
+      _index = next;
+      _shownAt = clock().toUtc();
+    }
+    _busy = false;
+    _emit();
+    return true;
+  }
 
   /// Переходит к следующей неоценённой карточке (авто-продвижение).
-  bool advance() => false;
+  ///
+  /// Оценку не ставит: это навигация, а не ответ (SPEC A7.3, ADR-016).
+  /// Идёт только вперёд: на последней странице авто-продвижение
+  /// останавливается, а не прыгает в начало.
+  bool advance() {
+    if (!_initialized || _busy || state.isCompleted) return false;
+    final int? next = _nextUnratedAfter(_index);
+    if (next == null) return false;
+    _index = next;
+    _shownAt = clock().toUtc();
+    _emit();
+    return true;
+  }
 
-  /// Откатывает последнюю оценку.
-  Future<bool> undo() async => false;
+  /// Откатывает последнюю оценку; `false` — откатывать нечего/идёт запись.
+  Future<bool> undo() async {
+    if (!_initialized || _busy || _undoStack.isEmpty) return false;
+    final ReviewUndo undo = _undoStack.last;
+    _busy = true;
+    _emit();
+    try {
+      await reviewRepository.undoReview(undo);
+    } catch (_) {
+      _busy = false;
+      _emit();
+      rethrow;
+    }
+    _undoStack.removeLast();
+    final int index = _items.indexWhere(
+      (FeedSessionItem item) => item.card.id == undo.previousCard.id,
+    );
+    if (index >= 0) {
+      _items = List<FeedSessionItem>.of(_items);
+      _items[index] = FeedSessionItem(
+        card: _items[index].card,
+        scheduling: _items[index].scheduling,
+        revealed: true,
+      );
+      _index = index;
+    }
+    _shownAt = clock().toUtc();
+    _busy = false;
+    _emit();
+    return true;
+  }
+
+  /// Следующая неоценённая карточка после текущей; если после нет — первая
+  /// неоценённая с начала (чтобы оценка на последней странице не оставила
+  /// сессию незавершённой).
+  int? _nextUnratedIndex() {
+    final int? after = _nextUnratedAfter(_index);
+    if (after != null) return after;
+    for (int i = 0; i < _items.length; i++) {
+      if (!_items[i].rated) return i;
+    }
+    return null;
+  }
+
+  /// Следующая неоценённая карточка строго после [index] (без перехода назад).
+  int? _nextUnratedAfter(int index) {
+    for (int i = index + 1; i < _items.length; i++) {
+      if (!_items[i].rated) return i;
+    }
+    return null;
+  }
+
+  void _replaceItem(int index, FeedSessionItem item) {
+    _items = List<FeedSessionItem>.of(_items);
+    _items[index] = item;
+  }
+
+  void _emit() {
+    // Асинхронная запись может завершиться уже после закрытия экрана: не
+    // дёргаем notifyListeners у освобождённого ChangeNotifier.
+    if (_disposed) return;
+    notifyListeners();
+  }
+
+  @override
+  String toString() =>
+      'FeedSessionEngine(mode: $mode, cards: ${cards.length}, '
+      'rated: ${state.ratedCount}, index: $_index)';
 }
