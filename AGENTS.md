@@ -74,6 +74,13 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   OpenDyslexic/масштаб, `M3EThemeData.fromMaterial`), `schedulerProvider` (retention/шаги),
   `ReviewQueue.build` (лимиты), экраны сессий (haptics/motion), генерация (модель по умолчанию).
   Шрифт дислексии — `assets/fonts/OpenDyslexic-Regular.otf` (SIL OFL); политика — `docs/privacy.md`.
+- **Дневные лимиты — по календарному дню** (ADR-019 §8, L45 снят): расход дня читается из `review_logs`
+  (`lib/domain/review/daily_limits.dart` — `DailyReviewUsage`/`RemainingReviewLimits`/`DailyLimits`;
+  порт `daily_usage_repository.dart`; drift-реализация `DriftDailyUsageRepository`, провайдер
+  `dailyUsageRepositoryProvider`). «Новая» карточка = запись с `actual_days IS NULL` (до оценки не
+  планировалась), иначе повторная; день — локальный календарный, схема БД не меняется. Экраны классики и
+  ленты передают **остаток** в движок: `int?` в `ReviewQueue.build`/движках — `null` без лимита, `0`
+  исчерпан. Конструктор (A6.7) не ограничивается (`prebuilt`).
 - Модели immutable (`freezed`/`const`), роутинг `GoRouter` (см. ADR), HTTP `Dio`. Состояние — Riverpod 3 без кодогенерации (ADR-002).
 - **Material-виджеты — только `package:material_ui/material_ui.dart`** (ADR-001), `package:flutter/material.dart` в `lib/` запрещён. M3E-компоненты — только через `lib/ui/m3e/`, библиотека `material_3_expressive` больше нигде не импортируется.
 - Никаких литералов пользовательского текста в виджетах: только `AppLocalizations` из `lib/l10n/app_ru.arb`.
@@ -211,5 +218,9 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   `assets/fonts/`; политика приватности — `docs/privacy.md`. Схема БД/`format_version` не менялись
   (`app.settings` — строка существующей `app_settings`), стык settings → scheduler/ReviewQueue/статистика
   покрыт интеграционным тестом на production-графе и реальной drift-БД. Ограничения: L43 (dynamic color/
-  шрифт/размеры на ОС), L44 (объём статистики), L45 (дневные лимиты между сессиями), L46 (screen-reader
-  карты). CI — после push по команде владельца.
+  шрифт/размеры на ОС), L44 (объём статистики), L46 (screen-reader карты).
+  **Push итерации 7 (2026-11-14):** `b2293cc..d1c55fa`; CI run
+  [`43623897449`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43623897449) — **9/9 job success**.
+  **Долг L45 снят в той же сессии** (ADR-019 §8): полный прогон **1203 passed + 1 skipped**, покрытие
+  **92.6% (8368/9038)**, `analyze` 0, `format` 305/0. **Финальный аудит MVP** — `journal/mvp-audit.md`,
+  8/8 критериев §9 «выполнено»; добавлен отсутствовавший `docs/m3e-tokens.md` (требование SPEC B4).
