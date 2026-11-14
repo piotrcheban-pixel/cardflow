@@ -586,6 +586,68 @@ void main() {
     expect(find.text('Париж — столица Франции.'), findsOneWidget);
   });
 
+  testWidgets('фон приложения останавливает авто-продвижение', (
+    WidgetTester tester,
+  ) async {
+    await pumpFeed(tester, overrides: overridesFor(twoCards()));
+    final AppLocalizations l10n = l10nOf(tester);
+
+    await tester.tap(find.byKey(const ValueKey<String>('feed-auto-advance')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.text(l10n.feedSeconds(3)));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    await tester.tap(find.byKey(firstCardKey));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    await tester.pump(const Duration(seconds: 4));
+    expect(find.text('Первый ответ'), findsOneWidget);
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.text('Второй вопрос'), findsOneWidget);
+  });
+
+  testWidgets('«Почему?» останавливает авто-продвижение', (
+    WidgetTester tester,
+  ) async {
+    await pumpFeed(
+      tester,
+      overrides: overridesFor(
+        twoCards(sourceExcerpt: 'Париж — столица Франции.'),
+      ),
+    );
+    final AppLocalizations l10n = l10nOf(tester);
+
+    await tester.tap(find.byKey(const ValueKey<String>('feed-auto-advance')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.text(l10n.feedSeconds(3)));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    await tester.tap(find.byKey(firstCardKey));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.tap(find.byKey(const ValueKey<String>('review-why')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    await tester.pump(const Duration(seconds: 4));
+    expect(find.text('Первый ответ'), findsOneWidget);
+    expect(find.text(l10n.feedCounter(1, 2)), findsOneWidget);
+
+    await tester.tapAt(const Offset(8, 8));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.text('Первый ответ'), findsOneWidget);
+  });
+
   testWidgets('«Почему?» неактивна без source_excerpt', (
     WidgetTester tester,
   ) async {

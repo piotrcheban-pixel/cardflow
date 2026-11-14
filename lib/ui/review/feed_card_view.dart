@@ -186,7 +186,9 @@ class _FeedCardViewState extends State<FeedCardView>
                       ),
                       child: GestureDetector(
                         behavior: HitTestBehavior.opaque,
-                        onTap: committing ? null : widget.onTap,
+                        onTap: committing || !widget.enabled
+                            ? null
+                            : widget.onTap,
                         onHorizontalDragStart: _onDragStart,
                         onHorizontalDragUpdate: _onDragUpdate,
                         onHorizontalDragEnd: _onDragEnd,

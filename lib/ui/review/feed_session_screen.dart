@@ -40,7 +40,8 @@ class FeedSessionScreen extends ConsumerStatefulWidget {
   ConsumerState<FeedSessionScreen> createState() => _FeedSessionScreenState();
 }
 
-class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen> {
+class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
+    with WidgetsBindingObserver {
   final PageController _pageController = PageController();
   FeedSessionEngine? _engine;
   Deck? _deck;
@@ -55,16 +56,29 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     unawaited(_load());
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _autoAdvanceTimer?.cancel();
     _engine?.removeListener(_onEngineChanged);
     _engine?.dispose();
     _pageController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      final FeedSessionEngine? engine = _engine;
+      if (engine != null) _scheduleAutoAdvance(engine.state);
+      return;
+    }
+    _autoAdvanceTimer?.cancel();
+    _autoAdvanceTimer = null;
   }
 
   Future<void> _load() async {
@@ -186,7 +200,13 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen> {
     if (engine == null || engine.state.busy) return;
     try {
       final bool rated = await engine.rate(rating);
-      if (!rated || !mounted) return;
+      if (!rated) {
+        // Оценку не приняли (гонка busy/завершение): возвращаем карточку,
+        // если она уже улетела за экран по свайпу.
+        if (mounted) setState(() => _resetToken++);
+        return;
+      }
+      if (!mounted) return;
       _playHaptic(rating);
       if (engine.state.isCompleted && !_completionHapticPlayed) {
         _completionHapticPlayed = true;
@@ -342,7 +362,7 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen> {
                   revealed: item.revealed,
                   rated: item.rated,
                   rating: item.rating,
-                  enabled: !state.busy && !item.rated,
+                  enabled: !state.busy && !item.rated && index == state.index,
                   resetToken: _resetToken,
                   onTap: _toggleReveal,
                   onRate: (Rating rating) => unawaited(_rate(rating)),
