@@ -1,4 +1,5 @@
-/// Проверка ключа API минимальным запросом (SPEC A6.6, ADR-019 §5).
+/// Проверка подключения провайдера минимальным запросом (SPEC A6.6, ADR-019 §5,
+/// ADR-020).
 ///
 /// Использует те же адаптеры и транспорт, что и генерация (A8.2): заголовки,
 /// адреса и формат запроса не дублируются. Тела ответов и ключи наружу не
@@ -7,23 +8,20 @@ library;
 
 import 'package:cardflow/api/http/generation_http_client.dart';
 import 'package:cardflow/api/providers/generation_provider_adapter.dart';
-import 'package:cardflow/api/providers/openai_compatible_endpoint.dart';
 import 'package:cardflow/domain/generation/api_key_store.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
-import 'package:cardflow/domain/generation/generation_model.dart';
 import 'package:cardflow/domain/generation/generation_provider.dart';
-import 'package:cardflow/domain/generation/generation_settings_store.dart';
-import 'package:cardflow/domain/generation/openai_compatible_settings.dart';
+import 'package:cardflow/domain/generation/provider_account.dart';
 
-/// Результат проверки ключа.
+/// Результат проверки подключения.
 enum ApiKeyCheckStatus {
-  /// Провайдер принял ключ (HTTP 2xx).
+  /// Провайдер принял запрос (HTTP 2xx).
   valid,
 
   /// Провайдер отверг ключ (401/403).
   invalidKey,
 
-  /// Ключ не сохранён.
+  /// Ключ не сохранён, а провайдер требует ключ.
   missingKey,
 
   /// Нет сети/таймаут.
@@ -32,7 +30,7 @@ enum ApiKeyCheckStatus {
   /// Лимит запросов (429).
   rateLimited,
 
-  /// OpenAI-совместимый сервер не настроен (адрес/модель).
+  /// Аккаунт не настроен (адрес/модель).
   providerNotConfigured,
 
   /// Прочие ошибки (4xx/5xx/неожиданные).
@@ -48,14 +46,13 @@ class ApiKeyCheckResult {
   final ApiKeyCheckStatus status;
 }
 
-/// Проверяет ключ одним синтетическим запросом провайдера.
+/// Проверяет провайдера одним синтетическим запросом.
 class ApiKeyVerifier {
   /// Создаёт проверяльщик.
   ApiKeyVerifier({
     required this.adapters,
     required this.apiKeyStore,
     required this.transport,
-    this.generationSettingsStore,
   });
 
   /// Адаптеры провайдеров (те же, что у генерации).
@@ -67,49 +64,26 @@ class ApiKeyVerifier {
   /// Транспорт генерации (Dio + retry + redaction).
   final GenerationTransport transport;
 
-  /// Настройки OpenAI-совместимого сервера (ADR-013); может быть `null` в срезах.
-  final GenerationSettingsStore? generationSettingsStore;
-
   /// Минимальный запрос: ответ не разбирается, важен только HTTP-успех.
-  Future<ApiKeyCheckResult> check(GenerationProvider provider) async {
-    final bool isCompatible = provider == GenerationProvider.openaiCompatible;
-    final String? rawKey = await apiKeyStore.read(provider);
-    final String? apiKey = rawKey?.trim();
-    String? baseUrl;
-    String model;
-
-    if (isCompatible) {
-      final GenerationSettingsStore? store = generationSettingsStore;
-      final OpenAiCompatibleSettings settings = store == null
-          ? const OpenAiCompatibleSettings()
-          : await store.readOpenAiCompatible();
-      final OpenAiCompatibleEndpoint endpoint = OpenAiCompatibleEndpoint.parse(
-        settings.baseUrl,
-      );
-      if (!endpoint.isValid || settings.model.trim().isEmpty) {
-        return const ApiKeyCheckResult(ApiKeyCheckStatus.providerNotConfigured);
-      }
-      baseUrl = settings.baseUrl;
-      model = settings.model.trim();
-    } else {
-      if (apiKey == null || apiKey.isEmpty) {
-        return const ApiKeyCheckResult(ApiKeyCheckStatus.missingKey);
-      }
-      final List<GenerationModel> models = generationModelsFor(provider);
-      if (models.isEmpty) {
-        return const ApiKeyCheckResult(ApiKeyCheckStatus.unexpected);
-      }
-      model = models.first.id;
+  Future<ApiKeyCheckResult> check(ProviderAccount account) async {
+    if (!account.isConfigured) {
+      return const ApiKeyCheckResult(ApiKeyCheckStatus.providerNotConfigured);
+    }
+    final String? apiKey = (await apiKeyStore.read(account.id))?.trim();
+    if (account.requiresApiKey && (apiKey == null || apiKey.isEmpty)) {
+      return const ApiKeyCheckResult(ApiKeyCheckStatus.missingKey);
     }
 
-    final GenerationProviderAdapter adapter = _adapterFor(provider);
+    final GenerationProviderAdapter adapter = _adapterFor(
+      account.protocol.adapterProvider,
+    );
     final ProviderRequest request = adapter.buildRequest(
       apiKey: apiKey ?? '',
-      model: model,
+      model: account.modelId.trim(),
       systemPrompt: 'Answer with a single short word.',
       userContent: 'OK',
       maxOutputTokens: 8,
-      baseUrl: baseUrl,
+      baseUrl: account.baseUrl.trim(),
       strictSchema: false,
     );
 

@@ -1036,71 +1036,17 @@ abstract class AppLocalizations {
   /// **'Не удалось получить карточки. Попробуйте ещё раз'**
   String get generationErrorGeneric;
 
-  /// Заголовок экрана настроек генерации (A6.6, API-блок; ADR-013).
-  ///
-  /// In ru, this message translates to:
-  /// **'Настройки генерации'**
-  String get settingsTitle;
-
-  /// Название провайдера OpenAI-compatible на экране настроек (ADR-013).
-  ///
-  /// In ru, this message translates to:
-  /// **'OpenAI-совместимый сервер'**
-  String get settingsOpenAiCompatibleTitle;
-
-  /// Пояснение к провайдеру OpenAI-compatible: DeepSeek, Ollama, LM Studio и другие (ADR-013).
-  ///
-  /// In ru, this message translates to:
-  /// **'Подходит для облачных и локальных серверов, совместимых с OpenAI'**
-  String get settingsOpenAiCompatibleDescription;
-
   /// Подпись поля base_url OpenAI-совместимого сервера.
   ///
   /// In ru, this message translates to:
   /// **'Адрес сервера'**
   String get settingsServerAddressLabel;
 
-  /// Подсказка поля base_url: например /v1 для локальных серверов.
-  ///
-  /// In ru, this message translates to:
-  /// **'Полный адрес; версию укажите в пути, если сервер её требует'**
-  String get settingsServerAddressHint;
-
   /// Подпись поля модели OpenAI-совместимого сервера.
   ///
   /// In ru, this message translates to:
   /// **'Модель'**
   String get settingsModelLabel;
-
-  /// Подсказка поля модели OpenAI-совместимого сервера.
-  ///
-  /// In ru, this message translates to:
-  /// **'Имя модели на сервере'**
-  String get settingsModelHint;
-
-  /// Подпись поля ключа OpenAI-совместимого сервера (локальным серверам ключ не нужен).
-  ///
-  /// In ru, this message translates to:
-  /// **'Ключ доступа (необязательно)'**
-  String get settingsApiKeyLabel;
-
-  /// Пояснение к полю ключа: ключ не отображается, пустое поле = удалить сохранённый ключ.
-  ///
-  /// In ru, this message translates to:
-  /// **'Ключ хранится в защищённом хранилище и не показывается. Введите новый ключ, чтобы заменить, или оставьте поле пустым, чтобы удалить'**
-  String get settingsApiKeyHelper;
-
-  /// Индикатор: для OpenAI-совместимого сервера сохранён ключ доступа.
-  ///
-  /// In ru, this message translates to:
-  /// **'Ключ доступа сохранён'**
-  String get settingsApiKeyConfigured;
-
-  /// Снекбар после сохранения настроек сервера.
-  ///
-  /// In ru, this message translates to:
-  /// **'Настройки сервера сохранены'**
-  String get settingsSaved;
 
   /// Ошибка сохранения настроек сервера (без сырых исключений).
   ///
@@ -1138,18 +1084,6 @@ abstract class AppLocalizations {
   /// **'Настройки'**
   String get settingsOpenTooltip;
 
-  /// Заголовок блока ключей облачных провайдеров на экране настроек генерации (A6.6/A6.8).
-  ///
-  /// In ru, this message translates to:
-  /// **'Ключи API'**
-  String get settingsApiKeysTitle;
-
-  /// Пояснение к блоку ключей API (SPEC 3.4).
-  ///
-  /// In ru, this message translates to:
-  /// **'Ключи хранятся в защищённом хранилище и не показываются. Введите новый ключ, чтобы заменить сохранённый'**
-  String get settingsApiKeysDescription;
-
   /// Индикатор: ключ облачного провайдера сохранён.
   ///
   /// In ru, this message translates to:
@@ -1162,29 +1096,11 @@ abstract class AppLocalizations {
   /// **'Ключ не задан'**
   String get settingsKeyMissing;
 
-  /// Кнопка сохранения ключа облачного провайдера.
-  ///
-  /// In ru, this message translates to:
-  /// **'Сохранить ключ'**
-  String get settingsKeySave;
-
   /// Кнопка удаления сохранённого ключа облачного провайдера.
   ///
   /// In ru, this message translates to:
   /// **'Удалить ключ'**
   String get settingsKeyDelete;
-
-  /// Снекбар после сохранения ключа облачного провайдера.
-  ///
-  /// In ru, this message translates to:
-  /// **'Ключ сохранён'**
-  String get settingsKeySaved;
-
-  /// Снекбар после удаления ключа облачного провайдера.
-  ///
-  /// In ru, this message translates to:
-  /// **'Ключ удалён'**
-  String get settingsKeyDeleted;
 
   /// Валидация: поле ключа облачного провайдера пустое.
   ///
@@ -1294,35 +1210,11 @@ abstract class AppLocalizations {
   /// **'OpenAI'**
   String get generationProviderOpenAi;
 
-  /// Название провайдера Gemini (бренд, латиница допустима).
-  ///
-  /// In ru, this message translates to:
-  /// **'Gemini'**
-  String get generationProviderGemini;
-
-  /// Название провайдера Anthropic (бренд, латиница допустима).
-  ///
-  /// In ru, this message translates to:
-  /// **'Anthropic'**
-  String get generationProviderAnthropic;
-
-  /// Название OpenAI-совместимого провайдера (ADR-013).
-  ///
-  /// In ru, this message translates to:
-  /// **'OpenAI-совместимый'**
-  String get generationProviderOpenAiCompatible;
-
   /// Подпись выбора модели генерации (SPEC A6.8).
   ///
   /// In ru, this message translates to:
   /// **'Модель'**
   String get generationModelLabel;
-
-  /// Пояснение для OpenAI-совместимого провайдера: модель из настроек (ADR-013).
-  ///
-  /// In ru, this message translates to:
-  /// **'Модель задаётся в настройках сервера'**
-  String get generationModelCompatibleHint;
 
   /// Подпись необязательного поля имени колоды на экране генерации.
   ///
@@ -2266,30 +2158,6 @@ abstract class AppLocalizations {
   /// **'Провайдеры'**
   String get settingsApiProvidersTitle;
 
-  /// Кнопка перехода к добавлению ключа.
-  ///
-  /// In ru, this message translates to:
-  /// **'Добавить ключ'**
-  String get settingsApiAddKey;
-
-  /// Кнопка проверки ключа запросом.
-  ///
-  /// In ru, this message translates to:
-  /// **'Проверить'**
-  String get settingsApiCheckKey;
-
-  /// Ключ принят провайдером.
-  ///
-  /// In ru, this message translates to:
-  /// **'Ключ работает'**
-  String get settingsApiCheckValid;
-
-  /// Провайдер отверг ключ.
-  ///
-  /// In ru, this message translates to:
-  /// **'Ключ недействителен. Проверьте ключ'**
-  String get settingsApiCheckInvalid;
-
   /// Проверка без сохранённого ключа.
   ///
   /// In ru, this message translates to:
@@ -2320,23 +2188,257 @@ abstract class AppLocalizations {
   /// **'Не удалось проверить ключ. Попробуйте ещё раз'**
   String get settingsApiCheckUnexpected;
 
-  /// Селектор модели по умолчанию.
-  ///
-  /// In ru, this message translates to:
-  /// **'Модель по умолчанию'**
-  String get settingsApiDefaultModel;
-
   /// Расход токенов за неделю.
   ///
   /// In ru, this message translates to:
   /// **'Токенов за неделю: {count}'**
   String settingsApiTokensWeek(int count);
 
-  /// Переход к экрану настроек генерации (ADR-013).
+  /// Переход к экрану провайдеров (ADR-020).
   ///
   /// In ru, this message translates to:
-  /// **'Настройки сервера и ключей'**
+  /// **'Провайдеры и ключи'**
   String get settingsApiOpenGeneration;
+
+  /// Заголовок экрана настройки провайдеров (ADR-020).
+  ///
+  /// In ru, this message translates to:
+  /// **'Провайдеры'**
+  String get providersTitle;
+
+  /// Пояснение на экране провайдеров.
+  ///
+  /// In ru, this message translates to:
+  /// **'Ключи хранятся в защищённом хранилище устройства и не показываются. Генерация использует основного провайдера'**
+  String get providersDescription;
+
+  /// Пустой список провайдеров.
+  ///
+  /// In ru, this message translates to:
+  /// **'Провайдеры не настроены'**
+  String get providersEmptyTitle;
+
+  /// Пустой список провайдеров: подсказка.
+  ///
+  /// In ru, this message translates to:
+  /// **'Добавьте провайдера, чтобы генерировать карточки'**
+  String get providersEmptyDescription;
+
+  /// Кнопка добавления провайдера.
+  ///
+  /// In ru, this message translates to:
+  /// **'Добавить провайдера'**
+  String get providersAdd;
+
+  /// Первый путь добавления: каталог.
+  ///
+  /// In ru, this message translates to:
+  /// **'Сторонний поставщик'**
+  String get providersAddPreset;
+
+  /// Подпись первого пути добавления.
+  ///
+  /// In ru, this message translates to:
+  /// **'Выбрать из каталога'**
+  String get providersAddPresetSubtitle;
+
+  /// Второй путь добавления и подпись безымянного пользовательского аккаунта.
+  ///
+  /// In ru, this message translates to:
+  /// **'Пользовательская модель API'**
+  String get providersAddCustom;
+
+  /// Подпись второго пути добавления.
+  ///
+  /// In ru, this message translates to:
+  /// **'Свой адрес, протокол и имя модели'**
+  String get providersAddCustomSubtitle;
+
+  /// Заголовок диалога изменения.
+  ///
+  /// In ru, this message translates to:
+  /// **'Изменить провайдера'**
+  String get providersEditTitle;
+
+  /// Поле выбора пресета в диалоге.
+  ///
+  /// In ru, this message translates to:
+  /// **'Поставщик'**
+  String get providersPresetLabel;
+
+  /// Поле выбора протокола в диалоге.
+  ///
+  /// In ru, this message translates to:
+  /// **'Протокол'**
+  String get providersProtocolLabel;
+
+  /// Поле названия пользовательского провайдера.
+  ///
+  /// In ru, this message translates to:
+  /// **'Название'**
+  String get providersNameLabel;
+
+  /// Ошибка пустого названия.
+  ///
+  /// In ru, this message translates to:
+  /// **'Укажите название'**
+  String get providersNameEmptyError;
+
+  /// Подсказка поля модели.
+  ///
+  /// In ru, this message translates to:
+  /// **'Имя модели на сервере'**
+  String get providersModelHint;
+
+  /// Подсказка поля адреса.
+  ///
+  /// In ru, this message translates to:
+  /// **'Полный адрес; версию укажите в пути, если сервер её требует'**
+  String get providersBaseUrlHint;
+
+  /// Неполный аккаунт (нет адреса/модели).
+  ///
+  /// In ru, this message translates to:
+  /// **'Заполните адрес и модель, чтобы пользоваться провайдером'**
+  String get providersIncompleteHint;
+
+  /// Статус ключа локального провайдера.
+  ///
+  /// In ru, this message translates to:
+  /// **'Ключ не требуется'**
+  String get providersKeyNotRequired;
+
+  /// Подсказка поля ключа.
+  ///
+  /// In ru, this message translates to:
+  /// **'Ключ хранится в защищённом хранилище и не показывается'**
+  String get providersKeyHelper;
+
+  /// Подсказка при изменении аккаунта.
+  ///
+  /// In ru, this message translates to:
+  /// **'Оставьте пустым, чтобы не менять сохранённый ключ'**
+  String get providersKeyKeep;
+
+  /// Подсказка для пользовательского провайдера.
+  ///
+  /// In ru, this message translates to:
+  /// **'Можно не заполнять: провайдер работает без ключа'**
+  String get providersKeyOptionalHint;
+
+  /// Отмена удаления ключа в диалоге.
+  ///
+  /// In ru, this message translates to:
+  /// **'Оставить сохранённый ключ'**
+  String get providersKeyUndoDelete;
+
+  /// Основной провайдер выбран.
+  ///
+  /// In ru, this message translates to:
+  /// **'Основной провайдер: {name}'**
+  String providersActiveSaved(String name);
+
+  /// Отметка основного провайдера.
+  ///
+  /// In ru, this message translates to:
+  /// **'Основной'**
+  String get providersActive;
+
+  /// Кнопка выбора основного провайдера.
+  ///
+  /// In ru, this message translates to:
+  /// **'Сделать основным'**
+  String get providersMakeActive;
+
+  /// Кнопка проверки подключения.
+  ///
+  /// In ru, this message translates to:
+  /// **'Проверить подключение'**
+  String get providersCheck;
+
+  /// Успешная проверка подключения.
+  ///
+  /// In ru, this message translates to:
+  /// **'Подключение работает'**
+  String get providersCheckValid;
+
+  /// Неверный ключ при проверке подключения.
+  ///
+  /// In ru, this message translates to:
+  /// **'Ошибка ключа. Проверьте ключ доступа'**
+  String get providersCheckInvalid;
+
+  /// Кнопка изменения провайдера.
+  ///
+  /// In ru, this message translates to:
+  /// **'Изменить'**
+  String get providersEdit;
+
+  /// Кнопка удаления провайдера.
+  ///
+  /// In ru, this message translates to:
+  /// **'Удалить'**
+  String get providersDelete;
+
+  /// Заголовок подтверждения удаления.
+  ///
+  /// In ru, this message translates to:
+  /// **'Удалить провайдера?'**
+  String get providersDeleteTitle;
+
+  /// Текст подтверждения удаления.
+  ///
+  /// In ru, this message translates to:
+  /// **'Настройки провайдера и сохранённый ключ будут удалены'**
+  String get providersDeleteBody;
+
+  /// Провайдер удалён.
+  ///
+  /// In ru, this message translates to:
+  /// **'Провайдер удалён'**
+  String get providersDeleted;
+
+  /// Провайдер сохранён.
+  ///
+  /// In ru, this message translates to:
+  /// **'Провайдер сохранён'**
+  String get providersSaved;
+
+  /// Ошибка сохранения провайдера.
+  ///
+  /// In ru, this message translates to:
+  /// **'Не удалось сохранить провайдера. Попробуйте ещё раз'**
+  String get providersSaveError;
+
+  /// Ключ не подтверждён после записи.
+  ///
+  /// In ru, this message translates to:
+  /// **'Не удалось сохранить ключ в защищённом хранилище. Попробуйте ещё раз'**
+  String get providersKeyStoreError;
+
+  /// Подпись протокола Chat Completions.
+  ///
+  /// In ru, this message translates to:
+  /// **'OpenAI-совместимый'**
+  String get providersProtocolOpenAi;
+
+  /// Подпись протокола Messages.
+  ///
+  /// In ru, this message translates to:
+  /// **'Anthropic (сообщения)'**
+  String get providersProtocolAnthropic;
+
+  /// Подпись протокола Gemini.
+  ///
+  /// In ru, this message translates to:
+  /// **'Gemini'**
+  String get providersProtocolGemini;
+
+  /// Подсказка модели на экране генерации.
+  ///
+  /// In ru, this message translates to:
+  /// **'Модель задаётся в настройках провайдера'**
+  String get generationModelProviderHint;
 
   /// Блок «О приложении».
   ///
@@ -2367,12 +2469,6 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Не удалось открыть ссылку'**
   String get settingsAboutLinkError;
-
-  /// Успешное сохранение настроек приложения.
-  ///
-  /// In ru, this message translates to:
-  /// **'Настройки сохранены'**
-  String get settingsSavedGeneric;
 }
 
 class _AppLocalizationsDelegate

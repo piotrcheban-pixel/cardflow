@@ -119,11 +119,7 @@ const List<ProviderPreset> kProviderPresets = <ProviderPreset>[
         label: 'GPT-4o mini',
         contextTokens: 128000,
       ),
-      ProviderPresetModel(
-        id: 'gpt-4o',
-        label: 'GPT-4o',
-        contextTokens: 128000,
-      ),
+      ProviderPresetModel(id: 'gpt-4o', label: 'GPT-4o', contextTokens: 128000),
     ],
     requiresApiKey: true,
   ),

@@ -96,8 +96,8 @@ class GenerationPipeline implements GenerationRunner {
       id: jobId,
       status: GenerationJobStatus.running,
       createdAt: createdAt,
-      provider: request.provider.wireName,
-      model: request.modelId,
+      provider: request.account.id,
+      model: request.account.modelId,
       promptVersion: systemPromptVersion,
       chunkCount: 0,
       cardsCount: 0,
@@ -112,8 +112,7 @@ class GenerationPipeline implements GenerationRunner {
         const GenerationProgress(phase: GenerationProgressPhase.chunking),
       );
       final int budget = inputTokenBudget(
-        provider: request.provider,
-        modelId: request.modelId,
+        contextTokens: request.account.contextTokens,
         systemPromptTokens: systemPromptTokens,
       );
       final List<GenerationChunk> chunks = chunker.chunkDocuments(
@@ -173,8 +172,8 @@ class GenerationPipeline implements GenerationRunner {
           id: previous.jobId,
           status: GenerationJobStatus.partial,
           createdAt: now(),
-          provider: request.provider.wireName,
-          model: request.modelId,
+          provider: request.account.id,
+          model: request.account.modelId,
           promptVersion: systemPromptVersion,
           files: <String>[
             for (final document in request.documents) document.fileName,
@@ -260,8 +259,7 @@ class GenerationPipeline implements GenerationRunner {
       try {
         result = await caller.generate(
           GenerationRequest(
-            provider: request.provider,
-            model: request.modelId,
+            account: request.account,
             materialsText: chunk.materialsText,
             wishes: request.wishes,
             limit: chunk.limit,

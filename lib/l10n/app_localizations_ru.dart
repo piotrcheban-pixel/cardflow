@@ -601,40 +601,10 @@ class AppLocalizationsRu extends AppLocalizations {
       'Не удалось получить карточки. Попробуйте ещё раз';
 
   @override
-  String get settingsTitle => 'Настройки генерации';
-
-  @override
-  String get settingsOpenAiCompatibleTitle => 'OpenAI-совместимый сервер';
-
-  @override
-  String get settingsOpenAiCompatibleDescription =>
-      'Подходит для облачных и локальных серверов, совместимых с OpenAI';
-
-  @override
   String get settingsServerAddressLabel => 'Адрес сервера';
 
   @override
-  String get settingsServerAddressHint =>
-      'Полный адрес; версию укажите в пути, если сервер её требует';
-
-  @override
   String get settingsModelLabel => 'Модель';
-
-  @override
-  String get settingsModelHint => 'Имя модели на сервере';
-
-  @override
-  String get settingsApiKeyLabel => 'Ключ доступа (необязательно)';
-
-  @override
-  String get settingsApiKeyHelper =>
-      'Ключ хранится в защищённом хранилище и не показывается. Введите новый ключ, чтобы заменить, или оставьте поле пустым, чтобы удалить';
-
-  @override
-  String get settingsApiKeyConfigured => 'Ключ доступа сохранён';
-
-  @override
-  String get settingsSaved => 'Настройки сервера сохранены';
 
   @override
   String get settingsSaveError =>
@@ -658,29 +628,13 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsOpenTooltip => 'Настройки';
 
   @override
-  String get settingsApiKeysTitle => 'Ключи API';
-
-  @override
-  String get settingsApiKeysDescription =>
-      'Ключи хранятся в защищённом хранилище и не показываются. Введите новый ключ, чтобы заменить сохранённый';
-
-  @override
   String get settingsKeyConfigured => 'Ключ сохранён';
 
   @override
   String get settingsKeyMissing => 'Ключ не задан';
 
   @override
-  String get settingsKeySave => 'Сохранить ключ';
-
-  @override
   String get settingsKeyDelete => 'Удалить ключ';
-
-  @override
-  String get settingsKeySaved => 'Ключ сохранён';
-
-  @override
-  String get settingsKeyDeleted => 'Ключ удалён';
 
   @override
   String get settingsKeyEmptyError => 'Введите ключ';
@@ -745,20 +699,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get generationProviderOpenAi => 'OpenAI';
 
   @override
-  String get generationProviderGemini => 'Gemini';
-
-  @override
-  String get generationProviderAnthropic => 'Anthropic';
-
-  @override
-  String get generationProviderOpenAiCompatible => 'OpenAI-совместимый';
-
-  @override
   String get generationModelLabel => 'Модель';
-
-  @override
-  String get generationModelCompatibleHint =>
-      'Модель задаётся в настройках сервера';
 
   @override
   String get generationDeckNameLabel => 'Имя колоды (необязательно)';
@@ -1356,18 +1297,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsApiProvidersTitle => 'Провайдеры';
 
   @override
-  String get settingsApiAddKey => 'Добавить ключ';
-
-  @override
-  String get settingsApiCheckKey => 'Проверить';
-
-  @override
-  String get settingsApiCheckValid => 'Ключ работает';
-
-  @override
-  String get settingsApiCheckInvalid => 'Ключ недействителен. Проверьте ключ';
-
-  @override
   String get settingsApiCheckMissing => 'Сначала добавьте ключ';
 
   @override
@@ -1386,15 +1315,145 @@ class AppLocalizationsRu extends AppLocalizations {
       'Не удалось проверить ключ. Попробуйте ещё раз';
 
   @override
-  String get settingsApiDefaultModel => 'Модель по умолчанию';
-
-  @override
   String settingsApiTokensWeek(int count) {
     return 'Токенов за неделю: $count';
   }
 
   @override
-  String get settingsApiOpenGeneration => 'Настройки сервера и ключей';
+  String get settingsApiOpenGeneration => 'Провайдеры и ключи';
+
+  @override
+  String get providersTitle => 'Провайдеры';
+
+  @override
+  String get providersDescription =>
+      'Ключи хранятся в защищённом хранилище устройства и не показываются. Генерация использует основного провайдера';
+
+  @override
+  String get providersEmptyTitle => 'Провайдеры не настроены';
+
+  @override
+  String get providersEmptyDescription =>
+      'Добавьте провайдера, чтобы генерировать карточки';
+
+  @override
+  String get providersAdd => 'Добавить провайдера';
+
+  @override
+  String get providersAddPreset => 'Сторонний поставщик';
+
+  @override
+  String get providersAddPresetSubtitle => 'Выбрать из каталога';
+
+  @override
+  String get providersAddCustom => 'Пользовательская модель API';
+
+  @override
+  String get providersAddCustomSubtitle => 'Свой адрес, протокол и имя модели';
+
+  @override
+  String get providersEditTitle => 'Изменить провайдера';
+
+  @override
+  String get providersPresetLabel => 'Поставщик';
+
+  @override
+  String get providersProtocolLabel => 'Протокол';
+
+  @override
+  String get providersNameLabel => 'Название';
+
+  @override
+  String get providersNameEmptyError => 'Укажите название';
+
+  @override
+  String get providersModelHint => 'Имя модели на сервере';
+
+  @override
+  String get providersBaseUrlHint =>
+      'Полный адрес; версию укажите в пути, если сервер её требует';
+
+  @override
+  String get providersIncompleteHint =>
+      'Заполните адрес и модель, чтобы пользоваться провайдером';
+
+  @override
+  String get providersKeyNotRequired => 'Ключ не требуется';
+
+  @override
+  String get providersKeyHelper =>
+      'Ключ хранится в защищённом хранилище и не показывается';
+
+  @override
+  String get providersKeyKeep =>
+      'Оставьте пустым, чтобы не менять сохранённый ключ';
+
+  @override
+  String get providersKeyOptionalHint =>
+      'Можно не заполнять: провайдер работает без ключа';
+
+  @override
+  String get providersKeyUndoDelete => 'Оставить сохранённый ключ';
+
+  @override
+  String providersActiveSaved(String name) {
+    return 'Основной провайдер: $name';
+  }
+
+  @override
+  String get providersActive => 'Основной';
+
+  @override
+  String get providersMakeActive => 'Сделать основным';
+
+  @override
+  String get providersCheck => 'Проверить подключение';
+
+  @override
+  String get providersCheckValid => 'Подключение работает';
+
+  @override
+  String get providersCheckInvalid => 'Ошибка ключа. Проверьте ключ доступа';
+
+  @override
+  String get providersEdit => 'Изменить';
+
+  @override
+  String get providersDelete => 'Удалить';
+
+  @override
+  String get providersDeleteTitle => 'Удалить провайдера?';
+
+  @override
+  String get providersDeleteBody =>
+      'Настройки провайдера и сохранённый ключ будут удалены';
+
+  @override
+  String get providersDeleted => 'Провайдер удалён';
+
+  @override
+  String get providersSaved => 'Провайдер сохранён';
+
+  @override
+  String get providersSaveError =>
+      'Не удалось сохранить провайдера. Попробуйте ещё раз';
+
+  @override
+  String get providersKeyStoreError =>
+      'Не удалось сохранить ключ в защищённом хранилище. Попробуйте ещё раз';
+
+  @override
+  String get providersProtocolOpenAi => 'OpenAI-совместимый';
+
+  @override
+  String get providersProtocolAnthropic => 'Anthropic (сообщения)';
+
+  @override
+  String get providersProtocolGemini => 'Gemini';
+
+  @override
+  String get generationModelProviderHint =>
+      'Модель задаётся в настройках провайдера';
 
   @override
   String get settingsAboutTitle => 'О приложении';
@@ -1412,7 +1471,4 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get settingsAboutLinkError => 'Не удалось открыть ссылку';
-
-  @override
-  String get settingsSavedGeneric => 'Настройки сохранены';
 }

@@ -1,4 +1,4 @@
-/// Модели запуска пайплайна генерации (SPEC A8.5, ADR-015).
+/// Модели запуска пайплайна генерации (SPEC A8.5, ADR-015, ADR-020).
 ///
 /// Домен не зависит от Flutter, Dio и БД: отмена и HTTP-транспорт живут в
 /// `lib/api/generation/`.
@@ -7,7 +7,7 @@ library;
 import 'package:cardflow/domain/generation/generated_card.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
 import 'package:cardflow/domain/generation/generation_job.dart';
-import 'package:cardflow/domain/generation/generation_provider.dart';
+import 'package:cardflow/domain/generation/provider_account.dart';
 import 'package:cardflow/domain/text/parsed_document.dart';
 
 /// Запрос на генерацию карточек из разобранных документов.
@@ -15,8 +15,7 @@ class GenerationRunRequest {
   /// Создаёт запрос.
   const GenerationRunRequest({
     required this.documents,
-    required this.provider,
-    required this.modelId,
+    required this.account,
     required this.deckName,
     this.wishes,
     this.targetDeckId,
@@ -25,11 +24,8 @@ class GenerationRunRequest {
   /// Разобранные документы (порядок прикрепления).
   final List<ParsedDocument> documents;
 
-  /// Провайдер.
-  final GenerationProvider provider;
-
-  /// Модель (для OpenAI-совместимого сервера игнорируется, ADR-013).
-  final String modelId;
+  /// Провайдер: протокол, адрес, модель и id ключа (ADR-020).
+  final ProviderAccount account;
 
   /// Имя колоды (при `targetDeckId == null` — имя новой колоды).
   final String deckName;

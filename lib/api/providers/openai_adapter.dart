@@ -4,13 +4,12 @@ library;
 import 'package:cardflow/api/generation/card_json_schema.dart';
 import 'package:cardflow/api/generation/provider_schema.dart';
 import 'package:cardflow/api/providers/generation_provider_adapter.dart';
+import 'package:cardflow/api/providers/provider_endpoint.dart';
 import 'package:cardflow/api/providers/provider_json.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
 import 'package:cardflow/domain/generation/generation_provider.dart';
 import 'package:cardflow/domain/generation/generation_result.dart';
-
-/// URL Chat Completions OpenAI.
-final Uri _endpoint = Uri.parse('https://api.openai.com/v1/chat/completions');
+import 'package:cardflow/domain/generation/provider_protocol.dart';
 
 /// OpenAI: `POST https://api.openai.com/v1/chat/completions`,
 /// `Authorization: Bearer <key>`, `response_format: {type: "json_schema",
@@ -40,8 +39,21 @@ class OpenAiAdapter implements GenerationProviderAdapter {
     String? baseUrl,
     bool strictSchema = true,
   }) {
+    final ProviderEndpoint endpoint = ProviderEndpoint.parse(
+      protocol: ProviderProtocol.openai,
+      baseUrl: baseUrl ?? '',
+      model: model,
+    );
+    final Uri? uri = endpoint.uri;
+    if (uri == null) {
+      throw ArgumentError.value(
+        baseUrl,
+        'baseUrl',
+        'Некорректный адрес OpenAI',
+      );
+    }
     return ProviderRequest(
-      uri: _endpoint,
+      uri: uri,
       headers: <String, String>{
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $apiKey',

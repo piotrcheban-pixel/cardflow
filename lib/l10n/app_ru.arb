@@ -729,49 +729,13 @@
   "@generationErrorGeneric": {
     "description": "Генерация: прочая ошибка без отдельного кода (SPEC A8.6)."
   },
-  "settingsTitle": "Настройки генерации",
-  "@settingsTitle": {
-    "description": "Заголовок экрана настроек генерации (A6.6, API-блок; ADR-013)."
-  },
-  "settingsOpenAiCompatibleTitle": "OpenAI-совместимый сервер",
-  "@settingsOpenAiCompatibleTitle": {
-    "description": "Название провайдера OpenAI-compatible на экране настроек (ADR-013)."
-  },
-  "settingsOpenAiCompatibleDescription": "Подходит для облачных и локальных серверов, совместимых с OpenAI",
-  "@settingsOpenAiCompatibleDescription": {
-    "description": "Пояснение к провайдеру OpenAI-compatible: DeepSeek, Ollama, LM Studio и другие (ADR-013)."
-  },
   "settingsServerAddressLabel": "Адрес сервера",
   "@settingsServerAddressLabel": {
     "description": "Подпись поля base_url OpenAI-совместимого сервера."
   },
-  "settingsServerAddressHint": "Полный адрес; версию укажите в пути, если сервер её требует",
-  "@settingsServerAddressHint": {
-    "description": "Подсказка поля base_url: например /v1 для локальных серверов."
-  },
   "settingsModelLabel": "Модель",
   "@settingsModelLabel": {
     "description": "Подпись поля модели OpenAI-совместимого сервера."
-  },
-  "settingsModelHint": "Имя модели на сервере",
-  "@settingsModelHint": {
-    "description": "Подсказка поля модели OpenAI-совместимого сервера."
-  },
-  "settingsApiKeyLabel": "Ключ доступа (необязательно)",
-  "@settingsApiKeyLabel": {
-    "description": "Подпись поля ключа OpenAI-совместимого сервера (локальным серверам ключ не нужен)."
-  },
-  "settingsApiKeyHelper": "Ключ хранится в защищённом хранилище и не показывается. Введите новый ключ, чтобы заменить, или оставьте поле пустым, чтобы удалить",
-  "@settingsApiKeyHelper": {
-    "description": "Пояснение к полю ключа: ключ не отображается, пустое поле = удалить сохранённый ключ."
-  },
-  "settingsApiKeyConfigured": "Ключ доступа сохранён",
-  "@settingsApiKeyConfigured": {
-    "description": "Индикатор: для OpenAI-совместимого сервера сохранён ключ доступа."
-  },
-  "settingsSaved": "Настройки сервера сохранены",
-  "@settingsSaved": {
-    "description": "Снекбар после сохранения настроек сервера."
   },
   "settingsSaveError": "Не удалось сохранить настройки. Попробуйте ещё раз",
   "@settingsSaveError": {
@@ -797,14 +761,6 @@
   "@settingsOpenTooltip": {
     "description": "Подсказка иконки перехода в настройки генерации."
   },
-  "settingsApiKeysTitle": "Ключи API",
-  "@settingsApiKeysTitle": {
-    "description": "Заголовок блока ключей облачных провайдеров на экране настроек генерации (A6.6/A6.8)."
-  },
-  "settingsApiKeysDescription": "Ключи хранятся в защищённом хранилище и не показываются. Введите новый ключ, чтобы заменить сохранённый",
-  "@settingsApiKeysDescription": {
-    "description": "Пояснение к блоку ключей API (SPEC 3.4)."
-  },
   "settingsKeyConfigured": "Ключ сохранён",
   "@settingsKeyConfigured": {
     "description": "Индикатор: ключ облачного провайдера сохранён."
@@ -813,21 +769,9 @@
   "@settingsKeyMissing": {
     "description": "Индикатор: ключ облачного провайдера не задан."
   },
-  "settingsKeySave": "Сохранить ключ",
-  "@settingsKeySave": {
-    "description": "Кнопка сохранения ключа облачного провайдера."
-  },
   "settingsKeyDelete": "Удалить ключ",
   "@settingsKeyDelete": {
     "description": "Кнопка удаления сохранённого ключа облачного провайдера."
-  },
-  "settingsKeySaved": "Ключ сохранён",
-  "@settingsKeySaved": {
-    "description": "Снекбар после сохранения ключа облачного провайдера."
-  },
-  "settingsKeyDeleted": "Ключ удалён",
-  "@settingsKeyDeleted": {
-    "description": "Снекбар после удаления ключа облачного провайдера."
   },
   "settingsKeyEmptyError": "Введите ключ",
   "@settingsKeyEmptyError": {
@@ -916,25 +860,9 @@
   "@generationProviderOpenAi": {
     "description": "Название провайдера OpenAI (бренд, латиница допустима)."
   },
-  "generationProviderGemini": "Gemini",
-  "@generationProviderGemini": {
-    "description": "Название провайдера Gemini (бренд, латиница допустима)."
-  },
-  "generationProviderAnthropic": "Anthropic",
-  "@generationProviderAnthropic": {
-    "description": "Название провайдера Anthropic (бренд, латиница допустима)."
-  },
-  "generationProviderOpenAiCompatible": "OpenAI-совместимый",
-  "@generationProviderOpenAiCompatible": {
-    "description": "Название OpenAI-совместимого провайдера (ADR-013)."
-  },
   "generationModelLabel": "Модель",
   "@generationModelLabel": {
     "description": "Подпись выбора модели генерации (SPEC A6.8)."
-  },
-  "generationModelCompatibleHint": "Модель задаётся в настройках сервера",
-  "@generationModelCompatibleHint": {
-    "description": "Пояснение для OpenAI-совместимого провайдера: модель из настроек (ADR-013)."
   },
   "generationDeckNameLabel": "Имя колоды (необязательно)",
   "@generationDeckNameLabel": {
@@ -1141,7 +1069,7 @@
       }
     }
   },
-  "cardFormClozeMissingError": "Добавьте хотя бы один пропуск", 
+  "cardFormClozeMissingError": "Добавьте хотя бы один пропуск",
   "@cardFormClozeMissingError": {
     "description": "Ошибка ручной формы: у cloze нет корректного пропуска A7.9."
   },
@@ -1694,22 +1622,6 @@
   "@settingsApiProvidersTitle": {
     "description": "Заголовок списка провайдеров."
   },
-  "settingsApiAddKey": "Добавить ключ",
-  "@settingsApiAddKey": {
-    "description": "Кнопка перехода к добавлению ключа."
-  },
-  "settingsApiCheckKey": "Проверить",
-  "@settingsApiCheckKey": {
-    "description": "Кнопка проверки ключа запросом."
-  },
-  "settingsApiCheckValid": "Ключ работает",
-  "@settingsApiCheckValid": {
-    "description": "Ключ принят провайдером."
-  },
-  "settingsApiCheckInvalid": "Ключ недействителен. Проверьте ключ",
-  "@settingsApiCheckInvalid": {
-    "description": "Провайдер отверг ключ."
-  },
   "settingsApiCheckMissing": "Сначала добавьте ключ",
   "@settingsApiCheckMissing": {
     "description": "Проверка без сохранённого ключа."
@@ -1730,10 +1642,6 @@
   "@settingsApiCheckUnexpected": {
     "description": "Прочие ошибки проверки ключа."
   },
-  "settingsApiDefaultModel": "Модель по умолчанию",
-  "@settingsApiDefaultModel": {
-    "description": "Селектор модели по умолчанию."
-  },
   "settingsApiTokensWeek": "Токенов за неделю: {count}",
   "@settingsApiTokensWeek": {
     "description": "Расход токенов за неделю.",
@@ -1743,9 +1651,174 @@
       }
     }
   },
-  "settingsApiOpenGeneration": "Настройки сервера и ключей",
+  "settingsApiOpenGeneration": "Провайдеры и ключи",
   "@settingsApiOpenGeneration": {
-    "description": "Переход к экрану настроек генерации (ADR-013)."
+    "description": "Переход к экрану провайдеров (ADR-020)."
+  },
+  "providersTitle": "Провайдеры",
+  "@providersTitle": {
+    "description": "Заголовок экрана настройки провайдеров (ADR-020)."
+  },
+  "providersDescription": "Ключи хранятся в защищённом хранилище устройства и не показываются. Генерация использует основного провайдера",
+  "@providersDescription": {
+    "description": "Пояснение на экране провайдеров."
+  },
+  "providersEmptyTitle": "Провайдеры не настроены",
+  "@providersEmptyTitle": {
+    "description": "Пустой список провайдеров."
+  },
+  "providersEmptyDescription": "Добавьте провайдера, чтобы генерировать карточки",
+  "@providersEmptyDescription": {
+    "description": "Пустой список провайдеров: подсказка."
+  },
+  "providersAdd": "Добавить провайдера",
+  "@providersAdd": {
+    "description": "Кнопка добавления провайдера."
+  },
+  "providersAddPreset": "Сторонний поставщик",
+  "@providersAddPreset": {
+    "description": "Первый путь добавления: каталог."
+  },
+  "providersAddPresetSubtitle": "Выбрать из каталога",
+  "@providersAddPresetSubtitle": {
+    "description": "Подпись первого пути добавления."
+  },
+  "providersAddCustom": "Пользовательская модель API",
+  "@providersAddCustom": {
+    "description": "Второй путь добавления и подпись безымянного пользовательского аккаунта."
+  },
+  "providersAddCustomSubtitle": "Свой адрес, протокол и имя модели",
+  "@providersAddCustomSubtitle": {
+    "description": "Подпись второго пути добавления."
+  },
+  "providersEditTitle": "Изменить провайдера",
+  "@providersEditTitle": {
+    "description": "Заголовок диалога изменения."
+  },
+  "providersPresetLabel": "Поставщик",
+  "@providersPresetLabel": {
+    "description": "Поле выбора пресета в диалоге."
+  },
+  "providersProtocolLabel": "Протокол",
+  "@providersProtocolLabel": {
+    "description": "Поле выбора протокола в диалоге."
+  },
+  "providersNameLabel": "Название",
+  "@providersNameLabel": {
+    "description": "Поле названия пользовательского провайдера."
+  },
+  "providersNameEmptyError": "Укажите название",
+  "@providersNameEmptyError": {
+    "description": "Ошибка пустого названия."
+  },
+  "providersModelHint": "Имя модели на сервере",
+  "@providersModelHint": {
+    "description": "Подсказка поля модели."
+  },
+  "providersBaseUrlHint": "Полный адрес; версию укажите в пути, если сервер её требует",
+  "@providersBaseUrlHint": {
+    "description": "Подсказка поля адреса."
+  },
+  "providersIncompleteHint": "Заполните адрес и модель, чтобы пользоваться провайдером",
+  "@providersIncompleteHint": {
+    "description": "Неполный аккаунт (нет адреса/модели)."
+  },
+  "providersKeyNotRequired": "Ключ не требуется",
+  "@providersKeyNotRequired": {
+    "description": "Статус ключа локального провайдера."
+  },
+  "providersKeyHelper": "Ключ хранится в защищённом хранилище и не показывается",
+  "@providersKeyHelper": {
+    "description": "Подсказка поля ключа."
+  },
+  "providersKeyKeep": "Оставьте пустым, чтобы не менять сохранённый ключ",
+  "@providersKeyKeep": {
+    "description": "Подсказка при изменении аккаунта."
+  },
+  "providersKeyOptionalHint": "Можно не заполнять: провайдер работает без ключа",
+  "@providersKeyOptionalHint": {
+    "description": "Подсказка для пользовательского провайдера."
+  },
+  "providersKeyUndoDelete": "Оставить сохранённый ключ",
+  "@providersKeyUndoDelete": {
+    "description": "Отмена удаления ключа в диалоге."
+  },
+  "providersActiveSaved": "Основной провайдер: {name}",
+  "@providersActiveSaved": {
+    "description": "Основной провайдер выбран.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "providersActive": "Основной",
+  "@providersActive": {
+    "description": "Отметка основного провайдера."
+  },
+  "providersMakeActive": "Сделать основным",
+  "@providersMakeActive": {
+    "description": "Кнопка выбора основного провайдера."
+  },
+  "providersCheck": "Проверить подключение",
+  "@providersCheck": {
+    "description": "Кнопка проверки подключения."
+  },
+  "providersCheckValid": "Подключение работает",
+  "@providersCheckValid": {
+    "description": "Успешная проверка подключения."
+  },
+  "providersCheckInvalid": "Ошибка ключа. Проверьте ключ доступа",
+  "@providersCheckInvalid": {
+    "description": "Неверный ключ при проверке подключения."
+  },
+  "providersEdit": "Изменить",
+  "@providersEdit": {
+    "description": "Кнопка изменения провайдера."
+  },
+  "providersDelete": "Удалить",
+  "@providersDelete": {
+    "description": "Кнопка удаления провайдера."
+  },
+  "providersDeleteTitle": "Удалить провайдера?",
+  "@providersDeleteTitle": {
+    "description": "Заголовок подтверждения удаления."
+  },
+  "providersDeleteBody": "Настройки провайдера и сохранённый ключ будут удалены",
+  "@providersDeleteBody": {
+    "description": "Текст подтверждения удаления."
+  },
+  "providersDeleted": "Провайдер удалён",
+  "@providersDeleted": {
+    "description": "Провайдер удалён."
+  },
+  "providersSaved": "Провайдер сохранён",
+  "@providersSaved": {
+    "description": "Провайдер сохранён."
+  },
+  "providersSaveError": "Не удалось сохранить провайдера. Попробуйте ещё раз",
+  "@providersSaveError": {
+    "description": "Ошибка сохранения провайдера."
+  },
+  "providersKeyStoreError": "Не удалось сохранить ключ в защищённом хранилище. Попробуйте ещё раз",
+  "@providersKeyStoreError": {
+    "description": "Ключ не подтверждён после записи."
+  },
+  "providersProtocolOpenAi": "OpenAI-совместимый",
+  "@providersProtocolOpenAi": {
+    "description": "Подпись протокола Chat Completions."
+  },
+  "providersProtocolAnthropic": "Anthropic (сообщения)",
+  "@providersProtocolAnthropic": {
+    "description": "Подпись протокола Messages."
+  },
+  "providersProtocolGemini": "Gemini",
+  "@providersProtocolGemini": {
+    "description": "Подпись протокола Gemini."
+  },
+  "generationModelProviderHint": "Модель задаётся в настройках провайдера",
+  "@generationModelProviderHint": {
+    "description": "Подсказка модели на экране генерации."
   },
   "settingsAboutTitle": "О приложении",
   "@settingsAboutTitle": {
@@ -1771,9 +1844,5 @@
   "settingsAboutLinkError": "Не удалось открыть ссылку",
   "@settingsAboutLinkError": {
     "description": "Ошибка открытия внешней ссылки."
-  },
-  "settingsSavedGeneric": "Настройки сохранены",
-  "@settingsSavedGeneric": {
-    "description": "Успешное сохранение настроек приложения."
   }
 }

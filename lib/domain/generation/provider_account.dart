@@ -75,9 +75,8 @@ class ProviderAccount {
   final bool requiresApiKey;
 
   /// Пресет каталога, если аккаунт создан из каталога.
-  ProviderPreset? get preset => presetId == null
-      ? null
-      : providerPresetById(presetId!);
+  ProviderPreset? get preset =>
+      presetId == null ? null : providerPresetById(presetId!);
 
   /// true, если заданы адрес и модель.
   bool get isConfigured =>
@@ -181,8 +180,7 @@ class ProviderAccount {
   );
 
   @override
-  String toString() =>
-      'ProviderAccount($id, ${protocol.wireName}, $modelId)';
+  String toString() => 'ProviderAccount($id, ${protocol.wireName}, $modelId)';
 }
 
 /// Список настроенных провайдеров и выбранный основной аккаунт.
@@ -315,7 +313,8 @@ class ProviderAccounts {
   int get hashCode => Object.hash(Object.hashAll(accounts), activeAccountId);
 
   @override
-  String toString() => 'ProviderAccounts(${accounts.length}, active: '
+  String toString() =>
+      'ProviderAccounts(${accounts.length}, active: '
       '$activeAccountId)';
 }
 

@@ -11,11 +11,12 @@ library;
 import 'package:cardflow/api/generation/card_json_schema.dart';
 import 'package:cardflow/api/generation/provider_schema.dart';
 import 'package:cardflow/api/providers/generation_provider_adapter.dart';
-import 'package:cardflow/api/providers/openai_compatible_endpoint.dart';
+import 'package:cardflow/api/providers/provider_endpoint.dart';
 import 'package:cardflow/api/providers/provider_json.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
 import 'package:cardflow/domain/generation/generation_provider.dart';
 import 'package:cardflow/domain/generation/generation_result.dart';
+import 'package:cardflow/domain/generation/provider_protocol.dart';
 
 /// OpenAI-совместимый провайдер: `POST <base_url>/chat/completions`,
 /// `Authorization: Bearer <key>` (если ключ задан),
@@ -41,8 +42,12 @@ class OpenAiCompatibleAdapter implements GenerationProviderAdapter {
     String? baseUrl,
     bool strictSchema = true,
   }) {
-    final endpoint = OpenAiCompatibleEndpoint.parse(baseUrl ?? '');
-    final uri = endpoint.uri;
+    final ProviderEndpoint endpoint = ProviderEndpoint.parse(
+      protocol: ProviderProtocol.openaiCompletions,
+      baseUrl: baseUrl ?? '',
+      model: model,
+    );
+    final Uri? uri = endpoint.uri;
     if (uri == null) {
       throw ArgumentError.value(
         baseUrl,

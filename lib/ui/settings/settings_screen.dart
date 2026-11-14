@@ -12,14 +12,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
-import 'package:cardflow/api/generation/api_key_verifier.dart';
-import 'package:cardflow/domain/generation/generation_model.dart';
-import 'package:cardflow/domain/generation/generation_provider.dart';
+import 'package:cardflow/domain/generation/provider_account.dart';
 import 'package:cardflow/domain/settings/app_settings.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/decks/deck_actions.dart';
 import 'package:cardflow/ui/router/app_router.dart';
 import 'package:cardflow/ui/settings/about_links.dart';
+import 'package:cardflow/ui/settings/provider_labels.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
 
 /// Экран настроек приложения.
@@ -62,10 +61,7 @@ class SettingsScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 24),
             _SectionTitle(l10n.settingsApiTitle),
-            _ApiSection(
-              settings: value,
-              onChanged: (AppSettings next) => _update(context, ref, next),
-            ),
+            const _ApiSection(),
             const SizedBox(height: 24),
             _SectionTitle(l10n.settingsLearningTitle),
             _LearningSection(
@@ -446,54 +442,19 @@ class _PercentSliderState extends State<_PercentSlider> {
   }
 }
 
-class _ApiSection extends ConsumerStatefulWidget {
-  const _ApiSection({required this.settings, required this.onChanged});
-
-  final AppSettings settings;
-  final ValueChanged<AppSettings> onChanged;
-
-  @override
-  ConsumerState<_ApiSection> createState() => _ApiSectionState();
-}
-
-class _ApiSectionState extends ConsumerState<_ApiSection> {
-  final Set<GenerationProvider> _checking = <GenerationProvider>{};
-
-  Future<void> _check(GenerationProvider provider) async {
-    final AppLocalizations l10n = AppLocalizations.of(context);
-    setState(() => _checking.add(provider));
-    try {
-      final ApiKeyCheckResult result = await ref
-          .read(apiKeyVerifierProvider)
-          .check(provider);
-      if (!mounted) return;
-      showAppMessage(context, _statusMessage(l10n, result.status));
-    } on Object {
-      if (!mounted) return;
-      showAppMessage(context, l10n.settingsApiCheckUnexpected);
-    } finally {
-      if (mounted) setState(() => _checking.remove(provider));
-    }
-  }
-
-  String _statusMessage(AppLocalizations l10n, ApiKeyCheckStatus status) {
-    return switch (status) {
-      ApiKeyCheckStatus.valid => l10n.settingsApiCheckValid,
-      ApiKeyCheckStatus.invalidKey => l10n.settingsApiCheckInvalid,
-      ApiKeyCheckStatus.missingKey => l10n.settingsApiCheckMissing,
-      ApiKeyCheckStatus.noConnection => l10n.settingsApiCheckNoConnection,
-      ApiKeyCheckStatus.rateLimited => l10n.settingsApiCheckRateLimited,
-      ApiKeyCheckStatus.providerNotConfigured =>
-        l10n.settingsApiCheckNotConfigured,
-      ApiKeyCheckStatus.unexpected => l10n.settingsApiCheckUnexpected,
-    };
-  }
+/// Блок «API»: сводка настроенных провайдеров и переход к их настройке.
+///
+/// В итерации 7.5 отдельные строки OpenAI/Gemini/Anthropic и «модель по
+/// умолчанию» удалены: провайдеры и модели живут на экране `/settings/generation`
+/// (ADR-020), а основного провайдера выбирает генерация.
+class _ApiSection extends ConsumerWidget {
+  const _ApiSection();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final AppLocalizations l10n = AppLocalizations.of(context);
-    final AsyncValue<Map<GenerationProvider, bool>> statuses = ref.watch(
-      providerKeyStatusProvider,
+    final AsyncValue<ProviderAccounts> accounts = ref.watch(
+      providerAccountsProvider,
     );
     final AsyncValue<int> tokens = ref.watch(weeklyTokensProvider);
     final ThemeData theme = Theme.of(context);
@@ -502,24 +463,54 @@ class _ApiSectionState extends ConsumerState<_ApiSection> {
       children: <Widget>[
         Text(l10n.settingsApiProvidersTitle, style: theme.textTheme.titleSmall),
         const SizedBox(height: 8),
-        statuses.when(
+        accounts.when(
           loading: () => const LinearProgressIndicator(),
           error: (Object error, StackTrace stackTrace) => Text(
             l10n.settingsLoadError,
             style: TextStyle(color: theme.colorScheme.error),
           ),
-          data: (Map<GenerationProvider, bool> configured) => Column(
-            children: <Widget>[
-              for (final GenerationProvider provider
-                  in GenerationProvider.values)
-                _ProviderTile(
-                  provider: provider,
-                  configured: configured[provider] ?? false,
-                  checking: _checking.contains(provider),
-                  onCheck: () => _check(provider),
+          data: (ProviderAccounts value) {
+            if (value.isEmpty) {
+              return Text(
+                l10n.providersEmptyTitle,
+                key: const ValueKey<String>('settings-providers-empty'),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
                 ),
-            ],
-          ),
+              );
+            }
+            final ProviderAccount? active = value.active;
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                for (final ProviderAccount account in value.accounts)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 2),
+                    child: Row(
+                      children: <Widget>[
+                        Icon(providerProtocolIcon(account.protocol), size: 20),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            providerSummary(l10n, account),
+                            key: ValueKey<String>(
+                              'settings-provider-${account.id}',
+                            ),
+                          ),
+                        ),
+                        if (active?.id == account.id)
+                          Text(
+                            l10n.providersActive,
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: theme.colorScheme.primary,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+              ],
+            );
+          },
         ),
         const SizedBox(height: 8),
         Align(
@@ -530,43 +521,6 @@ class _ApiSectionState extends ConsumerState<_ApiSection> {
             icon: const Icon(Icons.key_outlined),
             label: Text(l10n.settingsApiOpenGeneration),
           ),
-        ),
-        const SizedBox(height: 12),
-        DropdownButtonFormField<String>(
-          key: ValueKey<String>(
-            'settings-default-model-${widget.settings.defaultModelId}',
-          ),
-          initialValue: _modelExists(widget.settings.defaultModelId)
-              ? widget.settings.defaultModelId
-              : kGenerationModels.first.id,
-          decoration: InputDecoration(
-            labelText: l10n.settingsApiDefaultModel,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-          ),
-          items: <DropdownMenuItem<String>>[
-            for (final GenerationModel model in kGenerationModels)
-              DropdownMenuItem<String>(
-                value: model.id,
-                child: Text(model.label),
-              ),
-          ],
-          onChanged: (String? modelId) {
-            if (modelId == null) return;
-            GenerationModel? model;
-            for (final GenerationModel item in kGenerationModels) {
-              if (item.id == modelId) {
-                model = item;
-                break;
-              }
-            }
-            if (model == null) return;
-            widget.onChanged(
-              widget.settings.copyWith(
-                defaultProvider: model.provider,
-                defaultModelId: model.id,
-              ),
-            );
-          },
         ),
         const SizedBox(height: 12),
         tokens.when(
@@ -583,106 +537,6 @@ class _ApiSectionState extends ConsumerState<_ApiSection> {
         ),
       ],
     );
-  }
-
-  bool _modelExists(String id) =>
-      kGenerationModels.any((GenerationModel model) => model.id == id);
-}
-
-class _ProviderTile extends StatelessWidget {
-  const _ProviderTile({
-    required this.provider,
-    required this.configured,
-    required this.checking,
-    required this.onCheck,
-  });
-
-  final GenerationProvider provider;
-  final bool configured;
-  final bool checking;
-  final VoidCallback onCheck;
-
-  @override
-  Widget build(BuildContext context) {
-    final AppLocalizations l10n = AppLocalizations.of(context);
-    final ThemeData theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Padding(
-            padding: const EdgeInsets.only(top: 4),
-            child: Icon(_icon(provider), size: 22),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(_label(l10n, provider)),
-                Text(
-                  configured
-                      ? l10n.settingsKeyConfigured
-                      : l10n.settingsKeyMissing,
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: configured
-                        ? theme.colorScheme.primary
-                        : theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Wrap(
-                  spacing: 4,
-                  children: <Widget>[
-                    TextButton(
-                      key: ValueKey<String>(
-                        'settings-check-${provider.wireName}',
-                      ),
-                      onPressed: checking ? null : onCheck,
-                      child: checking
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : Text(l10n.settingsApiCheckKey),
-                    ),
-                    TextButton(
-                      key: ValueKey<String>(
-                        'settings-add-key-${provider.wireName}',
-                      ),
-                      onPressed: () =>
-                          context.push(AppRoutes.generationSettingsPath),
-                      child: Text(l10n.settingsApiAddKey),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  static String _label(AppLocalizations l10n, GenerationProvider provider) {
-    return switch (provider) {
-      GenerationProvider.openai => l10n.generationProviderOpenAi,
-      GenerationProvider.gemini => l10n.generationProviderGemini,
-      GenerationProvider.anthropic => l10n.generationProviderAnthropic,
-      GenerationProvider.openaiCompatible =>
-        l10n.generationProviderOpenAiCompatible,
-    };
-  }
-
-  static IconData _icon(GenerationProvider provider) {
-    return switch (provider) {
-      GenerationProvider.openai => Icons.auto_awesome_outlined,
-      GenerationProvider.gemini => Icons.diamond_outlined,
-      GenerationProvider.anthropic => Icons.psychology_outlined,
-      GenerationProvider.openaiCompatible => Icons.dns_outlined,
-    };
   }
 }
 

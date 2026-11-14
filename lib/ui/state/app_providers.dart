@@ -23,6 +23,7 @@ import 'package:cardflow/data/decks/drift_deck_repository.dart';
 import 'package:cardflow/data/generation/drift_generation_card_store.dart';
 import 'package:cardflow/data/generation/drift_generation_job_repository.dart';
 import 'package:cardflow/data/generation/drift_generation_settings_store.dart';
+import 'package:cardflow/data/generation/drift_provider_accounts_store.dart';
 import 'package:cardflow/data/generation/file_picker_document_gateway.dart';
 import 'package:cardflow/data/review/drift_review_repository.dart';
 import 'package:cardflow/data/review/drift_leech_repository.dart';
@@ -43,9 +44,9 @@ import 'package:cardflow/domain/generation/api_key_store.dart';
 import 'package:cardflow/domain/generation/document_gateway.dart';
 import 'package:cardflow/domain/generation/generation_card_store.dart';
 import 'package:cardflow/domain/generation/generation_job.dart';
-import 'package:cardflow/domain/generation/generation_provider.dart';
 import 'package:cardflow/domain/generation/generation_settings_store.dart';
-import 'package:cardflow/domain/generation/openai_compatible_settings.dart';
+import 'package:cardflow/domain/generation/provider_account.dart';
+import 'package:cardflow/domain/generation/provider_accounts_store.dart';
 import 'package:cardflow/domain/review/daily_usage_repository.dart';
 import 'package:cardflow/domain/review/review_repository.dart';
 import 'package:cardflow/domain/scheduling/scheduler.dart';
@@ -221,27 +222,56 @@ final effectiveAppSettingsProvider = Provider<AppSettings>((ref) {
   return ref.watch(appSettingsProvider).value ?? AppSettings.defaults;
 });
 
-/// Проверка ключа API минимальным запросом (A6.6, ADR-019 §5).
+/// Проверка подключения провайдера минимальным запросом (A6.6, ADR-020).
 final apiKeyVerifierProvider = Provider<ApiKeyVerifier>((ref) {
   return ApiKeyVerifier(
     adapters: generationAdapters,
     apiKeyStore: ref.watch(apiKeyStoreProvider),
     transport: ref.watch(generationHttpClientProvider),
-    generationSettingsStore: ref.watch(generationSettingsStoreProvider),
   );
 });
 
-/// Наличие ключей API по провайдерам (только present/absent, без значений).
-final providerKeyStatusProvider =
-    FutureProvider.autoDispose<Map<GenerationProvider, bool>>((ref) async {
-      final ApiKeyStore store = ref.watch(apiKeyStoreProvider);
-      final Map<GenerationProvider, bool> result = <GenerationProvider, bool>{};
-      for (final GenerationProvider provider in GenerationProvider.values) {
-        final String? key = await store.read(provider);
-        result[provider] = key != null && key.trim().isNotEmpty;
-      }
-      return result;
-    });
+/// Хранилище провайдеров (`app_settings`, ключ `generation.providers`).
+///
+/// [generationSettingsStoreProvider] передаётся только для миграции старых
+/// настроек OpenAI-совместимого сервера при первом чтении (ADR-020 §4).
+final providerAccountsStoreProvider = Provider<ProviderAccountsStore>((ref) {
+  return DriftProviderAccountsStore(
+    ref.watch(appDatabaseProvider),
+    apiKeyStore: ref.watch(apiKeyStoreProvider),
+    legacySettingsStore: ref.watch(generationSettingsStoreProvider),
+  );
+});
+
+/// Список провайдеров генерации; запись — через [ProviderAccountsController].
+class ProviderAccountsController extends AsyncNotifier<ProviderAccounts> {
+  @override
+  Future<ProviderAccounts> build() =>
+      ref.watch(providerAccountsStoreProvider).read();
+
+  /// Сохраняет список; при ошибке записи состояние откатывается.
+  Future<void> save(ProviderAccounts accounts) async {
+    final ProviderAccounts previous = state.value ?? ProviderAccounts.empty;
+    state = AsyncData<ProviderAccounts>(accounts);
+    try {
+      await ref.read(providerAccountsStoreProvider).write(accounts);
+    } on Object {
+      state = AsyncData<ProviderAccounts>(previous);
+      rethrow;
+    }
+  }
+}
+
+/// Провайдеры генерации (loading/error/data).
+final providerAccountsProvider =
+    AsyncNotifierProvider<ProviderAccountsController, ProviderAccounts>(
+      ProviderAccountsController.new,
+    );
+
+/// Синхронный снимок провайдеров для мест, где `await` невозможен.
+final effectiveProviderAccountsProvider = Provider<ProviderAccounts>((ref) {
+  return ref.watch(providerAccountsProvider).value ?? ProviderAccounts.empty;
+});
 
 /// Внешние ссылки (политика приватности) — системный браузер.
 final externalLinkLauncherProvider = Provider<ExternalLinkLauncher>((ref) {
@@ -270,12 +300,6 @@ final weeklyTokensProvider = FutureProvider.autoDispose<int>((ref) {
         ),
       );
 });
-
-/// Текущие настройки OpenAI-совместимого сервера для экрана настроек.
-final openAiCompatibleSettingsProvider =
-    FutureProvider<OpenAiCompatibleSettings>((ref) {
-      return ref.watch(generationSettingsStoreProvider).readOpenAiCompatible();
-    });
 
 /// Адаптеры провайдеров для сервиса генерации (SPEC A8.2, ADR-013).
 const List<GenerationProviderAdapter> generationAdapters =
@@ -319,7 +343,6 @@ final cardGenerationServiceProvider = Provider<CardGenerationService>((ref) {
     adapters: generationAdapters,
     apiKeyStore: ref.watch(apiKeyStoreProvider),
     httpClient: ref.watch(generationHttpClientProvider),
-    generationSettingsStore: ref.watch(generationSettingsStoreProvider),
   );
 });
 

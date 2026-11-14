@@ -17,20 +17,21 @@ import 'package:cardflow/api/generation/generation_pipeline.dart';
 import 'package:cardflow/api/generation/system_prompt.dart';
 import 'package:cardflow/api/parsers/file_parsing_service.dart';
 import 'package:cardflow/domain/decks/deck.dart';
+import 'package:cardflow/domain/generation/api_key_store.dart';
 import 'package:cardflow/domain/generation/document_gateway.dart';
 import 'package:cardflow/domain/generation/generation_card_store.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
 import 'package:cardflow/domain/generation/generation_model.dart';
-import 'package:cardflow/domain/generation/generation_provider.dart';
-import 'package:cardflow/domain/settings/app_settings.dart';
 import 'package:cardflow/domain/generation/generation_run.dart';
-import 'package:cardflow/domain/generation/openai_compatible_settings.dart';
+import 'package:cardflow/domain/generation/provider_account.dart';
+import 'package:cardflow/domain/generation/provider_preset.dart';
 import 'package:cardflow/domain/generation/token_estimator.dart';
 import 'package:cardflow/domain/text/document_format.dart';
 import 'package:cardflow/domain/text/parsed_document.dart';
 import 'package:cardflow/domain/text/parser_exception.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/decks/deck_actions.dart' show showAppMessage;
+import 'package:cardflow/ui/settings/provider_labels.dart';
 import 'package:cardflow/ui/generation/generation_error_message.dart';
 import 'package:cardflow/ui/generation/generation_preview_screen.dart';
 import 'package:cardflow/ui/generation/parser_error_message.dart';
@@ -72,12 +73,15 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
   final TextEditingController _deckNameController = TextEditingController();
 
   final List<_AttachedFile> _files = <_AttachedFile>[];
-  final Map<GenerationProvider, bool> _keyConfigured =
-      <GenerationProvider, bool>{};
 
-  GenerationProvider _provider = GenerationProvider.openai;
-  OpenAiCompatibleSettings _compatibleSettings =
-      const OpenAiCompatibleSettings();
+  /// Наличие ключей по id аккаунта (только present/absent, без значений).
+  Map<String, bool> _keyConfigured = <String, bool>{};
+
+  /// Настроенные провайдеры (ADR-020).
+  ProviderAccounts _accounts = ProviderAccounts.empty;
+
+  /// Выбранный аккаунт; `null` — провайдеры не настроены.
+  ProviderAccount? _account;
   String? _modelId;
   bool _loading = true;
   bool _configError = false;
@@ -100,53 +104,33 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
     super.dispose();
   }
 
-  /// Читает наличие ключей и настройки совместимого сервера.
+  /// Читает настроенных провайдеров и наличие их ключей.
   ///
   /// [preserveSelection] — не сбрасывать выбранного провайдера/модель после
-  /// возврата с экрана настроек (A6.8).
+  /// возврата с экрана настроек (A6.8, ADR-020).
   Future<void> _loadProviderConfig({bool preserveSelection = false}) async {
     try {
-      final configured = <GenerationProvider, bool>{};
-      for (final GenerationProvider provider in GenerationProvider.values) {
-        final String? key = await ref.read(apiKeyStoreProvider).read(provider);
-        configured[provider] = provider == GenerationProvider.openaiCompatible
-            ? true
-            : (key != null && key.trim().isNotEmpty);
-      }
-      final OpenAiCompatibleSettings compatible = await ref
-          .read(generationSettingsStoreProvider)
-          .readOpenAiCompatible();
-      AppSettings appSettings;
-      try {
-        appSettings = await ref.read(appSettingsProvider.future);
-      } on Object {
-        appSettings = AppSettings.defaults;
+      final ProviderAccounts accounts = await ref.read(
+        providerAccountsProvider.future,
+      );
+      final ApiKeyStore keyStore = ref.read(apiKeyStoreProvider);
+      final Map<String, bool> configured = <String, bool>{};
+      for (final ProviderAccount account in accounts.accounts) {
+        final String? key = await keyStore.read(account.id);
+        configured[account.id] = key != null && key.isNotEmpty;
       }
       if (!mounted) return;
+      final ProviderAccount? previous = preserveSelection ? _account : null;
+      final ProviderAccount? selected =
+          (previous == null ? null : accounts.accountById(previous.id)) ??
+          accounts.active;
       setState(() {
-        _keyConfigured
-          ..clear()
-          ..addAll(configured);
-        _compatibleSettings = compatible;
+        _accounts = accounts;
+        _keyConfigured = configured;
+        _account = selected;
+        _modelId = selected?.modelId;
         _loading = false;
         _configError = false;
-        if (!preserveSelection) {
-          _provider = _defaultProvider(configured, compatible);
-          _modelId = _defaultModelId(_provider);
-          // Модель по умолчанию из настроек (A6.6, ADR-019 §2): применяем,
-          // только если ключ провайдера задан, иначе генерация сразу упадёт.
-          final GenerationModel? preferred = generationModelById(
-            appSettings.defaultProvider,
-            appSettings.defaultModelId,
-          );
-          if (preferred != null &&
-              configured[appSettings.defaultProvider] == true) {
-            _provider = appSettings.defaultProvider;
-            _modelId = preferred.id;
-          }
-        } else {
-          _modelId ??= _defaultModelId(_provider);
-        }
       });
     } on Object {
       if (!mounted) return;
@@ -157,34 +141,29 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
     }
   }
 
-  /// Провайдер по умолчанию: облачный с ключом → настроенный совместимый → OpenAI.
-  GenerationProvider _defaultProvider(
-    Map<GenerationProvider, bool> configured,
-    OpenAiCompatibleSettings compatible,
-  ) {
-    for (final GenerationProvider provider in <GenerationProvider>[
-      GenerationProvider.openai,
-      GenerationProvider.gemini,
-      GenerationProvider.anthropic,
-    ]) {
-      if (configured[provider] == true) return provider;
-    }
-    if (compatible.isConfigured) return GenerationProvider.openaiCompatible;
-    return GenerationProvider.openai;
+  /// Аккаунт для запроса: выбранная модель с контекстом из каталога.
+  ProviderAccount? get _requestAccount {
+    final ProviderAccount? account = _account;
+    if (account == null) return null;
+    final String modelId = (_modelId ?? account.modelId).trim();
+    final ProviderPresetModel? model = account.preset?.modelById(modelId);
+    return account.copyWith(
+      modelId: modelId,
+      contextTokens: model?.contextTokens ?? account.contextTokens,
+    );
   }
 
-  String? _defaultModelId(GenerationProvider provider) {
-    final models = generationModelsFor(provider);
-    return models.isEmpty ? null : models.first.id;
+  /// Провайдеры не настроены.
+  bool get _noProvider => _account == null;
+
+  /// Аккаунт неполный (нет адреса/модели).
+  bool get _accountNotConfigured => _account != null && !_account!.isConfigured;
+
+  bool get _providerNeedsKey {
+    final ProviderAccount? account = _account;
+    if (account == null) return false;
+    return account.requiresApiKey && !(_keyConfigured[account.id] ?? false);
   }
-
-  bool get _providerNeedsKey =>
-      _provider != GenerationProvider.openaiCompatible &&
-      !(_keyConfigured[_provider] ?? false);
-
-  bool get _compatibleNotConfigured =>
-      _provider == GenerationProvider.openaiCompatible &&
-      !_compatibleSettings.isConfigured;
 
   List<ParsedDocument> get _parsedDocuments => <ParsedDocument>[
     for (final _AttachedFile file in _files)
@@ -325,13 +304,11 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
       showAppMessage(context, l10n.generationKeyMissing);
       return;
     }
-    if (_compatibleNotConfigured) {
+    final ProviderAccount? account = _requestAccount;
+    if (account == null || !account.isConfigured) {
       showAppMessage(context, l10n.generationErrorProviderNotConfigured);
       return;
     }
-    final String modelId = _provider == GenerationProvider.openaiCompatible
-        ? _compatibleSettings.model.trim()
-        : (_modelId ?? '');
     final String deckName = widget.deckId == null
         ? _resolveDeckName(l10n, documents)
         : '';
@@ -340,8 +317,7 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
         : _wishesController.text.trim();
     final GenerationRunRequest request = GenerationRunRequest(
       documents: documents,
-      provider: _provider,
-      modelId: modelId,
+      account: account,
       deckName: deckName,
       wishes: wishes,
       targetDeckId: widget.deckId,
@@ -605,17 +581,18 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          if (_providerNeedsKey) ...<Widget>[
+          if (_noProvider || _accountNotConfigured) ...<Widget>[
             _KeyBanner(
-              message: l10n.generationKeyMissing,
+              key: const ValueKey<String>('generation-provider-banner'),
+              message: l10n.generationErrorProviderNotConfigured,
               actionLabel: l10n.generationOpenSettings,
               onAction: _openSettings,
             ),
             const SizedBox(height: 12),
-          ],
-          if (_compatibleNotConfigured) ...<Widget>[
+          ] else if (_providerNeedsKey) ...<Widget>[
             _KeyBanner(
-              message: l10n.generationErrorProviderNotConfigured,
+              key: const ValueKey<String>('generation-key-banner'),
+              message: l10n.generationKeyMissing,
               actionLabel: l10n.generationOpenSettings,
               onAction: _openSettings,
             ),
@@ -687,54 +664,40 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
             spacing: 8,
             runSpacing: 8,
             children: <Widget>[
-              for (final GenerationProvider provider
-                  in GenerationProvider.values)
+              for (final ProviderAccount account in _accounts.accounts)
                 ChoiceChip(
-                  key: ValueKey<String>(
-                    'generation-provider-${provider.wireName}',
+                  key: ValueKey<String>('generation-provider-${account.id}'),
+                  avatar: Icon(
+                    providerProtocolIcon(account.protocol),
+                    size: 18,
                   ),
-                  avatar: Icon(_providerIcon(provider), size: 18),
-                  label: Text(_providerLabel(l10n, provider)),
-                  selected: _provider == provider,
+                  label: Text(providerAccountLabel(l10n, account)),
+                  selected: _account?.id == account.id,
                   onSelected: _generating
                       ? null
                       : (bool selected) {
                           if (!selected) return;
                           setState(() {
-                            _provider = provider;
-                            _modelId = _defaultModelId(provider);
+                            _account = account;
+                            _modelId = account.modelId;
                           });
                         },
                 ),
             ],
           ),
-          if (_provider == GenerationProvider.openaiCompatible) ...<Widget>[
-            const SizedBox(height: 16),
-            InputDecorator(
-              decoration: InputDecoration(
-                labelText: l10n.generationModelLabel,
-                helperText: l10n.generationModelCompatibleHint,
-                border: _fieldBorder,
-              ),
-              child: Text(
-                _compatibleSettings.model.trim().isEmpty
-                    ? l10n.generationModelCompatibleHint
-                    : _compatibleSettings.model,
-              ),
-            ),
-          ] else ...<Widget>[
-            const SizedBox(height: 16),
+          const SizedBox(height: 16),
+          if (_account?.preset != null)
             DropdownButtonFormField<String>(
-              key: const ValueKey<String>('generation-model'),
-              initialValue: _modelId,
+              key: ValueKey<String>('generation-model-${_account?.preset?.id}'),
+              initialValue: _modelId ?? _account?.modelId,
               decoration: InputDecoration(
                 labelText: l10n.generationModelLabel,
                 border: _fieldBorder,
               ),
               items: <DropdownMenuItem<String>>[
-                for (final GenerationModel model in generationModelsFor(
-                  _provider,
-                ))
+                for (final ProviderPresetModel model
+                    in _account?.preset?.models ??
+                        const <ProviderPresetModel>[])
                   DropdownMenuItem<String>(
                     value: model.id,
                     child: Text(model.label),
@@ -743,8 +706,17 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
               onChanged: _generating
                   ? null
                   : (String? value) => setState(() => _modelId = value),
+            )
+          else
+            InputDecorator(
+              key: const ValueKey<String>('generation-model-fixed'),
+              decoration: InputDecoration(
+                labelText: l10n.generationModelLabel,
+                helperText: l10n.generationModelProviderHint,
+                border: _fieldBorder,
+              ),
+              child: Text(_account?.modelId ?? ''),
             ),
-          ],
           const SizedBox(height: 16),
           if (_actualTokens != null)
             Padding(
@@ -763,25 +735,6 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
 
   static OutlineInputBorder get _fieldBorder =>
       OutlineInputBorder(borderRadius: BorderRadius.circular(16));
-
-  String _providerLabel(AppLocalizations l10n, GenerationProvider provider) {
-    return switch (provider) {
-      GenerationProvider.openai => l10n.generationProviderOpenAi,
-      GenerationProvider.gemini => l10n.generationProviderGemini,
-      GenerationProvider.anthropic => l10n.generationProviderAnthropic,
-      GenerationProvider.openaiCompatible =>
-        l10n.generationProviderOpenAiCompatible,
-    };
-  }
-
-  IconData _providerIcon(GenerationProvider provider) {
-    return switch (provider) {
-      GenerationProvider.openai => Icons.auto_awesome_outlined,
-      GenerationProvider.gemini => Icons.diamond_outlined,
-      GenerationProvider.anthropic => Icons.psychology_outlined,
-      GenerationProvider.openaiCompatible => Icons.dns_outlined,
-    };
-  }
 }
 
 /// Одна строка списка прикреплённых файлов со статусом парсинга.
@@ -869,6 +822,7 @@ class _KeyBanner extends StatelessWidget {
     required this.message,
     required this.actionLabel,
     required this.onAction,
+    super.key,
   });
 
   final String message;

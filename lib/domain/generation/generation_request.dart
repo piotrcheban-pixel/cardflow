@@ -1,24 +1,23 @@
-/// Запрос на генерацию карточек (SPEC A8.5 шаги 4–7, итерация 3b: один фрагмент).
+/// Запрос на генерацию карточек (SPEC A8.5 шаги 4–7).
+///
+/// Один вызов модели на один фрагмент; аккаунт провайдера несёт протокол,
+/// адрес, модель и id для ключа (ADR-020).
 library;
 
-import 'package:cardflow/domain/generation/generation_provider.dart';
+import 'package:cardflow/domain/generation/provider_account.dart';
 
-/// Параметры одного вызова модели (без чанкинга — он в итерации 3c).
+/// Параметры одного вызова модели (чанкинг — в пайплайне).
 class GenerationRequest {
   /// Создаёт запрос.
   const GenerationRequest({
-    required this.provider,
-    required this.model,
+    required this.account,
     required this.materialsText,
     required this.limit,
     this.wishes,
   });
 
-  /// Провайдер.
-  final GenerationProvider provider;
-
-  /// Модель провайдера (выбор — итерация 7, здесь параметр).
-  final String model;
+  /// Провайдер: протокол, адрес, модель и id ключа.
+  final ProviderAccount account;
 
   /// Текст фрагмента материалов (из парсеров A8.3).
   final String materialsText;

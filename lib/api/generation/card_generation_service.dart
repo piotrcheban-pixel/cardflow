@@ -1,9 +1,11 @@
-/// Сервис генерации карточек: ключ → запрос → HTTP → ответ → валидация.
+/// Сервис генерации карточек: аккаунт → запрос → HTTP → ответ → валидация.
 ///
-/// Один вызов модели на один фрагмент (чанкинг и `generation_jobs` — итерация 3c).
-/// Для OpenAI-совместимого провайдера (ADR-013) адрес и модель берутся из
-/// настроек, ключ опционален, а при отказе сервера от strict-схемы выполняется
-/// один fallback-запрос без `response_format` с той же локальной валидацией.
+/// Один вызов модели на один фрагмент (чанкинг и `generation_jobs` — пайплайн).
+/// Аккаунт провайдера (ADR-020) задаёт протокол, базовый адрес, модель и id
+/// ключа: ключ читается только из `ApiKeyStore`, адрес и модель — из аккаунта.
+/// Для OpenAI-совместимого протокола при отказе сервера от strict-схемы
+/// выполняется один fallback-запрос без `response_format` с той же локальной
+/// валидацией (ADR-013).
 library;
 
 import 'dart:convert';
@@ -17,14 +19,13 @@ import 'package:cardflow/api/generation/generation_prompt.dart';
 import 'package:cardflow/api/generation/system_prompt.dart';
 import 'package:cardflow/api/http/generation_http_client.dart';
 import 'package:cardflow/api/providers/generation_provider_adapter.dart';
-import 'package:cardflow/api/providers/openai_compatible_endpoint.dart';
 import 'package:cardflow/domain/generation/api_key_store.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
 import 'package:cardflow/domain/generation/generation_provider.dart';
 import 'package:cardflow/domain/generation/generation_request.dart';
 import 'package:cardflow/domain/generation/generation_result.dart';
-import 'package:cardflow/domain/generation/generation_settings_store.dart';
-import 'package:cardflow/domain/generation/openai_compatible_settings.dart';
+import 'package:cardflow/domain/generation/provider_account.dart';
+import 'package:cardflow/domain/generation/provider_protocol.dart';
 
 /// Вызов модели и локальная валидация ответа (SPEC A8.2, A8.4–A8.6).
 class CardGenerationService implements GenerationCaller {
@@ -33,7 +34,6 @@ class CardGenerationService implements GenerationCaller {
     required this.adapters,
     required this.apiKeyStore,
     required this.httpClient,
-    this.generationSettingsStore,
     CardResponseSchema? responseSchema,
     CardContentValidator? contentValidator,
     this.systemPrompt = systemPromptGenRuV2,
@@ -42,7 +42,7 @@ class CardGenerationService implements GenerationCaller {
   }) : responseSchema = responseSchema ?? CardResponseSchema(),
        contentValidator = contentValidator ?? const CardContentValidator();
 
-  /// Адаптеры провайдеров (по одному на провайдер).
+  /// Адаптеры провайдеров (по одному на протокол).
   final List<GenerationProviderAdapter> adapters;
 
   /// Хранилище ключей API (только secure storage).
@@ -50,12 +50,6 @@ class CardGenerationService implements GenerationCaller {
 
   /// Транспорт HTTP (Dio + retry + redaction в production-проводке).
   final GenerationTransport httpClient;
-
-  /// Хранилище настроек OpenAI-совместимого сервера (`app_settings`, ADR-013).
-  ///
-  /// Может быть `null` только в тестах/срезах без этого провайдера: тогда
-  /// обращение к `openaiCompatible` даёт `providerNotConfigured`.
-  final GenerationSettingsStore? generationSettingsStore;
 
   /// Локальная проверка схемы ответа A8.4.
   final CardResponseSchema responseSchema;
@@ -81,32 +75,27 @@ class CardGenerationService implements GenerationCaller {
     GenerationRequest request, {
     CancelToken? cancelToken,
   }) async {
-    final adapter = _adapterFor(request.provider);
-    final apiKey = (await apiKeyStore.read(request.provider))?.trim();
-    final isCompatible =
-        request.provider == GenerationProvider.openaiCompatible;
-    if (!isCompatible && (apiKey == null || apiKey.isEmpty)) {
+    final ProviderAccount account = request.account;
+    if (!account.isConfigured) {
+      throw const GenerationException(
+        GenerationErrorCode.providerNotConfigured,
+        details: 'Провайдер не настроен: нет адреса или модели',
+      );
+    }
+
+    final GenerationProviderAdapter adapter = _adapterFor(
+      account.protocol.adapterProvider,
+    );
+    final String? apiKey = (await apiKeyStore.read(account.id))?.trim();
+    if (account.requiresApiKey && (apiKey == null || apiKey.isEmpty)) {
       throw const GenerationException(GenerationErrorCode.missingApiKey);
     }
+    final String model = account.modelId.trim();
+    final String baseUrl = account.baseUrl.trim();
+    final bool tolerantFallback =
+        account.protocol == ProviderProtocol.openaiCompletions;
 
-    // Для OpenAI-совместимого провайдера модель и адрес — из настроек
-    // (ADR-013), а не из запроса: экран генерации выбора модели не делает.
-    var model = request.model;
-    String? baseUrl;
-    if (isCompatible) {
-      final settings = await _readCompatibleSettings();
-      final endpoint = OpenAiCompatibleEndpoint.parse(settings.baseUrl);
-      if (!endpoint.isValid || settings.model.trim().isEmpty) {
-        throw const GenerationException(
-          GenerationErrorCode.providerNotConfigured,
-          details: 'OpenAI-совместимый сервер не настроен',
-        );
-      }
-      baseUrl = settings.baseUrl;
-      model = settings.model.trim();
-    }
-
-    final userContent = buildGenerationUserContent(
+    final String userContent = buildGenerationUserContent(
       materialsText: request.materialsText,
       wishes: request.wishes,
       limit: request.limit,
@@ -124,10 +113,10 @@ class CardGenerationService implements GenerationCaller {
         cancelToken: cancelToken,
       );
     } on GenerationException catch (error) {
-      // Fallback для локальных OpenAI-совместимых серверов без поддержки
-      // strict `response_format` (ADR-013): один повтор без response_format,
-      // ответ всё равно проверяется локальной схемой A8.4 ниже.
-      if (!isCompatible || error.code != GenerationErrorCode.badRequest) {
+      // Fallback для серверов без поддержки strict `response_format`
+      // (ADR-013): один повтор без response_format, ответ всё равно
+      // проверяется локальной схемой A8.4 ниже.
+      if (!tolerantFallback || error.code != GenerationErrorCode.badRequest) {
         rethrow;
       }
       rawResponse = await _postAndParse(
@@ -143,7 +132,7 @@ class CardGenerationService implements GenerationCaller {
 
     final decoded = _decodeCardsJson(
       rawResponse.cardsJson,
-      tolerant: isCompatible,
+      tolerant: tolerantFallback,
     );
 
     final schemaErrors = responseSchema.validate(decoded);
@@ -161,19 +150,12 @@ class CardGenerationService implements GenerationCaller {
       sourceText: request.materialsText,
     );
     return GenerationResult(
-      provider: request.provider,
+      provider: account.protocol.adapterProvider,
       model: model,
       promptVersion: promptVersion,
       cards: cards,
       usage: rawResponse.usage,
     );
-  }
-
-  /// Настройки OpenAI-совместимого сервера; без хранилища — пустые.
-  Future<OpenAiCompatibleSettings> _readCompatibleSettings() async {
-    final store = generationSettingsStore;
-    if (store == null) return const OpenAiCompatibleSettings();
-    return store.readOpenAiCompatible();
   }
 
   /// Строит запрос адаптером и разбирает ответ провайдера.
@@ -215,9 +197,9 @@ class CardGenerationService implements GenerationCaller {
 
   /// Декодирует JSON ответа модели.
   ///
-  /// Для OpenAI-совместимого провайдера допускается ответ, обёрнутый в
+  /// Для OpenAI-совместимого протокола допускается ответ, обёрнутый в
   /// markdown-ограждение или пояснительный текст (локальные модели часто так
-  /// делают без strict-схемы); остальные провайдеры обязаны вернуть чистый JSON.
+  /// делают без strict-схемы); остальные — обязаны вернуть чистый JSON.
   Object? _decodeCardsJson(String cardsJson, {required bool tolerant}) {
     final direct = _tryDecode(cardsJson);
     if (direct.ok) return direct.value;

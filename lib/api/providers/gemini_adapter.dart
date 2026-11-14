@@ -3,13 +3,12 @@ library;
 
 import 'package:cardflow/api/generation/provider_schema.dart';
 import 'package:cardflow/api/providers/generation_provider_adapter.dart';
+import 'package:cardflow/api/providers/provider_endpoint.dart';
 import 'package:cardflow/api/providers/provider_json.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
 import 'package:cardflow/domain/generation/generation_provider.dart';
 import 'package:cardflow/domain/generation/generation_result.dart';
-
-/// Хост Generative Language API.
-const String _host = 'generativelanguage.googleapis.com';
+import 'package:cardflow/domain/generation/provider_protocol.dart';
 
 /// Причины остановки Gemini, означающие отказ/safety-фильтр (SPEC A8.2).
 const Set<String> _refusalFinishReasons = <String>{
@@ -44,8 +43,21 @@ class GeminiAdapter implements GenerationProviderAdapter {
     String? baseUrl,
     bool strictSchema = true,
   }) {
+    final ProviderEndpoint endpoint = ProviderEndpoint.parse(
+      protocol: ProviderProtocol.geminiGenerateContent,
+      baseUrl: baseUrl ?? '',
+      model: model,
+    );
+    final Uri? uri = endpoint.uri;
+    if (uri == null) {
+      throw ArgumentError.value(
+        baseUrl,
+        'baseUrl',
+        'Некорректный адрес Gemini',
+      );
+    }
     return ProviderRequest(
-      uri: Uri.https(_host, '/v1beta/models/$model:generateContent'),
+      uri: uri,
       headers: <String, String>{
         'Content-Type': 'application/json',
         'x-goog-api-key': apiKey,

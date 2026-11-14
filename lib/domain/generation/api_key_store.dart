@@ -1,19 +1,19 @@
-/// Контракт хранилища ключей API (SPEC 3.4, A8.6).
+/// Контракт хранилища ключей API (SPEC 3.4, A8.6, ADR-020).
 ///
-/// Ключи хранятся только в защищённом хранилище платформы
-/// (`flutter_secure_storage`); реализация — `lib/data/security/`.
+/// Ключ хранится по идентификатору аккаунта провайдера
+/// (`ProviderAccount.id`), а не по enum протокола: у пользователя может быть
+/// несколько аккаунтов одного протокола (два ключа DeepSeek, OpenAI и т.п.).
+/// Реализация — `lib/data/security/` поверх `flutter_secure_storage`.
 library;
 
-import 'package:cardflow/domain/generation/generation_provider.dart';
-
-/// Хранилище ключей API по провайдерам.
+/// Хранилище ключей API по аккаунтам провайдеров.
 abstract interface class ApiKeyStore {
-  /// Возвращает ключ провайдера или `null`, если ключ не задан.
-  Future<String?> read(GenerationProvider provider);
+  /// Возвращает ключ аккаунта или `null`, если ключ не задан.
+  Future<String?> read(String providerId);
 
-  /// Сохраняет ключ провайдера.
-  Future<void> write(GenerationProvider provider, String apiKey);
+  /// Сохраняет ключ аккаунта.
+  Future<void> write(String providerId, String apiKey);
 
-  /// Удаляет ключ провайдера.
-  Future<void> delete(GenerationProvider provider);
+  /// Удаляет ключ аккаунта.
+  Future<void> delete(String providerId);
 }

@@ -1,23 +1,28 @@
+/// Экран «Провайдеры»: единый список аккаунтов генерации (ADR-020).
+///
+/// Переписан в итерации 7.5 по замечанию владельца: вместо отдельных полей
+/// OpenAI/Gemini/Anthropic и «OpenAI-совместимого сервера» — карточки
+/// провайдеров и кнопка «+ Добавить провайдера» с двумя путями (каталог или
+/// пользовательская модель API). Ключ API пишется только в `ApiKeyStore`
+/// (secure storage, SPEC 3.4) и отдельно от настроек: сохраняется по одному
+/// нажатию, без обязательного адреса/модели. После записи ключ читается
+/// обратно — «Сохранено» показывается только если хранилище действительно
+/// вернуло значение (диагностика D3).
+library;
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
-import 'package:cardflow/api/providers/openai_compatible_endpoint.dart';
+import 'package:cardflow/api/generation/api_key_verifier.dart';
 import 'package:cardflow/domain/generation/api_key_store.dart';
-import 'package:cardflow/domain/generation/generation_provider.dart';
-import 'package:cardflow/domain/generation/openai_compatible_settings.dart';
+import 'package:cardflow/domain/generation/provider_account.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/decks/deck_actions.dart' show showAppMessage;
+import 'package:cardflow/ui/settings/provider_account_dialogs.dart';
+import 'package:cardflow/ui/settings/provider_labels.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
 
-/// Экран «Настройки генерации», блок OpenAI-совместимого сервера (ADR-013).
-///
-/// Пользователь задаёт базовый адрес сервера и модель (они сохраняются в
-/// `app_settings` через `GenerationSettingsStore`) и, при необходимости, ключ
-/// доступа. Ключ живёт только в `ApiKeyStore` (secure storage, SPEC 3.4):
-/// в БД и `app_settings` он не попадает, значение не выводится на экран и не
-/// логируется. Пустое поле ключа при сохранении удаляет сохранённый ключ —
-/// локальным серверам ключ не нужен. Адрес проверяется до записи через
-/// `OpenAiCompatibleEndpoint.parse`; тексты ошибок и сообщений — только из ARB.
+/// Экран настройки провайдеров генерации.
 class GenerationSettingsScreen extends ConsumerStatefulWidget {
   /// Создаёт экран.
   const GenerationSettingsScreen({super.key});
@@ -29,34 +34,11 @@ class GenerationSettingsScreen extends ConsumerStatefulWidget {
 
 class _GenerationSettingsScreenState
     extends ConsumerState<GenerationSettingsScreen> {
-  final TextEditingController _baseUrlController = TextEditingController();
-  final TextEditingController _modelController = TextEditingController();
-  final TextEditingController _apiKeyController = TextEditingController();
-
-  /// Ключи трёх облачных провайдеров (A6.8: «ключ не задан — ведём в настройки»).
-  static const List<GenerationProvider> _cloudProviders = <GenerationProvider>[
-    GenerationProvider.openai,
-    GenerationProvider.gemini,
-    GenerationProvider.anthropic,
-  ];
-
-  final Map<GenerationProvider, TextEditingController> _cloudKeyControllers =
-      <GenerationProvider, TextEditingController>{
-        for (final GenerationProvider provider in _cloudProviders)
-          provider: TextEditingController(),
-      };
-  final Map<GenerationProvider, bool> _cloudKeyConfigured =
-      <GenerationProvider, bool>{};
-  final Map<GenerationProvider, String?> _cloudKeyErrors =
-      <GenerationProvider, String?>{};
-
+  ProviderAccounts _accounts = ProviderAccounts.empty;
+  Map<String, bool> _keyConfigured = <String, bool>{};
+  final Set<String> _checking = <String>{};
   bool _loading = true;
   bool _loadFailed = false;
-  bool _saving = false;
-  bool _keyConfigured = false;
-
-  String? _baseUrlError;
-  String? _modelError;
 
   @override
   void initState() {
@@ -64,54 +46,26 @@ class _GenerationSettingsScreenState
     _load();
   }
 
-  @override
-  void dispose() {
-    _baseUrlController.dispose();
-    _modelController.dispose();
-    _apiKeyController.dispose();
-    for (final TextEditingController controller
-        in _cloudKeyControllers.values) {
-      controller.dispose();
-    }
-    super.dispose();
-  }
-
-  /// Читает сохранённые настройки и наличие всех ключей.
+  /// Читает список провайдеров и наличие их ключей (present/absent).
   Future<void> _load() async {
     try {
-      final OpenAiCompatibleSettings settings = await ref
-          .read(generationSettingsStoreProvider)
-          .readOpenAiCompatible();
-      final ApiKeyStore apiKeyStore = ref.read(apiKeyStoreProvider);
-      final String? apiKey = await apiKeyStore.read(
-        GenerationProvider.openaiCompatible,
+      final ProviderAccounts accounts = await ref.read(
+        providerAccountsProvider.future,
       );
-      final Map<GenerationProvider, bool> cloudConfigured =
-          <GenerationProvider, bool>{};
-      for (final GenerationProvider provider in _cloudProviders) {
-        final String? key = await apiKeyStore.read(provider);
-        cloudConfigured[provider] = key != null && key.trim().isNotEmpty;
+      final ApiKeyStore keyStore = ref.read(apiKeyStoreProvider);
+      final Map<String, bool> configured = <String, bool>{};
+      for (final ProviderAccount account in accounts.accounts) {
+        final String? key = await keyStore.read(account.id);
+        configured[account.id] = key != null && key.isNotEmpty;
       }
       if (!mounted) return;
       setState(() {
-        _baseUrlController.text = settings.baseUrl;
-        _modelController.text = settings.model;
-        _apiKeyController.clear();
-        _keyConfigured = apiKey != null;
-        _cloudKeyConfigured
-          ..clear()
-          ..addAll(cloudConfigured);
-        for (final TextEditingController controller
-            in _cloudKeyControllers.values) {
-          controller.clear();
-        }
-        _cloudKeyErrors.clear();
-        _baseUrlError = null;
-        _modelError = null;
+        _accounts = accounts;
+        _keyConfigured = configured;
         _loading = false;
         _loadFailed = false;
       });
-    } catch (_) {
+    } on Object {
       if (!mounted) return;
       setState(() {
         _loading = false;
@@ -120,8 +74,8 @@ class _GenerationSettingsScreenState
     }
   }
 
-  /// Повторная загрузка после ошибки.
   void _retryLoad() {
+    ref.invalidate(providerAccountsProvider);
     setState(() {
       _loading = true;
       _loadFailed = false;
@@ -129,124 +83,239 @@ class _GenerationSettingsScreenState
     _load();
   }
 
-  /// Проверяет поля, сохраняет настройки и ключ; ошибки — только из ARB.
-  Future<void> _save() async {
-    final AppLocalizations l10n = AppLocalizations.of(context);
-    final String baseUrl = _baseUrlController.text.trim();
-    final String model = _modelController.text.trim();
-    final OpenAiCompatibleEndpoint endpoint = OpenAiCompatibleEndpoint.parse(
-      baseUrl,
+  /// Следующий свободный id аккаунта для пресета (id === ключ secure storage).
+  String _nextIdForPreset(String presetId) {
+    return uniqueProviderAccountId(
+      presetId,
+      _accounts.accounts.map((ProviderAccount account) => account.id),
     );
+  }
 
-    final String? baseUrlError;
-    if (endpoint.error == OpenAiCompatibleEndpointError.empty) {
-      baseUrlError = l10n.settingsAddressEmptyError;
-    } else if (!endpoint.isValid) {
-      baseUrlError = l10n.settingsAddressInvalidError;
-    } else {
-      baseUrlError = null;
-    }
-    final String? modelError = model.isEmpty
-        ? l10n.settingsModelEmptyError
-        : null;
-    if (baseUrlError != null || modelError != null) {
-      setState(() {
-        _baseUrlError = baseUrlError;
-        _modelError = modelError;
-      });
-      return;
-    }
+  /// Следующий свободный id для пользовательского аккаунта.
+  String _nextIdForLabel(String label) {
+    return uniqueProviderAccountId(
+      label,
+      _accounts.accounts.map((ProviderAccount account) => account.id),
+    );
+  }
 
-    final String apiKey = _apiKeyController.text.trim();
-    setState(() {
-      _baseUrlError = null;
-      _modelError = null;
-      _saving = true;
-    });
-    try {
-      await ref
-          .read(generationSettingsStoreProvider)
-          .writeOpenAiCompatible(
-            OpenAiCompatibleSettings(baseUrl: baseUrl, model: model),
+  /// Меню «+ Добавить провайдера»: каталог или пользовательская модель.
+  Future<void> _openAddMenu() async {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final _AddProviderChoice? choice =
+        await showModalBottomSheet<_AddProviderChoice>(
+          context: context,
+          builder: (BuildContext context) => SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                ListTile(
+                  key: const ValueKey<String>('providers-add-preset'),
+                  leading: const Icon(Icons.storefront_outlined),
+                  title: Text(l10n.providersAddPreset),
+                  subtitle: Text(l10n.providersAddPresetSubtitle),
+                  onTap: () =>
+                      Navigator.of(context).pop(_AddProviderChoice.preset),
+                ),
+                ListTile(
+                  key: const ValueKey<String>('providers-add-custom'),
+                  leading: const Icon(Icons.tune_outlined),
+                  title: Text(l10n.providersAddCustom),
+                  subtitle: Text(l10n.providersAddCustomSubtitle),
+                  onTap: () =>
+                      Navigator.of(context).pop(_AddProviderChoice.custom),
+                ),
+              ],
+            ),
+          ),
+        );
+    if (!mounted || choice == null) return;
+    switch (choice) {
+      case _AddProviderChoice.preset:
+        await _addPreset();
+      case _AddProviderChoice.custom:
+        await _addCustom();
+    }
+  }
+
+  Future<void> _addPreset() async {
+    final ProviderAccountDraft? draft = await showPresetProviderDialog(
+      context,
+      nextIdFor: _nextIdForPreset,
+    );
+    if (draft == null || !mounted) return;
+    await _persistDraft(draft);
+  }
+
+  Future<void> _addCustom() async {
+    final ProviderAccountDraft? draft = await showCustomProviderDialog(
+      context,
+      nextIdFor: _nextIdForLabel,
+    );
+    if (draft == null || !mounted) return;
+    await _persistDraft(draft);
+  }
+
+  Future<void> _edit(ProviderAccount account) async {
+    final bool hasStoredKey = _keyConfigured[account.id] ?? false;
+    final ProviderAccountDraft? draft = account.presetId == null
+        ? await showCustomProviderDialog(
+            context,
+            nextIdFor: _nextIdForLabel,
+            initial: account,
+            hasStoredKey: hasStoredKey,
+          )
+        : await showPresetProviderDialog(
+            context,
+            nextIdFor: _nextIdForPreset,
+            initial: account,
+            hasStoredKey: hasStoredKey,
           );
-      final ApiKeyStore apiKeyStore = ref.read(apiKeyStoreProvider);
-      if (apiKey.isEmpty) {
-        await apiKeyStore.delete(GenerationProvider.openaiCompatible);
-      } else {
-        await apiKeyStore.write(GenerationProvider.openaiCompatible, apiKey);
+    if (draft == null || !mounted) return;
+    await _persistDraft(draft);
+  }
+
+  /// Сохраняет ключ (с проверкой записи), затем список провайдеров.
+  Future<void> _persistDraft(ProviderAccountDraft draft) async {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final ApiKeyStore keyStore = ref.read(apiKeyStoreProvider);
+    try {
+      final String? apiKey = draft.apiKey;
+      if (draft.deleteKey) {
+        await keyStore.delete(draft.account.id);
+      } else if (apiKey != null) {
+        await keyStore.write(draft.account.id, apiKey);
+        final String? stored = await keyStore.read(draft.account.id);
+        if (stored == null || stored != apiKey.trim()) {
+          if (!mounted) return;
+          showAppMessage(context, l10n.providersKeyStoreError);
+          return;
+        }
       }
-      final String? storedKey = await apiKeyStore.read(
-        GenerationProvider.openaiCompatible,
+      final ProviderAccounts updated = _accounts.withAccount(draft.account);
+      await ref.read(providerAccountsProvider.notifier).save(updated);
+      final String? stored = await keyStore.read(draft.account.id);
+      if (!mounted) return;
+      setState(() {
+        _accounts = updated;
+        _keyConfigured = <String, bool>{
+          ..._keyConfigured,
+          draft.account.id: stored != null && stored.isNotEmpty,
+        };
+      });
+      showAppMessage(context, l10n.providersSaved);
+    } on Object {
+      if (!mounted) return;
+      showAppMessage(context, l10n.providersSaveError);
+    }
+  }
+
+  Future<void> _delete(ProviderAccount account) async {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) => AlertDialog(
+        title: Text(l10n.providersDeleteTitle),
+        content: Text(l10n.providersDeleteBody),
+        actions: <Widget>[
+          TextButton(
+            key: const ValueKey<String>('provider-delete-cancel'),
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            key: const ValueKey<String>('provider-delete-confirm'),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(l10n.providersDelete),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      await ref.read(apiKeyStoreProvider).delete(account.id);
+      final ProviderAccounts updated = _accounts.withoutAccount(account.id);
+      await ref.read(providerAccountsProvider.notifier).save(updated);
+      if (!mounted) return;
+      setState(() {
+        _accounts = updated;
+        _keyConfigured = <String, bool>{..._keyConfigured}..remove(account.id);
+      });
+      showAppMessage(context, l10n.providersDeleted);
+    } on Object {
+      if (!mounted) return;
+      showAppMessage(context, l10n.providersSaveError);
+    }
+  }
+
+  Future<void> _setActive(ProviderAccount account) async {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final ProviderAccounts updated = _accounts.withActive(account.id);
+    try {
+      await ref.read(providerAccountsProvider.notifier).save(updated);
+      if (!mounted) return;
+      setState(() => _accounts = updated);
+      showAppMessage(
+        context,
+        l10n.providersActiveSaved(providerAccountLabel(l10n, account)),
       );
+    } on Object {
       if (!mounted) return;
-      setState(() {
-        _saving = false;
-        _keyConfigured = storedKey != null;
-        _baseUrlController.text = baseUrl;
-        _modelController.text = model;
-        _apiKeyController.clear();
-      });
-      showAppMessage(context, l10n.settingsSaved);
-    } catch (_) {
-      if (!mounted) return;
-      setState(() => _saving = false);
-      showAppMessage(context, l10n.settingsSaveError);
+      showAppMessage(context, l10n.providersSaveError);
     }
   }
 
-  /// Сохраняет ключ облачного провайдера (только secure storage, 3.4).
-  Future<void> _saveCloudKey(GenerationProvider provider) async {
+  Future<void> _check(ProviderAccount account) async {
     final AppLocalizations l10n = AppLocalizations.of(context);
-    final String key = _cloudKeyControllers[provider]!.text.trim();
-    if (key.isEmpty) {
-      setState(() => _cloudKeyErrors[provider] = l10n.settingsKeyEmptyError);
-      return;
-    }
+    setState(() => _checking.add(account.id));
     try {
-      final ApiKeyStore apiKeyStore = ref.read(apiKeyStoreProvider);
-      await apiKeyStore.write(provider, key);
-      final String? stored = await apiKeyStore.read(provider);
+      final ApiKeyCheckResult result = await ref
+          .read(apiKeyVerifierProvider)
+          .check(account);
       if (!mounted) return;
-      setState(() {
-        _cloudKeyConfigured[provider] = stored != null && stored.isNotEmpty;
-        _cloudKeyErrors[provider] = null;
-        _cloudKeyControllers[provider]!.clear();
-      });
-      showAppMessage(context, l10n.settingsKeySaved);
-    } catch (_) {
+      showAppMessage(context, _statusMessage(l10n, result.status));
+    } on Object {
       if (!mounted) return;
-      showAppMessage(context, l10n.settingsSaveError);
+      showAppMessage(context, l10n.settingsApiCheckUnexpected);
+    } finally {
+      if (mounted) setState(() => _checking.remove(account.id));
     }
   }
 
-  /// Удаляет сохранённый ключ облачного провайдера.
-  Future<void> _deleteCloudKey(GenerationProvider provider) async {
-    final AppLocalizations l10n = AppLocalizations.of(context);
-    try {
-      await ref.read(apiKeyStoreProvider).delete(provider);
-      if (!mounted) return;
-      setState(() {
-        _cloudKeyConfigured[provider] = false;
-        _cloudKeyErrors[provider] = null;
-        _cloudKeyControllers[provider]!.clear();
-      });
-      showAppMessage(context, l10n.settingsKeyDeleted);
-    } catch (_) {
-      if (!mounted) return;
-      showAppMessage(context, l10n.settingsSaveError);
-    }
+  String _statusMessage(AppLocalizations l10n, ApiKeyCheckStatus status) {
+    return switch (status) {
+      ApiKeyCheckStatus.valid => l10n.providersCheckValid,
+      ApiKeyCheckStatus.invalidKey => l10n.providersCheckInvalid,
+      ApiKeyCheckStatus.missingKey => l10n.settingsApiCheckMissing,
+      ApiKeyCheckStatus.noConnection => l10n.settingsApiCheckNoConnection,
+      ApiKeyCheckStatus.rateLimited => l10n.settingsApiCheckRateLimited,
+      ApiKeyCheckStatus.providerNotConfigured =>
+        l10n.settingsApiCheckNotConfigured,
+      ApiKeyCheckStatus.unexpected => l10n.settingsApiCheckUnexpected,
+    };
   }
 
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.settingsTitle)),
-      body: _buildBody(context, l10n),
+      appBar: AppBar(title: Text(l10n.providersTitle)),
+      body: _buildBody(l10n),
+      bottomNavigationBar: _loading || _loadFailed
+          ? null
+          : SafeArea(
+              minimum: const EdgeInsets.all(16),
+              child: FilledButton.icon(
+                key: const ValueKey<String>('providers-add'),
+                onPressed: _openAddMenu,
+                icon: const Icon(Icons.add),
+                label: Text(l10n.providersAdd),
+              ),
+            ),
     );
   }
 
-  Widget _buildBody(BuildContext context, AppLocalizations l10n) {
+  Widget _buildBody(AppLocalizations l10n) {
     if (_loading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -274,200 +343,211 @@ class _GenerationSettingsScreenState
 
     final ThemeData theme = Theme.of(context);
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
       children: <Widget>[
         Text(
-          l10n.settingsOpenAiCompatibleTitle,
-          style: theme.textTheme.titleMedium,
-        ),
-        const SizedBox(height: 8),
-        Text(
-          l10n.settingsOpenAiCompatibleDescription,
-          style: theme.textTheme.bodyMedium,
-        ),
-        const SizedBox(height: 16),
-        TextField(
-          key: const ValueKey<String>('settings-base-url'),
-          controller: _baseUrlController,
-          keyboardType: TextInputType.url,
-          autocorrect: false,
-          enableSuggestions: false,
-          textInputAction: TextInputAction.next,
-          decoration: InputDecoration(
-            labelText: l10n.settingsServerAddressLabel,
-            hintText: l10n.settingsServerAddressHint,
-            errorText: _baseUrlError,
-            border: _fieldBorder,
+          l10n.providersDescription,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
           ),
         ),
-        const SizedBox(height: 16),
-        TextField(
-          key: const ValueKey<String>('settings-model'),
-          controller: _modelController,
-          autocorrect: false,
-          enableSuggestions: false,
-          textInputAction: TextInputAction.next,
-          decoration: InputDecoration(
-            labelText: l10n.settingsModelLabel,
-            hintText: l10n.settingsModelHint,
-            errorText: _modelError,
-            border: _fieldBorder,
-          ),
-        ),
-        const SizedBox(height: 16),
-        TextField(
-          key: const ValueKey<String>('settings-api-key'),
-          controller: _apiKeyController,
-          obscureText: true,
-          autocorrect: false,
-          enableSuggestions: false,
-          textInputAction: TextInputAction.done,
-          decoration: InputDecoration(
-            labelText: l10n.settingsApiKeyLabel,
-            helperText: l10n.settingsApiKeyHelper,
-            helperMaxLines: 3,
-            border: _fieldBorder,
-          ),
-        ),
-        if (_keyConfigured)
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Row(
-              children: <Widget>[
-                Icon(
-                  Icons.check_circle_outline,
-                  size: 20,
-                  color: theme.colorScheme.primary,
-                ),
-                const SizedBox(width: 8),
-                Expanded(child: Text(l10n.settingsApiKeyConfigured)),
-              ],
+        const SizedBox(height: 12),
+        if (_accounts.isEmpty)
+          _EmptyProviders(l10n: l10n)
+        else
+          for (final ProviderAccount account in _accounts.accounts)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _ProviderCard(
+                account: account,
+                active: _accounts.active?.id == account.id,
+                keyConfigured: _keyConfigured[account.id] ?? false,
+                checking: _checking.contains(account.id),
+                onCheck: () => _check(account),
+                onEdit: () => _edit(account),
+                onDelete: () => _delete(account),
+                onActivate: () => _setActive(account),
+              ),
             ),
-          ),
-        const SizedBox(height: 24),
-        Align(
-          alignment: AlignmentDirectional.centerEnd,
-          child: FilledButton(
-            key: const ValueKey<String>('settings-save'),
-            onPressed: _saving ? null : _save,
-            child: Text(l10n.save),
-          ),
-        ),
-        const SizedBox(height: 32),
-        const Divider(),
-        const SizedBox(height: 16),
-        Text(l10n.settingsApiKeysTitle, style: theme.textTheme.titleMedium),
-        const SizedBox(height: 8),
-        Text(l10n.settingsApiKeysDescription, style: theme.textTheme.bodySmall),
-        const SizedBox(height: 16),
-        for (final GenerationProvider provider in _cloudProviders) ...<Widget>[
-          _CloudKeySection(
-            provider: provider,
-            label: _providerLabel(l10n, provider),
-            configured: _cloudKeyConfigured[provider] ?? false,
-            controller: _cloudKeyControllers[provider]!,
-            errorText: _cloudKeyErrors[provider],
-            onSave: () => _saveCloudKey(provider),
-            onDelete: () => _deleteCloudKey(provider),
-            l10n: l10n,
-          ),
-          const SizedBox(height: 16),
-        ],
       ],
     );
   }
-
-  String _providerLabel(AppLocalizations l10n, GenerationProvider provider) {
-    return switch (provider) {
-      GenerationProvider.openai => l10n.generationProviderOpenAi,
-      GenerationProvider.gemini => l10n.generationProviderGemini,
-      GenerationProvider.anthropic => l10n.generationProviderAnthropic,
-      GenerationProvider.openaiCompatible =>
-        l10n.generationProviderOpenAiCompatible,
-    };
-  }
-
-  /// Рамка полей — форма из общего UI-стиля экранов колод.
-  static final OutlineInputBorder _fieldBorder = OutlineInputBorder(
-    borderRadius: BorderRadius.circular(16),
-  );
 }
 
-/// Блок ключа одного облачного провайдера на экране настроек генерации.
-class _CloudKeySection extends StatelessWidget {
-  const _CloudKeySection({
-    required this.provider,
-    required this.label,
-    required this.configured,
-    required this.controller,
-    required this.errorText,
-    required this.onSave,
-    required this.onDelete,
-    required this.l10n,
-  });
+/// Выбор способа добавления провайдера.
+enum _AddProviderChoice {
+  /// Сторонний поставщик из каталога.
+  preset,
 
-  final GenerationProvider provider;
-  final String label;
-  final bool configured;
-  final TextEditingController controller;
-  final String? errorText;
-  final VoidCallback onSave;
-  final VoidCallback onDelete;
+  /// Пользовательская модель API.
+  custom,
+}
+
+/// Пустой список провайдеров.
+class _EmptyProviders extends StatelessWidget {
+  const _EmptyProviders({required this.l10n});
+
   final AppLocalizations l10n;
 
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        Row(
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 32),
+      child: Column(
+        children: <Widget>[
+          Icon(
+            Icons.key_off_outlined,
+            size: 48,
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            l10n.providersEmptyTitle,
+            style: theme.textTheme.titleMedium,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            l10n.providersEmptyDescription,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Карточка одного провайдера со статусом ключа и действиями.
+class _ProviderCard extends StatelessWidget {
+  const _ProviderCard({
+    required this.account,
+    required this.active,
+    required this.keyConfigured,
+    required this.checking,
+    required this.onCheck,
+    required this.onEdit,
+    required this.onDelete,
+    required this.onActivate,
+  });
+
+  final ProviderAccount account;
+  final bool active;
+  final bool keyConfigured;
+  final bool checking;
+  final VoidCallback onCheck;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+  final VoidCallback onActivate;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final ThemeData theme = Theme.of(context);
+    final String keyStatus = account.requiresApiKey
+        ? (keyConfigured ? l10n.settingsKeyConfigured : l10n.settingsKeyMissing)
+        : l10n.providersKeyNotRequired;
+    return Card(
+      key: ValueKey<String>('provider-card-${account.id}'),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Expanded(child: Text(label, style: theme.textTheme.titleSmall)),
+            Row(
+              children: <Widget>[
+                Icon(providerProtocolIcon(account.protocol)),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        providerAccountLabel(l10n, account),
+                        style: theme.textTheme.titleMedium,
+                      ),
+                      Text(
+                        providerSummary(l10n, account),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      Text(
+                        account.baseUrl,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (active)
+                  Chip(
+                    key: ValueKey<String>('provider-active-${account.id}'),
+                    label: Text(l10n.providersActive),
+                    visualDensity: VisualDensity.compact,
+                  ),
+              ],
+            ),
+            if (!account.isConfigured)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  l10n.providersIncompleteHint,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.error,
+                  ),
+                ),
+              ),
+            const SizedBox(height: 8),
             Text(
-              configured ? l10n.settingsKeyConfigured : l10n.settingsKeyMissing,
+              keyStatus,
               style: theme.textTheme.labelSmall?.copyWith(
-                color: configured
+                color: keyConfigured || !account.requiresApiKey
                     ? theme.colorScheme.primary
                     : theme.colorScheme.onSurfaceVariant,
               ),
             ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        TextField(
-          key: ValueKey<String>('settings-key-${provider.wireName}'),
-          controller: controller,
-          obscureText: true,
-          autocorrect: false,
-          enableSuggestions: false,
-          decoration: InputDecoration(
-            labelText: l10n.settingsCloudKeyLabel,
-            errorText: errorText,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: <Widget>[
-            FilledButton(
-              key: ValueKey<String>('settings-save-key-${provider.wireName}'),
-              onPressed: onSave,
-              child: Text(l10n.settingsKeySave),
-            ),
-            if (configured) ...<Widget>[
-              const SizedBox(width: 8),
-              TextButton(
-                key: ValueKey<String>(
-                  'settings-delete-key-${provider.wireName}',
+            const SizedBox(height: 4),
+            Wrap(
+              spacing: 4,
+              runSpacing: 4,
+              children: <Widget>[
+                TextButton(
+                  key: ValueKey<String>('provider-check-${account.id}'),
+                  onPressed: checking ? null : onCheck,
+                  child: checking
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Text(l10n.providersCheck),
                 ),
-                onPressed: onDelete,
-                child: Text(l10n.settingsKeyDelete),
-              ),
-            ],
+                if (!active)
+                  TextButton(
+                    key: ValueKey<String>('provider-activate-${account.id}'),
+                    onPressed: onActivate,
+                    child: Text(l10n.providersMakeActive),
+                  ),
+                TextButton(
+                  key: ValueKey<String>('provider-edit-${account.id}'),
+                  onPressed: onEdit,
+                  child: Text(l10n.providersEdit),
+                ),
+                TextButton(
+                  key: ValueKey<String>('provider-delete-${account.id}'),
+                  onPressed: onDelete,
+                  child: Text(l10n.providersDelete),
+                ),
+              ],
+            ),
           ],
         ),
-      ],
+      ),
     );
   }
 }

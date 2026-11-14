@@ -2,12 +2,14 @@
 ///
 /// Ключи никогда не попадают в БД, экспорт, логи и `generation_jobs`.
 /// Android Auto Backup отключён в manifest (`allowBackup="false"`).
+/// Имя ключа хранилища — `cardflow.api_key.<id аккаунта>`; legacy-имена
+/// (`openai`, `gemini`, `anthropic`, `openai_compatible`) совпадают с id
+/// аккаунтов, мигрируемых из старых настроек (ADR-020 §4).
 library;
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'package:cardflow/domain/generation/api_key_store.dart';
-import 'package:cardflow/domain/generation/generation_provider.dart';
 
 /// Узкий контракт safe-storage (для тестов и подмены платформы).
 abstract interface class SecureKeyValueStore {
@@ -49,20 +51,19 @@ class SecureApiKeyStore implements ApiKeyStore {
   /// Бэкенд secure storage.
   final SecureKeyValueStore store;
 
-  /// Ключ в secure storage для [provider].
-  static String storageKey(GenerationProvider provider) =>
-      'cardflow.api_key.${provider.wireName}';
+  /// Ключ в secure storage для аккаунта [providerId].
+  static String storageKey(String providerId) => 'cardflow.api_key.$providerId';
 
   @override
-  Future<String?> read(GenerationProvider provider) async {
-    final value = await store.read(storageKey(provider));
+  Future<String?> read(String providerId) async {
+    final value = await store.read(storageKey(providerId));
     if (value == null) return null;
     final normalized = value.trim();
     return normalized.isEmpty ? null : normalized;
   }
 
   @override
-  Future<void> write(GenerationProvider provider, String apiKey) {
+  Future<void> write(String providerId, String apiKey) {
     final normalized = apiKey.trim();
     if (normalized.isEmpty) {
       throw ArgumentError.value(
@@ -71,10 +72,10 @@ class SecureApiKeyStore implements ApiKeyStore {
         'Ключ API не может быть пустым',
       );
     }
-    return store.write(storageKey(provider), normalized);
+    return store.write(storageKey(providerId), normalized);
   }
 
   @override
-  Future<void> delete(GenerationProvider provider) =>
-      store.delete(storageKey(provider));
+  Future<void> delete(String providerId) =>
+      store.delete(storageKey(providerId));
 }

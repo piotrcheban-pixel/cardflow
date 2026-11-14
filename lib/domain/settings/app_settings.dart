@@ -5,8 +5,6 @@
 /// нормализуются в допустимые диапазоны, неверные типы отвергаются.
 library;
 
-import 'package:cardflow/domain/generation/generation_provider.dart';
-
 /// Тема приложения (A6.6, «Внешний вид»).
 enum AppThemePreference {
   /// Следовать системной теме.
@@ -69,8 +67,6 @@ class AppSettings {
     this.learningSteps = defaultLearningSteps,
     this.dailyNewLimit = 20,
     this.dailyReviewLimit = 200,
-    this.defaultProvider = GenerationProvider.openai,
-    this.defaultModelId = 'gpt-4o-mini',
   });
 
   /// Версия контракта JSON.
@@ -142,12 +138,6 @@ class AppSettings {
   /// Дневной лимит повторных карточек (0 — без лимита).
   final int dailyReviewLimit;
 
-  /// Провайдер генерации по умолчанию.
-  final GenerationProvider defaultProvider;
-
-  /// Идентификатор модели по умолчанию.
-  final String defaultModelId;
-
   /// Сериализация в `app_settings.value_json`.
   Map<String, Object?> toJson() => <String, Object?>{
     'version': version,
@@ -164,8 +154,6 @@ class AppSettings {
     ],
     'daily_new_limit': dailyNewLimit,
     'daily_review_limit': dailyReviewLimit,
-    'default_provider': defaultProvider.wireName,
-    'default_model': defaultModelId,
   };
 
   /// Разбирает JSON; неизвестные ключи игнорируются (ADR-019 §1).
@@ -215,8 +203,6 @@ class AppSettings {
         0,
         maxDailyLimit,
       ),
-      defaultProvider: _provider(json['default_provider']),
-      defaultModelId: _model(json['default_model']),
     );
   }
 
@@ -233,8 +219,6 @@ class AppSettings {
     List<Duration>? learningSteps,
     int? dailyNewLimit,
     int? dailyReviewLimit,
-    GenerationProvider? defaultProvider,
-    String? defaultModelId,
   }) {
     return AppSettings(
       theme: theme ?? this.theme,
@@ -266,8 +250,6 @@ class AppSettings {
         0,
         maxDailyLimit,
       ),
-      defaultProvider: defaultProvider ?? this.defaultProvider,
-      defaultModelId: defaultModelId ?? this.defaultModelId,
     );
   }
 
@@ -361,24 +343,6 @@ class AppSettings {
     return List<Duration>.unmodifiable(steps);
   }
 
-  static GenerationProvider _provider(Object? value) {
-    if (value == null) return AppSettings.defaults.defaultProvider;
-    if (value is! String) {
-      throw FormatException(
-        'Провайдер по умолчанию должен быть строкой: $value',
-      );
-    }
-    return GenerationProvider.fromWire(value);
-  }
-
-  static String _model(Object? value) {
-    if (value == null) return AppSettings.defaults.defaultModelId;
-    if (value is! String) {
-      throw FormatException('Модель по умолчанию должна быть строкой: $value');
-    }
-    return value.isEmpty ? AppSettings.defaults.defaultModelId : value;
-  }
-
   @override
   bool operator ==(Object other) =>
       other is AppSettings &&
@@ -392,9 +356,7 @@ class AppSettings {
       other.desiredRetention == desiredRetention &&
       _stepsEqual(other.learningSteps) &&
       other.dailyNewLimit == dailyNewLimit &&
-      other.dailyReviewLimit == dailyReviewLimit &&
-      other.defaultProvider == defaultProvider &&
-      other.defaultModelId == defaultModelId;
+      other.dailyReviewLimit == dailyReviewLimit;
 
   bool _stepsEqual(List<Duration> other) {
     if (other.length != learningSteps.length) return false;
@@ -417,8 +379,6 @@ class AppSettings {
     Object.hashAll(learningSteps),
     dailyNewLimit,
     dailyReviewLimit,
-    defaultProvider,
-    defaultModelId,
   );
 
   @override

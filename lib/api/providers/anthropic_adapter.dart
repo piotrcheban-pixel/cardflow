@@ -5,13 +5,12 @@ import 'dart:convert';
 
 import 'package:cardflow/api/generation/provider_schema.dart';
 import 'package:cardflow/api/providers/generation_provider_adapter.dart';
+import 'package:cardflow/api/providers/provider_endpoint.dart';
 import 'package:cardflow/api/providers/provider_json.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
 import 'package:cardflow/domain/generation/generation_provider.dart';
 import 'package:cardflow/domain/generation/generation_result.dart';
-
-/// URL Messages API Anthropic.
-final Uri _endpoint = Uri.parse('https://api.anthropic.com/v1/messages');
+import 'package:cardflow/domain/generation/provider_protocol.dart';
 
 /// Версия Messages API (SPEC A8.2).
 const String _anthropicVersion = '2023-06-01';
@@ -44,8 +43,21 @@ class AnthropicAdapter implements GenerationProviderAdapter {
     String? baseUrl,
     bool strictSchema = true,
   }) {
+    final ProviderEndpoint endpoint = ProviderEndpoint.parse(
+      protocol: ProviderProtocol.anthropicMessages,
+      baseUrl: baseUrl ?? '',
+      model: model,
+    );
+    final Uri? uri = endpoint.uri;
+    if (uri == null) {
+      throw ArgumentError.value(
+        baseUrl,
+        'baseUrl',
+        'Некорректный адрес Anthropic',
+      );
+    }
     return ProviderRequest(
-      uri: _endpoint,
+      uri: uri,
       headers: <String, String>{
         'Content-Type': 'application/json',
         'x-api-key': apiKey,
