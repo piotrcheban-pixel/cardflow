@@ -1,11 +1,13 @@
 import 'package:go_router/go_router.dart';
 
+import 'package:cardflow/domain/session/session_plan.dart';
 import 'package:cardflow/ui/cards/card_form_screen.dart';
 import 'package:cardflow/ui/decks/deck_screen.dart';
 import 'package:cardflow/ui/decks/decks_screen.dart';
 import 'package:cardflow/ui/generation/generation_screen.dart';
 import 'package:cardflow/ui/review/feed_session_screen.dart';
 import 'package:cardflow/ui/review/review_session_screen.dart';
+import 'package:cardflow/ui/session/session_constructor_screen.dart';
 import 'package:cardflow/ui/settings/generation_settings_screen.dart';
 
 /// Имена маршрутов приложения (для тестов и навигации).
@@ -21,6 +23,15 @@ abstract final class AppRoutes {
 
   /// Сессия в режиме «Лента» (SPEC A7.3).
   static const String feed = 'feed';
+
+  /// Конструктор сессии (SPEC A6.7).
+  static const String constructor = 'constructor';
+
+  /// Классическая сессия по плану конструктора (SPEC A6.7, ADR-018).
+  static const String sessionClassic = 'sessionClassic';
+
+  /// Сессия-лента по плану конструктора (SPEC A6.7, ADR-018).
+  static const String sessionFeed = 'sessionFeed';
 
   /// Создание карточки.
   static const String cardNew = 'cardNew';
@@ -49,6 +60,19 @@ abstract final class AppRoutes {
   /// Путь сессии-ленты по колоде (SPEC A7.3).
   static String feedPath(String deckId) => '/decks/$deckId/feed';
 
+  /// Путь конструктора сессии (SPEC A6.7).
+  static const String constructorPath = '/constructor';
+
+  /// Путь конструктора с предвыбранной колодой (вход с экрана колоды).
+  static String constructorDeckPath(String deckId) =>
+      '$constructorPath?deck=$deckId';
+
+  /// Путь классической сессии по плану конструктора.
+  static const String sessionClassicPath = '/session/classic';
+
+  /// Путь сессии-ленты по плану конструктора.
+  static const String sessionFeedPath = '/session/feed';
+
   /// Путь создания карточки в колоде.
   static String cardNewPath(String deckId) => '/decks/$deckId/cards/new';
 
@@ -65,6 +89,10 @@ abstract final class AppRoutes {
   /// Путь экрана генерации карточек в существующую колоду.
   static String deckGenerationPath(String deckId) => '/decks/$deckId/generate';
 }
+
+/// План сессии из `GoRouterState.extra`; `null` — extra не передан.
+SessionPlan? sessionPlanFromExtra(Object? extra) =>
+    extra is SessionPlan ? extra : null;
 
 /// Собирает маршрутизатор приложения (ADR: GoRouter).
 ///
@@ -96,6 +124,25 @@ GoRouter createAppRouter({String initialLocation = AppRoutes.decksPath}) {
         name: AppRoutes.feed,
         builder: (context, state) =>
             FeedSessionScreen(deckId: state.pathParameters['deckId']!),
+      ),
+      GoRoute(
+        path: AppRoutes.constructorPath,
+        name: AppRoutes.constructor,
+        builder: (context, state) => SessionConstructorScreen(
+          preselectedDeckId: state.uri.queryParameters['deck'],
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.sessionClassicPath,
+        name: AppRoutes.sessionClassic,
+        builder: (context, state) =>
+            ReviewSessionScreen(plan: sessionPlanFromExtra(state.extra)),
+      ),
+      GoRoute(
+        path: AppRoutes.sessionFeedPath,
+        name: AppRoutes.sessionFeed,
+        builder: (context, state) =>
+            FeedSessionScreen(plan: sessionPlanFromExtra(state.extra)),
       ),
       GoRoute(
         path: '/decks/:deckId/generate',

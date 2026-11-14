@@ -1221,5 +1221,198 @@
         "type": "int"
       }
     }
+  },
+  "constructorTitle": "Конструктор сессии",
+  "@constructorTitle": {
+    "description": "Заголовок экрана конструктора сессии (SPEC A6.7)."
+  },
+  "constructorAction": "Конструктор",
+  "@constructorAction": {
+    "description": "Пункт листа режимов на экране колоды (SPEC A6.3)."
+  },
+  "constructorDecksSection": "Колоды",
+  "@constructorDecksSection": {
+    "description": "Заголовок блока выбора колод."
+  },
+  "constructorTagsSection": "Теги",
+  "@constructorTagsSection": {
+    "description": "Заголовок блока фильтра по тегам."
+  },
+  "constructorTagsEmpty": "У выбранных колод нет тегов",
+  "@constructorTagsEmpty": {
+    "description": "Подсказка, если у карточек выбранных колод нет тегов."
+  },
+  "constructorSelectDecksHint": "Выберите колоды, чтобы собрать сессию",
+  "@constructorSelectDecksHint": {
+    "description": "Подсказка при пустом выборе колод."
+  },
+  "constructorTypesSection": "Тип карточки",
+  "@constructorTypesSection": {
+    "description": "Заголовок блока фильтра по типу карточки."
+  },
+  "constructorStatesSection": "Состояние",
+  "@constructorStatesSection": {
+    "description": "Заголовок блока фильтра по состоянию карточки."
+  },
+  "constructorStateNew": "Новые",
+  "@constructorStateNew": {
+    "description": "Фильтр состояния: новые карточки."
+  },
+  "constructorStateInProgress": "В процессе",
+  "@constructorStateInProgress": {
+    "description": "Фильтр состояния: изучаемые и переизучаемые."
+  },
+  "constructorStateReview": "Повторение",
+  "@constructorStateReview": {
+    "description": "Фильтр состояния: в повторении."
+  },
+  "constructorStateLeeches": "Пиявки",
+  "@constructorStateLeeches": {
+    "description": "Фильтр состояния: 8+ провалов (SPEC A7.17)."
+  },
+  "constructorModeSection": "Режим",
+  "@constructorModeSection": {
+    "description": "Заголовок блока выбора режима сессии."
+  },
+  "constructorLimitSection": "Лимит",
+  "@constructorLimitSection": {
+    "description": "Заголовок блока лимита сессии."
+  },
+  "constructorLimitCards": "Карточки",
+  "@constructorLimitCards": {
+    "description": "Лимит по числу карточек."
+  },
+  "constructorLimitMinutes": "Минуты",
+  "@constructorLimitMinutes": {
+    "description": "Лимит по времени сессии."
+  },
+  "constructorLimitCardsValue": "{count, plural, one{{count} карточка} few{{count} карточки} many{{count} карточек} other{{count} карточки}}",
+  "@constructorLimitCardsValue": {
+    "description": "Значение лимита по карточкам.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "constructorLimitMinutesValue": "{count} мин",
+  "@constructorLimitMinutesValue": {
+    "description": "Значение лимита по минутам.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "constructorOrderSection": "Порядок",
+  "@constructorOrderSection": {
+    "description": "Заголовок блока порядка карточек."
+  },
+  "constructorShuffle": "Перемешать",
+  "@constructorShuffle": {
+    "description": "Переключатель случайного порядка карточек."
+  },
+  "constructorShuffleHint": "Случайный порядок карточек",
+  "@constructorShuffleHint": {
+    "description": "Подпись переключателя перемешивания."
+  },
+  "constructorInterleave": "Интерливинг",
+  "@constructorInterleave": {
+    "description": "Переключатель подмешивания карточек из разных колод."
+  },
+  "constructorInterleaveHint": "Подмешивать карточки из разных колод",
+  "@constructorInterleaveHint": {
+    "description": "Подпись переключателя интерливинга (SPEC A7.19)."
+  },
+  "constructorWarmup": "Разминка",
+  "@constructorWarmup": {
+    "description": "Переключатель разминки (SPEC A7.19)."
+  },
+  "constructorWarmupHint": "Первые карточки — самые лёгкие",
+  "@constructorWarmupHint": {
+    "description": "Подпись переключателя разминки."
+  },
+  "constructorPresetsSection": "Пресеты",
+  "@constructorPresetsSection": {
+    "description": "Заголовок блока сохранённых пресетов."
+  },
+  "constructorPresetsEmpty": "Сохранённых пресетов нет",
+  "@constructorPresetsEmpty": {
+    "description": "Пустое состояние списка пресетов."
+  },
+  "constructorSavePreset": "Сохранить пресет",
+  "@constructorSavePreset": {
+    "description": "Кнопка сохранения текущих параметров как пресета."
+  },
+  "constructorPresetDialogTitle": "Название пресета",
+  "@constructorPresetDialogTitle": {
+    "description": "Заголовок диалога сохранения пресета."
+  },
+  "constructorPresetNameLabel": "Название",
+  "@constructorPresetNameLabel": {
+    "description": "Подпись поля имени пресета."
+  },
+  "constructorPresetNameEmpty": "Введите название пресета",
+  "@constructorPresetNameEmpty": {
+    "description": "Ошибка пустого имени пресета."
+  },
+  "constructorPresetSaved": "Пресет сохранён",
+  "@constructorPresetSaved": {
+    "description": "Сообщение после сохранения пресета."
+  },
+  "constructorPresetDeleted": "Пресет удалён",
+  "@constructorPresetDeleted": {
+    "description": "Сообщение после удаления пресета."
+  },
+  "constructorPresetDeleteTooltip": "Удалить пресет",
+  "@constructorPresetDeleteTooltip": {
+    "description": "Подсказка кнопки удаления пресета."
+  },
+  "constructorAvailableCount": "Доступно карточек: {count}",
+  "@constructorAvailableCount": {
+    "description": "Счётчик доступных карточек по текущим фильтрам.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "constructorEmptyDecks": "Нет активных колод. Создайте колоду, чтобы собрать сессию.",
+  "@constructorEmptyDecks": {
+    "description": "Пустое состояние конструктора без колод."
+  },
+  "constructorLoadError": "Не удалось загрузить колоды",
+  "@constructorLoadError": {
+    "description": "Ошибка загрузки данных конструктора."
+  },
+  "sessionDeckCountLabel": "{count, plural, one{{count} колода} few{{count} колоды} many{{count} колод} other{{count} колоды}}",
+  "@sessionDeckCountLabel": {
+    "description": "Подпись ленты для сессии из нескольких колод.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "reviewTimeUpTitle": "Время сессии истекло",
+  "@reviewTimeUpTitle": {
+    "description": "Заголовок завершения сессии по лимиту минут (SPEC A6.7)."
+  },
+  "reviewTimeUpMessage": "{count, plural, =0{Ни одной карточки} one{Повторена {count} карточка} few{Повторено {count} карточки} many{Повторено {count} карточек} other{Повторено {count} карточки}}",
+  "@reviewTimeUpMessage": {
+    "description": "Итог сессии, завершённой по лимиту времени.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "reviewPlanMissingTitle": "Сессия не найдена",
+  "@reviewPlanMissingTitle": {
+    "description": "Состояние сессии без переданного плана конструктора."
+  },
+  "reviewPlanMissingMessage": "Откройте конструктор и соберите сессию заново.",
+  "@reviewPlanMissingMessage": {
+    "description": "Пояснение к состоянию «сессия не найдена»."
   }
 }

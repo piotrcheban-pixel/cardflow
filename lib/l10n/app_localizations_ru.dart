@@ -988,4 +988,169 @@ class AppLocalizationsRu extends AppLocalizations {
   String occlusionMaskNumber(int number) {
     return 'Маска $number';
   }
+
+  @override
+  String get constructorTitle => 'Конструктор сессии';
+
+  @override
+  String get constructorAction => 'Конструктор';
+
+  @override
+  String get constructorDecksSection => 'Колоды';
+
+  @override
+  String get constructorTagsSection => 'Теги';
+
+  @override
+  String get constructorTagsEmpty => 'У выбранных колод нет тегов';
+
+  @override
+  String get constructorSelectDecksHint =>
+      'Выберите колоды, чтобы собрать сессию';
+
+  @override
+  String get constructorTypesSection => 'Тип карточки';
+
+  @override
+  String get constructorStatesSection => 'Состояние';
+
+  @override
+  String get constructorStateNew => 'Новые';
+
+  @override
+  String get constructorStateInProgress => 'В процессе';
+
+  @override
+  String get constructorStateReview => 'Повторение';
+
+  @override
+  String get constructorStateLeeches => 'Пиявки';
+
+  @override
+  String get constructorModeSection => 'Режим';
+
+  @override
+  String get constructorLimitSection => 'Лимит';
+
+  @override
+  String get constructorLimitCards => 'Карточки';
+
+  @override
+  String get constructorLimitMinutes => 'Минуты';
+
+  @override
+  String constructorLimitCardsValue(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count карточки',
+      many: '$count карточек',
+      few: '$count карточки',
+      one: '$count карточка',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String constructorLimitMinutesValue(int count) {
+    return '$count мин';
+  }
+
+  @override
+  String get constructorOrderSection => 'Порядок';
+
+  @override
+  String get constructorShuffle => 'Перемешать';
+
+  @override
+  String get constructorShuffleHint => 'Случайный порядок карточек';
+
+  @override
+  String get constructorInterleave => 'Интерливинг';
+
+  @override
+  String get constructorInterleaveHint =>
+      'Подмешивать карточки из разных колод';
+
+  @override
+  String get constructorWarmup => 'Разминка';
+
+  @override
+  String get constructorWarmupHint => 'Первые карточки — самые лёгкие';
+
+  @override
+  String get constructorPresetsSection => 'Пресеты';
+
+  @override
+  String get constructorPresetsEmpty => 'Сохранённых пресетов нет';
+
+  @override
+  String get constructorSavePreset => 'Сохранить пресет';
+
+  @override
+  String get constructorPresetDialogTitle => 'Название пресета';
+
+  @override
+  String get constructorPresetNameLabel => 'Название';
+
+  @override
+  String get constructorPresetNameEmpty => 'Введите название пресета';
+
+  @override
+  String get constructorPresetSaved => 'Пресет сохранён';
+
+  @override
+  String get constructorPresetDeleted => 'Пресет удалён';
+
+  @override
+  String get constructorPresetDeleteTooltip => 'Удалить пресет';
+
+  @override
+  String constructorAvailableCount(int count) {
+    return 'Доступно карточек: $count';
+  }
+
+  @override
+  String get constructorEmptyDecks =>
+      'Нет активных колод. Создайте колоду, чтобы собрать сессию.';
+
+  @override
+  String get constructorLoadError => 'Не удалось загрузить колоды';
+
+  @override
+  String sessionDeckCountLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count колоды',
+      many: '$count колод',
+      few: '$count колоды',
+      one: '$count колода',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get reviewTimeUpTitle => 'Время сессии истекло';
+
+  @override
+  String reviewTimeUpMessage(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Повторено $count карточки',
+      many: 'Повторено $count карточек',
+      few: 'Повторено $count карточки',
+      one: 'Повторена $count карточка',
+      zero: 'Ни одной карточки',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get reviewPlanMissingTitle => 'Сессия не найдена';
+
+  @override
+  String get reviewPlanMissingMessage =>
+      'Откройте конструктор и соберите сессию заново.';
 }

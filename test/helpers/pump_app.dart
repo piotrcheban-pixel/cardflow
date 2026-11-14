@@ -6,6 +6,8 @@ import 'package:cardflow/domain/generation/api_key_store.dart';
 import 'package:cardflow/domain/generation/generation_settings_store.dart';
 import 'package:cardflow/domain/review/review_repository.dart';
 import 'package:cardflow/domain/scheduling/scheduler.dart';
+import 'package:cardflow/domain/session/leech_repository.dart';
+import 'package:cardflow/domain/session/session_preset_repository.dart';
 import 'package:cardflow/domain/transfer/deck_transfer_service.dart';
 import 'package:cardflow/domain/transfer/file_gateway.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
@@ -15,6 +17,8 @@ import 'package:cardflow/ui/decks/decks_screen.dart';
 import 'package:cardflow/ui/m3e/m3e.dart';
 import 'package:cardflow/ui/review/feed_session_screen.dart';
 import 'package:cardflow/ui/review/review_session_screen.dart';
+import 'package:cardflow/ui/router/app_router.dart';
+import 'package:cardflow/ui/session/session_constructor_screen.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
 import 'package:cardflow/ui/theme/app_theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -26,6 +30,7 @@ import 'package:material_ui/material_ui.dart';
 import 'decks_fakes.dart';
 import 'generation_fakes.dart';
 import 'review_fakes.dart';
+import 'session_fakes.dart';
 
 /// Тестовый harness приложения CardFlow (итерация 1).
 ///
@@ -117,6 +122,25 @@ List<GoRoute> decksRoutes() {
           FeedSessionScreen(deckId: state.pathParameters['id']!),
     ),
     GoRoute(
+      path: '/constructor',
+      builder: (BuildContext context, GoRouterState state) =>
+          SessionConstructorScreen(
+            preselectedDeckId: state.uri.queryParameters['deck'],
+          ),
+    ),
+    GoRoute(
+      path: '/session/classic',
+      builder: (BuildContext context, GoRouterState state) =>
+          ReviewSessionScreen(
+            plan: sessionPlanFromExtra(state.extra),
+          ),
+    ),
+    GoRoute(
+      path: '/session/feed',
+      builder: (BuildContext context, GoRouterState state) =>
+          FeedSessionScreen(plan: sessionPlanFromExtra(state.extra)),
+    ),
+    GoRoute(
       path: '/decks/:id/cards/new',
       builder: (BuildContext context, GoRouterState state) =>
           CardFormScreen(deckId: state.pathParameters['id']!),
@@ -147,6 +171,8 @@ List<Override> decksOverrides({
   ApiKeyStore? apiKeyStore,
   CardMediaRepository? cardMediaRepository,
   CardImageGateway? imageGateway,
+  SessionPresetRepository? sessionPresetRepository,
+  LeechRepository? leechRepository,
 }) {
   return <Override>[
     deckRepositoryProvider.overrideWithValue(deckRepository),
@@ -170,6 +196,12 @@ List<Override> decksOverrides({
     ),
     imageGatewayProvider.overrideWithValue(
       imageGateway ?? FakeCardImageGateway(),
+    ),
+    sessionPresetRepositoryProvider.overrideWithValue(
+      sessionPresetRepository ?? FakeSessionPresetRepository(),
+    ),
+    leechRepositoryProvider.overrideWithValue(
+      leechRepository ?? FakeLeechRepository(),
     ),
   ];
 }

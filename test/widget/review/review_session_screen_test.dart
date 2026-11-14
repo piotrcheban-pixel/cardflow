@@ -6,6 +6,7 @@ import 'package:material_ui/material_ui.dart' hide Card;
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/decks/deck_summary.dart';
 import 'package:cardflow/domain/scheduling/rating.dart';
+import 'package:cardflow/domain/session/session_plan.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/decks/deck_screen.dart';
 import 'package:cardflow/ui/review/review_session_screen.dart';
@@ -477,6 +478,131 @@ void main() {
         find.byKey(const ValueKey<String>('review-why')),
       );
       expect(why.onPressed, isNull);
+    });
+  });
+
+  group('план конструктора (SPEC A6.7, ADR-018)', () {
+    List<Card> planCards() => <Card>[
+      makeCard(
+        id: 'p1',
+        deckId: 'deck-1',
+        front: 'Плановый вопрос',
+        state: CardState.review,
+        due: DateTime.utc(2026, 12, 1),
+      ),
+      makeCard(
+        id: 'p2',
+        deckId: 'deck-1',
+        front: 'Второй плановый',
+        createdAt: DateTime.utc(2026, 11, 14, 10, 1),
+      ),
+    ];
+
+    Future<void> pumpPlan(
+      WidgetTester tester, {
+      required SessionPlan plan,
+    }) async {
+      await tester.pumpWidget(
+        appWithHome(
+          overrides: overridesFor(plan.cards),
+          home: ReviewSessionScreen(plan: plan),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('порядок плана сохраняется, будущие due не отбрасываются', (
+      WidgetTester tester,
+    ) async {
+      final List<Card> planned = planCards();
+      await pumpPlan(tester, plan: SessionPlan(cards: planned));
+      // План не ходит в репозиторий карточек: экран работает только с планом.
+      cards.cardsByDeckError = StateError('репозиторий не должен вызываться');
+
+      expect(find.byType(ReviewSessionScreen), findsOneWidget);
+      expect(find.text('Плановый вопрос'), findsOneWidget);
+      expect(find.text('Второй плановый'), findsNothing);
+    });
+
+    testWidgets('оценка плановой сессии пишется с mode=classic', (
+      WidgetTester tester,
+    ) async {
+      final List<Card> planned = planCards();
+      await pumpPlan(tester, plan: SessionPlan(cards: planned));
+      reviews.previousCard = planned.first;
+
+      await tester.tap(
+        find.byKey(const ValueKey<String>('review-rating-good')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(reviews.cardIds, <String>['p1']);
+      expect(reviews.modes.single, 'classic');
+      expect(find.text('Второй плановый'), findsOneWidget);
+    });
+
+    testWidgets('лимит минут: по истечении — итог «Время сессии истекло»', (
+      WidgetTester tester,
+    ) async {
+      final List<Card> planned = planCards();
+      await pumpPlan(
+        tester,
+        plan: SessionPlan(
+          cards: planned,
+          timeBudget: const Duration(minutes: 1),
+        ),
+      );
+      final AppLocalizations l10n = l10nOf(tester);
+      expect(find.text(l10n.ratingGood), findsOneWidget);
+
+      await tester.pump(const Duration(minutes: 1));
+      await tester.pump();
+
+      expect(find.text(l10n.reviewTimeUpTitle), findsOneWidget);
+      expect(find.text(l10n.reviewTimeUpMessage(0)), findsOneWidget);
+      expect(find.text(l10n.ratingGood), findsNothing);
+      expect(reviews.ratings, isEmpty);
+    });
+
+    testWidgets('после лимита времени оценка не принимается', (
+      WidgetTester tester,
+    ) async {
+      final List<Card> planned = planCards();
+      await pumpPlan(
+        tester,
+        plan: SessionPlan(
+          cards: planned,
+          timeBudget: const Duration(minutes: 1),
+        ),
+      );
+      reviews.previousCard = planned.first;
+      await tester.pump(const Duration(minutes: 1));
+      await tester.pump();
+
+      await tester.tap(
+        find.byKey(const ValueKey<String>('review-rating-good')),
+        warnIfMissed: false,
+      );
+      await tester.pumpAndSettle();
+
+      expect(reviews.ratings, isEmpty);
+    });
+
+    testWidgets('без плана — «Сессия не найдена»', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        appWithHome(
+          overrides: overridesFor(const <Card>[]),
+          home: const ReviewSessionScreen(),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final AppLocalizations l10n = l10nOf(tester);
+
+      expect(find.text(l10n.reviewPlanMissingTitle), findsOneWidget);
+      expect(find.text(l10n.reviewPlanMissingMessage), findsOneWidget);
+      expect(find.text(l10n.reviewBack), findsOneWidget);
     });
   });
 }

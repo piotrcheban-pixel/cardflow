@@ -6,6 +6,7 @@ import 'package:cardflow/ui/cards/card_form_screen.dart';
 import 'package:cardflow/ui/decks/deck_screen.dart';
 import 'package:cardflow/ui/decks/decks_screen.dart';
 import 'package:cardflow/ui/review/review_session_screen.dart';
+import 'package:cardflow/ui/session/session_constructor_screen.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart' hide Card;
 
@@ -380,6 +381,49 @@ void main() {
 
       expect(find.byType(CardFormScreen), findsOneWidget);
       expect(find.text(l10n.cardFormTitleEdit), findsOneWidget);
+    });
+
+    testWidgets('лист режимов содержит «Конструктор» и открывает экран A6.7', (
+      WidgetTester tester,
+    ) async {
+      final FakeDeckRepository repository = FakeDeckRepository(
+        summaries: <DeckSummary>[
+          makeSummary(
+            id: 'deck-1',
+            name: 'Испанский',
+            totalCards: 1,
+            newCards: 1,
+          ),
+        ],
+      );
+      final FakeCardRepository cards = FakeCardRepository(
+        cards: <Card>[
+          makeCard(id: 'card-1', deckId: 'deck-1', front: 'Вопрос'),
+        ],
+      );
+
+      await pumpDeck(tester, repository: repository, cards: cards);
+      await tester.pumpAndSettle();
+      final AppLocalizations l10n = l10nOf(tester);
+
+      await tester.tap(find.text(l10n.reviewStartSession));
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.constructorAction), findsOneWidget);
+
+      await tester.tap(find.text(l10n.constructorAction));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(SessionConstructorScreen), findsOneWidget);
+      expect(find.text(l10n.constructorTitle), findsOneWidget);
+      expect(
+        tester
+            .widget<FilterChip>(
+              find.byKey(const ValueKey<String>('constructor-deck-deck-1')),
+            )
+            .selected,
+        isTrue,
+        reason: 'колода с экрана колоды предвыбрана',
+      );
     });
   });
 }

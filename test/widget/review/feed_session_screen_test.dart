@@ -6,6 +6,8 @@ import 'package:material_ui/material_ui.dart' hide Card;
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/decks/deck_summary.dart';
 import 'package:cardflow/domain/scheduling/rating.dart';
+import 'package:cardflow/domain/session/session_config.dart';
+import 'package:cardflow/domain/session/session_plan.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/review/feed_card_view.dart';
 import 'package:cardflow/ui/review/feed_progress_bar.dart';
@@ -672,5 +674,145 @@ void main() {
     await tester.tap(find.byKey(const ValueKey<String>('review-exit-cancel')));
     await tester.pump(const Duration(milliseconds: 400));
     expect(find.byType(FeedSessionScreen), findsOneWidget);
+  });
+
+  group('план конструктора (SPEC A6.7, ADR-018)', () {
+    List<Card> planCards() => <Card>[
+      makeCard(
+        id: 'p1',
+        deckId: 'deck-1',
+        front: 'Плановый вопрос',
+        state: CardState.review,
+        due: DateTime.utc(2026, 12, 1),
+      ),
+      makeCard(
+        id: 'p2',
+        deckId: 'deck-2',
+        front: 'Из второй колоды',
+        createdAt: DateTime.utc(2026, 11, 14, 10, 1),
+      ),
+    ];
+
+    Future<void> pumpPlan(
+      WidgetTester tester, {
+      required SessionPlan plan,
+      List<Override>? overrideList,
+    }) async {
+      await tester.pumpWidget(
+        appWithHome(
+          overrides: overrideList ?? overridesFor(plan.cards),
+          home: FeedSessionScreen(plan: plan),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 20));
+      await tester.pump(const Duration(milliseconds: 20));
+    }
+
+    testWidgets('порядок плана и подпись числа колод', (
+      WidgetTester tester,
+    ) async {
+      final List<Card> planned = planCards();
+      reviews = FakeReviewRepository();
+      await tester.pumpWidget(
+        appWithHome(
+          overrides: decksOverrides(
+            deckRepository: FakeDeckRepository(
+              summaries: <DeckSummary>[
+                makeSummary(id: 'deck-1', name: 'Испанский'),
+                makeSummary(id: 'deck-2', name: 'Биология'),
+              ],
+            ),
+            cardRepository: FakeCardRepository(cards: planned),
+            reviewRepository: reviews,
+          ),
+          home: FeedSessionScreen(
+            plan: SessionPlan(cards: planned, mode: SessionMode.feed),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 20));
+      final AppLocalizations l10n = l10nOf(tester);
+
+      expect(find.text('Плановый вопрос'), findsOneWidget);
+      expect(find.text(l10n.sessionDeckCountLabel(2)), findsOneWidget);
+      expect(find.text(l10n.feedCounter(1, 2)), findsOneWidget);
+    });
+
+    testWidgets('одна колода — в подписи имя колоды', (
+      WidgetTester tester,
+    ) async {
+      final List<Card> planned = <Card>[
+        makeCard(id: 'p1', deckId: 'deck-1', front: 'Плановый вопрос'),
+      ];
+      await pumpPlan(tester, plan: SessionPlan(cards: planned));
+
+      expect(find.text('Испанский'), findsOneWidget);
+    });
+
+    testWidgets('оценка плановой ленты пишется с mode=feed', (
+      WidgetTester tester,
+    ) async {
+      final List<Card> planned = planCards();
+      await pumpPlan(tester, plan: SessionPlan(cards: planned));
+      reviews.previousCard = planned.first;
+
+      await tester.tap(
+        find.byKey(const ValueKey<String>('feed-card-p1')),
+      );
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.fling(
+        find.byKey(const ValueKey<String>('feed-card-p1')),
+        const Offset(160, 0),
+        1200,
+      );
+      await pumpAfterGesture(tester);
+
+      expect(reviews.modes.single, 'feed');
+      expect(reviews.cardIds.first, 'p1');
+    });
+
+    testWidgets('лимит минут: итог «Время сессии истекло»', (
+      WidgetTester tester,
+    ) async {
+      final List<Card> planned = planCards();
+      await pumpPlan(
+        tester,
+        plan: SessionPlan(
+          cards: planned,
+          timeBudget: const Duration(minutes: 1),
+          mode: SessionMode.feed,
+        ),
+      );
+      final AppLocalizations l10n = l10nOf(tester);
+
+      await tester.pump(const Duration(minutes: 1));
+      await tester.pump();
+
+      expect(find.text(l10n.reviewTimeUpTitle), findsOneWidget);
+      expect(find.text(l10n.reviewTimeUpMessage(0)), findsOneWidget);
+    });
+
+    testWidgets('без плана — «Сессия не найдена»', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        appWithHome(
+          overrides: decksOverrides(
+            deckRepository: FakeDeckRepository(),
+            cardRepository: FakeCardRepository(),
+            reviewRepository: reviews,
+          ),
+          home: const FeedSessionScreen(),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 20));
+      final AppLocalizations l10n = l10nOf(tester);
+
+      expect(find.text(l10n.reviewPlanMissingTitle), findsOneWidget);
+      expect(find.text(l10n.reviewPlanMissingMessage), findsOneWidget);
+    });
   });
 }

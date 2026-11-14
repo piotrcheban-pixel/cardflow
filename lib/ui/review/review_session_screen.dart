@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'package:cardflow/domain/scheduling/rating.dart';
+import 'package:cardflow/domain/session/session_plan.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/decks/deck_actions.dart';
 import 'package:cardflow/ui/review/review_card_view.dart';
@@ -20,11 +21,17 @@ import 'package:cardflow/ui/state/app_providers.dart';
 /// `source_excerpt`), карточка с 3D-flip, панель 4 кнопок с прогнозом.
 /// Данные пишутся в БД движком по одной оценке (транзакция, SPEC A5).
 class ReviewSessionScreen extends ConsumerStatefulWidget {
-  /// Создаёт экран сессии для колоды [deckId].
-  const ReviewSessionScreen({required this.deckId, super.key});
+  /// Создаёт экран сессии для колоды [deckId] (режим колоды, ADR-008).
+  ///
+  /// [plan] — очередь конструктора (SPEC A6.7, ADR-018); при наличии
+  /// загруженной колоды не требуется.
+  const ReviewSessionScreen({this.deckId, this.plan, super.key});
 
   /// Идентификатор колоды.
-  final String deckId;
+  final String? deckId;
+
+  /// План сессии конструктора; `null` — очередь из колоды.
+  final SessionPlan? plan;
 
   @override
   ConsumerState<ReviewSessionScreen> createState() =>
@@ -59,7 +66,7 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
     try {
       final cards = await ref
           .read(cardRepositoryProvider)
-          .cardsByDeck(widget.deckId);
+          .cardsByDeck(widget.deckId!);
       final mediaIds = <String>{for (final card in cards) ...card.mediaIds};
       final mediaBytes = mediaIds.isEmpty
           ? const <String, Uint8List>{}

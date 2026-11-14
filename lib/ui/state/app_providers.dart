@@ -24,7 +24,9 @@ import 'package:cardflow/data/generation/drift_generation_job_repository.dart';
 import 'package:cardflow/data/generation/drift_generation_settings_store.dart';
 import 'package:cardflow/data/generation/file_picker_document_gateway.dart';
 import 'package:cardflow/data/review/drift_review_repository.dart';
+import 'package:cardflow/data/review/drift_leech_repository.dart';
 import 'package:cardflow/data/security/secure_api_key_store.dart';
+import 'package:cardflow/data/session/drift_session_preset_repository.dart';
 import 'package:cardflow/data/transfer/drift_deck_transfer_service.dart';
 import 'package:cardflow/data/transfer/file_picker_gateway.dart';
 import 'package:cardflow/data/transfer/media_store.dart';
@@ -41,6 +43,8 @@ import 'package:cardflow/domain/generation/generation_settings_store.dart';
 import 'package:cardflow/domain/generation/openai_compatible_settings.dart';
 import 'package:cardflow/domain/review/review_repository.dart';
 import 'package:cardflow/domain/scheduling/scheduler.dart';
+import 'package:cardflow/domain/session/leech_repository.dart';
+import 'package:cardflow/domain/session/session_preset_repository.dart';
 import 'package:cardflow/domain/transfer/archive_codec.dart';
 import 'package:cardflow/domain/transfer/deck_transfer_service.dart';
 import 'package:cardflow/domain/transfer/file_gateway.dart';
@@ -100,6 +104,18 @@ final mediaGarbageCollectorProvider = Provider<MediaGarbageCollector>((ref) {
 /// Запись повторений (review_logs + due/fsrs_json в одной транзакции).
 final reviewRepositoryProvider = Provider<ReviewRepository>((ref) {
   return DriftReviewRepository(ref.watch(appDatabaseProvider));
+});
+
+/// Счётчики провалов для фильтра «Пиявки» конструктора (ADR-018).
+final leechRepositoryProvider = Provider<LeechRepository>((ref) {
+  return DriftLeechRepository(ref.watch(appDatabaseProvider));
+});
+
+/// Пресеты конструктора сессии (`session_presets`, ADR-018).
+final sessionPresetRepositoryProvider = Provider<SessionPresetRepository>((
+  ref,
+) {
+  return DriftSessionPresetRepository(ref.watch(appDatabaseProvider));
 });
 
 /// Планировщик FSRS (ADR-004: конфигурация детерминированного прогноза).

@@ -8,6 +8,7 @@ import 'package:material_ui/material_ui.dart' hide Card;
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/decks/deck.dart';
 import 'package:cardflow/domain/scheduling/rating.dart';
+import 'package:cardflow/domain/session/session_plan.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/decks/deck_actions.dart';
 import 'package:cardflow/ui/review/feed_card_view.dart';
@@ -24,11 +25,17 @@ import 'package:cardflow/ui/state/app_providers.dart';
 /// из общего каркаса A6.4. Записи — через [FeedSessionEngine] и
 /// `ReviewRepository` (одна транзакция на оценку).
 class FeedSessionScreen extends ConsumerStatefulWidget {
-  /// Создаёт экран ленты для колоды [deckId].
-  const FeedSessionScreen({required this.deckId, super.key});
+  /// Создаёт экран ленты для колоды [deckId] (режим колоды, ADR-016).
+  ///
+  /// [plan] — очередь конструктора (SPEC A6.7, ADR-018); при наличии
+  /// загруженной колоды не требуется.
+  const FeedSessionScreen({this.deckId, this.plan, super.key});
 
   /// Идентификатор колоды.
-  final String deckId;
+  final String? deckId;
+
+  /// План сессии конструктора; `null` — очередь из колоды.
+  final SessionPlan? plan;
 
   /// Варианты интервала авто-продвижения (SPEC A7.3).
   static const List<int> autoAdvanceSeconds = <int>[3, 5, 8];
@@ -90,10 +97,10 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
     try {
       final List<Card> cards = await ref
           .read(cardRepositoryProvider)
-          .cardsByDeck(widget.deckId);
+          .cardsByDeck(widget.deckId!);
       final Deck? deck = await ref
           .read(deckRepositoryProvider)
-          .deckById(widget.deckId);
+          .deckById(widget.deckId!);
       final mediaIds = <String>{for (final card in cards) ...card.mediaIds};
       final mediaBytes = mediaIds.isEmpty
           ? const <String, Uint8List>{}

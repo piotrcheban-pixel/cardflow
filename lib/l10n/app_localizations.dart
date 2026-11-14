@@ -1671,6 +1671,258 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Маска {number}'**
   String occlusionMaskNumber(int number);
+
+  /// Заголовок экрана конструктора сессии (SPEC A6.7).
+  ///
+  /// In ru, this message translates to:
+  /// **'Конструктор сессии'**
+  String get constructorTitle;
+
+  /// Пункт листа режимов на экране колоды (SPEC A6.3).
+  ///
+  /// In ru, this message translates to:
+  /// **'Конструктор'**
+  String get constructorAction;
+
+  /// Заголовок блока выбора колод.
+  ///
+  /// In ru, this message translates to:
+  /// **'Колоды'**
+  String get constructorDecksSection;
+
+  /// Заголовок блока фильтра по тегам.
+  ///
+  /// In ru, this message translates to:
+  /// **'Теги'**
+  String get constructorTagsSection;
+
+  /// Подсказка, если у карточек выбранных колод нет тегов.
+  ///
+  /// In ru, this message translates to:
+  /// **'У выбранных колод нет тегов'**
+  String get constructorTagsEmpty;
+
+  /// Подсказка при пустом выборе колод.
+  ///
+  /// In ru, this message translates to:
+  /// **'Выберите колоды, чтобы собрать сессию'**
+  String get constructorSelectDecksHint;
+
+  /// Заголовок блока фильтра по типу карточки.
+  ///
+  /// In ru, this message translates to:
+  /// **'Тип карточки'**
+  String get constructorTypesSection;
+
+  /// Заголовок блока фильтра по состоянию карточки.
+  ///
+  /// In ru, this message translates to:
+  /// **'Состояние'**
+  String get constructorStatesSection;
+
+  /// Фильтр состояния: новые карточки.
+  ///
+  /// In ru, this message translates to:
+  /// **'Новые'**
+  String get constructorStateNew;
+
+  /// Фильтр состояния: изучаемые и переизучаемые.
+  ///
+  /// In ru, this message translates to:
+  /// **'В процессе'**
+  String get constructorStateInProgress;
+
+  /// Фильтр состояния: в повторении.
+  ///
+  /// In ru, this message translates to:
+  /// **'Повторение'**
+  String get constructorStateReview;
+
+  /// Фильтр состояния: 8+ провалов (SPEC A7.17).
+  ///
+  /// In ru, this message translates to:
+  /// **'Пиявки'**
+  String get constructorStateLeeches;
+
+  /// Заголовок блока выбора режима сессии.
+  ///
+  /// In ru, this message translates to:
+  /// **'Режим'**
+  String get constructorModeSection;
+
+  /// Заголовок блока лимита сессии.
+  ///
+  /// In ru, this message translates to:
+  /// **'Лимит'**
+  String get constructorLimitSection;
+
+  /// Лимит по числу карточек.
+  ///
+  /// In ru, this message translates to:
+  /// **'Карточки'**
+  String get constructorLimitCards;
+
+  /// Лимит по времени сессии.
+  ///
+  /// In ru, this message translates to:
+  /// **'Минуты'**
+  String get constructorLimitMinutes;
+
+  /// Значение лимита по карточкам.
+  ///
+  /// In ru, this message translates to:
+  /// **'{count, plural, one{{count} карточка} few{{count} карточки} many{{count} карточек} other{{count} карточки}}'**
+  String constructorLimitCardsValue(int count);
+
+  /// Значение лимита по минутам.
+  ///
+  /// In ru, this message translates to:
+  /// **'{count} мин'**
+  String constructorLimitMinutesValue(int count);
+
+  /// Заголовок блока порядка карточек.
+  ///
+  /// In ru, this message translates to:
+  /// **'Порядок'**
+  String get constructorOrderSection;
+
+  /// Переключатель случайного порядка карточек.
+  ///
+  /// In ru, this message translates to:
+  /// **'Перемешать'**
+  String get constructorShuffle;
+
+  /// Подпись переключателя перемешивания.
+  ///
+  /// In ru, this message translates to:
+  /// **'Случайный порядок карточек'**
+  String get constructorShuffleHint;
+
+  /// Переключатель подмешивания карточек из разных колод.
+  ///
+  /// In ru, this message translates to:
+  /// **'Интерливинг'**
+  String get constructorInterleave;
+
+  /// Подпись переключателя интерливинга (SPEC A7.19).
+  ///
+  /// In ru, this message translates to:
+  /// **'Подмешивать карточки из разных колод'**
+  String get constructorInterleaveHint;
+
+  /// Переключатель разминки (SPEC A7.19).
+  ///
+  /// In ru, this message translates to:
+  /// **'Разминка'**
+  String get constructorWarmup;
+
+  /// Подпись переключателя разминки.
+  ///
+  /// In ru, this message translates to:
+  /// **'Первые карточки — самые лёгкие'**
+  String get constructorWarmupHint;
+
+  /// Заголовок блока сохранённых пресетов.
+  ///
+  /// In ru, this message translates to:
+  /// **'Пресеты'**
+  String get constructorPresetsSection;
+
+  /// Пустое состояние списка пресетов.
+  ///
+  /// In ru, this message translates to:
+  /// **'Сохранённых пресетов нет'**
+  String get constructorPresetsEmpty;
+
+  /// Кнопка сохранения текущих параметров как пресета.
+  ///
+  /// In ru, this message translates to:
+  /// **'Сохранить пресет'**
+  String get constructorSavePreset;
+
+  /// Заголовок диалога сохранения пресета.
+  ///
+  /// In ru, this message translates to:
+  /// **'Название пресета'**
+  String get constructorPresetDialogTitle;
+
+  /// Подпись поля имени пресета.
+  ///
+  /// In ru, this message translates to:
+  /// **'Название'**
+  String get constructorPresetNameLabel;
+
+  /// Ошибка пустого имени пресета.
+  ///
+  /// In ru, this message translates to:
+  /// **'Введите название пресета'**
+  String get constructorPresetNameEmpty;
+
+  /// Сообщение после сохранения пресета.
+  ///
+  /// In ru, this message translates to:
+  /// **'Пресет сохранён'**
+  String get constructorPresetSaved;
+
+  /// Сообщение после удаления пресета.
+  ///
+  /// In ru, this message translates to:
+  /// **'Пресет удалён'**
+  String get constructorPresetDeleted;
+
+  /// Подсказка кнопки удаления пресета.
+  ///
+  /// In ru, this message translates to:
+  /// **'Удалить пресет'**
+  String get constructorPresetDeleteTooltip;
+
+  /// Счётчик доступных карточек по текущим фильтрам.
+  ///
+  /// In ru, this message translates to:
+  /// **'Доступно карточек: {count}'**
+  String constructorAvailableCount(int count);
+
+  /// Пустое состояние конструктора без колод.
+  ///
+  /// In ru, this message translates to:
+  /// **'Нет активных колод. Создайте колоду, чтобы собрать сессию.'**
+  String get constructorEmptyDecks;
+
+  /// Ошибка загрузки данных конструктора.
+  ///
+  /// In ru, this message translates to:
+  /// **'Не удалось загрузить колоды'**
+  String get constructorLoadError;
+
+  /// Подпись ленты для сессии из нескольких колод.
+  ///
+  /// In ru, this message translates to:
+  /// **'{count, plural, one{{count} колода} few{{count} колоды} many{{count} колод} other{{count} колоды}}'**
+  String sessionDeckCountLabel(int count);
+
+  /// Заголовок завершения сессии по лимиту минут (SPEC A6.7).
+  ///
+  /// In ru, this message translates to:
+  /// **'Время сессии истекло'**
+  String get reviewTimeUpTitle;
+
+  /// Итог сессии, завершённой по лимиту времени.
+  ///
+  /// In ru, this message translates to:
+  /// **'{count, plural, =0{Ни одной карточки} one{Повторена {count} карточка} few{Повторено {count} карточки} many{Повторено {count} карточек} other{Повторено {count} карточки}}'**
+  String reviewTimeUpMessage(int count);
+
+  /// Состояние сессии без переданного плана конструктора.
+  ///
+  /// In ru, this message translates to:
+  /// **'Сессия не найдена'**
+  String get reviewPlanMissingTitle;
+
+  /// Пояснение к состоянию «сессия не найдена».
+  ///
+  /// In ru, this message translates to:
+  /// **'Откройте конструктор и соберите сессию заново.'**
+  String get reviewPlanMissingMessage;
 }
 
 class _AppLocalizationsDelegate
