@@ -7,10 +7,11 @@
 
 ```
 файлы (picker / drag-n-drop)
-  → FileParsingService (изолят, ParsedDocument, ошибки по файлу)
-  → TokenEstimator + GenerationChunker (разделы, бюджет модели, <limit>)
+  → изображения JPG/PNG и PDF-сканы: GenerationAttachment (Vision)
+  → FileParsingService (изолят, ParsedDocument, ошибки по файлу) + TextSanitizer
+  → TokenEstimator + GenerationChunker (разделы, бюджет модели, <limit>, вложения)
   → GenerationPipeline (последовательно, progress/cancel)
-      → CardGenerationService (ключ → адаптер → HTTP → схема A8.4 → контент-правила)
+      → CardGenerationService (ключ → проверка Vision/PDF → адаптер → HTTP → схема A8.4 → контент-правила)
       → generation_jobs (running → done | partial | error | cancelled)
   → GenerationRunResult (карточки + ошибки фрагментов + токены + дубли)
   → экран предпросмотра (чекбоксы, инлайн-редактирование, повтор упавших)
@@ -24,8 +25,10 @@
 | Слой | Файл | Ответственность |
 |---|---|---|
 | домен | `lib/domain/generation/token_estimator.dart` | оценка токенов (≈2,5 символа/токен) |
+| домен | `lib/domain/generation/generation_attachment.dart` | вложение (JPG/PNG/PDF-скан), MIME и сигнатуры |
+| домен | `lib/domain/text/text_sanitizer.dart` | управляющие символы, пустые строки, trim |
 | домен | `lib/domain/generation/generation_model.dart` | каталог моделей и бюджет входа |
-| домен | `lib/domain/generation/generation_chunker.dart` | нарезка по разделам/абзацам, `<limit>`, split-in-half |
+| домен | `lib/domain/generation/generation_chunker.dart` | нарезка по разделам/абзацам, `<limit>`, split-in-half, вложения |
 | домен | `lib/domain/generation/generation_job.dart` | статусы и сущность задания, контракт репозитория |
 | домен | `lib/domain/generation/generation_run.dart` | запрос/результат/прогресс/ошибки фрагмента |
 | домен | `lib/domain/generation/document_gateway.dart` | контракт пикера документов |
@@ -61,7 +64,11 @@ inputBudget = max(inputBudget, 2000)
 - Соседние разделы склеиваются, пока оценка ≤ бюджета; между ними — пустая строка.
 - Раздел больше бюджета: абзацы → строки → жёсткое деление по символам (запас 20 %).
 - `<limit>` фрагмента — не больше 20 карточек (`kMaxCardsPerChunk`).
-- `truncated` → `splitInHalf` один раз; повторное обрезание — ошибка фрагмента с повтором.
+- Вложения (`GenerationAttachment`) — отдельный фрагмент на файл: текст `materialsText` пуст,
+  `images` содержит файл; оценка — `kImageTokenEstimate` (1000) на вложение. Смешивать
+  изображение с текстом другого файла в MVP нельзя.
+- `truncated` → `splitInHalf` один раз; фрагмент с вложением не дробится; повторное обрезание —
+  ошибка фрагмента с повтором.
 
 ## 5. Ошибки
 
@@ -70,8 +77,8 @@ inputBudget = max(inputBudget, 2000)
 | `cancelled` | остановка, уже полученные карточки возвращаются | «Генерация отменена» |
 | `truncated` | split-once; затем ошибка фрагмента | «Повторить неудавшиеся» |
 | `missingApiKey`, `providerNotConfigured`, `invalidApiKey` | fatal: остановка всего задания; если карточки уже получены — `partial` + `fatalErrorCode`, иначе исключение | переход в настройки / сообщение + предпросмотр |
-| `rateLimited`, `serverUnavailable`, `timeout`, `network`, `emptyResponse`, `refused`, `invalidResponse` | ошибка фрагмента, остальные фрагменты продолжаются | частичный успех + повтор |
-| `noMaterials` | генерация не начинается | «Нет текста для генерации…» |
+| `rateLimited`, `serverUnavailable`, `timeout`, `network`, `emptyResponse`, `refused`, `invalidResponse`, `visionUnsupported`, `fileWithoutTextAndVision`, `pdfScanUnsupported`, `attachmentTooLarge` | ошибка фрагмента, остальные фрагменты продолжаются | частичный успех + повтор |
+| `noMaterials` | генерация не начинается | «В файле нет текста (скан или пустая форма)» |
 
 `generation_jobs.error_code` — машинный код (имя `GenerationErrorCode`) или `unexpected` при сбое
 инфраструктуры/БД; не текст.
@@ -94,7 +101,9 @@ inputBudget = max(inputBudget, 2000)
 - Входы: Split-кнопка «Создать» на «Колодах» → «Сгенерировать карточки»; меню действий колоды на
   экране «Колода» → «Сгенерировать карточки».
 - Зона прикрепления: `DropTarget` (`desktop_drop 0.8.4`) на ПК + `file_picker` на всех платформах;
-  форматы A8.3; подпись и ошибки — только ARB.
+  форматы A8.3 + изображения JPG/JPEG/PNG; PDF без текста показывается как «Скан — отправится как
+  изображение»; подпись и ошибки — только ARB. Перед запуском проверяются `supportsVision` и
+  PDF-возможность протокола выбранного аккаунта (ADR-022).
 - Ключи OpenAI/Gemini/Anthropic — на экране «Настройки генерации» (блок «Ключи API»); «Проверить»
   (A6.6) — итерация 7, кнопка не рисуется.
 

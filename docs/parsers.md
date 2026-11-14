@@ -16,7 +16,8 @@
 | Домен | `lib/domain/text/document_format.dart` | `DocumentFormat`, определение по расширению, проверка сигнатур |
 | Домен | `lib/domain/text/parsed_document.dart` | `ParsedDocument`, `ParsedSection` (`start/end/title`), `ParsedDocumentMetadata`; инварианты и immutable-списки |
 | Домен | `lib/domain/text/parser_exception.dart` | `ParserErrorCode` (5 кодов) и `ParserException` (`details` — не в UI) |
-| Домен | `lib/domain/text/document_text_normalization.dart` | Единый нормализатор извлечённого текста |
+| Домен | `lib/domain/text/document_text_normalization.dart` | Единый нормализатор извлечённого текста; с итерации 7.8 делегирует в `TextSanitizer` (`lib/domain/text/text_sanitizer.dart`) |
+| Домен | `lib/domain/generation/generation_attachment.dart` | Вложения-изображения JPG/PNG и PDF-сканы (ADR-022); парсеры их не разбирают |
 | API | `lib/api/parsers/*_parser.dart` | Нативные парсеры форматов; один общий интерфейс `DocumentParser` |
 | API | `lib/api/parsers/zip_xml.dart` | `SecureZip` + лимиты ZIP-контейнеров, декодирование XML (BOM/UTF-16) |
 | API | `lib/api/parsers/parsed_document_builder.dart` | Сборка текста и границ разделов из логических секций |

@@ -1,0 +1,3 @@
+fvm flutter test --exclude-tags golden
+01:47 +1324 ~2: All tests passed!
+(1324 passed, 2 skipped — live без ключа в env)

@@ -49,6 +49,14 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   `GenerationErrorCode` → строка ARB (`lib/ui/generation/generation_error_message.dart`). Ключи — только
   `ApiKeyStore` (secure storage). LaTeX-проверка `flutter_math_fork` допустима только в
   `lib/api/generation/latex_checker.dart` и инжектируется в валидатор; остальной `lib/api/` от Flutter не зависит.
+  **Вложения (ADR-022, итерация 7.8):** `TextSanitizer` (`lib/domain/text/text_sanitizer.dart`) — единый
+  санитайзер локального текста, `normalizeDocumentText` делегирует в него; пустой текст → `noMaterials`.
+  Картинки JPG/PNG и PDF-сканы — `GenerationAttachment` (`lib/domain/generation/generation_attachment.dart`),
+  передаются inline только при `ProviderAccount.supportsVision`; PDF — только Anthropic/Gemini
+  (`ProviderProtocol.supportsPdfAttachments`), OpenAI/совместимые получают `image_url`, тела собирает
+  `lib/api/providers/attachment_parts.dart`. Каталог `ProviderPresetModel.supportsVision`, JSON аккаунта
+  `supports_vision`; старые записи — пресет или инференс по имени модели. `providerReason` для 400 —
+  очищенная причина провайдера (ARB `generationErrorBadRequestReason`), тела не логируются.
 - `ui/` — экраны, виджеты, локализация. Компоненты M3 Expressive — только через слой `lib/ui/m3e/` (библиотеку можно заменить). Токены движения — `lib/ui/motion.dart`.
 - **Режим «Лента»** (SPEC A7.3, ADR-016): движок `lib/ui/review/feed_session_engine.dart` (очередь
   `ReviewQueue`, по-карточные revealed/rated, `visit` без записи, `rate`/`undo` через тот же
@@ -171,6 +179,10 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   текста. UI-строку ошибки нельзя переиспользовать для другого исхода: валидный пустой `cards` — не
   `emptyResponse`, для него отдельная строка ARB. CI с `concurrency` отменяет незавершённый прогон при
   новом push — сначала пушить все коммиты итерации, затем ждать один прогон.
+- **Ретроспектива итерации 7.8:** поля-возможности провайдера (`supportsVision`) добавлять в JSON с
+  обратной совместимостью (инференс для старых записей и переключатель в UI), а «сырую» диагностику
+  провайдера (причина 400) — отдельным безопасным полем `providerReason`, не через `details`; проверять
+  сквозной путь HTTP → ARB → UI и приоритет ошибок (vision раньше размера/PDF-протокола).
 
 ## Факты хоста (обновлять при изменении)
 

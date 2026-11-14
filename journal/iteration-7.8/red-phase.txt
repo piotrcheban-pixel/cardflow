@@ -1,0 +1,30 @@
+fvm flutter test <10 target files> --reporter expanded
+(красная фаза, 2026-11-15; полный вывод — 82 КБ, здесь ключевые фрагменты)
+
+test/unit/ui/parser_error_message_test.dart: пустой текст: сообщение говорит о скане и пустой форме [E]
+  Expected: contains 'скан'
+    Actual: 'В файле нет текста'
+     Which: does not contain 'скан'
+
+test/unit/ui/generation_error_message_test.dart: ... No named parameter with the name 'providerReason'
+  lib/domain/generation/generation_error.dart:55:9: Context: Found this candidate
+    const GenerationException(this.code, {this.retryAfter, this.details});
+
+test/unit/ui/generation_error_message_test.dart: ... Member not found: 'visionUnsupported'
+test/unit/ui/generation_error_message_test.dart: ... Member not found: 'fileWithoutTextAndVision'
+test/unit/ui/generation_error_message_test.dart: ... Member not found: 'pdfScanUnsupported'
+test/unit/ui/generation_error_message_test.dart: ... Member not found: 'attachmentTooLarge'
+test/unit/ui/generation_error_message_test.dart: ... method 'generationErrorBadRequestReason' isn't defined
+
+test/unit/domain/text_sanitizer_test.dart: Error: couldn't resolve
+  'package:cardflow/domain/text/text_sanitizer.dart'
+
+test/unit/domain/generation_attachment_test.dart: Error: couldn't resolve
+  'package:cardflow/domain/generation/generation_attachment.dart'
+
+test/unit/api/generation/card_generation_service_test.dart: Error: No named parameter with the name
+  'images'; Member not found: 'GenerationErrorCode.visionUnsupported'
+
+test/unit/api/providers/provider_adapters_test.dart: Error: No named parameter with the name 'images'
+
+Failing tests: 9 (loading/компиляция новых контрактов) + parser_error_message (assertion-level).

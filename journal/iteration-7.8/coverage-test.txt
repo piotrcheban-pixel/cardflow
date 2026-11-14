@@ -1,0 +1,6 @@
+fvm flutter test --coverage --exclude-tags golden
+02:42 +1324 ~2: All tests passed!
+
+fvm dart run tool/coverage_check.dart
+Итого: 92.7% (9013/9721), порог 80.0%
+ПОРОГ ПРОЙДЕН
