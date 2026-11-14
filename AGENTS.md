@@ -20,19 +20,22 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   32 МБ запись / 120 МБ сумма) до разбора; ошибки — только `ParserErrorCode` → строка ARB
   (`lib/ui/generation/parser_error_message.dart`), `details`/сырые исключения в UI не попадают. `.doc/.xls`
   не поддерживаются (ADR-003). Парсинг — в `Isolate.run`; ошибка файла не блокирует остальные.
-- **API-слой генерации** (SPEC A8.1/A8.2/A8.4–A8.6, ADR-011/ADR-012/ADR-013):
+- **API-слой генерации** (SPEC A8.1/A8.2/A8.4–A8.6, ADR-011/ADR-012/ADR-013/ADR-015):
   канон-схема ответа и её проекции — `lib/api/generation/` (`card_json_schema.dart`, `provider_schema.dart`);
   адаптеры провайдеров — `lib/api/providers/` (OpenAI, Gemini, Anthropic и OpenAI-compatible; чистые
-  `buildRequest`/`parseResponse`, без сети и UI). У OpenAI-compatible `base_url` и `model` — настройки в
-  `app_settings` (`generation.openai_compatible`, `GenerationSettingsStore`), ключ опционален и только в
-  `ApiKeyStore`; strict `response_format` — с одним fallback без схемы и локальной проверкой A8.4;
-  промпт `gen-ru-v2` скрыт в коде (`system_prompt.dart`), пользовательское сообщение — `generation_prompt.dart`;
-  контентные правила A8.4 — `card_content_validator.dart` (пометки `CardIssueCode`, карточка не отбрасывается);
-  HTTP — только через `GenerationTransport` (`lib/api/http/generation_http_client.dart`) с `RetryPolicy`
-  и `RedactingLogInterceptor`. Ошибки — только `GenerationErrorCode` → строка ARB
-  (`lib/ui/generation/generation_error_message.dart`). Ключи — только `ApiKeyStore` (secure storage).
-  LaTeX-проверка `flutter_math_fork` допустима только в `lib/api/generation/latex_checker.dart` и инжектируется
-  в валидатор; остальной `lib/api/` от Flutter не зависит.
+  `buildRequest`/`parseResponse`, без сети и UI). Пайплайн генерации — `lib/api/generation/generation_pipeline.dart`
+  (`GenerationPipeline`: оценка/чанкинг, последовательные вызовы, прогресс/отмена, split-once, дедуп,
+  `generation_jobs`, partial/retry); чистые правила — `lib/domain/generation/` (`token_estimator.dart`,
+  `generation_model.dart`, `generation_chunker.dart`, `generation_job.dart`, `generation_run.dart`).
+  У OpenAI-compatible `base_url` и `model` — настройки в `app_settings` (`generation.openai_compatible`,
+  `GenerationSettingsStore`), ключ опционален и только в `ApiKeyStore`; strict `response_format` — с одним
+  fallback без схемы и локальной проверкой A8.4; промпт `gen-ru-v2` скрыт в коде (`system_prompt.dart`),
+  пользовательское сообщение — `generation_prompt.dart`; контентные правила A8.4 — `card_content_validator.dart`
+  (пометки `CardIssueCode`, карточка не отбрасывается); HTTP — только через `GenerationTransport`
+  (`lib/api/http/generation_http_client.dart`) с `RetryPolicy` и `RedactingLogInterceptor`. Ошибки — только
+  `GenerationErrorCode` → строка ARB (`lib/ui/generation/generation_error_message.dart`). Ключи — только
+  `ApiKeyStore` (secure storage). LaTeX-проверка `flutter_math_fork` допустима только в
+  `lib/api/generation/latex_checker.dart` и инжектируется в валидатор; остальной `lib/api/` от Flutter не зависит.
 - `ui/` — экраны, виджеты, локализация. Компоненты M3 Expressive — только через слой `lib/ui/m3e/` (библиотеку можно заменить). Токены движения — `lib/ui/motion.dart`.
 - Модели immutable (`freezed`/`const`), роутинг `GoRouter` (см. ADR), HTTP `Dio`. Состояние — Riverpod 3 без кодогенерации (ADR-002).
 - **Material-виджеты — только `package:material_ui/material_ui.dart`** (ADR-001), `package:flutter/material.dart` в `lib/` запрещён. M3E-компоненты — только через `lib/ui/m3e/`, библиотека `material_3_expressive` больше нигде не импортируется.
@@ -75,6 +78,10 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   `fvm dart format --set-exit-if-changed lib test` **без** `--output=none` (он не пишет и маскирует расхождение —
   ложное «0 changed» нашлось на ревью); параллельные слои — тесты-спецификация red-фазы как неизменяемый
   контракт и исполнители с непересекающимися write-scope (адаптеры; HTTP/безопасность), Lead — ядро и проводка.
+- **Ретроспектива итерации 3c:** первичные действия длинного экрана — в `bottomNavigationBar`, а не в конце
+  `ListView`: иначе widget-тест не находит кнопку без `scrollUntilVisible`, а пользователь — без прокрутки.
+  Все high/medium ревью закрывать одним fix-коммитом с отдельным тестом на каждую находку; ошибки
+  инфраструктуры (БД) не маскировать под ошибки фрагментов/адаптеров.
 
 ## Факты хоста (обновлять при изменении)
 
@@ -96,6 +103,13 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   `/chat/completions`, Bearer, разбор ответа, валидация A8.4 и контентные правила. Детали —
   `journal/iteration-3b/live-l30.md`. Негативные live-контракты (401/403/429/`Retry-After`) не проверяются —
   ADR-014. OpenAI/Gemini/Anthropic живьём не проверялись (L1).
+- **Экран генерации проверен локально (итерация 3c, 2026-11-14):** `fvm flutter test --exclude-tags golden`
+  → **897 passed + 1 skipped**; покрытие **93.2% (5219/5597)**; `analyze` 0; `dart format` 0 changed;
+  `fvm flutter build windows --release` — ок. Ревью 3c: 2 high, 12 medium, 11 low, H/M закрыты
+  fix-коммитом `9db83ab` с новыми тестами. Пайплайн: `GenerationPipeline` (оценка/чанкинг,
+  последовательные вызовы, split-once, дедуп, partial/retry, `generation_jobs`); UI A6.8:
+  `lib/ui/generation/`; входы — Split-меню «Колод» и Toolbar «Колоды». DnD — `desktop_drop 0.8.4`,
+  файлы — `file_picker 13.3.3`; реальный DnD-жест на ОС не проверялся (L33). CI-прогон 3c — после push.
 - GitHub-remote: `origin` → `piotrcheban-pixel/cardflow` (private); CI — GitHub Actions (`.github/workflows/ci.yml`). Push выполняется по команде владельца (хука `confirm-git-push` нет).
 - **PDF-тесты и PDFium в CI (L26, с 2026-11-13):** job `test` скачивает pinned PDFium
   (`bblanchon/pdfium-binaries` `chromium/8125` — тот же релиз, что build-hook `pdfium_dart` 0.4.1) на всех трёх ОС,
