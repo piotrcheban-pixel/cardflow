@@ -12,6 +12,7 @@ class FeedProgressBar extends StatefulWidget {
   const FeedProgressBar({
     required this.rated,
     required this.currentIndex,
+    this.animatePulse = true,
     super.key,
   });
 
@@ -21,16 +22,29 @@ class FeedProgressBar extends StatefulWidget {
   /// Индекс текущей карточки.
   final int currentIndex;
 
+  /// Пульс текущего сегмента (A6.6: «Стандартная» анимация — без пульса).
+  final bool animatePulse;
+
   @override
   State<FeedProgressBar> createState() => _FeedProgressBarState();
 }
 
 class _FeedProgressBarState extends State<FeedProgressBar>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _pulse = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 900),
-  )..repeat(reverse: true);
+  late final AnimationController _pulse = _createPulse();
+
+  AnimationController _createPulse() {
+    final AnimationController controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    );
+    if (widget.animatePulse) {
+      controller.repeat(reverse: true);
+    } else {
+      controller.value = 1;
+    }
+    return controller;
+  }
 
   @override
   void dispose() {
@@ -71,7 +85,9 @@ class _FeedProgressBarState extends State<FeedProgressBar>
                           ? pulse
                           : 1,
                       pulse:
-                          !widget.rated[index] && index == widget.currentIndex,
+                          widget.animatePulse &&
+                          !widget.rated[index] &&
+                          index == widget.currentIndex,
                     ),
                   ),
                 ),

@@ -1135,7 +1135,7 @@ abstract class AppLocalizations {
   /// Подсказка иконки перехода в настройки генерации.
   ///
   /// In ru, this message translates to:
-  /// **'Настройки генерации'**
+  /// **'Настройки'**
   String get settingsOpenTooltip;
 
   /// Заголовок блока ключей облачных провайдеров на экране настроек генерации (A6.6/A6.8).
@@ -1923,6 +1923,456 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Откройте конструктор и соберите сессию заново.'**
   String get reviewPlanMissingMessage;
+
+  /// Пункт оболочки: список колод (SPEC A6.1).
+  ///
+  /// In ru, this message translates to:
+  /// **'Колоды'**
+  String get navDecks;
+
+  /// Пункт оболочки: статистика (SPEC A6.1).
+  ///
+  /// In ru, this message translates to:
+  /// **'Статистика'**
+  String get navStatistics;
+
+  /// Пункт оболочки: настройки (SPEC A6.1).
+  ///
+  /// In ru, this message translates to:
+  /// **'Настройки'**
+  String get navSettings;
+
+  /// Заголовок экрана статистики (SPEC A6.5).
+  ///
+  /// In ru, this message translates to:
+  /// **'Статистика'**
+  String get statisticsTitle;
+
+  /// Заголовок блока удержания.
+  ///
+  /// In ru, this message translates to:
+  /// **'Удержание за 30 дней'**
+  String get statisticsRetentionTitle;
+
+  /// Процент удержания.
+  ///
+  /// In ru, this message translates to:
+  /// **'{percent}%'**
+  String statisticsRetentionValue(int percent);
+
+  /// Удержание без данных за окно.
+  ///
+  /// In ru, this message translates to:
+  /// **'Нет повторений за 30 дней'**
+  String get statisticsRetentionNoData;
+
+  /// Заголовок годовой тепловой карты.
+  ///
+  /// In ru, this message translates to:
+  /// **'Календарь повторений'**
+  String get statisticsHeatmapTitle;
+
+  /// Семантика годовой карты повторений.
+  ///
+  /// In ru, this message translates to:
+  /// **'Повторений за год: {count}'**
+  String statisticsChartSemantics(int count);
+
+  /// Заголовок недельного прогресса.
+  ///
+  /// In ru, this message translates to:
+  /// **'Недельный прогресс'**
+  String get statisticsWeekTitle;
+
+  /// Семантика недельного прогресса.
+  ///
+  /// In ru, this message translates to:
+  /// **'Повторений за неделю: {count}'**
+  String statisticsWeekSemantics(int count);
+
+  /// Заголовок списка слабых тем.
+  ///
+  /// In ru, this message translates to:
+  /// **'Слабые темы'**
+  String get statisticsWeakTopicsTitle;
+
+  /// Слабых тем не набралось по порогам.
+  ///
+  /// In ru, this message translates to:
+  /// **'Слабых тем пока нет'**
+  String get statisticsWeakTopicsEmpty;
+
+  /// Статистика по слабому тегу.
+  ///
+  /// In ru, this message translates to:
+  /// **'{errors} из {reviews} с ошибкой'**
+  String statisticsWeakTopicStats(int errors, int reviews);
+
+  /// Кнопка перехода в конструктор с фильтром тега.
+  ///
+  /// In ru, this message translates to:
+  /// **'Тренировать'**
+  String get statisticsWeakTopicTrain;
+
+  /// Заголовок прогноза.
+  ///
+  /// In ru, this message translates to:
+  /// **'Прогноз нагрузки на 7 дней'**
+  String get statisticsForecastTitle;
+
+  /// Подпись первого дня прогноза.
+  ///
+  /// In ru, this message translates to:
+  /// **'Сегодня'**
+  String get statisticsForecastToday;
+
+  /// Подпись второго дня прогноза.
+  ///
+  /// In ru, this message translates to:
+  /// **'Завтра'**
+  String get statisticsForecastTomorrow;
+
+  /// Сколько карточек к повторению в день прогноза.
+  ///
+  /// In ru, this message translates to:
+  /// **'{count, plural, =0{Нет карточек} one{{count} карточка} few{{count} карточки} many{{count} карточек} other{{count} карточки}}'**
+  String statisticsForecastCount(int count);
+
+  /// Семантика столбца прогноза.
+  ///
+  /// In ru, this message translates to:
+  /// **'{day}: {count}'**
+  String statisticsForecastSemantics(String day, int count);
+
+  /// Ошибка загрузки статистики.
+  ///
+  /// In ru, this message translates to:
+  /// **'Не удалось загрузить статистику'**
+  String get statisticsErrorTitle;
+
+  /// Пустое состояние статистики.
+  ///
+  /// In ru, this message translates to:
+  /// **'Статистика появится после первых повторений'**
+  String get statisticsEmptyTitle;
+
+  /// Пояснение к пустому состоянию статистики.
+  ///
+  /// In ru, this message translates to:
+  /// **'Повторите карточки — здесь появятся удержание, календарь, слабые темы и прогноз.'**
+  String get statisticsEmptyMessage;
+
+  /// Заголовок экрана настроек (SPEC A6.6).
+  ///
+  /// In ru, this message translates to:
+  /// **'Настройки'**
+  String get settingsScreenTitle;
+
+  /// Блок внешнего вида.
+  ///
+  /// In ru, this message translates to:
+  /// **'Внешний вид'**
+  String get settingsAppearanceTitle;
+
+  /// Подпись выбора темы.
+  ///
+  /// In ru, this message translates to:
+  /// **'Тема'**
+  String get settingsThemeTitle;
+
+  /// Светлая тема.
+  ///
+  /// In ru, this message translates to:
+  /// **'Светлая'**
+  String get settingsThemeLight;
+
+  /// Тёмная тема.
+  ///
+  /// In ru, this message translates to:
+  /// **'Тёмная'**
+  String get settingsThemeDark;
+
+  /// Системная тема.
+  ///
+  /// In ru, this message translates to:
+  /// **'Системная'**
+  String get settingsThemeSystem;
+
+  /// Переключатель dynamic color.
+  ///
+  /// In ru, this message translates to:
+  /// **'Динамические цвета'**
+  String get settingsDynamicColor;
+
+  /// Пояснение dynamic color.
+  ///
+  /// In ru, this message translates to:
+  /// **'Цвета системы, если платформа их поддерживает'**
+  String get settingsDynamicColorHint;
+
+  /// Подпись выбора профиля анимации.
+  ///
+  /// In ru, this message translates to:
+  /// **'Анимация'**
+  String get settingsMotionTitle;
+
+  /// Выразительная анимация.
+  ///
+  /// In ru, this message translates to:
+  /// **'Выразительная'**
+  String get settingsMotionExpressive;
+
+  /// Стандартная анимация.
+  ///
+  /// In ru, this message translates to:
+  /// **'Стандартная'**
+  String get settingsMotionStandard;
+
+  /// Переключатель шрифта OpenDyslexic.
+  ///
+  /// In ru, this message translates to:
+  /// **'Шрифт для дислексии'**
+  String get settingsDyslexiaFont;
+
+  /// Ползунок размера шрифта.
+  ///
+  /// In ru, this message translates to:
+  /// **'Размер шрифта'**
+  String get settingsTextScaleTitle;
+
+  /// Размер шрифта в процентах.
+  ///
+  /// In ru, this message translates to:
+  /// **'{percent}%'**
+  String settingsTextScaleValue(int percent);
+
+  /// Переключатель контраста.
+  ///
+  /// In ru, this message translates to:
+  /// **'Повышенный контраст'**
+  String get settingsHighContrast;
+
+  /// Блок обучения.
+  ///
+  /// In ru, this message translates to:
+  /// **'Обучение'**
+  String get settingsLearningTitle;
+
+  /// Ползунок desiredRetention.
+  ///
+  /// In ru, this message translates to:
+  /// **'Желаемое удержание'**
+  String get settingsRetentionTitle;
+
+  /// Желаемое удержание в процентах.
+  ///
+  /// In ru, this message translates to:
+  /// **'{percent}%'**
+  String settingsRetentionValue(int percent);
+
+  /// Список шагов обучения.
+  ///
+  /// In ru, this message translates to:
+  /// **'Шаги обучения'**
+  String get settingsLearningStepsTitle;
+
+  /// Длительность шага обучения.
+  ///
+  /// In ru, this message translates to:
+  /// **'{minutes} мин'**
+  String settingsLearningStepValue(int minutes);
+
+  /// Кнопка добавления шага обучения.
+  ///
+  /// In ru, this message translates to:
+  /// **'Добавить шаг'**
+  String get settingsLearningStepAdd;
+
+  /// Подсказка удаления шага обучения.
+  ///
+  /// In ru, this message translates to:
+  /// **'Удалить шаг'**
+  String get settingsLearningStepDeleteTooltip;
+
+  /// Заголовок диалога шага обучения.
+  ///
+  /// In ru, this message translates to:
+  /// **'Новый шаг обучения'**
+  String get settingsLearningStepDialogTitle;
+
+  /// Поле длительности шага.
+  ///
+  /// In ru, this message translates to:
+  /// **'Длительность, мин'**
+  String get settingsLearningStepDialogLabel;
+
+  /// Ошибка длительности шага.
+  ///
+  /// In ru, this message translates to:
+  /// **'Введите число от 1 до 60'**
+  String get settingsLearningStepInvalid;
+
+  /// Ошибка превышения числа шагов.
+  ///
+  /// In ru, this message translates to:
+  /// **'Не больше 5 шагов'**
+  String get settingsLearningStepLimit;
+
+  /// Дневной лимит новых карточек.
+  ///
+  /// In ru, this message translates to:
+  /// **'Новых в день'**
+  String get settingsDailyNewLimitTitle;
+
+  /// Дневной лимит повторных карточек.
+  ///
+  /// In ru, this message translates to:
+  /// **'Повторных в день'**
+  String get settingsDailyReviewLimitTitle;
+
+  /// Пояснение нулевого дневного лимита.
+  ///
+  /// In ru, this message translates to:
+  /// **'0 — без ограничения'**
+  String get settingsDailyLimitZeroHint;
+
+  /// Блок доступности.
+  ///
+  /// In ru, this message translates to:
+  /// **'Доступность'**
+  String get settingsAccessibilityTitle;
+
+  /// Переключатель haptics.
+  ///
+  /// In ru, this message translates to:
+  /// **'Тактильная отдача'**
+  String get settingsHapticsTitle;
+
+  /// Пояснение haptics.
+  ///
+  /// In ru, this message translates to:
+  /// **'Вибрация при оценке карточек'**
+  String get settingsHapticsHint;
+
+  /// Блок API (SPEC A6.6).
+  ///
+  /// In ru, this message translates to:
+  /// **'API'**
+  String get settingsApiTitle;
+
+  /// Заголовок списка провайдеров.
+  ///
+  /// In ru, this message translates to:
+  /// **'Провайдеры'**
+  String get settingsApiProvidersTitle;
+
+  /// Кнопка перехода к добавлению ключа.
+  ///
+  /// In ru, this message translates to:
+  /// **'Добавить ключ'**
+  String get settingsApiAddKey;
+
+  /// Кнопка проверки ключа запросом.
+  ///
+  /// In ru, this message translates to:
+  /// **'Проверить'**
+  String get settingsApiCheckKey;
+
+  /// Ключ принят провайдером.
+  ///
+  /// In ru, this message translates to:
+  /// **'Ключ работает'**
+  String get settingsApiCheckValid;
+
+  /// Провайдер отверг ключ.
+  ///
+  /// In ru, this message translates to:
+  /// **'Ключ недействителен. Проверьте ключ'**
+  String get settingsApiCheckInvalid;
+
+  /// Проверка без сохранённого ключа.
+  ///
+  /// In ru, this message translates to:
+  /// **'Сначала добавьте ключ'**
+  String get settingsApiCheckMissing;
+
+  /// Проверка ключа без сети.
+  ///
+  /// In ru, this message translates to:
+  /// **'Нет подключения к интернету'**
+  String get settingsApiCheckNoConnection;
+
+  /// Проверка ключа при 429.
+  ///
+  /// In ru, this message translates to:
+  /// **'Превышен лимит запросов. Попробуйте позже'**
+  String get settingsApiCheckRateLimited;
+
+  /// Проверка ключа без адреса/модели OpenAI-совместимого сервера.
+  ///
+  /// In ru, this message translates to:
+  /// **'Сервер не настроен. Укажите адрес и модель'**
+  String get settingsApiCheckNotConfigured;
+
+  /// Прочие ошибки проверки ключа.
+  ///
+  /// In ru, this message translates to:
+  /// **'Не удалось проверить ключ. Попробуйте ещё раз'**
+  String get settingsApiCheckUnexpected;
+
+  /// Селектор модели по умолчанию.
+  ///
+  /// In ru, this message translates to:
+  /// **'Модель по умолчанию'**
+  String get settingsApiDefaultModel;
+
+  /// Расход токенов за неделю.
+  ///
+  /// In ru, this message translates to:
+  /// **'Токенов за неделю: {count}'**
+  String settingsApiTokensWeek(int count);
+
+  /// Переход к экрану настроек генерации (ADR-013).
+  ///
+  /// In ru, this message translates to:
+  /// **'Настройки сервера и ключей'**
+  String get settingsApiOpenGeneration;
+
+  /// Блок «О приложении».
+  ///
+  /// In ru, this message translates to:
+  /// **'О приложении'**
+  String get settingsAboutTitle;
+
+  /// Версия приложения.
+  ///
+  /// In ru, this message translates to:
+  /// **'Версия {version}'**
+  String settingsAboutVersion(String version);
+
+  /// Пункт лицензий.
+  ///
+  /// In ru, this message translates to:
+  /// **'Лицензии'**
+  String get settingsAboutLicenses;
+
+  /// Пункт политики приватности.
+  ///
+  /// In ru, this message translates to:
+  /// **'Политика приватности'**
+  String get settingsAboutPrivacy;
+
+  /// Ошибка открытия внешней ссылки.
+  ///
+  /// In ru, this message translates to:
+  /// **'Не удалось открыть ссылку'**
+  String get settingsAboutLinkError;
+
+  /// Успешное сохранение настроек приложения.
+  ///
+  /// In ru, this message translates to:
+  /// **'Настройки сохранены'**
+  String get settingsSavedGeneric;
 }
 
 class _AppLocalizationsDelegate

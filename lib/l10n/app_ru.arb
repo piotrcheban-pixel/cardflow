@@ -793,7 +793,7 @@
   "@settingsModelEmptyError": {
     "description": "Валидация: имя модели OpenAI-совместимого сервера пустое."
   },
-  "settingsOpenTooltip": "Настройки генерации",
+  "settingsOpenTooltip": "Настройки",
   "@settingsOpenTooltip": {
     "description": "Подсказка иконки перехода в настройки генерации."
   },
@@ -1414,5 +1414,366 @@
   "reviewPlanMissingMessage": "Откройте конструктор и соберите сессию заново.",
   "@reviewPlanMissingMessage": {
     "description": "Пояснение к состоянию «сессия не найдена»."
+  },
+  "navDecks": "Колоды",
+  "@navDecks": {
+    "description": "Пункт оболочки: список колод (SPEC A6.1)."
+  },
+  "navStatistics": "Статистика",
+  "@navStatistics": {
+    "description": "Пункт оболочки: статистика (SPEC A6.1)."
+  },
+  "navSettings": "Настройки",
+  "@navSettings": {
+    "description": "Пункт оболочки: настройки (SPEC A6.1)."
+  },
+  "statisticsTitle": "Статистика",
+  "@statisticsTitle": {
+    "description": "Заголовок экрана статистики (SPEC A6.5)."
+  },
+  "statisticsRetentionTitle": "Удержание за 30 дней",
+  "@statisticsRetentionTitle": {
+    "description": "Заголовок блока удержания."
+  },
+  "statisticsRetentionValue": "{percent}%",
+  "@statisticsRetentionValue": {
+    "description": "Процент удержания.",
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "statisticsRetentionNoData": "Нет повторений за 30 дней",
+  "@statisticsRetentionNoData": {
+    "description": "Удержание без данных за окно."
+  },
+  "statisticsHeatmapTitle": "Календарь повторений",
+  "@statisticsHeatmapTitle": {
+    "description": "Заголовок годовой тепловой карты."
+  },
+  "statisticsChartSemantics": "Повторений за год: {count}",
+  "@statisticsChartSemantics": {
+    "description": "Семантика годовой карты повторений.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "statisticsWeekTitle": "Недельный прогресс",
+  "@statisticsWeekTitle": {
+    "description": "Заголовок недельного прогресса."
+  },
+  "statisticsWeekSemantics": "Повторений за неделю: {count}",
+  "@statisticsWeekSemantics": {
+    "description": "Семантика недельного прогресса.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "statisticsWeakTopicsTitle": "Слабые темы",
+  "@statisticsWeakTopicsTitle": {
+    "description": "Заголовок списка слабых тем."
+  },
+  "statisticsWeakTopicsEmpty": "Слабых тем пока нет",
+  "@statisticsWeakTopicsEmpty": {
+    "description": "Слабых тем не набралось по порогам."
+  },
+  "statisticsWeakTopicStats": "{errors} из {reviews} с ошибкой",
+  "@statisticsWeakTopicStats": {
+    "description": "Статистика по слабому тегу.",
+    "placeholders": {
+      "errors": {
+        "type": "int"
+      },
+      "reviews": {
+        "type": "int"
+      }
+    }
+  },
+  "statisticsWeakTopicTrain": "Тренировать",
+  "@statisticsWeakTopicTrain": {
+    "description": "Кнопка перехода в конструктор с фильтром тега."
+  },
+  "statisticsForecastTitle": "Прогноз нагрузки на 7 дней",
+  "@statisticsForecastTitle": {
+    "description": "Заголовок прогноза."
+  },
+  "statisticsForecastToday": "Сегодня",
+  "@statisticsForecastToday": {
+    "description": "Подпись первого дня прогноза."
+  },
+  "statisticsForecastTomorrow": "Завтра",
+  "@statisticsForecastTomorrow": {
+    "description": "Подпись второго дня прогноза."
+  },
+  "statisticsForecastCount": "{count, plural, =0{Нет карточек} one{{count} карточка} few{{count} карточки} many{{count} карточек} other{{count} карточки}}",
+  "@statisticsForecastCount": {
+    "description": "Сколько карточек к повторению в день прогноза.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "statisticsForecastSemantics": "{day}: {count}",
+  "@statisticsForecastSemantics": {
+    "description": "Семантика столбца прогноза.",
+    "placeholders": {
+      "day": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "statisticsErrorTitle": "Не удалось загрузить статистику",
+  "@statisticsErrorTitle": {
+    "description": "Ошибка загрузки статистики."
+  },
+  "statisticsEmptyTitle": "Статистика появится после первых повторений",
+  "@statisticsEmptyTitle": {
+    "description": "Пустое состояние статистики."
+  },
+  "statisticsEmptyMessage": "Повторите карточки — здесь появятся удержание, календарь, слабые темы и прогноз.",
+  "@statisticsEmptyMessage": {
+    "description": "Пояснение к пустому состоянию статистики."
+  },
+  "settingsScreenTitle": "Настройки",
+  "@settingsScreenTitle": {
+    "description": "Заголовок экрана настроек (SPEC A6.6)."
+  },
+  "settingsAppearanceTitle": "Внешний вид",
+  "@settingsAppearanceTitle": {
+    "description": "Блок внешнего вида."
+  },
+  "settingsThemeTitle": "Тема",
+  "@settingsThemeTitle": {
+    "description": "Подпись выбора темы."
+  },
+  "settingsThemeLight": "Светлая",
+  "@settingsThemeLight": {
+    "description": "Светлая тема."
+  },
+  "settingsThemeDark": "Тёмная",
+  "@settingsThemeDark": {
+    "description": "Тёмная тема."
+  },
+  "settingsThemeSystem": "Системная",
+  "@settingsThemeSystem": {
+    "description": "Системная тема."
+  },
+  "settingsDynamicColor": "Динамические цвета",
+  "@settingsDynamicColor": {
+    "description": "Переключатель dynamic color."
+  },
+  "settingsDynamicColorHint": "Цвета системы, если платформа их поддерживает",
+  "@settingsDynamicColorHint": {
+    "description": "Пояснение dynamic color."
+  },
+  "settingsMotionTitle": "Анимация",
+  "@settingsMotionTitle": {
+    "description": "Подпись выбора профиля анимации."
+  },
+  "settingsMotionExpressive": "Выразительная",
+  "@settingsMotionExpressive": {
+    "description": "Выразительная анимация."
+  },
+  "settingsMotionStandard": "Стандартная",
+  "@settingsMotionStandard": {
+    "description": "Стандартная анимация."
+  },
+  "settingsDyslexiaFont": "Шрифт для дислексии",
+  "@settingsDyslexiaFont": {
+    "description": "Переключатель шрифта OpenDyslexic."
+  },
+  "settingsTextScaleTitle": "Размер шрифта",
+  "@settingsTextScaleTitle": {
+    "description": "Ползунок размера шрифта."
+  },
+  "settingsTextScaleValue": "{percent}%",
+  "@settingsTextScaleValue": {
+    "description": "Размер шрифта в процентах.",
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsHighContrast": "Повышенный контраст",
+  "@settingsHighContrast": {
+    "description": "Переключатель контраста."
+  },
+  "settingsLearningTitle": "Обучение",
+  "@settingsLearningTitle": {
+    "description": "Блок обучения."
+  },
+  "settingsRetentionTitle": "Желаемое удержание",
+  "@settingsRetentionTitle": {
+    "description": "Ползунок desiredRetention."
+  },
+  "settingsRetentionValue": "{percent}%",
+  "@settingsRetentionValue": {
+    "description": "Желаемое удержание в процентах.",
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsLearningStepsTitle": "Шаги обучения",
+  "@settingsLearningStepsTitle": {
+    "description": "Список шагов обучения."
+  },
+  "settingsLearningStepValue": "{minutes} мин",
+  "@settingsLearningStepValue": {
+    "description": "Длительность шага обучения.",
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsLearningStepAdd": "Добавить шаг",
+  "@settingsLearningStepAdd": {
+    "description": "Кнопка добавления шага обучения."
+  },
+  "settingsLearningStepDeleteTooltip": "Удалить шаг",
+  "@settingsLearningStepDeleteTooltip": {
+    "description": "Подсказка удаления шага обучения."
+  },
+  "settingsLearningStepDialogTitle": "Новый шаг обучения",
+  "@settingsLearningStepDialogTitle": {
+    "description": "Заголовок диалога шага обучения."
+  },
+  "settingsLearningStepDialogLabel": "Длительность, мин",
+  "@settingsLearningStepDialogLabel": {
+    "description": "Поле длительности шага."
+  },
+  "settingsLearningStepInvalid": "Введите число от 1 до 60",
+  "@settingsLearningStepInvalid": {
+    "description": "Ошибка длительности шага."
+  },
+  "settingsLearningStepLimit": "Не больше 5 шагов",
+  "@settingsLearningStepLimit": {
+    "description": "Ошибка превышения числа шагов."
+  },
+  "settingsDailyNewLimitTitle": "Новых в день",
+  "@settingsDailyNewLimitTitle": {
+    "description": "Дневной лимит новых карточек."
+  },
+  "settingsDailyReviewLimitTitle": "Повторных в день",
+  "@settingsDailyReviewLimitTitle": {
+    "description": "Дневной лимит повторных карточек."
+  },
+  "settingsDailyLimitZeroHint": "0 — без ограничения",
+  "@settingsDailyLimitZeroHint": {
+    "description": "Пояснение нулевого дневного лимита."
+  },
+  "settingsAccessibilityTitle": "Доступность",
+  "@settingsAccessibilityTitle": {
+    "description": "Блок доступности."
+  },
+  "settingsHapticsTitle": "Тактильная отдача",
+  "@settingsHapticsTitle": {
+    "description": "Переключатель haptics."
+  },
+  "settingsHapticsHint": "Вибрация при оценке карточек",
+  "@settingsHapticsHint": {
+    "description": "Пояснение haptics."
+  },
+  "settingsApiTitle": "API",
+  "@settingsApiTitle": {
+    "description": "Блок API (SPEC A6.6)."
+  },
+  "settingsApiProvidersTitle": "Провайдеры",
+  "@settingsApiProvidersTitle": {
+    "description": "Заголовок списка провайдеров."
+  },
+  "settingsApiAddKey": "Добавить ключ",
+  "@settingsApiAddKey": {
+    "description": "Кнопка перехода к добавлению ключа."
+  },
+  "settingsApiCheckKey": "Проверить",
+  "@settingsApiCheckKey": {
+    "description": "Кнопка проверки ключа запросом."
+  },
+  "settingsApiCheckValid": "Ключ работает",
+  "@settingsApiCheckValid": {
+    "description": "Ключ принят провайдером."
+  },
+  "settingsApiCheckInvalid": "Ключ недействителен. Проверьте ключ",
+  "@settingsApiCheckInvalid": {
+    "description": "Провайдер отверг ключ."
+  },
+  "settingsApiCheckMissing": "Сначала добавьте ключ",
+  "@settingsApiCheckMissing": {
+    "description": "Проверка без сохранённого ключа."
+  },
+  "settingsApiCheckNoConnection": "Нет подключения к интернету",
+  "@settingsApiCheckNoConnection": {
+    "description": "Проверка ключа без сети."
+  },
+  "settingsApiCheckRateLimited": "Превышен лимит запросов. Попробуйте позже",
+  "@settingsApiCheckRateLimited": {
+    "description": "Проверка ключа при 429."
+  },
+  "settingsApiCheckNotConfigured": "Сервер не настроен. Укажите адрес и модель",
+  "@settingsApiCheckNotConfigured": {
+    "description": "Проверка ключа без адреса/модели OpenAI-совместимого сервера."
+  },
+  "settingsApiCheckUnexpected": "Не удалось проверить ключ. Попробуйте ещё раз",
+  "@settingsApiCheckUnexpected": {
+    "description": "Прочие ошибки проверки ключа."
+  },
+  "settingsApiDefaultModel": "Модель по умолчанию",
+  "@settingsApiDefaultModel": {
+    "description": "Селектор модели по умолчанию."
+  },
+  "settingsApiTokensWeek": "Токенов за неделю: {count}",
+  "@settingsApiTokensWeek": {
+    "description": "Расход токенов за неделю.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsApiOpenGeneration": "Настройки сервера и ключей",
+  "@settingsApiOpenGeneration": {
+    "description": "Переход к экрану настроек генерации (ADR-013)."
+  },
+  "settingsAboutTitle": "О приложении",
+  "@settingsAboutTitle": {
+    "description": "Блок «О приложении»."
+  },
+  "settingsAboutVersion": "Версия {version}",
+  "@settingsAboutVersion": {
+    "description": "Версия приложения.",
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsAboutLicenses": "Лицензии",
+  "@settingsAboutLicenses": {
+    "description": "Пункт лицензий."
+  },
+  "settingsAboutPrivacy": "Политика приватности",
+  "@settingsAboutPrivacy": {
+    "description": "Пункт политики приватности."
+  },
+  "settingsAboutLinkError": "Не удалось открыть ссылку",
+  "@settingsAboutLinkError": {
+    "description": "Ошибка открытия внешней ссылки."
+  },
+  "settingsSavedGeneric": "Настройки сохранены",
+  "@settingsSavedGeneric": {
+    "description": "Успешное сохранение настроек приложения."
   }
 }

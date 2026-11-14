@@ -8,6 +8,8 @@ import 'package:cardflow/domain/review/review_repository.dart';
 import 'package:cardflow/domain/scheduling/scheduler.dart';
 import 'package:cardflow/domain/session/leech_repository.dart';
 import 'package:cardflow/domain/session/session_preset_repository.dart';
+import 'package:cardflow/domain/settings/app_settings_store.dart';
+import 'package:cardflow/domain/statistics/statistics_repository.dart';
 import 'package:cardflow/domain/transfer/deck_transfer_service.dart';
 import 'package:cardflow/domain/transfer/file_gateway.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
@@ -31,6 +33,7 @@ import 'decks_fakes.dart';
 import 'generation_fakes.dart';
 import 'review_fakes.dart';
 import 'session_fakes.dart';
+import 'settings_fakes.dart';
 
 /// Тестовый harness приложения CardFlow (итерация 1).
 ///
@@ -171,6 +174,9 @@ List<Override> decksOverrides({
   CardImageGateway? imageGateway,
   SessionPresetRepository? sessionPresetRepository,
   LeechRepository? leechRepository,
+  AppSettingsStore? appSettingsStore,
+  StatisticsRepository? statisticsRepository,
+  FakeExternalLinkLauncher? externalLinkLauncher,
 }) {
   return <Override>[
     deckRepositoryProvider.overrideWithValue(deckRepository),
@@ -200,6 +206,15 @@ List<Override> decksOverrides({
     ),
     leechRepositoryProvider.overrideWithValue(
       leechRepository ?? FakeLeechRepository(),
+    ),
+    appSettingsStoreProvider.overrideWithValue(
+      appSettingsStore ?? FakeAppSettingsStore(),
+    ),
+    statisticsRepositoryProvider.overrideWithValue(
+      statisticsRepository ?? FakeStatisticsRepository(),
+    ),
+    externalLinkLauncherProvider.overrideWithValue(
+      externalLinkLauncher ?? FakeExternalLinkLauncher(),
     ),
   ];
 }

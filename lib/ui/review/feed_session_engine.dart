@@ -101,6 +101,8 @@ class FeedSessionEngine extends ChangeNotifier {
     required this.clock,
     this.mode = reviewModeFeed,
     this.prebuilt = false,
+    this.newLimit = 0,
+    this.reviewLimit = 0,
   });
 
   /// Снимок карточек колоды на момент старта сессии.
@@ -122,6 +124,12 @@ class FeedSessionEngine extends ChangeNotifier {
   /// ADR-018) и не пересобираются [ReviewQueue]; `false` — очередь строится
   /// по ADR-016 (due/new).
   final bool prebuilt;
+
+  /// Дневной лимит новых карточек (A6.6, ADR-019 §2); `0` — без лимита.
+  final int newLimit;
+
+  /// Дневной лимит повторных карточек; `0` — без лимита.
+  final int reviewLimit;
 
   final List<ReviewUndo> _undoStack = <ReviewUndo>[];
   List<FeedSessionItem> _items = const <FeedSessionItem>[];
@@ -153,7 +161,12 @@ class FeedSessionEngine extends ChangeNotifier {
     // упорядоченным: пересборка `ReviewQueue` отбросила бы будущие `due`.
     final List<Card> queue = prebuilt
         ? List<Card>.unmodifiable(cards)
-        : ReviewQueue.build(cards, now: now);
+        : ReviewQueue.build(
+            cards,
+            now: now,
+            newLimit: newLimit,
+            reviewLimit: reviewLimit,
+          );
     _items = <FeedSessionItem>[
       for (final Card card in queue)
         FeedSessionItem(

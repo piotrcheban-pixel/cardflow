@@ -89,6 +89,13 @@ flutter:
   # Включает генерацию локализации из lib/l10n/app_ru.arb (gen-l10n).
   generate: true
 
+  # Шрифт для дислексии (SPEC A6.6, ADR-019 §6): SIL OFL 1.1,
+  # assets/fonts/OFL.txt. Включается переключателем в настройках.
+  fonts:
+    - family: OpenDyslexic
+      fonts:
+        - asset: assets/fonts/OpenDyslexic-Regular.otf
+
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.

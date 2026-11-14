@@ -28,7 +28,7 @@ void main() {
         await tester.pumpWidget(appUnderTest());
         await tester.pumpAndSettle();
 
-        final context = tester.element(find.byType(Scaffold));
+        final context = tester.element(find.byType(Scaffold).first);
         expect(Localizations.localeOf(context), const Locale('ru'));
         expect(AppLocalizations.supportedLocales, const <Locale>[Locale('ru')]);
 
@@ -45,7 +45,7 @@ void main() {
       await tester.pumpWidget(appUnderTest());
       await tester.pumpAndSettle();
 
-      final context = tester.element(find.byType(Scaffold));
+      final context = tester.element(find.byType(Scaffold).first);
       expect(AppLocalizations.of(context).appTitle, 'CardFlow');
     });
 
@@ -55,7 +55,7 @@ void main() {
       await tester.pumpWidget(appUnderTest());
       await tester.pumpAndSettle();
 
-      final context = tester.element(find.byType(Scaffold));
+      final context = tester.element(find.byType(Scaffold).first);
       expect(MaterialLocalizations.of(context), isNotNull);
       expect(WidgetsLocalizations.of(context), isNotNull);
     });

@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:cardflow/api/generation/api_key_verifier.dart';
 import 'package:cardflow/api/generation/card_generation_service.dart';
 import 'package:cardflow/api/generation/generation_pipeline.dart';
 import 'package:cardflow/api/http/generation_http_client.dart';
@@ -27,6 +28,8 @@ import 'package:cardflow/data/review/drift_review_repository.dart';
 import 'package:cardflow/data/review/drift_leech_repository.dart';
 import 'package:cardflow/data/security/secure_api_key_store.dart';
 import 'package:cardflow/data/session/drift_session_preset_repository.dart';
+import 'package:cardflow/data/settings/drift_app_settings_store.dart';
+import 'package:cardflow/data/statistics/drift_statistics_repository.dart';
 import 'package:cardflow/data/transfer/drift_deck_transfer_service.dart';
 import 'package:cardflow/data/transfer/file_picker_gateway.dart';
 import 'package:cardflow/data/transfer/media_store.dart';
@@ -39,15 +42,21 @@ import 'package:cardflow/domain/generation/api_key_store.dart';
 import 'package:cardflow/domain/generation/document_gateway.dart';
 import 'package:cardflow/domain/generation/generation_card_store.dart';
 import 'package:cardflow/domain/generation/generation_job.dart';
+import 'package:cardflow/domain/generation/generation_provider.dart';
 import 'package:cardflow/domain/generation/generation_settings_store.dart';
 import 'package:cardflow/domain/generation/openai_compatible_settings.dart';
 import 'package:cardflow/domain/review/review_repository.dart';
 import 'package:cardflow/domain/scheduling/scheduler.dart';
 import 'package:cardflow/domain/session/leech_repository.dart';
 import 'package:cardflow/domain/session/session_preset_repository.dart';
+import 'package:cardflow/domain/settings/app_settings.dart';
+import 'package:cardflow/domain/settings/app_settings_store.dart';
+import 'package:cardflow/domain/statistics/statistics.dart';
+import 'package:cardflow/domain/statistics/statistics_repository.dart';
 import 'package:cardflow/domain/transfer/archive_codec.dart';
 import 'package:cardflow/domain/transfer/deck_transfer_service.dart';
 import 'package:cardflow/domain/transfer/file_gateway.dart';
+import 'package:cardflow/ui/settings/external_link_launcher.dart';
 
 /// Провайдеры приложения (ADR-002: Riverpod 3 без кодогенерации).
 ///
@@ -118,8 +127,14 @@ final sessionPresetRepositoryProvider = Provider<SessionPresetRepository>((
   return DriftSessionPresetRepository(ref.watch(appDatabaseProvider));
 });
 
-/// Планировщик FSRS (ADR-004: конфигурация детерминированного прогноза).
-final schedulerProvider = Provider<Scheduler>((ref) => FsrsScheduler());
+/// Планировщик FSRS: retention и шаги обучения — из настроек (A6.6, ADR-019).
+final schedulerProvider = Provider<Scheduler>((ref) {
+  final AppSettings settings = ref.watch(effectiveAppSettingsProvider);
+  return FsrsScheduler(
+    desiredRetention: settings.desiredRetention,
+    learningSteps: settings.learningSteps,
+  );
+});
 
 /// Кодек `.zip`-архива колоды.
 final deckArchiveCodecProvider = Provider<DeckArchiveCodec>((ref) {
@@ -155,6 +170,98 @@ final generationSettingsStoreProvider = Provider<GenerationSettingsStore>((
   ref,
 ) {
   return DriftGenerationSettingsStore(ref.watch(appDatabaseProvider));
+});
+
+/// Хранилище пользовательских настроек (`app_settings`, ADR-019).
+final appSettingsStoreProvider = Provider<AppSettingsStore>((ref) {
+  return DriftAppSettingsStore(ref.watch(appDatabaseProvider));
+});
+
+/// Контроллер настроек: состояние меняется сразу, запись — в store.
+///
+/// Ошибка записи не «проглатывается»: состояние откатывается к прежнему,
+/// исключение уходит в UI (сообщение из ARB), чтобы экран не показывал
+/// несохранённые настройки как сохранённые.
+class AppSettingsController extends AsyncNotifier<AppSettings> {
+  @override
+  Future<AppSettings> build() => ref.watch(appSettingsStoreProvider).read();
+
+  /// Применяет [settings] и сохраняет их.
+  Future<void> save(AppSettings settings) async {
+    final AppSettings? previous = state.value;
+    state = AsyncData<AppSettings>(settings);
+    try {
+      await ref.read(appSettingsStoreProvider).write(settings);
+    } on Object catch (error, stackTrace) {
+      state = previous == null
+          ? AsyncError<AppSettings>(error, stackTrace)
+          : AsyncData<AppSettings>(previous);
+      rethrow;
+    }
+  }
+}
+
+/// Настройки приложения (loading/error/data).
+final appSettingsProvider =
+    AsyncNotifierProvider<AppSettingsController, AppSettings>(
+      AppSettingsController.new,
+    );
+
+/// Синхронный снимок настроек для мест, где `await` невозможен.
+///
+/// До загрузки/при ошибке — значения по умолчанию (ADR-019 §1).
+final effectiveAppSettingsProvider = Provider<AppSettings>((ref) {
+  return ref.watch(appSettingsProvider).value ?? AppSettings.defaults;
+});
+
+/// Проверка ключа API минимальным запросом (A6.6, ADR-019 §5).
+final apiKeyVerifierProvider = Provider<ApiKeyVerifier>((ref) {
+  return ApiKeyVerifier(
+    adapters: generationAdapters,
+    apiKeyStore: ref.watch(apiKeyStoreProvider),
+    transport: ref.watch(generationHttpClientProvider),
+    generationSettingsStore: ref.watch(generationSettingsStoreProvider),
+  );
+});
+
+/// Наличие ключей API по провайдерам (только present/absent, без значений).
+final providerKeyStatusProvider =
+    FutureProvider.autoDispose<Map<GenerationProvider, bool>>((ref) async {
+      final ApiKeyStore store = ref.watch(apiKeyStoreProvider);
+      final Map<GenerationProvider, bool> result = <GenerationProvider, bool>{};
+      for (final GenerationProvider provider in GenerationProvider.values) {
+        final String? key = await store.read(provider);
+        result[provider] = key != null && key.trim().isNotEmpty;
+      }
+      return result;
+    });
+
+/// Внешние ссылки (политика приватности) — системный браузер.
+final externalLinkLauncherProvider = Provider<ExternalLinkLauncher>((ref) {
+  return const UrlLauncherExternalLinkLauncher();
+});
+
+/// Статистика обучения (SPEC A6.5, ADR-019 §4).
+final statisticsRepositoryProvider = Provider<StatisticsRepository>((ref) {
+  return DriftStatisticsRepository(ref.watch(appDatabaseProvider));
+});
+
+/// Снимок статистики для экрана A6.5.
+final statisticsProvider = FutureProvider.autoDispose<StatisticsSnapshot>((
+  ref,
+) {
+  return ref.watch(statisticsRepositoryProvider).load(now: DateTime.now());
+});
+
+/// Токены генерации за последние 7 дней (A6.6, блок API).
+final weeklyTokensProvider = FutureProvider.autoDispose<int>((ref) {
+  return ref
+      .watch(statisticsRepositoryProvider)
+      .tokensUsedSince(
+        DateTime.now().subtract(
+          const Duration(days: StatisticsCalculator.weekDays - 1),
+        ),
+      );
 });
 
 /// Текущие настройки OpenAI-совместимого сервера для экрана настроек.

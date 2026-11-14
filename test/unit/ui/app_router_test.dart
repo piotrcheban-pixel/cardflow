@@ -20,6 +20,8 @@ void main() {
       expect(AppRoutes.generationPath, '/generate');
       expect(AppRoutes.deckGenerationPath('deck-1'), '/decks/deck-1/generate');
       expect(AppRoutes.generationSettingsPath, '/settings/generation');
+      expect(AppRoutes.statisticsPath, '/statistics');
+      expect(AppRoutes.settingsPath, '/settings');
       expect(AppRoutes.constructorPath, '/constructor');
       expect(
         AppRoutes.constructorDeckPath('deck-1'),
@@ -52,54 +54,62 @@ void main() {
   });
 
   group('createAppRouter', () {
-    test(
-      'содержит 12 маршрутов (итерации 2, 3c, 4, 6) с уникальными именами',
-      () {
-        final router = createAppRouter();
-        addTearDown(router.dispose);
+    test('содержит оболочку A6.1 и 12 верхнеуровневых маршрутов с уникальными именами', () {
+      final router = createAppRouter();
+      addTearDown(router.dispose);
 
-        final routes = router.configuration.routes;
-        expect(routes, hasLength(12));
-        final paths = <String>[];
-        final names = <String?>[];
-        for (final route in routes) {
-          final goRoute = route as GoRoute;
-          paths.add(goRoute.path);
-          names.add(goRoute.name);
-        }
+      final routes = router.configuration.routes;
+      expect(routes, hasLength(12));
+      final shell = routes.first;
+      expect(shell, isA<StatefulShellRoute>());
+      final branchRoutes = <GoRoute>[
+        for (final StatefulShellBranch branch
+            in (shell as StatefulShellRoute).branches)
+          for (final RouteBase route in branch.routes) route as GoRoute,
+      ];
+      expect(branchRoutes, hasLength(3));
+      final goRoutes = <GoRoute>[
+        ...routes.whereType<GoRoute>(),
+        ...branchRoutes,
+      ];
+      final paths = <String>[for (final GoRoute route in goRoutes) route.path];
+      final names = <String?>[for (final GoRoute route in goRoutes) route.name];
 
-        expect(paths, contains('/'));
-        expect(paths, contains('/decks/:deckId'));
-        expect(paths, contains('/decks/:deckId/study'));
-        expect(paths, contains('/decks/:deckId/feed'));
-        expect(paths, contains('/decks/:deckId/generate'));
-        expect(paths, contains('/generate'));
-        expect(paths, contains('/decks/:deckId/cards/new'));
-        expect(paths, contains('/decks/:deckId/cards/:cardId/edit'));
-        expect(paths, contains('/settings/generation'));
-        expect(paths, contains('/constructor'));
-        expect(paths, contains('/session/classic'));
-        expect(paths, contains('/session/feed'));
-        expect(
-          names,
-          containsAll(<String>[
-            AppRoutes.decks,
-            AppRoutes.deck,
-            AppRoutes.study,
-            AppRoutes.feed,
-            AppRoutes.deckGeneration,
-            AppRoutes.generation,
-            AppRoutes.cardNew,
-            AppRoutes.cardEdit,
-            AppRoutes.generationSettings,
-            AppRoutes.constructor,
-            AppRoutes.sessionClassic,
-            AppRoutes.sessionFeed,
-          ]),
-        );
-        expect(AppRoutes.generationSettings, 'generationSettings');
-        expect(names.toSet(), hasLength(names.length));
-      },
-    );
+      expect(paths, contains('/'));
+      expect(paths, contains('/statistics'));
+      expect(paths, contains('/settings'));
+      expect(paths, contains('/decks/:deckId'));
+      expect(paths, contains('/decks/:deckId/study'));
+      expect(paths, contains('/decks/:deckId/feed'));
+      expect(paths, contains('/decks/:deckId/generate'));
+      expect(paths, contains('/generate'));
+      expect(paths, contains('/decks/:deckId/cards/new'));
+      expect(paths, contains('/decks/:deckId/cards/:cardId/edit'));
+      expect(paths, contains('/settings/generation'));
+      expect(paths, contains('/constructor'));
+      expect(paths, contains('/session/classic'));
+      expect(paths, contains('/session/feed'));
+      expect(
+        names,
+        containsAll(<String>[
+          AppRoutes.decks,
+          AppRoutes.statistics,
+          AppRoutes.settings,
+          AppRoutes.deck,
+          AppRoutes.study,
+          AppRoutes.feed,
+          AppRoutes.deckGeneration,
+          AppRoutes.generation,
+          AppRoutes.cardNew,
+          AppRoutes.cardEdit,
+          AppRoutes.generationSettings,
+          AppRoutes.constructor,
+          AppRoutes.sessionClassic,
+          AppRoutes.sessionFeed,
+        ]),
+      );
+      expect(AppRoutes.generationSettings, 'generationSettings');
+      expect(names.toSet(), hasLength(names.length));
+    });
   });
 }

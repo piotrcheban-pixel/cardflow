@@ -655,7 +655,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsModelEmptyError => 'Укажите модель';
 
   @override
-  String get settingsOpenTooltip => 'Настройки генерации';
+  String get settingsOpenTooltip => 'Настройки';
 
   @override
   String get settingsApiKeysTitle => 'Ключи API';
@@ -1153,4 +1153,266 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get reviewPlanMissingMessage =>
       'Откройте конструктор и соберите сессию заново.';
+
+  @override
+  String get navDecks => 'Колоды';
+
+  @override
+  String get navStatistics => 'Статистика';
+
+  @override
+  String get navSettings => 'Настройки';
+
+  @override
+  String get statisticsTitle => 'Статистика';
+
+  @override
+  String get statisticsRetentionTitle => 'Удержание за 30 дней';
+
+  @override
+  String statisticsRetentionValue(int percent) {
+    return '$percent%';
+  }
+
+  @override
+  String get statisticsRetentionNoData => 'Нет повторений за 30 дней';
+
+  @override
+  String get statisticsHeatmapTitle => 'Календарь повторений';
+
+  @override
+  String statisticsChartSemantics(int count) {
+    return 'Повторений за год: $count';
+  }
+
+  @override
+  String get statisticsWeekTitle => 'Недельный прогресс';
+
+  @override
+  String statisticsWeekSemantics(int count) {
+    return 'Повторений за неделю: $count';
+  }
+
+  @override
+  String get statisticsWeakTopicsTitle => 'Слабые темы';
+
+  @override
+  String get statisticsWeakTopicsEmpty => 'Слабых тем пока нет';
+
+  @override
+  String statisticsWeakTopicStats(int errors, int reviews) {
+    return '$errors из $reviews с ошибкой';
+  }
+
+  @override
+  String get statisticsWeakTopicTrain => 'Тренировать';
+
+  @override
+  String get statisticsForecastTitle => 'Прогноз нагрузки на 7 дней';
+
+  @override
+  String get statisticsForecastToday => 'Сегодня';
+
+  @override
+  String get statisticsForecastTomorrow => 'Завтра';
+
+  @override
+  String statisticsForecastCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count карточки',
+      many: '$count карточек',
+      few: '$count карточки',
+      one: '$count карточка',
+      zero: 'Нет карточек',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String statisticsForecastSemantics(String day, int count) {
+    return '$day: $count';
+  }
+
+  @override
+  String get statisticsErrorTitle => 'Не удалось загрузить статистику';
+
+  @override
+  String get statisticsEmptyTitle =>
+      'Статистика появится после первых повторений';
+
+  @override
+  String get statisticsEmptyMessage =>
+      'Повторите карточки — здесь появятся удержание, календарь, слабые темы и прогноз.';
+
+  @override
+  String get settingsScreenTitle => 'Настройки';
+
+  @override
+  String get settingsAppearanceTitle => 'Внешний вид';
+
+  @override
+  String get settingsThemeTitle => 'Тема';
+
+  @override
+  String get settingsThemeLight => 'Светлая';
+
+  @override
+  String get settingsThemeDark => 'Тёмная';
+
+  @override
+  String get settingsThemeSystem => 'Системная';
+
+  @override
+  String get settingsDynamicColor => 'Динамические цвета';
+
+  @override
+  String get settingsDynamicColorHint =>
+      'Цвета системы, если платформа их поддерживает';
+
+  @override
+  String get settingsMotionTitle => 'Анимация';
+
+  @override
+  String get settingsMotionExpressive => 'Выразительная';
+
+  @override
+  String get settingsMotionStandard => 'Стандартная';
+
+  @override
+  String get settingsDyslexiaFont => 'Шрифт для дислексии';
+
+  @override
+  String get settingsTextScaleTitle => 'Размер шрифта';
+
+  @override
+  String settingsTextScaleValue(int percent) {
+    return '$percent%';
+  }
+
+  @override
+  String get settingsHighContrast => 'Повышенный контраст';
+
+  @override
+  String get settingsLearningTitle => 'Обучение';
+
+  @override
+  String get settingsRetentionTitle => 'Желаемое удержание';
+
+  @override
+  String settingsRetentionValue(int percent) {
+    return '$percent%';
+  }
+
+  @override
+  String get settingsLearningStepsTitle => 'Шаги обучения';
+
+  @override
+  String settingsLearningStepValue(int minutes) {
+    return '$minutes мин';
+  }
+
+  @override
+  String get settingsLearningStepAdd => 'Добавить шаг';
+
+  @override
+  String get settingsLearningStepDeleteTooltip => 'Удалить шаг';
+
+  @override
+  String get settingsLearningStepDialogTitle => 'Новый шаг обучения';
+
+  @override
+  String get settingsLearningStepDialogLabel => 'Длительность, мин';
+
+  @override
+  String get settingsLearningStepInvalid => 'Введите число от 1 до 60';
+
+  @override
+  String get settingsLearningStepLimit => 'Не больше 5 шагов';
+
+  @override
+  String get settingsDailyNewLimitTitle => 'Новых в день';
+
+  @override
+  String get settingsDailyReviewLimitTitle => 'Повторных в день';
+
+  @override
+  String get settingsDailyLimitZeroHint => '0 — без ограничения';
+
+  @override
+  String get settingsAccessibilityTitle => 'Доступность';
+
+  @override
+  String get settingsHapticsTitle => 'Тактильная отдача';
+
+  @override
+  String get settingsHapticsHint => 'Вибрация при оценке карточек';
+
+  @override
+  String get settingsApiTitle => 'API';
+
+  @override
+  String get settingsApiProvidersTitle => 'Провайдеры';
+
+  @override
+  String get settingsApiAddKey => 'Добавить ключ';
+
+  @override
+  String get settingsApiCheckKey => 'Проверить';
+
+  @override
+  String get settingsApiCheckValid => 'Ключ работает';
+
+  @override
+  String get settingsApiCheckInvalid => 'Ключ недействителен. Проверьте ключ';
+
+  @override
+  String get settingsApiCheckMissing => 'Сначала добавьте ключ';
+
+  @override
+  String get settingsApiCheckNoConnection => 'Нет подключения к интернету';
+
+  @override
+  String get settingsApiCheckRateLimited =>
+      'Превышен лимит запросов. Попробуйте позже';
+
+  @override
+  String get settingsApiCheckNotConfigured =>
+      'Сервер не настроен. Укажите адрес и модель';
+
+  @override
+  String get settingsApiCheckUnexpected =>
+      'Не удалось проверить ключ. Попробуйте ещё раз';
+
+  @override
+  String get settingsApiDefaultModel => 'Модель по умолчанию';
+
+  @override
+  String settingsApiTokensWeek(int count) {
+    return 'Токенов за неделю: $count';
+  }
+
+  @override
+  String get settingsApiOpenGeneration => 'Настройки сервера и ключей';
+
+  @override
+  String get settingsAboutTitle => 'О приложении';
+
+  @override
+  String settingsAboutVersion(String version) {
+    return 'Версия $version';
+  }
+
+  @override
+  String get settingsAboutLicenses => 'Лицензии';
+
+  @override
+  String get settingsAboutPrivacy => 'Политика приватности';
+
+  @override
+  String get settingsAboutLinkError => 'Не удалось открыть ссылку';
+
+  @override
+  String get settingsSavedGeneric => 'Настройки сохранены';
 }

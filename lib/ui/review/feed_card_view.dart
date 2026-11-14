@@ -31,6 +31,7 @@ class FeedCardView extends StatefulWidget {
     required this.onRate,
     this.card,
     this.mediaBytes = const <String, Uint8List>{},
+    this.spring,
     super.key,
   });
 
@@ -67,6 +68,9 @@ class FeedCardView extends StatefulWidget {
   /// Байты изображений по `media.id`.
   final Map<String, Uint8List> mediaBytes;
 
+  /// Пружина переворота/возврата карточки (A6.6, ADR-019 §2).
+  final SpringDescription? spring;
+
   @override
   State<FeedCardView> createState() => _FeedCardViewState();
 }
@@ -92,7 +96,7 @@ class _FeedCardViewState extends State<FeedCardView>
     if (oldWidget.revealed != widget.revealed) {
       _flip.animateWith(
         SpringSimulation(
-          AppMotion.expressiveSpring(),
+          widget.spring ?? AppMotion.expressiveSpring(),
           _flip.value,
           widget.revealed ? 1 : 0,
           0,
@@ -138,7 +142,7 @@ class _FeedCardViewState extends State<FeedCardView>
     if (rating == null) {
       _swipe.animateWith(
         SpringSimulation(
-          AppMotion.expressiveSpring(),
+          widget.spring ?? AppMotion.expressiveSpring(),
           _swipe.value,
           0,
           velocity,

@@ -59,7 +59,7 @@ class DecksScreen extends ConsumerWidget {
           IconButton(
             tooltip: l10n.settingsOpenTooltip,
             icon: const Icon(Icons.settings_outlined),
-            onPressed: () => context.push(AppRoutes.generationSettingsPath),
+            onPressed: () => context.go(AppRoutes.settingsPath),
           ),
         ],
       ),

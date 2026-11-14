@@ -15,12 +15,14 @@ import 'package:cardflow/domain/generation/generation_job.dart';
 import 'package:cardflow/domain/generation/generation_provider.dart';
 import 'package:cardflow/domain/generation/generation_run.dart';
 import 'package:cardflow/domain/generation/document_gateway.dart';
+import 'package:cardflow/domain/settings/app_settings.dart';
 import 'package:cardflow/ui/generation/generation_screen.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
 
 import '../../helpers/decks_fakes.dart';
 import '../../helpers/generation_fakes.dart';
 import '../../helpers/pump_app.dart';
+import '../../helpers/settings_fakes.dart';
 
 Future<T> inlineIsolate<T>(Future<T> Function() task) => task();
 
@@ -30,6 +32,7 @@ void main() {
   late FakeApiKeyStore keyStore;
   late FakeGenerationSettingsStore settingsStore;
   late FakeDeckRepository deckRepository;
+  late FakeAppSettingsStore appSettings;
 
   setUp(() {
     gateway = FakeDocumentGateway();
@@ -39,6 +42,7 @@ void main() {
     });
     settingsStore = FakeGenerationSettingsStore();
     deckRepository = FakeDeckRepository();
+    appSettings = FakeAppSettingsStore();
   });
 
   List<Override> overrides() {
@@ -52,6 +56,7 @@ void main() {
       apiKeyStoreProvider.overrideWithValue(keyStore),
       generationSettingsStoreProvider.overrideWithValue(settingsStore),
       deckRepositoryProvider.overrideWithValue(deckRepository),
+      appSettingsStoreProvider.overrideWithValue(appSettings),
     ];
   }
 
@@ -95,6 +100,40 @@ void main() {
     );
     await tester.pumpAndSettle();
   }
+
+  testWidgets('модель по умолчанию из настроек A6.6 предвыбирается', (
+    tester,
+  ) async {
+    await keyStore.write(GenerationProvider.anthropic, 'key-anthropic');
+    appSettings.settings = AppSettings.defaults.copyWith(
+      defaultProvider: GenerationProvider.anthropic,
+      defaultModelId: 'claude-3-5-haiku-latest',
+    );
+    await pumpScreen(tester);
+
+    final Finder providerChip = find.byKey(
+      const ValueKey<String>('generation-provider-anthropic'),
+    );
+    await tester.scrollUntilVisible(
+      providerChip,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(tester.widget<ChoiceChip>(providerChip).selected, isTrue);
+
+    final Finder modelField = find.byKey(
+      const ValueKey<String>('generation-model'),
+    );
+    await tester.scrollUntilVisible(
+      modelField,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(
+      tester.widget<DropdownButtonFormField<String>>(modelField).initialValue,
+      'claude-3-5-haiku-latest',
+    );
+  });
 
   testWidgets('рендер: заголовок, зона прикрепления, пожелания, кнопка', (
     tester,

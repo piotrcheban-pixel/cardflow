@@ -103,6 +103,7 @@ void main() {
       builder: (BuildContext context, GoRouterState state) =>
           SessionConstructorScreen(
             preselectedDeckId: state.uri.queryParameters['deck'],
+            preselectedTag: state.uri.queryParameters['tag'],
           ),
     ),
     GoRoute(
@@ -186,6 +187,21 @@ void main() {
       );
     },
   );
+
+  testWidgets('тег из «Слабых тем» предвыбран через ?tag=', (
+    WidgetTester tester,
+  ) async {
+    await pumpConstructor(
+      tester,
+      overrideList: overrides(),
+      location: '/constructor?deck=deck-1&tag=даты',
+    );
+    final AppLocalizations l10n = l10nOf(tester);
+
+    expect(chipSelected(tester, 'constructor-tag-даты'), isTrue);
+    expect(chipSelected(tester, 'constructor-tag-язык'), isFalse);
+    expect(find.text(l10n.constructorAvailableCount(1)), findsOneWidget);
+  });
 
   testWidgets('старт: базовый порядок плана и переход в классику', (
     WidgetTester tester,

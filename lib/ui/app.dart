@@ -1,9 +1,13 @@
+import 'package:dynamic_color/dynamic_color.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'package:cardflow/domain/settings/app_settings.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/m3e/m3e.dart';
 import 'package:cardflow/ui/router/app_router.dart';
+import 'package:cardflow/ui/state/app_providers.dart';
 import 'package:cardflow/ui/theme/app_theme.dart';
 
 /// Экран критической ошибки старта (например, если БД не открылась).
@@ -54,9 +58,12 @@ class StartupErrorApp extends StatelessWidget {
 /// База Material — официальный пакет `material_ui` (ADR-001). Системные строки
 /// Material/Cupertino — делегаты `material_ui`, свой текст — из ARB.
 ///
+/// Пользовательские настройки (A6.6, ADR-019) применяются здесь: тема,
+/// dynamic color, повышенный контраст, шрифт для дислексии и масштаб текста.
+///
 /// M3 Expressive: `M3EMaterialApp` не принимает `routerConfig`/GoRouter, поэтому
 /// корень — `MaterialApp.router`, а `M3ETheme` подключается в `builder` (ADR-007).
-class CardFlowApp extends StatelessWidget {
+class CardFlowApp extends ConsumerStatefulWidget {
   /// Создаёт корневое приложение.
   ///
   /// [router] — override для widget-тестов (по умолчанию [createAppRouter]).
@@ -66,7 +73,42 @@ class CardFlowApp extends StatelessWidget {
   final GoRouter? router;
 
   @override
+  ConsumerState<CardFlowApp> createState() => _CardFlowAppState();
+}
+
+class _CardFlowAppState extends ConsumerState<CardFlowApp> {
+  /// Router создаётся один раз: смена темы/настроек перестраивает приложение,
+  /// но не должна сбрасывать навигацию (ADR-019).
+  late final GoRouter _router = widget.router ?? createAppRouter();
+
+  @override
+  void dispose() {
+    if (widget.router == null) _router.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final AppSettings settings = ref.watch(effectiveAppSettingsProvider);
+    if (!settings.dynamicColor) {
+      return _buildApp(settings);
+    }
+    return DynamicColorBuilder(
+      builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
+        return _buildApp(
+          settings,
+          lightScheme: lightDynamic,
+          darkScheme: darkDynamic,
+        );
+      },
+    );
+  }
+
+  Widget _buildApp(
+    AppSettings settings, {
+    ColorScheme? lightScheme,
+    ColorScheme? darkScheme,
+  }) {
     return MaterialApp.router(
       onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
       debugShowCheckedModeBanner: false,
@@ -76,16 +118,34 @@ class CardFlowApp extends StatelessWidget {
         AppLocalizations.delegate,
         ...GlobalMaterialLocalizations.delegates,
       ],
-      theme: AppTheme.light(),
-      darkTheme: AppTheme.dark(),
-      themeMode: ThemeMode.system,
-      routerConfig: router ?? createAppRouter(),
+      theme: AppTheme.light(
+        scheme: lightScheme,
+        highContrast: settings.highContrast,
+        dyslexiaFont: settings.dyslexiaFont,
+      ),
+      darkTheme: AppTheme.dark(
+        scheme: darkScheme,
+        highContrast: settings.highContrast,
+        dyslexiaFont: settings.dyslexiaFont,
+      ),
+      themeMode: switch (settings.theme) {
+        AppThemePreference.system => ThemeMode.system,
+        AppThemePreference.light => ThemeMode.light,
+        AppThemePreference.dark => ThemeMode.dark,
+      },
+      routerConfig: _router,
       builder: (context, child) {
-        final brightness = Theme.of(context).brightness;
-        final data = brightness == Brightness.dark
-            ? M3EThemeData.dark(seedColor: AppTheme.seedColor)
-            : M3EThemeData.light(seedColor: AppTheme.seedColor);
-        return M3ETheme(data: data, child: child ?? const SizedBox.shrink());
+        // M3E-тема проецируется из Material-темы: так dynamic color, контраст
+        // и шрифт дислексии из настроек действуют и на M3E-компоненты
+        // (M3EResolvedTheme заменяет textTheme — ADR-019 §2).
+        final M3EThemeData data = M3EThemeData.fromMaterial(Theme.of(context));
+        final MediaQueryData media = MediaQuery.of(context);
+        return MediaQuery(
+          data: media.copyWith(
+            textScaler: TextScaler.linear(settings.textScale),
+          ),
+          child: M3ETheme(data: data, child: child ?? const SizedBox.shrink()),
+        );
       },
     );
   }

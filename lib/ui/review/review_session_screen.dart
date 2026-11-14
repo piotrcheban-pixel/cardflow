@@ -8,8 +8,10 @@ import 'package:material_ui/material_ui.dart' hide Card;
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/scheduling/rating.dart';
 import 'package:cardflow/domain/session/session_plan.dart';
+import 'package:cardflow/domain/settings/app_settings.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/decks/deck_actions.dart';
+import 'package:cardflow/ui/motion.dart';
 import 'package:cardflow/ui/review/review_card_view.dart';
 import 'package:cardflow/ui/review/review_chrome.dart';
 import 'package:cardflow/ui/review/review_session_engine.dart';
@@ -51,6 +53,9 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
 
   bool get _hasSource => widget.plan != null || widget.deckId != null;
 
+  /// Haptics включены в настройках (A6.6, ADR-019 §2).
+  bool get _hapticsEnabled => ref.read(effectiveAppSettingsProvider).haptics;
+
   @override
   void initState() {
     super.initState();
@@ -89,6 +94,12 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
       final mediaBytes = mediaIds.isEmpty
           ? const <String, Uint8List>{}
           : await ref.read(cardMediaRepositoryProvider).readMedia(mediaIds);
+      AppSettings settings;
+      try {
+        settings = await ref.read(appSettingsProvider.future);
+      } on Object {
+        settings = AppSettings.defaults;
+      }
       if (!mounted) return;
       final engine = ReviewSessionEngine(
         cards: cards,
@@ -96,6 +107,8 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
         reviewRepository: ref.read(reviewRepositoryProvider),
         clock: DateTime.now,
         prebuilt: plan != null,
+        newLimit: settings.dailyNewLimit,
+        reviewLimit: settings.dailyReviewLimit,
       )..addListener(_onEngineChanged);
       engine.start();
       setState(() {
@@ -144,7 +157,9 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
       final bool rated = await engine.rate(rating);
       if (!rated) return;
       _playHaptic(rating);
-      if (engine.state.isCompleted && !_completionHapticPlayed) {
+      if (engine.state.isCompleted &&
+          !_completionHapticPlayed &&
+          _hapticsEnabled) {
         _completionHapticPlayed = true;
         unawaited(HapticFeedback.mediumImpact());
       }
@@ -183,11 +198,12 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
         engine.state.isCompleted) {
       return;
     }
-    unawaited(HapticFeedback.selectionClick());
+    if (_hapticsEnabled) unawaited(HapticFeedback.selectionClick());
     engine.reveal();
   }
 
   void _playHaptic(Rating rating) {
+    if (!_hapticsEnabled) return;
     switch (reviewHapticFor(rating)) {
       case ReviewHaptic.heavy:
         unawaited(HapticFeedback.heavyImpact());
@@ -275,6 +291,7 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
     if (state.isCompleted) {
       return ReviewCompletedView(ratedCount: state.ratedCount, onDone: _leave);
     }
+    final AppSettings settings = ref.watch(effectiveAppSettingsProvider);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
@@ -300,6 +317,9 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
                   card: state.current!.card,
                   mediaBytes: _mediaBytes,
                   revealed: state.revealed,
+                  spring: settings.motion == MotionPreference.standard
+                      ? AppMotion.standardSpring()
+                      : null,
                   onTap: _reveal,
                 ),
               ),

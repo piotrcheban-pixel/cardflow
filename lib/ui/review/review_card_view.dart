@@ -23,6 +23,7 @@ class ReviewCardView extends StatefulWidget {
     required this.onTap,
     this.card,
     this.mediaBytes = const <String, Uint8List>{},
+    this.spring,
     super.key,
   });
 
@@ -44,6 +45,9 @@ class ReviewCardView extends StatefulWidget {
   /// Байты изображений по `media.id`.
   final Map<String, Uint8List> mediaBytes;
 
+  /// Пружина переворота (A6.6: «Выразительная»/«Стандартная», ADR-019 §2).
+  final SpringDescription? spring;
+
   @override
   State<ReviewCardView> createState() => _ReviewCardViewState();
 }
@@ -61,7 +65,7 @@ class _ReviewCardViewState extends State<ReviewCardView>
     if (oldWidget.revealed == widget.revealed) return;
     _controller.animateWith(
       SpringSimulation(
-        AppMotion.expressiveSpring(),
+        widget.spring ?? AppMotion.expressiveSpring(),
         _controller.value,
         widget.revealed ? 1 : 0,
         0,

@@ -9,8 +9,10 @@ import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/decks/deck.dart';
 import 'package:cardflow/domain/scheduling/rating.dart';
 import 'package:cardflow/domain/session/session_plan.dart';
+import 'package:cardflow/domain/settings/app_settings.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/decks/deck_actions.dart';
+import 'package:cardflow/ui/motion.dart';
 import 'package:cardflow/ui/review/feed_card_view.dart';
 import 'package:cardflow/ui/review/feed_progress_bar.dart';
 import 'package:cardflow/ui/review/feed_session_engine.dart';
@@ -66,6 +68,9 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
   Map<String, Uint8List> _mediaBytes = const <String, Uint8List>{};
 
   bool get _hasSource => widget.plan != null || widget.deckId != null;
+
+  /// Haptics включены в настройках (A6.6, ADR-019 §2).
+  bool get _hapticsEnabled => ref.read(effectiveAppSettingsProvider).haptics;
 
   @override
   void initState() {
@@ -127,6 +132,12 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
       final mediaBytes = mediaIds.isEmpty
           ? const <String, Uint8List>{}
           : await ref.read(cardMediaRepositoryProvider).readMedia(mediaIds);
+      AppSettings settings;
+      try {
+        settings = await ref.read(appSettingsProvider.future);
+      } on Object {
+        settings = AppSettings.defaults;
+      }
       if (!mounted) return;
       final FeedSessionEngine engine = FeedSessionEngine(
         cards: cards,
@@ -134,6 +145,8 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
         reviewRepository: ref.read(reviewRepositoryProvider),
         clock: DateTime.now,
         prebuilt: plan != null,
+        newLimit: settings.dailyNewLimit,
+        reviewLimit: settings.dailyReviewLimit,
       )..addListener(_onEngineChanged);
       engine.start();
       setState(() {
@@ -247,7 +260,9 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
     if (item == null || item.rated || engine.state.busy) return;
     final bool revealing = !item.revealed;
     engine.toggleReveal();
-    if (revealing) unawaited(HapticFeedback.selectionClick());
+    if (revealing && _hapticsEnabled) {
+      unawaited(HapticFeedback.selectionClick());
+    }
   }
 
   Future<void> _rate(Rating rating) async {
@@ -263,7 +278,9 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
       }
       if (!mounted) return;
       _playHaptic(rating);
-      if (engine.state.isCompleted && !_completionHapticPlayed) {
+      if (engine.state.isCompleted &&
+          !_completionHapticPlayed &&
+          _hapticsEnabled) {
         _completionHapticPlayed = true;
         unawaited(HapticFeedback.mediumImpact());
       }
@@ -292,6 +309,7 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
   }
 
   void _playHaptic(Rating rating) {
+    if (!_hapticsEnabled) return;
     switch (reviewHapticFor(rating)) {
       case ReviewHaptic.heavy:
         unawaited(HapticFeedback.heavyImpact());
@@ -393,6 +411,7 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
       return ReviewCompletedView(ratedCount: state.ratedCount, onDone: _leave);
     }
     final AppLocalizations l10n = AppLocalizations.of(context);
+    final AppSettings settings = ref.watch(effectiveAppSettingsProvider);
     final List<bool> ratedFlags = <bool>[
       for (final FeedSessionItem item in state.items) item.rated,
     ];
@@ -401,7 +420,11 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
       children: <Widget>[
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-          child: FeedProgressBar(rated: ratedFlags, currentIndex: state.index),
+          child: FeedProgressBar(
+            rated: ratedFlags,
+            currentIndex: state.index,
+            animatePulse: settings.motion == MotionPreference.expressive,
+          ),
         ),
         Expanded(
           child: PageView.builder(
@@ -425,6 +448,9 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
                   rating: item.rating,
                   enabled: !state.busy && !item.rated && index == state.index,
                   resetToken: _resetToken,
+                  spring: settings.motion == MotionPreference.standard
+                      ? AppMotion.standardSpring()
+                      : null,
                   onTap: _toggleReveal,
                   onRate: (Rating rating) => unawaited(_rate(rating)),
                 ),

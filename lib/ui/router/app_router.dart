@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:cardflow/domain/session/session_plan.dart';
@@ -9,6 +10,9 @@ import 'package:cardflow/ui/review/feed_session_screen.dart';
 import 'package:cardflow/ui/review/review_session_screen.dart';
 import 'package:cardflow/ui/session/session_constructor_screen.dart';
 import 'package:cardflow/ui/settings/generation_settings_screen.dart';
+import 'package:cardflow/ui/settings/settings_screen.dart';
+import 'package:cardflow/ui/shell/app_shell.dart';
+import 'package:cardflow/ui/statistics/statistics_screen.dart';
 
 /// Имена маршрутов приложения (для тестов и навигации).
 abstract final class AppRoutes {
@@ -41,6 +45,12 @@ abstract final class AppRoutes {
 
   /// Настройки генерации (OpenAI-совместимый сервер, ADR-013).
   static const String generationSettings = 'generationSettings';
+
+  /// Экран «Статистика» (SPEC A6.5).
+  static const String statistics = 'statistics';
+
+  /// Экран «Настройки» (SPEC A6.6).
+  static const String settings = 'settings';
 
   /// Экран генерации карточек с созданием новой колоды (A6.8).
   static const String generation = 'generation';
@@ -83,6 +93,12 @@ abstract final class AppRoutes {
   /// Путь экрана настроек генерации.
   static const String generationSettingsPath = '/settings/generation';
 
+  /// Путь экрана «Статистика» (ветка оболочки).
+  static const String statisticsPath = '/statistics';
+
+  /// Путь экрана «Настройки» (ветка оболочки).
+  static const String settingsPath = '/settings';
+
   /// Путь экрана генерации карточек (новая колода).
   static const String generationPath = '/generate';
 
@@ -102,10 +118,41 @@ GoRouter createAppRouter({String initialLocation = AppRoutes.decksPath}) {
   return GoRouter(
     initialLocation: initialLocation,
     routes: <RouteBase>[
-      GoRoute(
-        path: AppRoutes.decksPath,
-        name: AppRoutes.decks,
-        builder: (context, state) => const DecksScreen(),
+      StatefulShellRoute.indexedStack(
+        builder: (
+          BuildContext context,
+          GoRouterState state,
+          StatefulNavigationShell navigationShell,
+        ) => AppShell(navigationShell: navigationShell),
+        branches: <StatefulShellBranch>[
+          StatefulShellBranch(
+            routes: <RouteBase>[
+              GoRoute(
+                path: AppRoutes.decksPath,
+                name: AppRoutes.decks,
+                builder: (context, state) => const DecksScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: <RouteBase>[
+              GoRoute(
+                path: AppRoutes.statisticsPath,
+                name: AppRoutes.statistics,
+                builder: (context, state) => const StatisticsScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: <RouteBase>[
+              GoRoute(
+                path: AppRoutes.settingsPath,
+                name: AppRoutes.settings,
+                builder: (context, state) => const SettingsScreen(),
+              ),
+            ],
+          ),
+        ],
       ),
       GoRoute(
         path: '/decks/:deckId',
@@ -130,6 +177,7 @@ GoRouter createAppRouter({String initialLocation = AppRoutes.decksPath}) {
         name: AppRoutes.constructor,
         builder: (context, state) => SessionConstructorScreen(
           preselectedDeckId: state.uri.queryParameters['deck'],
+          preselectedTag: state.uri.queryParameters['tag'],
         ),
       ),
       GoRoute(

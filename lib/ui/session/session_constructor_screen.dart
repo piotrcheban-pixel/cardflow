@@ -23,10 +23,17 @@ import 'package:cardflow/ui/state/app_providers.dart';
 /// проверенные движки классики и ленты через `SessionPlan`.
 class SessionConstructorScreen extends ConsumerStatefulWidget {
   /// Создаёт экран конструктора.
-  const SessionConstructorScreen({this.preselectedDeckId, super.key});
+  const SessionConstructorScreen({
+    this.preselectedDeckId,
+    this.preselectedTag,
+    super.key,
+  });
 
   /// Колода, предвыбранная при открытии с экрана колоды (SPEC A6.3).
   final String? preselectedDeckId;
+
+  /// Тег, предвыбранный из «Слабых тем» статистики (SPEC A6.5, ADR-019 §4).
+  final String? preselectedTag;
 
   /// Варианты лимита по карточкам.
   static const List<int> cardLimitValues = <int>[10, 20, 50, 100];
@@ -107,6 +114,12 @@ class _SessionConstructorScreenState
         _loading = false;
       });
       await _ensureCardsLoaded();
+      final String? preselectedTag = widget.preselectedTag;
+      if (mounted &&
+          preselectedTag != null &&
+          preselectedTag.trim().isNotEmpty) {
+        setState(() => _selectedTags = <String>{preselectedTag});
+      }
     } catch (_) {
       if (!mounted) return;
       setState(() {

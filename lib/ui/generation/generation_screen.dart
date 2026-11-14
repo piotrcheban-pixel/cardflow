@@ -22,6 +22,7 @@ import 'package:cardflow/domain/generation/generation_card_store.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
 import 'package:cardflow/domain/generation/generation_model.dart';
 import 'package:cardflow/domain/generation/generation_provider.dart';
+import 'package:cardflow/domain/settings/app_settings.dart';
 import 'package:cardflow/domain/generation/generation_run.dart';
 import 'package:cardflow/domain/generation/openai_compatible_settings.dart';
 import 'package:cardflow/domain/generation/token_estimator.dart';
@@ -115,6 +116,12 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
       final OpenAiCompatibleSettings compatible = await ref
           .read(generationSettingsStoreProvider)
           .readOpenAiCompatible();
+      AppSettings appSettings;
+      try {
+        appSettings = await ref.read(appSettingsProvider.future);
+      } on Object {
+        appSettings = AppSettings.defaults;
+      }
       if (!mounted) return;
       setState(() {
         _keyConfigured
@@ -126,6 +133,17 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
         if (!preserveSelection) {
           _provider = _defaultProvider(configured, compatible);
           _modelId = _defaultModelId(_provider);
+          // Модель по умолчанию из настроек (A6.6, ADR-019 §2): применяем,
+          // только если ключ провайдера задан, иначе генерация сразу упадёт.
+          final GenerationModel? preferred = generationModelById(
+            appSettings.defaultProvider,
+            appSettings.defaultModelId,
+          );
+          if (preferred != null &&
+              configured[appSettings.defaultProvider] == true) {
+            _provider = appSettings.defaultProvider;
+            _modelId = preferred.id;
+          }
         } else {
           _modelId ??= _defaultModelId(_provider);
         }

@@ -95,6 +95,8 @@ class ReviewSessionEngine extends ChangeNotifier {
     required this.clock,
     this.mode = reviewModeClassic,
     this.prebuilt = false,
+    this.newLimit = 0,
+    this.reviewLimit = 0,
   });
 
   /// Снимок карточек колоды на момент старта сессии.
@@ -116,6 +118,12 @@ class ReviewSessionEngine extends ChangeNotifier {
   /// ADR-018) и не пересобираются [ReviewQueue]; `false` — очередь строится
   /// по ADR-008 (due/new).
   final bool prebuilt;
+
+  /// Дневной лимит новых карточек (A6.6, ADR-019 §2); `0` — без лимита.
+  final int newLimit;
+
+  /// Дневной лимит повторных карточек; `0` — без лимита.
+  final int reviewLimit;
 
   ReviewSessionState _state = const ReviewSessionState(
     items: <ReviewSessionItem>[],
@@ -147,7 +155,12 @@ class ReviewSessionEngine extends ChangeNotifier {
     // упорядоченным: пересборка `ReviewQueue` отбросила бы будущие `due`.
     final List<Card> queue = prebuilt
         ? List<Card>.unmodifiable(cards)
-        : ReviewQueue.build(cards, now: now);
+        : ReviewQueue.build(
+            cards,
+            now: now,
+            newLimit: newLimit,
+            reviewLimit: reviewLimit,
+          );
     final List<ReviewSessionItem> items = <ReviewSessionItem>[
       for (final Card card in queue)
         ReviewSessionItem(

@@ -7,6 +7,7 @@ import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/decks/deck_summary.dart';
 import 'package:cardflow/domain/scheduling/rating.dart';
 import 'package:cardflow/domain/session/session_plan.dart';
+import 'package:cardflow/domain/settings/app_settings.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/decks/deck_screen.dart';
 import 'package:cardflow/ui/review/review_session_screen.dart';
@@ -14,6 +15,7 @@ import 'package:cardflow/ui/review/review_session_screen.dart';
 import '../../helpers/decks_fakes.dart';
 import '../../helpers/pump_app.dart';
 import '../../helpers/review_fakes.dart';
+import '../../helpers/settings_fakes.dart';
 
 /// Красная фаза итерации 2: экран классической сессии (SPEC A6.4, A7.2) —
 /// прогресс, flip-карточка, 4 кнопки с прогнозом, клавиши, undo, «Почему?»,
@@ -25,6 +27,7 @@ void main() {
   List<Override> overridesFor(
     List<Card> deckCards, {
     FakeDeckRepository? decks,
+    FakeAppSettingsStore? appSettingsStore,
   }) {
     cards = FakeCardRepository(cards: deckCards);
     reviews = FakeReviewRepository();
@@ -43,6 +46,7 @@ void main() {
           ),
       cardRepository: cards,
       reviewRepository: reviews,
+      appSettingsStore: appSettingsStore,
     );
   }
 
@@ -96,6 +100,31 @@ void main() {
     expect(find.text(l10n.reviewIntervalMinutes(6)), findsOneWidget);
     expect(find.text(l10n.reviewIntervalMinutes(10)), findsOneWidget);
     expect(find.text(l10n.reviewIntervalDays(16)), findsOneWidget);
+  });
+
+  testWidgets('дневной лимит новых карточек из настроек ограничивает сессию', (
+    WidgetTester tester,
+  ) async {
+    final List<Card> deckCards = twoCards();
+    final List<Override> overrides = overridesFor(
+      deckCards,
+      appSettingsStore: FakeAppSettingsStore(
+        settings: AppSettings.defaults.copyWith(dailyNewLimit: 1),
+      ),
+    );
+    await pumpSession(tester, overrides: overrides);
+    final AppLocalizations l10n = l10nOf(tester);
+    reviews.previousCard = deckCards.first;
+
+    expect(find.text('Первый вопрос'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey<String>('review-card')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey<String>('review-rating-good')));
+    await tester.pumpAndSettle();
+
+    expect(find.text(l10n.reviewCompletedTitle), findsOneWidget);
+    expect(find.text('Второй вопрос'), findsNothing);
+    expect(reviews.cardIds, <String>['card-1']);
   });
 
   testWidgets('тап по карточке раскрывает ответ', (WidgetTester tester) async {
@@ -401,6 +430,44 @@ void main() {
         ]);
       },
     );
+
+    testWidgets('haptics выключены в настройках — платформенных вызовов нет', (
+      WidgetTester tester,
+    ) async {
+      final harness = tester.binding;
+      final List<Object?> haptics = <Object?>[];
+      harness.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (MethodCall call) async {
+          if (call.method == 'HapticFeedback.vibrate') {
+            haptics.add(call.arguments);
+          }
+          return null;
+        },
+      );
+      addTearDown(
+        () => harness.defaultBinaryMessenger.setMockMethodCallHandler(
+          SystemChannels.platform,
+          null,
+        ),
+      );
+      await pumpSession(
+        tester,
+        overrides: overridesFor(
+          twoCards(),
+          appSettingsStore: FakeAppSettingsStore(
+            settings: AppSettings.defaults.copyWith(haptics: false),
+          ),
+        ),
+      );
+      final AppLocalizations l10n = l10nOf(tester);
+      await tester.tap(find.byKey(const ValueKey<String>('review-card')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(l10n.ratingGood));
+      await tester.pumpAndSettle();
+
+      expect(haptics, isEmpty);
+    });
 
     testWidgets('цвета кнопок A7.2 и значение прогресса', (
       WidgetTester tester,

@@ -11,6 +11,7 @@ import 'package:cardflow/ui/m3e/m3e.dart';
 import 'package:cardflow/ui/review/review_session_screen.dart';
 import 'package:cardflow/ui/router/app_router.dart';
 import 'package:cardflow/ui/settings/generation_settings_screen.dart';
+import 'package:cardflow/ui/settings/settings_screen.dart';
 
 import '../helpers/decks_fakes.dart';
 import '../helpers/pump_app.dart';
@@ -41,7 +42,7 @@ void main() {
       expect(find.text(l10n.decksTitle), findsOneWidget);
       expect(find.text('Испанский'), findsOneWidget);
       expect(
-        Localizations.localeOf(tester.element(find.byType(Scaffold))),
+        Localizations.localeOf(tester.element(find.byType(Scaffold).first)),
         const Locale('ru'),
       );
     });
@@ -132,7 +133,7 @@ void main() {
     );
 
     testWidgets('production-роутер: кнопка настроек на «Колодах» открывает '
-        '«Настройки генерации» (ADR-013)', (tester) async {
+        '«Настройки» (SPEC A6.1/A6.6)', (tester) async {
       await tester.pumpWidget(
         ProviderScope(
           overrides: decksOverrides(
@@ -151,11 +152,22 @@ void main() {
       await tester.tap(find.byTooltip(l10n.settingsOpenTooltip));
       await tester.pumpAndSettle();
 
-      expect(find.byType(GenerationSettingsScreen), findsOneWidget);
-      expect(find.text(l10n.settingsTitle), findsOneWidget);
+      expect(find.byType(SettingsScreen), findsOneWidget);
+      expect(find.text(l10n.settingsScreenTitle), findsWidgets);
       // Настройки читаются через production-провайдеры с фейками
       // (без drift/secure storage в тесте).
-      expect(find.text(l10n.settingsOpenAiCompatibleTitle), findsOneWidget);
+      expect(find.text(l10n.settingsAppearanceTitle), findsOneWidget);
+
+      // Настройки генерации (ADR-013) остаются доступны из блока API.
+      final Finder generationLink = find.byKey(
+        const ValueKey<String>('settings-open-generation'),
+      );
+      await tester.ensureVisible(generationLink);
+      await tester.pumpAndSettle();
+      await tester.tap(generationLink);
+      await tester.pumpAndSettle();
+      expect(find.byType(GenerationSettingsScreen), findsOneWidget);
+      expect(find.text(l10n.settingsTitle), findsOneWidget);
     });
   });
 
