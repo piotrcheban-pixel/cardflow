@@ -398,9 +398,10 @@ void main() {
 
       expect(prebuilt.state.total, 2);
       expect(prebuilt.state.current!.card.id, 'future');
-      expect(prebuilt.state.items.map((FeedSessionItem item) => item.card.id), <
-        String
-      >['future', 'fresh']);
+      expect(
+        prebuilt.state.items.map((FeedSessionItem item) => item.card.id),
+        <String>['future', 'fresh'],
+      );
     });
 
     test('без prebuilt сохраняется поведение ADR-016', () {

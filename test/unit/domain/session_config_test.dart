@@ -190,7 +190,10 @@ void main() {
         'limit': <String, Object?>{'kind': kind, 'value': value},
       };
 
-      expect(() => SessionConfig.fromJson(json('cards', 0)), throwsFormatException);
+      expect(
+        () => SessionConfig.fromJson(json('cards', 0)),
+        throwsFormatException,
+      );
       expect(
         () => SessionConfig.fromJson(json('cards', 501)),
         throwsFormatException,

@@ -116,7 +116,11 @@ void main() {
   });
 
   test('битая строка presets пропускается, валидные остаются', () async {
-    await repository.savePreset(name: 'Валидная', config: morning, createdAt: now);
+    await repository.savePreset(
+      name: 'Валидная',
+      config: morning,
+      createdAt: now,
+    );
     await db
         .into(db.sessionPresets)
         .insert(

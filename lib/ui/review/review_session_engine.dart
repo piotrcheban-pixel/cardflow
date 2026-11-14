@@ -143,7 +143,11 @@ class ReviewSessionEngine extends ChangeNotifier {
   void start() {
     if (_initialized) return;
     final DateTime now = clock().toUtc();
-    final List<Card> queue = ReviewQueue.build(cards, now: now);
+    // План конструктора (A6.7, ADR-018) приходит уже отфильтрованным и
+    // упорядоченным: пересборка `ReviewQueue` отбросила бы будущие `due`.
+    final List<Card> queue = prebuilt
+        ? List<Card>.unmodifiable(cards)
+        : ReviewQueue.build(cards, now: now);
     final List<ReviewSessionItem> items = <ReviewSessionItem>[
       for (final Card card in queue)
         ReviewSessionItem(

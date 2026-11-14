@@ -22,11 +22,7 @@ void main() {
   );
 
   /// Снимок FSRS для карточки в состоянии `review` с заданной стабильностью.
-  String reviewFsrs(
-    String cardId, {
-    double stability = 10,
-    DateTime? due,
-  }) {
+  String reviewFsrs(String cardId, {double stability = 10, DateTime? due}) {
     return jsonEncode(
       SchedulingCard(
         cardId: cardId,
@@ -59,32 +55,40 @@ void main() {
   }
 
   group('фильтры', () {
-    test('колоды: только выбранные; приостановленные и отложенные исключены', () {
-      final List<Card> cards = <Card>[
-        makeCard(id: 'a', deckId: 'deck-1', front: 'A'),
-        makeCard(id: 'b', deckId: 'deck-2', front: 'B'),
-        makeCard(id: 'c', deckId: 'deck-3', front: 'C'),
-        makeCard(id: 'suspended', deckId: 'deck-1', front: 'S', suspended: true),
-        makeCard(
-          id: 'buried-future',
-          deckId: 'deck-1',
-          front: 'BF',
-          buriedUntil: now.add(const Duration(hours: 1)),
-        ),
-        makeCard(
-          id: 'buried-past',
-          deckId: 'deck-1',
-          front: 'BP',
-          buriedUntil: now.subtract(const Duration(hours: 1)),
-        ),
-      ];
+    test(
+      'колоды: только выбранные; приостановленные и отложенные исключены',
+      () {
+        final List<Card> cards = <Card>[
+          makeCard(id: 'a', deckId: 'deck-1', front: 'A'),
+          makeCard(id: 'b', deckId: 'deck-2', front: 'B'),
+          makeCard(id: 'c', deckId: 'deck-3', front: 'C'),
+          makeCard(
+            id: 'suspended',
+            deckId: 'deck-1',
+            front: 'S',
+            suspended: true,
+          ),
+          makeCard(
+            id: 'buried-future',
+            deckId: 'deck-1',
+            front: 'BF',
+            buriedUntil: now.add(const Duration(hours: 1)),
+          ),
+          makeCard(
+            id: 'buried-past',
+            deckId: 'deck-1',
+            front: 'BP',
+            buriedUntil: now.subtract(const Duration(hours: 1)),
+          ),
+        ];
 
-      expect(ids(build(cards)), <String>[
-        'a',
-        'b',
-        'buried-past',
-      ], reason: 'без due: createdAt (равны) → id ASC');
-    });
+        expect(ids(build(cards)), <String>[
+          'a',
+          'b',
+          'buried-past',
+        ], reason: 'без due: createdAt (равны) → id ASC');
+      },
+    );
 
     test('теги: карточка проходит по любому выбранному тегу (OR)', () {
       final List<Card> cards = <Card>[
@@ -630,25 +634,28 @@ void main() {
       expect(plan.mode, SessionMode.classic);
     });
 
-    test('план с лимитом карточек: бюджет времени не задан, режим из конфига', () {
-      final List<Card> cards = <Card>[
-        makeCard(id: 'a', deckId: 'deck-1', front: 'A'),
-      ];
+    test(
+      'план с лимитом карточек: бюджет времени не задан, режим из конфига',
+      () {
+        final List<Card> cards = <Card>[
+          makeCard(id: 'a', deckId: 'deck-1', front: 'A'),
+        ];
 
-      final SessionPlan plan = SessionBuilder.plan(
-        cards: cards,
-        config: twoDecks.copyWith(
-          limit: const SessionLimit.cards(1),
-          mode: SessionMode.feed,
-        ),
-        failureCounts: const <String, int>{},
-        now: now,
-      );
+        final SessionPlan plan = SessionBuilder.plan(
+          cards: cards,
+          config: twoDecks.copyWith(
+            limit: const SessionLimit.cards(1),
+            mode: SessionMode.feed,
+          ),
+          failureCounts: const <String, int>{},
+          now: now,
+        );
 
-      expect(plan.timeBudget, isNull);
-      expect(plan.mode, SessionMode.feed);
-      expect(ids(plan.cards), <String>['a']);
-    });
+        expect(plan.timeBudget, isNull);
+        expect(plan.mode, SessionMode.feed);
+        expect(ids(plan.cards), <String>['a']);
+      },
+    );
   });
 
   group('select (доступность для UI)', () {
@@ -673,12 +680,7 @@ void main() {
         now: now,
       );
 
-      expect(ids(selected), <String>[
-        'card-0',
-        'card-1',
-        'card-2',
-        'card-3',
-      ]);
+      expect(ids(selected), <String>['card-0', 'card-1', 'card-2', 'card-3']);
     });
   });
 }

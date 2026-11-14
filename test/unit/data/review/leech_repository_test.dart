@@ -45,11 +45,7 @@ void main() {
     await db.close();
   });
 
-  Future<void> addLog(
-    String cardId,
-    int rating, {
-    required int index,
-  }) async {
+  Future<void> addLog(String cardId, int rating, {required int index}) async {
     await db
         .into(db.reviewLogs)
         .insert(
