@@ -1,50 +1,52 @@
 # STATE — текущее состояние CardFlow
 
-**Дата:** 2026-11-14 · **Итерация:** 3c «Экран генерации» — **завершена** (шаги 1–7) · **Режим:** ИТЕРАЦИИ
-**Факты:** Flutter 3.47.9 / Dart 3.13.7 (FVM 4.3.2); Windows 11; Windows-сборка работает;
-Android SDK/JDK, Xcode, Linux — отсутствуют. `DEEPSEEK_API_KEY`: present в Windows User scope,
-absent в унаследованном env агента (значение не выводить). GitHub `origin` →
-piotrcheban-pixel/cardflow; `main` = локальный HEAD `9db83ab` (push не выполнялся).
-**Проверено в сессии 2026-11-14 (HEAD `9db83ab`, дерево clean):** `fvm flutter test --exclude-tags golden`
-→ **897 passed + 1 skipped**; `fvm flutter analyze` → No issues; `fvm dart format --set-exit-if-changed
-lib test` → 0 changed; coverage 93.2% (5219/5597); `fvm flutter build windows --release` → `cardflow.exe`.
-Ревью: 2 high, 12 medium, 11 low; H/M закрыты fix-коммитом `9db83ab` с новыми тестами.
-**CI:** 3b/ADR-013/live L30/host-facts — 9/9 success (`43501572437`, `43505863077`, `43510331361`,
-`43511718280`); прогон 3c — после push.
+**Дата:** 2026-11-14 · **Итерация:** 4 «Лента» — **шаг 1 (план) выполнен** · **Режим:** ИТЕРАЦИИ
+**Факты (сверено в этой сессии):** HEAD `e5f64c4` == `origin/main` (docs-коммит 3c отправлен на remote;
+`git ls-remote origin HEAD` = `e5f64c4`), дерево clean. Flutter 3.47.9 / Dart 3.13.7 (FVM 4.3.2);
+Windows 11; Windows-сборка работает; Android SDK/JDK, Xcode, Linux — отсутствуют.
+`DEEPSEEK_API_KEY`: present в Windows User scope, absent в env агента (значение не выводить).
+**Baseline (эта сессия, HEAD `e5f64c4`):** `fvm flutter test --exclude-tags golden --reporter compact` →
+**897 passed + 1 skipped**, exit 0; `fvm flutter analyze` → **No issues found!**; `fvm dart format
+--set-exit-if-changed lib test` → **218 files, 0 changed**.
+**CI 3c:** push выполнен (remote = `e5f64c4`), статус прогона для `e5f64c4` не проверялся (private repo,
+анонимный доступ → 404; независимой проверки из сессии нет).
 
 ## Следующее действие
 
-1. **Итерация 3c завершена.** Отчёт владельцу; push — по отдельной команде.
-2. **Следующая по плану — итерация 4 «Лента»** (PageView, жесты, Stories-прогресс, авто-продвижение,
-   haptic, возврат пружиной) — **только по отдельной команде владельца**.
-3. **CI-прогон 3c** — после push; до этого статус CI для `9db83ab` неизвестен.
+1. **Шаг 2 — красная фаза** итерации 4: тесты T1–T16 по `journal/iteration-4/plan.md` на скелетах;
+   фрагменты «ожидалось/получено» → `journal/iteration-4/red-feed.md`; коммит `test:`.
+2. Затем шаги 3–7 итерации 4 (зелёная фаза, ревью, verify, память, ретроспектива).
+3. Push — только по отдельной команде владельца.
 4. Открытые вопросы к владельцу: нет.
 
-## Итерация 3c — итог
+## Итерация 4 — план (шаг 1)
 
-- Сделано: оценка токенов/бюджеты моделей, чанкинг по разделам с `<limit>`, `GenerationPipeline`
-  (последовательные вызовы, прогресс/отмена, split-once, дедуп, partial/retry, `generation_jobs`),
-  drift job-репозиторий, транзакционный импорт (reversed, дедуп), файловый шлюз 25 МБ, экран A6.8,
-  предпросмотр с чекбоксами/редактированием, входы с «Колод»/«Колоды», ключи API трёх провайдеров;
-  ADR-015, `docs/generation-pipeline.md`.
+- Спека: A7.3 (лента), A6.3 (лист режимов), A6.4 (каркас), A4.3/A4.4 (формы/пружины/haptics),
+  A5 (`review_logs.mode='feed'`); ADR-016.
+- Объём: `FeedSessionEngine` + чистая политика свайпов, Stories-прогресс, `FeedCardView` (свайпы,
+  spring-back, морфинг формы), `FeedSessionScreen` (PageView, авто-продвижение 3/5/8, пауза, нижняя
+  панель), общий каркас A6.4, роут `/decks/:deckId/feed`, лист режимов, ARB.
+- Критерии C1–C16 и задачи T1–T19 — в `journal/iteration-4/plan.md`.
+
+## Итерация 3c — итог (завершена, запушена `e5f64c4`)
+
+- Сделано: оценка токенов/чанкинг, `GenerationPipeline`, drift jobs, транзакционный импорт, экран A6.8,
+  предпросмотр, входы, ключи API; ADR-015, `docs/generation-pipeline.md`.
 - Доказательства: 897 passed/1 skipped; analyze 0; format 0; coverage 93.2%; build windows; ревью
-  `journal/iteration-3c/review.md` + `review-fixes.md`; интеграционный production-граф генерации/импорта.
-- Не проверено: живые OpenAI/Gemini/Anthropic (L1), реальный DnD/picker (L11/L33), 25 МБ/OOM (L25),
-  secure storage на платформе (L28), негативные HTTP-контракты (ADR-014); CI после push.
+  `journal/iteration-3c/review.md` + `review-fixes.md`.
+- Не проверено: живые OpenAI/Gemini/Anthropic (L1), DnD/picker (L11/L33), 25 МБ/OOM (L25), secure
+  storage (L28), негативные HTTP (ADR-014); CI-прогон 3c не проверялся.
 
 ## Итерация 3b — итог (завершена)
 
-Схема A8.4 + `json_schema`, проекции провайдеров, промпт `gen-ru-v2`, контент-валидатор, 3 адаптера +
-OpenAI-compatible (ADR-013), retry/backoff, redaction, `ApiKeyStore`, `CardGenerationService`, ARB,
-production-проводка; ADR-011/012/013. 800 passed/1 skipped; coverage 95.1%; CI 9/9. Не проверено:
-живые OpenAI/Gemini/Anthropic (L1), платформенный secure storage (L28), негативные HTTP (ADR-014),
-Ollama/LM Studio (L32). DeepSeek success — L30 (пройден).
+Схема A8.4 + `json_schema`, проекции, промпт `gen-ru-v2`, контент-валидатор, 3 адаптера + OpenAI-compatible
+(ADR-013), retry/backoff, redaction, `ApiKeyStore`, `CardGenerationService`, ARB, production-проводка;
+ADR-011/012/013. 800 passed/1 skipped; coverage 95.1%; CI 9/9. Не проверено: L1, L28, ADR-014, L32.
 
 ## Итерация 3a — итог (завершена)
 
-Нативные парсеры A8.3 + `ParsedDocument`; 603 теста; покрытие 95.3%; analyze 0; Windows-сборка;
-ревью закрыто `ecf845a`; L26 закрыт зелёным CI `43491786199`. Не проверено: реальные файлы (L23),
-25 МБ/OOM (L25), вложенные таблицы/нумерация (L24), формула без кэша (L27).
+Нативные парсеры A8.3 + `ParsedDocument`; 603 теста; покрытие 95.3%; analyze 0; Windows-сборка; ревью
+закрыто `ecf845a`; L26 закрыт зелёным CI `43491786199`. Не проверено: L23, L25, L24, L27.
 
 ## Известные ограничения (актуальные)
 
