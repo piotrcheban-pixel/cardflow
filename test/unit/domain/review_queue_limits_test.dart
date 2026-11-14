@@ -58,5 +58,34 @@ void main() {
       );
       expect(queue.length, 7);
     });
+
+    test('0 — дневной лимит исчерпан: карточек в сессии нет (ADR-019 §8)', () {
+      final List<Card> exhausted = ReviewQueue.build(
+        cards(),
+        now: now,
+        newLimit: 0,
+        reviewLimit: 0,
+      );
+      expect(
+        exhausted,
+        isEmpty,
+        reason: 'остаток дня 0 — очередь пуста, а не «без ограничения»',
+      );
+    });
+
+    test('остаток дня обрезает каждую часть отдельно (L45)', () {
+      // Вторая сессия того же дня: новые израсходованы (0 из 2), повторных
+      // осталось 2 из 3.
+      final List<Card> queue = ReviewQueue.build(
+        cards(),
+        now: now,
+        newLimit: 0,
+        reviewLimit: 2,
+      );
+      expect(queue.map((Card card) => card.id).toList(), <String>[
+        'due-0',
+        'due-1',
+      ]);
+    });
   });
 }
