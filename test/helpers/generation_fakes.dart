@@ -433,6 +433,7 @@ class FakeGenerationRunner implements GenerationRunner {
     return retryResult ?? result!;
   }
 }
+
 /// Фейковый шлюз документов: заданные файлы/байты и журнал вызовов.
 class FakeDocumentGateway implements DocumentGateway {
   /// Файлы, которые вернёт пикер.

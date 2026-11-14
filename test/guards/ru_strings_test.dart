@@ -6,6 +6,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'guard_utils.dart';
 
 /// Бренды и имена форматов, для которых латиница разрешена (SPEC 3.1).
+///
+/// `API`, `Word`, `Excel`, `PowerPoint`, `cloze`, `X` добавлены в итерации 3c:
+/// они дословно входят в тексты, заданные SPEC A6.6/A6.8/A8.4 (блок «API»,
+/// подпись зоны прикрепления, подсказка пожеланий, тип карточки cloze).
+/// Основание — ADR-015 §8; правило «интерфейс только на русском» не ослаблено.
 const List<String> allowedLatinTokens = <String>[
   'CardFlow',
   'OpenAI',
@@ -21,6 +26,12 @@ const List<String> allowedLatinTokens = <String>[
   'ZIP',
   'LaTeX',
   'FSRS',
+  'API',
+  'Word',
+  'Excel',
+  'PowerPoint',
+  'cloze',
+  'X',
 ];
 
 /// Служебные слова ICU-плюрализации/селекта — не английский текст интерфейса.

@@ -38,20 +38,16 @@ void main() {
 
   test('пустой список документов — пустой результат', () {
     expect(
-      chunker.chunkDocuments(
-        const <ParsedDocument>[],
-        maxInputTokens: 1000,
-      ),
+      chunker.chunkDocuments(const <ParsedDocument>[], maxInputTokens: 1000),
       isEmpty,
     );
   });
 
   test('маленький документ — один фрагмент, текст и файл сохранены', () {
     final document = docOf('лекция.txt', <String>['Раздел 1', 'Текст раздела']);
-    final chunks = chunker.chunkDocuments(
-      <ParsedDocument>[document],
-      maxInputTokens: 1000,
-    );
+    final chunks = chunker.chunkDocuments(<ParsedDocument>[
+      document,
+    ], maxInputTokens: 1000);
     expect(chunks, hasLength(1));
     expect(chunks.single.materialsText, contains('Раздел 1'));
     expect(chunks.single.materialsText, contains('Текст раздела'));
@@ -68,10 +64,9 @@ void main() {
       'uvwxyzабвг',
       'дежзийклмн',
     ]);
-    final chunks = chunker.chunkDocuments(
-      <ParsedDocument>[document],
-      maxInputTokens: 10,
-    );
+    final chunks = chunker.chunkDocuments(<ParsedDocument>[
+      document,
+    ], maxInputTokens: 10);
     expect(chunks.length, greaterThan(1));
     final joined = chunks.map((chunk) => chunk.materialsText).join('\n\n');
     for (final text in <String>[
@@ -85,19 +80,22 @@ void main() {
   });
 
   test('порядок фрагментов и нумерация с 1', () {
-    final chunks = chunker.chunkDocuments(
-      <ParsedDocument>[
-        docOf('a.txt', <String>['Первый раздел длиной побольше']),
-        docOf('b.txt', <String>['Второй раздел длиной побольше']),
-      ],
-      maxInputTokens: 6,
-    );
+    final chunks = chunker.chunkDocuments(<ParsedDocument>[
+      docOf('a.txt', <String>['Первый раздел длиной побольше']),
+      docOf('b.txt', <String>['Второй раздел длиной побольше']),
+    ], maxInputTokens: 6);
     expect(chunks.length, greaterThanOrEqualTo(2));
     for (var i = 0; i < chunks.length; i++) {
       expect(chunks[i].index, i + 1);
     }
-    expect(chunks.first.materialsText, contains('Первый'));
-    expect(chunks.last.materialsText, contains('Второй'));
+    final int firstIndex = chunks.indexWhere(
+      (chunk) => chunk.materialsText.contains('Первый'),
+    );
+    final int secondIndex = chunks.indexWhere(
+      (chunk) => chunk.materialsText.contains('Второй'),
+    );
+    expect(firstIndex, greaterThanOrEqualTo(0));
+    expect(secondIndex, greaterThan(firstIndex));
   });
 
   test('большой раздел делится по абзацам, бюджет соблюдается', () {
@@ -105,13 +103,15 @@ void main() {
     final document = docOf('big.txt', <String>[
       '$paragraph\n\n$paragraph\n\n$paragraph',
     ]);
-    final chunks = chunker.chunkDocuments(
-      <ParsedDocument>[document],
-      maxInputTokens: 10,
-    );
+    final chunks = chunker.chunkDocuments(<ParsedDocument>[
+      document,
+    ], maxInputTokens: 10);
     expect(chunks.length, greaterThan(1));
     for (final chunk in chunks) {
-      expect(const TokenEstimator().estimate(chunk.materialsText), lessThanOrEqualTo(10));
+      expect(
+        const TokenEstimator().estimate(chunk.materialsText),
+        lessThanOrEqualTo(10),
+      );
     }
     final joined = chunks.map((chunk) => chunk.materialsText).join('\n\n');
     expect(joined.replaceAll(RegExp(r'\s'), ''), 'а' * 120);
@@ -119,13 +119,15 @@ void main() {
 
   test('слишком длинный абзац режется жёстко по символам', () {
     final document = docOf('long.txt', <String>['б' * 100]);
-    final chunks = chunker.chunkDocuments(
-      <ParsedDocument>[document],
-      maxInputTokens: 10,
-    );
+    final chunks = chunker.chunkDocuments(<ParsedDocument>[
+      document,
+    ], maxInputTokens: 10);
     expect(chunks.length, greaterThan(1));
     for (final chunk in chunks) {
-      expect(const TokenEstimator().estimate(chunk.materialsText), lessThanOrEqualTo(10));
+      expect(
+        const TokenEstimator().estimate(chunk.materialsText),
+        lessThanOrEqualTo(10),
+      );
     }
     final joined = chunks.map((chunk) => chunk.materialsText).join();
     expect(joined.replaceAll(RegExp(r'\s'), ''), 'б' * 100);
@@ -133,10 +135,9 @@ void main() {
 
   test('sourceFiles объединяются без дублей', () {
     final document = docOf('один.txt', <String>['Раз', 'Два', 'Три']);
-    final chunks = chunker.chunkDocuments(
-      <ParsedDocument>[document],
-      maxInputTokens: 3,
-    );
+    final chunks = chunker.chunkDocuments(<ParsedDocument>[
+      document,
+    ], maxInputTokens: 3);
     for (final chunk in chunks) {
       expect(chunk.sourceFiles, <String>['один.txt']);
     }

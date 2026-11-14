@@ -42,7 +42,7 @@ void main() {
       expect(exception.toString(), contains('rateLimited'));
     });
 
-    test('все коды A8.6 присутствуют', () {
+    test('все коды A8.6 и noMaterials (3c) присутствуют', () {
       expect(GenerationErrorCode.values.toSet(), <GenerationErrorCode>{
         GenerationErrorCode.missingApiKey,
         GenerationErrorCode.providerNotConfigured,
@@ -57,6 +57,7 @@ void main() {
         GenerationErrorCode.truncated,
         GenerationErrorCode.refused,
         GenerationErrorCode.invalidResponse,
+        GenerationErrorCode.noMaterials,
       });
     });
   });

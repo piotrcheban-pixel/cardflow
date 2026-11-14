@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -16,7 +15,6 @@ import 'package:cardflow/domain/generation/generation_job.dart';
 import 'package:cardflow/domain/generation/generation_provider.dart';
 import 'package:cardflow/domain/generation/generation_run.dart';
 import 'package:cardflow/domain/generation/document_gateway.dart';
-import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/generation/generation_screen.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
 
@@ -92,7 +90,9 @@ void main() {
     gateway.bytesByPath['/tmp/лекция.txt'] = Uint8List.fromList(
       utf8.encode('Материал лекции'),
     );
-    await tester.tap(find.byKey(const ValueKey<String>('generation-attach-zone')));
+    await tester.tap(
+      find.byKey(const ValueKey<String>('generation-attach-zone')),
+    );
     await tester.pumpAndSettle();
   }
 
@@ -160,7 +160,9 @@ void main() {
       ),
     ];
     await pumpScreen(tester);
-    await tester.tap(find.byKey(const ValueKey<String>('generation-attach-zone')));
+    await tester.tap(
+      find.byKey(const ValueKey<String>('generation-attach-zone')),
+    );
     await tester.pumpAndSettle();
     final l10n = l10nOf(tester);
     expect(find.text(l10n.parserErrorUnsupportedFormat), findsOneWidget);
@@ -231,18 +233,13 @@ void main() {
     );
     await tester.pump();
     final l10n = l10nOf(tester);
-    expect(
-      find.text(l10n.generationProgressSending(1, 3)),
-      findsOneWidget,
-    );
+    expect(find.text(l10n.generationProgressSending(1, 3)), findsOneWidget);
     expect(
       find.byKey(const ValueKey<String>('generation-cancel')),
       findsOneWidget,
     );
 
-    await tester.tap(
-      find.byKey(const ValueKey<String>('generation-cancel')),
-    );
+    await tester.tap(find.byKey(const ValueKey<String>('generation-cancel')));
     await tester.pump();
     expect(runner.lastCancellation, isNotNull);
     expect(runner.lastCancellation!.isCancelled, isTrue);
@@ -264,7 +261,9 @@ void main() {
     expect(find.text(l10n.generationCancelled), findsOneWidget);
   });
 
-  testWidgets('ошибка генерации — строка ARB без сырых деталей', (tester) async {
+  testWidgets('ошибка генерации — строка ARB без сырых деталей', (
+    tester,
+  ) async {
     await pumpScreen(tester);
     await attachTextFile(tester);
     runner.error = const GenerationException(

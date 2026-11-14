@@ -8,6 +8,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cardflow/data/cards/drift_card_repository.dart';
 import 'package:cardflow/data/db/app_database.dart';
 import 'package:cardflow/data/decks/drift_deck_repository.dart';
+import 'package:cardflow/data/generation/drift_generation_card_store.dart';
+import 'package:cardflow/data/generation/drift_generation_job_repository.dart';
 import 'package:cardflow/data/generation/drift_generation_settings_store.dart';
 import 'package:cardflow/data/review/drift_review_repository.dart';
 import 'package:cardflow/data/transfer/drift_deck_transfer_service.dart';
@@ -73,6 +75,17 @@ void main() {
       container.read(generationSettingsStoreProvider),
       isA<DriftGenerationSettingsStore>(),
     );
+    expect(
+      container.read(generationJobRepositoryProvider),
+      isA<DriftGenerationJobRepository>(),
+    );
+    expect(
+      container.read(generationCardStoreProvider),
+      isA<DriftGenerationCardStore>(),
+    );
+    expect(container.read(documentGatewayProvider), isNotNull);
+    expect(container.read(generationRunnerProvider), isNotNull);
+    expect(container.read(fileParsingServiceProvider), isNotNull);
   });
 
   test(

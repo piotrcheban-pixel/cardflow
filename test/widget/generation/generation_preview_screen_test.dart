@@ -1,4 +1,3 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -96,10 +95,7 @@ void main() {
   }
 
   testWidgets('рендер: карточки, выбор, дубли и токены', (tester) async {
-    await pumpPreview(
-      tester,
-      resultWith(duplicatesRemoved: 2, tokensUsed: 42),
-    );
+    await pumpPreview(tester, resultWith(duplicatesRemoved: 2, tokensUsed: 42));
     final l10n = l10nOf(tester);
     expect(find.text(l10n.generationPreviewTitle), findsOneWidget);
     expect(find.text('Первый вопрос'), findsOneWidget);
@@ -256,10 +252,7 @@ void main() {
   });
 
   testWidgets('пустой результат — сообщение ARB', (tester) async {
-    await pumpPreview(
-      tester,
-      resultWith(cards: const <GeneratedCard>[]),
-    );
+    await pumpPreview(tester, resultWith(cards: const <GeneratedCard>[]));
     final l10n = l10nOf(tester);
     expect(find.text(l10n.generationPreviewEmpty), findsOneWidget);
   });

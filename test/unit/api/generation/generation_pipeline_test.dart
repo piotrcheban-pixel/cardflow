@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cardflow/api/generation/generation_cancellation.dart';
 import 'package:cardflow/api/generation/generation_pipeline.dart';
 import 'package:cardflow/api/generation/system_prompt.dart';
+import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/cards/content_hash.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
 import 'package:cardflow/domain/generation/generation_chunker.dart';
@@ -123,7 +124,9 @@ void main() {
     };
 
     final result = await pipeline.run(
-      requestWith(<ParsedDocument>[docOf('a.txt', <String>['материал лекции'])]),
+      requestWith(<ParsedDocument>[
+        docOf('a.txt', <String>['материал лекции']),
+      ]),
     );
 
     expect(result.status, GenerationJobStatus.done);
@@ -160,7 +163,9 @@ void main() {
     };
 
     final result = await pipeline.run(
-      requestWith(<ParsedDocument>[docOf('a.txt', <String>['первый второй'])]),
+      requestWith(<ParsedDocument>[
+        docOf('a.txt', <String>['первый второй']),
+      ]),
     );
 
     expect(caller.calls, 2);
@@ -178,14 +183,24 @@ void main() {
       chunkOf(2, 'второй'),
     ]);
     final card = makeGeneratedCard();
-    caller.onGenerate = (request, call) async =>
-        resultWith(<GeneratedCard>[card, makeGeneratedCard(front: 'Другой', back: 'Ответ')]);
+    caller.onGenerate = (request, call) async => call == 1
+        ? resultWith(<GeneratedCard>[card])
+        : resultWith(<GeneratedCard>[
+            card,
+            makeGeneratedCard(front: 'Другой', back: 'Ответ'),
+          ]);
 
     final result = await pipeline.run(
-      requestWith(<ParsedDocument>[docOf('a.txt', <String>['первый второй'])]),
+      requestWith(<ParsedDocument>[
+        docOf('a.txt', <String>['первый второй']),
+      ]),
     );
 
-    expect(result.cards.where((item) => item.front == card.front), hasLength(1));
+    expect(
+      result.cards.where((item) => item.front == card.front),
+      hasLength(1),
+    );
+    expect(result.cards, hasLength(2));
     expect(result.duplicatesRemoved, 1);
   });
 
@@ -214,10 +229,9 @@ void main() {
     ]);
 
     final result = await pipeline.run(
-      requestWith(
-        <ParsedDocument>[docOf('a.txt', <String>['материал'])],
-        targetDeckId: 'deck-1',
-      ),
+      requestWith(<ParsedDocument>[
+        docOf('a.txt', <String>['материал']),
+      ], targetDeckId: 'deck-1'),
     );
 
     expect(result.cards, hasLength(1));
@@ -252,42 +266,46 @@ void main() {
         resultWith(<GeneratedCard>[reversed]);
 
     final result = await pipeline.run(
-      requestWith(
-        <ParsedDocument>[docOf('a.txt', <String>['материал'])],
-        targetDeckId: 'deck-1',
-      ),
+      requestWith(<ParsedDocument>[
+        docOf('a.txt', <String>['материал']),
+      ], targetDeckId: 'deck-1'),
     );
 
     expect(result.cards, isEmpty);
     expect(result.duplicatesRemoved, 1);
   });
 
-  test('fatal-ошибка invalidApiKey останавливает пайплайн и job = error', () async {
-    final pipeline = pipelineWith(<GenerationChunk>[
-      chunkOf(1, 'первый'),
-      chunkOf(2, 'второй'),
-    ]);
-    caller.onGenerate = (request, call) async {
-      throw const GenerationException(GenerationErrorCode.invalidApiKey);
-    };
+  test(
+    'fatal-ошибка invalidApiKey останавливает пайплайн и job = error',
+    () async {
+      final pipeline = pipelineWith(<GenerationChunk>[
+        chunkOf(1, 'первый'),
+        chunkOf(2, 'второй'),
+      ]);
+      caller.onGenerate = (request, call) async {
+        throw const GenerationException(GenerationErrorCode.invalidApiKey);
+      };
 
-    await expectLater(
-      pipeline.run(
-        requestWith(<ParsedDocument>[docOf('a.txt', <String>['первый второй'])]),
-      ),
-      throwsA(
-        isA<GenerationException>().having(
-          (error) => error.code,
-          'code',
-          GenerationErrorCode.invalidApiKey,
+      await expectLater(
+        pipeline.run(
+          requestWith(<ParsedDocument>[
+            docOf('a.txt', <String>['первый второй']),
+          ]),
         ),
-      ),
-    );
+        throwsA(
+          isA<GenerationException>().having(
+            (error) => error.code,
+            'code',
+            GenerationErrorCode.invalidApiKey,
+          ),
+        ),
+      );
 
-    expect(caller.calls, 1, reason: 'второй фрагмент не должен вызываться');
-    expect(jobs.saved.last.status, GenerationJobStatus.error);
-    expect(jobs.saved.last.errorCode, 'invalidApiKey');
-  });
+      expect(caller.calls, 1, reason: 'второй фрагмент не должен вызываться');
+      expect(jobs.saved.last.status, GenerationJobStatus.error);
+      expect(jobs.saved.last.errorCode, 'invalidApiKey');
+    },
+  );
 
   test('частичный успех: ошибка фрагмента не теряет остальные', () async {
     final pipeline = pipelineWith(<GenerationChunk>[
@@ -305,7 +323,9 @@ void main() {
     };
 
     final result = await pipeline.run(
-      requestWith(<ParsedDocument>[docOf('a.txt', <String>['раз два три'])]),
+      requestWith(<ParsedDocument>[
+        docOf('a.txt', <String>['раз два три']),
+      ]),
     );
 
     expect(caller.calls, 3);
@@ -327,7 +347,9 @@ void main() {
     };
 
     final result = await pipeline.run(
-      requestWith(<ParsedDocument>[docOf('a.txt', <String>['первый'])]),
+      requestWith(<ParsedDocument>[
+        docOf('a.txt', <String>['первый']),
+      ]),
     );
 
     expect(result.status, GenerationJobStatus.error);
@@ -335,28 +357,33 @@ void main() {
     expect(result.failures, hasLength(1));
   });
 
-  test('отмена: полученное сохраняется, job = cancelled, вызовов больше нет', () async {
-    final pipeline = pipelineWith(<GenerationChunk>[
-      chunkOf(1, 'первый'),
-      chunkOf(2, 'второй'),
-    ]);
-    final cancellation = GenerationCancellation();
-    caller.onGenerate = (request, call) async {
-      cancellation.cancel();
-      return resultWith(<GeneratedCard>[makeGeneratedCard()]);
-    };
+  test(
+    'отмена: полученное сохраняется, job = cancelled, вызовов больше нет',
+    () async {
+      final pipeline = pipelineWith(<GenerationChunk>[
+        chunkOf(1, 'первый'),
+        chunkOf(2, 'второй'),
+      ]);
+      final cancellation = GenerationCancellation();
+      caller.onGenerate = (request, call) async {
+        cancellation.cancel();
+        return resultWith(<GeneratedCard>[makeGeneratedCard()]);
+      };
 
-    final result = await pipeline.run(
-      requestWith(<ParsedDocument>[docOf('a.txt', <String>['первый второй'])]),
-      cancellation: cancellation,
-    );
+      final result = await pipeline.run(
+        requestWith(<ParsedDocument>[
+          docOf('a.txt', <String>['первый второй']),
+        ]),
+        cancellation: cancellation,
+      );
 
-    expect(caller.calls, 1);
-    expect(result.cancelled, isTrue);
-    expect(result.status, GenerationJobStatus.cancelled);
-    expect(result.cards, hasLength(1));
-    expect(jobs.saved.last.status, GenerationJobStatus.cancelled);
-  });
+      expect(caller.calls, 1);
+      expect(result.cancelled, isTrue);
+      expect(result.status, GenerationJobStatus.cancelled);
+      expect(result.cards, hasLength(1));
+      expect(jobs.saved.last.status, GenerationJobStatus.cancelled);
+    },
+  );
 
   test('truncated: фрагмент делится пополам и повторяется один раз', () async {
     final pipeline = pipelineWith(<GenerationChunk>[
@@ -370,11 +397,16 @@ void main() {
     };
 
     final result = await pipeline.run(
-      requestWith(<ParsedDocument>[docOf('a.txt', <String>['раз два'])]),
+      requestWith(<ParsedDocument>[
+        docOf('a.txt', <String>['раз два']),
+      ]),
     );
 
-    expect(caller.calls, 2);
-    expect(caller.requests[1].materialsText, isNot(caller.requests[0].materialsText));
+    expect(caller.calls, 3);
+    expect(
+      caller.requests[1].materialsText,
+      isNot(caller.requests[0].materialsText),
+    );
     expect(result.status, GenerationJobStatus.done);
     expect(result.failures, isEmpty);
     expect(result.cards, hasLength(1));
@@ -389,10 +421,12 @@ void main() {
     };
 
     final result = await pipeline.run(
-      requestWith(<ParsedDocument>[docOf('a.txt', <String>['раз два'])]),
+      requestWith(<ParsedDocument>[
+        docOf('a.txt', <String>['раз два']),
+      ]),
     );
 
-    expect(caller.calls, 2);
+    expect(caller.calls, 3);
     expect(result.status, GenerationJobStatus.error);
     expect(result.failures, hasLength(2));
     for (final failure in result.failures) {
@@ -404,9 +438,11 @@ void main() {
     final pipeline = pipelineWith(const <GenerationChunk>[]);
 
     await expectLater(
-      pipeline.run(requestWith(<ParsedDocument>[
-        docOf('a.txt', <String>['материал']),
-      ])),
+      pipeline.run(
+        requestWith(<ParsedDocument>[
+          docOf('a.txt', <String>['материал']),
+        ]),
+      ),
       throwsA(
         isA<GenerationException>().having(
           (error) => error.code,
@@ -421,87 +457,105 @@ void main() {
     expect(jobs.saved.last.errorCode, 'noMaterials');
   });
 
-  test('прогресс: chunking → sending/receiving с номерами фрагментов', () async {
-    final pipeline = pipelineWith(<GenerationChunk>[
-      chunkOf(1, 'первый'),
-      chunkOf(2, 'второй'),
-    ]);
-    caller.onGenerate = (request, call) async =>
-        resultWith(<GeneratedCard>[makeGeneratedCard(front: 'В$call', back: 'О$call')]);
-    final progress = <GenerationProgress>[];
-
-    await pipeline.run(
-      requestWith(<ParsedDocument>[docOf('a.txt', <String>['первый второй'])]),
-      onProgress: progress.add,
-    );
-
-    expect(progress.first.phase, GenerationProgressPhase.chunking);
-    final sending = progress
-        .where((item) => item.phase == GenerationProgressPhase.sending)
-        .toList();
-    expect(sending, hasLength(2));
-    expect(sending[0].chunkIndex, 1);
-    expect(sending[0].chunkCount, 2);
-    expect(sending[1].chunkIndex, 2);
-    expect(
-      progress.where((item) => item.phase == GenerationProgressPhase.receiving),
-      hasLength(2),
-    );
-  });
-
-  test('retryFailed: повторяет только упавшие фрагменты и дедуплицирует', () async {
-    final pipeline = pipelineWith(<GenerationChunk>[
-      chunkOf(1, 'первый'),
-      chunkOf(2, 'второй'),
-    ]);
-    caller.onGenerate = (request, call) async {
-      if (call == 2) {
-        throw const GenerationException(GenerationErrorCode.network);
-      }
-      return resultWith(<GeneratedCard>[
-        makeGeneratedCard(front: 'Вопрос 1', back: 'Ответ 1'),
-      ]);
-    };
-    final first = await pipeline.run(
-      requestWith(<ParsedDocument>[docOf('a.txt', <String>['раз два'])]),
-    );
-    expect(first.failures, hasLength(1));
-
-    final retryCaller = FakeGenerationCaller();
-    final retryPipeline = GenerationPipeline(
-      caller: retryCaller,
-      jobRepository: jobs,
-      cardStore: store,
-      chunker: FixedChunker(<GenerationChunk>[
+  test(
+    'прогресс: chunking → sending/receiving с номерами фрагментов',
+    () async {
+      final pipeline = pipelineWith(<GenerationChunk>[
         chunkOf(1, 'первый'),
         chunkOf(2, 'второй'),
-      ]),
-      now: () => DateTime.utc(2026),
-      jobIdFactory: () => 'job-1',
-    );
-    retryCaller.onGenerate = (request, call) async =>
-        resultWith(<GeneratedCard>[makeGeneratedCard(front: 'Вопрос 2', back: 'Ответ 2')]);
+      ]);
+      caller.onGenerate = (request, call) async => resultWith(<GeneratedCard>[
+        makeGeneratedCard(front: 'В$call', back: 'О$call'),
+      ]);
+      final progress = <GenerationProgress>[];
 
-    final result = await retryPipeline.retryFailed(
-      requestWith(<ParsedDocument>[docOf('a.txt', <String>['раз два'])]),
-      first,
-    );
+      await pipeline.run(
+        requestWith(<ParsedDocument>[
+          docOf('a.txt', <String>['первый второй']),
+        ]),
+        onProgress: progress.add,
+      );
 
-    expect(retryCaller.calls, 1);
-    expect(retryCaller.requests.single.materialsText, 'второй');
-    expect(result.cards, hasLength(2));
-    expect(result.failures, isEmpty);
-    expect(result.status, GenerationJobStatus.done);
-    expect(result.jobId, first.jobId);
-    expect(jobs.saved.last.status, GenerationJobStatus.done);
-  });
+      expect(progress.first.phase, GenerationProgressPhase.chunking);
+      final sending = progress
+          .where((item) => item.phase == GenerationProgressPhase.sending)
+          .toList();
+      expect(sending, hasLength(2));
+      expect(sending[0].chunkIndex, 1);
+      expect(sending[0].chunkCount, 2);
+      expect(sending[1].chunkIndex, 2);
+      expect(
+        progress.where(
+          (item) => item.phase == GenerationProgressPhase.receiving,
+        ),
+        hasLength(2),
+      );
+    },
+  );
+
+  test(
+    'retryFailed: повторяет только упавшие фрагменты и дедуплицирует',
+    () async {
+      final pipeline = pipelineWith(<GenerationChunk>[
+        chunkOf(1, 'первый'),
+        chunkOf(2, 'второй'),
+      ]);
+      caller.onGenerate = (request, call) async {
+        if (call == 2) {
+          throw const GenerationException(GenerationErrorCode.network);
+        }
+        return resultWith(<GeneratedCard>[
+          makeGeneratedCard(front: 'Вопрос 1', back: 'Ответ 1'),
+        ]);
+      };
+      final first = await pipeline.run(
+        requestWith(<ParsedDocument>[
+          docOf('a.txt', <String>['раз два']),
+        ]),
+      );
+      expect(first.failures, hasLength(1));
+
+      final retryCaller = FakeGenerationCaller();
+      final retryPipeline = GenerationPipeline(
+        caller: retryCaller,
+        jobRepository: jobs,
+        cardStore: store,
+        chunker: FixedChunker(<GenerationChunk>[
+          chunkOf(1, 'первый'),
+          chunkOf(2, 'второй'),
+        ]),
+        now: () => DateTime.utc(2026),
+        jobIdFactory: () => 'job-1',
+      );
+      retryCaller.onGenerate = (request, call) async => resultWith(
+        <GeneratedCard>[makeGeneratedCard(front: 'Вопрос 2', back: 'Ответ 2')],
+      );
+
+      final result = await retryPipeline.retryFailed(
+        requestWith(<ParsedDocument>[
+          docOf('a.txt', <String>['раз два']),
+        ]),
+        first,
+      );
+
+      expect(retryCaller.calls, 1);
+      expect(retryCaller.requests.single.materialsText, 'второй');
+      expect(result.cards, hasLength(2));
+      expect(result.failures, isEmpty);
+      expect(result.status, GenerationJobStatus.done);
+      expect(result.jobId, first.jobId);
+      expect(jobs.saved.last.status, GenerationJobStatus.done);
+    },
+  );
 
   test('retryFailed без ошибок возвращает результат без вызовов', () async {
     final pipeline = pipelineWith(<GenerationChunk>[chunkOf(1, 'первый')]);
     caller.onGenerate = (request, call) async =>
         resultWith(<GeneratedCard>[makeGeneratedCard()]);
     final first = await pipeline.run(
-      requestWith(<ParsedDocument>[docOf('a.txt', <String>['первый'])]),
+      requestWith(<ParsedDocument>[
+        docOf('a.txt', <String>['первый']),
+      ]),
     );
 
     final retryCaller = FakeGenerationCaller();
@@ -514,7 +568,9 @@ void main() {
       jobIdFactory: () => 'job-1',
     );
     final result = await retryPipeline.retryFailed(
-      requestWith(<ParsedDocument>[docOf('a.txt', <String>['первый'])]),
+      requestWith(<ParsedDocument>[
+        docOf('a.txt', <String>['первый']),
+      ]),
       first,
     );
 

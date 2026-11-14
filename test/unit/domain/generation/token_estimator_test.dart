@@ -30,10 +30,7 @@ void main() {
   });
 
   test('estimateAll суммирует оценки фрагментов', () {
-    expect(
-      estimator.estimateAll(<String>['а' * 25, 'а' * 25, '']),
-      20,
-    );
+    expect(estimator.estimateAll(<String>['а' * 25, 'а' * 25, '']), 20);
   });
 
   test('кастомный charsPerToken меняет оценку', () {

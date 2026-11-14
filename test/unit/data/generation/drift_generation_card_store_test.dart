@@ -112,13 +112,10 @@ void main() {
       expect(row.fsrsJson, isNull);
       expect(row.due, isNull);
     }
-    expect(
-      cardRows.map((row) => row.contentHash).toSet(),
-      <String>{
-        contentHashOf(front: 'Вопрос 1', back: 'Ответ 1'),
-        contentHashOf(front: 'Вопрос 2', back: 'Ответ 2'),
-      },
-    );
+    expect(cardRows.map((row) => row.contentHash).toSet(), <String>{
+      contentHashOf(front: 'Вопрос 1', back: 'Ответ 1'),
+      contentHashOf(front: 'Вопрос 2', back: 'Ответ 2'),
+    });
 
     final job = (await jobs.jobById('job-1'))!;
     expect(job.resultDeckId, result.deckId);
@@ -158,10 +155,7 @@ void main() {
     expect(result.skippedDuplicates, 1);
     final cardRows = await db.select(db.cards).get();
     expect(cardRows, hasLength(2));
-    expect(
-      cardRows.where((row) => row.front == 'Вопрос 2'),
-      hasLength(1),
-    );
+    expect(cardRows.where((row) => row.front == 'Вопрос 2'), hasLength(1));
     final deckRows = await db.select(db.decks).get();
     expect(deckRows, hasLength(1), reason: 'новая колода не создаётся');
   });
@@ -188,11 +182,7 @@ void main() {
       deckId: null,
       deckName: 'Колода',
       cards: <GeneratedCard>[
-        cardOf(
-          'Термин',
-          back: 'Определение',
-          cardType: CardType.basicReversed,
-        ),
+        cardOf('Термин', back: 'Определение', cardType: CardType.basicReversed),
       ],
       jobId: 'job-1',
       now: now,
@@ -200,7 +190,10 @@ void main() {
 
     final rows = await db.select(db.cards).get();
     expect(rows, hasLength(2));
-    expect(rows.map((row) => row.front).toSet(), <String>{'Термин', 'Определение'});
+    expect(rows.map((row) => row.front).toSet(), <String>{
+      'Термин',
+      'Определение',
+    });
     final bySibling = <String, String>{};
     for (final row in rows) {
       expect(row.siblingId, isNotNull);
@@ -212,37 +205,44 @@ void main() {
     expect(await jobs.jobById('job-1'), isNotNull);
   });
 
-  test('basic_reversed не создаёт дубль, если обратная сторона уже есть', () async {
-    await insertDeckRow(
-      db,
-      id: 'deck-1',
-      name: 'Колода',
-      createdAt: 1,
-      updatedAt: 1,
-    );
-    await insertCardRow(
-      db,
-      id: 'card-1',
-      deckId: 'deck-1',
-      front: 'Определение',
-      back: 'Термин',
-      contentHash: contentHashOf(front: 'Определение', back: 'Термин'),
-    );
+  test(
+    'basic_reversed не создаёт дубль, если обратная сторона уже есть',
+    () async {
+      await insertDeckRow(
+        db,
+        id: 'deck-1',
+        name: 'Колода',
+        createdAt: 1,
+        updatedAt: 1,
+      );
+      await insertCardRow(
+        db,
+        id: 'card-1',
+        deckId: 'deck-1',
+        front: 'Определение',
+        back: 'Термин',
+        contentHash: contentHashOf(front: 'Определение', back: 'Термин'),
+      );
 
-    final result = await store.importGeneratedCards(
-      deckId: 'deck-1',
-      deckName: 'Колода',
-      cards: <GeneratedCard>[
-        cardOf('Термин', back: 'Определение', cardType: CardType.basicReversed),
-      ],
-      jobId: 'job-1',
-      now: now,
-    );
+      final result = await store.importGeneratedCards(
+        deckId: 'deck-1',
+        deckName: 'Колода',
+        cards: <GeneratedCard>[
+          cardOf(
+            'Термин',
+            back: 'Определение',
+            cardType: CardType.basicReversed,
+          ),
+        ],
+        jobId: 'job-1',
+        now: now,
+      );
 
-    expect(result.importedCards, 0);
-    expect(result.skippedDuplicates, 1);
-    expect(await db.select(db.cards).get(), hasLength(1));
-  });
+      expect(result.importedCards, 0);
+      expect(result.skippedDuplicates, 1);
+      expect(await db.select(db.cards).get(), hasLength(1));
+    },
+  );
 
   test('пустой список карточек — колода не создаётся', () async {
     final result = await store.importGeneratedCards(
@@ -256,17 +256,20 @@ void main() {
     expect(await db.select(db.decks).get(), isEmpty);
   });
 
-  test('несуществующая целевая колода — StateError, карточки не пишутся', () async {
-    await expectLater(
-      store.importGeneratedCards(
-        deckId: 'нет',
-        deckName: 'Колода',
-        cards: <GeneratedCard>[cardOf('Вопрос')],
-        jobId: 'job-1',
-        now: now,
-      ),
-      throwsStateError,
-    );
-    expect(await db.select(db.cards).get(), isEmpty);
-  });
+  test(
+    'несуществующая целевая колода — StateError, карточки не пишутся',
+    () async {
+      await expectLater(
+        store.importGeneratedCards(
+          deckId: 'нет',
+          deckName: 'Колода',
+          cards: <GeneratedCard>[cardOf('Вопрос')],
+          jobId: 'job-1',
+          now: now,
+        ),
+        throwsStateError,
+      );
+      expect(await db.select(db.cards).get(), isEmpty);
+    },
+  );
 }

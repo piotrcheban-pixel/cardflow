@@ -201,7 +201,8 @@ void main() {
       expect(fieldText(tester, apiKeyField()), isEmpty);
       expect(find.text(l10n.settingsApiKeyConfigured), findsNothing);
       expect(store.readCalls, 1);
-      expect(keys.readCalls, 1);
+      // 3c: экран читает ключ совместимого сервера + три облачных ключа.
+      expect(keys.readCalls, 4);
     });
 
     testWidgets('поле ключа скрыто и без автокоррекции (SPEC 3.4)', (

@@ -19,17 +19,14 @@ void main() {
   });
 
   test('у OpenAI-совместимого сервера списка моделей нет (ADR-013)', () {
-    expect(
-      generationModelsFor(GenerationProvider.openaiCompatible),
-      isEmpty,
-    );
+    expect(generationModelsFor(GenerationProvider.openaiCompatible), isEmpty);
   });
 
   test('id моделей уникальны внутри провайдера', () {
     for (final provider in GenerationProvider.values) {
-      final ids = generationModelsFor(
-        provider,
-      ).map((model) => model.id).toList();
+      final ids = generationModelsFor(provider)
+          .map((model) => model.id)
+          .toList();
       expect(ids.toSet().length, ids.length);
     }
   });
@@ -43,10 +40,7 @@ void main() {
       generationModelById(GenerationProvider.openai, 'gemini-2.0-flash'),
       isNull,
     );
-    expect(
-      generationModelById(GenerationProvider.openai, 'нет-такой'),
-      isNull,
-    );
+    expect(generationModelById(GenerationProvider.openai, 'нет-такой'), isNull);
   });
 
   test('бюджет входа: контекст − ответ − промпт − обёртка', () {
@@ -57,7 +51,10 @@ void main() {
     );
     expect(
       budget,
-      128000 - kGenerationOutputTokenReserve - 1000 - kPromptWrapperTokenReserve,
+      128000 -
+          kGenerationOutputTokenReserve -
+          1000 -
+          kPromptWrapperTokenReserve,
     );
   });
 
