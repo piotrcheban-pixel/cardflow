@@ -3,6 +3,8 @@ import 'dart:typed_data';
 
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/cards/card_draft.dart';
+import 'package:cardflow/domain/cards/card_media.dart';
+import 'package:cardflow/domain/cards/card_media_repository.dart';
 import 'package:cardflow/domain/cards/card_repository.dart';
 import 'package:cardflow/domain/cards/content_hash.dart';
 import 'package:cardflow/domain/decks/deck.dart';
@@ -75,6 +77,9 @@ Card makeCard({
   String? fsrsJson,
   String? siblingId,
   bool suspended = false,
+  List<String> mediaIds = const <String>[],
+  String? latex,
+  String? occlusionJson,
 }) {
   final DateTime created = createdAt ?? fixturesNow;
   return Card(
@@ -86,6 +91,9 @@ Card makeCard({
     cardType: cardType,
     state: state,
     tags: tags,
+    mediaIds: mediaIds,
+    latex: latex,
+    occlusionJson: occlusionJson,
     due: due,
     sourceExcerpt: sourceExcerpt,
     fsrsJson: fsrsJson,
@@ -580,5 +588,34 @@ class FakeFileGateway implements FileGateway {
   Future<Uint8List> readFile(String path) async {
     if (readError != null) throw readError!;
     return importBytes;
+  }
+}
+
+/// Фейковое чтение медиа: только заданные id.
+class FakeCardMediaRepository implements CardMediaRepository {
+  FakeCardMediaRepository({this.bytesById = const <String, Uint8List>{}});
+
+  final Map<String, Uint8List> bytesById;
+
+  @override
+  Future<Map<String, Uint8List>> readMedia(Iterable<String> mediaIds) async {
+    return <String, Uint8List>{
+      for (final id in mediaIds)
+        if (bytesById[id] != null) id: bytesById[id]!,
+    };
+  }
+}
+
+/// Фейковый системный выбор изображения.
+class FakeCardImageGateway implements CardImageGateway {
+  CardImageUpload? result;
+  Object? error;
+  int calls = 0;
+
+  @override
+  Future<CardImageUpload?> pickImage() async {
+    calls++;
+    if (error != null) throw error!;
+    return result;
   }
 }

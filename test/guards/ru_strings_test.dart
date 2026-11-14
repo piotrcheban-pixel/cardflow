@@ -10,7 +10,8 @@ import 'guard_utils.dart';
 /// `API`, `Word`, `Excel`, `PowerPoint`, `cloze`, `X` добавлены в итерации 3c:
 /// они дословно входят в тексты, заданные SPEC A6.6/A6.8/A8.4 (блок «API»,
 /// подпись зоны прикрепления, подсказка пожеланий, тип карточки cloze).
-/// Основание — ADR-015 §8; правило «интерфейс только на русском» не ослаблено.
+/// `c` — не слово интерфейса, а обязательный маркер синтаксиса `{{c1::…}}` из A7.9.
+/// Основание — ADR-015 §8/ADR-017; правило «интерфейс только на русском» не ослаблено.
 const List<String> allowedLatinTokens = <String>[
   'CardFlow',
   'OpenAI',
@@ -31,6 +32,7 @@ const List<String> allowedLatinTokens = <String>[
   'Excel',
   'PowerPoint',
   'cloze',
+  'c',
   'X',
 ];
 

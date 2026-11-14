@@ -5,6 +5,7 @@ import 'package:flutter/physics.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'package:cardflow/domain/cards/card.dart' as domain;
+import 'package:cardflow/ui/cards/content/card_content_view.dart';
 import 'package:cardflow/ui/motion.dart';
 
 /// Карточка классического режима: front/back с 3D-flip по тапу
@@ -93,14 +94,22 @@ class _ReviewCardViewState extends State<ReviewCardView>
           child: Center(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(24),
-              child: Text(
-                showBack ? widget.back : widget.front,
-                key: const ValueKey<String>('review-card-face'),
-                textAlign: TextAlign.center,
-                style: showBack
-                    ? theme.textTheme.bodyLarge?.copyWith(height: 1.6)
-                    : theme.textTheme.headlineMedium,
-              ),
+              child: widget.card == null
+                  ? Text(
+                      showBack ? widget.back : widget.front,
+                      key: const ValueKey<String>('review-card-face'),
+                      textAlign: TextAlign.center,
+                      style: showBack
+                          ? theme.textTheme.bodyLarge?.copyWith(height: 1.6)
+                          : theme.textTheme.headlineMedium,
+                    )
+                  : CardContentView(
+                      card: widget.card!,
+                      side: showBack ? widget.back : widget.front,
+                      revealed: showBack,
+                      faceKey: const ValueKey<String>('review-card-face'),
+                      mediaBytes: widget.mediaBytes,
+                    ),
             ),
           ),
         );

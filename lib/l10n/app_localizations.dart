@@ -1557,6 +1557,120 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'{count, plural, =0{Карточки не импортированы} one{Импортирована {count} карточка} few{Импортировано {count} карточки} many{Импортировано {count} карточек} other{Импортировано {count} карточки}}'**
   String generationImported(int count);
+
+  /// Ошибка ручной формы: у cloze нет корректного пропуска A7.9.
+  ///
+  /// In ru, this message translates to:
+  /// **'Добавьте хотя бы один пропуск'**
+  String get cardFormClozeMissingError;
+
+  /// Заголовок редактора Image Occlusion в форме карточки.
+  ///
+  /// In ru, this message translates to:
+  /// **'Изображение и маски'**
+  String get cardFormOcclusionSection;
+
+  /// Кнопка системного выбора изображения для масок.
+  ///
+  /// In ru, this message translates to:
+  /// **'Выбрать изображение'**
+  String get cardFormPickImage;
+
+  /// Кнопка замены изображения для масок.
+  ///
+  /// In ru, this message translates to:
+  /// **'Заменить изображение'**
+  String get cardFormChangeImage;
+
+  /// Ошибка picker/чтения изображения без сырого исключения.
+  ///
+  /// In ru, this message translates to:
+  /// **'Не удалось загрузить изображение. Выберите другое изображение до 25 МБ.'**
+  String get cardFormImageLoadError;
+
+  /// Ошибка occlusion без изображения.
+  ///
+  /// In ru, this message translates to:
+  /// **'Выберите изображение для масок'**
+  String get cardFormOcclusionImageMissingError;
+
+  /// Ошибка occlusion с пустым списком масок.
+  ///
+  /// In ru, this message translates to:
+  /// **'Добавьте хотя бы одну маску'**
+  String get cardFormOcclusionMasksMissingError;
+
+  /// Ошибка повреждённой разметки occlusion.
+  ///
+  /// In ru, this message translates to:
+  /// **'Проверьте изображение и координаты масок'**
+  String get cardFormOcclusionInvalidError;
+
+  /// Форма прямоугольной маски.
+  ///
+  /// In ru, this message translates to:
+  /// **'Прямоугольник'**
+  String get occlusionRectangle;
+
+  /// Форма эллиптической маски.
+  ///
+  /// In ru, this message translates to:
+  /// **'Эллипс'**
+  String get occlusionEllipse;
+
+  /// Кнопка удаления маски в редакторе.
+  ///
+  /// In ru, this message translates to:
+  /// **'Удалить маску'**
+  String get occlusionDeleteMaskTooltip;
+
+  /// Раскрыть все маски изображения.
+  ///
+  /// In ru, this message translates to:
+  /// **'Показать все'**
+  String get occlusionShowAll;
+
+  /// Скрыть содержимое всех масок изображения.
+  ///
+  /// In ru, this message translates to:
+  /// **'Скрыть все'**
+  String get occlusionHideAll;
+
+  /// Запасное сообщение вместо отсутствующего изображения.
+  ///
+  /// In ru, this message translates to:
+  /// **'Не удалось загрузить изображение'**
+  String get occlusionImageUnavailable;
+
+  /// Запасное сообщение для повреждённого occlusion_json.
+  ///
+  /// In ru, this message translates to:
+  /// **'Ошибка разметки масок'**
+  String get occlusionInvalid;
+
+  /// Раскрыть следующую формулу в пошаговом выводе.
+  ///
+  /// In ru, this message translates to:
+  /// **'Следующий шаг'**
+  String get latexNextStep;
+
+  /// Замена скрытого пропуска cloze или следующего шага формулы.
+  ///
+  /// In ru, this message translates to:
+  /// **'…'**
+  String get clozeHiddenAnswer;
+
+  /// Подсказка редактора масок Image Occlusion.
+  ///
+  /// In ru, this message translates to:
+  /// **'Проведите по изображению, чтобы добавить маску'**
+  String get occlusionDrawHint;
+
+  /// Номер маски в списке редактора.
+  ///
+  /// In ru, this message translates to:
+  /// **'Маска {number}'**
+  String occlusionMaskNumber(int number);
 }
 
 class _AppLocalizationsDelegate

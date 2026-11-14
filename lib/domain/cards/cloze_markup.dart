@@ -18,8 +18,35 @@ class ClozeMarkup {
 
   final List<ClozeSegment> segments;
 
-  bool get hasGaps => false;
+  bool get hasGaps => segments.any((segment) => segment.isGap);
 
-  static ClozeMarkup parse(String source) =>
+  static final RegExp _pattern = RegExp(r'\{\{c([1-9]\d*)::([\s\S]+?)\}\}');
+
+  static ClozeMarkup parse(String source) {
+    final matches = _pattern.allMatches(source).toList(growable: false);
+    if (matches.isEmpty) return _plain(source);
+    final segments = <ClozeSegment>[];
+    var cursor = 0;
+    for (final match in matches) {
+      final answer = match.group(2);
+      if (answer == null || answer.trim().isEmpty) return _plain(source);
+      final before = source.substring(cursor, match.start);
+      if (_containsMarkup(before)) return _plain(source);
+      if (before.isNotEmpty) segments.add(ClozeSegment.text(before));
+      segments.add(
+        ClozeSegment.gap(number: int.parse(match.group(1)!), answer: answer),
+      );
+      cursor = match.end;
+    }
+    final after = source.substring(cursor);
+    if (_containsMarkup(after)) return _plain(source);
+    if (after.isNotEmpty) segments.add(ClozeSegment.text(after));
+    return ClozeMarkup(segments: List<ClozeSegment>.unmodifiable(segments));
+  }
+
+  static bool _containsMarkup(String value) =>
+      value.contains('{{') || value.contains('}}');
+
+  static ClozeMarkup _plain(String source) =>
       ClozeMarkup(segments: <ClozeSegment>[ClozeSegment.text(source)]);
 }

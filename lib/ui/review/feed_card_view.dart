@@ -7,6 +7,7 @@ import 'package:material_ui/material_ui.dart' hide Card;
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/scheduling/rating.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
+import 'package:cardflow/ui/cards/content/card_content_view.dart';
 import 'package:cardflow/ui/motion.dart';
 import 'package:cardflow/ui/review/feed_swipe.dart';
 
@@ -210,6 +211,8 @@ class _FeedCardViewState extends State<FeedCardView>
                                 front: widget.front,
                                 back: widget.back,
                                 revealed: widget.revealed,
+                                card: widget.card,
+                                mediaBytes: widget.mediaBytes,
                               ),
                             ),
                             if (widget.rated)
@@ -259,12 +262,16 @@ class _FlipFace extends StatelessWidget {
     required this.front,
     required this.back,
     required this.revealed,
+    required this.card,
+    required this.mediaBytes,
   });
 
   final Animation<double> controller;
   final String front;
   final String back;
   final bool revealed;
+  final Card? card;
+  final Map<String, Uint8List> mediaBytes;
 
   @override
   Widget build(BuildContext context) {
@@ -287,14 +294,22 @@ class _FlipFace extends StatelessWidget {
               transform: transform,
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(24),
-                child: Text(
-                  showBack ? back : front,
-                  key: const ValueKey<String>('feed-card-face'),
-                  textAlign: TextAlign.center,
-                  style: showBack
-                      ? theme.textTheme.bodyLarge?.copyWith(height: 1.6)
-                      : theme.textTheme.headlineMedium,
-                ),
+                child: card == null
+                    ? Text(
+                        showBack ? back : front,
+                        key: const ValueKey<String>('feed-card-face'),
+                        textAlign: TextAlign.center,
+                        style: showBack
+                            ? theme.textTheme.bodyLarge?.copyWith(height: 1.6)
+                            : theme.textTheme.headlineMedium,
+                      )
+                    : CardContentView(
+                        card: card!,
+                        side: showBack ? back : front,
+                        revealed: showBack,
+                        faceKey: const ValueKey<String>('feed-card-face'),
+                        mediaBytes: mediaBytes,
+                      ),
               ),
             ),
           );

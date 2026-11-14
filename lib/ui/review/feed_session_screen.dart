@@ -52,6 +52,7 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
   bool _loadFailed = false;
   bool _completionHapticPlayed = false;
   int _resetToken = 0;
+  Map<String, Uint8List> _mediaBytes = const <String, Uint8List>{};
 
   @override
   void initState() {
@@ -93,6 +94,10 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
       final Deck? deck = await ref
           .read(deckRepositoryProvider)
           .deckById(widget.deckId);
+      final mediaIds = <String>{for (final card in cards) ...card.mediaIds};
+      final mediaBytes = mediaIds.isEmpty
+          ? const <String, Uint8List>{}
+          : await ref.read(cardMediaRepositoryProvider).readMedia(mediaIds);
       if (!mounted) return;
       final FeedSessionEngine engine = FeedSessionEngine(
         cards: cards,
@@ -104,6 +109,7 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
       setState(() {
         _deck = deck;
         _engine = engine;
+        _mediaBytes = mediaBytes;
         _loading = false;
         _autoAdvancePaused = false;
         _completionHapticPlayed = false;
@@ -359,6 +365,8 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
                   key: ValueKey<String>('feed-card-${item.card.id}'),
                   front: item.card.front,
                   back: item.card.back,
+                  card: item.card,
+                  mediaBytes: _mediaBytes,
                   revealed: item.revealed,
                   rated: item.rated,
                   rating: item.rating,

@@ -13,7 +13,10 @@ import 'package:cardflow/api/providers/openai_adapter.dart';
 import 'package:cardflow/api/providers/openai_compatible_adapter.dart';
 import 'package:cardflow/api/providers/generation_provider_adapter.dart';
 import 'package:cardflow/api/parsers/file_parsing_service.dart';
+import 'package:cardflow/data/cards/drift_card_media_repository.dart';
 import 'package:cardflow/data/cards/drift_card_repository.dart';
+import 'package:cardflow/data/cards/file_picker_image_gateway.dart';
+import 'package:cardflow/data/cards/media_garbage_collector.dart';
 import 'package:cardflow/data/db/app_database.dart';
 import 'package:cardflow/data/decks/drift_deck_repository.dart';
 import 'package:cardflow/data/generation/drift_generation_card_store.dart';
@@ -26,6 +29,8 @@ import 'package:cardflow/data/transfer/drift_deck_transfer_service.dart';
 import 'package:cardflow/data/transfer/file_picker_gateway.dart';
 import 'package:cardflow/data/transfer/media_store.dart';
 import 'package:cardflow/data/transfer/zip_deck_archive_codec.dart';
+import 'package:cardflow/domain/cards/card_media.dart';
+import 'package:cardflow/domain/cards/card_media_repository.dart';
 import 'package:cardflow/domain/cards/card_repository.dart';
 import 'package:cardflow/domain/decks/deck_repository.dart';
 import 'package:cardflow/domain/generation/api_key_store.dart';
@@ -65,7 +70,31 @@ final deckRepositoryProvider = Provider<DeckRepository>((ref) {
 
 /// Репозиторий карточек.
 final cardRepositoryProvider = Provider<CardRepository>((ref) {
-  return DriftCardRepository(ref.watch(appDatabaseProvider));
+  return DriftCardRepository(
+    ref.watch(appDatabaseProvider),
+    mediaStore: ref.watch(mediaStoreProvider),
+  );
+});
+
+/// Чтение изображений карточек в сессиях (без drift в UI).
+final cardMediaRepositoryProvider = Provider<CardMediaRepository>((ref) {
+  return DriftCardMediaRepository(
+    ref.watch(appDatabaseProvider),
+    ref.watch(mediaStoreProvider),
+  );
+});
+
+/// Системный выбор изображения для Image Occlusion.
+final imageGatewayProvider = Provider<CardImageGateway>((ref) {
+  return const FilePickerImageGateway();
+});
+
+/// Очистка сирот медиа при старте приложения.
+final mediaGarbageCollectorProvider = Provider<MediaGarbageCollector>((ref) {
+  return MediaGarbageCollector(
+    ref.watch(appDatabaseProvider),
+    ref.watch(mediaStoreProvider),
+  );
 });
 
 /// Запись повторений (review_logs + due/fsrs_json в одной транзакции).

@@ -924,4 +924,68 @@ class AppLocalizationsRu extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get cardFormClozeMissingError => 'Добавьте хотя бы один пропуск';
+
+  @override
+  String get cardFormOcclusionSection => 'Изображение и маски';
+
+  @override
+  String get cardFormPickImage => 'Выбрать изображение';
+
+  @override
+  String get cardFormChangeImage => 'Заменить изображение';
+
+  @override
+  String get cardFormImageLoadError =>
+      'Не удалось загрузить изображение. Выберите другое изображение до 25 МБ.';
+
+  @override
+  String get cardFormOcclusionImageMissingError =>
+      'Выберите изображение для масок';
+
+  @override
+  String get cardFormOcclusionMasksMissingError =>
+      'Добавьте хотя бы одну маску';
+
+  @override
+  String get cardFormOcclusionInvalidError =>
+      'Проверьте изображение и координаты масок';
+
+  @override
+  String get occlusionRectangle => 'Прямоугольник';
+
+  @override
+  String get occlusionEllipse => 'Эллипс';
+
+  @override
+  String get occlusionDeleteMaskTooltip => 'Удалить маску';
+
+  @override
+  String get occlusionShowAll => 'Показать все';
+
+  @override
+  String get occlusionHideAll => 'Скрыть все';
+
+  @override
+  String get occlusionImageUnavailable => 'Не удалось загрузить изображение';
+
+  @override
+  String get occlusionInvalid => 'Ошибка разметки масок';
+
+  @override
+  String get latexNextStep => 'Следующий шаг';
+
+  @override
+  String get clozeHiddenAnswer => '…';
+
+  @override
+  String get occlusionDrawHint =>
+      'Проведите по изображению, чтобы добавить маску';
+
+  @override
+  String occlusionMaskNumber(int number) {
+    return 'Маска $number';
+  }
 }

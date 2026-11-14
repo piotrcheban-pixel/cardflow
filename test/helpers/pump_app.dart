@@ -1,3 +1,5 @@
+import 'package:cardflow/domain/cards/card_media.dart';
+import 'package:cardflow/domain/cards/card_media_repository.dart';
 import 'package:cardflow/domain/cards/card_repository.dart';
 import 'package:cardflow/domain/decks/deck_repository.dart';
 import 'package:cardflow/domain/generation/api_key_store.dart';
@@ -143,6 +145,8 @@ List<Override> decksOverrides({
   FileGateway? fileGateway,
   GenerationSettingsStore? generationSettingsStore,
   ApiKeyStore? apiKeyStore,
+  CardMediaRepository? cardMediaRepository,
+  CardImageGateway? imageGateway,
 }) {
   return <Override>[
     deckRepositoryProvider.overrideWithValue(deckRepository),
@@ -161,6 +165,12 @@ List<Override> decksOverrides({
       generationSettingsStore ?? FakeGenerationSettingsStore(),
     ),
     apiKeyStoreProvider.overrideWithValue(apiKeyStore ?? FakeApiKeyStore()),
+    cardMediaRepositoryProvider.overrideWithValue(
+      cardMediaRepository ?? FakeCardMediaRepository(),
+    ),
+    imageGatewayProvider.overrideWithValue(
+      imageGateway ?? FakeCardImageGateway(),
+    ),
   ];
 }
 

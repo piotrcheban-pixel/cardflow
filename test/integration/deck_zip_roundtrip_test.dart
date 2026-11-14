@@ -8,7 +8,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cardflow/data/db/app_database.dart';
 import 'package:cardflow/data/transfer/media_store.dart';
 import 'package:cardflow/domain/cards/card.dart';
+import 'package:cardflow/domain/cards/card_draft.dart';
+import 'package:cardflow/domain/cards/card_media.dart';
 import 'package:cardflow/domain/cards/content_hash.dart';
+import 'package:cardflow/domain/cards/occlusion.dart';
 import 'package:cardflow/domain/transfer/deck_archive.dart';
 import 'package:cardflow/domain/transfer/deck_transfer_service.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
@@ -155,6 +158,59 @@ void main() {
     expect(exported.media.single.mimeType, 'image/png');
     expect(exported.media.single.bytes, bytes);
     expect(exported.cards.single.mediaIds, hasLength(1));
+  });
+
+  test('occlusion-карточка: create → export → import сохраняет всё', () async {
+    final deck = await container
+        .read(deckRepositoryProvider)
+        .createDeck(name: 'Анатомия');
+    final bytes = Uint8List.fromList(<int>[0x89, 0x50, 0x4E, 0x47, 1, 2, 3]);
+    const document = OcclusionDocument(
+      masks: <OcclusionMask>[
+        OcclusionMask(
+          id: 'm1',
+          shape: OcclusionShape.ellipse,
+          x: 0.1,
+          y: 0.2,
+          width: 0.3,
+          height: 0.4,
+        ),
+      ],
+    );
+    final created = await container
+        .read(cardRepositoryProvider)
+        .createCards(
+          deckId: deck.id,
+          draft: CardDraft(
+            front: 'Схема',
+            back: 'Подпись',
+            occlusionJson: document.encode(),
+            latex: r'x^2',
+            imageUpload: CardImageUpload(
+              fileName: 'scheme.png',
+              mimeType: 'image/png',
+              bytes: bytes,
+            ),
+          ),
+          now: DateTime.utc(2026, 11, 14, 12),
+        );
+    expect(created.single.mediaIds, hasLength(1));
+    expect(created.single.occlusionJson, document.encode());
+
+    final zip = await service().exportDeckZip(deck.id);
+    final result = await service().importZip(zip);
+    final imported = await container
+        .read(cardRepositoryProvider)
+        .cardsByDeck(result.deckId);
+
+    expect(imported, hasLength(1));
+    expect(imported.single.occlusionJson, document.encode());
+    expect(imported.single.latex, r'x^2');
+    expect(imported.single.mediaIds, hasLength(1));
+    final media = await container
+        .read(cardMediaRepositoryProvider)
+        .readMedia(imported.single.mediaIds);
+    expect(media[imported.single.mediaIds.single], bytes);
   });
 
   test('дубликаты по content_hash внутри архива пропускаются', () async {

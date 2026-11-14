@@ -52,7 +52,25 @@ class MediaStore {
   }
 
   /// Перечисляет относительные пути реальных файлов медиа для GC.
-  Future<List<String>> listMedia() async => <String>[];
+  Future<List<String>> listMedia() async {
+    final mediaDirectory = Directory(p.join(rootDirectory.path, 'media'));
+    if (!await mediaDirectory.exists()) return <String>[];
+    final paths = <String>[];
+    await for (final entity in mediaDirectory.list(
+      recursive: true,
+      followLinks: false,
+    )) {
+      if (entity is! File ||
+          p.basename(entity.path).startsWith(_tempPrefix())) {
+        continue;
+      }
+      paths.add(
+        p.relative(entity.path, from: rootDirectory.path).replaceAll('\\', '/'),
+      );
+    }
+    paths.sort();
+    return List<String>.unmodifiable(paths);
+  }
 
   /// Удаляет медиа по относительному пути (нет файла — не ошибка).
   Future<void> deleteMedia(String relativePath) async {

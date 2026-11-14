@@ -37,7 +37,12 @@ void main() {
     mediaIds: mediaIds,
   );
 
-  Future<void> pumpClassic(WidgetTester tester, Card value, {Uint8List? image}) async {
+  Future<void> pumpClassic(
+    WidgetTester tester,
+    Card value, {
+    Uint8List? image,
+    bool revealed = false,
+  }) async {
     await tester.pumpWidget(
       appWithHome(
         overrides: const [],
@@ -46,8 +51,8 @@ void main() {
             front: value.front,
             back: value.back,
             card: value,
-            mediaBytes: <String, Uint8List>{if (image != null) 'media-1': image},
-            revealed: false,
+            mediaBytes: <String, Uint8List>{'media-1': ?image},
+            revealed: revealed,
             onTap: () {},
           ),
         ),
@@ -72,7 +77,22 @@ void main() {
     expect(find.byKey(const ValueKey('cloze-answer-1')), findsOneWidget);
   });
 
-  testWidgets('лента: тот же cloze-рендер раскрывает один пропуск', (tester) async {
+  testWidgets('классика: общее раскрытие cloze показывает все ответы', (
+    tester,
+  ) async {
+    await pumpClassic(
+      tester,
+      card(front: '{{c1::А}} и {{c2::Б}}', back: '', type: CardType.cloze),
+      revealed: true,
+    );
+
+    expect(find.byKey(const ValueKey('cloze-answer-1')), findsOneWidget);
+    expect(find.byKey(const ValueKey('cloze-answer-2')), findsOneWidget);
+  });
+
+  testWidgets('лента: тот же cloze-рендер раскрывает один пропуск', (
+    tester,
+  ) async {
     final value = card(
       front: 'А {{c1::Б}} и {{c2::В}}',
       back: '',
@@ -129,10 +149,34 @@ void main() {
     expect(find.byType(Math), findsNothing);
   });
 
+  testWidgets('occlusion: общее раскрытие показывает маски, hide возвращает', (
+    tester,
+  ) async {
+    const raw =
+        '{"version":1,"masks":['
+        '{"id":"m1","shape":"rectangle","x":0,"y":0,"width":1,"height":1}]}';
+    await pumpClassic(
+      tester,
+      card(occlusionJson: raw, mediaIds: const <String>['media-1']),
+      image: png,
+      revealed: true,
+    );
+    await tester.pump();
+
+    expect(find.byKey(const ValueKey('occlusion-cover-m1')), findsNothing);
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('occlusion-hide-all')),
+    );
+    await tester.tap(find.byKey(const ValueKey('occlusion-hide-all')));
+    await tester.pump();
+    expect(find.byKey(const ValueKey('occlusion-cover-m1')), findsOneWidget);
+  });
+
   testWidgets('occlusion: изображение, тап маски и показать/скрыть все', (
     tester,
   ) async {
-    const raw = '{"version":1,"masks":['
+    const raw =
+        '{"version":1,"masks":['
         '{"id":"m1","shape":"rectangle","x":0,"y":0,"width":1,"height":1}]}';
     await pumpClassic(
       tester,

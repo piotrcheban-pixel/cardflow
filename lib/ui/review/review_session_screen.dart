@@ -36,6 +36,7 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
   bool _loading = true;
   bool _loadFailed = false;
   bool _completionHapticPlayed = false;
+  Map<String, Uint8List> _mediaBytes = const <String, Uint8List>{};
 
   @override
   void initState() {
@@ -59,6 +60,10 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
       final cards = await ref
           .read(cardRepositoryProvider)
           .cardsByDeck(widget.deckId);
+      final mediaIds = <String>{for (final card in cards) ...card.mediaIds};
+      final mediaBytes = mediaIds.isEmpty
+          ? const <String, Uint8List>{}
+          : await ref.read(cardMediaRepositoryProvider).readMedia(mediaIds);
       if (!mounted) return;
       final engine = ReviewSessionEngine(
         cards: cards,
@@ -69,6 +74,7 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
       engine.start();
       setState(() {
         _engine = engine;
+        _mediaBytes = mediaBytes;
         _loading = false;
       });
     } catch (_) {
@@ -244,6 +250,8 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
                   key: ValueKey<String>(state.current!.card.id),
                   front: state.current!.card.front,
                   back: state.current!.card.back,
+                  card: state.current!.card,
+                  mediaBytes: _mediaBytes,
                   revealed: state.revealed,
                   onTap: _reveal,
                 ),

@@ -20,8 +20,7 @@ void main() {
   test('две формулы — два независимых шага', () {
     final markup = LatexMarkup.parse(r'$x=1$ и $y=2$');
     expect(
-      markup.segments
-          .where((segment) => segment.kind != LatexSegmentKind.text),
+      markup.segments.where((segment) => segment.kind != LatexSegmentKind.text),
       hasLength(2),
     );
   });

@@ -6,7 +6,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cardflow/data/cards/drift_card_repository.dart';
 import 'package:cardflow/data/db/app_database.dart';
 import 'package:cardflow/data/transfer/media_store.dart';
-import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/cards/card_draft.dart';
 import 'package:cardflow/domain/cards/card_media.dart';
 import 'package:cardflow/domain/cards/occlusion.dart';
@@ -38,7 +37,13 @@ void main() {
     temp = Directory.systemTemp.createTempSync('cardflow_occlusion_');
     store = MediaStore(temp);
     repository = DriftCardRepository(db, mediaStore: store);
-    await insertDeckRow(db, id: 'deck-1', name: 'Колода', createdAt: 1, updatedAt: 1);
+    await insertDeckRow(
+      db,
+      id: 'deck-1',
+      name: 'Колода',
+      createdAt: 1,
+      updatedAt: 1,
+    );
   });
 
   tearDown(() async {
@@ -52,31 +57,38 @@ void main() {
     bytes: bytes,
   );
 
-  test('createCards сохраняет файл, media-строку, latex и occlusion_json', () async {
-    final card = (await repository.createCards(
-      deckId: 'deck-1',
-      draft: CardDraft(
-        front: 'Анатомия',
-        back: 'Подпись',
-        latex: r'x^2',
-        occlusionJson: occlusion.encode(),
-        imageUpload: upload(),
-      ),
-      now: now,
-    )).single;
+  test(
+    'createCards сохраняет файл, media-строку, latex и occlusion_json',
+    () async {
+      final card = (await repository.createCards(
+        deckId: 'deck-1',
+        draft: CardDraft(
+          front: 'Анатомия',
+          back: 'Подпись',
+          latex: r'x^2',
+          occlusionJson: occlusion.encode(),
+          imageUpload: upload(),
+        ),
+        now: now,
+      )).single;
 
-    expect(card.mediaIds, hasLength(1), reason: 'карточка ссылается на новое медиа');
-    expect(card.occlusionJson, occlusion.encode());
-    expect(card.latex, r'x^2');
-    final mediaRows = await db.select(db.media).get();
-    expect(mediaRows, hasLength(1));
-    expect(mediaRows.single.id, card.mediaIds.single);
-    expect(mediaRows.single.cardId, card.id);
-    expect(mediaRows.single.mimeType, 'image/png');
-    expect(mediaRows.single.size, bytes.length);
-    expect(await store.readMedia(mediaRows.single.path), bytes);
-    expect(await repository.cardById(card.id), card);
-  });
+      expect(
+        card.mediaIds,
+        hasLength(1),
+        reason: 'карточка ссылается на новое медиа',
+      );
+      expect(card.occlusionJson, occlusion.encode());
+      expect(card.latex, r'x^2');
+      final mediaRows = await db.select(db.media).get();
+      expect(mediaRows, hasLength(1));
+      expect(mediaRows.single.id, card.mediaIds.single);
+      expect(mediaRows.single.cardId, card.id);
+      expect(mediaRows.single.mimeType, 'image/png');
+      expect(mediaRows.single.size, bytes.length);
+      expect(await store.readMedia(mediaRows.single.path), bytes);
+      expect(await repository.cardById(card.id), card);
+    },
+  );
 
   test('updateCard сохраняет маски и существующую связь media', () async {
     final original = (await repository.createCards(
@@ -140,7 +152,8 @@ void main() {
   });
 
   test('ошибка записи файла откатывает карточку и media-строку', () async {
-    final blockingFile = File('${temp.path}/not-a-directory')..writeAsBytesSync(<int>[0]);
+    final blockingFile = File('${temp.path}/not-a-directory')
+      ..writeAsBytesSync(<int>[0]);
     final failingRepository = DriftCardRepository(
       db,
       mediaStore: MediaStore(Directory(blockingFile.path)),

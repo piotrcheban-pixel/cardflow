@@ -21,7 +21,9 @@ void main() {
   );
 
   test('round-trip сохраняет версию, формы и нормализованные координаты', () {
-    const document = OcclusionDocument(masks: <OcclusionMask>[rectangle, ellipse]);
+    const document = OcclusionDocument(
+      masks: <OcclusionMask>[rectangle, ellipse],
+    );
 
     final decoded = OcclusionDocument.tryParse(document.encode());
 

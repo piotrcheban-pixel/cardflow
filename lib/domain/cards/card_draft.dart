@@ -1,5 +1,7 @@
 import 'card.dart';
 import 'card_media.dart';
+import 'cloze_markup.dart';
+import 'occlusion.dart';
 
 /// Поле ручной формы карточки, к которому относится ошибка валидации.
 enum CardDraftField {
@@ -135,6 +137,7 @@ class CardDraft {
   CardDraft normalized() {
     final String normalizedHint = (hint ?? '').trim();
     final String normalizedExcerpt = (sourceExcerpt ?? '').trim();
+    final String normalizedLatex = (latex ?? '').trim();
     return CardDraft(
       front: front.trim(),
       back: back.trim(),
@@ -142,6 +145,10 @@ class CardDraft {
       tags: parseTags(tags.join(',')),
       cardType: cardType,
       sourceExcerpt: normalizedExcerpt.isEmpty ? null : normalizedExcerpt,
+      mediaIds: List<String>.unmodifiable(mediaIds),
+      latex: normalizedLatex.isEmpty ? null : normalizedLatex,
+      occlusionJson: occlusionJson,
+      imageUpload: imageUpload,
     );
   }
 
@@ -166,6 +173,25 @@ class CardDraft {
     } else if (value.back.length > backMaxLength) {
       errors[CardDraftField.back] = CardValidationError.backTooLong;
     }
+    if (value.cardType == CardType.cloze &&
+        !ClozeMarkup.parse(value.front).hasGaps) {
+      errors[CardDraftField.front] = CardValidationError.clozeMissing;
+    }
+    if (value.occlusionJson != null) {
+      if (value.mediaIds.isEmpty && value.imageUpload == null) {
+        errors[CardDraftField.occlusion] =
+            CardValidationError.occlusionImageMissing;
+      } else {
+        final document = OcclusionDocument.tryParse(value.occlusionJson);
+        if (document == null || value.cardType == CardType.basicReversed) {
+          errors[CardDraftField.occlusion] =
+              CardValidationError.occlusionInvalid;
+        } else if (document.masks.isEmpty) {
+          errors[CardDraftField.occlusion] =
+              CardValidationError.occlusionMasksMissing;
+        }
+      }
+    }
     if (value.tags.length > maxTags) {
       errors[CardDraftField.tags] = CardValidationError.tagsTooMany;
     }
@@ -189,7 +215,11 @@ class CardDraft {
           other.hint == hint &&
           _listEquals(other.tags, tags) &&
           other.cardType == cardType &&
-          other.sourceExcerpt == sourceExcerpt;
+          other.sourceExcerpt == sourceExcerpt &&
+          _listEquals(other.mediaIds, mediaIds) &&
+          other.latex == latex &&
+          other.occlusionJson == occlusionJson &&
+          other.imageUpload == imageUpload;
 
   @override
   int get hashCode => Object.hash(
@@ -199,6 +229,10 @@ class CardDraft {
     Object.hashAll(tags),
     cardType,
     sourceExcerpt,
+    Object.hashAll(mediaIds),
+    latex,
+    occlusionJson,
+    imageUpload,
   );
 
   static bool _listEquals(List<String> a, List<String> b) {

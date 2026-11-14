@@ -1140,5 +1140,86 @@
         "type": "int"
       }
     }
+  },
+  "cardFormClozeMissingError": "Добавьте хотя бы один пропуск", 
+  "@cardFormClozeMissingError": {
+    "description": "Ошибка ручной формы: у cloze нет корректного пропуска A7.9."
+  },
+  "cardFormOcclusionSection": "Изображение и маски",
+  "@cardFormOcclusionSection": {
+    "description": "Заголовок редактора Image Occlusion в форме карточки."
+  },
+  "cardFormPickImage": "Выбрать изображение",
+  "@cardFormPickImage": {
+    "description": "Кнопка системного выбора изображения для масок."
+  },
+  "cardFormChangeImage": "Заменить изображение",
+  "@cardFormChangeImage": {
+    "description": "Кнопка замены изображения для масок."
+  },
+  "cardFormImageLoadError": "Не удалось загрузить изображение. Выберите другое изображение до 25 МБ.",
+  "@cardFormImageLoadError": {
+    "description": "Ошибка picker/чтения изображения без сырого исключения."
+  },
+  "cardFormOcclusionImageMissingError": "Выберите изображение для масок",
+  "@cardFormOcclusionImageMissingError": {
+    "description": "Ошибка occlusion без изображения."
+  },
+  "cardFormOcclusionMasksMissingError": "Добавьте хотя бы одну маску",
+  "@cardFormOcclusionMasksMissingError": {
+    "description": "Ошибка occlusion с пустым списком масок."
+  },
+  "cardFormOcclusionInvalidError": "Проверьте изображение и координаты масок",
+  "@cardFormOcclusionInvalidError": {
+    "description": "Ошибка повреждённой разметки occlusion."
+  },
+  "occlusionRectangle": "Прямоугольник",
+  "@occlusionRectangle": {
+    "description": "Форма прямоугольной маски."
+  },
+  "occlusionEllipse": "Эллипс",
+  "@occlusionEllipse": {
+    "description": "Форма эллиптической маски."
+  },
+  "occlusionDeleteMaskTooltip": "Удалить маску",
+  "@occlusionDeleteMaskTooltip": {
+    "description": "Кнопка удаления маски в редакторе."
+  },
+  "occlusionShowAll": "Показать все",
+  "@occlusionShowAll": {
+    "description": "Раскрыть все маски изображения."
+  },
+  "occlusionHideAll": "Скрыть все",
+  "@occlusionHideAll": {
+    "description": "Скрыть содержимое всех масок изображения."
+  },
+  "occlusionImageUnavailable": "Не удалось загрузить изображение",
+  "@occlusionImageUnavailable": {
+    "description": "Запасное сообщение вместо отсутствующего изображения."
+  },
+  "occlusionInvalid": "Ошибка разметки масок",
+  "@occlusionInvalid": {
+    "description": "Запасное сообщение для повреждённого occlusion_json."
+  },
+  "latexNextStep": "Следующий шаг",
+  "@latexNextStep": {
+    "description": "Раскрыть следующую формулу в пошаговом выводе."
+  },
+  "clozeHiddenAnswer": "…",
+  "@clozeHiddenAnswer": {
+    "description": "Замена скрытого пропуска cloze или следующего шага формулы."
+  },
+  "occlusionDrawHint": "Проведите по изображению, чтобы добавить маску",
+  "@occlusionDrawHint": {
+    "description": "Подсказка редактора масок Image Occlusion."
+  },
+  "occlusionMaskNumber": "Маска {number}",
+  "@occlusionMaskNumber": {
+    "description": "Номер маски в списке редактора.",
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
   }
 }

@@ -1,11 +1,16 @@
+import 'dart:typed_data';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart' hide Card;
 
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/cards/card_draft.dart';
+import 'package:cardflow/domain/cards/card_media.dart';
 import 'package:cardflow/domain/cards/card_repository.dart';
+import 'package:cardflow/domain/cards/occlusion.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
+import 'package:cardflow/ui/cards/occlusion_mask_editor.dart';
 import 'package:cardflow/ui/decks/deck_actions.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
 
@@ -24,8 +29,9 @@ enum CardFormResult {
 /// Экран создания/редактирования карточки (SPEC A6.3, ADR-009).
 ///
 /// Поля: front (обязателен, ≤500), back (обязателен, ≤2000), hint, теги (≤3),
-/// тип (`basic`/`basic_reversed`, при редактировании неизменяем) и
-/// `source_excerpt` для кнопки «Почему?». Сохранение — через репозиторий;
+/// тип (`basic`/`basic_reversed`/`cloze`, при редактировании неизменяем),
+/// `source_excerpt` для кнопки «Почему?» и редактор масок occlusion.
+/// Сохранение — через репозиторий;
 /// удаление — с подтверждением.
 class CardFormScreen extends ConsumerStatefulWidget {
   /// Создаёт форму; [cardId] == null — создание новой карточки.
@@ -52,6 +58,10 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
   bool _loading = false;
   bool _loadFailed = false;
   bool _saving = false;
+  bool _imageLoading = false;
+  CardImageUpload? _imageUpload;
+  Uint8List? _imageBytes;
+  OcclusionDocument? _occlusion;
   CardType _cardType = CardType.basic;
   Map<CardDraftField, CardValidationError> _errors =
       const <CardDraftField, CardValidationError>{};
@@ -99,9 +109,23 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
       _hint.text = card.hint ?? '';
       _tags.text = card.tags.join(', ');
       _sourceExcerpt.text = card.sourceExcerpt ?? '';
+      Uint8List? imageBytes;
+      if (card.mediaIds.isNotEmpty) {
+        try {
+          final bytes = await ref.read(cardMediaRepositoryProvider).readMedia(
+            <String>[card.mediaIds.first],
+          );
+          imageBytes = bytes[card.mediaIds.first];
+        } on Object {
+          imageBytes = null;
+        }
+      }
+      if (!mounted) return;
       setState(() {
         _card = card;
         _cardType = card.cardType;
+        _imageBytes = imageBytes;
+        _occlusion = OcclusionDocument.tryParse(card.occlusionJson);
         _loading = false;
       });
     } catch (_) {
@@ -113,8 +137,41 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
     }
   }
 
+  Future<void> _pickImage() async {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    setState(() => _imageLoading = true);
+    try {
+      final upload = await ref.read(imageGatewayProvider).pickImage();
+      if (!mounted || upload == null) return;
+      setState(() {
+        _imageUpload = upload;
+        _imageBytes = upload.bytes;
+        _occlusion = const OcclusionDocument();
+        _errors = <CardDraftField, CardValidationError>{
+          for (final entry in _errors.entries)
+            if (entry.key != CardDraftField.occlusion) entry.key: entry.value,
+        };
+      });
+    } on Object {
+      if (mounted) showAppMessage(context, l10n.cardFormImageLoadError);
+    } finally {
+      if (mounted) setState(() => _imageLoading = false);
+    }
+  }
+
   Future<void> _save() async {
     final AppLocalizations l10n = AppLocalizations.of(context);
+    final bool hasOcclusion = _imageBytes != null && _occlusion != null;
+    final bool replacingImage = _imageUpload != null;
+    final mediaIds = <String>[
+      if (_card != null && (!hasOcclusion || !replacingImage))
+        ..._card!.mediaIds,
+      if (_card != null &&
+          hasOcclusion &&
+          replacingImage &&
+          _card!.mediaIds.length > 1)
+        ..._card!.mediaIds.skip(1),
+    ];
     final CardDraft draft = CardDraft(
       front: _front.text,
       back: _back.text,
@@ -122,6 +179,13 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
       tags: CardDraft.parseTags(_tags.text),
       cardType: _cardType,
       sourceExcerpt: _sourceExcerpt.text,
+      mediaIds: mediaIds,
+      occlusionJson: hasOcclusion && _cardType == CardType.basic
+          ? _occlusion!.encode()
+          : null,
+      imageUpload: hasOcclusion && _cardType == CardType.basic
+          ? _imageUpload
+          : null,
     );
     final Map<CardDraftField, CardValidationError> errors = draft.validate();
     if (errors.isNotEmpty) {
@@ -298,8 +362,59 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
           ),
           const SizedBox(height: 16),
           _buildTypeSection(l10n),
+          if (_cardType == CardType.basic) ...<Widget>[
+            const SizedBox(height: 20),
+            _buildOcclusionSection(l10n),
+          ],
         ],
       ),
+    );
+  }
+
+  Widget _buildOcclusionSection(AppLocalizations l10n) {
+    final error = _errorText(l10n, CardDraftField.occlusion);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Text(
+          l10n.cardFormOcclusionSection,
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: 8),
+        if (error != null)
+          Text(
+            error,
+            style: TextStyle(color: Theme.of(context).colorScheme.error),
+          ),
+        const SizedBox(height: 8),
+        OutlinedButton.icon(
+          key: const ValueKey<String>('card-form-pick-image'),
+          onPressed: _imageLoading || _saving ? null : _pickImage,
+          icon: const Icon(Icons.add_photo_alternate_outlined),
+          label: Text(
+            _imageBytes == null
+                ? l10n.cardFormPickImage
+                : l10n.cardFormChangeImage,
+          ),
+        ),
+        if (_imageBytes != null && _occlusion != null) ...<Widget>[
+          const SizedBox(height: 12),
+          OcclusionMaskEditor(
+            imageBytes: _imageBytes!,
+            document: _occlusion!,
+            onChanged: (document) {
+              setState(() {
+                _occlusion = document;
+                _errors = <CardDraftField, CardValidationError>{
+                  for (final entry in _errors.entries)
+                    if (entry.key != CardDraftField.occlusion)
+                      entry.key: entry.value,
+                };
+              });
+            },
+          ),
+        ],
+      ],
     );
   }
 
@@ -333,6 +448,10 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
             ButtonSegment<CardType>(
               value: CardType.basicReversed,
               label: Text(l10n.cardTypeBasicReversed),
+            ),
+            ButtonSegment<CardType>(
+              value: CardType.cloze,
+              label: Text(l10n.cardTypeCloze),
             ),
           ],
           selected: <CardType>{_cardType},
@@ -402,10 +521,13 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
       CardValidationError.tagsTooMany => l10n.cardFormTagsTooManyError,
       CardValidationError.sourceExcerptTooLong =>
         l10n.cardFormSourceExcerptTooLongError,
-      CardValidationError.clozeMissing => l10n.cardFormFrontEmptyError,
-      CardValidationError.occlusionImageMissing ||
-      CardValidationError.occlusionMasksMissing ||
-      CardValidationError.occlusionInvalid => l10n.genericError,
+      CardValidationError.clozeMissing => l10n.cardFormClozeMissingError,
+      CardValidationError.occlusionImageMissing =>
+        l10n.cardFormOcclusionImageMissingError,
+      CardValidationError.occlusionMasksMissing =>
+        l10n.cardFormOcclusionMasksMissingError,
+      CardValidationError.occlusionInvalid =>
+        l10n.cardFormOcclusionInvalidError,
       null => null,
     };
   }

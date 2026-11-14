@@ -5,7 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cardflow/data/cards/drift_card_media_repository.dart';
 import 'package:cardflow/data/cards/drift_card_repository.dart';
+import 'package:cardflow/data/cards/file_picker_image_gateway.dart';
+import 'package:cardflow/data/cards/media_garbage_collector.dart';
 import 'package:cardflow/data/db/app_database.dart';
 import 'package:cardflow/data/decks/drift_deck_repository.dart';
 import 'package:cardflow/data/generation/drift_generation_card_store.dart';
@@ -56,6 +59,21 @@ void main() {
   test('граф провайдеров собирается на реальных реализациях', () {
     expect(container.read(deckRepositoryProvider), isA<DriftDeckRepository>());
     expect(container.read(cardRepositoryProvider), isA<DriftCardRepository>());
+    expect(
+      (container.read(
+        cardRepositoryProvider,
+      ) as DriftCardRepository).mediaStore,
+      same(container.read(mediaStoreProvider)),
+    );
+    expect(
+      container.read(cardMediaRepositoryProvider),
+      isA<DriftCardMediaRepository>(),
+    );
+    expect(container.read(imageGatewayProvider), isA<FilePickerImageGateway>());
+    expect(
+      container.read(mediaGarbageCollectorProvider),
+      isA<MediaGarbageCollector>(),
+    );
     expect(
       container.read(reviewRepositoryProvider),
       isA<DriftReviewRepository>(),

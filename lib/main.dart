@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/widgets.dart';
@@ -6,6 +7,7 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import 'data/cards/media_garbage_collector.dart';
 import 'data/db/app_database.dart';
 import 'data/db/database_opener.dart';
 import 'data/transfer/media_store.dart';
@@ -37,6 +39,10 @@ Future<void> main() async {
     runApp(const StartupErrorApp());
     return;
   }
+
+  unawaited(
+    MediaGarbageCollector(database, mediaStore).collect().catchError((_) => 0),
+  );
 
   runApp(
     ProviderScope(
