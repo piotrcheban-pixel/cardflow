@@ -11,7 +11,9 @@ Xcode, Linux — отсутствуют. `DEEPSEEK_API_KEY`: present в Windows 
 **959 passed + 1 skipped** (baseline 897 → +62); покрытие **93.6% (5788/6181)** (feed-файлы 95.8–100%);
 `fvm flutter analyze` → No issues; `fvm dart format --set-exit-if-changed lib test` → 229 files, 0 changed;
 `fvm flutter build windows --release` → `cardflow.exe` (51,9 s).
-**CI:** прогон итерации 4 — после push; для 3c прогон `43583803312` (commit `e5f64c4`) — **9/9 success**.
+**CI:** push итерации 4 + handoff выполнен 2026-11-14: `origin/main` = `4ef3038`; run
+[`43587472135`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43587472135) — **9/9 success**.
+Для 3c run `43583803312` (`e5f64c4`) — 9/9 success.
 
 ## Передача итерации 5
 
@@ -22,8 +24,9 @@ Xcode, Linux — отсутствуют. `DEEPSEEK_API_KEY`: present в Windows 
 
 1. **Итерация 4 завершена (шаг 7); передача итерации 5 — внешнему агенту (Kimi).** DSH итерацию 5
    не начинает.
-2. **Push итерации 4 + handoff** — разрешён владельцем (2026-11-14); CI-прогон отслеживается.
-3. **CI-прогон итерации 4** — дождаться зелёного после push; статус 3c уже зелёный (`43583803312`).
+2. **Push итерации 4 + handoff выполнен** (2026-11-14, `origin/main` = `4ef3038`); CI —
+   run `43587472135`, 9/9 success.
+3. **CI-прогон итерации 4 — зелёный.** Следующий шаг — внешний агент (Kimi), итерация 5.
 4. Открытые вопросы к владельцу: нет.
 
 ## Итерация 4 — итог

@@ -6,14 +6,13 @@
 ## 1. HEAD и CI
 
 - **HEAD на момент передачи:** `33993f4` (`docs: complete iteration 4 verification and memory`),
-  последний коммит итерации 4. Handoff-коммит (`STATE.md` + этот файл) идёт сразу после него.
-- **`origin/main` до push:** `e5f64c4` (итерация 3c). Итерация 4 — 7 коммитов впереди; push разрешён
-  владельцем 2026-11-14 и выполняется вместе с handoff.
-- **CI итерации 3c:** run [`43583803312`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43583803312)
-  (commit `e5f64c4`) — **9/9 job success**.
-- **CI итерации 4:** запускается push-событием на `main`; статус фиксируется после прогона. Локальные
-  гейты итерации 4 зелёные: `fvm flutter test --coverage --exclude-tags golden` → **959 passed + 1 skipped**,
-  покрытие **93.6% (5788/6181)**, `analyze` 0, `format` 0 changed, Windows release — `cardflow.exe`.
+  последний коммит итерации 4; handoff-коммит — `4ef3038` (`docs: hand off iteration 5 to external agent`).
+- **`origin/main`:** `4ef3038` — push итерации 4 + handoff выполнен 2026-11-14 (было `e5f64c4`).
+- **CI итерации 4:** run [`43587472135`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43587472135)
+  (commit `4ef3038`) — **9/9 job success** (format+analyze, test × ubuntu/windows/macos, build linux/windows/
+  macos/android/ios). CI итерации 3c — run `43583803312` (commit `e5f64c4`) — 9/9 success.
+- Локальные гейты итерации 4 зелёные: `fvm flutter test --coverage --exclude-tags golden` → **959 passed +
+  1 skipped**, покрытие **93.6% (5788/6181)**, `analyze` 0, `format` 0 changed, Windows release — `cardflow.exe`.
 - Актуальный status — вкладка Actions репозитория; workflow — `.github/workflows/ci.yml` (push/PR,
   matrix ubuntu/windows/macos, 9 job'ов, `concurrency: cancel-in-progress`).
 
