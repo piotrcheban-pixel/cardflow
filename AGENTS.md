@@ -250,5 +250,7 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   «DeepSeek-аккаунт → `https://api.deepseek.com/chat/completions` + Bearer + job.provider=deepseek».
   Каталог: 9 провайдеров, миграция legacy-настроек и ключей, экран «Провайдеры», проверка
   подключения. Схема БД/`schemaVersion` не менялись; `AppSettings.defaultProvider/defaultModelId`
-  удалены (роль — `activeAccountId`). Ограничения: L28 (только Windows), L47, L48, L49. Push/CI —
-  по команде владельца.
+  удалены (роль — `activeAccountId`). Ограничения: L28 (только Windows), L47, L48, L49.
+  **Push итерации 7.5:** `7892b08..a20cd5e`; CI run
+  [`43632334916`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43632334916) —
+  **9/9 job success**.

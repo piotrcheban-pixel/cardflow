@@ -23,7 +23,7 @@
 | 2 | Каталог из 9 провайдеров, автозаполнение адреса/модели | **выполнено** | `provider_preset_test.dart` (9 пресетов, адреса, протоколы, модели, ключ у Ollama); widget-тест «добавление DeepSeek из каталога» проверяет `https://api.deepseek.com` без ручного ввода |
 | 3 | Экран провайдеров: список, «+ Добавить», два пути, «Проверить подключение», удаление, основной; старых полей нет | **выполнено** | `generation_settings_screen_test.dart` (13 тестов) + `settings_screen_test.dart` (сводка/пусто); старые строки ARB удалены |
 | 4 | Генерация использует выбранный аккаунт | **выполнено** | `generation_flow_test.dart`: DeepSeek-аккаунт → `POST https://api.deepseek.com/chat/completions`, `Bearer`, `model=deepseek-chat`, `generation_jobs.provider='deepseek'`; живой DeepSeek — 3 карточки |
-| 5 | Гейты качества | **выполнено** | таблица выше; push/CI — в конце итерации (см. `summary.md` после прогона) |
+| 5 | Гейты качества | **выполнено** | таблица выше + CI: push `7892b08..a20cd5e`, run [`43632334916`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43632334916) — **9/9 job success** (`format + analyze`, `test` × 3 ОС, `build-desktop` × 3, `build-mobile` × 2) |
 
 ## Не проверено (KNOWN_LIMITATIONS)
 
