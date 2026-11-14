@@ -5,7 +5,7 @@ import 'package:material_ui/material_ui.dart';
 
 import 'package:cardflow/api/parsers/file_parsing_service.dart';
 import 'package:cardflow/domain/decks/deck_summary.dart';
-import 'package:cardflow/domain/generation/generation_provider.dart';
+import 'package:cardflow/domain/generation/provider_account.dart';
 import 'package:cardflow/ui/generation/generation_screen.dart';
 import 'package:cardflow/ui/m3e/m3e.dart';
 import 'package:cardflow/ui/settings/generation_settings_screen.dart';
@@ -19,6 +19,7 @@ import '../../helpers/pump_app.dart';
 void main() {
   late FakeDeckRepository decks;
   late FakeGenerationRunner runner;
+  late FakeProviderAccountsStore accountsStore;
 
   setUp(() {
     decks = FakeDeckRepository(
@@ -27,11 +28,22 @@ void main() {
       ],
     );
     runner = FakeGenerationRunner();
+    accountsStore = FakeProviderAccountsStore(
+      ProviderAccounts.empty
+          .withAccount(testProviderAccount(presetId: 'deepseek'))
+          .withAccount(testProviderAccount(presetId: 'gemini')),
+    );
   });
 
   List<Override> overrides() {
     return <Override>[
-      ...decksOverrides(deckRepository: decks),
+      ...decksOverrides(
+        deckRepository: decks,
+        providerAccountsStore: accountsStore,
+        // У Gemini ключа нет: экран генерации показывает баннер с переходом
+        // в настройки — им и проверяем сохранение выбора провайдера.
+        apiKeyStore: FakeApiKeyStore(<String, String>{'deepseek': 'sk-ds'}),
+      ),
       generationRunnerProvider.overrideWithValue(runner),
       generationCardStoreProvider.overrideWithValue(FakeGenerationCardStore()),
       documentGatewayProvider.overrideWithValue(FakeDocumentGateway()),
@@ -114,9 +126,10 @@ void main() {
     );
   });
 
-  testWidgets('нет ключа → кнопка настроек открывает экран настроек', (
+  testWidgets('провайдеры не настроены → кнопка открывает экран провайдеров', (
     tester,
   ) async {
+    accountsStore = FakeProviderAccountsStore();
     await tester.pumpWidget(
       appWithRouter(
         overrides: overrides(),
@@ -127,22 +140,16 @@ void main() {
     await tester.pumpAndSettle();
     final l10n = l10nOf(tester);
 
-    expect(find.text(l10n.generationKeyMissing), findsOneWidget);
+    expect(
+      find.text(l10n.generationErrorProviderNotConfigured),
+      findsOneWidget,
+    );
     await tester.tap(
       find.byKey(const ValueKey<String>('generation-open-settings')),
     );
     await tester.pumpAndSettle();
-    expect(find.text(l10n.settingsTitle), findsOneWidget);
-    final Finder keyField = find.byKey(
-      ValueKey<String>('settings-key-${GenerationProvider.openai.wireName}'),
-    );
-    await tester.scrollUntilVisible(
-      keyField,
-      200,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.pumpAndSettle();
-    expect(keyField, findsOneWidget);
+    expect(find.text(l10n.providersTitle), findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('providers-add')), findsOneWidget);
   });
 
   testWidgets('выбранный провайдер сохраняется после возврата из настроек', (

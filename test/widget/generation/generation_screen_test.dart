@@ -12,10 +12,9 @@ import 'package:cardflow/domain/decks/deck_summary.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
 import 'package:cardflow/domain/generation/generation_job.dart';
-import 'package:cardflow/domain/generation/generation_provider.dart';
 import 'package:cardflow/domain/generation/generation_run.dart';
 import 'package:cardflow/domain/generation/document_gateway.dart';
-import 'package:cardflow/domain/settings/app_settings.dart';
+import 'package:cardflow/domain/generation/provider_account.dart';
 import 'package:cardflow/ui/generation/generation_screen.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
 
@@ -30,19 +29,17 @@ void main() {
   late FakeDocumentGateway gateway;
   late FakeGenerationRunner runner;
   late FakeApiKeyStore keyStore;
-  late FakeGenerationSettingsStore settingsStore;
+  late FakeProviderAccountsStore accountsStore;
   late FakeDeckRepository deckRepository;
-  late FakeAppSettingsStore appSettings;
 
   setUp(() {
     gateway = FakeDocumentGateway();
     runner = FakeGenerationRunner();
-    keyStore = FakeApiKeyStore(<GenerationProvider, String>{
-      GenerationProvider.openai: 'test-key',
-    });
-    settingsStore = FakeGenerationSettingsStore();
+    keyStore = FakeApiKeyStore(<String, String>{'deepseek': 'sk-deepseek'});
+    accountsStore = FakeProviderAccountsStore(
+      ProviderAccounts.empty.withAccount(testProviderAccount()),
+    );
     deckRepository = FakeDeckRepository();
-    appSettings = FakeAppSettingsStore();
   });
 
   List<Override> overrides() {
@@ -54,9 +51,9 @@ void main() {
       generationRunnerProvider.overrideWithValue(runner),
       generationCardStoreProvider.overrideWithValue(FakeGenerationCardStore()),
       apiKeyStoreProvider.overrideWithValue(keyStore),
-      generationSettingsStoreProvider.overrideWithValue(settingsStore),
+      providerAccountsStoreProvider.overrideWithValue(accountsStore),
       deckRepositoryProvider.overrideWithValue(deckRepository),
-      appSettingsStoreProvider.overrideWithValue(appSettings),
+      appSettingsStoreProvider.overrideWithValue(FakeAppSettingsStore()),
     ];
   }
 
@@ -101,28 +98,28 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('модель по умолчанию из настроек A6.6 предвыбирается', (
+  testWidgets('основной провайдер из настроек предвыбирается, модель — его', (
     tester,
   ) async {
-    await keyStore.write(GenerationProvider.anthropic, 'key-anthropic');
-    appSettings.settings = AppSettings.defaults.copyWith(
-      defaultProvider: GenerationProvider.anthropic,
-      defaultModelId: 'claude-3-5-haiku-latest',
-    );
+    accountsStore.accounts = ProviderAccounts.empty
+        .withAccount(testProviderAccount(presetId: 'deepseek'))
+        .withAccount(testProviderAccount(presetId: 'groq'))
+        .withActive('groq');
+    keyStore.keys['groq'] = 'sk-groq';
     await pumpScreen(tester);
 
-    final Finder providerChip = find.byKey(
-      const ValueKey<String>('generation-provider-anthropic'),
+    final Finder chip = find.byKey(
+      const ValueKey<String>('generation-provider-groq'),
     );
     await tester.scrollUntilVisible(
-      providerChip,
+      chip,
       300,
       scrollable: find.byType(Scrollable).first,
     );
-    expect(tester.widget<ChoiceChip>(providerChip).selected, isTrue);
+    expect(tester.widget<ChoiceChip>(chip).selected, isTrue);
 
     final Finder modelField = find.byKey(
-      const ValueKey<String>('generation-model'),
+      const ValueKey<String>('generation-model-groq'),
     );
     await tester.scrollUntilVisible(
       modelField,
@@ -131,7 +128,7 @@ void main() {
     );
     expect(
       tester.widget<DropdownButtonFormField<String>>(modelField).initialValue,
-      'claude-3-5-haiku-latest',
+      'llama-3.3-70b-versatile',
     );
   });
 
@@ -237,8 +234,9 @@ void main() {
     expect(runner.lastRequest!.documents.single.fileName, 'лекция.txt');
     expect(runner.lastRequest!.deckName, 'лекция');
     expect(runner.lastRequest!.targetDeckId, isNull);
-    expect(runner.lastRequest!.provider, GenerationProvider.openai);
-    expect(runner.lastRequest!.modelId, 'gpt-4o-mini');
+    expect(runner.lastRequest!.account.id, 'deepseek');
+    expect(runner.lastRequest!.account.baseUrl, 'https://api.deepseek.com');
+    expect(runner.lastRequest!.account.modelId, 'deepseek-chat');
     final l10n = l10nOf(tester);
     expect(find.text(l10n.generationPreviewTitle), findsOneWidget);
   });
@@ -249,9 +247,35 @@ void main() {
     final l10n = l10nOf(tester);
     expect(find.text(l10n.generationKeyMissing), findsOneWidget);
     expect(
+      find.byKey(const ValueKey<String>('generation-key-banner')),
+      findsOneWidget,
+    );
+    expect(
       find.byKey(const ValueKey<String>('generation-open-settings')),
       findsOneWidget,
     );
+  });
+
+  testWidgets('провайдеры не настроены: баннер «Сервер не настроен»', (
+    tester,
+  ) async {
+    accountsStore = FakeProviderAccountsStore();
+    await pumpScreen(tester);
+    final l10n = l10nOf(tester);
+    expect(
+      find.byKey(const ValueKey<String>('generation-provider-banner')),
+      findsOneWidget,
+    );
+    expect(
+      find.text(l10n.generationErrorProviderNotConfigured),
+      findsOneWidget,
+    );
+
+    await attachTextFile(tester);
+    await tester.tap(find.byKey(const ValueKey<String>('generation-start')));
+    await tester.pumpAndSettle();
+    expect(runner.runCalls, 0);
+    expect(find.text(l10n.generationErrorProviderNotConfigured), findsWidgets);
   });
 
   testWidgets('прогресс и отмена: текст фрагмента и отмена токена', (

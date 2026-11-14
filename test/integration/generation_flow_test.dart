@@ -8,7 +8,6 @@ import 'package:cardflow/data/db/app_database.dart';
 import 'package:cardflow/data/generation/drift_generation_card_store.dart';
 import 'package:cardflow/data/generation/drift_generation_job_repository.dart';
 import 'package:cardflow/domain/generation/generation_job.dart';
-import 'package:cardflow/domain/generation/generation_provider.dart';
 import 'package:cardflow/domain/generation/generation_run.dart';
 import 'package:cardflow/domain/text/document_format.dart';
 import 'package:cardflow/domain/text/parsed_document.dart';
@@ -62,9 +61,7 @@ void main() {
         appDatabaseProvider.overrideWithValue(database),
         generationDioProvider.overrideWithValue(dioWithAdapter(httpAdapter)),
         apiKeyStoreProvider.overrideWithValue(
-          FakeApiKeyStore(<GenerationProvider, String>{
-            GenerationProvider.openai: 'test-key-openai',
-          }),
+          FakeApiKeyStore(<String, String>{'openai': 'test-key-openai'}),
         ),
         generationSettingsStoreProvider.overrideWithValue(
           FakeGenerationSettingsStore(),
@@ -91,8 +88,7 @@ void main() {
   GenerationRunRequest request({String? targetDeckId}) {
     return GenerationRunRequest(
       documents: <ParsedDocument>[document()],
-      provider: GenerationProvider.openai,
-      modelId: 'gpt-4o-mini',
+      account: testProviderAccount(presetId: 'openai', modelId: 'gpt-4o-mini'),
       deckName: 'Сгенерированная колода',
       targetDeckId: targetDeckId,
     );
@@ -179,6 +175,51 @@ void main() {
       expect(secondJob.status, GenerationJobStatus.done);
       expect(secondJob.cardsCount, 0);
       expect(httpAdapter.requests, hasLength(2));
+    },
+  );
+
+  test(
+    'аккаунт DeepSeek: сохранённый ключ → запрос на https://api.deepseek.com',
+    () async {
+      // Ключ пишется в secure-storage-фейк так же, как это делает экран
+      // провайдеров (ADR-020): id аккаунта === ключ хранилища.
+      await container
+          .read(apiKeyStoreProvider)
+          .write('deepseek', 'sk-ds-test-key');
+
+      final result = await container
+          .read(generationRunnerProvider)
+          .run(
+            GenerationRunRequest(
+              documents: <ParsedDocument>[document()],
+              account: testProviderAccount(
+                presetId: 'deepseek',
+                modelId: 'deepseek-chat',
+              ),
+              deckName: 'DeepSeek колода',
+            ),
+          );
+
+      expect(result.status, GenerationJobStatus.done);
+      expect(result.cards, hasLength(1));
+      expect(httpAdapter.requests, hasLength(1));
+      final sent = httpAdapter.requests.single;
+      expect(
+        sent.uri.toString(),
+        'https://api.deepseek.com/chat/completions',
+        reason: 'запрос должен уйти на адрес аккаунта DeepSeek',
+      );
+      expect(sent.headers['Authorization'], 'Bearer sk-ds-test-key');
+      final body = jsonDecode(sent.data! as String) as Map<String, Object?>;
+      expect(body['model'], 'deepseek-chat');
+
+      final GenerationJob job = (await container
+          .read(generationJobRepositoryProvider)
+          .jobById(result.jobId))!;
+      expect(job.status, GenerationJobStatus.done);
+      expect(job.provider, 'deepseek', reason: 'id аккаунта в generation_jobs');
+      expect(job.model, 'deepseek-chat');
+      expect(job.tokensUsed, 30);
     },
   );
 

@@ -9,8 +9,7 @@ import 'package:cardflow/api/providers/generation_provider_adapter.dart';
 import 'package:cardflow/api/providers/openai_adapter.dart';
 import 'package:cardflow/api/providers/openai_compatible_adapter.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
-import 'package:cardflow/domain/generation/generation_provider.dart';
-import 'package:cardflow/domain/generation/openai_compatible_settings.dart';
+import 'package:cardflow/domain/generation/provider_account.dart';
 
 import '../../../helpers/generation_fakes.dart';
 
@@ -33,10 +32,10 @@ class _FakeTransport implements GenerationTransport {
   }
 }
 
+/// Итерация 7.5 (ADR-020): проверка подключения по аккаунту провайдера.
 void main() {
   late _FakeTransport transport;
   late FakeApiKeyStore keys;
-  late FakeGenerationSettingsStore compatibleSettings;
 
   ApiKeyVerifier verifier() => ApiKeyVerifier(
     adapters: <GenerationProviderAdapter>[
@@ -47,65 +46,73 @@ void main() {
     ],
     apiKeyStore: keys,
     transport: transport,
-    generationSettingsStore: compatibleSettings,
   );
 
   setUp(() {
     transport = _FakeTransport();
     keys = FakeApiKeyStore();
-    compatibleSettings = FakeGenerationSettingsStore();
   });
 
-  group('ApiKeyVerifier — облачные провайдеры', () {
+  group('ApiKeyVerifier — каталог провайдеров', () {
     test('ключ не задан — missingKey, запрос не уходит', () async {
       final ApiKeyCheckResult result = await verifier().check(
-        GenerationProvider.openai,
+        testProviderAccount(presetId: 'deepseek'),
       );
       expect(result.status, ApiKeyCheckStatus.missingKey);
       expect(transport.calls, 0);
     });
 
     test(
-      'ключ принят — valid, ключ в заголовке провайдера (не в URL)',
+      'DeepSeek: ключ из хранилища в заголовке, запрос на api.deepseek.com',
       () async {
-        keys = FakeApiKeyStore(<GenerationProvider, String>{
-          GenerationProvider.openai: 'key-openai',
-        });
+        keys = FakeApiKeyStore(<String, String>{'deepseek': 'sk-deepseek'});
         final ApiKeyCheckResult result = await verifier().check(
-          GenerationProvider.openai,
+          testProviderAccount(presetId: 'deepseek'),
         );
         expect(result.status, ApiKeyCheckStatus.valid);
         expect(transport.calls, 1);
         expect(
           transport.lastRequest!.headers['Authorization'],
-          'Bearer key-openai',
+          'Bearer sk-deepseek',
         );
-        expect(transport.lastRequest!.uri.query, isNot(contains('key-openai')));
+        expect(
+          transport.lastRequest!.uri.toString(),
+          'https://api.deepseek.com/chat/completions',
+        );
+        expect(transport.lastRequest!.uri.toString(), isNot(contains('sk-')));
       },
     );
 
-    test('Gemini и Anthropic используют свои заголовки', () async {
-      keys = FakeApiKeyStore(<GenerationProvider, String>{
-        GenerationProvider.gemini: 'key-gemini',
-        GenerationProvider.anthropic: 'key-anthropic',
+    test('Gemini и Anthropic используют свои заголовки и адреса', () async {
+      keys = FakeApiKeyStore(<String, String>{
+        'gemini': 'key-gemini',
+        'anthropic': 'key-anthropic',
       });
       expect(
-        (await verifier().check(GenerationProvider.gemini)).status,
+        (await verifier().check(testProviderAccount(presetId: 'gemini')))
+            .status,
         ApiKeyCheckStatus.valid,
       );
       expect(transport.lastRequest!.headers['x-goog-api-key'], 'key-gemini');
+      expect(
+        transport.lastRequest!.uri.toString(),
+        contains('generativelanguage.googleapis.com/v1beta/models/'),
+      );
 
       expect(
-        (await verifier().check(GenerationProvider.anthropic)).status,
+        (await verifier().check(testProviderAccount(presetId: 'anthropic')))
+            .status,
         ApiKeyCheckStatus.valid,
       );
       expect(transport.lastRequest!.headers['x-api-key'], 'key-anthropic');
+      expect(
+        transport.lastRequest!.uri.toString(),
+        contains('api.anthropic.com/v1/messages'),
+      );
     });
 
     test('ошибки транспорта маппятся в статусы без сырых деталей', () async {
-      keys = FakeApiKeyStore(<GenerationProvider, String>{
-        GenerationProvider.openai: 'key-openai',
-      });
+      keys = FakeApiKeyStore(<String, String>{'deepseek': 'sk-deepseek'});
       final Map<GenerationErrorCode, ApiKeyCheckStatus> cases =
           <GenerationErrorCode, ApiKeyCheckStatus>{
             GenerationErrorCode.invalidApiKey: ApiKeyCheckStatus.invalidKey,
@@ -121,44 +128,39 @@ void main() {
           details: 'сырые детали не должны попасть наружу',
         );
         final ApiKeyCheckResult result = await verifier().check(
-          GenerationProvider.openai,
+          testProviderAccount(presetId: 'deepseek'),
         );
         expect(result.status, entry.value, reason: entry.key.name);
       }
     });
 
     test('неожиданное исключение — unexpected', () async {
-      keys = FakeApiKeyStore(<GenerationProvider, String>{
-        GenerationProvider.openai: 'key-openai',
-      });
+      keys = FakeApiKeyStore(<String, String>{'deepseek': 'sk-deepseek'});
       transport.error = StateError('boom');
       final ApiKeyCheckResult result = await verifier().check(
-        GenerationProvider.openai,
+        testProviderAccount(presetId: 'deepseek'),
       );
       expect(result.status, ApiKeyCheckStatus.unexpected);
     });
   });
 
-  group('ApiKeyVerifier — OpenAI-совместимый сервер', () {
-    test('сервер не настроен — providerNotConfigured', () async {
-      final ApiKeyCheckResult result = await verifier().check(
-        GenerationProvider.openaiCompatible,
-      );
-      expect(result.status, ApiKeyCheckStatus.providerNotConfigured);
-      expect(transport.calls, 0);
-    });
+  group('ApiKeyVerifier — пользовательский провайдер', () {
+    test(
+      'неполный аккаунт — providerNotConfigured, запрос не уходит',
+      () async {
+        final ApiKeyCheckResult result = await verifier().check(
+          testCustomProviderAccount(baseUrl: '  '),
+        );
+        expect(result.status, ApiKeyCheckStatus.providerNotConfigured);
+        expect(transport.calls, 0);
+      },
+    );
 
     test(
-      'сервер настроен без ключа — запрос без Authorization и valid',
+      'локальный сервер без ключа — запрос без Authorization и valid',
       () async {
-        compatibleSettings = FakeGenerationSettingsStore(
-          const OpenAiCompatibleSettings(
-            baseUrl: 'http://localhost:11434/v1',
-            model: 'qwen2.5',
-          ),
-        );
         final ApiKeyCheckResult result = await verifier().check(
-          GenerationProvider.openaiCompatible,
+          testCustomProviderAccount(),
         );
         expect(result.status, ApiKeyCheckStatus.valid);
         expect(
@@ -167,10 +169,32 @@ void main() {
         );
         expect(
           transport.lastRequest!.uri.toString(),
-          contains('localhost:11434'),
+          'http://localhost:1234/v1/chat/completions',
         );
         expect(transport.lastRequest!.body['model'], 'qwen2.5');
       },
     );
+
+    test('локальный сервер с ключом — ключ уходит в заголовке', () async {
+      final ProviderAccount account = testCustomProviderAccount(id: 'local');
+      keys = FakeApiKeyStore(<String, String>{'local': 'sk-local'});
+      final ApiKeyCheckResult result = await verifier().check(account);
+      expect(result.status, ApiKeyCheckStatus.valid);
+      expect(
+        transport.lastRequest!.headers['Authorization'],
+        'Bearer sk-local',
+      );
+    });
+
+    test('Ollama из каталога не требует ключа', () async {
+      final ApiKeyCheckResult result = await verifier().check(
+        testProviderAccount(presetId: 'ollama'),
+      );
+      expect(result.status, ApiKeyCheckStatus.valid);
+      expect(
+        transport.lastRequest!.uri.toString(),
+        contains('localhost:11434'),
+      );
+    });
   });
 }

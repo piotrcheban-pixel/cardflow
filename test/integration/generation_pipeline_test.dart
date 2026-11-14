@@ -9,7 +9,8 @@ import 'package:cardflow/domain/generation/generation_error.dart';
 import 'package:cardflow/domain/generation/generation_provider.dart';
 import 'package:cardflow/domain/generation/generation_request.dart';
 import 'package:cardflow/domain/generation/generation_result.dart';
-import 'package:cardflow/domain/generation/openai_compatible_settings.dart';
+import 'package:cardflow/domain/generation/provider_account.dart';
+import 'package:cardflow/domain/generation/provider_protocol.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
 
 import '../helpers/fake_http_adapter.dart';
@@ -50,6 +51,24 @@ void main() {
     },
   };
 
+  /// Аккаунт провайдера для запроса (id === ключ в secure storage).
+  ProviderAccount accountWith({
+    required String id,
+    required ProviderProtocol protocol,
+    required String modelId,
+    String? baseUrl,
+    bool requiresApiKey = true,
+  }) {
+    return ProviderAccount(
+      id: id,
+      label: id,
+      protocol: protocol,
+      baseUrl: baseUrl ?? protocol.defaultBaseUrl,
+      modelId: modelId,
+      requiresApiKey: requiresApiKey,
+    );
+  }
+
   ProviderContainer containerWith(
     Dio dio, {
     FakeApiKeyStore? keyStore,
@@ -59,10 +78,7 @@ void main() {
       overrides: [
         generationDioProvider.overrideWithValue(dio),
         apiKeyStoreProvider.overrideWithValue(
-          keyStore ??
-              FakeApiKeyStore(<GenerationProvider, String>{
-                GenerationProvider.openai: openAiKey,
-              }),
+          keyStore ?? FakeApiKeyStore(<String, String>{'openai': openAiKey}),
         ),
         generationSettingsStoreProvider.overrideWithValue(
           settingsStore ?? FakeGenerationSettingsStore(),
@@ -84,9 +100,12 @@ void main() {
       final service = container.read(cardGenerationServiceProvider);
 
       final GenerationResult result = await service.generate(
-        const GenerationRequest(
-          provider: GenerationProvider.openai,
-          model: 'gpt-test',
+        GenerationRequest(
+          account: accountWith(
+            id: 'openai',
+            protocol: ProviderProtocol.openai,
+            modelId: 'gpt-test',
+          ),
           materialsText: 'Материал лекции',
           wishes: 'Покороче',
           limit: 7,
@@ -133,9 +152,12 @@ void main() {
       container
           .read(cardGenerationServiceProvider)
           .generate(
-            const GenerationRequest(
-              provider: GenerationProvider.openai,
-              model: 'gpt-test',
+            GenerationRequest(
+              account: accountWith(
+                id: 'openai',
+                protocol: ProviderProtocol.openai,
+                modelId: 'gpt-test',
+              ),
               materialsText: 'Материал',
               limit: 3,
             ),
@@ -163,9 +185,12 @@ void main() {
       container
           .read(cardGenerationServiceProvider)
           .generate(
-            const GenerationRequest(
-              provider: GenerationProvider.openai,
-              model: 'gpt-test',
+            GenerationRequest(
+              account: accountWith(
+                id: 'openai',
+                protocol: ProviderProtocol.openai,
+                modelId: 'gpt-test',
+              ),
               materialsText: 'Материал',
               limit: 3,
             ),
@@ -210,17 +235,18 @@ void main() {
       );
       final container = containerWith(
         dioWithAdapter(adapter),
-        keyStore: FakeApiKeyStore(<GenerationProvider, String>{
-          GenerationProvider.gemini: geminiKey,
-        }),
+        keyStore: FakeApiKeyStore(<String, String>{'gemini': geminiKey}),
       );
 
       final result = await container
           .read(cardGenerationServiceProvider)
           .generate(
-            const GenerationRequest(
-              provider: GenerationProvider.gemini,
-              model: 'gemini-test',
+            GenerationRequest(
+              account: accountWith(
+                id: 'gemini',
+                protocol: ProviderProtocol.geminiGenerateContent,
+                modelId: 'gemini-test',
+              ),
               materialsText: 'Материал лекции',
               limit: 5,
             ),
@@ -269,17 +295,18 @@ void main() {
       );
       final container = containerWith(
         dioWithAdapter(adapter),
-        keyStore: FakeApiKeyStore(<GenerationProvider, String>{
-          GenerationProvider.anthropic: anthropicKey,
-        }),
+        keyStore: FakeApiKeyStore(<String, String>{'anthropic': anthropicKey}),
       );
 
       final result = await container
           .read(cardGenerationServiceProvider)
           .generate(
-            const GenerationRequest(
-              provider: GenerationProvider.anthropic,
-              model: 'claude-test',
+            GenerationRequest(
+              account: accountWith(
+                id: 'anthropic',
+                protocol: ProviderProtocol.anthropicMessages,
+                modelId: 'claude-test',
+              ),
               materialsText: 'Материал лекции',
               limit: 5,
             ),
@@ -308,20 +335,19 @@ void main() {
     final container = containerWith(
       dioWithAdapter(adapter),
       keyStore: FakeApiKeyStore(),
-      settingsStore: FakeGenerationSettingsStore(
-        const OpenAiCompatibleSettings(
-          baseUrl: 'http://localhost:11434/v1',
-          model: 'qwen2.5',
-        ),
-      ),
     );
 
     final GenerationResult result = await container
         .read(cardGenerationServiceProvider)
         .generate(
-          const GenerationRequest(
-            provider: GenerationProvider.openaiCompatible,
-            model: 'игнорируется',
+          GenerationRequest(
+            account: accountWith(
+              id: 'ollama',
+              protocol: ProviderProtocol.openaiCompletions,
+              modelId: 'qwen2.5',
+              baseUrl: 'http://localhost:11434/v1',
+              requiresApiKey: false,
+            ),
             materialsText: 'Материал лекции',
             limit: 5,
           ),
@@ -352,23 +378,21 @@ void main() {
     });
     final container = containerWith(
       dioWithAdapter(adapter),
-      keyStore: FakeApiKeyStore(<GenerationProvider, String>{
-        GenerationProvider.openaiCompatible: 'deepseek-test-key',
+      keyStore: FakeApiKeyStore(<String, String>{
+        'deepseek': 'deepseek-test-key',
       }),
-      settingsStore: FakeGenerationSettingsStore(
-        const OpenAiCompatibleSettings(
-          baseUrl: 'https://api.deepseek.com',
-          model: 'deepseek-chat',
-        ),
-      ),
     );
 
     final GenerationResult result = await container
         .read(cardGenerationServiceProvider)
         .generate(
-          const GenerationRequest(
-            provider: GenerationProvider.openaiCompatible,
-            model: 'игнорируется',
+          GenerationRequest(
+            account: accountWith(
+              id: 'deepseek',
+              protocol: ProviderProtocol.openaiCompletions,
+              modelId: 'deepseek-chat',
+              baseUrl: 'https://api.deepseek.com',
+            ),
             materialsText: 'Материал лекции',
             limit: 5,
           ),

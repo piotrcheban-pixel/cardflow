@@ -9,7 +9,8 @@ import 'package:cardflow/api/http/retry_policy.dart';
 import 'package:cardflow/api/providers/openai_compatible_adapter.dart';
 import 'package:cardflow/domain/generation/generation_provider.dart';
 import 'package:cardflow/domain/generation/generation_request.dart';
-import 'package:cardflow/domain/generation/openai_compatible_settings.dart';
+import 'package:cardflow/domain/generation/provider_account.dart';
+import 'package:cardflow/domain/generation/provider_protocol.dart';
 
 import '../helpers/generation_fakes.dart';
 
@@ -36,12 +37,7 @@ void main() {
 
       final service = CardGenerationService(
         adapters: <OpenAiCompatibleAdapter>[const OpenAiCompatibleAdapter()],
-        apiKeyStore: FakeApiKeyStore(<GenerationProvider, String>{
-          GenerationProvider.openaiCompatible: apiKey!,
-        }),
-        generationSettingsStore: FakeGenerationSettingsStore(
-          OpenAiCompatibleSettings(baseUrl: baseUrl, model: model),
-        ),
+        apiKeyStore: FakeApiKeyStore(<String, String>{'deepseek': apiKey!}),
         httpClient: GenerationHttpClient(
           dio: dio,
           retryPolicy: RetryPolicy(),
@@ -52,9 +48,17 @@ void main() {
       );
 
       final result = await service.generate(
-        const GenerationRequest(
-          provider: GenerationProvider.openaiCompatible,
-          model: 'из-настроек',
+        GenerationRequest(
+          account: ProviderAccount(
+            id: 'deepseek',
+            label: 'DeepSeek',
+            presetId: 'deepseek',
+            protocol: ProviderProtocol.openaiCompletions,
+            baseUrl: baseUrl,
+            modelId: model,
+            contextTokens: 128000,
+            requiresApiKey: true,
+          ),
           materialsText:
               'FSRS — алгоритм интервального повторения. Он прогнозирует '
               'вероятность вспоминания карточки и выбирает дату следующего '

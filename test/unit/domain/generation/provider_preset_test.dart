@@ -7,23 +7,26 @@ import 'package:cardflow/domain/generation/provider_protocol.dart';
 /// Итерация 7.5, шаг 2 (ADR-020): статический каталог провайдеров.
 void main() {
   group('Каталог провайдеров', () {
-    test('содержит девять предустановленных провайдеров в заданном порядке', () {
-      expect(kProviderPresets, hasLength(9));
-      expect(
-        kProviderPresets.map((ProviderPreset preset) => preset.id).toList(),
-        <String>[
-          'deepseek',
-          'openai',
-          'anthropic',
-          'gemini',
-          'openrouter',
-          'moonshot',
-          'minimax',
-          'groq',
-          'ollama',
-        ],
-      );
-    });
+    test(
+      'содержит девять предустановленных провайдеров в заданном порядке',
+      () {
+        expect(kProviderPresets, hasLength(9));
+        expect(
+          kProviderPresets.map((ProviderPreset preset) => preset.id).toList(),
+          <String>[
+            'deepseek',
+            'openai',
+            'anthropic',
+            'gemini',
+            'openrouter',
+            'moonshot',
+            'minimax',
+            'groq',
+            'ollama',
+          ],
+        );
+      },
+    );
 
     test('у каждого пресета непустые адрес, модели и протокол', () {
       for (final ProviderPreset preset in kProviderPresets) {
@@ -42,17 +45,17 @@ void main() {
       final ProviderPreset deepseek = providerPresetById('deepseek')!;
       expect(deepseek.label, 'DeepSeek');
       expect(deepseek.protocol, ProviderProtocol.openaiCompletions);
-      expect(deepseek.protocol.adapterProvider, GenerationProvider.openaiCompatible);
+      expect(
+        deepseek.protocol.adapterProvider,
+        GenerationProvider.openaiCompatible,
+      );
       expect(deepseek.baseUrl, 'https://api.deepseek.com');
       expect(deepseek.defaultModel.id, 'deepseek-chat');
       expect(deepseek.requiresApiKey, isTrue);
     });
 
     test('нативные протоколы: OpenAI, Anthropic, Gemini', () {
-      expect(
-        providerPresetById('openai')!.protocol,
-        ProviderProtocol.openai,
-      );
+      expect(providerPresetById('openai')!.protocol, ProviderProtocol.openai);
       expect(
         providerPresetById('anthropic')!.protocol.wireName,
         'anthropic-messages',
@@ -116,10 +119,7 @@ void main() {
         ProviderProtocol.fromWire('gemini-generate-content'),
         ProviderProtocol.geminiGenerateContent,
       );
-      expect(
-        () => ProviderProtocol.fromWire('grpc'),
-        throwsFormatException,
-      );
+      expect(() => ProviderProtocol.fromWire('grpc'), throwsFormatException);
     });
   });
 }

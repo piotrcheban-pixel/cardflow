@@ -6,7 +6,6 @@ import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
 import 'package:cardflow/domain/generation/generation_job.dart';
-import 'package:cardflow/domain/generation/generation_provider.dart';
 import 'package:cardflow/domain/generation/generation_run.dart';
 import 'package:cardflow/domain/text/parsed_document.dart';
 import 'package:cardflow/ui/generation/generation_preview_screen.dart';
@@ -26,10 +25,9 @@ void main() {
   });
 
   GenerationRunRequest request() {
-    return const GenerationRunRequest(
-      documents: <ParsedDocument>[],
-      provider: GenerationProvider.openai,
-      modelId: 'gpt-4o',
+    return GenerationRunRequest(
+      documents: const <ParsedDocument>[],
+      account: testProviderAccount(presetId: 'openai', modelId: 'gpt-4o'),
       deckName: 'Новая колода',
     );
   }

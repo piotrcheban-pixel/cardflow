@@ -37,7 +37,6 @@ void main() {
         learningSteps: <Duration>[Duration(minutes: 3)],
         dailyNewLimit: 10,
         dailyReviewLimit: 120,
-        defaultModelId: 'gpt-4o',
       );
       await store.write(settings);
       expect(await store.read(), settings);

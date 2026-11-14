@@ -21,35 +21,48 @@ void main() {
   }
 
   group('ProviderAccount', () {
-    test('из пресета: адрес, протокол, модель и лимит контекста из каталога', () {
-      final ProviderAccount account = ProviderAccount.fromPreset(
-        providerPresetById('deepseek')!,
-        id: 'deepseek',
-      );
-      expect(account.id, 'deepseek');
-      expect(account.label, 'DeepSeek');
-      expect(account.presetId, 'deepseek');
-      expect(account.preset?.label, 'DeepSeek');
-      expect(account.protocol, ProviderProtocol.openaiCompletions);
-      expect(account.baseUrl, 'https://api.deepseek.com');
-      expect(account.modelId, 'deepseek-chat');
-      expect(account.contextTokens, 128000);
-      expect(account.requiresApiKey, isTrue);
-      expect(account.isConfigured, isTrue);
-    });
+    test(
+      'из пресета: адрес, протокол, модель и лимит контекста из каталога',
+      () {
+        final ProviderAccount account = ProviderAccount.fromPreset(
+          providerPresetById('deepseek')!,
+          id: 'deepseek',
+        );
+        expect(account.id, 'deepseek');
+        expect(account.label, 'DeepSeek');
+        expect(account.presetId, 'deepseek');
+        expect(account.preset?.label, 'DeepSeek');
+        expect(account.protocol, ProviderProtocol.openaiCompletions);
+        expect(account.baseUrl, 'https://api.deepseek.com');
+        expect(account.modelId, 'deepseek-chat');
+        expect(account.contextTokens, 128000);
+        expect(account.requiresApiKey, isTrue);
+        expect(account.isConfigured, isTrue);
+      },
+    );
 
-    test('из пресета с явной моделью; несуществующая — модель по умолчанию', () {
-      final ProviderPreset gemini = providerPresetById('gemini')!;
-      expect(
-        ProviderAccount.fromPreset(gemini, id: 'gemini', modelId: 'gemini-2.5-flash')
-            .modelId,
-        'gemini-2.5-flash',
-      );
-      expect(
-        ProviderAccount.fromPreset(gemini, id: 'gemini', modelId: 'nope').modelId,
-        'gemini-2.0-flash',
-      );
-    });
+    test(
+      'из пресета с явной моделью; несуществующая — модель по умолчанию',
+      () {
+        final ProviderPreset gemini = providerPresetById('gemini')!;
+        expect(
+          ProviderAccount.fromPreset(
+            gemini,
+            id: 'gemini',
+            modelId: 'gemini-2.5-flash',
+          ).modelId,
+          'gemini-2.5-flash',
+        );
+        expect(
+          ProviderAccount.fromPreset(
+            gemini,
+            id: 'gemini',
+            modelId: 'nope',
+          ).modelId,
+          'gemini-2.0-flash',
+        );
+      },
+    );
 
     test('у пользовательского провайдера нет пресета и ключ не обязателен', () {
       final ProviderAccount account = custom();
@@ -151,7 +164,10 @@ void main() {
       expect(list.withActive('my-server').active?.id, 'my-server');
       expect(list.withActive('ghost').activeAccountId, isNull);
       expect(list.withActive('ghost').active?.id, 'deepseek');
-      expect(list.withActive('ghost').withActive('my-server').active?.id, 'my-server');
+      expect(
+        list.withActive('ghost').withActive('my-server').active?.id,
+        'my-server',
+      );
     });
 
     test('удаление переключает основной на первый оставшийся', () {

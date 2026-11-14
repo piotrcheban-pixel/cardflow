@@ -7,20 +7,60 @@ import 'package:cardflow/domain/generation/generation_error.dart';
 import 'package:cardflow/domain/generation/generation_provider.dart';
 import 'package:cardflow/domain/generation/generation_request.dart';
 import 'package:cardflow/domain/generation/generation_result.dart';
-import 'package:cardflow/domain/generation/openai_compatible_settings.dart';
+import 'package:cardflow/domain/generation/provider_account.dart';
+import 'package:cardflow/domain/generation/provider_protocol.dart';
 
 import '../../../helpers/generation_fakes.dart';
 
-/// Красная фаза итерации 3b: сервис генерации — ключ → промпт → адаптер →
+/// Итерация 7.5 (ADR-020): сервис генерации — аккаунт → промпт → адаптер →
 /// транспорт → разбор → схема → контент-валидация (SPEC A8.5 шаги 6–7).
 void main() {
-  const request = GenerationRequest(
-    provider: GenerationProvider.openai,
-    model: 'gpt-test',
-    materialsText: 'Материал лекции',
-    wishes: 'Акцент на датах',
-    limit: 10,
-  );
+  /// Облачный аккаунт с ключом в хранилище.
+  ProviderAccount openAiAccount({String modelId = 'gpt-test'}) {
+    return ProviderAccount(
+      id: 'openai',
+      label: 'OpenAI',
+      presetId: 'openai',
+      protocol: ProviderProtocol.openai,
+      baseUrl: 'https://api.openai.com/v1',
+      modelId: modelId,
+      contextTokens: 128000,
+      requiresApiKey: true,
+    );
+  }
+
+  /// OpenAI-совместимый аккаунт (DeepSeek/локальный сервер).
+  ProviderAccount compatibleAccount({
+    String id = 'deepseek',
+    String baseUrl = 'https://api.deepseek.com',
+    String modelId = 'deepseek-chat',
+    bool requiresApiKey = false,
+  }) {
+    return ProviderAccount(
+      id: id,
+      label: 'DeepSeek',
+      presetId: 'deepseek',
+      protocol: ProviderProtocol.openaiCompletions,
+      baseUrl: baseUrl,
+      modelId: modelId,
+      contextTokens: 128000,
+      requiresApiKey: requiresApiKey,
+    );
+  }
+
+  GenerationRequest requestFor(
+    ProviderAccount account, {
+    String materialsText = 'Материал лекции',
+    String? wishes = 'Акцент на датах',
+    int limit = 10,
+  }) {
+    return GenerationRequest(
+      account: account,
+      materialsText: materialsText,
+      wishes: wishes,
+      limit: limit,
+    );
+  }
 
   Map<String, Object?> validCardJson() => <String, Object?>{
     'front': 'Вопрос',
@@ -39,17 +79,13 @@ void main() {
     required FakeProviderAdapter adapter,
     required FakeGenerationTransport transport,
     FakeApiKeyStore? apiKeyStore,
-    FakeGenerationSettingsStore? settingsStore,
     String systemPrompt = 'СИСТЕМНЫЙ ПРОМПТ',
   }) {
     return CardGenerationService(
       adapters: <FakeProviderAdapter>[adapter],
       apiKeyStore:
           apiKeyStore ??
-          FakeApiKeyStore(<GenerationProvider, String>{
-            GenerationProvider.openai: 'test-key-openai',
-          }),
-      generationSettingsStore: settingsStore ?? FakeGenerationSettingsStore(),
+          FakeApiKeyStore(<String, String>{'openai': 'test-key-openai'}),
       httpClient: transport,
       systemPrompt: systemPrompt,
       promptVersion: 'gen-ru-v2',
@@ -76,7 +112,7 @@ void main() {
       );
       final service = serviceWith(adapter: adapter, transport: transport);
 
-      final result = await service.generate(request);
+      final result = await service.generate(requestFor(openAiAccount()));
 
       expect(result.provider, GenerationProvider.openai);
       expect(result.model, 'gpt-test');
@@ -85,6 +121,7 @@ void main() {
       expect(result.cards.single.front, 'Вопрос');
       expect(adapter.buildArgs!.apiKey, 'test-key-openai');
       expect(adapter.buildArgs!.model, 'gpt-test');
+      expect(adapter.buildArgs!.baseUrl, 'https://api.openai.com/v1');
       expect(adapter.buildArgs!.systemPrompt, 'СИСТЕМНЫЙ ПРОМПТ');
       expect(adapter.buildArgs!.maxOutputTokens, 1234);
       expect(
@@ -100,35 +137,49 @@ void main() {
     },
   );
 
-  test('ключ не задан → missingApiKey, без запроса', () async {
-    final adapter = FakeProviderAdapter();
-    final transport = FakeGenerationTransport(response: <String, Object?>{});
-    final service = serviceWith(
-      adapter: adapter,
-      transport: transport,
-      apiKeyStore: FakeApiKeyStore(),
-    );
+  test(
+    'ключ не задан у аккаунта, который его требует → missingApiKey',
+    () async {
+      final adapter = FakeProviderAdapter();
+      final transport = FakeGenerationTransport(response: <String, Object?>{});
+      final service = serviceWith(
+        adapter: adapter,
+        transport: transport,
+        apiKeyStore: FakeApiKeyStore(),
+      );
 
-    await expectLater(
-      service.generate(request),
-      throwsGeneration(GenerationErrorCode.missingApiKey),
-    );
-    expect(adapter.buildCalls, 0);
-    expect(transport.calls, 0);
-  });
+      await expectLater(
+        service.generate(requestFor(openAiAccount())),
+        throwsGeneration(GenerationErrorCode.missingApiKey),
+      );
+      expect(adapter.buildCalls, 0);
+      expect(transport.calls, 0);
+    },
+  );
 
   test('ключ из пробелов → missingApiKey', () async {
     final service = serviceWith(
       adapter: FakeProviderAdapter(),
       transport: FakeGenerationTransport(response: <String, Object?>{}),
-      apiKeyStore: FakeApiKeyStore(<GenerationProvider, String>{
-        GenerationProvider.openai: '   ',
-      }),
+      apiKeyStore: FakeApiKeyStore(<String, String>{'openai': '   '}),
     );
     await expectLater(
-      service.generate(request),
+      service.generate(requestFor(openAiAccount())),
       throwsGeneration(GenerationErrorCode.missingApiKey),
     );
+  });
+
+  test('аккаунт без адреса → providerNotConfigured, без запроса', () async {
+    final adapter = FakeProviderAdapter();
+    final service = serviceWith(
+      adapter: adapter,
+      transport: FakeGenerationTransport(response: <String, Object?>{}),
+    );
+    await expectLater(
+      service.generate(requestFor(compatibleAccount(baseUrl: '  '))),
+      throwsGeneration(GenerationErrorCode.providerNotConfigured),
+    );
+    expect(adapter.buildCalls, 0);
   });
 
   test('ошибка разбора адаптера пробрасывается как есть', () async {
@@ -139,7 +190,7 @@ void main() {
     final service = serviceWith(adapter: adapter, transport: transport);
 
     await expectLater(
-      service.generate(request),
+      service.generate(requestFor(openAiAccount())),
       throwsGeneration(GenerationErrorCode.truncated),
     );
     expect(transport.calls, 1);
@@ -153,7 +204,7 @@ void main() {
       ),
     );
     await expectLater(
-      service.generate(request),
+      service.generate(requestFor(openAiAccount())),
       throwsGeneration(GenerationErrorCode.serverUnavailable),
     );
   });
@@ -164,7 +215,7 @@ void main() {
       transport: FakeGenerationTransport(response: <String, Object?>{}),
     );
     await expectLater(
-      service.generate(request),
+      service.generate(requestFor(openAiAccount())),
       throwsGeneration(GenerationErrorCode.invalidResponse),
     );
   });
@@ -178,7 +229,7 @@ void main() {
       transport: FakeGenerationTransport(response: <String, Object?>{}),
     );
     await expectLater(
-      service.generate(request),
+      service.generate(requestFor(openAiAccount())),
       throwsGeneration(GenerationErrorCode.invalidResponse),
     );
   });
@@ -190,7 +241,7 @@ void main() {
       ),
       transport: FakeGenerationTransport(response: <String, Object?>{}),
     );
-    final result = await service.generate(request);
+    final result = await service.generate(requestFor(openAiAccount()));
     expect(result.cards, isEmpty);
   });
 
@@ -202,49 +253,54 @@ void main() {
       ),
       transport: FakeGenerationTransport(response: <String, Object?>{}),
     );
-    final result = await service.generate(request);
+    final result = await service.generate(requestFor(openAiAccount()));
     expect(result.cards.single.hasIssues, isTrue);
   });
 
-  test('используется адаптер запрошенного провайдера', () async {
+  test('используется адаптер протокола аккаунта и ключ его id', () async {
     final openAi = FakeProviderAdapter(provider: GenerationProvider.openai);
     final gemini = FakeProviderAdapter(provider: GenerationProvider.gemini);
     final transport = FakeGenerationTransport(response: <String, Object?>{});
     final service = CardGenerationService(
       adapters: <FakeProviderAdapter>[openAi, gemini],
-      apiKeyStore: FakeApiKeyStore(<GenerationProvider, String>{
-        GenerationProvider.gemini: 'test-key-gemini',
-      }),
+      apiKeyStore: FakeApiKeyStore(<String, String>{'gemini': 'key-gemini'}),
       httpClient: transport,
     );
-
-    await service.generate(
-      const GenerationRequest(
-        provider: GenerationProvider.gemini,
-        model: 'gemini-test',
-        materialsText: 'Материал',
-        limit: 5,
-      ),
+    final ProviderAccount geminiAccount = ProviderAccount(
+      id: 'gemini',
+      label: 'Gemini',
+      presetId: 'gemini',
+      protocol: ProviderProtocol.geminiGenerateContent,
+      baseUrl: 'https://generativelanguage.googleapis.com',
+      modelId: 'gemini-2.0-flash',
+      contextTokens: 1048576,
+      requiresApiKey: true,
     );
+
+    await service.generate(requestFor(geminiAccount));
     expect(openAi.buildCalls, 0);
     expect(gemini.buildCalls, 1);
-    expect(gemini.buildArgs!.apiKey, 'test-key-gemini');
+    expect(gemini.buildArgs!.apiKey, 'key-gemini');
+    expect(gemini.buildArgs!.model, 'gemini-2.0-flash');
   });
 
-  test('нет адаптера для провайдера → ArgumentError', () async {
+  test('нет адаптера для протокола аккаунта → ArgumentError', () async {
     final service = serviceWith(
       adapter: FakeProviderAdapter(provider: GenerationProvider.openai),
       transport: FakeGenerationTransport(response: <String, Object?>{}),
     );
+    final ProviderAccount anthropicAccount = ProviderAccount(
+      id: 'anthropic',
+      label: 'Anthropic',
+      presetId: 'anthropic',
+      protocol: ProviderProtocol.anthropicMessages,
+      baseUrl: 'https://api.anthropic.com',
+      modelId: 'claude-3-5-haiku-latest',
+      contextTokens: 200000,
+      requiresApiKey: true,
+    );
     await expectLater(
-      service.generate(
-        const GenerationRequest(
-          provider: GenerationProvider.anthropic,
-          model: 'claude-test',
-          materialsText: 'Материал',
-          limit: 5,
-        ),
-      ),
+      service.generate(requestFor(anthropicAccount)),
       throwsArgumentError,
     );
   });
@@ -261,25 +317,14 @@ void main() {
       ),
       transport: FakeGenerationTransport(response: <String, Object?>{}),
     );
-    final result = await service.generate(request);
+    final result = await service.generate(requestFor(openAiAccount()));
     expect(
       result.usage,
       const TokenUsage(promptTokens: 3, completionTokens: 4, totalTokens: 7),
     );
   });
 
-  group('OpenAI-compatible (ADR-013)', () {
-    const compatibleRequest = GenerationRequest(
-      provider: GenerationProvider.openaiCompatible,
-      model: 'модель-из-запроса',
-      materialsText: 'Материал лекции',
-      limit: 5,
-    );
-    const configured = OpenAiCompatibleSettings(
-      baseUrl: 'http://localhost:11434/v1',
-      model: 'qwen2.5',
-    );
-
+  group('OpenAI-совместимый протокол (ADR-013, ADR-020)', () {
     FakeProviderAdapter compatibleAdapter({
       String cardsJson = '{"cards":[]}',
     }) => FakeProviderAdapter(
@@ -287,61 +332,41 @@ void main() {
       cardsJson: cardsJson,
     );
 
-    test('настройки сервера переопределяют модель, ключ опционален', () async {
+    test('адрес и модель из аккаунта, ключ опционален', () async {
       final adapter = compatibleAdapter();
       final transport = FakeGenerationTransport(response: <String, Object?>{});
       final service = serviceWith(
         adapter: adapter,
         transport: transport,
         apiKeyStore: FakeApiKeyStore(),
-        settingsStore: FakeGenerationSettingsStore(configured),
       );
 
-      final result = await service.generate(compatibleRequest);
+      final result = await service.generate(
+        requestFor(compatibleAccount(baseUrl: 'http://localhost:11434/v1')),
+      );
 
       expect(result.provider, GenerationProvider.openaiCompatible);
-      expect(result.model, 'qwen2.5');
+      expect(result.model, 'deepseek-chat');
       expect(adapter.buildArgs!.baseUrl, 'http://localhost:11434/v1');
-      expect(adapter.buildArgs!.model, 'qwen2.5');
+      expect(adapter.buildArgs!.model, 'deepseek-chat');
       expect(adapter.buildArgs!.apiKey, isEmpty);
       expect(adapter.buildArgs!.strictSchema, isTrue);
       expect(transport.calls, 1);
     });
 
-    test(
-      'сервер не настроен (пустые настройки) → providerNotConfigured',
-      () async {
-        final adapter = compatibleAdapter();
-        final service = serviceWith(
-          adapter: adapter,
-          transport: FakeGenerationTransport(response: <String, Object?>{}),
-          apiKeyStore: FakeApiKeyStore(),
-          settingsStore: FakeGenerationSettingsStore(),
-        );
-
-        await expectLater(
-          service.generate(compatibleRequest),
-          throwsGeneration(GenerationErrorCode.providerNotConfigured),
-        );
-        expect(adapter.buildCalls, 0);
-      },
-    );
-
-    test('некорректный сохранённый base_url → providerNotConfigured', () async {
-      final settingsStore = FakeGenerationSettingsStore(
-        const OpenAiCompatibleSettings(baseUrl: 'ftp://x', model: 'm'),
-      );
+    test('аккаунт, требующий ключ, без ключа → missingApiKey', () async {
+      final adapter = compatibleAdapter();
       final service = serviceWith(
-        adapter: compatibleAdapter(),
+        adapter: adapter,
         transport: FakeGenerationTransport(response: <String, Object?>{}),
         apiKeyStore: FakeApiKeyStore(),
-        settingsStore: settingsStore,
       );
 
       await expectLater(
-        service.generate(compatibleRequest),
-        throwsGeneration(GenerationErrorCode.providerNotConfigured),
+        service.generate(requestFor(compatibleAccount(requiresApiKey: true))),
+        throwsGeneration(GenerationErrorCode.missingApiKey),
       );
+      expect(adapter.buildCalls, 0);
     });
 
     test(
@@ -359,16 +384,17 @@ void main() {
           adapter: adapter,
           transport: transport,
           apiKeyStore: FakeApiKeyStore(),
-          settingsStore: FakeGenerationSettingsStore(configured),
         );
 
-        final result = await service.generate(compatibleRequest);
+        final result = await service.generate(
+          requestFor(compatibleAccount(baseUrl: 'http://localhost:11434/v1')),
+        );
 
         expect(result.cards, isEmpty);
         expect(transport.calls, 2);
         expect(adapter.buildCalls, 2);
         expect(adapter.buildArgs!.strictSchema, isFalse);
-        expect(adapter.buildArgs!.baseUrl, configured.baseUrl);
+        expect(adapter.buildArgs!.baseUrl, 'http://localhost:11434/v1');
       },
     );
 
@@ -384,11 +410,10 @@ void main() {
         adapter: compatibleAdapter(),
         transport: transport,
         apiKeyStore: FakeApiKeyStore(),
-        settingsStore: FakeGenerationSettingsStore(configured),
       );
 
       await expectLater(
-        service.generate(compatibleRequest),
+        service.generate(requestFor(compatibleAccount())),
         throwsGeneration(GenerationErrorCode.badRequest),
       );
       expect(transport.calls, 2);
@@ -407,11 +432,10 @@ void main() {
           adapter: compatibleAdapter(),
           transport: transport,
           apiKeyStore: FakeApiKeyStore(),
-          settingsStore: FakeGenerationSettingsStore(configured),
         );
 
         await expectLater(
-          service.generate(compatibleRequest),
+          service.generate(requestFor(compatibleAccount())),
           throwsGeneration(GenerationErrorCode.serverUnavailable),
         );
         expect(transport.calls, 1);
@@ -419,7 +443,7 @@ void main() {
     );
 
     test(
-      'обычный подрядчик: badRequest не повторяется fallback-логикой',
+      'нативный протокол: badRequest не повторяется fallback-логикой',
       () async {
         final transport = FakeGenerationTransport(
           response: <String, Object?>{},
@@ -433,14 +457,14 @@ void main() {
         );
 
         await expectLater(
-          service.generate(request),
+          service.generate(requestFor(openAiAccount())),
           throwsGeneration(GenerationErrorCode.badRequest),
         );
         expect(transport.calls, 1);
       },
     );
 
-    test('markdown вокруг JSON извлекается только у compatible-провайдера', () async {
+    test('markdown вокруг JSON извлекается только у compatible-протокола', () async {
       final tolerant = compatibleAdapter(
         cardsJson:
             'Вот карточки:\n```json\n${cardsJson(<Map<String, Object?>>[])}\n```',
@@ -449,9 +473,8 @@ void main() {
         adapter: tolerant,
         transport: FakeGenerationTransport(response: <String, Object?>{}),
         apiKeyStore: FakeApiKeyStore(),
-        settingsStore: FakeGenerationSettingsStore(configured),
       );
-      final result = await service.generate(compatibleRequest);
+      final result = await service.generate(requestFor(compatibleAccount()));
       expect(result.cards, isEmpty);
 
       final strict = FakeProviderAdapter(
@@ -464,7 +487,7 @@ void main() {
         transport: FakeGenerationTransport(response: <String, Object?>{}),
       );
       await expectLater(
-        openAiService.generate(request),
+        openAiService.generate(requestFor(openAiAccount())),
         throwsGeneration(GenerationErrorCode.invalidResponse),
       );
     });

@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:cardflow/data/security/secure_api_key_store.dart';
-import 'package:cardflow/domain/generation/generation_provider.dart';
 
 class _MockFlutterSecureStorage extends Mock implements FlutterSecureStorage {}
 
@@ -29,59 +28,92 @@ class _FakeSecureKeyValueStore implements SecureKeyValueStore {
   }
 }
 
-/// Красная фаза итерации 3b: ключи API только в secure storage (SPEC 3.4).
+/// Итерация 3b + 7.5 (ADR-020): ключи API только в secure storage (SPEC 3.4).
+///
+/// Диагностика D3 итерации 7.5: «запись → чтение → значение совпадает» — этот
+/// контракт проверяется здесь и Windows-integration-тестом на реальном
+/// плагине (`integration_test/secure_api_key_store_windows_test.dart`).
 void main() {
   group('SecureApiKeyStore', () {
-    test('ключи хранилища — по провайдеру', () {
+    test('ключ хранилища — cardflow.api_key.<id аккаунта>', () {
       expect(
-        SecureApiKeyStore.storageKey(GenerationProvider.openai),
-        'cardflow.api_key.openai',
+        SecureApiKeyStore.storageKey('deepseek'),
+        'cardflow.api_key.deepseek',
       );
+      expect(SecureApiKeyStore.storageKey('openai'), 'cardflow.api_key.openai');
       expect(
-        SecureApiKeyStore.storageKey(GenerationProvider.gemini),
-        'cardflow.api_key.gemini',
-      );
-      expect(
-        SecureApiKeyStore.storageKey(GenerationProvider.anthropic),
-        'cardflow.api_key.anthropic',
+        SecureApiKeyStore.storageKey('openai_compatible'),
+        'cardflow.api_key.openai_compatible',
+        reason: 'id мигрируемого legacy-аккаунта совпадает со старой записью',
       );
     });
 
-    test('write → read → delete по провайдеру', () async {
+    test('запись → чтение → значение совпадает (round-trip)', () async {
       final backend = _FakeSecureKeyValueStore();
       final store = SecureApiKeyStore(backend);
 
-      expect(await store.read(GenerationProvider.openai), isNull);
-      await store.write(GenerationProvider.openai, 'test-key-123');
-      expect(await store.read(GenerationProvider.openai), 'test-key-123');
+      expect(await store.read('deepseek'), isNull);
+
+      await store.write('deepseek', 'sk-deepseek-key');
+      final String? stored = await store.read('deepseek');
+
+      expect(stored, 'sk-deepseek-key');
+      expect(stored, equals('sk-deepseek-key'));
+      expect(backend.values, <String, String>{
+        'cardflow.api_key.deepseek': 'sk-deepseek-key',
+      });
+    });
+
+    test('write → read → delete по аккаунту', () async {
+      final backend = _FakeSecureKeyValueStore();
+      final store = SecureApiKeyStore(backend);
+
+      await store.write('openai', 'test-key-123');
+      expect(await store.read('openai'), 'test-key-123');
       expect(backend.values, <String, String>{
         'cardflow.api_key.openai': 'test-key-123',
       });
 
-      await store.delete(GenerationProvider.openai);
-      expect(await store.read(GenerationProvider.openai), isNull);
+      await store.delete('openai');
+      expect(await store.read('openai'), isNull);
       expect(backend.deleted, <String>['cardflow.api_key.openai']);
     });
 
-    test('ключи провайдеров независимы', () async {
+    test('перезапись заменяет значение', () async {
+      final store = SecureApiKeyStore(_FakeSecureKeyValueStore());
+      await store.write('deepseek', 'old');
+      await store.write('deepseek', 'new');
+      expect(await store.read('deepseek'), 'new');
+    });
+
+    test('ключи аккаунтов независимы', () async {
       final backend = _FakeSecureKeyValueStore();
       final store = SecureApiKeyStore(backend);
-      await store.write(GenerationProvider.openai, 'key-openai');
-      await store.write(GenerationProvider.gemini, 'key-gemini');
-      await store.write(GenerationProvider.anthropic, 'key-anthropic');
+      await store.write('openai', 'key-openai');
+      await store.write('gemini', 'key-gemini');
+      await store.write('gemini-2', 'key-gemini-2');
 
-      expect(await store.read(GenerationProvider.openai), 'key-openai');
-      expect(await store.read(GenerationProvider.gemini), 'key-gemini');
-      expect(await store.read(GenerationProvider.anthropic), 'key-anthropic');
+      expect(await store.read('openai'), 'key-openai');
+      expect(await store.read('gemini'), 'key-gemini');
+      expect(await store.read('gemini-2'), 'key-gemini-2');
+      await store.delete('gemini');
+      expect(await store.read('openai'), 'key-openai');
+      expect(await store.read('gemini'), isNull);
+      expect(await store.read('gemini-2'), 'key-gemini-2');
+    });
+
+    test('ключ с пробелами по краям нормализуется', () async {
+      final backend = _FakeSecureKeyValueStore();
+      final store = SecureApiKeyStore(backend);
+      await store.write('deepseek', '  sk-key  ');
+      expect(await store.read('deepseek'), 'sk-key');
+      expect(backend.values['cardflow.api_key.deepseek'], 'sk-key');
     });
 
     test('пустой ключ не записывается (ArgumentError)', () async {
       final store = SecureApiKeyStore(_FakeSecureKeyValueStore());
       for (final value in <String>['', '   ']) {
-        expect(
-          () => store.write(GenerationProvider.openai, value),
-          throwsArgumentError,
-        );
+        expect(() => store.write('deepseek', value), throwsArgumentError);
       }
     });
 
@@ -89,7 +121,7 @@ void main() {
       final backend = _FakeSecureKeyValueStore()
         ..values['cardflow.api_key.openai'] = '   ';
       final store = SecureApiKeyStore(backend);
-      expect(await store.read(GenerationProvider.openai), isNull);
+      expect(await store.read('openai'), isNull);
     });
   });
 

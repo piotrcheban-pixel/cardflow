@@ -21,14 +21,22 @@ import 'package:cardflow/domain/generation/generation_result.dart';
 import 'package:cardflow/domain/generation/generation_run.dart';
 import 'package:cardflow/domain/generation/generation_settings_store.dart';
 import 'package:cardflow/domain/generation/openai_compatible_settings.dart';
+import 'package:cardflow/domain/generation/provider_account.dart';
+import 'package:cardflow/domain/generation/provider_accounts_store.dart';
+import 'package:cardflow/domain/generation/provider_preset.dart';
+import 'package:cardflow/domain/generation/provider_protocol.dart';
 
 /// In-memory хранилище ключей API для тестов (без платформы).
+///
+/// Ключ адресуется id аккаунта провайдера (`ProviderAccount.id`, ADR-020);
+/// начальные ключи для legacy-проверок задаются теми же строками, что раньше
+/// были wire-именами (`openai`, `gemini`, `anthropic`, `openai_compatible`).
 class FakeApiKeyStore implements ApiKeyStore {
   /// Создаёт хранилище; [keys] — начальные ключи.
-  FakeApiKeyStore([Map<GenerationProvider, String>? keys])
-    : _keys = <GenerationProvider, String>{...?keys};
+  FakeApiKeyStore([Map<String, String>? keys])
+    : _keys = <String, String>{...?keys};
 
-  final Map<GenerationProvider, String> _keys;
+  final Map<String, String> _keys;
 
   /// Сколько раз читали ключ.
   int readCalls = 0;
@@ -40,29 +48,96 @@ class FakeApiKeyStore implements ApiKeyStore {
   int deleteCalls = 0;
 
   /// Текущее содержимое хранилища (открыто для проверок в тестах).
-  Map<GenerationProvider, String> get keys => _keys;
+  Map<String, String> get keys => _keys;
 
   /// Если задано — `read` бросает эту ошибку (проверка error-состояния UI).
   Object? readError;
 
+  /// Если `true` — `write` «успешен», но значение не сохраняется
+  /// (проверка read-back и сообщения об ошибке хранилища).
+  bool dropWrites = false;
+
   @override
-  Future<String?> read(GenerationProvider provider) async {
+  Future<String?> read(String providerId) async {
     readCalls++;
     if (readError != null) throw readError!;
-    return _keys[provider];
+    return _keys[providerId];
   }
 
   @override
-  Future<void> write(GenerationProvider provider, String apiKey) async {
+  Future<void> write(String providerId, String apiKey) async {
     writeCalls++;
-    _keys[provider] = apiKey;
+    if (dropWrites) return;
+    _keys[providerId] = apiKey;
   }
 
   @override
-  Future<void> delete(GenerationProvider provider) async {
+  Future<void> delete(String providerId) async {
     deleteCalls++;
-    _keys.remove(provider);
+    _keys.remove(providerId);
   }
+}
+
+/// In-memory хранилище провайдеров генерации (ADR-020).
+class FakeProviderAccountsStore implements ProviderAccountsStore {
+  /// Создаёт хранилище с начальным списком [accounts].
+  FakeProviderAccountsStore([ProviderAccounts? accounts])
+    : accounts = accounts ?? ProviderAccounts.empty;
+
+  /// Текущий список.
+  ProviderAccounts accounts;
+
+  /// Сколько раз читали.
+  int readCalls = 0;
+
+  /// Сколько раз писали.
+  int writeCalls = 0;
+
+  /// Если `true` — запись бросает исключение.
+  bool failWrites = false;
+
+  @override
+  Future<ProviderAccounts> read() async {
+    readCalls++;
+    return accounts;
+  }
+
+  @override
+  Future<void> write(ProviderAccounts value) async {
+    writeCalls++;
+    if (failWrites) throw StateError('Запись провайдеров недоступна (тест)');
+    accounts = value;
+  }
+}
+
+/// Аккаунт из каталога для тестов (по умолчанию DeepSeek).
+ProviderAccount testProviderAccount({
+  String presetId = 'deepseek',
+  String? id,
+  String? modelId,
+}) {
+  final ProviderPreset preset = providerPresetById(presetId)!;
+  return ProviderAccount.fromPreset(
+    preset,
+    id: id ?? preset.id,
+    modelId: modelId,
+  );
+}
+
+/// Пользовательский аккаунт для тестов.
+ProviderAccount testCustomProviderAccount({
+  String id = 'custom',
+  String label = 'Свой сервер',
+  String baseUrl = 'http://localhost:1234/v1',
+  String modelId = 'qwen2.5',
+}) {
+  return ProviderAccount(
+    id: id,
+    label: label,
+    protocol: ProviderProtocol.openaiCompletions,
+    baseUrl: baseUrl,
+    modelId: modelId,
+  );
 }
 
 /// In-memory хранилище настроек OpenAI-совместимого сервера для тестов.

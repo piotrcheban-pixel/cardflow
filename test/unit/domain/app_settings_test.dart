@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:cardflow/domain/generation/generation_provider.dart';
 import 'package:cardflow/domain/settings/app_settings.dart';
 
 void main() {
@@ -21,8 +20,6 @@ void main() {
       ]);
       expect(settings.dailyNewLimit, 20);
       expect(settings.dailyReviewLimit, 200);
-      expect(settings.defaultProvider, GenerationProvider.openai);
-      expect(settings.defaultModelId, 'gpt-4o-mini');
     });
   });
 
@@ -39,8 +36,6 @@ void main() {
       learningSteps: <Duration>[Duration(minutes: 5)],
       dailyNewLimit: 35,
       dailyReviewLimit: 400,
-      defaultProvider: GenerationProvider.anthropic,
-      defaultModelId: 'claude-3-5-haiku-latest',
     );
 
     test('roundtrip сохраняет все поля и версию', () {
@@ -129,7 +124,7 @@ void main() {
       expect(
         () => AppSettings.fromJson(<String, Object?>{
           'version': 1,
-          'default_provider': 'unknown',
+          'motion': 'bouncy',
         }),
         throwsFormatException,
       );

@@ -10,7 +10,7 @@ import 'package:cardflow/api/providers/gemini_adapter.dart';
 import 'package:cardflow/api/providers/generation_provider_adapter.dart';
 import 'package:cardflow/api/providers/openai_adapter.dart';
 import 'package:cardflow/api/providers/openai_compatible_adapter.dart';
-import 'package:cardflow/domain/generation/generation_provider.dart';
+import 'package:cardflow/domain/generation/provider_account.dart';
 import 'package:cardflow/domain/settings/app_settings.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/settings/settings_screen.dart';
@@ -44,9 +44,7 @@ void main() {
 
   setUp(() {
     settings = FakeAppSettingsStore();
-    keys = FakeApiKeyStore(<GenerationProvider, String>{
-      GenerationProvider.openai: 'key-openai',
-    });
+    keys = FakeApiKeyStore(<String, String>{'deepseek': 'key-deepseek'});
     launcher = FakeExternalLinkLauncher();
     transport = _SuccessTransport();
   });
@@ -56,6 +54,9 @@ void main() {
         deckRepository: FakeDeckRepository(),
         appSettingsStore: settings,
         apiKeyStore: keys,
+        providerAccountsStore: FakeProviderAccountsStore(
+          ProviderAccounts.empty.withAccount(testProviderAccount()),
+        ),
         statisticsRepository: FakeStatisticsRepository(tokens: tokens),
         externalLinkLauncher: launcher,
       )..add(
@@ -196,7 +197,7 @@ void main() {
     );
   });
 
-  testWidgets('API: статусы, проверка ключа, модель по умолчанию, токены', (
+  testWidgets('API: сводка провайдеров, переход к настройке, токены', (
     WidgetTester tester,
   ) async {
     await pump(tester, tokens: 1234);
@@ -207,32 +208,46 @@ void main() {
       find.byKey(const ValueKey<String>('settings-weekly-tokens')),
     );
     expect(find.text(l10n.settingsApiTokensWeek(1234)), findsOneWidget);
-    expect(find.text(l10n.settingsKeyConfigured), findsOneWidget);
-    expect(find.text(l10n.settingsKeyMissing), findsWidgets);
+    expect(
+      find.byKey(const ValueKey<String>('settings-provider-deepseek')),
+      findsOneWidget,
+      reason: 'В блоке API — сводка настроенных провайдеров (ADR-020)',
+    );
+    expect(find.text(l10n.providersActive), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey<String>('settings-open-generation')),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining('Model по умолчанию'),
+      findsNothing,
+      reason: 'Отдельной «модели по умолчанию» больше нет',
+    );
+  });
 
+  testWidgets('API: провайдеры не настроены — подсказка вместо списка', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      appWithHome(
+        overrides: decksOverrides(
+          deckRepository: FakeDeckRepository(),
+          appSettingsStore: settings,
+          apiKeyStore: keys,
+          providerAccountsStore: FakeProviderAccountsStore(),
+          statisticsRepository: FakeStatisticsRepository(),
+          externalLinkLauncher: launcher,
+        ),
+        home: const SettingsScreen(),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final AppLocalizations l10n = l10nOf(tester);
     await reveal(
       tester,
-      find.byKey(const ValueKey<String>('settings-check-openai')),
+      find.byKey(const ValueKey<String>('settings-providers-empty')),
     );
-    await tester.tap(
-      find.byKey(const ValueKey<String>('settings-check-openai')),
-    );
-    await tester.pumpAndSettle();
-    expect(find.text(l10n.settingsApiCheckValid), findsOneWidget);
-    expect(transport.calls, 1);
-
-    await reveal(
-      tester,
-      find.byKey(const ValueKey<String>('settings-default-model-gpt-4o-mini')),
-    );
-    await tester.tap(
-      find.byKey(const ValueKey<String>('settings-default-model-gpt-4o-mini')),
-    );
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('GPT-4o').last);
-    await tester.pumpAndSettle();
-    expect(settings.settings.defaultModelId, 'gpt-4o');
-    expect(settings.settings.defaultProvider, GenerationProvider.openai);
+    expect(find.text(l10n.providersEmptyTitle), findsOneWidget);
   });
 
   testWidgets('«О приложении»: версия, лицензии, политика приватности', (

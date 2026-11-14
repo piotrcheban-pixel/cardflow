@@ -84,8 +84,7 @@ void main() {
   }) {
     return GenerationRunRequest(
       documents: documents,
-      provider: GenerationProvider.openai,
-      modelId: 'gpt-4o',
+      account: testProviderAccount(presetId: 'openai', modelId: 'gpt-4o'),
       deckName: 'Новая колода',
       wishes: 'Покороче',
       targetDeckId: targetDeckId,
@@ -117,8 +116,11 @@ void main() {
     caller.onGenerate = (GenerationRequest request, int call) async {
       expect(request.materialsText, 'материал лекции');
       expect(request.limit, 10);
-      expect(request.provider, GenerationProvider.openai);
-      expect(request.model, 'gpt-4o');
+      expect(
+        request.account.protocol.adapterProvider,
+        GenerationProvider.openai,
+      );
+      expect(request.account.modelId, 'gpt-4o');
       expect(request.wishes, 'Покороче');
       return resultWith(<GeneratedCard>[makeGeneratedCard()], tokens: 30);
     };

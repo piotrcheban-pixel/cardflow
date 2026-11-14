@@ -4,6 +4,7 @@ import 'package:cardflow/domain/cards/card_repository.dart';
 import 'package:cardflow/domain/decks/deck_repository.dart';
 import 'package:cardflow/domain/generation/api_key_store.dart';
 import 'package:cardflow/domain/generation/generation_settings_store.dart';
+import 'package:cardflow/domain/generation/provider_accounts_store.dart';
 import 'package:cardflow/domain/review/daily_usage_repository.dart';
 import 'package:cardflow/domain/review/review_repository.dart';
 import 'package:cardflow/domain/scheduling/scheduler.dart';
@@ -170,6 +171,7 @@ List<Override> decksOverrides({
   DeckTransferService? transferService,
   FileGateway? fileGateway,
   GenerationSettingsStore? generationSettingsStore,
+  ProviderAccountsStore? providerAccountsStore,
   ApiKeyStore? apiKeyStore,
   CardMediaRepository? cardMediaRepository,
   CardImageGateway? imageGateway,
@@ -195,6 +197,9 @@ List<Override> decksOverrides({
     fileGatewayProvider.overrideWithValue(fileGateway ?? FakeFileGateway()),
     generationSettingsStoreProvider.overrideWithValue(
       generationSettingsStore ?? FakeGenerationSettingsStore(),
+    ),
+    providerAccountsStoreProvider.overrideWithValue(
+      providerAccountsStore ?? FakeProviderAccountsStore(),
     ),
     apiKeyStoreProvider.overrideWithValue(apiKeyStore ?? FakeApiKeyStore()),
     cardMediaRepositoryProvider.overrideWithValue(

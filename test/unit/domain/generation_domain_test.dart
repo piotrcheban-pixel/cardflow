@@ -5,6 +5,8 @@ import 'package:cardflow/domain/generation/generated_card.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
 import 'package:cardflow/domain/generation/generation_provider.dart';
 import 'package:cardflow/domain/generation/generation_request.dart';
+import 'package:cardflow/domain/generation/provider_account.dart';
+import 'package:cardflow/domain/generation/provider_protocol.dart';
 import 'package:cardflow/domain/generation/generation_result.dart';
 
 /// Красная фаза итерации 3b: доменные модели слоя генерации (SPEC A8.2, A8.4, A8.6).
@@ -129,16 +131,27 @@ void main() {
     });
 
     test(
-      'GenerationRequest хранит параметры вызова, пожелания опциональны',
+      'GenerationRequest хранит аккаунт, материалы и пожелания опциональны',
       () {
-        const request = GenerationRequest(
-          provider: GenerationProvider.gemini,
-          model: 'gemini-test',
+        final ProviderAccount account = ProviderAccount(
+          id: 'gemini',
+          label: 'Gemini',
+          presetId: 'gemini',
+          protocol: ProviderProtocol.geminiGenerateContent,
+          baseUrl: 'https://generativelanguage.googleapis.com',
+          modelId: 'gemini-test',
+          requiresApiKey: true,
+        );
+        final GenerationRequest request = GenerationRequest(
+          account: account,
           materialsText: 'Материал',
           limit: 12,
         );
-        expect(request.provider, GenerationProvider.gemini);
-        expect(request.model, 'gemini-test');
+        expect(request.account, account);
+        expect(
+          request.account.protocol,
+          ProviderProtocol.geminiGenerateContent,
+        );
         expect(request.materialsText, 'Материал');
         expect(request.limit, 12);
         expect(request.wishes, isNull);
