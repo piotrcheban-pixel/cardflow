@@ -135,5 +135,6 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   → **959 passed + 1 skipped**; покрытие **93.6% (5788/6181)** (feed-файлы 95.8–100%); `analyze` 0;
   `dart format` 229 files 0 changed; `fvm flutter build windows --release` → `cardflow.exe` (51,9 s).
   Ревью Lead (независимый reviewer недоступен — L35), fix `1857589`; push 2026-11-14: `origin/main` =
-  `4ef3038`, CI run [`43587472135`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43587472135) —
-  **9/9 success**. Ограничения: L36 (таймер при покрытии маршрутом), L37 (реальные жесты).
+  `e90f660`, CI runs [`43587472135`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43587472135)
+  и [`43588247850`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43588247850) — оба **9/9 success**.
+  Ограничения: L36 (таймер при покрытии маршрутом), L37 (реальные жесты).
