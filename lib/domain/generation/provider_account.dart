@@ -1,0 +1,357 @@
+/// Аккаунт провайдера генерации: протокол, адрес, модель и ключ (ADR-020).
+///
+/// Ключ API здесь не хранится: он живёт только в `ApiKeyStore` (secure storage,
+/// SPEC 3.4) под [ProviderAccount.id]. Список аккаунтов — одно JSON-значение
+/// `app_settings` с ключом `generation.providers`; схема БД не меняется.
+/// Домен не зависит от Flutter, сети и БД.
+library;
+
+import 'package:cardflow/domain/generation/generation_model.dart';
+import 'package:cardflow/domain/generation/provider_preset.dart';
+import 'package:cardflow/domain/generation/provider_protocol.dart';
+
+/// Окно контекста пользовательского провайдера по умолчанию: реальное значение
+/// неизвестно, поэтому бюджет входа консервативный (ADR-013/ADR-020).
+const int kCustomProviderContextTokens = kCompatibleInputTokenBudget;
+
+/// Настроенный провайдер генерации.
+class ProviderAccount {
+  /// Создаёт аккаунт.
+  const ProviderAccount({
+    required this.id,
+    required this.label,
+    required this.protocol,
+    required this.baseUrl,
+    required this.modelId,
+    this.presetId,
+    this.contextTokens = kCustomProviderContextTokens,
+    this.requiresApiKey = false,
+  });
+
+  /// Аккаунт из пресета каталога; [id] — id аккаунта (=== ключ secure storage).
+  factory ProviderAccount.fromPreset(
+    ProviderPreset preset, {
+    required String id,
+    String? modelId,
+  }) {
+    final ProviderPresetModel model = modelId == null
+        ? preset.defaultModel
+        : (preset.modelById(modelId) ?? preset.defaultModel);
+    return ProviderAccount(
+      id: id,
+      label: preset.label,
+      presetId: preset.id,
+      protocol: preset.protocol,
+      baseUrl: preset.baseUrl,
+      modelId: model.id,
+      contextTokens: model.contextTokens,
+      requiresApiKey: preset.requiresApiKey,
+    );
+  }
+
+  /// Идентификатор аккаунта; он же ключ в secure storage
+  /// (`cardflow.api_key.<id>`), поэтому не меняется при редактировании.
+  final String id;
+
+  /// Отображаемое имя: бренд пресета или название, введённое пользователем.
+  final String label;
+
+  /// id пресета каталога; `null` — пользовательская модель API.
+  final String? presetId;
+
+  /// Протокол API.
+  final ProviderProtocol protocol;
+
+  /// Базовый адрес сервера.
+  final String baseUrl;
+
+  /// Идентификатор модели в запросе.
+  final String modelId;
+
+  /// Окно контекста модели, токенов (для нарезки фрагментов).
+  final int contextTokens;
+
+  /// Требуется ли ключ доступа (локальному серверу — нет).
+  final bool requiresApiKey;
+
+  /// Пресет каталога, если аккаунт создан из каталога.
+  ProviderPreset? get preset => presetId == null
+      ? null
+      : providerPresetById(presetId!);
+
+  /// true, если заданы адрес и модель.
+  bool get isConfigured =>
+      baseUrl.trim().isNotEmpty && modelId.trim().isNotEmpty;
+
+  /// Копия с изменёнными полями.
+  ///
+  /// [presetId] не обнуляется: `null` означает «не менять» — для
+  /// пользовательского аккаунта пресета и так нет.
+  ProviderAccount copyWith({
+    String? label,
+    ProviderProtocol? protocol,
+    String? baseUrl,
+    String? modelId,
+    int? contextTokens,
+    bool? requiresApiKey,
+  }) {
+    return ProviderAccount(
+      id: id,
+      label: label ?? this.label,
+      presetId: presetId,
+      protocol: protocol ?? this.protocol,
+      baseUrl: baseUrl ?? this.baseUrl,
+      modelId: modelId ?? this.modelId,
+      contextTokens: contextTokens ?? this.contextTokens,
+      requiresApiKey: requiresApiKey ?? this.requiresApiKey,
+    );
+  }
+
+  /// Представление для `app_settings.value_json` (без ключа API).
+  Map<String, Object?> toJson() => <String, Object?>{
+    'id': id,
+    'label': label,
+    'preset_id': presetId,
+    'protocol': protocol.wireName,
+    'base_url': baseUrl,
+    'model': modelId,
+    'context_tokens': contextTokens,
+    'requires_api_key': requiresApiKey,
+  };
+
+  /// Разбирает аккаунт из JSON; `null` — запись некорректна и пропускается.
+  static ProviderAccount? fromJson(Object? json) {
+    if (json is! Map) return null;
+    final Object? rawId = json['id'];
+    final Object? rawProtocol = json['protocol'];
+    if (rawId is! String || rawId.trim().isEmpty) return null;
+    if (rawProtocol is! String) return null;
+    final ProviderProtocol protocol;
+    try {
+      protocol = ProviderProtocol.fromWire(rawProtocol);
+    } on FormatException {
+      return null;
+    }
+    final Object? rawPreset = json['preset_id'];
+    final String? presetId = rawPreset is String && rawPreset.isNotEmpty
+        ? rawPreset
+        : null;
+    final Object? rawBaseUrl = json['base_url'];
+    final Object? rawModel = json['model'];
+    final Object? rawContext = json['context_tokens'];
+    final Object? rawRequiresKey = json['requires_api_key'];
+    final Object? rawLabel = json['label'];
+    return ProviderAccount(
+      id: rawId,
+      label: rawLabel is String ? rawLabel : '',
+      presetId: presetId,
+      protocol: protocol,
+      baseUrl: rawBaseUrl is String ? rawBaseUrl : '',
+      modelId: rawModel is String ? rawModel : '',
+      contextTokens: rawContext is num && rawContext > 0
+          ? rawContext.toInt()
+          : kCustomProviderContextTokens,
+      requiresApiKey: rawRequiresKey is bool ? rawRequiresKey : false,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ProviderAccount &&
+          other.id == id &&
+          other.label == label &&
+          other.presetId == presetId &&
+          other.protocol == protocol &&
+          other.baseUrl == baseUrl &&
+          other.modelId == modelId &&
+          other.contextTokens == contextTokens &&
+          other.requiresApiKey == requiresApiKey;
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    label,
+    presetId,
+    protocol,
+    baseUrl,
+    modelId,
+    contextTokens,
+    requiresApiKey,
+  );
+
+  @override
+  String toString() =>
+      'ProviderAccount($id, ${protocol.wireName}, $modelId)';
+}
+
+/// Список настроенных провайдеров и выбранный основной аккаунт.
+class ProviderAccounts {
+  /// Создаёт список.
+  const ProviderAccounts({
+    this.accounts = const <ProviderAccount>[],
+    this.activeAccountId,
+  });
+
+  /// Версия контракта JSON (`generation.providers`).
+  static const int version = 1;
+
+  /// Пустой список.
+  static const ProviderAccounts empty = ProviderAccounts();
+
+  /// Настроенные аккаунты (порядок добавления).
+  final List<ProviderAccount> accounts;
+
+  /// id основного аккаунта; `null`/отсутствующий — первый из списка.
+  final String? activeAccountId;
+
+  /// true, если провайдеров нет.
+  bool get isEmpty => accounts.isEmpty;
+
+  /// Аккаунт по id или `null`.
+  ProviderAccount? accountById(String id) {
+    for (final ProviderAccount account in accounts) {
+      if (account.id == id) return account;
+    }
+    return null;
+  }
+
+  /// Основной аккаунт: выбранный, иначе первый; `null` — провайдеров нет.
+  ProviderAccount? get active {
+    final String? id = activeAccountId;
+    if (id != null) {
+      final ProviderAccount? selected = accountById(id);
+      if (selected != null) return selected;
+    }
+    return accounts.isEmpty ? null : accounts.first;
+  }
+
+  /// Список с добавленным или заменённым аккаунтом (по id).
+  ProviderAccounts withAccount(ProviderAccount account) {
+    final List<ProviderAccount> updated = <ProviderAccount>[
+      for (final ProviderAccount item in accounts)
+        if (item.id != account.id) item,
+    ];
+    final int existingIndex = accounts.indexWhere(
+      (ProviderAccount item) => item.id == account.id,
+    );
+    if (existingIndex >= 0) {
+      updated.insert(existingIndex, account);
+    } else {
+      updated.add(account);
+    }
+    return ProviderAccounts(
+      accounts: List<ProviderAccount>.unmodifiable(updated),
+      activeAccountId: activeAccountId ?? account.id,
+    );
+  }
+
+  /// Список без аккаунта [id]; основной переключается на первый оставшийся.
+  ProviderAccounts withoutAccount(String id) {
+    final List<ProviderAccount> updated = <ProviderAccount>[
+      for (final ProviderAccount item in accounts)
+        if (item.id != id) item,
+    ];
+    final String? nextActive = activeAccountId == id
+        ? (updated.isEmpty ? null : updated.first.id)
+        : activeAccountId;
+    return ProviderAccounts(
+      accounts: List<ProviderAccount>.unmodifiable(updated),
+      activeAccountId: nextActive,
+    );
+  }
+
+  /// Список с другим основным аккаунтом (`null` — сбросить выбор).
+  ProviderAccounts withActive(String? id) {
+    return ProviderAccounts(
+      accounts: accounts,
+      activeAccountId: id != null && accountById(id) != null ? id : null,
+    );
+  }
+
+  /// Представление для `app_settings.value_json`.
+  Map<String, Object?> toJson() => <String, Object?>{
+    'version': version,
+    'accounts': <Object?>[
+      for (final ProviderAccount account in accounts) account.toJson(),
+    ],
+    'active_id': activeAccountId,
+  };
+
+  /// Разбирает список из JSON; повреждённые записи пропускаются.
+  static ProviderAccounts fromJson(Object? json) {
+    if (json is! Map) return ProviderAccounts.empty;
+    final Object? rawAccounts = json['accounts'];
+    if (rawAccounts is! List) return ProviderAccounts.empty;
+    final List<ProviderAccount> parsed = <ProviderAccount>[
+      for (final Object? item in rawAccounts)
+        if (ProviderAccount.fromJson(item) case final ProviderAccount account)
+          account,
+    ];
+    final Object? rawActive = json['active_id'];
+    final String? activeId = rawActive is String ? rawActive : null;
+    final ProviderAccounts result = ProviderAccounts(
+      accounts: List<ProviderAccount>.unmodifiable(parsed),
+    );
+    return activeId == null ? result : result.withActive(activeId);
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ProviderAccounts &&
+          other.activeAccountId == activeAccountId &&
+          _sameAccounts(other.accounts);
+
+  bool _sameAccounts(List<ProviderAccount> other) {
+    if (other.length != accounts.length) return false;
+    for (int index = 0; index < other.length; index++) {
+      if (other[index] != accounts[index]) return false;
+    }
+    return true;
+  }
+
+  @override
+  int get hashCode => Object.hash(Object.hashAll(accounts), activeAccountId);
+
+  @override
+  String toString() => 'ProviderAccounts(${accounts.length}, active: '
+      '$activeAccountId)';
+}
+
+/// Приводит строку к пригодному id аккаунта: латиница/цифры/дефис в нижнем
+/// регистре. Кириллица и прочие символы отбрасываются (id — ключ хранилища).
+String slugifyProviderId(String value) {
+  final String lower = value.trim().toLowerCase();
+  final StringBuffer buffer = StringBuffer();
+  var lastWasDash = false;
+  for (final int codeUnit in lower.codeUnits) {
+    final bool isDigit = codeUnit >= 0x30 && codeUnit <= 0x39;
+    final bool isLatin = codeUnit >= 0x61 && codeUnit <= 0x7A;
+    if (isDigit || isLatin) {
+      buffer.writeCharCode(codeUnit);
+      lastWasDash = false;
+    } else if (!lastWasDash && buffer.isNotEmpty) {
+      buffer.write('-');
+      lastWasDash = true;
+    }
+  }
+  var slug = buffer.toString();
+  while (slug.endsWith('-')) {
+    slug = slug.substring(0, slug.length - 1);
+  }
+  return slug;
+}
+
+/// Уникальный id аккаунта: [base] или [base]-2, [base]-3, … среди [taken].
+String uniqueProviderAccountId(String base, Iterable<String> taken) {
+  final Set<String> used = <String>{...taken};
+  final String slug = slugifyProviderId(base);
+  final String root = slug.isEmpty ? 'provider' : slug;
+  if (!used.contains(root)) return root;
+  var counter = 2;
+  while (used.contains('$root-$counter')) {
+    counter++;
+  }
+  return '$root-$counter';
+}
