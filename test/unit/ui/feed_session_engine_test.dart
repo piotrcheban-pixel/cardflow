@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cardflow/domain/cards/card.dart';
@@ -190,6 +192,32 @@ void main() {
     expect(await engine.rate(Rating.again), isTrue);
     expect(engine.state.ratedCount, 1);
   });
+
+  test(
+    'во время записи visit игнорируется — оценка не уходит не той карточке',
+    () async {
+      final Completer<void> gate = Completer<void>();
+      repository.recordGate = gate;
+      engine.start();
+      repository.previousCard = cards.first;
+
+      final Future<bool> pending = engine.rate(Rating.good);
+      engine.visit(2);
+
+      expect(
+        engine.state.index,
+        0,
+        reason: 'листание во время записи игнорируется',
+      );
+      gate.complete();
+      expect(await pending, isTrue);
+
+      final FeedSessionState state = engine.state;
+      expect(state.items[0].rated, isTrue);
+      expect(state.items[2].rated, isFalse);
+      expect(state.index, 1, reason: 'следующая неоценённая после оценённой');
+    },
+  );
 
   test('undo откатывает оценку, возвращает карточку раскрытой', () async {
     engine.start();

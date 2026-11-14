@@ -9,13 +9,15 @@ import 'package:cardflow/l10n/app_localizations.dart';
 /// состояния «пусто/завершено/ошибка загрузки». Тексты — только ARB.
 
 /// Верхняя панель сессии: undo, «Почему?», выход (SPEC A6.4).
-class ReviewSessionAppBar extends StatelessWidget implements PreferredSizeWidget {
+class ReviewSessionAppBar extends StatelessWidget
+    implements PreferredSizeWidget {
   /// Создаёт панель.
   const ReviewSessionAppBar({
     required this.undoEnabled,
     required this.onUndo,
     required this.whyExcerpt,
     required this.onClose,
+    this.onWhyPressed,
     super.key,
   });
 
@@ -31,6 +33,10 @@ class ReviewSessionAppBar extends StatelessWidget implements PreferredSizeWidget
   /// Обработчик выхода (диалог открывает вызывающий экран).
   final VoidCallback onClose;
 
+  /// Свой обработчик «Почему?» (лента на время sheet останавливает таймер);
+  /// если не задан — открывается стандартный bottom sheet с [whyExcerpt].
+  final VoidCallback? onWhyPressed;
+
   @override
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
 
@@ -38,6 +44,7 @@ class ReviewSessionAppBar extends StatelessWidget implements PreferredSizeWidget
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
     final String? excerpt = whyExcerpt;
+    final VoidCallback? onWhy = onWhyPressed;
     return AppBar(
       automaticallyImplyLeading: false,
       title: Text(l10n.reviewTitle),
@@ -52,9 +59,11 @@ class ReviewSessionAppBar extends StatelessWidget implements PreferredSizeWidget
           key: const ValueKey<String>('review-why'),
           tooltip: l10n.reviewWhyTooltip,
           icon: const Icon(Icons.info_outline),
-          onPressed: excerpt == null
-              ? null
-              : () => showReviewSourceExcerpt(context, excerpt),
+          onPressed:
+              onWhy ??
+              (excerpt == null
+                  ? null
+                  : () => showReviewSourceExcerpt(context, excerpt)),
         ),
         IconButton(
           key: const ValueKey<String>('review-close'),

@@ -19,10 +19,9 @@ enum _DeckMenuAction { generate, rename, export, delete }
 /// Экран «Колода» (SPEC A6.3).
 ///
 /// Заголовок с именем, счётчики (к повторению/новые/в процессе), карточка
-/// «Начать сессию» (bottom sheet режима; в итерации 2 доступен только
-/// классический), список карточек с переходом в редактирование, FAB «Добавить»,
-/// меню переименовать/экспорт/удалить, экспорт/импорт и состояния
-/// «не найдена»/ошибка.
+/// «Начать сессию» (bottom sheet режима: классика или лента), список карточек
+/// с переходом в редактирование, FAB «Добавить», меню переименовать/экспорт/
+/// удалить, экспорт/импорт и состояния «не найдена»/ошибка.
 class DeckScreen extends ConsumerWidget {
   /// Создаёт экран колоды [deckId].
   const DeckScreen({required this.deckId, super.key});
@@ -195,7 +194,7 @@ class DeckScreen extends ConsumerWidget {
     });
   }
 
-  /// Bottom sheet режима сессии; в итерации 2 доступен только классический.
+  /// Bottom sheet режима сессии: классика или лента (SPEC A6.3, A7.3).
   ///
   /// Пустая очередь (все карточки не due и не новые) — сообщение вместо
   /// перехода на пустой экран.
@@ -209,7 +208,7 @@ class DeckScreen extends ConsumerWidget {
       showAppMessage(context, l10n.reviewStartEmptyMessage);
       return;
     }
-    final bool? selected = await showModalBottomSheet<bool>(
+    final String? selected = await showModalBottomSheet<String>(
       context: context,
       showDragHandle: true,
       builder: (BuildContext sheetContext) => SafeArea(
@@ -227,16 +226,25 @@ class DeckScreen extends ConsumerWidget {
               ),
             ),
             ListTile(
+              key: const ValueKey<String>('review-mode-classic'),
               leading: const Icon(Icons.style_outlined),
               title: Text(l10n.reviewModeClassic),
-              onTap: () => Navigator.of(sheetContext).pop(true),
+              onTap: () =>
+                  Navigator.of(sheetContext).pop(AppRoutes.studyPath(deckId)),
+            ),
+            ListTile(
+              key: const ValueKey<String>('review-mode-feed'),
+              leading: const Icon(Icons.view_agenda_outlined),
+              title: Text(l10n.reviewModeFeed),
+              onTap: () =>
+                  Navigator.of(sheetContext).pop(AppRoutes.feedPath(deckId)),
             ),
           ],
         ),
       ),
     );
-    if (selected == true && context.mounted) {
-      context.push(AppRoutes.studyPath(deckId));
+    if (selected != null && context.mounted) {
+      context.push(selected);
     }
   }
 

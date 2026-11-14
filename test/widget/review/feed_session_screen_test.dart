@@ -129,11 +129,13 @@ void main() {
     await pumpFeed(tester, overrides: overridesFor(twoCards()));
 
     await tester.tap(find.byKey(firstCardKey));
+    await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
     expect(find.text('Первый ответ'), findsOneWidget);
     expect(find.text('Первый вопрос'), findsNothing);
 
     await tester.tap(find.byKey(firstCardKey));
+    await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
     expect(find.text('Первый вопрос'), findsOneWidget);
     expect(find.text('Первый ответ'), findsNothing);
@@ -272,13 +274,17 @@ void main() {
     final AppLocalizations l10n = l10nOf(tester);
 
     await tester.tap(find.byKey(const ValueKey<String>('feed-auto-advance')));
+    await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
     await tester.tap(find.text(l10n.feedSeconds(3)));
+    await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
 
     await tester.tap(find.byKey(firstCardKey));
+    await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
     await tester.pump(const Duration(seconds: 3));
+    await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
 
     expect(find.text('Второй вопрос'), findsOneWidget);
@@ -293,8 +299,10 @@ void main() {
     final AppLocalizations l10n = l10nOf(tester);
 
     await tester.tap(find.byKey(const ValueKey<String>('feed-auto-advance')));
+    await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
     await tester.tap(find.text(l10n.feedSeconds(3)));
+    await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
     await tester.pump(const Duration(seconds: 4));
 
@@ -309,23 +317,31 @@ void main() {
     final AppLocalizations l10n = l10nOf(tester);
 
     await tester.tap(find.byKey(const ValueKey<String>('feed-auto-advance')));
+    await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
     await tester.tap(find.text(l10n.feedSeconds(3)));
+    await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
 
     await tester.tap(find.byKey(firstCardKey));
+    await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
     await tester.tap(find.byKey(const ValueKey<String>('feed-pause')));
     await tester.pump(const Duration(milliseconds: 200));
     expect(find.text(l10n.feedResume), findsOneWidget);
 
     await tester.pump(const Duration(seconds: 4));
-    expect(find.text('Первый вопрос'), findsOneWidget);
+    expect(
+      find.text('Первый ответ'),
+      findsOneWidget,
+      reason: 'пауза держит раскрытую карточку на месте',
+    );
 
     await tester.tap(find.byKey(const ValueKey<String>('feed-pause')));
     await tester.pump(const Duration(milliseconds: 200));
     expect(find.text(l10n.feedPause), findsOneWidget);
     await tester.pump(const Duration(seconds: 3));
+    await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
 
     expect(find.text('Второй вопрос'), findsOneWidget);
@@ -355,6 +371,7 @@ void main() {
     await pumpFeed(tester, overrides: overridesFor(deckCards));
 
     await tester.tap(find.byKey(firstCardKey));
+    await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
 
     reviews.previousCard = deckCards[0];
@@ -407,7 +424,9 @@ void main() {
     expect(find.text('Второй вопрос'), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey<String>('review-undo')));
+    await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump(const Duration(seconds: 1));
 
     expect(reviews.undone, hasLength(1));
     expect(find.text('Первый ответ'), findsOneWidget);
@@ -431,6 +450,73 @@ void main() {
     expect(find.text('Первый вопрос'), findsOneWidget);
     expect(find.textContaining('БД недоступна'), findsNothing);
     expect(reviews.ratings, isEmpty);
+  });
+
+  testWidgets('форма карточки: 28 в покое → 16 при свайпе (A4.3)', (
+    WidgetTester tester,
+  ) async {
+    await pumpFeed(tester, overrides: overridesFor(twoCards()));
+
+    BorderRadius radius() {
+      final Material material = tester.widget<Material>(
+        find
+            .descendant(
+              of: find.byKey(firstCardKey),
+              matching: find.byType(Material),
+            )
+            .first,
+      );
+      return (material.shape! as RoundedRectangleBorder).borderRadius.resolve(
+        TextDirection.ltr,
+      );
+    }
+
+    expect(radius().topLeft.x, 28);
+    final TestGesture gesture = await tester.startGesture(
+      tester.getCenter(find.byKey(firstCardKey)),
+    );
+    await gesture.moveBy(const Offset(100, 0));
+    await tester.pump();
+    await gesture.moveBy(const Offset(100, 0));
+    await tester.pump();
+    expect(radius().topLeft.x, lessThan(28));
+    expect(radius().topLeft.x, greaterThanOrEqualTo(16));
+
+    await gesture.up();
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    expect(radius().topLeft.x, closeTo(28, 1));
+  });
+
+  testWidgets('клавиши: Space раскрывает, 3 — «Знаю»', (
+    WidgetTester tester,
+  ) async {
+    final List<Card> deckCards = twoCards();
+    await pumpFeed(tester, overrides: overridesFor(deckCards));
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.space);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.text('Первый ответ'), findsOneWidget);
+
+    reviews.previousCard = deckCards.first;
+    await tester.sendKeyEvent(LogicalKeyboardKey.digit3);
+    await pumpAfterGesture(tester);
+    expect(reviews.ratings, <Rating>[Rating.good]);
+  });
+
+  testWidgets('Stories: семантическая подпись прогресса на русском', (
+    WidgetTester tester,
+  ) async {
+    final SemanticsHandle handle = tester.ensureSemantics();
+    await pumpFeed(tester, overrides: overridesFor(twoCards()));
+    final AppLocalizations l10n = l10nOf(tester);
+
+    expect(
+      tester.getSemantics(find.byType(FeedProgressBar)).label,
+      l10n.feedProgressSemantics(0, 2),
+    );
+    handle.dispose();
   });
 
   testWidgets('завершение: все оценены — итоговый экран', (

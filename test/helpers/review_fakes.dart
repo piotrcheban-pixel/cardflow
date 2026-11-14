@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/review/review.dart';
 import 'package:cardflow/domain/review/review_repository.dart';
@@ -14,6 +16,9 @@ class FakeReviewRepository implements ReviewRepository {
 
   /// Ошибка, бросаемая `recordReview`.
   Object? recordError;
+
+  /// Если задано — `recordReview` ждёт завершения (проверка busy-состояния).
+  Completer<void>? recordGate;
 
   /// Ошибка, бросаемая `undoReview`.
   Object? undoError;
@@ -51,6 +56,8 @@ class FakeReviewRepository implements ReviewRepository {
     Duration? elapsed,
   }) async {
     if (recordError != null) throw recordError!;
+    final Completer<void>? gate = recordGate;
+    if (gate != null) await gate.future;
     ratings.add(rating);
     cardIds.add(cardId);
     reviewedAts.add(reviewedAt);

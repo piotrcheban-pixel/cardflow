@@ -72,12 +72,12 @@ class FeedSessionState {
   int get total => items.length;
 
   /// Сколько карточек оценено.
-  int get ratedCount => items.where((FeedSessionItem item) => item.rated).length;
+  int get ratedCount =>
+      items.where((FeedSessionItem item) => item.rated).length;
 
   /// Сессия завершена, когда оценены все карточки (ADR-016); пустая очередь
   /// тоже завершена — экран показывает отдельное пустое состояние.
-  bool get isCompleted =>
-      items.every((FeedSessionItem item) => item.rated);
+  bool get isCompleted => items.every((FeedSessionItem item) => item.rated);
 
   /// Текущая карточка; `null` после завершения.
   FeedSessionItem? get current =>
@@ -158,8 +158,12 @@ class FeedSessionEngine extends ChangeNotifier {
   }
 
   /// Переходит на страницу [index] без оценки (листание не засчитывается).
+  ///
+  /// Во время записи оценки листание игнорируется: иначе завершение записи
+  /// пометило бы не ту карточку (гонка `_index`).
   void visit(int index) {
     if (!_initialized ||
+        _busy ||
         index == _index ||
         index < 0 ||
         index >= _items.length) {
@@ -189,6 +193,7 @@ class FeedSessionEngine extends ChangeNotifier {
     if (item == null || item.rated) return false;
 
     final DateTime reviewedAt = clock().toUtc();
+    final int ratedIndex = _index;
     final SchedulingCard outcome = scheduler
         .review(item.scheduling, rating, now: reviewedAt)
         .card;
@@ -211,8 +216,8 @@ class FeedSessionEngine extends ChangeNotifier {
       rethrow;
     }
     _undoStack.add(undo);
-    _replaceItem(_index, item.copyWith(rated: true, rating: rating));
-    final int? next = _nextUnratedIndex();
+    _replaceItem(ratedIndex, item.copyWith(rated: true, rating: rating));
+    final int? next = _nextUnratedIndexFrom(ratedIndex);
     if (next != null) {
       _index = next;
       _shownAt = clock().toUtc();
@@ -269,11 +274,11 @@ class FeedSessionEngine extends ChangeNotifier {
     return true;
   }
 
-  /// Следующая неоценённая карточка после текущей; если после нет — первая
+  /// Следующая неоценённая карточка после [from]; если после нет — первая
   /// неоценённая с начала (чтобы оценка на последней странице не оставила
   /// сессию незавершённой).
-  int? _nextUnratedIndex() {
-    final int? after = _nextUnratedAfter(_index);
+  int? _nextUnratedIndexFrom(int from) {
+    final int? after = _nextUnratedAfter(from);
     if (after != null) return after;
     for (int i = 0; i < _items.length; i++) {
       if (!_items[i].rated) return i;

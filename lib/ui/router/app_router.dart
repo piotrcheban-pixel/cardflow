@@ -4,6 +4,7 @@ import 'package:cardflow/ui/cards/card_form_screen.dart';
 import 'package:cardflow/ui/decks/deck_screen.dart';
 import 'package:cardflow/ui/decks/decks_screen.dart';
 import 'package:cardflow/ui/generation/generation_screen.dart';
+import 'package:cardflow/ui/review/feed_session_screen.dart';
 import 'package:cardflow/ui/review/review_session_screen.dart';
 import 'package:cardflow/ui/settings/generation_settings_screen.dart';
 
@@ -89,6 +90,12 @@ GoRouter createAppRouter({String initialLocation = AppRoutes.decksPath}) {
         name: AppRoutes.study,
         builder: (context, state) =>
             ReviewSessionScreen(deckId: state.pathParameters['deckId']!),
+      ),
+      GoRoute(
+        path: '/decks/:deckId/feed',
+        name: AppRoutes.feed,
+        builder: (context, state) =>
+            FeedSessionScreen(deckId: state.pathParameters['deckId']!),
       ),
       GoRoute(
         path: '/decks/:deckId/generate',
