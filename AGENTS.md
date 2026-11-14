@@ -51,6 +51,16 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   `occlusion_json` v1 (нормализованные 0..1); запись файла/строк `media` транзакционная
   (`DriftCardRepository` + `MediaStore`), чтение сессий — `CardMediaRepository`, GC — 
   `MediaGarbageCollector` при старте. LaTeX-рендер — только UI, проверка — `latex_checker.dart`.
+- **Конструктор сессии** (SPEC A6.7/A7.19–A7.20, ADR-018): домен — `lib/domain/session/`
+  (`session_config.dart` — конфиг + JSON `version=1` для `session_presets.config_json`;
+  `session_builder.dart` — фильтры OR, базовый порядок ADR-008, разминка ≤4 выученных по stability,
+  перемешивание по seed, интерливинг round-robin **после** перемешивания, лимит карточек/минут;
+  `session_plan.dart`). Порты `SessionPresetRepository` и `LeechRepository` (порог 8, A7.17) —
+  реализации `lib/data/session/`, `lib/data/review/`. Экран — `lib/ui/session/session_constructor_screen.dart`;
+  маршруты `/constructor` (`?deck=`), `/session/classic`, `/session/feed` (план через `GoRouter.extra`),
+  пункт «Конструктор» в листе режимов колоды. Движки классики/ленты принимают `prebuilt` (план не
+  пересобирается `ReviewQueue`); лимит минут — `Timer` экрана, по истечении «Время сессии истекло»,
+  непройденные карточки не трогаются. Схема БД не менялась: таблица `session_presets` есть с schemaVersion=1.
 - Модели immutable (`freezed`/`const`), роутинг `GoRouter` (см. ADR), HTTP `Dio`. Состояние — Riverpod 3 без кодогенерации (ADR-002).
 - **Material-виджеты — только `package:material_ui/material_ui.dart`** (ADR-001), `package:flutter/material.dart` в `lib/` запрещён. M3E-компоненты — только через `lib/ui/m3e/`, библиотека `material_3_expressive` больше нигде не импортируется.
 - Никаких литералов пользовательского текста в виджетах: только `AppLocalizations` из `lib/l10n/app_ru.arb`.
@@ -105,6 +115,11 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   тестами/ADR, UI-сообщение остаётся коротким. Интерактивный рисующий canvas внутри прокрутки забирает
   pointer eager-распознавателем и имеет vertical-first widget-тест; medium ревью воспроизводится тестом
   до фикса, а `analyze` прогоняется после последней правки тестов, не только кода.
+- **Ретроспектива итерации 6:** в widget-тестах экрана с `ListView` сразу заводить helper
+  `scrollTo(finder)` (`scrollUntilVisible`) для элементов ниже fold — иначе `find` даёт 0 и «дефект»
+  оказывается тестом; блокировку действий во время загрузки проверять гейтом (`Completer`) в фейковом
+  репозитории, а не полагаться на «быстрые» фейки; домен и его тесты писать до UI — тогда порядок
+  фильтров/сборки не отлаживается в виджетах.
 
 ## Факты хоста (обновлять при изменении)
 
@@ -161,3 +176,12 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   Push 2026-11-14: `origin/main = 9bd09ad` (7 коммитов итерации 5); CI run
   [`43612309379`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43612309379) — **9/9 job success**
   (`format + analyze`, `test` × 3 ОС, `build desktop` × 3, `build mobile` Android + iOS). Реальные picker/рисование — L11/L38.
+- **Конструктор сессии проверен локально (итерация 6, 2026-11-14):** `fvm flutter test --coverage
+  --exclude-tags golden` → **1102 passed + 1 skipped**; покрытие **93.1% (7236/7772)** (экран конструктора
+  94.8%); `analyze` 0; `dart format` 269 files 0 changed; `fvm flutter build windows --release` →
+  `cardflow.exe` (51,9 с). Ревью Lead снимка `70b1d97` (L35): high нет, M1–M3 и L1–L2 закрыты `0bdc0ab`
+  с тестами (порядок «перемешивание → интерливинг», блокировка старта при недогруженных карточках, тест
+  переключения режима). Схема БД/`format_version` не менялись (пресеты — в существующей `session_presets`),
+  стык domain → сессии покрыт интеграционным тестом на production-графе и реальной drift-БД. Лимит минут —
+  `Timer` экрана (L40), загрузка карточек конструктором — L41, ручная приёмка — L42. CI финального снимка —
+  после push по команде владельца.
