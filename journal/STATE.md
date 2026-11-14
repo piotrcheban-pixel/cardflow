@@ -11,11 +11,12 @@ Xcode, Linux — отсутствуют. `DEEPSEEK_API_KEY`: present в Windows 
 **959 passed + 1 skipped** (baseline 897 → +62); покрытие **93.6% (5788/6181)** (feed-файлы 95.8–100%);
 `fvm flutter analyze` → No issues; `fvm dart format --set-exit-if-changed lib test` → 229 files, 0 changed;
 `fvm flutter build windows --release` → `cardflow.exe` (51,9 s).
-**CI:** push итерации 4 + handoff выполнен 2026-11-14: `origin/main` = `e90f660`; run
-[`43588247850`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43588247850) — **9/9 success**
+**CI:** push итерации 4 + handoff выполнен 2026-11-14. Последний зелёный прогон — `e90f660`:
+run [`43588247850`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43588247850) — **9/9 success**
 (prior run `43587472135` для `4ef3038` — тоже 9/9). Для 3c run `43583803312` (`e5f64c4`) — 9/9 success.
+`origin/main` содержит docs-only коммиты после `e90f660` (код с `33993f4` не менялся).
 **Внешний блокер:** run `43589108294` (`490eb80`, docs-only) — все job'ы не стартовали из-за GitHub
-billing/spending limit; код не выполнялся. Владельцу — проверить Billing & plans; текущий docs-коммит
+billing/spending limit; код не выполнялся. Владельцу — проверить Billing & plans; последующие docs-коммиты
 `[skip ci]`.
 
 ## Передача итерации 5

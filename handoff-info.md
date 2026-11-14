@@ -5,10 +5,10 @@
 
 ## 1. HEAD и CI
 
-- **HEAD (актуальный на момент обновления):** `e90f660` (`docs: record iteration 4 CI success`) —
-  docs-only поверх handoff-коммита; код итерации 4 — `33993f4`, handoff — `4ef3038`. Если `git rev-parse
-  HEAD` новее, это docs-коммит обновления статуса CI (код не менялся).
-- **`origin/main`:** `e90f660` — push итерации 4 + handoff + статус CI выполнен 2026-11-14 (было `e5f64c4`).
+- **HEAD:** актуальный — `git rev-parse HEAD`; **последний зелёный CI — `e90f660`** (run `43588247850`).
+  После него — только docs-коммиты: `490eb80` (billing failure, job'ы не стартовали), `4b4157b` и этот
+  (`[skip ci]`, фиксация факта). Код итерации 4 — `33993f4`, handoff — `4ef3038`.
+- **`origin/main`:** содержит docs-коммиты после `e90f660`; код приложения не менялся с `33993f4`.
 - **CI итерации 4:** run [`43587472135`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43587472135)
   (commit `4ef3038`) — **9/9 job success**; run
   [`43588247850`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43588247850) (commit `e90f660`) —
