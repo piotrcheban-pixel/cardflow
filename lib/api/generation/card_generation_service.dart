@@ -12,6 +12,7 @@ import 'package:dio/dio.dart';
 
 import 'package:cardflow/api/generation/card_content_validator.dart';
 import 'package:cardflow/api/generation/card_response_schema.dart';
+import 'package:cardflow/api/generation/generation_caller.dart';
 import 'package:cardflow/api/generation/generation_prompt.dart';
 import 'package:cardflow/api/generation/system_prompt.dart';
 import 'package:cardflow/api/http/generation_http_client.dart';
@@ -26,7 +27,7 @@ import 'package:cardflow/domain/generation/generation_settings_store.dart';
 import 'package:cardflow/domain/generation/openai_compatible_settings.dart';
 
 /// Вызов модели и локальная валидация ответа (SPEC A8.2, A8.4–A8.6).
-class CardGenerationService {
+class CardGenerationService implements GenerationCaller {
   /// Создаёт сервис.
   CardGenerationService({
     required this.adapters,

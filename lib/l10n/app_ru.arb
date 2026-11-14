@@ -739,5 +739,314 @@
   "settingsOpenTooltip": "Настройки генерации",
   "@settingsOpenTooltip": {
     "description": "Подсказка иконки перехода в настройки генерации."
+  },
+  "settingsApiKeysTitle": "Ключи API",
+  "@settingsApiKeysTitle": {
+    "description": "Заголовок блока ключей облачных провайдеров на экране настроек генерации (A6.6/A6.8)."
+  },
+  "settingsApiKeysDescription": "Ключи хранятся в защищённом хранилище и не показываются. Введите новый ключ, чтобы заменить сохранённый",
+  "@settingsApiKeysDescription": {
+    "description": "Пояснение к блоку ключей API (SPEC 3.4)."
+  },
+  "settingsKeyConfigured": "Ключ сохранён",
+  "@settingsKeyConfigured": {
+    "description": "Индикатор: ключ облачного провайдера сохранён."
+  },
+  "settingsKeyMissing": "Ключ не задан",
+  "@settingsKeyMissing": {
+    "description": "Индикатор: ключ облачного провайдера не задан."
+  },
+  "settingsKeySave": "Сохранить ключ",
+  "@settingsKeySave": {
+    "description": "Кнопка сохранения ключа облачного провайдера."
+  },
+  "settingsKeyDelete": "Удалить ключ",
+  "@settingsKeyDelete": {
+    "description": "Кнопка удаления сохранённого ключа облачного провайдера."
+  },
+  "settingsKeySaved": "Ключ сохранён",
+  "@settingsKeySaved": {
+    "description": "Снекбар после сохранения ключа облачного провайдера."
+  },
+  "settingsKeyDeleted": "Ключ удалён",
+  "@settingsKeyDeleted": {
+    "description": "Снекбар после удаления ключа облачного провайдера."
+  },
+  "settingsKeyEmptyError": "Введите ключ",
+  "@settingsKeyEmptyError": {
+    "description": "Валидация: поле ключа облачного провайдера пустое."
+  },
+  "decksCreateGenerate": "Сгенерировать карточки",
+  "@decksCreateGenerate": {
+    "description": "Пункт меню Split-кнопки «Создать»: открыть экран генерации (SPEC A6.2/A6.8)."
+  },
+  "deckGenerateTooltip": "Сгенерировать карточки",
+  "@deckGenerateTooltip": {
+    "description": "Подсказка пункта меню экрана колоды: генерация карточек в эту колоду (SPEC A6.3)."
+  },
+  "generationTitle": "Генерация карточек",
+  "@generationTitle": {
+    "description": "Заголовок экрана генерации карточек (SPEC A6.8)."
+  },
+  "generationAttachHint": "Перетащите файлы сюда или нажмите, чтобы выбрать. Поддерживаются Word, Excel, PDF, PowerPoint, текст и другие",
+  "@generationAttachHint": {
+    "description": "Подпись зоны прикрепления файлов (SPEC A6.8)."
+  },
+  "generationAttachButton": "Выбрать файлы",
+  "@generationAttachButton": {
+    "description": "Кнопка открытия файлового пикера на экране генерации."
+  },
+  "generationFilesEmpty": "Файлы не прикреплены",
+  "@generationFilesEmpty": {
+    "description": "Пустой список прикреплённых файлов."
+  },
+  "generationFileRemoveTooltip": "Убрать файл",
+  "@generationFileRemoveTooltip": {
+    "description": "Подсказка кнопки удаления прикреплённого файла."
+  },
+  "generationFileParsing": "Читаем файл…",
+  "@generationFileParsing": {
+    "description": "Статус парсинга прикреплённого файла."
+  },
+  "generationFileParsed": "Готово",
+  "@generationFileParsed": {
+    "description": "Статус успешного парсинга прикреплённого файла."
+  },
+  "generationWishesLabel": "Дополнительные пожелания",
+  "@generationWishesLabel": {
+    "description": "Подпись необязательного поля пожеланий (SPEC A6.8)."
+  },
+  "generationWishesHint": "Необязательно. Например: сделайте акцент на датах, или добавьте больше карточек по теме X",
+  "@generationWishesHint": {
+    "description": "Подсказка поля пожеланий (SPEC A6.8)."
+  },
+  "generationProviderLabel": "Провайдер",
+  "@generationProviderLabel": {
+    "description": "Подпись выбора провайдера генерации (SPEC A6.8)."
+  },
+  "generationProviderOpenAi": "OpenAI",
+  "@generationProviderOpenAi": {
+    "description": "Название провайдера OpenAI (бренд, латиница допустима)."
+  },
+  "generationProviderGemini": "Gemini",
+  "@generationProviderGemini": {
+    "description": "Название провайдера Gemini (бренд, латиница допустима)."
+  },
+  "generationProviderAnthropic": "Anthropic",
+  "@generationProviderAnthropic": {
+    "description": "Название провайдера Anthropic (бренд, латиница допустима)."
+  },
+  "generationProviderOpenAiCompatible": "OpenAI-совместимый",
+  "@generationProviderOpenAiCompatible": {
+    "description": "Название OpenAI-совместимого провайдера (ADR-013)."
+  },
+  "generationModelLabel": "Модель",
+  "@generationModelLabel": {
+    "description": "Подпись выбора модели генерации (SPEC A6.8)."
+  },
+  "generationModelCompatibleHint": "Модель задаётся в настройках сервера",
+  "@generationModelCompatibleHint": {
+    "description": "Пояснение для OpenAI-совместимого провайдера: модель из настроек (ADR-013)."
+  },
+  "generationDeckNameLabel": "Имя колоды (необязательно)",
+  "@generationDeckNameLabel": {
+    "description": "Подпись необязательного поля имени колоды на экране генерации."
+  },
+  "generationDeckNameHint": "Пусто — из имени первого файла",
+  "@generationDeckNameHint": {
+    "description": "Подсказка поля имени колоды: значение по умолчанию из первого файла."
+  },
+  "generationTargetDeck": "Карточки будут добавлены в колоду «{name}»",
+  "@generationTargetDeck": {
+    "description": "Пояснение, что генерация дополнит существующую колоду.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "generationDeckDefaultName": "Сгенерированные карточки",
+  "@generationDeckDefaultName": {
+    "description": "Имя колоды по умолчанию, если файлов нет и поле пустое."
+  },
+  "generationEstimate": "Примерно {count} токенов",
+  "@generationEstimate": {
+    "description": "Оценка объёма материалов в токенах до отправки (SPEC A6.8).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "generationEstimateWarning": "Материала много: запрос будет разбит на несколько частей",
+  "@generationEstimateWarning": {
+    "description": "Предупреждение при большом объёме материалов (SPEC A8.5 шаг 4)."
+  },
+  "generationNoFilesError": "Прикрепите хотя бы один файл",
+  "@generationNoFilesError": {
+    "description": "Валидация: генерация без прикреплённых файлов."
+  },
+  "generationNoParsedFilesError": "Ни один файл не удалось прочитать. Проверьте формат и размер файлов",
+  "@generationNoParsedFilesError": {
+    "description": "Валидация: все прикреплённые файлы не разобраны."
+  },
+  "generationKeyMissing": "Ключ доступа не задан",
+  "@generationKeyMissing": {
+    "description": "Индикатор: для выбранного облачного провайдера нет ключа (SPEC A6.8)."
+  },
+  "generationOpenSettings": "Открыть настройки",
+  "@generationOpenSettings": {
+    "description": "Кнопка перехода в настройки генерации, чтобы добавить ключ."
+  },
+  "generationStart": "Сгенерировать",
+  "@generationStart": {
+    "description": "Большая primary-кнопка запуска генерации (SPEC A6.8)."
+  },
+  "generationProgressReading": "Читаем файлы…",
+  "@generationProgressReading": {
+    "description": "Индикатор прогресса: чтение файлов (SPEC A6.8)."
+  },
+  "generationProgressSending": "Отправляем в нейросеть… (фрагмент {current} из {total})",
+  "@generationProgressSending": {
+    "description": "Индикатор прогресса: отправка фрагмента K из M (SPEC A6.8).",
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "generationProgressReceiving": "Получаем карточки…",
+  "@generationProgressReceiving": {
+    "description": "Индикатор прогресса: получение и разбор карточек (SPEC A6.8)."
+  },
+  "generationCancelled": "Генерация отменена",
+  "@generationCancelled": {
+    "description": "Сообщение после отмены генерации."
+  },
+  "generationErrorNoMaterials": "Нет текста для генерации. Добавьте файл с текстом",
+  "@generationErrorNoMaterials": {
+    "description": "Генерация: после парсинга нет текста (новый код noMaterials, ADR-015)."
+  },
+  "generationPreviewTitle": "Предпросмотр карточек",
+  "@generationPreviewTitle": {
+    "description": "Заголовок экрана предпросмотра сгенерированных карточек (SPEC A6.8)."
+  },
+  "generationPreviewEmpty": "Модель не вернула карточки",
+  "@generationPreviewEmpty": {
+    "description": "Пустое состояние предпросмотра: карточек нет."
+  },
+  "generationPreviewSelected": "Выбрано: {selected} из {total}",
+  "@generationPreviewSelected": {
+    "description": "Счётчик выбранных карточек в предпросмотре.",
+    "placeholders": {
+      "selected": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "generationPreviewImportAll": "Импортировать все",
+  "@generationPreviewImportAll": {
+    "description": "Кнопка импорта всех карточек предпросмотра (SPEC A6.8)."
+  },
+  "generationPreviewImportSelected": "Импортировать выбранные",
+  "@generationPreviewImportSelected": {
+    "description": "Кнопка импорта выбранных карточек предпросмотра (SPEC A6.8)."
+  },
+  "generationPreviewCancel": "Отмена",
+  "@generationPreviewCancel": {
+    "description": "Кнопка отмены предпросмотра (SPEC A6.8)."
+  },
+  "generationPreviewNoSelection": "Выберите хотя бы одну карточку",
+  "@generationPreviewNoSelection": {
+    "description": "Валидация: импорт выбранных без выбора."
+  },
+  "generationPreviewValidationError": "Проверьте заполнение выбранных карточек: вопрос не должен быть пустым",
+  "@generationPreviewValidationError": {
+    "description": "Валидация предпросмотра: у выбранной карточки пустой вопрос/ответ."
+  },
+  "generationIssueEmptyFront": "Пустой вопрос",
+  "@generationIssueEmptyFront": {
+    "description": "Пометка A8.4: пустой front у сгенерированной карточки."
+  },
+  "generationIssueFrontTooLong": "Вопрос длиннее 500 символов",
+  "@generationIssueFrontTooLong": {
+    "description": "Пометка A8.4: front длиннее 500 символов."
+  },
+  "generationIssueBackTooLong": "Ответ длиннее 2000 символов",
+  "@generationIssueBackTooLong": {
+    "description": "Пометка A8.4: back длиннее 2000 символов."
+  },
+  "generationIssueClozeMissing": "В карточке cloze нет пропусков",
+  "@generationIssueClozeMissing": {
+    "description": "Пометка A8.4: у cloze нет разметки {{cN::…}}."
+  },
+  "generationIssueLatexBroken": "Ошибка разметки формулы",
+  "@generationIssueLatexBroken": {
+    "description": "Пометка A8.4: формула не парсится flutter_math_fork."
+  },
+  "generationIssueExcerptMismatch": "Цитата не найдена в исходном тексте",
+  "@generationIssueExcerptMismatch": {
+    "description": "Пометка A8.4: source_excerpt обнулена, карточка остаётся."
+  },
+  "generationIssueTagsAdjusted": "Теги скорректированы",
+  "@generationIssueTagsAdjusted": {
+    "description": "Пометка A8.4: теги обрезаны/нормализованы."
+  },
+  "generationDuplicatesRemoved": "{count, plural, =0{Дубликатов нет} one{{count} дубликат пропущен} few{{count} дубликата пропущено} many{{count} дубликатов пропущено} other{{count} дубликата пропущено}}",
+  "@generationDuplicatesRemoved": {
+    "description": "Сколько дублей отсеяла дедупликация (SPEC A8.5 шаг 9).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "generationTokensUsed": "Израсходовано токенов: {count}",
+  "@generationTokensUsed": {
+    "description": "Фактический расход токенов после генерации (SPEC A6.8).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "generationFailuresTitle": "Не удалось обработать фрагменты",
+  "@generationFailuresTitle": {
+    "description": "Заголовок списка ошибок фрагментов при частичном успехе (SPEC A6.8)."
+  },
+  "generationFailureChunk": "Фрагмент {index}: {message}",
+  "@generationFailureChunk": {
+    "description": "Ошибка одного фрагмента генерации.",
+    "placeholders": {
+      "index": {
+        "type": "int"
+      },
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "generationRetryFailed": "Повторить неудавшиеся",
+  "@generationRetryFailed": {
+    "description": "Кнопка повтора только упавших фрагментов (SPEC A6.8)."
+  },
+  "generationImportError": "Не удалось импортировать карточки. Попробуйте ещё раз",
+  "@generationImportError": {
+    "description": "Ошибка импорта карточек (без сырых исключений)."
+  },
+  "generationImported": "{count, plural, =0{Карточки не импортированы} one{Импортирована {count} карточка} few{Импортировано {count} карточки} many{Импортировано {count} карточек} other{Импортировано {count} карточки}}",
+  "@generationImported": {
+    "description": "Сообщение после импорта сгенерированных карточек.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   }
 }

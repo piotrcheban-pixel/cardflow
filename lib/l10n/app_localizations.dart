@@ -1083,6 +1083,396 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Настройки генерации'**
   String get settingsOpenTooltip;
+
+  /// Заголовок блока ключей облачных провайдеров на экране настроек генерации (A6.6/A6.8).
+  ///
+  /// In ru, this message translates to:
+  /// **'Ключи API'**
+  String get settingsApiKeysTitle;
+
+  /// Пояснение к блоку ключей API (SPEC 3.4).
+  ///
+  /// In ru, this message translates to:
+  /// **'Ключи хранятся в защищённом хранилище и не показываются. Введите новый ключ, чтобы заменить сохранённый'**
+  String get settingsApiKeysDescription;
+
+  /// Индикатор: ключ облачного провайдера сохранён.
+  ///
+  /// In ru, this message translates to:
+  /// **'Ключ сохранён'**
+  String get settingsKeyConfigured;
+
+  /// Индикатор: ключ облачного провайдера не задан.
+  ///
+  /// In ru, this message translates to:
+  /// **'Ключ не задан'**
+  String get settingsKeyMissing;
+
+  /// Кнопка сохранения ключа облачного провайдера.
+  ///
+  /// In ru, this message translates to:
+  /// **'Сохранить ключ'**
+  String get settingsKeySave;
+
+  /// Кнопка удаления сохранённого ключа облачного провайдера.
+  ///
+  /// In ru, this message translates to:
+  /// **'Удалить ключ'**
+  String get settingsKeyDelete;
+
+  /// Снекбар после сохранения ключа облачного провайдера.
+  ///
+  /// In ru, this message translates to:
+  /// **'Ключ сохранён'**
+  String get settingsKeySaved;
+
+  /// Снекбар после удаления ключа облачного провайдера.
+  ///
+  /// In ru, this message translates to:
+  /// **'Ключ удалён'**
+  String get settingsKeyDeleted;
+
+  /// Валидация: поле ключа облачного провайдера пустое.
+  ///
+  /// In ru, this message translates to:
+  /// **'Введите ключ'**
+  String get settingsKeyEmptyError;
+
+  /// Пункт меню Split-кнопки «Создать»: открыть экран генерации (SPEC A6.2/A6.8).
+  ///
+  /// In ru, this message translates to:
+  /// **'Сгенерировать карточки'**
+  String get decksCreateGenerate;
+
+  /// Подсказка пункта меню экрана колоды: генерация карточек в эту колоду (SPEC A6.3).
+  ///
+  /// In ru, this message translates to:
+  /// **'Сгенерировать карточки'**
+  String get deckGenerateTooltip;
+
+  /// Заголовок экрана генерации карточек (SPEC A6.8).
+  ///
+  /// In ru, this message translates to:
+  /// **'Генерация карточек'**
+  String get generationTitle;
+
+  /// Подпись зоны прикрепления файлов (SPEC A6.8).
+  ///
+  /// In ru, this message translates to:
+  /// **'Перетащите файлы сюда или нажмите, чтобы выбрать. Поддерживаются Word, Excel, PDF, PowerPoint, текст и другие'**
+  String get generationAttachHint;
+
+  /// Кнопка открытия файлового пикера на экране генерации.
+  ///
+  /// In ru, this message translates to:
+  /// **'Выбрать файлы'**
+  String get generationAttachButton;
+
+  /// Пустой список прикреплённых файлов.
+  ///
+  /// In ru, this message translates to:
+  /// **'Файлы не прикреплены'**
+  String get generationFilesEmpty;
+
+  /// Подсказка кнопки удаления прикреплённого файла.
+  ///
+  /// In ru, this message translates to:
+  /// **'Убрать файл'**
+  String get generationFileRemoveTooltip;
+
+  /// Статус парсинга прикреплённого файла.
+  ///
+  /// In ru, this message translates to:
+  /// **'Читаем файл…'**
+  String get generationFileParsing;
+
+  /// Статус успешного парсинга прикреплённого файла.
+  ///
+  /// In ru, this message translates to:
+  /// **'Готово'**
+  String get generationFileParsed;
+
+  /// Подпись необязательного поля пожеланий (SPEC A6.8).
+  ///
+  /// In ru, this message translates to:
+  /// **'Дополнительные пожелания'**
+  String get generationWishesLabel;
+
+  /// Подсказка поля пожеланий (SPEC A6.8).
+  ///
+  /// In ru, this message translates to:
+  /// **'Необязательно. Например: сделайте акцент на датах, или добавьте больше карточек по теме X'**
+  String get generationWishesHint;
+
+  /// Подпись выбора провайдера генерации (SPEC A6.8).
+  ///
+  /// In ru, this message translates to:
+  /// **'Провайдер'**
+  String get generationProviderLabel;
+
+  /// Название провайдера OpenAI (бренд, латиница допустима).
+  ///
+  /// In ru, this message translates to:
+  /// **'OpenAI'**
+  String get generationProviderOpenAi;
+
+  /// Название провайдера Gemini (бренд, латиница допустима).
+  ///
+  /// In ru, this message translates to:
+  /// **'Gemini'**
+  String get generationProviderGemini;
+
+  /// Название провайдера Anthropic (бренд, латиница допустима).
+  ///
+  /// In ru, this message translates to:
+  /// **'Anthropic'**
+  String get generationProviderAnthropic;
+
+  /// Название OpenAI-совместимого провайдера (ADR-013).
+  ///
+  /// In ru, this message translates to:
+  /// **'OpenAI-совместимый'**
+  String get generationProviderOpenAiCompatible;
+
+  /// Подпись выбора модели генерации (SPEC A6.8).
+  ///
+  /// In ru, this message translates to:
+  /// **'Модель'**
+  String get generationModelLabel;
+
+  /// Пояснение для OpenAI-совместимого провайдера: модель из настроек (ADR-013).
+  ///
+  /// In ru, this message translates to:
+  /// **'Модель задаётся в настройках сервера'**
+  String get generationModelCompatibleHint;
+
+  /// Подпись необязательного поля имени колоды на экране генерации.
+  ///
+  /// In ru, this message translates to:
+  /// **'Имя колоды (необязательно)'**
+  String get generationDeckNameLabel;
+
+  /// Подсказка поля имени колоды: значение по умолчанию из первого файла.
+  ///
+  /// In ru, this message translates to:
+  /// **'Пусто — из имени первого файла'**
+  String get generationDeckNameHint;
+
+  /// Пояснение, что генерация дополнит существующую колоду.
+  ///
+  /// In ru, this message translates to:
+  /// **'Карточки будут добавлены в колоду «{name}»'**
+  String generationTargetDeck(String name);
+
+  /// Имя колоды по умолчанию, если файлов нет и поле пустое.
+  ///
+  /// In ru, this message translates to:
+  /// **'Сгенерированные карточки'**
+  String get generationDeckDefaultName;
+
+  /// Оценка объёма материалов в токенах до отправки (SPEC A6.8).
+  ///
+  /// In ru, this message translates to:
+  /// **'Примерно {count} токенов'**
+  String generationEstimate(int count);
+
+  /// Предупреждение при большом объёме материалов (SPEC A8.5 шаг 4).
+  ///
+  /// In ru, this message translates to:
+  /// **'Материала много: запрос будет разбит на несколько частей'**
+  String get generationEstimateWarning;
+
+  /// Валидация: генерация без прикреплённых файлов.
+  ///
+  /// In ru, this message translates to:
+  /// **'Прикрепите хотя бы один файл'**
+  String get generationNoFilesError;
+
+  /// Валидация: все прикреплённые файлы не разобраны.
+  ///
+  /// In ru, this message translates to:
+  /// **'Ни один файл не удалось прочитать. Проверьте формат и размер файлов'**
+  String get generationNoParsedFilesError;
+
+  /// Индикатор: для выбранного облачного провайдера нет ключа (SPEC A6.8).
+  ///
+  /// In ru, this message translates to:
+  /// **'Ключ доступа не задан'**
+  String get generationKeyMissing;
+
+  /// Кнопка перехода в настройки генерации, чтобы добавить ключ.
+  ///
+  /// In ru, this message translates to:
+  /// **'Открыть настройки'**
+  String get generationOpenSettings;
+
+  /// Большая primary-кнопка запуска генерации (SPEC A6.8).
+  ///
+  /// In ru, this message translates to:
+  /// **'Сгенерировать'**
+  String get generationStart;
+
+  /// Индикатор прогресса: чтение файлов (SPEC A6.8).
+  ///
+  /// In ru, this message translates to:
+  /// **'Читаем файлы…'**
+  String get generationProgressReading;
+
+  /// Индикатор прогресса: отправка фрагмента K из M (SPEC A6.8).
+  ///
+  /// In ru, this message translates to:
+  /// **'Отправляем в нейросеть… (фрагмент {current} из {total})'**
+  String generationProgressSending(int current, int total);
+
+  /// Индикатор прогресса: получение и разбор карточек (SPEC A6.8).
+  ///
+  /// In ru, this message translates to:
+  /// **'Получаем карточки…'**
+  String get generationProgressReceiving;
+
+  /// Сообщение после отмены генерации.
+  ///
+  /// In ru, this message translates to:
+  /// **'Генерация отменена'**
+  String get generationCancelled;
+
+  /// Генерация: после парсинга нет текста (новый код noMaterials, ADR-015).
+  ///
+  /// In ru, this message translates to:
+  /// **'Нет текста для генерации. Добавьте файл с текстом'**
+  String get generationErrorNoMaterials;
+
+  /// Заголовок экрана предпросмотра сгенерированных карточек (SPEC A6.8).
+  ///
+  /// In ru, this message translates to:
+  /// **'Предпросмотр карточек'**
+  String get generationPreviewTitle;
+
+  /// Пустое состояние предпросмотра: карточек нет.
+  ///
+  /// In ru, this message translates to:
+  /// **'Модель не вернула карточки'**
+  String get generationPreviewEmpty;
+
+  /// Счётчик выбранных карточек в предпросмотре.
+  ///
+  /// In ru, this message translates to:
+  /// **'Выбрано: {selected} из {total}'**
+  String generationPreviewSelected(int selected, int total);
+
+  /// Кнопка импорта всех карточек предпросмотра (SPEC A6.8).
+  ///
+  /// In ru, this message translates to:
+  /// **'Импортировать все'**
+  String get generationPreviewImportAll;
+
+  /// Кнопка импорта выбранных карточек предпросмотра (SPEC A6.8).
+  ///
+  /// In ru, this message translates to:
+  /// **'Импортировать выбранные'**
+  String get generationPreviewImportSelected;
+
+  /// Кнопка отмены предпросмотра (SPEC A6.8).
+  ///
+  /// In ru, this message translates to:
+  /// **'Отмена'**
+  String get generationPreviewCancel;
+
+  /// Валидация: импорт выбранных без выбора.
+  ///
+  /// In ru, this message translates to:
+  /// **'Выберите хотя бы одну карточку'**
+  String get generationPreviewNoSelection;
+
+  /// Валидация предпросмотра: у выбранной карточки пустой вопрос/ответ.
+  ///
+  /// In ru, this message translates to:
+  /// **'Проверьте заполнение выбранных карточек: вопрос не должен быть пустым'**
+  String get generationPreviewValidationError;
+
+  /// Пометка A8.4: пустой front у сгенерированной карточки.
+  ///
+  /// In ru, this message translates to:
+  /// **'Пустой вопрос'**
+  String get generationIssueEmptyFront;
+
+  /// Пометка A8.4: front длиннее 500 символов.
+  ///
+  /// In ru, this message translates to:
+  /// **'Вопрос длиннее 500 символов'**
+  String get generationIssueFrontTooLong;
+
+  /// Пометка A8.4: back длиннее 2000 символов.
+  ///
+  /// In ru, this message translates to:
+  /// **'Ответ длиннее 2000 символов'**
+  String get generationIssueBackTooLong;
+
+  /// Пометка A8.4: у cloze нет разметки {{cN::…}}.
+  ///
+  /// In ru, this message translates to:
+  /// **'В карточке cloze нет пропусков'**
+  String get generationIssueClozeMissing;
+
+  /// Пометка A8.4: формула не парсится flutter_math_fork.
+  ///
+  /// In ru, this message translates to:
+  /// **'Ошибка разметки формулы'**
+  String get generationIssueLatexBroken;
+
+  /// Пометка A8.4: source_excerpt обнулена, карточка остаётся.
+  ///
+  /// In ru, this message translates to:
+  /// **'Цитата не найдена в исходном тексте'**
+  String get generationIssueExcerptMismatch;
+
+  /// Пометка A8.4: теги обрезаны/нормализованы.
+  ///
+  /// In ru, this message translates to:
+  /// **'Теги скорректированы'**
+  String get generationIssueTagsAdjusted;
+
+  /// Сколько дублей отсеяла дедупликация (SPEC A8.5 шаг 9).
+  ///
+  /// In ru, this message translates to:
+  /// **'{count, plural, =0{Дубликатов нет} one{{count} дубликат пропущен} few{{count} дубликата пропущено} many{{count} дубликатов пропущено} other{{count} дубликата пропущено}}'**
+  String generationDuplicatesRemoved(int count);
+
+  /// Фактический расход токенов после генерации (SPEC A6.8).
+  ///
+  /// In ru, this message translates to:
+  /// **'Израсходовано токенов: {count}'**
+  String generationTokensUsed(int count);
+
+  /// Заголовок списка ошибок фрагментов при частичном успехе (SPEC A6.8).
+  ///
+  /// In ru, this message translates to:
+  /// **'Не удалось обработать фрагменты'**
+  String get generationFailuresTitle;
+
+  /// Ошибка одного фрагмента генерации.
+  ///
+  /// In ru, this message translates to:
+  /// **'Фрагмент {index}: {message}'**
+  String generationFailureChunk(int index, String message);
+
+  /// Кнопка повтора только упавших фрагментов (SPEC A6.8).
+  ///
+  /// In ru, this message translates to:
+  /// **'Повторить неудавшиеся'**
+  String get generationRetryFailed;
+
+  /// Ошибка импорта карточек (без сырых исключений).
+  ///
+  /// In ru, this message translates to:
+  /// **'Не удалось импортировать карточки. Попробуйте ещё раз'**
+  String get generationImportError;
+
+  /// Сообщение после импорта сгенерированных карточек.
+  ///
+  /// In ru, this message translates to:
+  /// **'{count, plural, =0{Карточки не импортированы} one{Импортирована {count} карточка} few{Импортировано {count} карточки} many{Импортировано {count} карточек} other{Импортировано {count} карточки}}'**
+  String generationImported(int count);
 }
 
 class _AppLocalizationsDelegate

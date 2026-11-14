@@ -1,10 +1,24 @@
+import 'dart:async';
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 
+import 'package:cardflow/api/generation/generation_caller.dart';
+import 'package:cardflow/api/generation/generation_cancellation.dart';
+import 'package:cardflow/api/generation/generation_pipeline.dart';
 import 'package:cardflow/api/http/generation_http_client.dart';
 import 'package:cardflow/api/providers/generation_provider_adapter.dart';
+import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/generation/api_key_store.dart';
+import 'package:cardflow/domain/generation/document_gateway.dart';
+import 'package:cardflow/domain/generation/generated_card.dart';
+import 'package:cardflow/domain/generation/generation_card_store.dart';
+import 'package:cardflow/domain/generation/generation_error.dart';
+import 'package:cardflow/domain/generation/generation_job.dart';
 import 'package:cardflow/domain/generation/generation_provider.dart';
+import 'package:cardflow/domain/generation/generation_request.dart';
 import 'package:cardflow/domain/generation/generation_result.dart';
+import 'package:cardflow/domain/generation/generation_run.dart';
 import 'package:cardflow/domain/generation/generation_settings_store.dart';
 import 'package:cardflow/domain/generation/openai_compatible_settings.dart';
 
@@ -228,5 +242,232 @@ class FakeGenerationTransport implements GenerationTransport {
     final failure = error;
     if (failure != null) throw failure;
     return response ?? <String, Object?>{};
+  }
+}
+
+/// Создаёт сгенерированную карточку-фикстуру.
+GeneratedCard makeGeneratedCard({
+  String front = 'Что такое FSRS?',
+  String back = 'Алгоритм интервального повторения.',
+  CardType cardType = CardType.basic,
+  List<String> tags = const <String>['fsrs'],
+  String? sourceExcerpt,
+  List<CardIssueCode> issues = const <CardIssueCode>[],
+}) {
+  return GeneratedCard(
+    front: front,
+    back: back,
+    cardType: cardType,
+    tags: tags,
+    sourceExcerpt: sourceExcerpt,
+    issues: issues,
+  );
+}
+
+/// Фейковый вызов модели: очередь результатов/ошибок, журнал запросов.
+class FakeGenerationCaller implements GenerationCaller {
+  /// Создаёт фейк; [responses] — `GenerationResult` или `GenerationException`.
+  FakeGenerationCaller({List<Object>? responses})
+    : _responses = <Object>[...?responses];
+
+  final List<Object> _responses;
+
+  /// Все запросы в порядке вызовов.
+  final List<GenerationRequest> requests = <GenerationRequest>[];
+
+  /// Если задано — вызывается вместо очереди (для проверки отмены/прогресса).
+  Future<GenerationResult> Function(GenerationRequest request, int call)?
+  onGenerate;
+
+  /// Сколько раз вызывали модель.
+  int get calls => requests.length;
+
+  @override
+  Future<GenerationResult> generate(
+    GenerationRequest request, {
+    CancelToken? cancelToken,
+  }) async {
+    requests.add(request);
+    final handler = onGenerate;
+    if (handler != null) {
+      return handler(request, requests.length);
+    }
+    if (_responses.isEmpty) {
+      throw StateError('FakeGenerationCaller: нет запланированного ответа');
+    }
+    final Object response = _responses.removeAt(0);
+    if (response is GenerationException) {
+      throw response;
+    }
+    return response as GenerationResult;
+  }
+}
+
+/// Фейковое хранилище заданий: in-memory, журнал сохранений.
+class FakeGenerationJobRepository implements GenerationJobRepository {
+  final Map<String, GenerationJob> _jobs = <String, GenerationJob>{};
+
+  /// Все сохранённые версии заданий в порядке записи.
+  final List<GenerationJob> saved = <GenerationJob>[];
+
+  @override
+  Future<void> save(GenerationJob job) async {
+    saved.add(job);
+    _jobs[job.id] = job;
+  }
+
+  @override
+  Future<GenerationJob?> jobById(String id) async => _jobs[id];
+}
+
+/// Фейковое хранилище карточек: хеши существующих и импорт с дедупликацией.
+class FakeGenerationCardStore implements GenerationCardStore {
+  /// Создаёт фейк с существующими хешами [existingByDeck].
+  FakeGenerationCardStore({
+    Map<String, Set<String>>? existingByDeck,
+    this.importResult,
+  }) : _existingByDeck = <String, Set<String>>{...?existingByDeck};
+
+  final Map<String, Set<String>> _existingByDeck;
+
+  /// Результат импорта; по умолчанию — первая карточка списка.
+  final GenerationImportResult? importResult;
+
+  /// Карточки, переданные в импорт.
+  final List<List<GeneratedCard>> importedCards = <List<GeneratedCard>>[];
+
+  /// Параметры последнего импорта.
+  String? lastDeckId;
+  String? lastDeckName;
+  String? lastJobId;
+
+  @override
+  Future<Set<String>> existingContentHashes(String deckId) async {
+    return <String>{...?_existingByDeck[deckId]};
+  }
+
+  @override
+  Future<GenerationImportResult> importGeneratedCards({
+    required String? deckId,
+    required String deckName,
+    required List<GeneratedCard> cards,
+    required String jobId,
+    required DateTime now,
+  }) async {
+    importedCards.add(List<GeneratedCard>.of(cards));
+    lastDeckId = deckId;
+    lastDeckName = deckName;
+    lastJobId = jobId;
+    return importResult ??
+        GenerationImportResult(
+          deckId: deckId ?? 'new-deck',
+          importedCards: cards.length,
+          skippedDuplicates: 0,
+        );
+  }
+}
+
+/// Фейковый пайплайн для widget-тестов экрана генерации/предпросмотра.
+class FakeGenerationRunner implements GenerationRunner {
+  /// Результат `run`; `null` — бросается [error].
+  GenerationRunResult? result;
+
+  /// Результат `retryFailed`; по умолчанию — [result].
+  GenerationRunResult? retryResult;
+
+  /// Ошибка вместо результата.
+  Object? error;
+
+  /// Если задан — `run` ждёт завершения этого completer (проверка прогресса).
+  Completer<GenerationRunResult>? pending;
+
+  /// Сколько раз вызывали `run`.
+  int runCalls = 0;
+
+  /// Сколько раз вызывали `retryFailed`.
+  int retryCalls = 0;
+
+  /// Последний запрос.
+  GenerationRunRequest? lastRequest;
+
+  /// Последний колбэк прогресса.
+  GenerationProgressCallback? lastProgress;
+
+  /// Последняя отмена.
+  GenerationCancellation? lastCancellation;
+
+  /// Последний предыдущий результат для retry.
+  GenerationRunResult? lastPrevious;
+
+  @override
+  Future<GenerationRunResult> run(
+    GenerationRunRequest request, {
+    GenerationProgressCallback? onProgress,
+    GenerationCancellation? cancellation,
+  }) async {
+    runCalls++;
+    lastRequest = request;
+    lastProgress = onProgress;
+    lastCancellation = cancellation;
+    final failure = error;
+    if (failure != null) throw failure;
+    final waiting = pending;
+    if (waiting != null) return waiting.future;
+    return result!;
+  }
+
+  @override
+  Future<GenerationRunResult> retryFailed(
+    GenerationRunRequest request,
+    GenerationRunResult previous, {
+    GenerationProgressCallback? onProgress,
+    GenerationCancellation? cancellation,
+  }) async {
+    retryCalls++;
+    lastRequest = request;
+    lastPrevious = previous;
+    lastProgress = onProgress;
+    lastCancellation = cancellation;
+    final failure = error;
+    if (failure != null) throw failure;
+    return retryResult ?? result!;
+  }
+}
+/// Фейковый шлюз документов: заданные файлы/байты и журнал вызовов.
+class FakeDocumentGateway implements DocumentGateway {
+  /// Файлы, которые вернёт пикер.
+  List<PickedDocument> picked = <PickedDocument>[];
+
+  /// Байты по пути; по умолчанию — UTF-8 текст «Материал лекции».
+  final Map<String, Uint8List> bytesByPath = <String, Uint8List>{};
+
+  /// Ошибка пикера.
+  Object? pickError;
+
+  /// Ошибка чтения.
+  Object? readError;
+
+  /// Сколько раз открывали пикер.
+  int pickCalls = 0;
+
+  /// Сколько раз читали файл.
+  int readCalls = 0;
+
+  @override
+  int get maxFileBytes => 25 * 1024 * 1024;
+
+  @override
+  Future<List<PickedDocument>> pickDocuments() async {
+    pickCalls++;
+    if (pickError != null) throw pickError!;
+    return List<PickedDocument>.of(picked);
+  }
+
+  @override
+  Future<Uint8List> readDocument(PickedDocument document) async {
+    readCalls++;
+    if (readError != null) throw readError!;
+    return bytesByPath[document.path] ??
+        Uint8List.fromList('Материал лекции'.codeUnits);
   }
 }

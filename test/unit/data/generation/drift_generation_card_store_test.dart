@@ -1,0 +1,272 @@
+import 'package:flutter_test/flutter_test.dart';
+
+import 'package:cardflow/data/db/app_database.dart';
+import 'package:cardflow/data/generation/drift_generation_card_store.dart';
+import 'package:cardflow/data/generation/drift_generation_job_repository.dart';
+import 'package:cardflow/domain/cards/card.dart';
+import 'package:cardflow/domain/cards/content_hash.dart';
+import 'package:cardflow/domain/generation/generated_card.dart';
+import 'package:cardflow/domain/generation/generation_job.dart';
+
+import '../../data/db/test_support.dart';
+
+GeneratedCard cardOf(
+  String front, {
+  String back = 'Ответ',
+  CardType cardType = CardType.basic,
+}) {
+  return GeneratedCard(front: front, back: back, cardType: cardType);
+}
+
+void main() {
+  late AppDatabase db;
+  late DriftGenerationCardStore store;
+  late DriftGenerationJobRepository jobs;
+  final now = DateTime.utc(2026, 11, 14, 10);
+
+  setUp(() async {
+    db = AppDatabase.inMemory();
+    store = DriftGenerationCardStore(db);
+    jobs = DriftGenerationJobRepository(db);
+    await jobs.save(
+      GenerationJob(
+        id: 'job-1',
+        status: GenerationJobStatus.done,
+        createdAt: now,
+        promptVersion: 'gen-ru-v2',
+      ),
+    );
+  });
+
+  tearDown(() async {
+    await db.close();
+  });
+
+  test('existingContentHashes: хеши карточек колоды', () async {
+    await insertDeckRow(
+      db,
+      id: 'deck-1',
+      name: 'Колода',
+      createdAt: 1,
+      updatedAt: 1,
+    );
+    await insertCardRow(
+      db,
+      id: 'card-1',
+      deckId: 'deck-1',
+      front: 'Вопрос',
+      back: 'Ответ',
+      contentHash: contentHashOf(front: 'Вопрос', back: 'Ответ'),
+    );
+    await insertDeckRow(
+      db,
+      id: 'deck-2',
+      name: 'Другая',
+      createdAt: 1,
+      updatedAt: 1,
+    );
+    await insertCardRow(
+      db,
+      id: 'card-2',
+      deckId: 'deck-2',
+      front: 'Чужой',
+      back: 'Ответ',
+      contentHash: contentHashOf(front: 'Чужой', back: 'Ответ'),
+    );
+
+    final hashes = await store.existingContentHashes('deck-1');
+    expect(hashes, contains(contentHashOf(front: 'Вопрос', back: 'Ответ')));
+    expect(
+      hashes,
+      isNot(contains(contentHashOf(front: 'Чужой', back: 'Ответ'))),
+    );
+  });
+
+  test('импорт в новую колоду: колода, карточки, хеши, job', () async {
+    final result = await store.importGeneratedCards(
+      deckId: null,
+      deckName: '  Новая колода  ',
+      cards: <GeneratedCard>[
+        cardOf('Вопрос 1', back: 'Ответ 1'),
+        cardOf('Вопрос 2', back: 'Ответ 2'),
+      ],
+      jobId: 'job-1',
+      now: now,
+    );
+
+    expect(result.deckId, isNotEmpty);
+    expect(result.importedCards, 2);
+    expect(result.skippedDuplicates, 0);
+
+    final deckRows = await db.select(db.decks).get();
+    expect(deckRows, hasLength(1));
+    expect(deckRows.single.id, result.deckId);
+    expect(deckRows.single.name, 'Новая колода');
+
+    final cardRows = await db.select(db.cards).get();
+    expect(cardRows, hasLength(2));
+    for (final row in cardRows) {
+      expect(row.deckId, result.deckId);
+      expect(row.state, 'new');
+      expect(row.contentHash, isNotNull);
+      expect(row.fsrsJson, isNull);
+      expect(row.due, isNull);
+    }
+    expect(
+      cardRows.map((row) => row.contentHash).toSet(),
+      <String>{
+        contentHashOf(front: 'Вопрос 1', back: 'Ответ 1'),
+        contentHashOf(front: 'Вопрос 2', back: 'Ответ 2'),
+      },
+    );
+
+    final job = (await jobs.jobById('job-1'))!;
+    expect(job.resultDeckId, result.deckId);
+    expect(job.cardsCount, 2);
+  });
+
+  test('импорт в существующую колоду: дополняет, дубли пропускает', () async {
+    await insertDeckRow(
+      db,
+      id: 'deck-1',
+      name: 'Колода',
+      createdAt: 1,
+      updatedAt: 1,
+    );
+    await insertCardRow(
+      db,
+      id: 'card-1',
+      deckId: 'deck-1',
+      front: 'Вопрос 1',
+      back: 'Ответ 1',
+      contentHash: contentHashOf(front: 'Вопрос 1', back: 'Ответ 1'),
+    );
+
+    final result = await store.importGeneratedCards(
+      deckId: 'deck-1',
+      deckName: 'Игнорируется',
+      cards: <GeneratedCard>[
+        cardOf('Вопрос 1', back: 'Ответ 1'),
+        cardOf('Вопрос 2', back: 'Ответ 2'),
+      ],
+      jobId: 'job-1',
+      now: now,
+    );
+
+    expect(result.deckId, 'deck-1');
+    expect(result.importedCards, 1);
+    expect(result.skippedDuplicates, 1);
+    final cardRows = await db.select(db.cards).get();
+    expect(cardRows, hasLength(2));
+    expect(
+      cardRows.where((row) => row.front == 'Вопрос 2'),
+      hasLength(1),
+    );
+    final deckRows = await db.select(db.decks).get();
+    expect(deckRows, hasLength(1), reason: 'новая колода не создаётся');
+  });
+
+  test('дубли внутри пакета отсеиваются, первый выигрывает', () async {
+    final result = await store.importGeneratedCards(
+      deckId: null,
+      deckName: 'Колода',
+      cards: <GeneratedCard>[
+        cardOf('Вопрос', back: 'Ответ'),
+        cardOf('Вопрос', back: 'Ответ'),
+      ],
+      jobId: 'job-1',
+      now: now,
+    );
+
+    expect(result.importedCards, 1);
+    expect(result.skippedDuplicates, 1);
+    expect(await db.select(db.cards).get(), hasLength(1));
+  });
+
+  test('basic_reversed создаёт две строки с взаимными sibling_id', () async {
+    await store.importGeneratedCards(
+      deckId: null,
+      deckName: 'Колода',
+      cards: <GeneratedCard>[
+        cardOf(
+          'Термин',
+          back: 'Определение',
+          cardType: CardType.basicReversed,
+        ),
+      ],
+      jobId: 'job-1',
+      now: now,
+    );
+
+    final rows = await db.select(db.cards).get();
+    expect(rows, hasLength(2));
+    expect(rows.map((row) => row.front).toSet(), <String>{'Термин', 'Определение'});
+    final bySibling = <String, String>{};
+    for (final row in rows) {
+      expect(row.siblingId, isNotNull);
+      bySibling[row.id] = row.siblingId!;
+    }
+    for (final entry in bySibling.entries) {
+      expect(bySibling[entry.value], entry.key);
+    }
+    expect(await jobs.jobById('job-1'), isNotNull);
+  });
+
+  test('basic_reversed не создаёт дубль, если обратная сторона уже есть', () async {
+    await insertDeckRow(
+      db,
+      id: 'deck-1',
+      name: 'Колода',
+      createdAt: 1,
+      updatedAt: 1,
+    );
+    await insertCardRow(
+      db,
+      id: 'card-1',
+      deckId: 'deck-1',
+      front: 'Определение',
+      back: 'Термин',
+      contentHash: contentHashOf(front: 'Определение', back: 'Термин'),
+    );
+
+    final result = await store.importGeneratedCards(
+      deckId: 'deck-1',
+      deckName: 'Колода',
+      cards: <GeneratedCard>[
+        cardOf('Термин', back: 'Определение', cardType: CardType.basicReversed),
+      ],
+      jobId: 'job-1',
+      now: now,
+    );
+
+    expect(result.importedCards, 0);
+    expect(result.skippedDuplicates, 1);
+    expect(await db.select(db.cards).get(), hasLength(1));
+  });
+
+  test('пустой список карточек — колода не создаётся', () async {
+    final result = await store.importGeneratedCards(
+      deckId: null,
+      deckName: 'Колода',
+      cards: const <GeneratedCard>[],
+      jobId: 'job-1',
+      now: now,
+    );
+    expect(result.importedCards, 0);
+    expect(await db.select(db.decks).get(), isEmpty);
+  });
+
+  test('несуществующая целевая колода — StateError, карточки не пишутся', () async {
+    await expectLater(
+      store.importGeneratedCards(
+        deckId: 'нет',
+        deckName: 'Колода',
+        cards: <GeneratedCard>[cardOf('Вопрос')],
+        jobId: 'job-1',
+        now: now,
+      ),
+      throwsStateError,
+    );
+    expect(await db.select(db.cards).get(), isEmpty);
+  });
+}

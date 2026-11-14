@@ -3,6 +3,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cardflow/api/generation/card_generation_service.dart';
+import 'package:cardflow/api/generation/generation_pipeline.dart';
+import 'package:cardflow/api/generation/generation_caller.dart';
 import 'package:cardflow/api/http/generation_http_client.dart';
 import 'package:cardflow/api/http/redacting_log_interceptor.dart';
 import 'package:cardflow/api/http/retry_policy.dart';
@@ -11,10 +13,14 @@ import 'package:cardflow/api/providers/gemini_adapter.dart';
 import 'package:cardflow/api/providers/openai_adapter.dart';
 import 'package:cardflow/api/providers/openai_compatible_adapter.dart';
 import 'package:cardflow/api/providers/generation_provider_adapter.dart';
+import 'package:cardflow/api/parsers/file_parsing_service.dart';
 import 'package:cardflow/data/cards/drift_card_repository.dart';
 import 'package:cardflow/data/db/app_database.dart';
 import 'package:cardflow/data/decks/drift_deck_repository.dart';
+import 'package:cardflow/data/generation/drift_generation_card_store.dart';
+import 'package:cardflow/data/generation/drift_generation_job_repository.dart';
 import 'package:cardflow/data/generation/drift_generation_settings_store.dart';
+import 'package:cardflow/data/generation/file_picker_document_gateway.dart';
 import 'package:cardflow/data/review/drift_review_repository.dart';
 import 'package:cardflow/data/security/secure_api_key_store.dart';
 import 'package:cardflow/data/transfer/drift_deck_transfer_service.dart';
@@ -24,6 +30,9 @@ import 'package:cardflow/data/transfer/zip_deck_archive_codec.dart';
 import 'package:cardflow/domain/cards/card_repository.dart';
 import 'package:cardflow/domain/decks/deck_repository.dart';
 import 'package:cardflow/domain/generation/api_key_store.dart';
+import 'package:cardflow/domain/generation/document_gateway.dart';
+import 'package:cardflow/domain/generation/generation_card_store.dart';
+import 'package:cardflow/domain/generation/generation_job.dart';
 import 'package:cardflow/domain/generation/generation_settings_store.dart';
 import 'package:cardflow/domain/generation/openai_compatible_settings.dart';
 import 'package:cardflow/domain/review/review_repository.dart';
@@ -153,5 +162,34 @@ final cardGenerationServiceProvider = Provider<CardGenerationService>((ref) {
     apiKeyStore: ref.watch(apiKeyStoreProvider),
     httpClient: ref.watch(generationHttpClientProvider),
     generationSettingsStore: ref.watch(generationSettingsStoreProvider),
+  );
+});
+
+/// Парсинг прикреплённых документов (SPEC A8.3, A8.5 шаг 3).
+final fileParsingServiceProvider = Provider<FileParsingService>((ref) {
+  return FileParsingService();
+});
+
+/// Шлюз выбора/чтения документов генерации (A6.8).
+final documentGatewayProvider = Provider<DocumentGateway>((ref) {
+  return const FilePickerDocumentGateway();
+});
+
+/// Задания генерации в `generation_jobs` (A5, ADR-015).
+final generationJobRepositoryProvider = Provider<GenerationJobRepository>((ref) {
+  return DriftGenerationJobRepository(ref.watch(appDatabaseProvider));
+});
+
+/// Импорт сгенерированных карточек в колоду (A8.5 шаги 9–11).
+final generationCardStoreProvider = Provider<GenerationCardStore>((ref) {
+  return DriftGenerationCardStore(ref.watch(appDatabaseProvider));
+});
+
+/// Пайплайн генерации: чанкинг, вызовы, прогресс/отмена, дедупликация.
+final generationRunnerProvider = Provider<GenerationRunner>((ref) {
+  return GenerationPipeline(
+    caller: ref.watch(cardGenerationServiceProvider),
+    jobRepository: ref.watch(generationJobRepositoryProvider),
+    cardStore: ref.watch(generationCardStoreProvider),
   );
 });

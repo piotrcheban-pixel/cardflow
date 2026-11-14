@@ -623,4 +623,243 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get settingsOpenTooltip => 'Настройки генерации';
+
+  @override
+  String get settingsApiKeysTitle => 'Ключи API';
+
+  @override
+  String get settingsApiKeysDescription =>
+      'Ключи хранятся в защищённом хранилище и не показываются. Введите новый ключ, чтобы заменить сохранённый';
+
+  @override
+  String get settingsKeyConfigured => 'Ключ сохранён';
+
+  @override
+  String get settingsKeyMissing => 'Ключ не задан';
+
+  @override
+  String get settingsKeySave => 'Сохранить ключ';
+
+  @override
+  String get settingsKeyDelete => 'Удалить ключ';
+
+  @override
+  String get settingsKeySaved => 'Ключ сохранён';
+
+  @override
+  String get settingsKeyDeleted => 'Ключ удалён';
+
+  @override
+  String get settingsKeyEmptyError => 'Введите ключ';
+
+  @override
+  String get decksCreateGenerate => 'Сгенерировать карточки';
+
+  @override
+  String get deckGenerateTooltip => 'Сгенерировать карточки';
+
+  @override
+  String get generationTitle => 'Генерация карточек';
+
+  @override
+  String get generationAttachHint =>
+      'Перетащите файлы сюда или нажмите, чтобы выбрать. Поддерживаются Word, Excel, PDF, PowerPoint, текст и другие';
+
+  @override
+  String get generationAttachButton => 'Выбрать файлы';
+
+  @override
+  String get generationFilesEmpty => 'Файлы не прикреплены';
+
+  @override
+  String get generationFileRemoveTooltip => 'Убрать файл';
+
+  @override
+  String get generationFileParsing => 'Читаем файл…';
+
+  @override
+  String get generationFileParsed => 'Готово';
+
+  @override
+  String get generationWishesLabel => 'Дополнительные пожелания';
+
+  @override
+  String get generationWishesHint =>
+      'Необязательно. Например: сделайте акцент на датах, или добавьте больше карточек по теме X';
+
+  @override
+  String get generationProviderLabel => 'Провайдер';
+
+  @override
+  String get generationProviderOpenAi => 'OpenAI';
+
+  @override
+  String get generationProviderGemini => 'Gemini';
+
+  @override
+  String get generationProviderAnthropic => 'Anthropic';
+
+  @override
+  String get generationProviderOpenAiCompatible => 'OpenAI-совместимый';
+
+  @override
+  String get generationModelLabel => 'Модель';
+
+  @override
+  String get generationModelCompatibleHint =>
+      'Модель задаётся в настройках сервера';
+
+  @override
+  String get generationDeckNameLabel => 'Имя колоды (необязательно)';
+
+  @override
+  String get generationDeckNameHint => 'Пусто — из имени первого файла';
+
+  @override
+  String generationTargetDeck(String name) {
+    return 'Карточки будут добавлены в колоду «$name»';
+  }
+
+  @override
+  String get generationDeckDefaultName => 'Сгенерированные карточки';
+
+  @override
+  String generationEstimate(int count) {
+    return 'Примерно $count токенов';
+  }
+
+  @override
+  String get generationEstimateWarning =>
+      'Материала много: запрос будет разбит на несколько частей';
+
+  @override
+  String get generationNoFilesError => 'Прикрепите хотя бы один файл';
+
+  @override
+  String get generationNoParsedFilesError =>
+      'Ни один файл не удалось прочитать. Проверьте формат и размер файлов';
+
+  @override
+  String get generationKeyMissing => 'Ключ доступа не задан';
+
+  @override
+  String get generationOpenSettings => 'Открыть настройки';
+
+  @override
+  String get generationStart => 'Сгенерировать';
+
+  @override
+  String get generationProgressReading => 'Читаем файлы…';
+
+  @override
+  String generationProgressSending(int current, int total) {
+    return 'Отправляем в нейросеть… (фрагмент $current из $total)';
+  }
+
+  @override
+  String get generationProgressReceiving => 'Получаем карточки…';
+
+  @override
+  String get generationCancelled => 'Генерация отменена';
+
+  @override
+  String get generationErrorNoMaterials =>
+      'Нет текста для генерации. Добавьте файл с текстом';
+
+  @override
+  String get generationPreviewTitle => 'Предпросмотр карточек';
+
+  @override
+  String get generationPreviewEmpty => 'Модель не вернула карточки';
+
+  @override
+  String generationPreviewSelected(int selected, int total) {
+    return 'Выбрано: $selected из $total';
+  }
+
+  @override
+  String get generationPreviewImportAll => 'Импортировать все';
+
+  @override
+  String get generationPreviewImportSelected => 'Импортировать выбранные';
+
+  @override
+  String get generationPreviewCancel => 'Отмена';
+
+  @override
+  String get generationPreviewNoSelection => 'Выберите хотя бы одну карточку';
+
+  @override
+  String get generationPreviewValidationError =>
+      'Проверьте заполнение выбранных карточек: вопрос не должен быть пустым';
+
+  @override
+  String get generationIssueEmptyFront => 'Пустой вопрос';
+
+  @override
+  String get generationIssueFrontTooLong => 'Вопрос длиннее 500 символов';
+
+  @override
+  String get generationIssueBackTooLong => 'Ответ длиннее 2000 символов';
+
+  @override
+  String get generationIssueClozeMissing => 'В карточке cloze нет пропусков';
+
+  @override
+  String get generationIssueLatexBroken => 'Ошибка разметки формулы';
+
+  @override
+  String get generationIssueExcerptMismatch =>
+      'Цитата не найдена в исходном тексте';
+
+  @override
+  String get generationIssueTagsAdjusted => 'Теги скорректированы';
+
+  @override
+  String generationDuplicatesRemoved(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count дубликата пропущено',
+      many: '$count дубликатов пропущено',
+      few: '$count дубликата пропущено',
+      one: '$count дубликат пропущен',
+      zero: 'Дубликатов нет',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String generationTokensUsed(int count) {
+    return 'Израсходовано токенов: $count';
+  }
+
+  @override
+  String get generationFailuresTitle => 'Не удалось обработать фрагменты';
+
+  @override
+  String generationFailureChunk(int index, String message) {
+    return 'Фрагмент $index: $message';
+  }
+
+  @override
+  String get generationRetryFailed => 'Повторить неудавшиеся';
+
+  @override
+  String get generationImportError =>
+      'Не удалось импортировать карточки. Попробуйте ещё раз';
+
+  @override
+  String generationImported(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Импортировано $count карточки',
+      many: 'Импортировано $count карточек',
+      few: 'Импортировано $count карточки',
+      one: 'Импортирована $count карточка',
+      zero: 'Карточки не импортированы',
+    );
+    return '$_temp0';
+  }
 }

@@ -37,6 +37,7 @@ String generationErrorCodeMessage(
     GenerationErrorCode.refused ||
     GenerationErrorCode.invalidResponse =>
       l10n.generationErrorUnexpectedResponse,
+    GenerationErrorCode.noMaterials => l10n.generationErrorNoMaterials,
   };
 }
 
