@@ -9,6 +9,7 @@ import 'package:cardflow/domain/scheduling/rating.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/decks/deck_actions.dart';
 import 'package:cardflow/ui/review/review_card_view.dart';
+import 'package:cardflow/ui/review/review_chrome.dart';
 import 'package:cardflow/ui/review/review_session_engine.dart';
 import 'package:cardflow/ui/review/review_toolbar.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
@@ -168,58 +169,12 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
   }
 
   Future<void> _confirmExit() async {
-    final AppLocalizations l10n = AppLocalizations.of(context);
-    final bool confirmed =
-        (await showDialog<bool>(
-          context: context,
-          builder: (BuildContext dialogContext) => AlertDialog(
-            title: Text(l10n.reviewExitDialogTitle),
-            content: Text(l10n.reviewExitDialogMessage),
-            actions: <Widget>[
-              TextButton(
-                key: const ValueKey<String>('review-exit-cancel'),
-                onPressed: () => Navigator.of(dialogContext).pop(false),
-                child: Text(l10n.reviewExitContinue),
-              ),
-              FilledButton(
-                key: const ValueKey<String>('review-exit-confirm'),
-                onPressed: () => Navigator.of(dialogContext).pop(true),
-                child: Text(l10n.reviewExitConfirm),
-              ),
-            ],
-          ),
-        )) ??
-        false;
+    final bool confirmed = await confirmReviewExit(context);
     if (confirmed && mounted) _leave();
   }
 
   void _leave() {
     if (context.canPop()) context.pop();
-  }
-
-  void _showWhy(String excerpt) {
-    final AppLocalizations l10n = AppLocalizations.of(context);
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      builder: (BuildContext sheetContext) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Text(
-                l10n.reviewWhySheetTitle,
-                style: Theme.of(sheetContext).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 12),
-              SingleChildScrollView(child: Text(excerpt)),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 
   @override
@@ -239,31 +194,11 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
         unawaited(_confirmExit());
       },
       child: Scaffold(
-        appBar: AppBar(
-          automaticallyImplyLeading: false,
-          title: Text(l10n.reviewTitle),
-          actions: <Widget>[
-            IconButton(
-              key: const ValueKey<String>('review-undo'),
-              tooltip: l10n.reviewUndoTooltip,
-              icon: const Icon(Icons.undo),
-              onPressed: state != null && state.undoCount > 0 && !state.busy
-                  ? _undo
-                  : null,
-            ),
-            IconButton(
-              key: const ValueKey<String>('review-why'),
-              tooltip: l10n.reviewWhyTooltip,
-              icon: const Icon(Icons.info_outline),
-              onPressed: excerpt == null ? null : () => _showWhy(excerpt),
-            ),
-            IconButton(
-              key: const ValueKey<String>('review-close'),
-              tooltip: l10n.reviewCloseTooltip,
-              icon: const Icon(Icons.close),
-              onPressed: _confirmExit,
-            ),
-          ],
+        appBar: ReviewSessionAppBar(
+          undoEnabled: state != null && state.undoCount > 0 && !state.busy,
+          onUndo: _undo,
+          whyExcerpt: excerpt,
+          onClose: _confirmExit,
         ),
         body: Focus(
           autofocus: true,
@@ -280,9 +215,13 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
     ReviewSessionState? state,
   ) {
     if (_loading) return const Center(child: CircularProgressIndicator());
-    if (_loadFailed || state == null) return _buildLoadError(l10n);
-    if (state.total == 0) return _buildEmpty(l10n);
-    if (state.isCompleted) return _buildCompleted(l10n, state);
+    if (_loadFailed || state == null) {
+      return ReviewLoadErrorView(onRetry: _retry);
+    }
+    if (state.total == 0) return ReviewEmptyView(onBack: _leave);
+    if (state.isCompleted) {
+      return ReviewCompletedView(ratedCount: state.ratedCount, onDone: _leave);
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
@@ -318,85 +257,6 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
           onRating: (Rating rating) => unawaited(_rate(rating)),
         ),
       ],
-    );
-  }
-
-  Widget _buildEmpty(AppLocalizations l10n) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Icon(
-              Icons.done_all,
-              size: 56,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              l10n.reviewEmptyTitle,
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            Text(l10n.reviewEmptyMessage, textAlign: TextAlign.center),
-            const SizedBox(height: 16),
-            FilledButton(onPressed: _leave, child: Text(l10n.reviewBack)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCompleted(AppLocalizations l10n, ReviewSessionState state) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Icon(
-              Icons.celebration_outlined,
-              size: 56,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              l10n.reviewCompletedTitle,
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              l10n.reviewCompletedMessage(state.ratedCount),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            FilledButton(onPressed: _leave, child: Text(l10n.reviewDone)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLoadError(AppLocalizations l10n) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Icon(
-              Icons.error_outline,
-              size: 48,
-              color: Theme.of(context).colorScheme.error,
-            ),
-            const SizedBox(height: 12),
-            Text(l10n.reviewLoadError, textAlign: TextAlign.center),
-            const SizedBox(height: 12),
-            TextButton(onPressed: _retry, child: Text(l10n.retry)),
-          ],
-        ),
-      ),
     );
   }
 }
