@@ -76,6 +76,7 @@ class CardGenerationService implements GenerationCaller {
   ///
   /// Бросает [GenerationException] с кодом из `lib/domain/generation/generation_error.dart`;
   /// сырые исключения провайдеров и ключи наружу не попадают.
+  @override
   Future<GenerationResult> generate(
     GenerationRequest request, {
     CancelToken? cancelToken,

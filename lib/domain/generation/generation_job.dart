@@ -90,6 +90,9 @@ class GenerationJob {
   final String? resultDeckId;
 
   /// Копия с изменёнными полями.
+  ///
+  /// [clearErrorCode] сбрасывает `error_code` в `null` (нужно после успешного
+  /// повтора упавших фрагментов).
   GenerationJob copyWith({
     GenerationJobStatus? status,
     String? provider,
@@ -97,6 +100,7 @@ class GenerationJob {
     int? tokensUsed,
     String? promptVersion,
     String? errorCode,
+    bool clearErrorCode = false,
     int? cardsCount,
     int? chunkCount,
     List<String>? files,
@@ -110,7 +114,7 @@ class GenerationJob {
       model: model ?? this.model,
       tokensUsed: tokensUsed ?? this.tokensUsed,
       promptVersion: promptVersion ?? this.promptVersion,
-      errorCode: errorCode ?? this.errorCode,
+      errorCode: clearErrorCode ? null : (errorCode ?? this.errorCode),
       cardsCount: cardsCount ?? this.cardsCount,
       chunkCount: chunkCount ?? this.chunkCount,
       files: files ?? this.files,

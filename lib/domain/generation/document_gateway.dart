@@ -12,9 +12,10 @@ class PickedDocument {
     required this.path,
     required this.name,
     required this.sizeBytes,
+    this.preloadedBytes,
   });
 
-  /// Путь к файлу на диске.
+  /// Путь к файлу на диске (для `content://`/веба — синтетический `memory://`).
   final String path;
 
   /// Имя файла с расширением.
@@ -22,6 +23,11 @@ class PickedDocument {
 
   /// Размер файла в байтах.
   final int sizeBytes;
+
+  /// Байты, уже прочитанные пикером (платформы без локального пути).
+  ///
+  /// `null` — читать по [path] через [DocumentGateway.readDocument].
+  final Uint8List? preloadedBytes;
 }
 
 /// Контракт файлового шлюза генерации.
