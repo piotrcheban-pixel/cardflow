@@ -37,8 +37,12 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   запроса — `lib/api/providers/provider_endpoint.dart` (все адаптеры уважают `baseUrl` аккаунта).
   `GenerationRequest`/`GenerationRunRequest` несут аккаунт, `generation_jobs.provider` = id аккаунта.
   Экран — `lib/ui/settings/generation_settings_screen.dart` (+ `provider_account_dialogs.dart`),
-  блок API в настройках — сводка и переход. strict `response_format` — с одним fallback без схемы
-  (только протокол `openai-completions`) и локальной проверкой A8.4; промпт `gen-ru-v2` скрыт в коде (`system_prompt.dart`),
+  блок API в настройках — сводка и переход. strict `response_format` — лестница совместимости
+  OpenAI-совместимого протокола (ADR-021): strict+`max_tokens` → без схемы+`max_tokens` →
+  без схемы и `max_tokens`, не больше трёх запросов, только по `badRequest`; разбор текста ответа —
+  `lib/api/generation/cards_json_extractor.dart` (BOM, markdown-ограждение, текст вокруг JSON —
+  только для compatible-протокола); пустой `cards` — не ошибка ответа: в UI отдельная строка
+  `generationNoCardsFound`. Промпт `gen-ru-v2` скрыт в коде (`system_prompt.dart`),
   пользовательское сообщение — `generation_prompt.dart`; контентные правила A8.4 — `card_content_validator.dart`
   (пометки `CardIssueCode`, карточка не отбрасывается); HTTP — только через `GenerationTransport`
   (`lib/api/http/generation_http_client.dart`) с `RetryPolicy` и `RedactingLogInterceptor`. Ошибки — только

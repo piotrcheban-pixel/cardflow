@@ -1,9 +1,11 @@
 # API-схема генерации CardFlow
 
-**Версия:** 2 (2026-11-13; добавлен провайдер «OpenAI-совместимый», ADR-013) ·
-**Связано:** SPEC A8.1, A8.2, A8.4, A8.5, A8.6; ADR-011; ADR-012; ADR-013
+**Версия:** 3 (2026-11-14; `max_tokens` и лестница совместимости OpenAI-совместимого
+протокола, ADR-021) ·
+**Связано:** SPEC A8.1, A8.2, A8.4, A8.5, A8.6; ADR-011; ADR-012; ADR-013; ADR-021
 **Источник правды в коде:** `lib/api/generation/card_json_schema.dart` (канон), `provider_schema.dart`
-(проекции), `card_response_schema.dart` (валидатор), `lib/domain/generation/` (коды ошибок).
+(проекции), `card_response_schema.dart` (валидатор), `cards_json_extractor.dart` (разбор текста ответа),
+`lib/domain/generation/` (коды ошибок).
 
 ## 1. Каноническая схема ответа модели (A8.4)
 
@@ -38,14 +40,17 @@
 }
 ```
 
-Пустой массив `cards` — валидный ответ (мало материала / материала нет, правило 13 A8.1).
+Пустой массив `cards` — валидный ответ (мало материала / материала нет, правило 13 A8.1). Это **не**
+ошибка ответа: UI показывает отдельное сообщение ARB `generationNoCardsFound` («Модель не нашла в
+материалах фактов для карточек…», ADR-021), а `generationErrorEmptyResponse` остаётся за случаем, когда
+сам провайдер вернул пустой `content` (`emptyResponse`).
 
 ## 2. Проекции под провайдеров (A8.2)
 
 | Провайдер | Механизм | Проекция схемы | Ключевые поля |
 |---|---|---|---|
 | OpenAI | Chat Completions, `response_format: {type: "json_schema", json_schema: {name, strict: true, schema}}` | канон как есть (strict **требует** `additionalProperties: false` и все свойства в `required`; nullable — union с `null`) | `choices[0].message.content`, `message.refusal`, `choices[0].finish_reason`, `usage.prompt_tokens/completion_tokens` |
-| OpenAI-совместимый (ADR-013) | Chat Completions с настраиваемым `base_url`; первый запрос — `response_format` со strict-схемой, при `badRequest` (любой 4xx, кроме 401/403/429) — один повтор без `response_format` | канон как есть (как у OpenAI); в fallback-пути схема не передаётся, но ответ проверяется локально по канону | `choices[0].message.content` (JSON может быть в markdown-ограждении — извлекается), `message.refusal`, `choices[0].finish_reason`, `usage.*` |
+| OpenAI-совместимый (ADR-013, ADR-021) | Chat Completions с настраиваемым `base_url`; первый запрос — `response_format` со strict-схемой + `max_tokens`, при `badRequest` (любой 4xx, кроме 401/403/429) — лестница из двух упрощений (§2, «лестница совместимости») | канон как есть (как у OpenAI); в fallback-пути схема не передаётся, но ответ проверяется локально по канону | `choices[0].message.content` (JSON может быть в markdown-ограждении или с BOM — извлекается), `message.refusal`, `choices[0].finish_reason`, `usage.*`, `max_tokens` |
 | Gemini | `generateContent`, `generationConfig: {responseMimeType: "application/json", responseSchema}` | union `[T,"null"]` → `{type: T, nullable: true}`; типы — `STRING/NUMBER/INTEGER/BOOLEAN/ARRAY/OBJECT`; `additionalProperties` удаляется; `propertyOrdering` = порядок свойств | `candidates[0].content.parts[].text`, `candidates[0].finishReason`, `promptFeedback.blockReason`, `usageMetadata.*` |
 | Anthropic | `messages` + `tools` (`emit_cards`) + `tool_choice: {type: "tool", name: "emit_cards"}` | union → `anyOf: [{type: T}, {type: "null"}]`; `additionalProperties` сохраняется | `content[]` с `{type: "tool_use", name: "emit_cards", input.cards}`, `stop_reason`, `usage.input_tokens/output_tokens` |
 
@@ -66,16 +71,24 @@
   `anthropic-version: 2023-06-01`, `max_tokens` обязателен.
 - Лимит ответа OpenAI не передаётся: ограничение — `<limit>` карточек в сообщении, а обрезание
   распознаётся по `finish_reason` (у части моделей параметр устарел, сверка с живым API — L1).
-  Для OpenAI-совместимого — то же решение: лимит не передаётся, обрезание — по `finish_reason`.
+  OpenAI-совместимый передаёт `max_tokens = maxOutputTokens` (8192, ADR-021): серверный дефолт
+  DeepSeek — 4096, для 20 карточек этого мало. `max_tokens` не передаётся на третьем шаге лестницы
+  совместимости (серверы, требующие `max_completion_tokens`).
 
-**Строгий режим и fallback (только OpenAI-совместимый, ADR-013 §4).** Первый запрос — как у OpenAI.
-Если сервер не поддерживает `response_format` со strict-схемой и отвечает ошибкой `badRequest` (любой 4xx,
-включая 400/404/422; 401/403/429 не повторяются), выполняется **ровно один** повтор без `response_format`;
-ответ и в этом случае проходит ту же локальную валидацию канонической схемы A8.4 (`CardResponseSchema`) и
-контентные правила — послаблений нет. JSON в markdown-ограждении или в пояснительном тексте извлекается до
-декодирования (только для этого провайдера; остальные обязаны вернуть чистый JSON). Fallback — не ретрай
-ADR-012: 4xx транспортом не повторяются; при 401/403/429/5xx/таймауте fallback не выполняется.
-Существующие OpenAI/Gemini/Anthropic поведение не меняют.
+**Лестница совместимости (только OpenAI-совместимый, ADR-013 §4, ADR-021).** Первый запрос — как у
+OpenAI, со strict-схемой и `max_tokens`. Если сервер не поддерживает `response_format` со strict-схемой
+и отвечает `badRequest` (любой 4xx, включая 400/404/422; 401/403/429 не повторяются), выполняется
+второй запрос — без `response_format`, но с `max_tokens`; если и он отклонён `badRequest` — третий, без
+`response_format` и без `max_tokens` (серверы, требующие `max_completion_tokens`). Больше трёх запросов
+не бывает. Ответ на любом шаге проходит ту же локальную валидацию канонической схемы A8.4
+(`CardResponseSchema`) и контентные правила — послаблений нет. JSON в markdown-ограждении, с BOM или в
+пояснительном тексте извлекается до декодирования (`cards_json_extractor.dart`; только для этого
+провайдера — остальные обязаны вернуть чистый JSON). Fallback — не ретрай ADR-012: 4xx транспортом не
+повторяются; при 401/403/429/5xx/таймауте fallback не выполняется. Живой DeepSeek (2026-11-14):
+strict-запрос → 400 (`This response_format type is unavailable now`), второй запрос с `max_tokens=8192`
+→ 200, карточки; проверяется live-тестом `test/live/openai_compatible_deepseek_live_test.dart`.
+Поведение OpenAI/Gemini/Anthropic не меняется: у них по-прежнему один запрос, `max_tokens` — по контракту
+протокола (Anthropic/Gemini передают, OpenAI — нет).
 
 **Аккаунты провайдеров (ADR-020, итерация 7.5).** Адреса выше — значения по умолчанию
 протокола; адрес и модель берутся из аккаунта (`ProviderAccount`), а ключ — из

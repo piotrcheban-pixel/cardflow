@@ -1,0 +1,14 @@
+00:00 +3 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/providers/openai_compatible_adapter_test.dart: buildRequest max_tokens передаётся: серверный дефолт DeepSeek (4096) мал [E]
+  Expected: <4096>
+    Actual: <null>
+00:00 +3 -2: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/providers/openai_compatible_adapter_test.dart: buildRequest fallback без strict: response_format отсутствует, max_tokens нет только при sendMaxTokens=false [E]
+  Expected: <4096>
+    Actual: <null>
+00:00 +24 -3: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/card_generation_service_test.dart: OpenAI-совместимый протокол (ADR-013, ADR-020) fallback с max_tokens тоже 400 → третий запрос без max_tokens (ADR-021) [E]
+00:00 +24 -4: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/card_generation_service_test.dart: OpenAI-совместимый протокол (ADR-013, ADR-020) все три запроса 400 → badRequest, не больше трёх [E]
+  Expected: <3>
+    Actual: <2>
+Expected: exactly one matching candidate
+  Actual: _TextWidgetFinder:<Found 0 widgets with text "Модель не нашла в материалах фактов для
+00:04 +41 -5: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/generation/generation_screen_test.dart: модель вернула валидный пустой массив: понятное сообщение о материалах [E]
+00:04 +44 -5: Some tests failed.
