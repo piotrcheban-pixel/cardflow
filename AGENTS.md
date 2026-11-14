@@ -44,6 +44,13 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   `feed_card_view.dart`, `feed_progress_bar.dart`; общий каркас A6.4 — `review_chrome.dart`;
   маршрут `/decks/:deckId/feed` из листа режимов колоды. Пульсация Stories — повторяющаяся
   анимация: тесты только `pump(Duration)`, не `pumpAndSettle`.
+- **Типы/разметка карточек** (SPEC A7.8–A7.10, ADR-017): чистая разметка — `lib/domain/cards/`
+  (`occlusion.dart`, `cloze_markup.dart`, `latex_markup.dart`); общий рендер — `lib/ui/cards/content/`
+  (`CardContentView`, `cloze_text.dart`, `latex_text.dart`, `occlusion_image_view.dart`), редактор масок —
+  `lib/ui/cards/occlusion_mask_editor.dart`. Изображение occlusion — первый `media_json`, маски — 
+  `occlusion_json` v1 (нормализованные 0..1); запись файла/строк `media` транзакционная
+  (`DriftCardRepository` + `MediaStore`), чтение сессий — `CardMediaRepository`, GC — 
+  `MediaGarbageCollector` при старте. LaTeX-рендер — только UI, проверка — `latex_checker.dart`.
 - Модели immutable (`freezed`/`const`), роутинг `GoRouter` (см. ADR), HTTP `Dio`. Состояние — Riverpod 3 без кодогенерации (ADR-002).
 - **Material-виджеты — только `package:material_ui/material_ui.dart`** (ADR-001), `package:flutter/material.dart` в `lib/` запрещён. M3E-компоненты — только через `lib/ui/m3e/`, библиотека `material_3_expressive` больше нигде не импортируется.
 - Никаких литералов пользовательского текста в виджетах: только `AppLocalizations` из `lib/l10n/app_ru.arb`.
@@ -94,6 +101,10 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   анимацией (пульс Stories) прогонять `pump(Duration)`, не `pumpAndSettle`; не редактировать `lib/`/`test/`
   во время полного прогона (иначе `loading … [E]`). Независимый reviewer в сессии недоступен (L35):
   ревью Lead по чек-листу на неизменяемом снимке, findings — fix-коммитом с тестами.
+- **Ретроспектива итерации 5:** ARB не содержит сырых `{}`-шаблонов (ICU) — синтаксис разметки проверяется
+  тестами/ADR, UI-сообщение остаётся коротким. Интерактивный рисующий canvas внутри прокрутки забирает
+  pointer eager-распознавателем и имеет vertical-first widget-тест; medium ревью воспроизводится тестом
+  до фикса, а `analyze` прогоняется после последней правки тестов, не только кода.
 
 ## Факты хоста (обновлять при изменении)
 
@@ -139,3 +150,9 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   и [`43588247850`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43588247850) — оба **9/9 success**.
   После них docs-only run `43589108294` (`490eb80`) не стартовал (GitHub billing/spending limit — внешний
   блокер владельца); код не выполнялся. Ограничения: L36 (таймер при покрытии маршрутом), L37 (реальные жесты).
+- **Occlusion / Cloze / LaTeX проверены локально (итерация 5, 2026-11-14):** `fvm flutter test --coverage
+  --exclude-tags golden` → **1020 passed + 1 skipped**; покрытие **93.1% (6468/6946)**; `analyze` 0;
+  `dart format` 253 files 0 changed; `fvm flutter build windows --release` → `cardflow.exe` (56,2 с).
+  Ревью Lead снимка `5af8f70` (L35), M1–M4 закрыты `0e4e11b` с тестами; L17 снят startup-GC, добавлены
+  L38/L39. Схема БД/`format_version` не менялись, create → export → import покрыт интеграционным тестом.
+  Локальные коммиты не запушены, CI итерации 5 не запускался; реальные picker/рисование — L11/L38.
