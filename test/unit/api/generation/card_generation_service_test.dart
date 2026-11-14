@@ -370,7 +370,7 @@ void main() {
     });
 
     test(
-      'strict 400 → один fallback без response_format, ответ валиден',
+      'strict 400 → один fallback без response_format, но с max_tokens',
       () async {
         final fenced = '```json\n${cardsJson(<Map<String, Object?>>[])}\n```';
         final adapter = compatibleAdapter(cardsJson: fenced);
@@ -394,14 +394,44 @@ void main() {
         expect(transport.calls, 2);
         expect(adapter.buildCalls, 2);
         expect(adapter.buildArgs!.strictSchema, isFalse);
+        expect(adapter.buildArgs!.sendMaxTokens, isTrue);
         expect(adapter.buildArgs!.baseUrl, 'http://localhost:11434/v1');
       },
     );
 
-    test('fallback тоже 400 → badRequest, не больше двух запросов', () async {
+    test(
+      'fallback с max_tokens тоже 400 → третий запрос без max_tokens (ADR-021)',
+      () async {
+        final adapter = compatibleAdapter(
+          cardsJson: cardsJson(<Map<String, Object?>>[validCardJson()]),
+        );
+        final transport = FakeGenerationTransport(
+          response: <String, Object?>{},
+          errorsBeforeResponse: <Object?>[
+            const GenerationException(GenerationErrorCode.badRequest),
+            const GenerationException(GenerationErrorCode.badRequest),
+          ],
+        );
+        final service = serviceWith(
+          adapter: adapter,
+          transport: transport,
+          apiKeyStore: FakeApiKeyStore(),
+        );
+
+        final result = await service.generate(requestFor(compatibleAccount()));
+
+        expect(result.cards, hasLength(1));
+        expect(transport.calls, 3);
+        expect(adapter.buildArgs!.strictSchema, isFalse);
+        expect(adapter.buildArgs!.sendMaxTokens, isFalse);
+      },
+    );
+
+    test('все три запроса 400 → badRequest, не больше трёх', () async {
       final transport = FakeGenerationTransport(
         response: <String, Object?>{},
         errorsBeforeResponse: <Object?>[
+          const GenerationException(GenerationErrorCode.badRequest),
           const GenerationException(GenerationErrorCode.badRequest),
           const GenerationException(GenerationErrorCode.badRequest),
         ],
@@ -416,7 +446,7 @@ void main() {
         service.generate(requestFor(compatibleAccount())),
         throwsGeneration(GenerationErrorCode.badRequest),
       );
-      expect(transport.calls, 2);
+      expect(transport.calls, 3);
     });
 
     test(

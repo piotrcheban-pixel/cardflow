@@ -42,6 +42,7 @@ class AnthropicAdapter implements GenerationProviderAdapter {
     required int maxOutputTokens,
     String? baseUrl,
     bool strictSchema = true,
+    bool sendMaxTokens = true,
   }) {
     final ProviderEndpoint endpoint = ProviderEndpoint.parse(
       protocol: ProviderProtocol.anthropicMessages,

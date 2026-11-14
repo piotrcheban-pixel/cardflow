@@ -41,6 +41,7 @@ class OpenAiCompatibleAdapter implements GenerationProviderAdapter {
     required int maxOutputTokens,
     String? baseUrl,
     bool strictSchema = true,
+    bool sendMaxTokens = true,
   }) {
     final ProviderEndpoint endpoint = ProviderEndpoint.parse(
       protocol: ProviderProtocol.openaiCompletions,
@@ -69,6 +70,12 @@ class OpenAiCompatibleAdapter implements GenerationProviderAdapter {
         <String, Object?>{'role': 'user', 'content': userContent},
       ],
     };
+    // ADR-021: серверный дефолт у части OpenAI-совместимых серверов (DeepSeek —
+    // 4096) меньше 20 карточек ответа. Серверы, требующие вместо `max_tokens`
+    // поле `max_completion_tokens`, отсекаются третьим шагом лестницы сервиса.
+    if (sendMaxTokens) {
+      body['max_tokens'] = maxOutputTokens;
+    }
     if (strictSchema) {
       body['response_format'] = <String, Object?>{
         'type': 'json_schema',

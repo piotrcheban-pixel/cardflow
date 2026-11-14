@@ -181,6 +181,7 @@ class RecordedBuildArgs {
     required this.maxOutputTokens,
     this.baseUrl,
     this.strictSchema = true,
+    this.sendMaxTokens = true,
   });
 
   /// Переданный ключ.
@@ -203,6 +204,9 @@ class RecordedBuildArgs {
 
   /// Переданный флаг strict-схемы.
   final bool strictSchema;
+
+  /// Переданный флаг `max_tokens` (ADR-021).
+  final bool sendMaxTokens;
 }
 
 /// Фейковый адаптер провайдера: запоминает аргументы и отдаёт заданный ответ.
@@ -249,6 +253,7 @@ class FakeProviderAdapter implements GenerationProviderAdapter {
     required int maxOutputTokens,
     String? baseUrl,
     bool strictSchema = true,
+    bool sendMaxTokens = true,
   }) {
     buildCalls++;
     buildArgs = RecordedBuildArgs(
@@ -259,6 +264,7 @@ class FakeProviderAdapter implements GenerationProviderAdapter {
       maxOutputTokens: maxOutputTokens,
       baseUrl: baseUrl,
       strictSchema: strictSchema,
+      sendMaxTokens: sendMaxTokens,
     );
     return request ??
         ProviderRequest(

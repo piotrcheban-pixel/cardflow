@@ -50,6 +50,11 @@ abstract interface class GenerationProviderAdapter {
   /// [strictSchema] — включать ли `response_format` со strict-схемой; только
   /// для OpenAI-совместимого провайдера (fallback для серверов без поддержки
   /// strict), остальные адаптеры игнорируют.
+  ///
+  /// [sendMaxTokens] — передавать ли `max_tokens` (`maxOutputTokens`); только
+  /// для OpenAI-совместимого провайдера: часть таких серверов требует
+  /// `max_completion_tokens` и отклоняет `max_tokens` (ADR-021). Anthropic и
+  /// Gemini передают лимит всегда, OpenAI — не передаёт (устаревшее поле).
   ProviderRequest buildRequest({
     required String apiKey,
     required String model,
@@ -58,6 +63,7 @@ abstract interface class GenerationProviderAdapter {
     required int maxOutputTokens,
     String? baseUrl,
     bool strictSchema = true,
+    bool sendMaxTokens = true,
   });
 
   /// Разбирает ответ провайдера; причины остановки/отказы → `GenerationException`.

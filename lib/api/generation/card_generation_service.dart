@@ -8,12 +8,11 @@
 /// валидацией (ADR-013).
 library;
 
-import 'dart:convert';
-
 import 'package:dio/dio.dart';
 
 import 'package:cardflow/api/generation/card_content_validator.dart';
 import 'package:cardflow/api/generation/card_response_schema.dart';
+import 'package:cardflow/api/generation/cards_json_extractor.dart';
 import 'package:cardflow/api/generation/generation_caller.dart';
 import 'package:cardflow/api/generation/generation_prompt.dart';
 import 'package:cardflow/api/generation/system_prompt.dart';
@@ -36,6 +35,7 @@ class CardGenerationService implements GenerationCaller {
     required this.httpClient,
     CardResponseSchema? responseSchema,
     CardContentValidator? contentValidator,
+    this.jsonExtractor = const CardsJsonExtractor(),
     this.systemPrompt = systemPromptGenRuV2,
     this.promptVersion = systemPromptVersion,
     this.maxOutputTokens = 8192,
@@ -56,6 +56,9 @@ class CardGenerationService implements GenerationCaller {
 
   /// Локальная проверка контентных правил A8.4.
   final CardContentValidator contentValidator;
+
+  /// Разбор текста ответа модели в JSON (markdown-обёртка, BOM).
+  final CardsJsonExtractor jsonExtractor;
 
   /// Системный промпт (скрыт от UI).
   final String systemPrompt;
@@ -101,36 +104,17 @@ class CardGenerationService implements GenerationCaller {
       limit: request.limit,
     );
 
-    ProviderRawResponse rawResponse;
-    try {
-      rawResponse = await _postAndParse(
-        adapter: adapter,
-        apiKey: apiKey ?? '',
-        model: model,
-        baseUrl: baseUrl,
-        userContent: userContent,
-        strictSchema: true,
-        cancelToken: cancelToken,
-      );
-    } on GenerationException catch (error) {
-      // Fallback для серверов без поддержки strict `response_format`
-      // (ADR-013): один повтор без response_format, ответ всё равно
-      // проверяется локальной схемой A8.4 ниже.
-      if (!tolerantFallback || error.code != GenerationErrorCode.badRequest) {
-        rethrow;
-      }
-      rawResponse = await _postAndParse(
-        adapter: adapter,
-        apiKey: apiKey ?? '',
-        model: model,
-        baseUrl: baseUrl,
-        userContent: userContent,
-        strictSchema: false,
-        cancelToken: cancelToken,
-      );
-    }
+    final ProviderRawResponse rawResponse = await _postWithFallbacks(
+      adapter: adapter,
+      apiKey: apiKey ?? '',
+      model: model,
+      baseUrl: baseUrl,
+      userContent: userContent,
+      tolerantFallback: tolerantFallback,
+      cancelToken: cancelToken,
+    );
 
-    final decoded = _decodeCardsJson(
+    final decoded = jsonExtractor.decode(
       rawResponse.cardsJson,
       tolerant: tolerantFallback,
     );
@@ -158,6 +142,55 @@ class CardGenerationService implements GenerationCaller {
     );
   }
 
+  /// Отправляет запрос с «лестницей совместимости» (ADR-021).
+  ///
+  /// OpenAI-совместимые серверы различаются поддержкой полей запроса, поэтому
+  /// при `badRequest` сервис по одному упрощает запрос, не теряя локальной
+  /// проверки схемы A8.4:
+  /// 1) strict `response_format` + `max_tokens`;
+  /// 2) без `response_format` (сервер не знает `json_schema` — DeepSeek);
+  /// 3) без `max_tokens` (сервер требует `max_completion_tokens`).
+  ///
+  /// Нативные протоколы (`openai`, `gemini`, `anthropic`) повтор не делают:
+  /// их контракт зафиксирован, ошибка отдаётся пользователю как есть.
+  Future<ProviderRawResponse> _postWithFallbacks({
+    required GenerationProviderAdapter adapter,
+    required String apiKey,
+    required String model,
+    required String? baseUrl,
+    required String userContent,
+    required bool tolerantFallback,
+    required CancelToken? cancelToken,
+  }) async {
+    final List<({bool strictSchema, bool sendMaxTokens})> attempts =
+        <({bool strictSchema, bool sendMaxTokens})>[
+          (strictSchema: true, sendMaxTokens: true),
+          if (tolerantFallback) (strictSchema: false, sendMaxTokens: true),
+          if (tolerantFallback) (strictSchema: false, sendMaxTokens: false),
+        ];
+    GenerationException? lastError;
+    for (final attempt in attempts) {
+      try {
+        return await _postAndParse(
+          adapter: adapter,
+          apiKey: apiKey,
+          model: model,
+          baseUrl: baseUrl,
+          userContent: userContent,
+          strictSchema: attempt.strictSchema,
+          sendMaxTokens: attempt.sendMaxTokens,
+          cancelToken: cancelToken,
+        );
+      } on GenerationException catch (error) {
+        lastError = error;
+        if (!tolerantFallback || error.code != GenerationErrorCode.badRequest) {
+          rethrow;
+        }
+      }
+    }
+    throw lastError!;
+  }
+
   /// Строит запрос адаптером и разбирает ответ провайдера.
   Future<ProviderRawResponse> _postAndParse({
     required GenerationProviderAdapter adapter,
@@ -166,6 +199,7 @@ class CardGenerationService implements GenerationCaller {
     required String? baseUrl,
     required String userContent,
     required bool strictSchema,
+    required bool sendMaxTokens,
     required CancelToken? cancelToken,
   }) async {
     final providerRequest = adapter.buildRequest(
@@ -176,6 +210,7 @@ class CardGenerationService implements GenerationCaller {
       maxOutputTokens: maxOutputTokens,
       baseUrl: baseUrl,
       strictSchema: strictSchema,
+      sendMaxTokens: sendMaxTokens,
     );
     final rawJson = await httpClient.postJson(
       providerRequest,
@@ -193,49 +228,5 @@ class CardGenerationService implements GenerationCaller {
       'provider',
       'Для провайдера не собран адаптер генерации',
     );
-  }
-
-  /// Декодирует JSON ответа модели.
-  ///
-  /// Для OpenAI-совместимого протокола допускается ответ, обёрнутый в
-  /// markdown-ограждение или пояснительный текст (локальные модели часто так
-  /// делают без strict-схемы); остальные — обязаны вернуть чистый JSON.
-  Object? _decodeCardsJson(String cardsJson, {required bool tolerant}) {
-    final direct = _tryDecode(cardsJson);
-    if (direct.ok) return direct.value;
-    if (tolerant) {
-      final extracted = _extractJsonObject(cardsJson);
-      if (extracted != null) {
-        final second = _tryDecode(extracted);
-        if (second.ok) return second.value;
-      }
-    }
-    throw const GenerationException(
-      GenerationErrorCode.invalidResponse,
-      details: 'Ответ модели не является JSON',
-    );
-  }
-
-  /// Пытается декодировать [value]; не бросает исключений.
-  ({bool ok, Object? value}) _tryDecode(String value) {
-    try {
-      return (ok: true, value: jsonDecode(value));
-    } on FormatException {
-      return (ok: false, value: null);
-    }
-  }
-
-  /// Извлекает JSON-объект из markdown-ограждения или текста вокруг него.
-  String? _extractJsonObject(String raw) {
-    var text = raw.trim();
-    final fence = RegExp(
-      r'```(?:json)?\s*([\s\S]*?)```',
-      caseSensitive: false,
-    ).firstMatch(text);
-    if (fence != null) text = fence.group(1)!.trim();
-    final start = text.indexOf('{');
-    final end = text.lastIndexOf('}');
-    if (start < 0 || end <= start) return null;
-    return text.substring(start, end + 1);
   }
 }

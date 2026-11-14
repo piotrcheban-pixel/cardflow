@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
@@ -80,6 +81,94 @@ void main() {
       print(
         'LIVE DeepSeek OK: model=$model, cards=${result.cards.length}, '
         'tokens=${result.usage.totalTokens}',
+      );
+    },
+    skip: apiKey == null
+        ? 'Нет DEEPSEEK_API_KEY — live-тест пропущен (L30)'
+        : false,
+    timeout: const Timeout(Duration(minutes: 2)),
+    tags: <String>['live'],
+  );
+
+  test(
+    'живой DeepSeek отклоняет strict response_format → fallback с max_tokens '
+    '(ADR-021)',
+    () async {
+      // Запоминаем только метаданные запросов: ключ, тела и ответ модели в
+      // лог не попадают (AGENTS: тела генерации не логируются).
+      final List<Map<String, Object?>> bodies = <Map<String, Object?>>[];
+      final List<int?> statuses = <int?>[];
+      final Dio dio = Dio();
+      addTearDown(() => dio.close(force: true));
+      dio.interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (RequestOptions options, RequestInterceptorHandler next) {
+            final data = options.data;
+            if (data is String) {
+              final decoded = jsonDecode(data);
+              if (decoded is Map<String, Object?>) bodies.add(decoded);
+            }
+            next.next(options);
+          },
+          onResponse:
+              (Response<dynamic> response, ResponseInterceptorHandler next) {
+                statuses.add(response.statusCode);
+                next.next(response);
+              },
+          onError: (DioException error, ErrorInterceptorHandler next) {
+            statuses.add(error.response?.statusCode);
+            next.next(error);
+          },
+        ),
+      );
+
+      final service = CardGenerationService(
+        adapters: <OpenAiCompatibleAdapter>[const OpenAiCompatibleAdapter()],
+        apiKeyStore: FakeApiKeyStore(<String, String>{'deepseek': apiKey!}),
+        httpClient: GenerationHttpClient(
+          dio: dio,
+          retryPolicy: RetryPolicy(),
+          delay: (Duration _) async {},
+        ),
+        maxOutputTokens: 8192,
+      );
+
+      final result = await service.generate(
+        GenerationRequest(
+          account: ProviderAccount(
+            id: 'deepseek',
+            label: 'DeepSeek',
+            presetId: 'deepseek',
+            protocol: ProviderProtocol.openaiCompletions,
+            baseUrl: baseUrl,
+            modelId: model,
+            contextTokens: 128000,
+            requiresApiKey: true,
+          ),
+          materialsText:
+              'Минералы делятся на классы по химическому составу. Кварц — '
+              'минерал класса оксидов, твердость 7, блеск стеклянный.',
+          limit: 2,
+        ),
+      );
+
+      expect(result.cards, isNotEmpty);
+      expect(
+        bodies,
+        hasLength(2),
+        reason: 'strict-запрос отклонён, затем fallback',
+      );
+      expect(statuses, <int?>[400, 200]);
+      final strictFormat = bodies.first['response_format'];
+      expect(strictFormat, isA<Map<String, Object?>>());
+      expect(bodies.first['max_tokens'], 8192);
+      expect(bodies.last.containsKey('response_format'), isFalse);
+      expect(bodies.last['max_tokens'], 8192);
+      // ignore: avoid_print — evidence без ключа, тел и ответа модели.
+      print(
+        'LIVE DeepSeek fallback: strict=${statuses.first}, '
+        'tolerant=${statuses.last}, max_tokens=${bodies.last['max_tokens']}, '
+        'cards=${result.cards.length}',
       );
     },
     skip: apiKey == null

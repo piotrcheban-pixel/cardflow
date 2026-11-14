@@ -15,15 +15,18 @@ void main() {
     String apiKey = 'test-key',
     String baseUrl = 'http://localhost:11434/v1',
     bool strictSchema = true,
+    bool sendMaxTokens = true,
+    int maxOutputTokens = 4096,
   }) {
     return adapter.buildRequest(
       apiKey: apiKey,
       model: 'local-model',
       systemPrompt: 'СИСТЕМНЫЙ ПРОМПТ',
       userContent: 'ПОЛЬЗОВАТЕЛЬСКИЙ ТЕКСТ',
-      maxOutputTokens: 4096,
+      maxOutputTokens: maxOutputTokens,
       baseUrl: baseUrl,
       strictSchema: strictSchema,
+      sendMaxTokens: sendMaxTokens,
     );
   }
 
@@ -81,14 +84,24 @@ void main() {
       expect(strict['name'], 'cards_response');
       expect(strict['strict'], isTrue);
       expect(strict['schema'], openAiStrictCardSchema());
-      expect(request.body.containsKey('max_tokens'), isFalse);
     });
 
-    test('fallback без strict: response_format отсутствует', () {
-      final request = build(strictSchema: false);
-      expect(request.body.containsKey('response_format'), isFalse);
-      expect(request.body['model'], 'local-model');
-      expect(request.body['messages'], hasLength(2));
+    test('max_tokens передаётся: серверный дефолт DeepSeek (4096) мал', () {
+      expect(build().body['max_tokens'], 4096);
+      expect(build(maxOutputTokens: 8192).body['max_tokens'], 8192);
+    });
+
+    test('fallback без strict: response_format отсутствует, max_tokens нет '
+        'только при sendMaxTokens=false', () {
+      final withBudget = build(strictSchema: false);
+      expect(withBudget.body.containsKey('response_format'), isFalse);
+      expect(withBudget.body['max_tokens'], 4096);
+      expect(withBudget.body['model'], 'local-model');
+      expect(withBudget.body['messages'], hasLength(2));
+
+      final plain = build(strictSchema: false, sendMaxTokens: false);
+      expect(plain.body.containsKey('max_tokens'), isFalse);
+      expect(plain.body.containsKey('response_format'), isFalse);
     });
 
     test('некорректный base_url → ArgumentError, запрос не строится', () {
