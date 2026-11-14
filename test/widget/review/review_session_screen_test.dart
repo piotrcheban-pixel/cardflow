@@ -579,18 +579,15 @@ void main() {
       await tester.pump(const Duration(minutes: 1));
       await tester.pump();
 
-      await tester.tap(
-        find.byKey(const ValueKey<String>('review-rating-good')),
-        warnIfMissed: false,
-      );
+      // Клавиша оценки после истечения времени: движок не должен получить
+      // запись (кнопки уже скрыты итоговым экраном).
+      await tester.sendKeyEvent(LogicalKeyboardKey.digit3);
       await tester.pumpAndSettle();
 
       expect(reviews.ratings, isEmpty);
     });
 
-    testWidgets('без плана — «Сессия не найдена»', (
-      WidgetTester tester,
-    ) async {
+    testWidgets('без плана — «Сессия не найдена»', (WidgetTester tester) async {
       await tester.pumpWidget(
         appWithHome(
           overrides: overridesFor(const <Card>[]),

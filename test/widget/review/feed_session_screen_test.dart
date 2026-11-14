@@ -758,9 +758,7 @@ void main() {
       await pumpPlan(tester, plan: SessionPlan(cards: planned));
       reviews.previousCard = planned.first;
 
-      await tester.tap(
-        find.byKey(const ValueKey<String>('feed-card-p1')),
-      );
+      await tester.tap(find.byKey(const ValueKey<String>('feed-card-p1')));
       await tester.pump(const Duration(milliseconds: 400));
       await tester.fling(
         find.byKey(const ValueKey<String>('feed-card-p1')),
@@ -794,9 +792,7 @@ void main() {
       expect(find.text(l10n.reviewTimeUpMessage(0)), findsOneWidget);
     });
 
-    testWidgets('без плана — «Сессия не найдена»', (
-      WidgetTester tester,
-    ) async {
+    testWidgets('без плана — «Сессия не найдена»', (WidgetTester tester) async {
       await tester.pumpWidget(
         appWithHome(
           overrides: decksOverrides(

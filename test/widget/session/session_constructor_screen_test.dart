@@ -54,11 +54,20 @@ void main() {
     ),
   ];
 
-  List<Override> overrides({List<SessionPreset> savedPresets = const <SessionPreset>[]}) {
-    cards = FakeCardRepository(cards: <Card>[...deckOneCards(), ...deckTwoCards()]);
+  List<Override> overrides({
+    List<SessionPreset> savedPresets = const <SessionPreset>[],
+  }) {
+    cards = FakeCardRepository(
+      cards: <Card>[...deckOneCards(), ...deckTwoCards()],
+    );
     decks = FakeDeckRepository(
       summaries: <DeckSummary>[
-        makeSummary(id: 'deck-1', name: 'Испанский', totalCards: 2, newCards: 1),
+        makeSummary(
+          id: 'deck-1',
+          name: 'Испанский',
+          totalCards: 2,
+          newCards: 1,
+        ),
         makeSummary(id: 'deck-2', name: 'Биология', totalCards: 1, newCards: 1),
       ],
     );
@@ -74,9 +83,7 @@ void main() {
 
   String planLabel(Object? extra) {
     if (extra is! SessionPlan) return 'NO_PLAN';
-    final String ids = extra.cards
-        .map((Card card) => card.id)
-        .join(',');
+    final String ids = extra.cards.map((Card card) => card.id).join(',');
     final String budget = extra.timeBudget == null
         ? ''
         : '|${extra.timeBudget!.inMinutes}m';
@@ -103,9 +110,8 @@ void main() {
     ),
     GoRoute(
       path: '/session/feed',
-      builder: (BuildContext context, GoRouterState state) => Text(
-        planLabel(state.extra),
-      ),
+      builder: (BuildContext context, GoRouterState state) =>
+          Text(planLabel(state.extra)),
     ),
   ];
 
@@ -127,6 +133,15 @@ void main() {
   bool chipSelected(WidgetTester tester, String key) =>
       tester.widget<FilterChip>(find.byKey(ValueKey<String>(key))).selected;
 
+  Future<void> scrollTo(WidgetTester tester, Finder finder) async {
+    await tester.scrollUntilVisible(
+      finder,
+      240,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+  }
+
   bool startEnabled(WidgetTester tester) =>
       tester
           .widget<FilledButton>(
@@ -135,39 +150,40 @@ void main() {
           .onPressed !=
       null;
 
-  testWidgets('загрузка: колоды, предвыбор с экрана колоды, счётчик доступных', (
-    WidgetTester tester,
-  ) async {
-    await pumpConstructor(
-      tester,
-      overrideList: overrides(),
-      location: '/constructor?deck=deck-1',
-    );
-    final AppLocalizations l10n = l10nOf(tester);
+  testWidgets(
+    'загрузка: колоды, предвыбор с экрана колоды, счётчик доступных',
+    (WidgetTester tester) async {
+      await pumpConstructor(
+        tester,
+        overrideList: overrides(),
+        location: '/constructor?deck=deck-1',
+      );
+      final AppLocalizations l10n = l10nOf(tester);
 
-    expect(find.text(l10n.constructorTitle), findsOneWidget);
-    expect(find.text(l10n.constructorDecksSection), findsOneWidget);
-    expect(find.text('Испанский'), findsOneWidget);
-    expect(find.text('Биология'), findsOneWidget);
-    expect(
-      chipSelected(tester, 'constructor-deck-deck-1'),
-      isTrue,
-      reason: 'колода с экрана колоды предвыбрана',
-    );
-    expect(chipSelected(tester, 'constructor-deck-deck-2'), isFalse);
-    expect(find.text(l10n.constructorAvailableCount(2)), findsOneWidget);
-    expect(startEnabled(tester), isTrue);
-    expect(
-      leeches.requestedDecks.single.toSet(),
-      <String>{'deck-1', 'deck-2'},
-      reason: 'счётчики провалов запрошены для активных колод',
-    );
-    expect(
-      find.text(l10n.constructorPresetsEmpty),
-      findsOneWidget,
-      reason: 'пресетов пока нет',
-    );
-  });
+      expect(find.text(l10n.constructorTitle), findsOneWidget);
+      expect(find.text(l10n.constructorDecksSection), findsOneWidget);
+      expect(find.text('Испанский'), findsOneWidget);
+      expect(find.text('Биология'), findsOneWidget);
+      expect(
+        chipSelected(tester, 'constructor-deck-deck-1'),
+        isTrue,
+        reason: 'колода с экрана колоды предвыбрана',
+      );
+      expect(chipSelected(tester, 'constructor-deck-deck-2'), isFalse);
+      expect(find.text(l10n.constructorAvailableCount(2)), findsOneWidget);
+      expect(startEnabled(tester), isTrue);
+      expect(leeches.requestedDecks.single.toSet(), <String>{
+        'deck-1',
+        'deck-2',
+      }, reason: 'счётчики провалов запрошены для активных колод');
+      await scrollTo(tester, find.text(l10n.constructorPresetsEmpty));
+      expect(
+        find.text(l10n.constructorPresetsEmpty),
+        findsOneWidget,
+        reason: 'пресетов пока нет',
+      );
+    },
+  );
 
   testWidgets('старт: базовый порядок плана и переход в классику', (
     WidgetTester tester,
@@ -188,17 +204,25 @@ void main() {
     );
   });
 
-  testWidgets('фильтр по тегу ограничивает выборку', (WidgetTester tester) async {
+  testWidgets('фильтр по тегу ограничивает выборку', (
+    WidgetTester tester,
+  ) async {
     await pumpConstructor(tester, overrideList: overrides());
     final AppLocalizations l10n = l10nOf(tester);
 
-    await tester.tap(find.byKey(const ValueKey<String>('constructor-deck-deck-1')));
-    await tester.tap(find.byKey(const ValueKey<String>('constructor-deck-deck-2')));
+    await tester.tap(
+      find.byKey(const ValueKey<String>('constructor-deck-deck-1')),
+    );
+    await tester.tap(
+      find.byKey(const ValueKey<String>('constructor-deck-deck-2')),
+    );
     await tester.pumpAndSettle();
     expect(find.text(l10n.constructorAvailableCount(3)), findsOneWidget);
     expect(find.text(l10n.constructorTagsEmpty), findsNothing);
 
-    await tester.tap(find.byKey(const ValueKey<String>('constructor-tag-даты')));
+    await tester.tap(
+      find.byKey(const ValueKey<String>('constructor-tag-даты')),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text(l10n.constructorAvailableCount(2)), findsOneWidget);
@@ -211,8 +235,12 @@ void main() {
     await pumpConstructor(tester, overrideList: overrides());
     final AppLocalizations l10n = l10nOf(tester);
 
-    await tester.tap(find.byKey(const ValueKey<String>('constructor-deck-deck-1')));
-    await tester.tap(find.byKey(const ValueKey<String>('constructor-deck-deck-2')));
+    await tester.tap(
+      find.byKey(const ValueKey<String>('constructor-deck-deck-1')),
+    );
+    await tester.tap(
+      find.byKey(const ValueKey<String>('constructor-deck-deck-2')),
+    );
     await tester.pumpAndSettle();
     await tester.tap(
       find.byKey(const ValueKey<String>('constructor-type-cloze')),
@@ -229,7 +257,9 @@ void main() {
     await pumpConstructor(tester, overrideList: overrides());
     final AppLocalizations l10n = l10nOf(tester);
 
-    await tester.tap(find.byKey(const ValueKey<String>('constructor-deck-deck-1')));
+    await tester.tap(
+      find.byKey(const ValueKey<String>('constructor-deck-deck-1')),
+    );
     await tester.pumpAndSettle();
     await tester.tap(
       find.byKey(const ValueKey<String>('constructor-state-in_progress')),
@@ -279,9 +309,17 @@ void main() {
   testWidgets('интерливинг чередует колоды', (WidgetTester tester) async {
     await pumpConstructor(tester, overrideList: overrides());
 
-    await tester.tap(find.byKey(const ValueKey<String>('constructor-deck-deck-1')));
-    await tester.tap(find.byKey(const ValueKey<String>('constructor-deck-deck-2')));
+    await tester.tap(
+      find.byKey(const ValueKey<String>('constructor-deck-deck-1')),
+    );
+    await tester.tap(
+      find.byKey(const ValueKey<String>('constructor-deck-deck-2')),
+    );
     await tester.pumpAndSettle();
+    await scrollTo(
+      tester,
+      find.byKey(const ValueKey<String>('constructor-interleave')),
+    );
     await tester.tap(
       find.byKey(const ValueKey<String>('constructor-interleave')),
     );
@@ -302,11 +340,17 @@ void main() {
     );
     final AppLocalizations l10n = l10nOf(tester);
 
+    await scrollTo(
+      tester,
+      find.byKey(const ValueKey<String>('constructor-limit-minutes')),
+    );
     await tester.tap(
       find.byKey(const ValueKey<String>('constructor-limit-minutes')),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey<String>('constructor-limit-value')));
+    await tester.tap(
+      find.byKey(const ValueKey<String>('constructor-limit-value')),
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.text(l10n.constructorLimitMinutesValue(5)).last);
     await tester.pumpAndSettle();
@@ -348,6 +392,7 @@ void main() {
     expect(saved.mode, SessionMode.classic);
     expect(saved.limit, const SessionLimit.cards(20));
     expect(find.text(l10n.constructorPresetSaved), findsOneWidget);
+    await scrollTo(tester, find.text('Утренняя'));
     expect(find.text('Утренняя'), findsOneWidget, reason: 'пресет в списке');
   });
 
@@ -391,16 +436,26 @@ void main() {
       tester,
       overrideList: overrides(savedPresets: <SessionPreset>[preset]),
     );
+    final AppLocalizations l10n = l10nOf(tester);
 
-    await tester.tap(find.byKey(const ValueKey<String>('constructor-preset-preset-7')));
+    await scrollTo(
+      tester,
+      find.byKey(const ValueKey<String>('constructor-preset-preset-7')),
+    );
+    await tester.tap(
+      find.byKey(const ValueKey<String>('constructor-preset-preset-7')),
+    );
     await tester.pumpAndSettle();
 
-    expect(chipSelected(tester, 'constructor-deck-deck-2'), isTrue);
-    expect(chipSelected(tester, 'constructor-deck-deck-1'), isFalse);
+    expect(find.text(l10n.constructorAvailableCount(1)), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey<String>('constructor-start')));
     await tester.pumpAndSettle();
 
-    expect(find.text('PLAN:b1|10m'), findsOneWidget);
+    expect(
+      find.text('PLAN:b1|10m'),
+      findsOneWidget,
+      reason: 'пресет задал колоду deck-2, режим ленты и 10 минут',
+    );
   });
 
   testWidgets('пресет удаляется', (WidgetTester tester) async {
@@ -416,6 +471,10 @@ void main() {
     );
     final AppLocalizations l10n = l10nOf(tester);
 
+    await scrollTo(
+      tester,
+      find.byKey(const ValueKey<String>('constructor-preset-delete-preset-8')),
+    );
     await tester.tap(
       find.byKey(const ValueKey<String>('constructor-preset-delete-preset-8')),
     );
@@ -424,6 +483,7 @@ void main() {
     expect(presets.deletedIds, <String>['preset-8']);
     expect(find.text(l10n.constructorPresetDeleted), findsOneWidget);
     expect(find.text('Старый'), findsNothing);
+    await scrollTo(tester, find.text(l10n.constructorPresetsEmpty));
     expect(find.text(l10n.constructorPresetsEmpty), findsOneWidget);
   });
 

@@ -131,9 +131,7 @@ List<GoRoute> decksRoutes() {
     GoRoute(
       path: '/session/classic',
       builder: (BuildContext context, GoRouterState state) =>
-          ReviewSessionScreen(
-            plan: sessionPlanFromExtra(state.extra),
-          ),
+          ReviewSessionScreen(plan: sessionPlanFromExtra(state.extra)),
     ),
     GoRoute(
       path: '/session/feed',

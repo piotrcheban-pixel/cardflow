@@ -194,54 +194,72 @@ class DeckScreen extends ConsumerWidget {
     });
   }
 
-  /// Bottom sheet режима сессии: классика или лента (SPEC A6.3, A7.3).
+  /// Bottom sheet режима сессии: классика, лента или конструктор (SPEC A6.3).
   ///
-  /// Пустая очередь (все карточки не due и не новые) — сообщение вместо
-  /// перехода на пустой экран.
+  /// Пустая колода — сообщение вместо перехода. Колода без карточек к
+  /// повторению открывает лист: конструктор может собрать сессию из фильтров
+  /// (например, «Повторение»), а классика/лента сообщают, что карточек нет.
   Future<void> _startSession(
     BuildContext context, {
     required String deckId,
     required List<Card> cards,
   }) async {
     final AppLocalizations l10n = AppLocalizations.of(context);
-    if (ReviewQueue.build(cards, now: DateTime.now()).isEmpty) {
+    if (cards.isEmpty) {
       showAppMessage(context, l10n.reviewStartEmptyMessage);
       return;
     }
     final String? selected = await showModalBottomSheet<String>(
       context: context,
       showDragHandle: true,
-      builder: (BuildContext sheetContext) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
-              child: Align(
-                alignment: AlignmentDirectional.centerStart,
-                child: Text(
-                  l10n.reviewSessionModeTitle,
-                  style: Theme.of(sheetContext).textTheme.titleLarge,
+      builder: (BuildContext sheetContext) {
+        void chooseQueueMode(String path) {
+          if (ReviewQueue.build(cards, now: DateTime.now()).isEmpty) {
+            Navigator.of(sheetContext).pop();
+            showAppMessage(context, l10n.reviewStartEmptyMessage);
+            return;
+          }
+          Navigator.of(sheetContext).pop(path);
+        }
+
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+                child: Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: Text(
+                    l10n.reviewSessionModeTitle,
+                    style: Theme.of(sheetContext).textTheme.titleLarge,
+                  ),
                 ),
               ),
-            ),
-            ListTile(
-              key: const ValueKey<String>('review-mode-classic'),
-              leading: const Icon(Icons.style_outlined),
-              title: Text(l10n.reviewModeClassic),
-              onTap: () =>
-                  Navigator.of(sheetContext).pop(AppRoutes.studyPath(deckId)),
-            ),
-            ListTile(
-              key: const ValueKey<String>('review-mode-feed'),
-              leading: const Icon(Icons.view_agenda_outlined),
-              title: Text(l10n.reviewModeFeed),
-              onTap: () =>
-                  Navigator.of(sheetContext).pop(AppRoutes.feedPath(deckId)),
-            ),
-          ],
-        ),
-      ),
+              ListTile(
+                key: const ValueKey<String>('review-mode-classic'),
+                leading: const Icon(Icons.style_outlined),
+                title: Text(l10n.reviewModeClassic),
+                onTap: () => chooseQueueMode(AppRoutes.studyPath(deckId)),
+              ),
+              ListTile(
+                key: const ValueKey<String>('review-mode-feed'),
+                leading: const Icon(Icons.view_agenda_outlined),
+                title: Text(l10n.reviewModeFeed),
+                onTap: () => chooseQueueMode(AppRoutes.feedPath(deckId)),
+              ),
+              ListTile(
+                key: const ValueKey<String>('review-mode-constructor'),
+                leading: const Icon(Icons.tune),
+                title: Text(l10n.constructorAction),
+                onTap: () =>
+                    Navigator.of(sheetContext)
+                        .pop(AppRoutes.constructorDeckPath(deckId)),
+              ),
+            ],
+          ),
+        );
+      },
     );
     if (selected != null && context.mounted) {
       context.push(selected);

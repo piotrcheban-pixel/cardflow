@@ -3,8 +3,9 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:material_ui/material_ui.dart' hide Card;
 
+import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/scheduling/rating.dart';
 import 'package:cardflow/domain/session/session_plan.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
@@ -40,10 +41,15 @@ class ReviewSessionScreen extends ConsumerStatefulWidget {
 
 class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
   ReviewSessionEngine? _engine;
+  Timer? _budgetTimer;
+  bool _timeExpired = false;
+  bool _planMissing = false;
   bool _loading = true;
   bool _loadFailed = false;
   bool _completionHapticPlayed = false;
   Map<String, Uint8List> _mediaBytes = const <String, Uint8List>{};
+
+  bool get _hasSource => widget.plan != null || widget.deckId != null;
 
   @override
   void initState() {
@@ -53,20 +59,32 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
 
   @override
   void dispose() {
+    _budgetTimer?.cancel();
     _engine?.removeListener(_onEngineChanged);
     _engine?.dispose();
     super.dispose();
   }
 
   Future<void> _load() async {
+    if (!_hasSource) {
+      setState(() {
+        _loading = false;
+        _loadFailed = false;
+        _planMissing = true;
+      });
+      return;
+    }
     setState(() {
       _loading = true;
       _loadFailed = false;
+      _planMissing = false;
+      _timeExpired = false;
     });
     try {
-      final cards = await ref
-          .read(cardRepositoryProvider)
-          .cardsByDeck(widget.deckId!);
+      final SessionPlan? plan = widget.plan;
+      final List<Card> cards = plan != null
+          ? plan.cards
+          : await ref.read(cardRepositoryProvider).cardsByDeck(widget.deckId!);
       final mediaIds = <String>{for (final card in cards) ...card.mediaIds};
       final mediaBytes = mediaIds.isEmpty
           ? const <String, Uint8List>{}
@@ -77,6 +95,7 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
         scheduler: ref.read(schedulerProvider),
         reviewRepository: ref.read(reviewRepositoryProvider),
         clock: DateTime.now,
+        prebuilt: plan != null,
       )..addListener(_onEngineChanged);
       engine.start();
       setState(() {
@@ -84,6 +103,7 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
         _mediaBytes = mediaBytes;
         _loading = false;
       });
+      _startBudgetTimer(plan?.timeBudget);
     } catch (_) {
       if (!mounted) return;
       setState(() {
@@ -93,11 +113,24 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
     }
   }
 
+  /// Лимит минут (SPEC A6.7): по истечении сессия завершается, оценки после
+  /// не принимаются; непройденные карточки остаются на следующий раз.
+  void _startBudgetTimer(Duration? budget) {
+    _budgetTimer?.cancel();
+    _budgetTimer = null;
+    if (budget == null) return;
+    _budgetTimer = Timer(budget, () {
+      if (!mounted) return;
+      setState(() => _timeExpired = true);
+    });
+  }
+
   void _onEngineChanged() {
     if (mounted) setState(() {});
   }
 
   void _retry() {
+    _budgetTimer?.cancel();
     _engine?.removeListener(_onEngineChanged);
     _engine?.dispose();
     _engine = null;
@@ -106,7 +139,7 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
 
   Future<void> _rate(Rating rating) async {
     final ReviewSessionEngine? engine = _engine;
-    if (engine == null) return;
+    if (engine == null || _timeExpired) return;
     try {
       final bool rated = await engine.rate(rating);
       if (!rated) return;
@@ -144,7 +177,10 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
   /// Раскрывает ответ с haptic `selectionClick` (SPEC A4.4: раскрытие карточки).
   void _reveal() {
     final ReviewSessionEngine? engine = _engine;
-    if (engine == null || engine.state.revealed || engine.state.isCompleted) {
+    if (engine == null ||
+        _timeExpired ||
+        engine.state.revealed ||
+        engine.state.isCompleted) {
       return;
     }
     unawaited(HapticFeedback.selectionClick());
@@ -228,10 +264,14 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
     ReviewSessionState? state,
   ) {
     if (_loading) return const Center(child: CircularProgressIndicator());
+    if (_planMissing) return ReviewPlanMissingView(onBack: _leave);
     if (_loadFailed || state == null) {
       return ReviewLoadErrorView(onRetry: _retry);
     }
     if (state.total == 0) return ReviewEmptyView(onBack: _leave);
+    if (_timeExpired) {
+      return ReviewTimeUpView(ratedCount: state.ratedCount, onDone: _leave);
+    }
     if (state.isCompleted) {
       return ReviewCompletedView(ratedCount: state.ratedCount, onDone: _leave);
     }

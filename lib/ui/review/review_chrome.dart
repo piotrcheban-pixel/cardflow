@@ -247,3 +247,95 @@ class ReviewLoadErrorView extends StatelessWidget {
     );
   }
 }
+
+/// Итог сессии, завершённой по лимиту минут (SPEC A6.7, ADR-018).
+///
+/// Карточки, которые не успели, остаются на следующий раз: `due`/`fsrs_json`
+/// не тронуты.
+class ReviewTimeUpView extends StatelessWidget {
+  /// Создаёт итоговый экран по лимиту времени.
+  const ReviewTimeUpView({
+    required this.ratedCount,
+    required this.onDone,
+    super.key,
+  });
+
+  /// Сколько карточек оценено до истечения времени.
+  final int ratedCount;
+
+  /// Закрыть сессию.
+  final VoidCallback onDone;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Icon(
+              Icons.timer_off_outlined,
+              size: 56,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              l10n.reviewTimeUpTitle,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              l10n.reviewTimeUpMessage(ratedCount),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            FilledButton(onPressed: onDone, child: Text(l10n.reviewDone)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Состояние «план сессии не найден» (ADR-018).
+///
+/// Маршруты `/session/classic` и `/session/feed` получают план через
+/// `GoRouter.extra`; при прямом переходе без него сессию собрать не из чего.
+class ReviewPlanMissingView extends StatelessWidget {
+  /// Создаёт состояние отсутствующего плана.
+  const ReviewPlanMissingView({required this.onBack, super.key});
+
+  /// Возврат назад.
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Icon(
+              Icons.search_off,
+              size: 56,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              l10n.reviewPlanMissingTitle,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            Text(l10n.reviewPlanMissingMessage, textAlign: TextAlign.center),
+            const SizedBox(height: 16),
+            FilledButton(onPressed: onBack, child: Text(l10n.reviewBack)),
+          ],
+        ),
+      ),
+    );
+  }
+}

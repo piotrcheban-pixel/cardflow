@@ -53,13 +53,19 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
   FeedSessionEngine? _engine;
   Deck? _deck;
   Timer? _autoAdvanceTimer;
+  Timer? _budgetTimer;
   Duration _autoAdvanceInterval = FeedSessionScreen.defaultAutoAdvance;
   bool _autoAdvancePaused = false;
+  bool _timeExpired = false;
+  bool _planMissing = false;
+  int _deckCount = 1;
   bool _loading = true;
   bool _loadFailed = false;
   bool _completionHapticPlayed = false;
   int _resetToken = 0;
   Map<String, Uint8List> _mediaBytes = const <String, Uint8List>{};
+
+  bool get _hasSource => widget.plan != null || widget.deckId != null;
 
   @override
   void initState() {
@@ -72,6 +78,7 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _autoAdvanceTimer?.cancel();
+    _budgetTimer?.cancel();
     _engine?.removeListener(_onEngineChanged);
     _engine?.dispose();
     _pageController.dispose();
@@ -90,17 +97,32 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
   }
 
   Future<void> _load() async {
+    if (!_hasSource) {
+      setState(() {
+        _loading = false;
+        _loadFailed = false;
+        _planMissing = true;
+      });
+      return;
+    }
     setState(() {
       _loading = true;
       _loadFailed = false;
+      _planMissing = false;
+      _timeExpired = false;
     });
     try {
-      final List<Card> cards = await ref
-          .read(cardRepositoryProvider)
-          .cardsByDeck(widget.deckId!);
-      final Deck? deck = await ref
-          .read(deckRepositoryProvider)
-          .deckById(widget.deckId!);
+      final SessionPlan? plan = widget.plan;
+      final List<Card> cards = plan != null
+          ? plan.cards
+          : await ref.read(cardRepositoryProvider).cardsByDeck(widget.deckId!);
+      final List<String> deckIds = plan != null
+          ? <String>{for (final Card card in cards) card.deckId}
+                .toList(growable: false)
+          : <String>[widget.deckId!];
+      final Deck? deck = deckIds.length == 1
+          ? await ref.read(deckRepositoryProvider).deckById(deckIds.single)
+          : null;
       final mediaIds = <String>{for (final card in cards) ...card.mediaIds};
       final mediaBytes = mediaIds.isEmpty
           ? const <String, Uint8List>{}
@@ -111,10 +133,12 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
         scheduler: ref.read(schedulerProvider),
         reviewRepository: ref.read(reviewRepositoryProvider),
         clock: DateTime.now,
+        prebuilt: plan != null,
       )..addListener(_onEngineChanged);
       engine.start();
       setState(() {
         _deck = deck;
+        _deckCount = deckIds.length;
         _engine = engine;
         _mediaBytes = mediaBytes;
         _loading = false;
@@ -122,6 +146,7 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
         _completionHapticPlayed = false;
         _resetToken = 0;
       });
+      _startBudgetTimer(plan?.timeBudget);
       _syncPageAfterFrame();
     } catch (_) {
       if (!mounted) return;
@@ -132,8 +157,23 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
     }
   }
 
+  /// Лимит минут (SPEC A6.7): по истечении сессия завершается, авто-продвижение
+  /// и оценки останавливаются, непройденные карточки остаются на следующий раз.
+  void _startBudgetTimer(Duration? budget) {
+    _budgetTimer?.cancel();
+    _budgetTimer = null;
+    if (budget == null) return;
+    _budgetTimer = Timer(budget, () {
+      if (!mounted) return;
+      _autoAdvanceTimer?.cancel();
+      _autoAdvanceTimer = null;
+      setState(() => _timeExpired = true);
+    });
+  }
+
   void _retry() {
     _autoAdvanceTimer?.cancel();
+    _budgetTimer?.cancel();
     _engine?.removeListener(_onEngineChanged);
     _engine?.dispose();
     _engine = null;
@@ -174,7 +214,9 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
   void _scheduleAutoAdvance(FeedSessionState state) {
     _autoAdvanceTimer?.cancel();
     _autoAdvanceTimer = null;
-    if (_autoAdvancePaused || state.busy || state.isCompleted) return;
+    if (_autoAdvancePaused || _timeExpired || state.busy || state.isCompleted) {
+      return;
+    }
     final FeedSessionItem? item = state.current;
     if (item == null || !item.revealed || item.rated) return;
     _autoAdvanceTimer = Timer(_autoAdvanceInterval, () {
@@ -200,7 +242,7 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
 
   void _toggleReveal() {
     final FeedSessionEngine? engine = _engine;
-    if (engine == null) return;
+    if (engine == null || _timeExpired) return;
     final FeedSessionItem? item = engine.state.current;
     if (item == null || item.rated || engine.state.busy) return;
     final bool revealing = !item.revealed;
@@ -210,7 +252,7 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
 
   Future<void> _rate(Rating rating) async {
     final FeedSessionEngine? engine = _engine;
-    if (engine == null || engine.state.busy) return;
+    if (engine == null || _timeExpired || engine.state.busy) return;
     try {
       final bool rated = await engine.rate(rating);
       if (!rated) {
@@ -339,10 +381,14 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
 
   Widget _buildBody(BuildContext context, FeedSessionState? state) {
     if (_loading) return const Center(child: CircularProgressIndicator());
+    if (_planMissing) return ReviewPlanMissingView(onBack: _leave);
     if (_loadFailed || state == null) {
       return ReviewLoadErrorView(onRetry: _retry);
     }
     if (state.total == 0) return ReviewEmptyView(onBack: _leave);
+    if (_timeExpired) {
+      return ReviewTimeUpView(ratedCount: state.ratedCount, onDone: _leave);
+    }
     if (state.isCompleted) {
       return ReviewCompletedView(ratedCount: state.ratedCount, onDone: _leave);
     }
@@ -388,6 +434,7 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
         ),
         _FeedBottomBar(
           deckName: _deck?.name,
+          deckCount: _deckCount,
           position: state.index + 1,
           total: state.total,
           intervalSeconds: _autoAdvanceInterval.inSeconds,
@@ -404,6 +451,7 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
 class _FeedBottomBar extends StatelessWidget {
   const _FeedBottomBar({
     required this.deckName,
+    required this.deckCount,
     required this.position,
     required this.total,
     required this.intervalSeconds,
@@ -414,6 +462,7 @@ class _FeedBottomBar extends StatelessWidget {
   });
 
   final String? deckName;
+  final int deckCount;
   final int position;
   final int total;
   final int intervalSeconds;
@@ -425,6 +474,9 @@ class _FeedBottomBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
+    final String? label =
+        deckName ??
+        (deckCount > 1 ? l10n.sessionDeckCountLabel(deckCount) : null);
     return Material(
       color: scheme.surfaceContainerLow,
       child: SafeArea(
@@ -438,9 +490,9 @@ class _FeedBottomBar extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
-                    if (deckName != null)
+                    if (label != null)
                       Text(
-                        deckName!,
+                        label,
                         key: const ValueKey<String>('feed-deck-name'),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,

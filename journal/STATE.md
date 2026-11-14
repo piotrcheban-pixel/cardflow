@@ -1,29 +1,36 @@
 # STATE — текущее состояние CardFlow
 
-**Дата:** 2026-11-14 · **Итерация:** 6 «Конструктор сессии» — **шаг 1 (план) выполнен** · **Режим:** ИТЕРАЦИИ
-**Факты (сверено командами в этой сессии):** `git status --short` → пусто; `HEAD = origin/main =
-ca1e2b69d8b0e4b78005c5ac1066df7988ff437e` (`ca1e2b6 docs: record green CI for iteration 5`);
-запись прежнего STATE «HEAD = origin/main = 9bd09ad» устарела на один docs-коммит и исправлена.
-`fvm flutter test --exclude-tags golden` → **1020 passed + 1 skipped**, exit 0; Flutter 3.47.9 /
-Dart 3.13.7 (FVM); Windows 11; Android SDK/JDK/Xcode/Linux — отсутствуют (L2; CI покрыл в итерации 5,
-run `43612309379` — 9/9 success). Независимый reviewer недоступен (L35), навыков из промпта нет (L5).
+**Дата:** 2026-11-14 · **Итерация:** 6 «Конструктор сессии» — **шаг 3 (зелёная фаза UI) выполнен** ·
+**Режим:** ИТЕРАЦИИ
+**Факты (сверено командами в этой сессии):** `git status --short` → пусто; `HEAD =
+ca1e2b69d8b0e4b78005c5ac1066df7988ff437e` до старта итерации; запись прежнего STATE «HEAD = origin/main =
+9bd09ad» устарела на один docs-коммит и исправлена. `fvm flutter test --exclude-tags golden` на старте →
+**1020 passed + 1 skipped**; после зелёной фазы домена/данных → **1069 passed + 1 skipped**; после зелёной
+фазы UI → **1095 passed + 1 skipped**, `analyze` 0, `format` применён. Flutter 3.47.9 / Dart 3.13.7 (FVM);
+Windows 11; Android SDK/JDK/Xcode/Linux — отсутствуют (L2). Независимый reviewer недоступен (L35).
 
 ## Следующее действие
 
-1. **Шаг 2 — красная фаза итерации 6:** тесты домена (`SessionConfig` JSON/фильтры, `SessionBuilder`:
-   порядок, разминка, интерливинг, перемешивание, лимит), данных (`DriftSessionPresetRepository`,
-   `DriftLeechRepository`), движков (`prebuilt`), экрана конструктора и маршрутов; вывод падений —
-   `journal/iteration-6/red.md`.
-2. План и ADR: `journal/iteration-6/plan.md`, `docs/decisions/ADR-018-session-constructor.md`.
+1. **Шаг 4 — ревью Lead** на неизменяемом снимке зелёной фазы: чек-лист (границы фильтров, порядок
+   операций сборки, гонки таймера лимита минут, ARB-only тексты, безопасность пресетов, дублирование
+   логики сессий); отчёт `journal/iteration-6/review.md`; high/medium — fix-коммит с тестом на находку.
+2. Затем шаг 5 (verify: coverage, build windows), шаг 6 (summary/STATE/AGENTS), шаг 7 (ретроспектива).
 3. Итерация 6 без остановки внутри идёт до шага 7, затем отчёт владельцу и стоп.
 4. Открытые вопросы к владельцу: нет.
 
-## Итерация 6 — рамка
+## Итерация 6 — сделано
 
-- SPEC B2/A6.7/A7.19/A7.20: мультивыбор колод, фильтры (теги/тип/состояние), режим classic/feed,
-  лимит карточек/минут, перемешивание/интерливинг/разминка, пресеты `session_presets`,
-  передача готовой выборки в движки ADR-008/016 (`prebuilt`), лимит минут — таймер экрана.
-- Схема БД/`schemaVersion`/формат `.zip` не меняются (ADR-005/006/018).
+- Домен: `SessionConfig` (JSON `version=1`, валидация), `SessionBuilder` (фильтры, базовый порядок,
+  разминка ≤4 выученных, интерливинг round-robin, перемешивание по seed, лимит карточек/минут),
+  `SessionPlan`, `SessionPreset`; порты пресетов и счётчиков провалов (ADR-018).
+- Данные: `DriftSessionPresetRepository` (`session_presets`, без миграций), `DriftLeechRepository`
+  (`review_logs.rating = 1`, порог 8), провайдеры в `app_providers`.
+- UI: экран A6.7 (`lib/ui/session/session_constructor_screen.dart`), маршруты `/constructor`,
+  `/session/classic`, `/session/feed`, пункт «Конструктор» в листе режимов колоды, план в экранах
+  классики и ленты (`prebuilt`), лимит минут через таймер экрана, состояние «Сессия не найдена».
+- Тесты: domain/data unit, prebuilt-движки, 13 widget-тестов конструктора, плановые сессии
+  классики/ленты, интеграция на production-графе и реальной drift-БД (4 теста).
+
 
 ## Итерация 5 — итог (завершена, запушена)
 
