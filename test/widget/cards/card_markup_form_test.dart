@@ -138,6 +138,46 @@ void main() {
   });
 
   testWidgets(
+    'недоступный файл изображения не стирает существующую occlusion-разметку',
+    (tester) async {
+      const raw =
+          '{"version":1,"masks":[{"id":"m1","shape":"rectangle",'
+          '"x":0.1,"y":0.1,"width":0.2,"height":0.2}]}';
+      final card = makeCard(
+        id: 'card-1',
+        deckId: 'deck-1',
+        front: 'Схема',
+        mediaIds: const <String>['media-1'],
+        occlusionJson: raw,
+      );
+      final cards = FakeCardRepository(cards: <Card>[card]);
+      await tester.pumpWidget(
+        appWithRouter(
+          overrides: decksOverrides(
+            deckRepository: FakeDeckRepository(),
+            cardRepository: cards,
+            cardMediaRepository: FakeCardMediaRepository(),
+          ),
+          routes: decksRoutes(),
+          initialLocation: '/decks/deck-1/cards/card-1/edit',
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const ValueKey('card-form-front')),
+        'Новая схема',
+      );
+      await tester.tap(find.byKey(const ValueKey('card-form-save')));
+      await tester.pumpAndSettle();
+
+      final draft = cards.updatedDrafts.single;
+      expect(draft.occlusionJson, raw);
+      expect(draft.mediaIds, <String>['media-1']);
+    },
+  );
+
+  testWidgets(
     'cloze без пропуска показывает отдельную ошибку и не сохраняется',
     (tester) async {
       final cards = await pumpForm(tester);

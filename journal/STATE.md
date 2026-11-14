@@ -1,6 +1,6 @@
 # STATE — текущее состояние CardFlow
 
-**Дата:** 2026-11-14 · **Итерация:** 5 «Occlusion / Cloze / LaTeX» — **шаг 3 завершён** · **Режим:** ИТЕРАЦИИ
+**Дата:** 2026-11-14 · **Итерация:** 5 «Occlusion / Cloze / LaTeX» — **шаг 4 завершён** · **Режим:** ИТЕРАЦИИ
 **Факты (сверено в этой сессии):** рабочее дерево было чистым; `HEAD = origin/main =
 8dfa6e5d29aed3a5a1805d6ebc6f96c84ebf3065`; последние 5 коммитов — docs/handoff после итерации 4.
 Прежняя запись об `origin/main = e5f64c4` и 7 незапушенных коммитах устарела и исправлена по git.
@@ -12,12 +12,14 @@ Flutter 3.47.9 / Dart 3.13.7 (FVM); Windows 11; Windows-сборка работ�
 **Шаги 1–3:** план/ADR-017 (`88bf2e9`), красная фаза (`2df06dd`, доказательства `journal/iteration-5/red.md`),
 зелёная реализация. Полный прогон: **1013 passed + 1 skipped**; покрытие **92.8% (6443/6942)**;
 `analyze` — 0 issues; `format` — 252 files, 0 changed. Детали — `journal/iteration-5/green.md`.
+**Шаг 4:** независимого reviewer нет (L35); Lead-ревью снимка `5af8f70` — high нет, M1–M4 закрыты фиксом
+с тестами на каждую находку (`journal/iteration-5/review.md`). L17 снят, добавлены L38/L39.
 
 ## Следующее действие
 
-1. **Шаг 4 (ревью):** независимый reviewer в дереве агентов отсутствует; Lead-ревью по чек-листу на
-   неизменяемом снимке green-коммита. Все high/medium — отдельным fix-коммитом с тестом на находку.
-2. Затем шаг 5 verify (повторные гейты + Windows release), шаг 6 remember и шаг 7 improve.
+1. **Шаг 5 (verify):** повторный полный прогон на fix-снимке, coverage/analyze/format и
+   `fvm flutter build windows --release`; доказательства — `journal/iteration-5/verify.md`.
+2. Затем шаг 6 remember (STATE/ADR/handoff) и шаг 7 improve (ретроспектива и правило в AGENTS.md).
 3. Push не выполнять без отдельной команды владельца.
 4. Открытые вопросы к владельцу: нет.
 

@@ -308,6 +308,9 @@ class FakeCardRepository implements CardRepository {
   /// Карточки, переданные в `updateCard`.
   final List<Card> updatedCards = <Card>[];
 
+  /// Черновики, переданные в `updateCard`.
+  final List<CardDraft> updatedDrafts = <CardDraft>[];
+
   /// Id удалённых карточек (в порядке вызовов).
   final List<String> deletedIds = <String>[];
 
@@ -453,6 +456,7 @@ class FakeCardRepository implements CardRepository {
   }) async {
     if (updateError != null) throw updateError!;
     updatedCards.add(card);
+    updatedDrafts.add(draft);
     final Card updated = _withContent(card, draft, now);
     final int index = _cards.indexWhere((Card item) => item.id == card.id);
     if (index < 0) throw StateError('Карточка не найдена: ${card.id}');

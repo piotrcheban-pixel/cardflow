@@ -77,4 +77,58 @@ void main() {
     expect(document.masks, hasLength(1));
     expect(document.masks.single.shape, OcclusionShape.ellipse);
   });
+
+  testWidgets('вертикальное начало жеста рисует маску внутри прокрутки', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(800, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final png = base64Decode(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk'
+      '+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+    );
+    var document = const OcclusionDocument();
+    await tester.pumpWidget(
+      appWithHome(
+        overrides: const [],
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: SizedBox(
+              height: 1400,
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: SizedBox(
+                  width: 500,
+                  height: 560,
+                  child: StatefulBuilder(
+                    builder: (context, setState) => OcclusionMaskEditor(
+                      imageBytes: Uint8List.fromList(png),
+                      document: document,
+                      onChanged: (value) => setState(() => document = value),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final canvas = find.byKey(const ValueKey('occlusion-editor-canvas'));
+
+    final gesture = await tester.startGesture(tester.getCenter(canvas));
+    await gesture.moveBy(const Offset(0, 60));
+    await tester.pump();
+    await gesture.moveBy(const Offset(80, 0));
+    await tester.pump();
+    await gesture.up();
+    await tester.pumpAndSettle();
+
+    expect(document.masks, hasLength(1));
+    expect(document.masks.single.width, greaterThan(0));
+    expect(document.masks.single.height, greaterThan(0));
+  });
 }

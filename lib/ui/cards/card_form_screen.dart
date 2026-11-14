@@ -161,7 +161,9 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
 
   Future<void> _save() async {
     final AppLocalizations l10n = AppLocalizations.of(context);
-    final bool hasOcclusion = _imageBytes != null && _occlusion != null;
+    final bool hasOcclusion =
+        _occlusion != null &&
+        (_imageBytes != null || _card?.occlusionJson != null);
     final bool replacingImage = _imageUpload != null;
     final mediaIds = <String>[
       if (_card != null && (!hasOcclusion || !replacingImage))

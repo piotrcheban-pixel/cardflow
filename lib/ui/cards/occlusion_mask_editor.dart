@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
+import 'package:flutter/gestures.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'package:cardflow/domain/cards/occlusion.dart';
@@ -55,17 +56,17 @@ class _OcclusionMaskEditorState extends State<OcclusionMaskEditor> {
     }
   }
 
-  void _start(DragStartDetails details, Size size) {
-    _draft = _rect(details.localPosition, details.localPosition, size);
+  void _startAt(Offset position, Size size) {
+    _draft = _rect(position, position, size);
   }
 
-  void _update(DragUpdateDetails details, Size size) {
+  void _updateAt(Offset position, Size size) {
     final start = _draft;
     if (start == null) return;
     setState(() {
       _draft = _rect(
         Offset(start.left * size.width, start.top * size.height),
-        details.localPosition,
+        position,
         size,
       );
     });
@@ -165,30 +166,43 @@ class _OcclusionMaskEditorState extends State<OcclusionMaskEditor> {
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final size = Size(constraints.maxWidth, constraints.maxHeight);
-                return GestureDetector(
-                  key: const ValueKey<String>('occlusion-editor-canvas'),
-                  behavior: HitTestBehavior.opaque,
-                  onPanStart: (details) => _start(details, size),
-                  onPanUpdate: (details) => _update(details, size),
-                  onPanEnd: (_) => _end(size),
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: <Widget>[
-                      Image.memory(
-                        widget.imageBytes,
-                        fit: BoxFit.fill,
-                        errorBuilder: (context, error, stack) => ColoredBox(
-                          color: scheme.surfaceContainerHigh,
-                          child: Center(
-                            child: Text(l10n.occlusionImageUnavailable),
+                // Eager-распознаватель забирает жест у прокрутки формы: иначе
+                // вертикальное начало рисования прокручивало бы страницу.
+                return RawGestureDetector(
+                  gestures: <Type, GestureRecognizerFactory>{
+                    EagerGestureRecognizer:
+                        GestureRecognizerFactoryWithHandlers<
+                          EagerGestureRecognizer
+                        >(EagerGestureRecognizer.new, (_) {}),
+                  },
+                  child: Listener(
+                    key: const ValueKey<String>('occlusion-editor-canvas'),
+                    behavior: HitTestBehavior.opaque,
+                    onPointerDown: (event) =>
+                        _startAt(event.localPosition, size),
+                    onPointerMove: (event) =>
+                        _updateAt(event.localPosition, size),
+                    onPointerUp: (_) => _end(size),
+                    onPointerCancel: (_) => setState(() => _draft = null),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: <Widget>[
+                        Image.memory(
+                          widget.imageBytes,
+                          fit: BoxFit.fill,
+                          errorBuilder: (context, error, stack) => ColoredBox(
+                            color: scheme.surfaceContainerHigh,
+                            child: Center(
+                              child: Text(l10n.occlusionImageUnavailable),
+                            ),
                           ),
                         ),
-                      ),
-                      for (final mask in widget.document.masks)
-                        _outline(mask, scheme),
-                      if (_draft case final draft?)
-                        _draftOutline(draft, _shape, scheme),
-                    ],
+                        for (final mask in widget.document.masks)
+                          _outline(mask, scheme),
+                        if (_draft case final draft?)
+                          _draftOutline(draft, _shape, scheme),
+                      ],
+                    ),
                   ),
                 );
               },
