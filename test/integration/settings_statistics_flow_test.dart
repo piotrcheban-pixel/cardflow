@@ -7,9 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cardflow/data/db/app_database.dart';
 import 'package:cardflow/data/db/epoch.dart';
-import 'package:cardflow/domain/scheduling/rating.dart';
 import 'package:cardflow/domain/scheduling/scheduler.dart';
-import 'package:cardflow/domain/scheduling/scheduling_card.dart';
 import 'package:cardflow/domain/settings/app_settings.dart';
 import 'package:cardflow/domain/statistics/statistics.dart';
 import 'package:cardflow/ui/state/app_providers.dart';

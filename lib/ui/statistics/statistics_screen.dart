@@ -249,6 +249,7 @@ class _ForecastChart extends StatelessWidget {
           for (int index = 0; index < forecast.length; index++)
             Expanded(
               child: _ForecastBar(
+                index: index,
                 day: forecast[index],
                 label: _label(l10n, localizations, forecast[index].day, index),
                 semantics: l10n.statisticsForecastSemantics(
@@ -279,6 +280,7 @@ class _ForecastChart extends StatelessWidget {
 
 class _ForecastBar extends StatelessWidget {
   const _ForecastBar({
+    required this.index,
     required this.day,
     required this.label,
     required this.semantics,
@@ -286,6 +288,7 @@ class _ForecastBar extends StatelessWidget {
     required this.color,
   });
 
+  final int index;
   final ForecastDay day;
   final String label;
   final String semantics;
@@ -310,21 +313,26 @@ class _ForecastBar extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Expanded(
-              child: Align(
-                alignment: Alignment.bottomCenter,
-                child: FractionallySizedBox(
-                  heightFactor: fraction.clamp(0.04, 1.0),
-                  child: Container(
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: color,
-                      borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(6),
+              child: day.due == 0
+                  ? const SizedBox.shrink()
+                  : Align(
+                      alignment: Alignment.bottomCenter,
+                      child: FractionallySizedBox(
+                        heightFactor: fraction.clamp(0.04, 1.0),
+                        child: Container(
+                          key: ValueKey<String>(
+                            'statistics-forecast-bar-$index',
+                          ),
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            color: color,
+                            borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(6),
+                            ),
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                ),
-              ),
             ),
             const SizedBox(height: 6),
             Text(label, style: theme.textTheme.labelSmall),

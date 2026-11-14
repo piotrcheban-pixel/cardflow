@@ -92,20 +92,10 @@ class StatisticsHeatmap extends StatelessWidget {
     final MaterialLocalizations localizations = MaterialLocalizations.of(
       context,
     );
-    final List<String> labels = List<String>.filled(
-      math.max(1, (days.length / 7).ceil()),
-      '',
+    final List<String> labels = heatmapMonthLabels(
+      days,
+      (DateTime day) => _monthName(localizations, day),
     );
-    int? lastMonth;
-    for (int index = 0; index < days.length; index++) {
-      final DateTime day = days[index].day;
-      if (lastMonth == day.month) continue;
-      lastMonth = day.month;
-      final int column = index ~/ 7;
-      if (column < labels.length) {
-        labels[column] = _monthName(localizations, day);
-      }
-    }
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         final double width = constraints.maxWidth;
@@ -132,6 +122,29 @@ class StatisticsHeatmap extends StatelessWidget {
   static String _monthName(MaterialLocalizations localizations, DateTime day) {
     final String formatted = localizations.formatMonthYear(day);
     return formatted.replaceFirst(RegExp(r'\s+\d{4}$'), '');
+  }
+
+  /// Подписи месяцев по колонкам карты: только чётные месяцы.
+  ///
+  /// Колонка карты на узком экране — 5–11 px; подпись каждого месяца
+  /// перекрывала бы соседнюю. Январь/март/май/… дают зазор в 8–9 колонок.
+  @visibleForTesting
+  static List<String> heatmapMonthLabels(
+    List<DayCount> days,
+    String Function(DateTime day) format,
+  ) {
+    final int columns = math.max(1, (days.length / 7).ceil());
+    final List<String> labels = List<String>.filled(columns, '');
+    int? lastMonth;
+    for (int index = 0; index < days.length; index++) {
+      final DateTime day = days[index].day;
+      if (lastMonth == day.month) continue;
+      lastMonth = day.month;
+      if (day.month.isOdd) continue;
+      final int column = index ~/ 7;
+      if (column < labels.length) labels[column] = format(day);
+    }
+    return labels;
   }
 }
 

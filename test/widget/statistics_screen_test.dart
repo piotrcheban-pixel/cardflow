@@ -99,6 +99,19 @@ void main() {
     );
     expect(find.text(l10n.statisticsForecastToday), findsOneWidget);
     expect(find.text(l10n.statisticsForecastTomorrow), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey<String>('statistics-forecast-bar-0')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey<String>('statistics-forecast-bar-1')),
+      findsNothing,
+      reason: 'на день без карточек столбца нет',
+    );
+    expect(
+      find.byKey(const ValueKey<String>('statistics-forecast-bar-2')),
+      findsOneWidget,
+    );
 
     await tester.ensureVisible(
       find.byKey(const ValueKey<String>('statistics-week')),
