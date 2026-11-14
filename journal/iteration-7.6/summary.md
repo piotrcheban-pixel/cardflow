@@ -1,7 +1,8 @@
 # Итерация 7.6 — «Пустой ответ» LLM: диагностика, фикс, тесты (2026-11-14)
 
-**Статус:** завершена; push `5925ea0..2ddacc6`, CI run
-[`43637919516`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43637919516) — **9/9 job success**.
+**Статус:** завершена; push `5925ea0..5a64a31`, прогоны **9/9 job success**: код-снимок `2ddacc6` —
+run [`43637919516`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43637919516), финальный
+`5a64a31` — run [`43639479927`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43639479927).
 
 ## Что было (owner note)
 
