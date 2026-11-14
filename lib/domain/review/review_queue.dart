@@ -12,13 +12,14 @@ abstract final class ReviewQueue {
   /// - входят просроченные (`due <= now`, кроме `new`) и новые (`state = new`);
   /// - порядок: просроченные по `due` ASC, затем новые по `createdAt` ASC;
   /// - тай-брек — `id` ASC (детерминизм);
-  /// - [reviewLimit]/[newLimit] — дневные лимиты (A6.6, ADR-019 §2):
-  ///   обрезают хвост соответствующей части очереди; `0` — без ограничения.
+  /// - [reviewLimit]/[newLimit] — **остаток** дневных лимитов на момент
+  ///   открытия сессии (A6.6, ADR-019 §8): `null` — лимита нет; `0` — лимит на
+  ///   сегодня исчерпан, брать нечего; `n` — не больше `n` карточек.
   static List<Card> build(
     List<Card> cards, {
     required DateTime now,
-    int newLimit = 0,
-    int reviewLimit = 0,
+    int? newLimit,
+    int? reviewLimit,
   }) {
     final DateTime utcNow = now.toUtc();
     final List<Card> eligible = cards
@@ -49,13 +50,16 @@ abstract final class ReviewQueue {
       return byCreated != 0 ? byCreated : a.id.compareTo(b.id);
     });
 
-    final List<Card> dueLimited = reviewLimit > 0 && due.length > reviewLimit
-        ? due.sublist(0, reviewLimit)
-        : due;
-    final List<Card> freshLimited = newLimit > 0 && fresh.length > newLimit
-        ? fresh.sublist(0, newLimit)
-        : fresh;
+    return List<Card>.unmodifiable(<Card>[
+      ..._limited(due, reviewLimit),
+      ..._limited(fresh, newLimit),
+    ]);
+  }
 
-    return List<Card>.unmodifiable(<Card>[...dueLimited, ...freshLimited]);
+  /// Обрезает [cards] до остатка [limit] (`null` — без ограничения).
+  static List<Card> _limited(List<Card> cards, int? limit) {
+    if (limit == null || cards.length <= limit) return cards;
+    // Остаток не бывает отрицательным, но защита от RangeError дешевле бага.
+    return limit <= 0 ? const <Card>[] : cards.sublist(0, limit);
   }
 }

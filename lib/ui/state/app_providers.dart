@@ -26,6 +26,7 @@ import 'package:cardflow/data/generation/drift_generation_settings_store.dart';
 import 'package:cardflow/data/generation/file_picker_document_gateway.dart';
 import 'package:cardflow/data/review/drift_review_repository.dart';
 import 'package:cardflow/data/review/drift_leech_repository.dart';
+import 'package:cardflow/data/review/drift_daily_usage_repository.dart';
 import 'package:cardflow/data/security/secure_api_key_store.dart';
 import 'package:cardflow/data/session/drift_session_preset_repository.dart';
 import 'package:cardflow/data/settings/drift_app_settings_store.dart';
@@ -45,6 +46,7 @@ import 'package:cardflow/domain/generation/generation_job.dart';
 import 'package:cardflow/domain/generation/generation_provider.dart';
 import 'package:cardflow/domain/generation/generation_settings_store.dart';
 import 'package:cardflow/domain/generation/openai_compatible_settings.dart';
+import 'package:cardflow/domain/review/daily_usage_repository.dart';
 import 'package:cardflow/domain/review/review_repository.dart';
 import 'package:cardflow/domain/scheduling/scheduler.dart';
 import 'package:cardflow/domain/session/leech_repository.dart';
@@ -118,6 +120,11 @@ final reviewRepositoryProvider = Provider<ReviewRepository>((ref) {
 /// Счётчики провалов для фильтра «Пиявки» конструктора (ADR-018).
 final leechRepositoryProvider = Provider<LeechRepository>((ref) {
   return DriftLeechRepository(ref.watch(appDatabaseProvider));
+});
+
+/// Дневной расход лимитов из `review_logs` (A6.6, ADR-019 §8).
+final dailyUsageRepositoryProvider = Provider<DailyUsageRepository>((ref) {
+  return DriftDailyUsageRepository(ref.watch(appDatabaseProvider));
 });
 
 /// Пресеты конструктора сессии (`session_presets`, ADR-018).

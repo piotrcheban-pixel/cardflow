@@ -1,10 +1,35 @@
 import 'dart:async';
 
 import 'package:cardflow/domain/cards/card.dart';
+import 'package:cardflow/domain/review/daily_limits.dart';
+import 'package:cardflow/domain/review/daily_usage_repository.dart';
 import 'package:cardflow/domain/review/review.dart';
 import 'package:cardflow/domain/review/review_repository.dart';
 import 'package:cardflow/domain/scheduling/rating.dart';
 import 'package:cardflow/domain/scheduling/scheduling_card.dart';
+
+/// In-memory дневной расход лимитов для тестов без drift (ADR-019 §8).
+class FakeDailyUsageRepository implements DailyUsageRepository {
+  /// Создаёт фейк с расходом [usage] (по умолчанию — начало дня).
+  FakeDailyUsageRepository({this.usage = DailyReviewUsage.empty});
+
+  /// Расход дня, который вернёт [usageOnDay].
+  DailyReviewUsage usage;
+
+  /// Если задано — [usageOnDay] бросает это исключение.
+  Object? error;
+
+  /// Моменты, с которыми запрашивали расход дня.
+  final List<DateTime> requestedAt = <DateTime>[];
+
+  @override
+  Future<DailyReviewUsage> usageOnDay(DateTime now) async {
+    final Object? failure = error;
+    if (failure != null) throw failure;
+    requestedAt.add(now);
+    return usage;
+  }
+}
 
 /// Фейковый порт записи повторений для unit-тестов движка сессии.
 ///

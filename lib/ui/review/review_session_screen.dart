@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart' hide Card;
 
 import 'package:cardflow/domain/cards/card.dart';
+import 'package:cardflow/domain/review/daily_limits.dart';
 import 'package:cardflow/domain/scheduling/rating.dart';
 import 'package:cardflow/domain/session/session_plan.dart';
 import 'package:cardflow/domain/settings/app_settings.dart';
@@ -100,6 +101,15 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
       } on Object {
         settings = AppSettings.defaults;
       }
+      // Дневные лимиты A6.6 — остаток на локальный календарный день по
+      // `review_logs`, а не свежий лимит на каждую сессию (ADR-019 §8, L45).
+      final RemainingReviewLimits limits = RemainingReviewLimits.of(
+        newLimit: settings.dailyNewLimit,
+        reviewLimit: settings.dailyReviewLimit,
+        usage: await ref
+            .read(dailyUsageRepositoryProvider)
+            .usageOnDay(DateTime.now()),
+      );
       if (!mounted) return;
       final engine = ReviewSessionEngine(
         cards: cards,
@@ -107,8 +117,8 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
         reviewRepository: ref.read(reviewRepositoryProvider),
         clock: DateTime.now,
         prebuilt: plan != null,
-        newLimit: settings.dailyNewLimit,
-        reviewLimit: settings.dailyReviewLimit,
+        newLimit: limits.newCards,
+        reviewLimit: limits.reviews,
       )..addListener(_onEngineChanged);
       engine.start();
       setState(() {

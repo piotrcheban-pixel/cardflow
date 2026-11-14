@@ -4,6 +4,7 @@ import 'package:cardflow/domain/cards/card_repository.dart';
 import 'package:cardflow/domain/decks/deck_repository.dart';
 import 'package:cardflow/domain/generation/api_key_store.dart';
 import 'package:cardflow/domain/generation/generation_settings_store.dart';
+import 'package:cardflow/domain/review/daily_usage_repository.dart';
 import 'package:cardflow/domain/review/review_repository.dart';
 import 'package:cardflow/domain/scheduling/scheduler.dart';
 import 'package:cardflow/domain/session/leech_repository.dart';
@@ -177,6 +178,7 @@ List<Override> decksOverrides({
   AppSettingsStore? appSettingsStore,
   StatisticsRepository? statisticsRepository,
   FakeExternalLinkLauncher? externalLinkLauncher,
+  DailyUsageRepository? dailyUsageRepository,
 }) {
   return <Override>[
     deckRepositoryProvider.overrideWithValue(deckRepository),
@@ -215,6 +217,9 @@ List<Override> decksOverrides({
     ),
     externalLinkLauncherProvider.overrideWithValue(
       externalLinkLauncher ?? FakeExternalLinkLauncher(),
+    ),
+    dailyUsageRepositoryProvider.overrideWithValue(
+      dailyUsageRepository ?? FakeDailyUsageRepository(),
     ),
   ];
 }

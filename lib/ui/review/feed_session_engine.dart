@@ -101,8 +101,8 @@ class FeedSessionEngine extends ChangeNotifier {
     required this.clock,
     this.mode = reviewModeFeed,
     this.prebuilt = false,
-    this.newLimit = 0,
-    this.reviewLimit = 0,
+    this.newLimit,
+    this.reviewLimit,
   });
 
   /// Снимок карточек колоды на момент старта сессии.
@@ -125,11 +125,12 @@ class FeedSessionEngine extends ChangeNotifier {
   /// по ADR-016 (due/new).
   final bool prebuilt;
 
-  /// Дневной лимит новых карточек (A6.6, ADR-019 §2); `0` — без лимита.
-  final int newLimit;
+  /// Остаток дневного лимита новых карточек на момент старта сессии
+  /// (A6.6, ADR-019 §8); `null` — без лимита, `0` — лимит дня исчерпан.
+  final int? newLimit;
 
-  /// Дневной лимит повторных карточек; `0` — без лимита.
-  final int reviewLimit;
+  /// Остаток дневного лимита повторных карточек; `null` — без лимита.
+  final int? reviewLimit;
 
   final List<ReviewUndo> _undoStack = <ReviewUndo>[];
   List<FeedSessionItem> _items = const <FeedSessionItem>[];
