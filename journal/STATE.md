@@ -1,10 +1,15 @@
 # STATE — текущее состояние CardFlow
 
 **Дата:** 2026-11-14 · **Этап:** итерация **7.6** «Пустой ответ LLM: диагностика и фикс» — **завершена
-локально**, push/CI — см. ниже · **Режим:** ИТЕРАЦИИ (стоп до команды владельца)
+и запушена**, CI зелёный · **Режим:** ИТЕРАЦИИ (стоп до команды владельца)
 **Факты (сверено командами в этой сессии):** на старте `git status --short` → пусто, `HEAD` =
 `origin/main` = `5925ea0` (docs-коммит итерации 7.5; в `STATE.md` 7.5 было записано `a20cd5e` —
 исправлено по репозиторию). Flutter 3.47.9 / Dart 3.13.7 (FVM); Windows 11; Android SDK/JDK/Xcode нет (L2).
+
+**Push/CI (2026-11-14):** `origin/main = 2ddacc6` (`5925ea0..2ddacc6`, 5 коммитов итерации 7.6);
+CI run [`43637919516`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43637919516) —
+**9/9 job success** (`format + analyze`, `test` × 3 ОС, `build-desktop` × 3, `build-mobile` Android + iOS).
+Промежуточный прогон `43637807138` (docs-коммит `9b36d8c`) отменён concurrency при следующем push.
 
 ## Следующее действие
 

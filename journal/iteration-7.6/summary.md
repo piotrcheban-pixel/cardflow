@@ -1,6 +1,7 @@
 # Итерация 7.6 — «Пустой ответ» LLM: диагностика, фикс, тесты (2026-11-14)
 
-**Статус:** завершена локально (red → green → verify), push и CI — ниже.
+**Статус:** завершена; push `5925ea0..2ddacc6`, CI run
+[`43637919516`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43637919516) — **9/9 job success**.
 
 ## Что было (owner note)
 
@@ -72,6 +73,7 @@ BOM-обработку — для него красная фаза ограни�
 | `fvm dart format lib test integration_test` | 319 файлов, 1 changed → повтор `--set-exit-if-changed` 0 changed |
 | `fvm flutter build windows --release` | `√ Built build\windows\x64\runner\Release\cardflow.exe` (61,8 с) |
 | `fvm flutter test test/live --tags live` (ключ из User scope) | **2 passed**: `LIVE DeepSeek OK: … cards=3`; `LIVE DeepSeek fallback: strict=400, tolerant=200, max_tokens=8192, cards=2` |
+| CI run [`43637919516`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43637919516) (`2ddacc6`) | **9/9 job success**: format+analyze, test × 3 ОС, build-desktop × 3, build-mobile Android + iOS |
 
 ## Не проверено
 

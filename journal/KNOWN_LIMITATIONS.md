@@ -3,6 +3,11 @@
 Формат: ограничение → причина → чем компенсировано в коде/тестах → когда снимается.
 Каждое ограничение подтверждено фактом в текущей сессии; «проверено живьём» без доказательства не пишется.
 
+**Статус CI (2026-11-14, итерация 7.6):** push `2ddacc6` (`5925ea0..2ddacc6`); прогон
+[`43637919516`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43637919516) — **9/9 job success**
+(`format + analyze`, `test` × 3 ОС, `build-desktop` × 3, `build-mobile` Android + iOS). Ограничения L50/L51 —
+ниже, в разделе итерации 7.6.
+
 **Статус CI (2026-11-14, итерация 7.5):** push `a20cd5e`; прогон
 [`43632334916`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43632334916) — **9/9 job success**.
 
