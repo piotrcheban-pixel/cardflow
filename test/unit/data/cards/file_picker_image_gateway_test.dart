@@ -16,7 +16,6 @@ base class _FakePlatformFile extends PlatformFile {
   @override
   final String name;
 
-  @override
   final int size;
 
   final Uint8List _bytes;

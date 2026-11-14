@@ -1,6 +1,6 @@
 # STATE — текущее состояние CardFlow
 
-**Дата:** 2026-11-14 · **Итерация:** 5 «Occlusion / Cloze / LaTeX» — **шаг 4 завершён** · **Режим:** ИТЕРАЦИИ
+**Дата:** 2026-11-14 · **Итерация:** 5 «Occlusion / Cloze / LaTeX» — **шаг 5 завершён** · **Режим:** ИТЕРАЦИИ
 **Факты (сверено в этой сессии):** рабочее дерево было чистым; `HEAD = origin/main =
 8dfa6e5d29aed3a5a1805d6ebc6f96c84ebf3065`; последние 5 коммитов — docs/handoff после итерации 4.
 Прежняя запись об `origin/main = e5f64c4` и 7 незапушенных коммитах устарела и исправлена по git.
@@ -14,12 +14,14 @@ Flutter 3.47.9 / Dart 3.13.7 (FVM); Windows 11; Windows-сборка работ�
 `analyze` — 0 issues; `format` — 252 files, 0 changed. Детали — `journal/iteration-5/green.md`.
 **Шаг 4:** независимого reviewer нет (L35); Lead-ревью снимка `5af8f70` — high нет, M1–M4 закрыты фиксом
 с тестами на каждую находку (`journal/iteration-5/review.md`). L17 снят, добавлены L38/L39.
+**Шаг 5:** финальные гейты — `format` 253/0; `analyze` 0; **1020 passed + 1 skipped**; покрытие
+**93.1% (6468/6946)**; Windows release `cardflow.exe` за 56,2 с. Доказательства —
+`journal/iteration-5/verify.md`. CI/push не выполнялись; golden/live/ручные жесты — ограничения.
 
 ## Следующее действие
 
-1. **Шаг 5 (verify):** повторный полный прогон на fix-снимке, coverage/analyze/format и
-   `fvm flutter build windows --release`; доказательства — `journal/iteration-5/verify.md`.
-2. Затем шаг 6 remember (STATE/ADR/handoff) и шаг 7 improve (ретроспектива и правило в AGENTS.md).
+1. **Шаг 6 (remember):** обновить итог итерации, `handoff-info.md`, ADR/ограничения и следующую передачу.
+2. Шаг 7 (improve): ретроспектива и одно устойчивое правило процесса в `AGENTS.md`, затем финальный отчёт.
 3. Push не выполнять без отдельной команды владельца.
 4. Открытые вопросы к владельцу: нет.
 
