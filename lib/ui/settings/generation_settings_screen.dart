@@ -33,6 +33,23 @@ class _GenerationSettingsScreenState
   final TextEditingController _modelController = TextEditingController();
   final TextEditingController _apiKeyController = TextEditingController();
 
+  /// Ключи трёх облачных провайдеров (A6.8: «ключ не задан — ведём в настройки»).
+  static const List<GenerationProvider> _cloudProviders = <GenerationProvider>[
+    GenerationProvider.openai,
+    GenerationProvider.gemini,
+    GenerationProvider.anthropic,
+  ];
+
+  final Map<GenerationProvider, TextEditingController> _cloudKeyControllers =
+      <GenerationProvider, TextEditingController>{
+        for (final GenerationProvider provider in _cloudProviders)
+          provider: TextEditingController(),
+      };
+  final Map<GenerationProvider, bool> _cloudKeyConfigured =
+      <GenerationProvider, bool>{};
+  final Map<GenerationProvider, String?> _cloudKeyErrors =
+      <GenerationProvider, String?>{};
+
   bool _loading = true;
   bool _loadFailed = false;
   bool _saving = false;
@@ -52,24 +69,43 @@ class _GenerationSettingsScreenState
     _baseUrlController.dispose();
     _modelController.dispose();
     _apiKeyController.dispose();
+    for (final TextEditingController controller
+        in _cloudKeyControllers.values) {
+      controller.dispose();
+    }
     super.dispose();
   }
 
-  /// Читает сохранённые настройки и наличие ключа.
+  /// Читает сохранённые настройки и наличие всех ключей.
   Future<void> _load() async {
     try {
       final OpenAiCompatibleSettings settings = await ref
           .read(generationSettingsStoreProvider)
           .readOpenAiCompatible();
-      final String? apiKey = await ref
-          .read(apiKeyStoreProvider)
-          .read(GenerationProvider.openaiCompatible);
+      final ApiKeyStore apiKeyStore = ref.read(apiKeyStoreProvider);
+      final String? apiKey = await apiKeyStore.read(
+        GenerationProvider.openaiCompatible,
+      );
+      final Map<GenerationProvider, bool> cloudConfigured =
+          <GenerationProvider, bool>{};
+      for (final GenerationProvider provider in _cloudProviders) {
+        final String? key = await apiKeyStore.read(provider);
+        cloudConfigured[provider] = key != null && key.trim().isNotEmpty;
+      }
       if (!mounted) return;
       setState(() {
         _baseUrlController.text = settings.baseUrl;
         _modelController.text = settings.model;
         _apiKeyController.clear();
         _keyConfigured = apiKey != null;
+        _cloudKeyConfigured
+          ..clear()
+          ..addAll(cloudConfigured);
+        for (final TextEditingController controller
+            in _cloudKeyControllers.values) {
+          controller.clear();
+        }
+        _cloudKeyErrors.clear();
         _baseUrlError = null;
         _modelError = null;
         _loading = false;
@@ -154,6 +190,49 @@ class _GenerationSettingsScreenState
     } catch (_) {
       if (!mounted) return;
       setState(() => _saving = false);
+      showAppMessage(context, l10n.settingsSaveError);
+    }
+  }
+
+  /// Сохраняет ключ облачного провайдера (только secure storage, 3.4).
+  Future<void> _saveCloudKey(GenerationProvider provider) async {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final String key = _cloudKeyControllers[provider]!.text.trim();
+    if (key.isEmpty) {
+      setState(() => _cloudKeyErrors[provider] = l10n.settingsKeyEmptyError);
+      return;
+    }
+    try {
+      final ApiKeyStore apiKeyStore = ref.read(apiKeyStoreProvider);
+      await apiKeyStore.write(provider, key);
+      final String? stored = await apiKeyStore.read(provider);
+      if (!mounted) return;
+      setState(() {
+        _cloudKeyConfigured[provider] = stored != null && stored.isNotEmpty;
+        _cloudKeyErrors[provider] = null;
+        _cloudKeyControllers[provider]!.clear();
+      });
+      showAppMessage(context, l10n.settingsKeySaved);
+    } catch (_) {
+      if (!mounted) return;
+      showAppMessage(context, l10n.settingsSaveError);
+    }
+  }
+
+  /// Удаляет сохранённый ключ облачного провайдера.
+  Future<void> _deleteCloudKey(GenerationProvider provider) async {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    try {
+      await ref.read(apiKeyStoreProvider).delete(provider);
+      if (!mounted) return;
+      setState(() {
+        _cloudKeyConfigured[provider] = false;
+        _cloudKeyErrors[provider] = null;
+        _cloudKeyControllers[provider]!.clear();
+      });
+      showAppMessage(context, l10n.settingsKeyDeleted);
+    } catch (_) {
+      if (!mounted) return;
       showAppMessage(context, l10n.settingsSaveError);
     }
   }
@@ -274,12 +353,121 @@ class _GenerationSettingsScreenState
             child: Text(l10n.save),
           ),
         ),
+        const SizedBox(height: 32),
+        const Divider(),
+        const SizedBox(height: 16),
+        Text(l10n.settingsApiKeysTitle, style: theme.textTheme.titleMedium),
+        const SizedBox(height: 8),
+        Text(l10n.settingsApiKeysDescription, style: theme.textTheme.bodySmall),
+        const SizedBox(height: 16),
+        for (final GenerationProvider provider in _cloudProviders) ...<Widget>[
+          _CloudKeySection(
+            provider: provider,
+            label: _providerLabel(l10n, provider),
+            configured: _cloudKeyConfigured[provider] ?? false,
+            controller: _cloudKeyControllers[provider]!,
+            errorText: _cloudKeyErrors[provider],
+            onSave: () => _saveCloudKey(provider),
+            onDelete: () => _deleteCloudKey(provider),
+            l10n: l10n,
+          ),
+          const SizedBox(height: 16),
+        ],
       ],
     );
+  }
+
+  String _providerLabel(AppLocalizations l10n, GenerationProvider provider) {
+    return switch (provider) {
+      GenerationProvider.openai => l10n.generationProviderOpenAi,
+      GenerationProvider.gemini => l10n.generationProviderGemini,
+      GenerationProvider.anthropic => l10n.generationProviderAnthropic,
+      GenerationProvider.openaiCompatible =>
+        l10n.generationProviderOpenAiCompatible,
+    };
   }
 
   /// Рамка полей — форма из общего UI-стиля экранов колод.
   static final OutlineInputBorder _fieldBorder = OutlineInputBorder(
     borderRadius: BorderRadius.circular(16),
   );
+}
+
+/// Блок ключа одного облачного провайдера на экране настроек генерации.
+class _CloudKeySection extends StatelessWidget {
+  const _CloudKeySection({
+    required this.provider,
+    required this.label,
+    required this.configured,
+    required this.controller,
+    required this.errorText,
+    required this.onSave,
+    required this.onDelete,
+    required this.l10n,
+  });
+
+  final GenerationProvider provider;
+  final String label;
+  final bool configured;
+  final TextEditingController controller;
+  final String? errorText;
+  final VoidCallback onSave;
+  final VoidCallback onDelete;
+  final AppLocalizations l10n;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Row(
+          children: <Widget>[
+            Expanded(child: Text(label, style: theme.textTheme.titleSmall)),
+            Text(
+              configured ? l10n.settingsKeyConfigured : l10n.settingsKeyMissing,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: configured
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          key: ValueKey<String>('settings-key-${provider.wireName}'),
+          controller: controller,
+          obscureText: true,
+          autocorrect: false,
+          enableSuggestions: false,
+          decoration: InputDecoration(
+            labelText: l10n.settingsCloudKeyLabel,
+            errorText: errorText,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: <Widget>[
+            FilledButton(
+              key: ValueKey<String>('settings-save-key-${provider.wireName}'),
+              onPressed: onSave,
+              child: Text(l10n.settingsKeySave),
+            ),
+            if (configured) ...<Widget>[
+              const SizedBox(width: 8),
+              TextButton(
+                key: ValueKey<String>(
+                  'settings-delete-key-${provider.wireName}',
+                ),
+                onPressed: onDelete,
+                child: Text(l10n.settingsKeyDelete),
+              ),
+            ],
+          ],
+        ),
+      ],
+    );
+  }
 }

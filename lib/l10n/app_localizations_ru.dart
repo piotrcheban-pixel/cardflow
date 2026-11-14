@@ -653,6 +653,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsKeyEmptyError => 'Введите ключ';
 
   @override
+  String get settingsCloudKeyLabel => 'Ключ доступа';
+
+  @override
   String get decksCreateGenerate => 'Сгенерировать карточки';
 
   @override
@@ -679,6 +682,21 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get generationFileParsed => 'Готово';
+
+  @override
+  String generationFileSizeBytes(int size) {
+    return '$size Б';
+  }
+
+  @override
+  String generationFileSizeKb(int size) {
+    return '$size КБ';
+  }
+
+  @override
+  String generationFileSizeMb(int size) {
+    return '$size МБ';
+  }
 
   @override
   String get generationWishesLabel => 'Дополнительные пожелания';

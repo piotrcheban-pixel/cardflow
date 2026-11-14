@@ -1138,6 +1138,12 @@ abstract class AppLocalizations {
   /// **'Введите ключ'**
   String get settingsKeyEmptyError;
 
+  /// Подпись поля ключа облачного провайдера (OpenAI/Gemini/Anthropic).
+  ///
+  /// In ru, this message translates to:
+  /// **'Ключ доступа'**
+  String get settingsCloudKeyLabel;
+
   /// Пункт меню Split-кнопки «Создать»: открыть экран генерации (SPEC A6.2/A6.8).
   ///
   /// In ru, this message translates to:
@@ -1191,6 +1197,24 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Готово'**
   String get generationFileParsed;
+
+  /// Размер прикреплённого файла в байтах.
+  ///
+  /// In ru, this message translates to:
+  /// **'{size} Б'**
+  String generationFileSizeBytes(int size);
+
+  /// Размер прикреплённого файла в килобайтах.
+  ///
+  /// In ru, this message translates to:
+  /// **'{size} КБ'**
+  String generationFileSizeKb(int size);
+
+  /// Размер прикреплённого файла в мегабайтах.
+  ///
+  /// In ru, this message translates to:
+  /// **'{size} МБ'**
+  String generationFileSizeMb(int size);
 
   /// Подпись необязательного поля пожеланий (SPEC A6.8).
   ///

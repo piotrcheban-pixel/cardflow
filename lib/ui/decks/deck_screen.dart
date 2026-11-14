@@ -14,7 +14,7 @@ import 'package:cardflow/ui/router/app_router.dart';
 import 'package:cardflow/ui/state/decks_ui_providers.dart';
 
 /// Действие меню экрана колоды.
-enum _DeckMenuAction { rename, export, delete }
+enum _DeckMenuAction { generate, rename, export, delete }
 
 /// Экран «Колода» (SPEC A6.3).
 ///
@@ -59,6 +59,13 @@ class DeckScreen extends ConsumerWidget {
                       _handleMenuAction(context, ref, deck, action),
                   itemBuilder: (BuildContext context) =>
                       <PopupMenuEntry<_DeckMenuAction>>[
+                        PopupMenuItem<_DeckMenuAction>(
+                          value: _DeckMenuAction.generate,
+                          child: Text(
+                            l10n.deckGenerateTooltip,
+                            key: const ValueKey<String>('deck-generate-action'),
+                          ),
+                        ),
                         PopupMenuItem<_DeckMenuAction>(
                           value: _DeckMenuAction.rename,
                           child: Text(l10n.deckRename),
@@ -236,6 +243,8 @@ class DeckScreen extends ConsumerWidget {
     _DeckMenuAction action,
   ) async {
     switch (action) {
+      case _DeckMenuAction.generate:
+        await context.push(AppRoutes.deckGenerationPath(deck.id));
       case _DeckMenuAction.rename:
         await renameDeck(context, ref, deck: deck);
       case _DeckMenuAction.export:

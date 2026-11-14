@@ -88,6 +88,13 @@ class DecksScreen extends ConsumerWidget {
                     child: l10n.decksCreateManual,
                   ),
                   M3ESplitButtonItem<String>(
+                    value: 'generate',
+                    child: Text(
+                      l10n.decksCreateGenerate,
+                      key: const ValueKey<String>('decks-create-generate'),
+                    ),
+                  ),
+                  M3ESplitButtonItem<String>(
                     value: 'import',
                     child: l10n.decksImportZip,
                   ),
@@ -97,6 +104,8 @@ class DecksScreen extends ConsumerWidget {
                   switch (value) {
                     case 'manual':
                       await createDeckManually(context, ref);
+                    case 'generate':
+                      await context.push(AppRoutes.generationPath);
                     case 'import':
                       await importDeckZip(context, ref);
                   }

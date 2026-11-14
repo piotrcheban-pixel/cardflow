@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cardflow/api/generation/card_generation_service.dart';
 import 'package:cardflow/api/generation/generation_pipeline.dart';
-import 'package:cardflow/api/generation/generation_caller.dart';
 import 'package:cardflow/api/http/generation_http_client.dart';
 import 'package:cardflow/api/http/redacting_log_interceptor.dart';
 import 'package:cardflow/api/http/retry_policy.dart';
@@ -176,7 +175,9 @@ final documentGatewayProvider = Provider<DocumentGateway>((ref) {
 });
 
 /// Задания генерации в `generation_jobs` (A5, ADR-015).
-final generationJobRepositoryProvider = Provider<GenerationJobRepository>((ref) {
+final generationJobRepositoryProvider = Provider<GenerationJobRepository>((
+  ref,
+) {
   return DriftGenerationJobRepository(ref.watch(appDatabaseProvider));
 });
 

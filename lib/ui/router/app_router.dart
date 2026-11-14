@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:cardflow/ui/cards/card_form_screen.dart';
 import 'package:cardflow/ui/decks/deck_screen.dart';
 import 'package:cardflow/ui/decks/decks_screen.dart';
+import 'package:cardflow/ui/generation/generation_screen.dart';
 import 'package:cardflow/ui/review/review_session_screen.dart';
 import 'package:cardflow/ui/settings/generation_settings_screen.dart';
 
@@ -26,6 +27,12 @@ abstract final class AppRoutes {
   /// Настройки генерации (OpenAI-совместимый сервер, ADR-013).
   static const String generationSettings = 'generationSettings';
 
+  /// Экран генерации карточек с созданием новой колоды (A6.8).
+  static const String generation = 'generation';
+
+  /// Экран генерации карточек в существующую колоду (A6.3).
+  static const String deckGeneration = 'deckGeneration';
+
   /// Путь списка колод.
   static const String decksPath = '/';
 
@@ -44,6 +51,12 @@ abstract final class AppRoutes {
 
   /// Путь экрана настроек генерации.
   static const String generationSettingsPath = '/settings/generation';
+
+  /// Путь экрана генерации карточек (новая колода).
+  static const String generationPath = '/generate';
+
+  /// Путь экрана генерации карточек в существующую колоду.
+  static String deckGenerationPath(String deckId) => '/decks/$deckId/generate';
 }
 
 /// Собирает маршрутизатор приложения (ADR: GoRouter).
@@ -70,6 +83,17 @@ GoRouter createAppRouter({String initialLocation = AppRoutes.decksPath}) {
         name: AppRoutes.study,
         builder: (context, state) =>
             ReviewSessionScreen(deckId: state.pathParameters['deckId']!),
+      ),
+      GoRoute(
+        path: '/decks/:deckId/generate',
+        name: AppRoutes.deckGeneration,
+        builder: (context, state) =>
+            GenerationScreen(deckId: state.pathParameters['deckId']),
+      ),
+      GoRoute(
+        path: AppRoutes.generationPath,
+        name: AppRoutes.generation,
+        builder: (context, state) => const GenerationScreen(),
       ),
       GoRoute(
         path: '/decks/:deckId/cards/new',

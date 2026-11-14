@@ -776,6 +776,10 @@
   "@settingsKeyEmptyError": {
     "description": "Валидация: поле ключа облачного провайдера пустое."
   },
+  "settingsCloudKeyLabel": "Ключ доступа",
+  "@settingsCloudKeyLabel": {
+    "description": "Подпись поля ключа облачного провайдера (OpenAI/Gemini/Anthropic)."
+  },
   "decksCreateGenerate": "Сгенерировать карточки",
   "@decksCreateGenerate": {
     "description": "Пункт меню Split-кнопки «Создать»: открыть экран генерации (SPEC A6.2/A6.8)."
@@ -811,6 +815,33 @@
   "generationFileParsed": "Готово",
   "@generationFileParsed": {
     "description": "Статус успешного парсинга прикреплённого файла."
+  },
+  "generationFileSizeBytes": "{size} Б",
+  "@generationFileSizeBytes": {
+    "description": "Размер прикреплённого файла в байтах.",
+    "placeholders": {
+      "size": {
+        "type": "int"
+      }
+    }
+  },
+  "generationFileSizeKb": "{size} КБ",
+  "@generationFileSizeKb": {
+    "description": "Размер прикреплённого файла в килобайтах.",
+    "placeholders": {
+      "size": {
+        "type": "int"
+      }
+    }
+  },
+  "generationFileSizeMb": "{size} МБ",
+  "@generationFileSizeMb": {
+    "description": "Размер прикреплённого файла в мегабайтах.",
+    "placeholders": {
+      "size": {
+        "type": "int"
+      }
+    }
   },
   "generationWishesLabel": "Дополнительные пожелания",
   "@generationWishesLabel": {
