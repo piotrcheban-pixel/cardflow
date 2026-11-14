@@ -2,9 +2,12 @@ import '../cards/card.dart';
 
 /// Режим повторения, записываемый в `review_logs.mode` (SPEC A5).
 ///
-/// В итерации 2 существует только классический режим (SPEC A7.2); «Лента» и
-/// «Конструктор» добавят свои значения в итерациях 4/6.
+/// Классический режим (SPEC A7.2) — [reviewModeClassic]; «Лента» (SPEC A7.3) —
+/// [reviewModeFeed]. «Конструктор» добавит своё значение в итерации 6.
 const String reviewModeClassic = 'classic';
+
+/// Режим «Лента» (SPEC A7.3); пишется в `review_logs.mode` (ADR-016).
+const String reviewModeFeed = 'feed';
 
 /// Данные для отката одной оценки (undo, SPEC A6.4).
 ///

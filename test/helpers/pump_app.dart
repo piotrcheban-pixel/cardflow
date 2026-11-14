@@ -11,6 +11,7 @@ import 'package:cardflow/ui/cards/card_form_screen.dart';
 import 'package:cardflow/ui/decks/deck_screen.dart';
 import 'package:cardflow/ui/decks/decks_screen.dart';
 import 'package:cardflow/ui/m3e/m3e.dart';
+import 'package:cardflow/ui/review/feed_session_screen.dart';
 import 'package:cardflow/ui/review/review_session_screen.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
 import 'package:cardflow/ui/theme/app_theme.dart';
@@ -107,6 +108,11 @@ List<GoRoute> decksRoutes() {
       path: '/decks/:id/study',
       builder: (BuildContext context, GoRouterState state) =>
           ReviewSessionScreen(deckId: state.pathParameters['id']!),
+    ),
+    GoRoute(
+      path: '/decks/:id/feed',
+      builder: (BuildContext context, GoRouterState state) =>
+          FeedSessionScreen(deckId: state.pathParameters['id']!),
     ),
     GoRoute(
       path: '/decks/:id/cards/new',

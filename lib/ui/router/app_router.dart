@@ -18,6 +18,9 @@ abstract final class AppRoutes {
   /// Классическая сессия повторения.
   static const String study = 'study';
 
+  /// Сессия в режиме «Лента» (SPEC A7.3).
+  static const String feed = 'feed';
+
   /// Создание карточки.
   static const String cardNew = 'cardNew';
 
@@ -41,6 +44,9 @@ abstract final class AppRoutes {
 
   /// Путь сессии по колоде.
   static String studyPath(String deckId) => '/decks/$deckId/study';
+
+  /// Путь сессии-ленты по колоде (SPEC A7.3).
+  static String feedPath(String deckId) => '/decks/$deckId/feed';
 
   /// Путь создания карточки в колоде.
   static String cardNewPath(String deckId) => '/decks/$deckId/cards/new';

@@ -526,6 +526,12 @@ abstract class AppLocalizations {
   /// **'Классический'**
   String get reviewModeClassic;
 
+  /// Название режима «Лента» в листе выбора режима (SPEC A7.3).
+  ///
+  /// In ru, this message translates to:
+  /// **'Лента'**
+  String get reviewModeFeed;
+
   /// Заголовок bottom sheet выбора режима сессии (SPEC A6.3).
   ///
   /// In ru, this message translates to:
@@ -639,6 +645,54 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Прогресс сессии'**
   String get reviewProgressLabel;
+
+  /// Кнопка паузы авто-продвижения в ленте (SPEC A7.3).
+  ///
+  /// In ru, this message translates to:
+  /// **'Пауза'**
+  String get feedPause;
+
+  /// Кнопка возобновления авто-продвижения в ленте (SPEC A7.3).
+  ///
+  /// In ru, this message translates to:
+  /// **'Продолжить'**
+  String get feedResume;
+
+  /// Интервал авто-продвижения ленты в секундах (SPEC A7.3: 3/5/8).
+  ///
+  /// In ru, this message translates to:
+  /// **'{count} с'**
+  String feedSeconds(int count);
+
+  /// Подсказка выбора интервала авто-продвижения в ленте.
+  ///
+  /// In ru, this message translates to:
+  /// **'Авто-продвижение'**
+  String get feedAutoAdvanceTooltip;
+
+  /// Счётчик текущей карточки ленты: «2 из 10».
+  ///
+  /// In ru, this message translates to:
+  /// **'{position} из {total}'**
+  String feedCounter(int position, int total);
+
+  /// Пометка оценённой карточки при возврате к ней в ленте.
+  ///
+  /// In ru, this message translates to:
+  /// **'Оценено'**
+  String get feedRatedLabel;
+
+  /// Семантическая подпись Stories-прогресса ленты.
+  ///
+  /// In ru, this message translates to:
+  /// **'Оценено {rated} из {total}'**
+  String feedProgressSemantics(int rated, int total);
+
+  /// Семантическая подсказка жестов оценки в ленте (SPEC A7.3).
+  ///
+  /// In ru, this message translates to:
+  /// **'Свайп вправо — «Знаю», влево — «Не знаю»'**
+  String get feedSwipeHint;
 
   /// Заголовок состояния завершённой сессии.
   ///

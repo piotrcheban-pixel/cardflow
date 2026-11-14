@@ -291,6 +291,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get reviewModeClassic => 'Классический';
 
   @override
+  String get reviewModeFeed => 'Лента';
+
+  @override
   String get reviewSessionModeTitle => 'Выберите режим';
 
   @override
@@ -350,6 +353,36 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get reviewProgressLabel => 'Прогресс сессии';
+
+  @override
+  String get feedPause => 'Пауза';
+
+  @override
+  String get feedResume => 'Продолжить';
+
+  @override
+  String feedSeconds(int count) {
+    return '$count с';
+  }
+
+  @override
+  String get feedAutoAdvanceTooltip => 'Авто-продвижение';
+
+  @override
+  String feedCounter(int position, int total) {
+    return '$position из $total';
+  }
+
+  @override
+  String get feedRatedLabel => 'Оценено';
+
+  @override
+  String feedProgressSemantics(int rated, int total) {
+    return 'Оценено $rated из $total';
+  }
+
+  @override
+  String get feedSwipeHint => 'Свайп вправо — «Знаю», влево — «Не знаю»';
 
   @override
   String get reviewCompletedTitle => 'Сессия завершена';

@@ -343,6 +343,10 @@
   "@reviewModeClassic": {
     "description": "Название классического режима повторения в листе выбора режима."
   },
+  "reviewModeFeed": "Лента",
+  "@reviewModeFeed": {
+    "description": "Название режима «Лента» в листе выбора режима (SPEC A7.3)."
+  },
   "reviewSessionModeTitle": "Выберите режим",
   "@reviewSessionModeTitle": {
     "description": "Заголовок bottom sheet выбора режима сессии (SPEC A6.3)."
@@ -418,6 +422,59 @@
   "reviewProgressLabel": "Прогресс сессии",
   "@reviewProgressLabel": {
     "description": "Семантическая подпись линейного прогресса классической сессии."
+  },
+  "feedPause": "Пауза",
+  "@feedPause": {
+    "description": "Кнопка паузы авто-продвижения в ленте (SPEC A7.3)."
+  },
+  "feedResume": "Продолжить",
+  "@feedResume": {
+    "description": "Кнопка возобновления авто-продвижения в ленте (SPEC A7.3)."
+  },
+  "feedSeconds": "{count} с",
+  "@feedSeconds": {
+    "description": "Интервал авто-продвижения ленты в секундах (SPEC A7.3: 3/5/8).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "feedAutoAdvanceTooltip": "Авто-продвижение",
+  "@feedAutoAdvanceTooltip": {
+    "description": "Подсказка выбора интервала авто-продвижения в ленте."
+  },
+  "feedCounter": "{position} из {total}",
+  "@feedCounter": {
+    "description": "Счётчик текущей карточки ленты: «2 из 10».",
+    "placeholders": {
+      "position": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "feedRatedLabel": "Оценено",
+  "@feedRatedLabel": {
+    "description": "Пометка оценённой карточки при возврате к ней в ленте."
+  },
+  "feedProgressSemantics": "Оценено {rated} из {total}",
+  "@feedProgressSemantics": {
+    "description": "Семантическая подпись Stories-прогресса ленты.",
+    "placeholders": {
+      "rated": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "feedSwipeHint": "Свайп вправо — «Знаю», влево — «Не знаю»",
+  "@feedSwipeHint": {
+    "description": "Семантическая подсказка жестов оценки в ленте (SPEC A7.3)."
   },
   "reviewCompletedTitle": "Сессия завершена",
   "@reviewCompletedTitle": {
