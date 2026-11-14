@@ -37,6 +37,13 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   `ApiKeyStore` (secure storage). LaTeX-проверка `flutter_math_fork` допустима только в
   `lib/api/generation/latex_checker.dart` и инжектируется в валидатор; остальной `lib/api/` от Flutter не зависит.
 - `ui/` — экраны, виджеты, локализация. Компоненты M3 Expressive — только через слой `lib/ui/m3e/` (библиотеку можно заменить). Токены движения — `lib/ui/motion.dart`.
+- **Режим «Лента»** (SPEC A7.3, ADR-016): движок `lib/ui/review/feed_session_engine.dart` (очередь
+  `ReviewQueue`, по-карточные revealed/rated, `visit` без записи, `rate`/`undo` через тот же
+  `ReviewRepository`, `mode='feed'`, авто-продвижение без оценки); политика свайпов —
+  `feed_swipe.dart` (80 px + 300 px/с, >60% — Easy/Hard); UI — `feed_session_screen.dart`,
+  `feed_card_view.dart`, `feed_progress_bar.dart`; общий каркас A6.4 — `review_chrome.dart`;
+  маршрут `/decks/:deckId/feed` из листа режимов колоды. Пульсация Stories — повторяющаяся
+  анимация: тесты только `pump(Duration)`, не `pumpAndSettle`.
 - Модели immutable (`freezed`/`const`), роутинг `GoRouter` (см. ADR), HTTP `Dio`. Состояние — Riverpod 3 без кодогенерации (ADR-002).
 - **Material-виджеты — только `package:material_ui/material_ui.dart`** (ADR-001), `package:flutter/material.dart` в `lib/` запрещён. M3E-компоненты — только через `lib/ui/m3e/`, библиотека `material_3_expressive` больше нигде не импортируется.
 - Никаких литералов пользовательского текста в виджетах: только `AppLocalizations` из `lib/l10n/app_ru.arb`.
@@ -82,6 +89,11 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   `ListView`: иначе widget-тест не находит кнопку без `scrollUntilVisible`, а пользователь — без прокрутки.
   Все high/medium ревью закрывать одним fix-коммитом с отдельным тестом на каждую находку; ошибки
   инфраструктуры (БД) не маскировать под ошибки фрагментов/адаптеров.
+- **Ретроспектива итерации 4:** в widget-тестах анимаций после тапа/жеста — сначала `pump()` (старт тика),
+  затем `pump(duration)`; PopupMenu/диалоги — `pump()` + `pump(300 ms)`; экраны с повторяющейся
+  анимацией (пульс Stories) прогонять `pump(Duration)`, не `pumpAndSettle`; не редактировать `lib/`/`test/`
+  во время полного прогона (иначе `loading … [E]`). Независимый reviewer в сессии недоступен (L35):
+  ревью Lead по чек-листу на неизменяемом снимке, findings — fix-коммитом с тестами.
 
 ## Факты хоста (обновлять при изменении)
 
@@ -119,3 +131,8 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   точные маркеры файлов, CRLF из checkout-а ломал L26-guard на Windows.
 - **CI и диск раннера (с 2026-11-13):** перед `flutter pub get` все job'ы выполняют шаг `Free disk space` (Linux: dotnet/android SDK/ghc/boost/CodeQL + `docker image prune --all`; macOS: Android SDK/Homebrew cache/dotnet) с `df -h` до/после; Android-сборка дополнительно чистит `~/.gradle/caches` перед сборкой. Android SDK в android-job сохраняется (`KEEP_ANDROID_SDK`) — без него `flutter build apk` не работает. Прогоны docs-коммитов live-верификации L30 (`a2568ea`, `384ca43`) — 9/9 job success
 (`43510331361`, `43511718280`); актуальный статус — вкладка Actions репозитория.
+- **Лента проверена локально (итерация 4, 2026-11-14):** `fvm flutter test --coverage --exclude-tags golden`
+  → **959 passed + 1 skipped**; покрытие **93.6% (5788/6181)** (feed-файлы 95.8–100%); `analyze` 0;
+  `dart format` 229 files 0 changed; `fvm flutter build windows --release` → `cardflow.exe` (51,9 s).
+  Ревью Lead (независимый reviewer недоступен — L35), fix `1857589`; CI 4 — после push. Ограничения:
+  L36 (таймер при покрытии маршрутом), L37 (реальные жесты). Push не выполнялся: `origin/main` = `e5f64c4`.
