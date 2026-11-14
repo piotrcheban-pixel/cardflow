@@ -10,6 +10,7 @@ import 'package:uuid/uuid.dart';
 
 import 'package:cardflow/data/cards/card_row_mapper.dart';
 import 'package:cardflow/data/db/app_database.dart';
+import 'package:cardflow/data/transfer/media_store.dart';
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/cards/card_draft.dart';
 import 'package:cardflow/domain/cards/card_repository.dart';
@@ -18,10 +19,13 @@ import 'package:cardflow/domain/cards/content_hash.dart';
 /// Репозиторий карточек поверх drift-БД.
 class DriftCardRepository implements CardRepository {
   /// Создаёт репозиторий поверх БД.
-  DriftCardRepository(this.database);
+  DriftCardRepository(this.database, {this.mediaStore});
 
   /// БД приложения.
   final AppDatabase database;
+
+  /// Файловое хранилище новых изображений (итерация 5).
+  final MediaStore? mediaStore;
 
   static const Uuid _uuid = Uuid();
 

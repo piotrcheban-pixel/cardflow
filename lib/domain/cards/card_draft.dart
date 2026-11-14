@@ -1,4 +1,5 @@
 import 'card.dart';
+import 'card_media.dart';
 
 /// Поле ручной формы карточки, к которому относится ошибка валидации.
 enum CardDraftField {
@@ -13,6 +14,9 @@ enum CardDraftField {
 
   /// Цитата для кнопки «Почему?».
   sourceExcerpt,
+
+  /// Изображение и маски Image Occlusion.
+  occlusion,
 }
 
 /// Ошибка валидации черновика карточки (SPEC A8.4, L14).
@@ -34,6 +38,18 @@ enum CardValidationError {
 
   /// Цитата длиннее [CardDraft.sourceExcerptMaxLength].
   sourceExcerptTooLong,
+
+  /// У cloze нет корректного пропуска.
+  clozeMissing,
+
+  /// У occlusion нет изображения.
+  occlusionImageMissing,
+
+  /// У occlusion нет ни одной маски.
+  occlusionMasksMissing,
+
+  /// JSON occlusion повреждён или координаты выходят за изображение.
+  occlusionInvalid,
 }
 
 /// Иммутабельный черновик карточки: то, что пользователь ввёл в форме
@@ -47,6 +63,10 @@ class CardDraft {
     this.tags = const <String>[],
     this.cardType = CardType.basic,
     this.sourceExcerpt,
+    this.mediaIds = const <String>[],
+    this.latex,
+    this.occlusionJson,
+    this.imageUpload,
   });
 
   /// Пустой черновик новой карточки.
@@ -82,6 +102,18 @@ class CardDraft {
 
   /// Цитата для кнопки «Почему?».
   final String? sourceExcerpt;
+
+  /// Существующие идентификаторы медиа карточки.
+  final List<String> mediaIds;
+
+  /// Дополнительная LaTeX-разметка из импорта.
+  final String? latex;
+
+  /// Сериализованные маски Image Occlusion.
+  final String? occlusionJson;
+
+  /// Новое изображение, которое репозиторий должен сохранить.
+  final CardImageUpload? imageUpload;
 
   /// Разбирает строку тегов из формы: запятые → trim → убрать `#` → пустые
   /// и дубликаты. Порядок сохраняется (SPEC A8.4).

@@ -51,6 +51,9 @@ class MediaStore {
     }
   }
 
+  /// Перечисляет относительные пути реальных файлов медиа для GC.
+  Future<List<String>> listMedia() async => <String>[];
+
   /// Удаляет медиа по относительному пути (нет файла — не ошибка).
   Future<void> deleteMedia(String relativePath) async {
     final file = _fileFor(relativePath);

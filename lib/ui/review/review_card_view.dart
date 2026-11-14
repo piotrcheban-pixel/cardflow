@@ -1,8 +1,10 @@
 import 'dart:math' as math;
+import 'dart:typed_data';
 
 import 'package:flutter/physics.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'package:cardflow/domain/cards/card.dart' as domain;
 import 'package:cardflow/ui/motion.dart';
 
 /// Карточка классического режима: front/back с 3D-flip по тапу
@@ -18,6 +20,8 @@ class ReviewCardView extends StatefulWidget {
     required this.back,
     required this.revealed,
     required this.onTap,
+    this.card,
+    this.mediaBytes = const <String, Uint8List>{},
     super.key,
   });
 
@@ -32,6 +36,12 @@ class ReviewCardView extends StatefulWidget {
 
   /// Тап по карточке (раскрыть ответ).
   final VoidCallback onTap;
+
+  /// Полная карточка для разметки итерации 5; optional для прежних вызовов.
+  final domain.Card? card;
+
+  /// Байты изображений по `media.id`.
+  final Map<String, Uint8List> mediaBytes;
 
   @override
   State<ReviewCardView> createState() => _ReviewCardViewState();

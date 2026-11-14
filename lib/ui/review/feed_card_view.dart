@@ -1,8 +1,10 @@
 import 'dart:math' as math;
+import 'dart:typed_data';
 
 import 'package:flutter/physics.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:material_ui/material_ui.dart' hide Card;
 
+import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/scheduling/rating.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/motion.dart';
@@ -26,6 +28,8 @@ class FeedCardView extends StatefulWidget {
     required this.resetToken,
     required this.onTap,
     required this.onRate,
+    this.card,
+    this.mediaBytes = const <String, Uint8List>{},
     super.key,
   });
 
@@ -55,6 +59,12 @@ class FeedCardView extends StatefulWidget {
 
   /// Оценка свайпом.
   final ValueChanged<Rating> onRate;
+
+  /// Полная карточка для разметки итерации 5; optional для прежних вызовов.
+  final Card? card;
+
+  /// Байты изображений по `media.id`.
+  final Map<String, Uint8List> mediaBytes;
 
   @override
   State<FeedCardView> createState() => _FeedCardViewState();

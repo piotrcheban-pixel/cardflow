@@ -402,6 +402,10 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
       CardValidationError.tagsTooMany => l10n.cardFormTagsTooManyError,
       CardValidationError.sourceExcerptTooLong =>
         l10n.cardFormSourceExcerptTooLongError,
+      CardValidationError.clozeMissing => l10n.cardFormFrontEmptyError,
+      CardValidationError.occlusionImageMissing ||
+      CardValidationError.occlusionMasksMissing ||
+      CardValidationError.occlusionInvalid => l10n.genericError,
       null => null,
     };
   }
