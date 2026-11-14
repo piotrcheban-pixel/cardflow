@@ -1,36 +1,22 @@
 # STATE — текущее состояние CardFlow
 
-**Дата:** 2026-11-14 · **Итерация:** 4 «Лента» — **завершена (шаги 1–7)** · **Режим:** ИТЕРАЦИИ
-**Факты (сверено в этой сессии):** локальный HEAD — docs-коммит итерации 4 (`docs: complete iteration 4
-verification and memory`); `origin/main` = `e5f64c4` (итерация 3c), push итерации 4 не выполнялся —
-локальная ветка впереди на 7 коммитов.
-Flutter 3.47.9 / Dart 3.13.7 (FVM 4.3.2); Windows 11; Windows-сборка работает; Android SDK/JDK,
-Xcode, Linux — отсутствуют. `DEEPSEEK_API_KEY`: present в Windows User scope, absent в env агента
-(значение не выводить).
-**Проверено в этой сессии (`1857589`):** `fvm flutter test --coverage --exclude-tags golden` →
-**959 passed + 1 skipped** (baseline 897 → +62); покрытие **93.6% (5788/6181)** (feed-файлы 95.8–100%);
-`fvm flutter analyze` → No issues; `fvm dart format --set-exit-if-changed lib test` → 229 files, 0 changed;
-`fvm flutter build windows --release` → `cardflow.exe` (51,9 s).
-**CI:** push итерации 4 + handoff выполнен 2026-11-14. Последний зелёный прогон — `e90f660`:
-run [`43588247850`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43588247850) — **9/9 success**
-(prior run `43587472135` для `4ef3038` — тоже 9/9). Для 3c run `43583803312` (`e5f64c4`) — 9/9 success.
-`origin/main` содержит docs-only коммиты после `e90f660` (код с `33993f4` не менялся).
-**Внешний блокер:** run `43589108294` (`490eb80`, docs-only) — все job'ы не стартовали из-за GitHub
-billing/spending limit; код не выполнялся. Владельцу — проверить Billing & plans; последующие docs-коммиты
-`[skip ci]`.
-
-## Передача итерации 5
-
-**Итерация 4 завершена. Итерация 5 (Occlusion/Cloze/LaTeX) передана внешнему агенту. DSH: не начинать.**
-Подробности передачи — `handoff-info.md` в корне.
+**Дата:** 2026-11-14 · **Итерация:** 5 «Occlusion / Cloze / LaTeX» — **шаг 1 завершён** · **Режим:** ИТЕРАЦИИ
+**Факты (сверено в этой сессии):** рабочее дерево было чистым; `HEAD = origin/main =
+8dfa6e5d29aed3a5a1805d6ebc6f96c84ebf3065`; последние 5 коммитов — docs/handoff после итерации 4.
+Прежняя запись об `origin/main = e5f64c4` и 7 незапушенных коммитах устарела и исправлена по git.
+Flutter 3.47.9 / Dart 3.13.7 (FVM); Windows 11; Windows-сборка работает; Android SDK/JDK, Xcode, Linux —
+отсутствуют. Каталог `journal/iteration-5/` отсутствовал: внешняя реализация в репозиторий не поступала.
+**Базовый прогон:** `fvm flutter test --exclude-tags golden` → **959 passed + 1 skipped**.
+По новой команде владельца 2026-11-14 DSH продолжает итерацию 5; прежний handoff «DSH не начинать» отменён
+этой командой. План — `journal/iteration-5/plan.md`; технические развилки — ADR-017.
+**Шаг 1:** объём A7.8–A7.10, файлы, проверки и риски записаны; навыки процесса отсутствуют (L5).
 
 ## Следующее действие
 
-1. **Итерация 4 завершена (шаг 7); передача итерации 5 — внешнему агенту (Kimi).** DSH итерацию 5
-   не начинает.
-2. **Push итерации 4 + handoff выполнен** (2026-11-14, `origin/main` = `e90f660`); CI —
-   runs `43587472135` и `43588247850`, оба 9/9 success.
-3. **CI-прогон итерации 4 — зелёный.** Следующий шаг — внешний агент (Kimi), итерация 5.
+1. **Шаг 2 (красная фаза):** написать unit/widget/integration-тесты разметки, медиа, редактора и двух сессий;
+   сохранить assertion-level вывод ожидаемых падений в `journal/iteration-5/red.md`.
+2. Затем шаг 3 — минимальная реализация до зелёного, analyze и format; после каждого шага обновить STATE.
+3. Push не выполнять без отдельной команды владельца.
 4. Открытые вопросы к владельцу: нет.
 
 ## Итерация 4 — итог
