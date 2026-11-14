@@ -1,69 +1,54 @@
 # STATE — текущее состояние CardFlow
 
-**Дата:** 2026-11-14 · **Этап:** **MVP закрыт** — итерация 7 запушена, долг L45 снят, финальный аудит §9
-выполнен · **Режим:** ИТЕРАЦИИ (остановлен по команде владельца)
-**Факты (сверено командами в этой сессии):** на старте `git status --short` → пусто, `HEAD` опережал
-`origin/main` на 5 коммитов итерации 7; push `b2293cc..d1c55fa` → CI run
-[`43623897449`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43623897449) — **9/9 job success**
-(`format + analyze`, `test` × 3 ОС, `build` × 5). Долг **L45 закрыт** (ADR-019 §8, коммиты `1f3d152` red,
-`043e4c8` green, `c289ada` docs): полный прогон **1203 passed + 1 skipped** (было 1175 + 1; skip — live-тест
-DeepSeek без ключа, L30), покрытие **92.6 % (8368/9038)**, `analyze` → `No issues found!`, `dart format
---set-exit-if-changed` → 305 файлов, 0 changed. Финальный аудит критериев остановки — `journal/mvp-audit.md`:
-**8/8 «выполнено»**. Flutter 3.47.9 / Dart 3.13.7 (FVM); Windows 11; Android SDK/JDK/Xcode/Linux
-отсутствуют (L2); независимый reviewer недоступен (L35).
+**Дата:** 2026-11-14 · **Этап:** итерация **7.5** «Провайдеры и фикс сохранения ключей» — выполнена,
+ожидает push/CI · **Режим:** ИТЕРАЦИИ
+**Факты (сверено командами в этой сессии):** на старте `git status --short` → пусто, `HEAD` =
+`origin/main` = `7892b08` (документация L45/аудита MVP). Flutter 3.47.9 / Dart 3.13.7 (FVM);
+Windows 11; `fvm flutter devices` → Windows desktop доступен; Android SDK/JDK/Xcode/Linux нет (L2).
 
 ## Следующее действие
 
-1. **Стоп по команде владельца:** ждать отдельной команды на релиз или старт Post-MVP (итерация 8).
-2. Итерация 8 (Post-MVP) **не начиналась** — ни одной новой фичи в этой сессии не добавлено.
-3. Открытые вопросы к владельцу: нет. Все незакрытые пункты — ограничения ручной приёмки и внешние
-   (L1, L2, L6c, L11, L12, L30, L32, L33, L35, L37–L46) — перечислены в `journal/KNOWN_LIMITATIONS.md`,
-   блокеров MVP нет.
+1. Push итерации 7.5 и зелёный CI (9/9 job) — по команде владельца, затем стоп.
+2. Приёмка владельцем: экран «Провайдеры» — добавить DeepSeek из каталога, вставить ключ,
+   «Проверить подключение», «Сгенерировать» (живой DeepSeek-путь подтверждён в этой сессии).
+3. Дизайн (стекло, тени, анимации) — **отдельная задача**, в 7.5 не делался (условие владельца).
 
-## Итерация 7 — сделано (итог)
+## Итерация 7.5 — итог
 
-- Настройки A6.6 (ADR-019): `AppSettings` + drift-store `app.settings` (JSON v1, без миграций),
-  контроллер с откатом при ошибке записи; экран «Настройки» (внешний вид, API, обучение, доступность,
-  «О приложении»); проверка ключа `ApiKeyVerifier`; модель по умолчанию; токены за неделю.
-- Статистика A6.5: `StatisticsCalculator` (30 дней/365/7/слабые темы ≥5 и ≥20 %/прогноз), drift-репозиторий,
-  экран с waveform/heatmap/forecast, «Тренировать» → `/constructor?tag=`.
-- Оболочка A6.1: `AppShell` (`NavigationBar`/`NavigationRail`), ветки `/`, `/statistics`, `/settings`;
-  «Сессия» скрыта (ADR-019 §3).
-- Действие настроек: тема/контраст/dynamic color/OpenDyslexic/масштаб, haptics, motion, retention и шаги →
-  планировщик, лимиты → очередь, модель → генерация.
-- Ревью Lead: high/critical нет; M1/M2 закрыты `6a40180` с тестами; M3 → L45 (A6.6 «частично»).
-- **L45 закрыт после ревью** (фикс-сессия 2026-11-14, ADR-019 §8): дневные лимиты считаются за локальный
-  календарный день по `review_logs` (`DailyUsageRepository`, `actual_days IS NULL` = новая карточка),
-  `ReviewQueue`/движки принимают остаток `int?`; интеграционный тест на реальной БД требует 0 новых во
-  второй сессии того же дня. A6.6 «дневные лимиты» → **выполнено**.
-- Ограничения итерации: L43 (dynamic color/шрифт/размеры на реальной ОС), L44 (большие БД статистики),
-  L46 (screen-reader карты); L35 расширен на итерации 4–7. L45 снят.
+**Диагностика (owner note):** D1 — ключ не сохранялся, потому что `_save()` экрана настроек
+валидировал адрес/модель и делал ранний `return` до записи ключа (воспроизведено widget-тестом,
+`writeCalls=0`); D2 — генерация по умолчанию уходила в OpenAI без ключа; D3 — «Сохранено»
+показывалось без проверки read-back. Платформенное хранилище исправно: Windows integration-тест
+на реальном DPAPI — `All tests passed!`.
 
-## Итерация 6 — итог (завершена, запушена `b2293cc`, CI success)
+**Сделано (ADR-020):**
+- Домен: `ProviderProtocol`, каталог `kProviderPresets` (9 провайдеров), `ProviderAccount`/
+  `ProviderAccounts` (JSON v1 в `app_settings` → `generation.providers`, схема БД не менялась).
+- Ключи: `ApiKeyStore` по id аккаунта; write → read-back → только затем сохранение аккаунта.
+- Миграция наследия: legacy-адрес/модель и legacy-ключи (`openai`, `gemini`, `anthropic`,
+  `openai_compatible`) → аккаунты; «осиротевший» ключ без адреса не теряется.
+- `ProviderEndpoint`: все адаптеры уважают базовый адрес аккаунта (прокси/шлюз тоже).
+- Генерация: `GenerationRequest`/`GenerationRunRequest` несут аккаунт; `generation_jobs.provider`
+  = id аккаунта.
+- UI: `/settings/generation` → список карточек + «+ Добавить провайдера» (каталог /
+  пользовательская модель), «Проверить подключение», изменение/удаление/основной; блок API в
+  настройках — сводка + переход; экран генерации — чипы аккаунтов и модель из пресета.
+  `AppSettings.defaultProvider/defaultModelId` удалены (роль — `activeAccountId`).
+- ARB: +46 строк (провайдеры), удалены 24 устаревшие строки прежнего экрана.
 
-Конструктор сессии (ADR-018): `SessionBuilder`/`SessionConfig`/`SessionPlan`, drift-порты пресетов и
-пиявок, экран A6.7, маршруты `/constructor`, `/session/classic|feed`, `prebuilt`-план, лимит минут.
-1102 passed/1 skipped; coverage 93.1 %; analyze 0; format 269/0; build windows; ревью `70b1d97`.
-
-## Итерация 5 — итог (завершена, запушена `9bd09ad`, CI 9/9)
-
-Occlusion/cloze/LaTeX (ADR-017), редактор масок, медиа-транзакции, общий рендер карточек.
-
-## Итерация 4 — итог (завершена, запушена `e90f660`, CI 9/9)
-
-Лента (ADR-016), свайпы, Stories, `FeedCardView`, `/decks/:deckId/feed`.
-
-## Итерация 3c/3b/3a — итоги (завершены, запушены, CI 9/9)
-
-3c — пайплайн генерации, `generation_jobs`, экран A6.8, предпросмотр, ключи (ADR-015);
-3b — схема A8.4, адаптеры, retry/backoff, redaction, `ApiKeyStore` (ADR-011/012/013);
-3a — нативные парсеры A8.3 + `ParsedDocument`, 603 теста, L26 закрыт CI.
+**Доказательства:** `fvm flutter test --exclude-tags golden` → **1254 passed + 1 skipped**
+(skip — live-тест без ключа в env; при ключе из реестра — **1 passed**,
+`LIVE DeepSeek OK: model=deepseek-chat, cards=3, tokens=1138`); покрытие рукописного кода
+**92.6 % (8759/9457)** (raw lcov с генератами — 76.1 %); `analyze` → `No issues found!`;
+`dart format --set-exit-if-changed lib test integration_test` → 317 файлов, 0 changed;
+`fvm flutter build windows --release` → `cardflow.exe` (54,7 с);
+`fvm flutter test integration_test/secure_api_key_store_windows_test.dart -d windows` →
+`All tests passed!` (реальный `flutter_secure_storage`, DPAPI).
 
 ## Известные ограничения (актуальные)
 
-L1 (ключи OpenAI/Gemini/Anthropic), L2 (только локальные сборки — CI покрывает), L4 (хуки), L5 (навыки),
-L6 (golden), **L6c** (dynamic color: реализован, реальная ОС не проверена), L7 (.doc/.xls), L8, L10, L11,
-L12, L13, L14, L15, L16, L18, L19, L20, L23, L24, L25, L27, L28, L30, L31, L32, L33, L34,
-**L35** (reviewer итераций 4–7), L36, L37, L38, L39, L40, L41, L42,
-**L43** (dynamic color/OpenDyslexic/размеры на ОС), **L44** (объём статистики), **L45** (дневные лимиты
-между сессиями), **L46** (screen-reader карты).
+L1, L2, L4, L5, L6, L6c, L7, L8, L10, L11, L12, L13, L14, L15, L16, L18, L19, L20, L23, L24, L25,
+L27, L30 (DeepSeek — success-путь живьём; негативные контракты по ADR-014 не проверяются),
+L31, L32, L33, L34, L35, L36, L37, L38, L39, L40, L41, L42, L43, L44, L46,
+**L28** (сужен: Windows проверен integration-тестом, Android/iOS/macOS/Linux — нет),
+**L47** (живые вызовы каталога кроме DeepSeek), **L48** (Windows integration-тест вне CI).

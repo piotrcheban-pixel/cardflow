@@ -27,9 +27,18 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   (`GenerationPipeline`: оценка/чанкинг, последовательные вызовы, прогресс/отмена, split-once, дедуп,
   `generation_jobs`, partial/retry); чистые правила — `lib/domain/generation/` (`token_estimator.dart`,
   `generation_model.dart`, `generation_chunker.dart`, `generation_job.dart`, `generation_run.dart`).
-  У OpenAI-compatible `base_url` и `model` — настройки в `app_settings` (`generation.openai_compatible`,
-  `GenerationSettingsStore`), ключ опционален и только в `ApiKeyStore`; strict `response_format` — с одним
-  fallback без схемы и локальной проверкой A8.4; промпт `gen-ru-v2` скрыт в коде (`system_prompt.dart`),
+  **Провайдеры — аккаунты, а не enum** (SPEC A6.6/A6.8/A8.6, ADR-020): статический каталог
+  `lib/domain/generation/provider_preset.dart` (DeepSeek, OpenAI, Anthropic, Gemini, OpenRouter,
+  Moonshot, MiniMax, Groq, Ollama), `ProviderProtocol` → существующий адаптер, `ProviderAccount`
+  (`id`, протокол, `base_url`, модель, контекст) + `ProviderAccounts` — JSON v1 в `app_settings`
+  (`generation.providers`), схема БД не меняется. Ключ — по `ProviderAccount.id` в `ApiKeyStore`
+  (контракт строковый), значения не показываются; после записи — read-back, и только затем
+  сохранение аккаунта. Legacy-настройки/ключи мигрирует `DriftProviderAccountsStore`. Адрес
+  запроса — `lib/api/providers/provider_endpoint.dart` (все адаптеры уважают `baseUrl` аккаунта).
+  `GenerationRequest`/`GenerationRunRequest` несут аккаунт, `generation_jobs.provider` = id аккаунта.
+  Экран — `lib/ui/settings/generation_settings_screen.dart` (+ `provider_account_dialogs.dart`),
+  блок API в настройках — сводка и переход. strict `response_format` — с одним fallback без схемы
+  (только протокол `openai-completions`) и локальной проверкой A8.4; промпт `gen-ru-v2` скрыт в коде (`system_prompt.dart`),
   пользовательское сообщение — `generation_prompt.dart`; контентные правила A8.4 — `card_content_validator.dart`
   (пометки `CardIssueCode`, карточка не отбрасывается); HTTP — только через `GenerationTransport`
   (`lib/api/http/generation_http_client.dart`) с `RetryPolicy` и `RedactingLogInterceptor`. Ошибки — только
@@ -145,6 +154,12 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   настроек идти сверху вниз (`scrollUntilVisible` не ищет выше текущей позиции); ряд провайдеров API
   проверять на узкой ширине (`Wrap`/перенос вместо `Row` с двумя кнопками); M3E-тему проецировать из
   Material-темы (`M3EThemeData.fromMaterial`), иначе M3E перекрывает шрифт дислексии и dynamic color.
+- **Ретроспектива итерации 7.5:** сохраняемые сущности с несколькими полями валидировать и писать
+  **независимо** — ранний `return` по одному полю не должен «съедать» другое (баг D1: ключ не
+  сохранялся из-за пустого адреса); результат read-back хранилища обязан влиять на сообщение об
+  успехе (D3); платформенный плагин без `flutter test`-регистрации проверять
+  `integration_test`-ом на десктопе (`-d windows`), а не только моками; при breaking-рефакторинге
+  контрактов сначала обновлять общие тестовые фейки (`test/helpers/`), затем точечно тесты.
 
 ## Факты хоста (обновлять при изменении)
 
@@ -224,3 +239,16 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   **Долг L45 снят в той же сессии** (ADR-019 §8): полный прогон **1203 passed + 1 skipped**, покрытие
   **92.6% (8368/9038)**, `analyze` 0, `format` 305/0. **Финальный аудит MVP** — `journal/mvp-audit.md`,
   8/8 критериев §9 «выполнено»; добавлен отсутствовавший `docs/m3e-tokens.md` (требование SPEC B4).
+- **Провайдеры и ключи проверены локально (итерация 7.5, 2026-11-14, ADR-020):** `fvm flutter test
+  --coverage --exclude-tags golden` → **1254 passed + 1 skipped**; покрытие рукописного кода
+  **92.6 % (8759/9457)**; `analyze` 0; `dart format` 317/0; `fvm flutter build windows --release` →
+  `cardflow.exe` (54,7 с). **Реальное secure storage (Windows, DPAPI):**
+  `fvm flutter test integration_test/secure_api_key_store_windows_test.dart -d windows` →
+  `All tests passed!` (write → read → delete; L28 сужен). **Живой DeepSeek на аккаунтном пути:**
+  `fvm flutter test test/live --tags live` → `LIVE DeepSeek OK: model=deepseek-chat, cards=3,
+  tokens=1138` (ключ из Windows User scope, значение не выводилось). Интеграционный тест
+  «DeepSeek-аккаунт → `https://api.deepseek.com/chat/completions` + Bearer + job.provider=deepseek».
+  Каталог: 9 провайдеров, миграция legacy-настроек и ключей, экран «Провайдеры», проверка
+  подключения. Схема БД/`schemaVersion` не менялись; `AppSettings.defaultProvider/defaultModelId`
+  удалены (роль — `activeAccountId`). Ограничения: L28 (только Windows), L47, L48, L49. Push/CI —
+  по команде владельца.

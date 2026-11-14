@@ -270,3 +270,19 @@ dev_dependencies:
 **Продуктовый ассет (не пакет):** `assets/fonts/OpenDyslexic-Regular.otf` (SIL Open Font License 1.1,
 `assets/fonts/OFL.txt`), объявлен в `pubspec.yaml` как семейство `OpenDyslexic`; используется только
 при включённом переключателе (ADR-019 §6). `flutter pub get` граф не изменил; `fvm flutter analyze` — 0.
+
+## 13. Фактическое состояние после итерации 7.5 (2026-11-14)
+
+**Новый dev-пакет — `integration_test` (Flutter SDK):** нужен, чтобы проверить реальное платформенное
+поведение `flutter_secure_storage` (L28) на Windows: в обычном `flutter test` плагин не
+зарегистрирован. Пакет входит в Flutter SDK (лицензия BSD-3-Clause, версия привязана к Flutter
+3.47.9), не добавляется в runtime-граф, не входит в `flutter test` и в CI-матрицу.
+
+Проверка пакета: `fvm flutter pub get` → `Changed 6 dependencies!` (SDK-пакет + транзитивные
+`integration_test`/`flutter_driver` из SDK); `fvm flutter test integration_test/secure_api_key_store_windows_test.dart -d windows`
+→ **`All tests passed!`** (запись → чтение → совпадение → удаление на реальном DPAPI-хранилище,
+сборка Windows — 39,4 с).
+
+Итерация сама новых runtime-зависимостей не вводит: каталог провайдеров — статические данные,
+аккаунты — строка `app_settings`, ключи — существующий `flutter_secure_storage` 11.2.0, сеть —
+существующий `dio` 5.11.1.

@@ -77,6 +77,16 @@
 ADR-012: 4xx транспортом не повторяются; при 401/403/429/5xx/таймауте fallback не выполняется.
 Существующие OpenAI/Gemini/Anthropic поведение не меняют.
 
+**Аккаунты провайдеров (ADR-020, итерация 7.5).** Адреса выше — значения по умолчанию
+протокола; адрес и модель берутся из аккаунта (`ProviderAccount`), а ключ — из
+`ApiKeyStore` по `account.id`. Один протокол (`openai-completions`) обслуживает каталог
+DeepSeek / OpenRouter / Moonshot / MiniMax / Groq / Ollama и любую пользовательскую модель API:
+`POST <base_url>/chat/completions`, где `<base_url>` — адрес аккаунта. Нативные протоколы тоже
+принимают свой базовый адрес (прокси/шлюз): OpenAI — `<base_url>/chat/completions`,
+Anthropic — `<base_url>/v1/messages`, Gemini — `<base_url>/v1beta/models/{model}:generateContent`.
+Резолвер один — `lib/api/providers/provider_endpoint.dart`; схема только http/https, ключ только
+в заголовке.
+
 ## 3. Причины остановки и ошибки провайдеров
 
 | Ситуация | OpenAI | Gemini | Anthropic | Код CardFlow |
