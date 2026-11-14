@@ -146,20 +146,24 @@ class GenerationChunker {
   /// повторно (A8.5 шаг 8).
   List<GenerationChunk>? splitInHalf(GenerationChunk chunk) {
     final String text = chunk.materialsText;
-    if (text.runes.length < 2) return null;
-    final int middle = text.length ~/ 2;
-    final List<int> points = <int>[
-      ...RegExp(r'\n\s*\n').allMatches(text).map((match) => match.start),
-      ...RegExp(r'\n').allMatches(text).map((match) => match.start),
-      middle,
-    ]..sort();
-    int splitAt = points.first;
+    final List<int> runes = text.runes.toList(growable: false);
+    if (runes.length < 2) return null;
+    final int middle = runes.length ~/ 2;
+    final List<int> points = <int>[middle];
+    for (var i = 1; i < runes.length - 1; i++) {
+      if (runes[i] == 0x0A) {
+        points.add(i);
+        if (runes[i + 1] == 0x0A) points.add(i);
+      }
+    }
+    points.sort();
+    int splitAt = middle;
     for (final int point in points) {
-      if (point <= 0 || point >= text.length) continue;
+      if (point <= 0 || point >= runes.length) continue;
       if ((point - middle).abs() < (splitAt - middle).abs()) splitAt = point;
     }
-    final String left = text.substring(0, splitAt).trim();
-    final String right = text.substring(splitAt).trim();
+    final String left = String.fromCharCodes(runes.sublist(0, splitAt)).trim();
+    final String right = String.fromCharCodes(runes.sublist(splitAt)).trim();
     if (left.isEmpty || right.isEmpty) return null;
     return <GenerationChunk>[
       chunk.copyWith(

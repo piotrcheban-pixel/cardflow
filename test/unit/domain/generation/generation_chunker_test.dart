@@ -174,4 +174,18 @@ void main() {
     );
     expect(chunker.splitInHalf(chunk), isNull);
   });
+
+  test('splitInHalf не разрезает суррогатные пары (эмодзи)', () {
+    const chunk = GenerationChunk(
+      index: 1,
+      materialsText: '😀😀😀😀',
+      sourceFiles: <String>[],
+      limit: 20,
+    );
+    final halves = chunker.splitInHalf(chunk);
+    expect(halves, isNotNull);
+    expect(halves![0].materialsText.runes.length, 2);
+    expect(halves[1].materialsText.runes.length, 2);
+    expect(halves[0].materialsText + halves[1].materialsText, '😀😀😀😀');
+  });
 }

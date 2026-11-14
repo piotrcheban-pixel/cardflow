@@ -743,7 +743,15 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String generationEstimate(int count) {
-    return 'Примерно $count токенов';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count токена',
+      many: '$count токенов',
+      few: '$count токена',
+      one: '$count токен',
+    );
+    return 'Примерно $_temp0';
   }
 
   @override
@@ -756,6 +764,9 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get generationNoParsedFilesError =>
       'Ни один файл не удалось прочитать. Проверьте формат и размер файлов';
+
+  @override
+  String get generationFilesParsing => 'Дождитесь окончания чтения файлов';
 
   @override
   String get generationKeyMissing => 'Ключ доступа не задан';
@@ -809,7 +820,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get generationPreviewValidationError =>
-      'Проверьте заполнение выбранных карточек: вопрос не должен быть пустым';
+      'Проверьте заполнение выбранных карточек: вопрос и ответ должны быть корректными';
 
   @override
   String get generationIssueEmptyFront => 'Пустой вопрос';

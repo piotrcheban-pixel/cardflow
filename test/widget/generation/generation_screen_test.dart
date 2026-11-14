@@ -293,4 +293,148 @@ void main() {
       findsNothing,
     );
   });
+
+  testWidgets('все фрагменты упали: предпросмотр с ошибками и повтором', (
+    tester,
+  ) async {
+    await pumpScreen(tester);
+    await attachTextFile(tester);
+    runner.result = GenerationRunResult(
+      jobId: 'job-1',
+      status: GenerationJobStatus.error,
+      cards: const <GeneratedCard>[],
+      failures: <GenerationChunkFailure>[
+        GenerationChunkFailure(
+          chunkIndex: 1,
+          code: GenerationErrorCode.network,
+          materialsText: 'материал',
+          limit: 20,
+        ),
+      ],
+      tokensUsed: 0,
+      estimatedTokens: 10,
+      duplicatesRemoved: 0,
+      chunkCount: 1,
+      cancelled: false,
+    );
+    await tester.tap(find.byKey(const ValueKey<String>('generation-start')));
+    await tester.pumpAndSettle();
+
+    final l10n = l10nOf(tester);
+    expect(find.text(l10n.generationPreviewTitle), findsOneWidget);
+    expect(find.text(l10n.generationFailuresTitle), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey<String>('generation-preview-retry-failed')),
+      findsOneWidget,
+    );
+    expect(find.text(l10n.generationErrorEmptyResponse), findsNothing);
+  });
+
+  testWidgets('все карточки — дубли: сообщение о дублях, не пустой ответ', (
+    tester,
+  ) async {
+    await pumpScreen(tester);
+    await attachTextFile(tester);
+    runner.result = const GenerationRunResult(
+      jobId: 'job-1',
+      status: GenerationJobStatus.done,
+      cards: <GeneratedCard>[],
+      failures: <GenerationChunkFailure>[],
+      tokensUsed: 10,
+      estimatedTokens: 10,
+      duplicatesRemoved: 2,
+      chunkCount: 1,
+      cancelled: false,
+    );
+    await tester.tap(find.byKey(const ValueKey<String>('generation-start')));
+    await tester.pumpAndSettle();
+
+    final l10n = l10nOf(tester);
+    expect(find.text(l10n.generationDuplicatesRemoved(2)), findsOneWidget);
+    expect(find.text(l10n.generationErrorEmptyResponse), findsNothing);
+    expect(find.text(l10n.generationPreviewTitle), findsNothing);
+  });
+
+  testWidgets('пока файл парсится, кнопка генерации недоступна', (
+    tester,
+  ) async {
+    gateway.readCompleter = Completer<Uint8List>();
+    gateway.picked = <PickedDocument>[
+      const PickedDocument(
+        path: '/tmp/лекция.txt',
+        name: 'лекция.txt',
+        sizeBytes: 30,
+      ),
+    ];
+    await pumpScreen(tester);
+    await tester.tap(
+      find.byKey(const ValueKey<String>('generation-attach-zone')),
+    );
+    await tester.pump();
+
+    FilledButton start = tester.widget<FilledButton>(
+      find.byKey(const ValueKey<String>('generation-start')),
+    );
+    expect(start.onPressed, isNull);
+
+    gateway.readCompleter!.complete(
+      Uint8List.fromList(utf8.encode('Материал лекции')),
+    );
+    await tester.pumpAndSettle();
+    start = tester.widget<FilledButton>(
+      find.byKey(const ValueKey<String>('generation-start')),
+    );
+    expect(start.onPressed, isNotNull);
+  });
+
+  testWidgets('ошибка чтения ключей: сообщение ARB и повтор', (tester) async {
+    keyStore.readError = StateError('secure storage down');
+    await pumpScreen(tester);
+    final l10n = l10nOf(tester);
+    expect(find.text(l10n.settingsLoadError), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey<String>('generation-config-retry')),
+      findsOneWidget,
+    );
+
+    keyStore.readError = null;
+    await tester.tap(
+      find.byKey(const ValueKey<String>('generation-config-retry')),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey<String>('generation-attach-zone')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('системный Back во время генерации отменяет запрос', (
+    tester,
+  ) async {
+    await pumpScreen(tester);
+    await attachTextFile(tester);
+    runner.pending = Completer<GenerationRunResult>();
+    await tester.tap(find.byKey(const ValueKey<String>('generation-start')));
+    await tester.pump();
+
+    await tester.binding.handlePopRoute();
+    await tester.pump();
+    expect(runner.lastCancellation, isNotNull);
+    expect(runner.lastCancellation!.isCancelled, isTrue);
+
+    runner.pending!.complete(
+      const GenerationRunResult(
+        jobId: 'job-1',
+        status: GenerationJobStatus.cancelled,
+        cards: <GeneratedCard>[],
+        failures: <GenerationChunkFailure>[],
+        tokensUsed: 0,
+        estimatedTokens: 10,
+        duplicatesRemoved: 0,
+        chunkCount: 0,
+        cancelled: true,
+      ),
+    );
+    await tester.pumpAndSettle();
+  });
 }

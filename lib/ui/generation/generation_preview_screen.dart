@@ -125,7 +125,7 @@ class _GenerationPreviewScreenState
       _cards.where((_EditableCard card) => card.selected).length;
 
   Future<void> _retryFailed() async {
-    if (_retrying) return;
+    if (_retrying || _importing) return;
     final AppLocalizations l10n = AppLocalizations.of(context);
     setState(() => _retrying = true);
     try {
@@ -158,7 +158,7 @@ class _GenerationPreviewScreenState
 
   Future<void> _import({required bool all}) async {
     final AppLocalizations l10n = AppLocalizations.of(context);
-    if (_importing) return;
+    if (_importing || _retrying) return;
     final List<_EditableCard> picked = all
         ? List<_EditableCard>.of(_cards)
         : _cards.where((_EditableCard card) => card.selected).toList();
@@ -376,14 +376,11 @@ class _PreviewCardTile extends StatelessWidget {
                   onChanged: (bool? value) => onSelected(value ?? false),
                 ),
                 Expanded(
-                  child: Text(
-                    switch (card.original.cardType) {
-                      CardType.basic => l10n.cardTypeBasic,
-                      CardType.basicReversed => l10n.cardTypeBasicReversed,
-                      CardType.cloze => l10n.cardTypeCloze,
-                    },
-                    style: theme.textTheme.labelMedium,
-                  ),
+                  child: Text(switch (card.original.cardType) {
+                    CardType.basic => l10n.cardTypeBasic,
+                    CardType.basicReversed => l10n.cardTypeBasicReversed,
+                    CardType.cloze => l10n.cardTypeCloze,
+                  }, style: theme.textTheme.labelMedium),
                 ),
               ],
             ),

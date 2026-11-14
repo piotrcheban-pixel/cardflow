@@ -89,4 +89,33 @@ void main() {
     );
     expect(bytes, <int>[1, 2, 3]);
   });
+
+  test('preloadedBytes больше лимита отклоняются до парсинга', () async {
+    const gateway = FilePickerDocumentGateway(maxFileBytes: 2);
+    await expectLater(
+      gateway.readDocument(
+        PickedDocument(
+          path: 'memory://большой.txt',
+          name: 'большой.txt',
+          sizeBytes: 3,
+          preloadedBytes: Uint8List.fromList(<int>[1, 2, 3]),
+        ),
+      ),
+      throwsA(
+        isA<ParserException>().having(
+          (error) => error.code,
+          'code',
+          ParserErrorCode.fileTooLarge,
+        ),
+      ),
+    );
+  });
+
+  test('синтетические пути платформы без локального пути уникальны', () {
+    expect(
+      syntheticMemoryPath(0, 'notes.txt'),
+      isNot(syntheticMemoryPath(1, 'notes.txt')),
+    );
+    expect(syntheticMemoryPath(0, 'notes.txt'), contains('notes.txt'));
+  });
 }

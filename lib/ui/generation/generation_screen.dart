@@ -14,6 +14,7 @@ import 'package:path/path.dart' as p;
 
 import 'package:cardflow/api/generation/generation_cancellation.dart';
 import 'package:cardflow/api/generation/generation_pipeline.dart';
+import 'package:cardflow/api/generation/system_prompt.dart';
 import 'package:cardflow/api/parsers/file_parsing_service.dart';
 import 'package:cardflow/domain/decks/deck.dart';
 import 'package:cardflow/domain/generation/document_gateway.dart';
@@ -78,6 +79,7 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
       const OpenAiCompatibleSettings();
   String? _modelId;
   bool _loading = true;
+  bool _configError = false;
   bool _generating = false;
   bool _dragging = false;
   GenerationCancellation? _cancellation;
@@ -98,27 +100,43 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
   }
 
   /// Читает наличие ключей и настройки совместимого сервера.
-  Future<void> _loadProviderConfig() async {
-    final configured = <GenerationProvider, bool>{};
-    for (final GenerationProvider provider in GenerationProvider.values) {
-      final String? key = await ref.read(apiKeyStoreProvider).read(provider);
-      configured[provider] = provider == GenerationProvider.openaiCompatible
-          ? true
-          : (key != null && key.trim().isNotEmpty);
+  ///
+  /// [preserveSelection] — не сбрасывать выбранного провайдера/модель после
+  /// возврата с экрана настроек (A6.8).
+  Future<void> _loadProviderConfig({bool preserveSelection = false}) async {
+    try {
+      final configured = <GenerationProvider, bool>{};
+      for (final GenerationProvider provider in GenerationProvider.values) {
+        final String? key = await ref.read(apiKeyStoreProvider).read(provider);
+        configured[provider] = provider == GenerationProvider.openaiCompatible
+            ? true
+            : (key != null && key.trim().isNotEmpty);
+      }
+      final OpenAiCompatibleSettings compatible = await ref
+          .read(generationSettingsStoreProvider)
+          .readOpenAiCompatible();
+      if (!mounted) return;
+      setState(() {
+        _keyConfigured
+          ..clear()
+          ..addAll(configured);
+        _compatibleSettings = compatible;
+        _loading = false;
+        _configError = false;
+        if (!preserveSelection) {
+          _provider = _defaultProvider(configured, compatible);
+          _modelId = _defaultModelId(_provider);
+        } else {
+          _modelId ??= _defaultModelId(_provider);
+        }
+      });
+    } on Object {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _configError = true;
+      });
     }
-    final OpenAiCompatibleSettings compatible = await ref
-        .read(generationSettingsStoreProvider)
-        .readOpenAiCompatible();
-    if (!mounted) return;
-    setState(() {
-      _keyConfigured
-        ..clear()
-        ..addAll(configured);
-      _compatibleSettings = compatible;
-      _loading = false;
-      _provider = _defaultProvider(configured, compatible);
-      _modelId = _defaultModelId(_provider);
-    });
   }
 
   /// Провайдер по умолчанию: облачный с ключом → настроенный совместимый → OpenAI.
@@ -156,15 +174,23 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
         file.document!,
   ];
 
-  int get _estimatedTokens => _estimator.estimateAll(
-    _parsedDocuments.map((ParsedDocument document) => document.text),
-  );
+  /// Есть ли файлы, которые ещё читаются/парсятся.
+  bool get _anyParsing =>
+      _files.any((_AttachedFile file) => file.status == _FileStatus.parsing);
+
+  int get _estimatedTokens =>
+      _estimator.estimateAll(
+        _parsedDocuments.map((ParsedDocument document) => document.text),
+      ) +
+      _estimator.estimate(systemPromptGenRuV2) +
+      kPromptWrapperTokenReserve;
 
   Future<void> _pickFiles() async {
     try {
       final List<PickedDocument> picked = await ref
           .read(documentGatewayProvider)
           .pickDocuments();
+      if (!mounted) return;
       if (picked.isNotEmpty) await _attach(picked);
     } on Object {
       if (!mounted) return;
@@ -181,15 +207,16 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
     final picked = <PickedDocument>[];
     for (final DropItem item in details.files) {
       if (item is DropItemDirectory) continue;
+      final int length = await item.length();
       picked.add(
         PickedDocument(
           path: item.path,
           name: item.name.isEmpty ? p.basename(item.path) : item.name,
-          sizeBytes: 0,
+          sizeBytes: length,
         ),
       );
     }
-    if (picked.isNotEmpty) await _attach(picked);
+    if (picked.isNotEmpty && mounted) await _attach(picked);
   }
 
   /// Добавляет файлы (без дублей по пути) и запускает парсинг.
@@ -257,7 +284,7 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
 
   Future<void> _openSettings() async {
     await context.push(AppRoutes.generationSettingsPath);
-    if (mounted) await _loadProviderConfig();
+    if (mounted) await _loadProviderConfig(preserveSelection: true);
   }
 
   Future<void> _generate() async {
@@ -266,6 +293,10 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
     final List<ParsedDocument> documents = _parsedDocuments;
     if (_files.isEmpty) {
       showAppMessage(context, l10n.generationNoFilesError);
+      return;
+    }
+    if (_anyParsing) {
+      showAppMessage(context, l10n.generationFilesParsing);
       return;
     }
     if (documents.isEmpty) {
@@ -326,20 +357,30 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
         showAppMessage(context, l10n.generationCancelled);
         return;
       }
+      if (result.fatalErrorCode != null && result.cards.isNotEmpty) {
+        showAppMessage(
+          context,
+          generationErrorCodeMessage(l10n, result.fatalErrorCode!),
+        );
+      }
       if (result.cards.isEmpty) {
+        if (result.failures.isNotEmpty) {
+          // Все фрагменты упали: предпросмотр покажет ошибки и «Повторить
+          // неудавшиеся» вместо ложного «пустого ответа» (A6.8).
+          await _openPreview(request, result);
+          return;
+        }
+        if (result.duplicatesRemoved > 0) {
+          showAppMessage(
+            context,
+            l10n.generationDuplicatesRemoved(result.duplicatesRemoved),
+          );
+          return;
+        }
         showAppMessage(context, l10n.generationErrorEmptyResponse);
         return;
       }
-      final GenerationImportResult? imported = await Navigator.of(context)
-          .push<GenerationImportResult>(
-            MaterialPageRoute<GenerationImportResult>(
-              builder: (BuildContext context) =>
-                  GenerationPreviewScreen(request: request, result: result),
-            ),
-          );
-      if (imported != null && mounted && GoRouter.maybeOf(context) != null) {
-        context.go(AppRoutes.deckPath(imported.deckId));
-      }
+      await _openPreview(request, result);
     } on GenerationException catch (error) {
       if (!mounted) return;
       setState(() => _generating = false);
@@ -362,6 +403,23 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
           _cancellation = null;
         });
       }
+    }
+  }
+
+  /// Открывает предпросмотр и переходит в колоду после импорта.
+  Future<void> _openPreview(
+    GenerationRunRequest request,
+    GenerationRunResult result,
+  ) async {
+    final GenerationImportResult? imported = await Navigator.of(context)
+        .push<GenerationImportResult>(
+          MaterialPageRoute<GenerationImportResult>(
+            builder: (BuildContext context) =>
+                GenerationPreviewScreen(request: request, result: result),
+          ),
+        );
+    if (imported != null && mounted && GoRouter.maybeOf(context) != null) {
+      context.go(AppRoutes.deckPath(imported.deckId));
     }
   }
 
@@ -388,19 +446,62 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
     final Deck? targetDeck = widget.deckId == null
         ? null
         : ref.watch(deckProvider(widget.deckId!)).value;
-    return Scaffold(
-      appBar: AppBar(title: Text(l10n.generationTitle)),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _buildForm(context, l10n, targetDeck),
-      bottomNavigationBar: _loading
-          ? null
-          : SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                child: _buildActions(l10n),
+    return PopScope(
+      canPop: !_generating,
+      onPopInvokedWithResult: (bool didPop, Object? result) {
+        if (!didPop && _generating) {
+          _cancellation?.cancel();
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(title: Text(l10n.generationTitle)),
+        body: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : _configError
+            ? _buildConfigError(context, l10n)
+            : _buildForm(context, l10n, targetDeck),
+        bottomNavigationBar: _loading || _configError
+            ? null
+            : SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                  child: _buildActions(l10n),
+                ),
               ),
+      ),
+    );
+  }
+
+  /// Ошибка чтения ключей/настроек: сообщение ARB и повтор.
+  Widget _buildConfigError(BuildContext context, AppLocalizations l10n) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Icon(
+              Icons.error_outline,
+              size: 48,
+              color: Theme.of(context).colorScheme.error,
             ),
+            const SizedBox(height: 12),
+            Text(l10n.settingsLoadError, textAlign: TextAlign.center),
+            const SizedBox(height: 12),
+            TextButton(
+              key: const ValueKey<String>('generation-config-retry'),
+              onPressed: () {
+                setState(() {
+                  _loading = true;
+                  _configError = false;
+                });
+                _loadProviderConfig();
+              },
+              child: Text(l10n.retry),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -423,7 +524,7 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
     }
     return FilledButton(
       key: const ValueKey<String>('generation-start'),
-      onPressed: _generate,
+      onPressed: _anyParsing ? null : _generate,
       style: FilledButton.styleFrom(
         minimumSize: const Size.fromHeight(48),
         shape: const StadiumBorder(),

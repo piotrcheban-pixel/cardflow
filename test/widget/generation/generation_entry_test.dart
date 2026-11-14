@@ -101,8 +101,6 @@ void main() {
     await tester.pumpAndSettle();
     final l10n = l10nOf(tester);
 
-    await tester.tap(find.byKey(const ValueKey<String>('deck-overflow-menu')));
-    await tester.pumpAndSettle();
     await tester.tap(
       find.byKey(const ValueKey<String>('deck-generate-action')),
     );
@@ -145,5 +143,47 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(keyField, findsOneWidget);
+  });
+
+  testWidgets('выбранный провайдер сохраняется после возврата из настроек', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      appWithRouter(
+        overrides: overrides(),
+        routes: routes(),
+        initialLocation: '/generate',
+      ),
+    );
+    await tester.pumpAndSettle();
+    final Finder geminiChip = find.byKey(
+      const ValueKey<String>('generation-provider-gemini'),
+    );
+    final Finder scrollable = find.byType(Scrollable).first;
+
+    await tester.scrollUntilVisible(geminiChip, 200, scrollable: scrollable);
+    await tester.pumpAndSettle();
+    await tester.tap(geminiChip);
+    await tester.pumpAndSettle();
+    expect(tester.widget<ChoiceChip>(geminiChip).selected, isTrue);
+
+    final Finder settingsButton = find.byKey(
+      const ValueKey<String>('generation-open-settings'),
+    );
+    await tester.scrollUntilVisible(
+      settingsButton,
+      -200,
+      scrollable: scrollable,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(settingsButton);
+    await tester.pumpAndSettle();
+
+    Navigator.of(tester.element(find.byType(GenerationSettingsScreen))).pop();
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(geminiChip, 200, scrollable: scrollable);
+    await tester.pumpAndSettle();
+    expect(tester.widget<ChoiceChip>(geminiChip).selected, isTrue);
   });
 }

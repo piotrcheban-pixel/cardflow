@@ -578,4 +578,112 @@ void main() {
     expect(result.cards, hasLength(1));
     expect(result.status, GenerationJobStatus.done);
   });
+
+  test(
+    'fatal после полученных карточек: partial + fatalErrorCode, без throw',
+    () async {
+      final pipeline = pipelineWith(<GenerationChunk>[
+        chunkOf(1, 'первый'),
+        chunkOf(2, 'второй'),
+      ]);
+      caller.onGenerate = (request, call) async {
+        if (call == 2) {
+          throw const GenerationException(GenerationErrorCode.invalidApiKey);
+        }
+        return resultWith(<GeneratedCard>[makeGeneratedCard()]);
+      };
+
+      final result = await pipeline.run(
+        requestWith(<ParsedDocument>[
+          docOf('a.txt', <String>['первый второй']),
+        ]),
+      );
+
+      expect(caller.calls, 2);
+      expect(result.cards, hasLength(1));
+      expect(result.status, GenerationJobStatus.partial);
+      expect(result.fatalErrorCode, GenerationErrorCode.invalidApiKey);
+      expect(jobs.saved.last.status, GenerationJobStatus.partial);
+      expect(jobs.saved.last.errorCode, 'invalidApiKey');
+    },
+  );
+
+  test(
+    'retryFailed: фрагмент, упавший без дробления, может быть раздроблен',
+    () async {
+      final pipeline = pipelineWith(<GenerationChunk>[
+        chunkOf(1, 'Первая половина\n\nВторая половина'),
+      ]);
+      caller.onGenerate = (request, call) async {
+        throw const GenerationException(GenerationErrorCode.network);
+      };
+      final first = await pipeline.run(
+        requestWith(<ParsedDocument>[
+          docOf('a.txt', <String>['раз два']),
+        ]),
+      );
+      expect(first.failures, hasLength(1));
+
+      final retryCaller = FakeGenerationCaller();
+      var retryCall = 0;
+      retryCaller.onGenerate = (request, call) async {
+        retryCall++;
+        if (retryCall == 1) {
+          throw const GenerationException(GenerationErrorCode.truncated);
+        }
+        return resultWith(<GeneratedCard>[
+          makeGeneratedCard(
+            front: 'Вопрос $retryCall',
+            back: 'Ответ $retryCall',
+          ),
+        ]);
+      };
+      final retryPipeline = GenerationPipeline(
+        caller: retryCaller,
+        jobRepository: jobs,
+        cardStore: store,
+        chunker: const GenerationChunker(),
+        now: () => DateTime.utc(2026),
+        jobIdFactory: () => 'job-1',
+      );
+
+      final result = await retryPipeline.retryFailed(
+        requestWith(<ParsedDocument>[
+          docOf('a.txt', <String>['раз два']),
+        ]),
+        first,
+      );
+
+      expect(retryCaller.calls, 3, reason: 'truncated → две половины');
+      expect(result.failures, isEmpty);
+      expect(result.cards, hasLength(2));
+    },
+  );
+
+  test('ошибка чтения хешей колоды: задание остаётся не running', () async {
+    caller = FakeGenerationCaller();
+    jobs = FakeGenerationJobRepository();
+    store = FakeGenerationCardStore()..existingError = StateError('db down');
+    final pipeline = GenerationPipeline(
+      caller: caller,
+      jobRepository: jobs,
+      cardStore: store,
+      chunker: FixedChunker(<GenerationChunk>[chunkOf(1, 'материал')]),
+      now: () => DateTime.utc(2026),
+      jobIdFactory: () => 'job-1',
+    );
+
+    await expectLater(
+      pipeline.run(
+        requestWith(<ParsedDocument>[
+          docOf('a.txt', <String>['материал']),
+        ], targetDeckId: 'deck-1'),
+      ),
+      throwsStateError,
+    );
+
+    expect(caller.calls, 0);
+    expect(jobs.saved.last.status, GenerationJobStatus.error);
+    expect(jobs.saved.last.errorCode, 'unexpected');
+  });
 }

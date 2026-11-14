@@ -42,9 +42,13 @@ class FakeApiKeyStore implements ApiKeyStore {
   /// Текущее содержимое хранилища (открыто для проверок в тестах).
   Map<GenerationProvider, String> get keys => _keys;
 
+  /// Если задано — `read` бросает эту ошибку (проверка error-состояния UI).
+  Object? readError;
+
   @override
   Future<String?> read(GenerationProvider provider) async {
     readCalls++;
+    if (readError != null) throw readError!;
     return _keys[provider];
   }
 
@@ -341,8 +345,12 @@ class FakeGenerationCardStore implements GenerationCardStore {
   String? lastDeckName;
   String? lastJobId;
 
+  /// Если задано — `existingContentHashes` бросает эту ошибку.
+  Object? existingError;
+
   @override
   Future<Set<String>> existingContentHashes(String deckId) async {
+    if (existingError != null) throw existingError!;
     return <String>{...?_existingByDeck[deckId]};
   }
 
@@ -454,6 +462,9 @@ class FakeDocumentGateway implements DocumentGateway {
   /// Сколько раз читали файл.
   int readCalls = 0;
 
+  /// Если задан — `readDocument` ждёт его завершения (проверка parsing-статуса).
+  Completer<Uint8List>? readCompleter;
+
   @override
   int get maxFileBytes => 25 * 1024 * 1024;
 
@@ -468,6 +479,8 @@ class FakeDocumentGateway implements DocumentGateway {
   Future<Uint8List> readDocument(PickedDocument document) async {
     readCalls++;
     if (readError != null) throw readError!;
+    final waiting = readCompleter;
+    if (waiting != null) return waiting.future;
     return bytesByPath[document.path] ??
         Uint8List.fromList('Материал лекции'.codeUnits);
   }

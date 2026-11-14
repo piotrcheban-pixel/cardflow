@@ -110,10 +110,7 @@ class DriftGenerationCardStore implements GenerationCardStore {
       await (database.update(
         database.generationJobs,
       )..where((table) => table.id.equals(jobId))).write(
-        GenerationJobsCompanion(
-          resultDeckId: Value<String>(resolvedDeckId),
-          cardsCount: Value<int>(accepted.length),
-        ),
+        GenerationJobsCompanion(resultDeckId: Value<String>(resolvedDeckId)),
       );
 
       return GenerationImportResult(

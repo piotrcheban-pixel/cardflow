@@ -44,17 +44,20 @@ class FilePickerDocumentGateway implements DocumentGateway {
         );
         continue;
       }
-      // content:// (Android/iOS) и веб: локального пути нет. Большой файл не
-      // читаем в память — ошибку размера вернёт readDocument/парсинг.
+      // content:// (Android/iOS) и веб: локального пути нет. Путь синтетический
+      // и уникальный (номер в списке), иначе два разных notes.txt схлопнулись
+      // бы в один файл. Большой файл не читаем в память: ошибку размера
+      // вернёт readDocument/парсинг.
       final Uint8List? bytes = size <= maxFileBytes
           ? await file.readAsBytes()
           : null;
+      final int actualSize = bytes?.length ?? size;
       picked.add(
         PickedDocument(
-          path: 'memory://${file.name}',
+          path: syntheticMemoryPath(picked.length, file.name),
           name: file.name,
-          sizeBytes: size,
-          preloadedBytes: bytes,
+          sizeBytes: actualSize,
+          preloadedBytes: actualSize <= maxFileBytes ? bytes : null,
         ),
       );
     }
@@ -63,14 +66,23 @@ class FilePickerDocumentGateway implements DocumentGateway {
 
   @override
   Future<Uint8List> readDocument(PickedDocument document) async {
+    final Uint8List? preloaded = document.preloadedBytes;
+    if (preloaded != null) {
+      if (preloaded.length > maxFileBytes ||
+          document.sizeBytes > maxFileBytes) {
+        throw const ParserException(
+          ParserErrorCode.fileTooLarge,
+          details: 'Файл больше лимита 25 МБ',
+        );
+      }
+      return preloaded;
+    }
     if (document.sizeBytes > maxFileBytes) {
       throw const ParserException(
         ParserErrorCode.fileTooLarge,
         details: 'Файл больше лимита 25 МБ',
       );
     }
-    final Uint8List? preloaded = document.preloadedBytes;
-    if (preloaded != null) return preloaded;
     if (!document.path.startsWith('memory://')) {
       final File file = File(document.path);
       final int length = await file.length();
@@ -87,4 +99,9 @@ class FilePickerDocumentGateway implements DocumentGateway {
       details: 'Нет локального пути и байтов файла',
     );
   }
+}
+
+/// Синтетический уникальный путь для платформ без локального пути.
+String syntheticMemoryPath(int index, String fileName) {
+  return 'memory://$index/${Uri.encodeComponent(fileName)}';
 }

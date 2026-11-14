@@ -1297,7 +1297,7 @@ abstract class AppLocalizations {
   /// Оценка объёма материалов в токенах до отправки (SPEC A6.8).
   ///
   /// In ru, this message translates to:
-  /// **'Примерно {count} токенов'**
+  /// **'Примерно {count, plural, one{{count} токен} few{{count} токена} many{{count} токенов} other{{count} токена}}'**
   String generationEstimate(int count);
 
   /// Предупреждение при большом объёме материалов (SPEC A8.5 шаг 4).
@@ -1317,6 +1317,12 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Ни один файл не удалось прочитать. Проверьте формат и размер файлов'**
   String get generationNoParsedFilesError;
+
+  /// Валидация: генерация запущена, пока файлы ещё парсятся.
+  ///
+  /// In ru, this message translates to:
+  /// **'Дождитесь окончания чтения файлов'**
+  String get generationFilesParsing;
 
   /// Индикатор: для выбранного облачного провайдера нет ключа (SPEC A6.8).
   ///
@@ -1408,10 +1414,10 @@ abstract class AppLocalizations {
   /// **'Выберите хотя бы одну карточку'**
   String get generationPreviewNoSelection;
 
-  /// Валидация предпросмотра: у выбранной карточки пустой вопрос/ответ.
+  /// Валидация предпросмотра: у выбранной карточки пустой/слишком длинный текст.
   ///
   /// In ru, this message translates to:
-  /// **'Проверьте заполнение выбранных карточек: вопрос не должен быть пустым'**
+  /// **'Проверьте заполнение выбранных карточек: вопрос и ответ должны быть корректными'**
   String get generationPreviewValidationError;
 
   /// Пометка A8.4: пустой front у сгенерированной карточки.

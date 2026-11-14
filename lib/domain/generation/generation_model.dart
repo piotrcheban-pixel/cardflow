@@ -131,9 +131,13 @@ int inputTokenBudget({
     return kCompatibleInputTokenBudget;
   }
   final GenerationModel? model = generationModelById(provider, modelId);
-  final int context = model?.contextTokens ?? kFallbackInputTokenBudget;
+  if (model == null) {
+    // Бюджет неизвестной модели — сам бюджет входа (ADR-015 §1), а не
+    // «контекст», из которого повторно вычитался бы резерв ответа.
+    return kFallbackInputTokenBudget;
+  }
   final int budget =
-      context -
+      model.contextTokens -
       kGenerationOutputTokenReserve -
       systemPromptTokens -
       kPromptWrapperTokenReserve;

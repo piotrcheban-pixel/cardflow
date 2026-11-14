@@ -77,4 +77,15 @@ void main() {
       kCompatibleInputTokenBudget,
     );
   });
+
+  test('неизвестная модель — бюджет входа 8000, а не вычет из контекста', () {
+    expect(
+      inputTokenBudget(
+        provider: GenerationProvider.openai,
+        modelId: 'нет-такой',
+        systemPromptTokens: 5000,
+      ),
+      kFallbackInputTokenBudget,
+    );
+  });
 }

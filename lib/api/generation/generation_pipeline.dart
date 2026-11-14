@@ -16,6 +16,7 @@ import 'package:cardflow/domain/generation/generation_error.dart';
 import 'package:cardflow/domain/generation/generation_job.dart';
 import 'package:cardflow/domain/generation/generation_model.dart';
 import 'package:cardflow/domain/generation/generation_request.dart';
+import 'package:cardflow/domain/generation/generation_result.dart';
 import 'package:cardflow/domain/generation/generation_run.dart';
 import 'package:cardflow/domain/generation/token_estimator.dart';
 
@@ -26,6 +27,9 @@ const Set<GenerationErrorCode> _fatalCodes = <GenerationErrorCode>{
   GenerationErrorCode.invalidApiKey,
   GenerationErrorCode.noMaterials,
 };
+
+/// Код в `generation_jobs.error_code` для непредвиденного сбоя пайплайна/БД.
+const String _unexpectedErrorCode = 'unexpected';
 
 /// Оркестратор генерации (контракт для UI).
 abstract interface class GenerationRunner {
@@ -103,47 +107,52 @@ class GenerationPipeline implements GenerationRunner {
     );
     await jobRepository.save(initialJob);
 
-    onProgress?.call(
-      const GenerationProgress(phase: GenerationProgressPhase.chunking),
-    );
-    final int budget = inputTokenBudget(
-      provider: request.provider,
-      modelId: request.modelId,
-      systemPromptTokens: systemPromptTokens,
-    );
-    final List<GenerationChunk> chunks = chunker.chunkDocuments(
-      request.documents,
-      maxInputTokens: budget,
-    );
-    if (chunks.isEmpty) {
-      await jobRepository.save(
-        initialJob.copyWith(
-          status: GenerationJobStatus.error,
-          errorCode: GenerationErrorCode.noMaterials.name,
-        ),
+    try {
+      onProgress?.call(
+        const GenerationProgress(phase: GenerationProgressPhase.chunking),
       );
-      throw const GenerationException(GenerationErrorCode.noMaterials);
+      final int budget = inputTokenBudget(
+        provider: request.provider,
+        modelId: request.modelId,
+        systemPromptTokens: systemPromptTokens,
+      );
+      final List<GenerationChunk> chunks = chunker.chunkDocuments(
+        request.documents,
+        maxInputTokens: budget,
+      );
+      if (chunks.isEmpty) {
+        await jobRepository.save(
+          initialJob.copyWith(
+            status: GenerationJobStatus.error,
+            errorCode: GenerationErrorCode.noMaterials.name,
+          ),
+        );
+        throw const GenerationException(GenerationErrorCode.noMaterials);
+      }
+
+      final int estimatedTokens =
+          estimator.estimateAll(<String>[
+            for (final document in request.documents) document.text,
+          ]) +
+          chunks.length * (systemPromptTokens + kPromptWrapperTokenReserve);
+      final Set<String> seen = <String>{
+        ...?await _existingHashes(request.targetDeckId),
+      };
+
+      final GenerationRunResult result = await _process(
+        request: request,
+        job: initialJob,
+        chunks: chunks,
+        seen: seen,
+        estimate: estimatedTokens,
+        onProgress: onProgress,
+        cancellation: cancellation,
+      );
+      return result;
+    } on Object {
+      await _markUnexpected(jobId, initialJob);
+      rethrow;
     }
-
-    final int estimatedTokens =
-        estimator.estimateAll(<String>[
-          for (final document in request.documents) document.text,
-        ]) +
-        chunks.length * (systemPromptTokens + kPromptWrapperTokenReserve);
-    final Set<String> seen = <String>{
-      ...?await _existingHashes(request.targetDeckId),
-    };
-
-    final _RunState state = await _process(
-      request: request,
-      job: initialJob,
-      chunks: chunks,
-      seen: seen,
-      estimate: estimatedTokens,
-      onProgress: onProgress,
-      cancellation: cancellation,
-    );
-    return state.result;
   }
 
   @override
@@ -172,7 +181,7 @@ class GenerationPipeline implements GenerationRunner {
           ],
         );
     final Set<String> seen = <String>{
-      ...prevHashes(previous.cards),
+      ..._hashesOfCards(previous.cards),
       ...?await _existingHashes(request.targetDeckId),
     };
     final List<GenerationChunk> chunks = <GenerationChunk>[
@@ -182,31 +191,35 @@ class GenerationPipeline implements GenerationRunner {
           materialsText: failure.materialsText,
           sourceFiles: failure.sourceFiles,
           limit: failure.limit,
-          splitAttempted: true,
+          splitAttempted: failure.splitAttempted,
         ),
     ];
 
-    final _RunState state = await _process(
-      request: request,
-      job: job.copyWith(
-        status: GenerationJobStatus.running,
-        clearErrorCode: true,
-      ),
-      chunks: chunks,
-      seen: seen,
-      estimate: previous.estimatedTokens,
-      initialCards: previous.cards,
-      initialTokens: previous.tokensUsed,
-      initialProcessed: previous.chunkCount,
-      initialDuplicates: previous.duplicatesRemoved,
-      onProgress: onProgress,
-      cancellation: cancellation,
-    );
-    return state.result;
+    try {
+      return await _process(
+        request: request,
+        job: job.copyWith(
+          status: GenerationJobStatus.running,
+          clearErrorCode: true,
+        ),
+        chunks: chunks,
+        seen: seen,
+        estimate: previous.estimatedTokens,
+        initialCards: previous.cards,
+        initialTokens: previous.tokensUsed,
+        initialProcessed: previous.chunkCount,
+        initialDuplicates: previous.duplicatesRemoved,
+        onProgress: onProgress,
+        cancellation: cancellation,
+      );
+    } on Object {
+      await _markUnexpected(previous.jobId, job);
+      rethrow;
+    }
   }
 
   /// Общий цикл обработки фрагментов (первый запуск и повтор упавших).
-  Future<_RunState> _process({
+  Future<GenerationRunResult> _process({
     required GenerationRunRequest request,
     required GenerationJob job,
     required List<GenerationChunk> chunks,
@@ -242,8 +255,10 @@ class GenerationPipeline implements GenerationRunner {
           chunkCount: queue.length,
         ),
       );
+
+      GenerationResult result;
       try {
-        final result = await caller.generate(
+        result = await caller.generate(
           GenerationRequest(
             provider: request.provider,
             model: request.modelId,
@@ -253,35 +268,6 @@ class GenerationPipeline implements GenerationRunner {
           ),
           cancelToken: cancellation?.token,
         );
-        tokensUsed += result.usage.totalTokens ?? 0;
-        processed++;
-        for (final GeneratedCard card in result.cards) {
-          if (_acceptCard(card, seen)) {
-            cards.add(card);
-          } else {
-            duplicates++;
-          }
-        }
-        onProgress?.call(
-          GenerationProgress(
-            phase: GenerationProgressPhase.receiving,
-            chunkIndex: index + 1,
-            chunkCount: queue.length,
-          ),
-        );
-        await jobRepository.save(
-          job.copyWith(
-            status: GenerationJobStatus.running,
-            chunkCount: processed,
-            cardsCount: cards.length,
-            tokensUsed: tokensUsed,
-          ),
-        );
-        if (cancellation?.isCancelled ?? false) {
-          cancelled = true;
-          break;
-        }
-        index++;
       } on GenerationException catch (error) {
         if (error.code == GenerationErrorCode.cancelled ||
             (cancellation?.isCancelled ?? false)) {
@@ -304,49 +290,55 @@ class GenerationPipeline implements GenerationRunner {
           }
         }
         processed++;
-        failures.add(
-          GenerationChunkFailure(
-            chunkIndex: chunk.index,
-            code: error.code,
-            materialsText: chunk.materialsText,
-            limit: chunk.limit,
-            sourceFiles: chunk.sourceFiles,
-          ),
-        );
-        await jobRepository.save(
-          job.copyWith(
-            status: GenerationJobStatus.running,
-            chunkCount: processed,
-            cardsCount: cards.length,
-            tokensUsed: tokensUsed,
-          ),
-        );
+        failures.add(_failureOf(chunk, error.code));
+        await _saveProgress(job, processed, cards.length, tokensUsed);
         index++;
+        continue;
       } on Object {
         // Непредвиденная ошибка адаптера: карточки фрагмента не принимаются,
         // остальные фрагменты продолжаются (A6.8 «частичный успех»).
         processed++;
-        failures.add(
-          GenerationChunkFailure(
-            chunkIndex: chunk.index,
-            code: GenerationErrorCode.invalidResponse,
-            materialsText: chunk.materialsText,
-            limit: chunk.limit,
-            sourceFiles: chunk.sourceFiles,
-          ),
-        );
+        failures.add(_failureOf(chunk, GenerationErrorCode.invalidResponse));
+        await _saveProgress(job, processed, cards.length, tokensUsed);
         index++;
+        continue;
       }
+
+      tokensUsed += result.usage.totalTokens ?? 0;
+      processed++;
+      for (final GeneratedCard card in result.cards) {
+        if (_acceptCard(card, seen)) {
+          cards.add(card);
+        } else {
+          duplicates++;
+        }
+      }
+      onProgress?.call(
+        GenerationProgress(
+          phase: GenerationProgressPhase.receiving,
+          chunkIndex: index + 1,
+          chunkCount: queue.length,
+        ),
+      );
+      await _saveProgress(job, processed, cards.length, tokensUsed);
+      if (cancellation?.isCancelled ?? false) {
+        cancelled = true;
+        break;
+      }
+      index++;
     }
 
+    final bool hasCards = cards.isNotEmpty;
     final GenerationJobStatus status;
     if (cancelled) {
       status = GenerationJobStatus.cancelled;
     } else if (fatal != null) {
-      status = GenerationJobStatus.error;
+      status = hasCards
+          ? GenerationJobStatus.partial
+          : GenerationJobStatus.error;
     } else if (failures.isEmpty) {
       status = GenerationJobStatus.done;
-    } else if (cards.isEmpty) {
+    } else if (!hasCards) {
       status = GenerationJobStatus.error;
     } else {
       status = GenerationJobStatus.partial;
@@ -366,27 +358,78 @@ class GenerationPipeline implements GenerationRunner {
         clearErrorCode: errorCode == null,
       ),
     );
-    if (fatal != null) throw fatal;
+    // Fatal без карточек — ошибка целиком; с карточками возвращаем результат,
+    // чтобы пользователь мог открыть предпросмотр и сохранить полученное.
+    if (fatal != null && !hasCards) throw fatal;
 
-    return _RunState(
-      GenerationRunResult(
-        jobId: job.id,
-        status: status,
-        cards: List<GeneratedCard>.unmodifiable(cards),
-        failures: List<GenerationChunkFailure>.unmodifiable(failures),
-        tokensUsed: tokensUsed,
-        estimatedTokens: estimate,
-        duplicatesRemoved: duplicates,
+    return GenerationRunResult(
+      jobId: job.id,
+      status: status,
+      cards: List<GeneratedCard>.unmodifiable(cards),
+      failures: List<GenerationChunkFailure>.unmodifiable(failures),
+      tokensUsed: tokensUsed,
+      estimatedTokens: estimate,
+      duplicatesRemoved: duplicates,
+      chunkCount: processed,
+      cancelled: cancelled,
+      fatalErrorCode: fatal?.code,
+    );
+  }
+
+  /// Сохраняет пошаговый прогресс задания (`generation_jobs` A8.5 шаг 12).
+  Future<void> _saveProgress(
+    GenerationJob job,
+    int processed,
+    int cardsCount,
+    int tokensUsed,
+  ) {
+    return jobRepository.save(
+      job.copyWith(
+        status: GenerationJobStatus.running,
         chunkCount: processed,
-        cancelled: cancelled,
+        cardsCount: cardsCount,
+        tokensUsed: tokensUsed,
       ),
     );
+  }
+
+  /// Помечает задание `error`, если оно осталось `running` после сбоя.
+  Future<void> _markUnexpected(String jobId, GenerationJob initialJob) async {
+    try {
+      final GenerationJob? current = await jobRepository.jobById(jobId);
+      if (current != null && current.status != GenerationJobStatus.running) {
+        return;
+      }
+      await jobRepository.save(
+        initialJob.copyWith(
+          status: GenerationJobStatus.error,
+          errorCode: _unexpectedErrorCode,
+        ),
+      );
+    } on Object {
+      // Best-effort: исходная ошибка важнее состояния журнала.
+    }
   }
 
   /// Хеши карточек целевой колоды; без колоды — пусто.
   Future<Set<String>?> _existingHashes(String? deckId) async {
     if (deckId == null) return null;
     return cardStore.existingContentHashes(deckId);
+  }
+
+  /// Описание упавшего фрагмента для повтора.
+  GenerationChunkFailure _failureOf(
+    GenerationChunk chunk,
+    GenerationErrorCode code,
+  ) {
+    return GenerationChunkFailure(
+      chunkIndex: chunk.index,
+      code: code,
+      materialsText: chunk.materialsText,
+      limit: chunk.limit,
+      sourceFiles: chunk.sourceFiles,
+      splitAttempted: chunk.splitAttempted,
+    );
   }
 
   /// Принимает карточку, если её хеш (и обратный для reversed) новый.
@@ -405,7 +448,7 @@ class GenerationPipeline implements GenerationRunner {
 }
 
 /// Хеши карточек результата (для дедупликации при повторе).
-Set<String> prevHashes(List<GeneratedCard> cards) {
+Set<String> _hashesOfCards(List<GeneratedCard> cards) {
   final Set<String> hashes = <String>{};
   for (final GeneratedCard card in cards) {
     hashes.add(contentHashOf(front: card.front, back: card.back));
@@ -414,13 +457,6 @@ Set<String> prevHashes(List<GeneratedCard> cards) {
     }
   }
   return hashes;
-}
-
-/// Результат цикла обработки.
-class _RunState {
-  const _RunState(this.result);
-
-  final GenerationRunResult result;
 }
 
 DateTime _defaultNow() => DateTime.now();

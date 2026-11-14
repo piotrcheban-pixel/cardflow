@@ -51,6 +51,13 @@ class DeckScreen extends ConsumerWidget {
         actions: deck == null
             ? null
             : <Widget>[
+                IconButton(
+                  key: const ValueKey<String>('deck-generate-action'),
+                  tooltip: l10n.deckGenerateTooltip,
+                  icon: const Icon(Icons.auto_awesome_outlined),
+                  onPressed: () =>
+                      context.push(AppRoutes.deckGenerationPath(deck.id)),
+                ),
                 PopupMenuButton<_DeckMenuAction>(
                   key: const ValueKey<String>('deck-overflow-menu'),
                   tooltip: l10n.decksMenuTooltip,
@@ -61,10 +68,7 @@ class DeckScreen extends ConsumerWidget {
                       <PopupMenuEntry<_DeckMenuAction>>[
                         PopupMenuItem<_DeckMenuAction>(
                           value: _DeckMenuAction.generate,
-                          child: Text(
-                            l10n.deckGenerateTooltip,
-                            key: const ValueKey<String>('deck-generate-action'),
-                          ),
+                          child: Text(l10n.deckGenerateTooltip),
                         ),
                         PopupMenuItem<_DeckMenuAction>(
                           value: _DeckMenuAction.rename,

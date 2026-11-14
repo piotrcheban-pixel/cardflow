@@ -85,6 +85,7 @@ class GenerationChunkFailure {
     required this.limit,
     this.sourceFiles = const <String>[],
     this.retryable = true,
+    this.splitAttempted = false,
   });
 
   /// Номер фрагмента (с 1).
@@ -104,6 +105,10 @@ class GenerationChunkFailure {
 
   /// Можно ли повторить фрагмент кнопкой «Повторить неудавшиеся».
   final bool retryable;
+
+  /// Фрагмент уже дробился до этой ошибки (повтор не должен дробить снова
+  /// без нового разрешения A8.5 шаг 8).
+  final bool splitAttempted;
 }
 
 /// Результат генерации (он же данные предпросмотра).
@@ -119,6 +124,7 @@ class GenerationRunResult {
     required this.duplicatesRemoved,
     required this.chunkCount,
     required this.cancelled,
+    this.fatalErrorCode,
   });
 
   /// Идентификатор задания `generation_jobs`.
@@ -147,4 +153,9 @@ class GenerationRunResult {
 
   /// Пользователь отменил генерацию.
   final bool cancelled;
+
+  /// Fatal-код, после которого пайплайн остановился, но карточки уже получены
+  /// (например, ключ отозван после первого фрагмента). Сообщение показывается
+  /// пользователю, предпросмотр остаётся доступным.
+  final GenerationErrorCode? fatalErrorCode;
 }

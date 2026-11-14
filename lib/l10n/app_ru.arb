@@ -900,7 +900,7 @@
   "@generationDeckDefaultName": {
     "description": "Имя колоды по умолчанию, если файлов нет и поле пустое."
   },
-  "generationEstimate": "Примерно {count} токенов",
+  "generationEstimate": "Примерно {count, plural, one{{count} токен} few{{count} токена} many{{count} токенов} other{{count} токена}}",
   "@generationEstimate": {
     "description": "Оценка объёма материалов в токенах до отправки (SPEC A6.8).",
     "placeholders": {
@@ -920,6 +920,10 @@
   "generationNoParsedFilesError": "Ни один файл не удалось прочитать. Проверьте формат и размер файлов",
   "@generationNoParsedFilesError": {
     "description": "Валидация: все прикреплённые файлы не разобраны."
+  },
+  "generationFilesParsing": "Дождитесь окончания чтения файлов",
+  "@generationFilesParsing": {
+    "description": "Валидация: генерация запущена, пока файлы ещё парсятся."
   },
   "generationKeyMissing": "Ключ доступа не задан",
   "@generationKeyMissing": {
@@ -997,9 +1001,9 @@
   "@generationPreviewNoSelection": {
     "description": "Валидация: импорт выбранных без выбора."
   },
-  "generationPreviewValidationError": "Проверьте заполнение выбранных карточек: вопрос не должен быть пустым",
+  "generationPreviewValidationError": "Проверьте заполнение выбранных карточек: вопрос и ответ должны быть корректными",
   "@generationPreviewValidationError": {
-    "description": "Валидация предпросмотра: у выбранной карточки пустой вопрос/ответ."
+    "description": "Валидация предпросмотра: у выбранной карточки пустой/слишком длинный текст."
   },
   "generationIssueEmptyFront": "Пустой вопрос",
   "@generationIssueEmptyFront": {

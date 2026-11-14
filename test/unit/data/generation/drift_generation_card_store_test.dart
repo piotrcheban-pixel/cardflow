@@ -119,7 +119,8 @@ void main() {
 
     final job = (await jobs.jobById('job-1'))!;
     expect(job.resultDeckId, result.deckId);
-    expect(job.cardsCount, 2);
+    // A5: cards_count — «сколько получено моделью», импорт его не перезаписывает.
+    expect(job.cardsCount, isNull);
   });
 
   test('импорт в существующую колоду: дополняет, дубли пропускает', () async {
