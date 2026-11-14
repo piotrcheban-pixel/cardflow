@@ -12,6 +12,7 @@ import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/generation/api_key_store.dart';
 import 'package:cardflow/domain/generation/document_gateway.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
+import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/generation/generation_card_store.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
 import 'package:cardflow/domain/generation/generation_job.dart';
@@ -130,6 +131,7 @@ ProviderAccount testCustomProviderAccount({
   String label = 'Свой сервер',
   String baseUrl = 'http://localhost:1234/v1',
   String modelId = 'qwen2.5',
+  bool supportsVision = false,
 }) {
   return ProviderAccount(
     id: id,
@@ -137,6 +139,7 @@ ProviderAccount testCustomProviderAccount({
     protocol: ProviderProtocol.openaiCompletions,
     baseUrl: baseUrl,
     modelId: modelId,
+    supportsVision: supportsVision,
   );
 }
 
@@ -182,6 +185,7 @@ class RecordedBuildArgs {
     this.baseUrl,
     this.strictSchema = true,
     this.sendMaxTokens = true,
+    this.images = const <GenerationAttachment>[],
   });
 
   /// Переданный ключ.
@@ -207,6 +211,9 @@ class RecordedBuildArgs {
 
   /// Переданный флаг `max_tokens` (ADR-021).
   final bool sendMaxTokens;
+
+  /// Переданные вложения (итерация 7.8).
+  final List<GenerationAttachment> images;
 }
 
 /// Фейковый адаптер провайдера: запоминает аргументы и отдаёт заданный ответ.
@@ -254,6 +261,7 @@ class FakeProviderAdapter implements GenerationProviderAdapter {
     String? baseUrl,
     bool strictSchema = true,
     bool sendMaxTokens = true,
+    List<GenerationAttachment> images = const <GenerationAttachment>[],
   }) {
     buildCalls++;
     buildArgs = RecordedBuildArgs(
@@ -265,6 +273,7 @@ class FakeProviderAdapter implements GenerationProviderAdapter {
       baseUrl: baseUrl,
       strictSchema: strictSchema,
       sendMaxTokens: sendMaxTokens,
+      images: images,
     );
     return request ??
         ProviderRequest(

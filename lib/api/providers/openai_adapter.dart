@@ -3,9 +3,11 @@ library;
 
 import 'package:cardflow/api/generation/card_json_schema.dart';
 import 'package:cardflow/api/generation/provider_schema.dart';
+import 'package:cardflow/api/providers/attachment_parts.dart';
 import 'package:cardflow/api/providers/generation_provider_adapter.dart';
 import 'package:cardflow/api/providers/provider_endpoint.dart';
 import 'package:cardflow/api/providers/provider_json.dart';
+import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
 import 'package:cardflow/domain/generation/generation_provider.dart';
 import 'package:cardflow/domain/generation/generation_result.dart';
@@ -39,7 +41,13 @@ class OpenAiAdapter implements GenerationProviderAdapter {
     String? baseUrl,
     bool strictSchema = true,
     bool sendMaxTokens = true,
+    List<GenerationAttachment> images = const <GenerationAttachment>[],
   }) {
+    for (final GenerationAttachment image in images) {
+      if (image.isPdf) {
+        throw const GenerationException(GenerationErrorCode.pdfScanUnsupported);
+      }
+    }
     final ProviderEndpoint endpoint = ProviderEndpoint.parse(
       protocol: ProviderProtocol.openai,
       baseUrl: baseUrl ?? '',
@@ -63,7 +71,10 @@ class OpenAiAdapter implements GenerationProviderAdapter {
         'model': model,
         'messages': <Object?>[
           <String, Object?>{'role': 'system', 'content': systemPrompt},
-          <String, Object?>{'role': 'user', 'content': userContent},
+          <String, Object?>{
+            'role': 'user',
+            'content': openAiUserContent(userContent, images),
+          },
         ],
         'response_format': <String, Object?>{
           'type': 'json_schema',

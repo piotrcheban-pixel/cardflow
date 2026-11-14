@@ -97,6 +97,45 @@ void main() {
       expect(gemini.defaultModel.id, 'gemini-2.0-flash');
     });
 
+    test('дефолты supportsVision: vision-модели true, текстовые false', () {
+      final Map<String, bool> vision = <String, bool>{
+        for (final ProviderPreset preset in kProviderPresets)
+          for (final ProviderPresetModel model in preset.models)
+            '${preset.id}/${model.id}': model.supportsVision,
+      };
+
+      expect(vision['openai/gpt-4o'], isTrue);
+      expect(vision['openai/gpt-4o-mini'], isTrue);
+      expect(vision['gemini/gemini-2.0-flash'], isTrue);
+      expect(vision['gemini/gemini-2.5-flash'], isTrue);
+      expect(vision['anthropic/claude-3-5-haiku-latest'], isTrue);
+      expect(vision['anthropic/claude-3-5-sonnet-latest'], isTrue);
+      expect(vision['openrouter/openai/gpt-4o-mini'], isTrue);
+      expect(vision['openrouter/anthropic/claude-3.5-sonnet'], isTrue);
+
+      expect(vision['deepseek/deepseek-chat'], isFalse);
+      expect(vision['deepseek/deepseek-reasoner'], isFalse);
+      expect(vision['openrouter/deepseek/deepseek-chat'], isFalse);
+      expect(vision['moonshot/moonshot-v1-8k'], isFalse);
+      expect(vision['minimax/MiniMax-Text-01'], isFalse);
+      expect(vision['groq/llama-3.3-70b-versatile'], isFalse);
+      expect(vision['ollama/llama3.1'], isFalse);
+      expect(vision['ollama/qwen2.5'], isFalse);
+    });
+
+    test('PDF-vision — только Anthropic и Gemini', () {
+      expect(ProviderProtocol.anthropicMessages.supportsPdfAttachments, isTrue);
+      expect(
+        ProviderProtocol.geminiGenerateContent.supportsPdfAttachments,
+        isTrue,
+      );
+      expect(ProviderProtocol.openai.supportsPdfAttachments, isFalse);
+      expect(
+        ProviderProtocol.openaiCompletions.supportsPdfAttachments,
+        isFalse,
+      );
+    });
+
     test('протоколы для пользовательской модели поддерживают свой адрес', () {
       expect(ProviderProtocol.customProtocols, hasLength(3));
       expect(

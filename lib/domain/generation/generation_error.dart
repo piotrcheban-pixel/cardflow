@@ -45,14 +45,32 @@ enum GenerationErrorCode {
   /// Невалидный ответ: не JSON, не соответствует схеме, нет `tool_use`.
   invalidResponse,
 
-  /// После парсинга нет текста для генерации (итерация 3c, ADR-015).
+  /// После парсинга нет текста для генерации (итерация 3c, ADR-015; с 7.8 —
+  /// пустой текст после санитизации, скан или пустая форма).
   noMaterials,
+
+  /// Модель не поддерживает изображения, а пользователь приложил картинку.
+  visionUnsupported,
+
+  /// Текст не извлечён, а модель не поддерживает изображения (скан).
+  fileWithoutTextAndVision,
+
+  /// PDF-скан, но протокол/модель не принимает PDF как документ.
+  pdfScanUnsupported,
+
+  /// Вложение больше inline-лимита (10 МБ).
+  attachmentTooLarge,
 }
 
 /// Исключение слоя генерации.
 class GenerationException implements Exception {
   /// Создаёт исключение с кодом [code].
-  const GenerationException(this.code, {this.retryAfter, this.details});
+  const GenerationException(
+    this.code, {
+    this.retryAfter,
+    this.details,
+    this.providerReason,
+  });
 
   /// Код ошибки для маппинга в ARB.
   final GenerationErrorCode code;
@@ -62,6 +80,11 @@ class GenerationException implements Exception {
 
   /// Диагностическая информация (не показывается пользователю, без ключей/материалов).
   final String? details;
+
+  /// Короткая безопасная причина отказа провайдера (HTTP 400), показывается
+  /// пользователю в ARB-шаблоне «Запрос отклонён: {reason}». Очищена от
+  /// управляющих символов и секретоподобных значений, ограничена по длине.
+  final String? providerReason;
 
   @override
   String toString() =>

@@ -152,6 +152,84 @@ void main() {
     }
   });
 
+  test('400 с телом ошибки: реальная причина в providerReason', () async {
+    final adapter = FakeHttpAdapter(
+      (options) => jsonResponse(<String, Object?>{
+        'error': <String, Object?>{
+          'message': 'invalid characters in content',
+          'type': 'invalid_request_error',
+        },
+      }, statusCode: 400),
+    );
+    final client = clientWith(dioWithAdapter(adapter));
+
+    await expectLater(
+      client.postJson(request),
+      throwsA(
+        isA<GenerationException>()
+            .having(
+              (exception) => exception.code,
+              'code',
+              GenerationErrorCode.badRequest,
+            )
+            .having(
+              (exception) => exception.providerReason,
+              'providerReason',
+              'invalid characters in content',
+            ),
+      ),
+    );
+  });
+
+  test(
+    '400 с HTML/мусором: providerReason отсутствует, код badRequest',
+    () async {
+      final adapter = FakeHttpAdapter(
+        (options) => textResponse('<html>Bad Request</html>', statusCode: 400),
+      );
+      final client = clientWith(dioWithAdapter(adapter));
+
+      await expectLater(
+        client.postJson(request),
+        throwsA(
+          isA<GenerationException>()
+              .having(
+                (exception) => exception.code,
+                'code',
+                GenerationErrorCode.badRequest,
+              )
+              .having(
+                (exception) => exception.providerReason,
+                'providerReason',
+                isNull,
+              ),
+        ),
+      );
+    },
+  );
+
+  test('причина 400 очищается от секретов и управляющих символов', () async {
+    final fakeKey = 'sk-${'A' * 32}';
+    final adapter = FakeHttpAdapter(
+      (options) => jsonResponse(<String, Object?>{
+        'error': <String, Object?>{
+          'message': 'bad key $fakeKey\u0000 in content',
+        },
+      }, statusCode: 400),
+    );
+    final client = clientWith(dioWithAdapter(adapter));
+
+    try {
+      await client.postJson(request);
+      fail('Ожидалась GenerationException');
+    } on GenerationException catch (exception) {
+      expect(exception.providerReason, isNotNull);
+      expect(exception.providerReason, isNot(contains(fakeKey)));
+      expect(exception.providerReason, isNot(contains('\u0000')));
+      expect(exception.providerReason, contains('bad key'));
+    }
+  });
+
   test('таймаут: ретраи и итоговый код timeout', () async {
     final adapter = FakeHttpAdapter(
       (options) => throw DioException(

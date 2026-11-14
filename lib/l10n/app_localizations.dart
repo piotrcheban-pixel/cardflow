@@ -958,10 +958,10 @@ abstract class AppLocalizations {
   /// **'Файл больше 25 МБ. Уменьшите файл и попробуйте снова'**
   String get parserErrorFileTooLarge;
 
-  /// Ошибка парсинга: в документе нет извлекаемого текста.
+  /// Ошибка парсинга: в документе нет извлекаемого текста (Word/пустая форма, итерация 7.8).
   ///
   /// In ru, this message translates to:
-  /// **'В файле нет текста'**
+  /// **'В файле нет текста (скан или пустая форма)'**
   String get parserErrorEmptyText;
 
   /// Генерация: ключ API не задан (SPEC A8.6).
@@ -987,6 +987,36 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Запрос отклонён. Проверьте выбранную модель и ключ в настройках'**
   String get generationErrorBadRequest;
+
+  /// Генерация: HTTP 400 с причиной провайдера (итерация 7.8).
+  ///
+  /// In ru, this message translates to:
+  /// **'Запрос отклонён: {reason}'**
+  String generationErrorBadRequestReason(String reason);
+
+  /// Генерация: картинка, а модель без Vision (итерация 7.8).
+  ///
+  /// In ru, this message translates to:
+  /// **'Модель не поддерживает изображения'**
+  String get generationErrorVisionUnsupported;
+
+  /// Генерация: скан без текста и модель без Vision (итерация 7.8).
+  ///
+  /// In ru, this message translates to:
+  /// **'В файле нет текста. Модель не поддерживает изображения'**
+  String get generationErrorFileWithoutTextAndVision;
+
+  /// Генерация: PDF-скан, протокол не принимает PDF (итерация 7.8).
+  ///
+  /// In ru, this message translates to:
+  /// **'PDF-скан не поддерживается выбранной моделью'**
+  String get generationErrorPdfScanUnsupported;
+
+  /// Генерация: вложение больше inline-лимита 10 МБ (итерация 7.8).
+  ///
+  /// In ru, this message translates to:
+  /// **'Файл больше 10 МБ. Уменьшите файл и попробуйте снова'**
+  String get generationErrorAttachmentTooLarge;
 
   /// Генерация: HTTP 429 с Retry-After, пауза в секундах (SPEC A8.6).
   ///
@@ -1135,7 +1165,7 @@ abstract class AppLocalizations {
   /// Подпись зоны прикрепления файлов (SPEC A6.8).
   ///
   /// In ru, this message translates to:
-  /// **'Перетащите файлы сюда или нажмите, чтобы выбрать. Поддерживаются Word, Excel, PDF, PowerPoint, текст и другие'**
+  /// **'Перетащите файлы сюда или нажмите, чтобы выбрать. Поддерживаются Word, Excel, PDF, PowerPoint, текст, изображения JPG и PNG'**
   String get generationAttachHint;
 
   /// Кнопка открытия файлового пикера на экране генерации.
@@ -1162,11 +1192,23 @@ abstract class AppLocalizations {
   /// **'Читаем файл…'**
   String get generationFileParsing;
 
-  /// Статус успешного парсинга прикреплённого файла.
+  /// Статус файла: локальный разбор завершён (SPEC A8.3).
   ///
   /// In ru, this message translates to:
   /// **'Готово'**
   String get generationFileParsed;
+
+  /// Статус файла: JPG/PNG будет отправлен как изображение (итерация 7.8).
+  ///
+  /// In ru, this message translates to:
+  /// **'Изображение'**
+  String get generationFileImage;
+
+  /// Статус файла: PDF без текстового слоя, будет отправлен как документ при Vision (итерация 7.8).
+  ///
+  /// In ru, this message translates to:
+  /// **'Скан — отправится как изображение'**
+  String get generationFileScannedPdf;
 
   /// Размер прикреплённого файла в байтах.
   ///
@@ -1315,7 +1357,7 @@ abstract class AppLocalizations {
   /// Генерация: после парсинга нет текста (новый код noMaterials, ADR-015).
   ///
   /// In ru, this message translates to:
-  /// **'Нет текста для генерации. Добавьте файл с текстом'**
+  /// **'В файле нет текста (скан или пустая форма)'**
   String get generationErrorNoMaterials;
 
   /// Генерация: модель вернула валидный пустой массив cards (правило 13 промпта) — это не ошибка ответа, а материалы без фактов (ADR-021).
@@ -2295,6 +2337,30 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Имя модели на сервере'**
   String get providersModelHint;
+
+  /// Переключатель Vision пользовательской модели (итерация 7.8).
+  ///
+  /// In ru, this message translates to:
+  /// **'Модель принимает изображения'**
+  String get providersVisionLabel;
+
+  /// Пояснение к переключателю Vision (итерация 7.8).
+  ///
+  /// In ru, this message translates to:
+  /// **'Включайте, если модель понимает картинки и сканы'**
+  String get providersVisionHint;
+
+  /// Подпись модели/аккаунта с поддержкой Vision (итерация 7.8).
+  ///
+  /// In ru, this message translates to:
+  /// **'Принимает изображения'**
+  String get providersVisionSupported;
+
+  /// Подпись модели/аккаунта без Vision (итерация 7.8).
+  ///
+  /// In ru, this message translates to:
+  /// **'Только текст'**
+  String get providersVisionNotSupported;
 
   /// Подсказка поля адреса.
   ///

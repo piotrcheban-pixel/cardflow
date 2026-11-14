@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
@@ -7,6 +8,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cardflow/data/db/app_database.dart';
 import 'package:cardflow/data/generation/drift_generation_card_store.dart';
 import 'package:cardflow/data/generation/drift_generation_job_repository.dart';
+import 'package:cardflow/domain/generation/generation_attachment.dart';
+import 'package:cardflow/domain/generation/generation_error.dart';
 import 'package:cardflow/domain/generation/generation_job.dart';
 import 'package:cardflow/domain/generation/generation_run.dart';
 import 'package:cardflow/domain/text/document_format.dart';
@@ -85,10 +88,19 @@ void main() {
     );
   }
 
-  GenerationRunRequest request({String? targetDeckId}) {
+  GenerationRunRequest request({
+    String? targetDeckId,
+    List<GenerationAttachment> images = const <GenerationAttachment>[],
+    bool includeDocument = true,
+    String presetId = 'openai',
+    String modelId = 'gpt-4o-mini',
+  }) {
     return GenerationRunRequest(
-      documents: <ParsedDocument>[document()],
-      account: testProviderAccount(presetId: 'openai', modelId: 'gpt-4o-mini'),
+      documents: includeDocument
+          ? <ParsedDocument>[document()]
+          : const <ParsedDocument>[],
+      images: images,
+      account: testProviderAccount(presetId: presetId, modelId: modelId),
       deckName: 'Сгенерированная колода',
       targetDeckId: targetDeckId,
     );
@@ -222,6 +234,92 @@ void main() {
       expect(job.tokensUsed, 30);
     },
   );
+
+  test('изображение + Vision: production-граф шлёт image_url, job.files хранит файл', () async {
+    final GenerationAttachment image = GenerationAttachment(
+      fileName: 'схема.png',
+      mediaType: AttachmentMediaType.png,
+      bytes: Uint8List.fromList(<int>[
+        0x89,
+        0x50,
+        0x4E,
+        0x47,
+        0x0D,
+        0x0A,
+        0x1A,
+        0x0A,
+        1,
+        2,
+      ]),
+    );
+
+    final result = await container
+        .read(generationRunnerProvider)
+        .run(
+          request(
+            includeDocument: false,
+            images: <GenerationAttachment>[image],
+            modelId: 'gpt-4o',
+          ),
+        );
+
+    expect(result.status, GenerationJobStatus.done);
+    expect(result.cards, hasLength(1));
+    expect(httpAdapter.requests, hasLength(1));
+    final body = jsonDecode(
+      httpAdapter.requests.single.data! as String,
+    ) as Map<String, Object?>;
+    final messages = body['messages']! as List<Object?>;
+    final user = messages[1]! as Map<String, Object?>;
+    final content = user['content']! as List<Object?>;
+    final imagePart = content[1]! as Map<String, Object?>;
+    expect(imagePart['type'], 'image_url');
+    expect(
+      (imagePart['image_url']! as Map<String, Object?>)['url'],
+      startsWith('data:image/png;base64,'),
+    );
+
+    final job = (await container
+        .read(generationJobRepositoryProvider)
+        .jobById(result.jobId))!;
+    expect(job.files, <String>['схема.png']);
+  });
+
+  test('изображение + модель без Vision: ошибка без HTTP-запроса', () async {
+    await container
+        .read(apiKeyStoreProvider)
+        .write('deepseek', 'sk-ds-test-key');
+    final GenerationAttachment image = GenerationAttachment(
+      fileName: 'схема.png',
+      mediaType: AttachmentMediaType.png,
+      bytes: Uint8List.fromList(<int>[
+        0x89,
+        0x50,
+        0x4E,
+        0x47,
+        0x0D,
+        0x0A,
+        0x1A,
+        0x0A,
+      ]),
+    );
+
+    final result = await container
+        .read(generationRunnerProvider)
+        .run(
+          request(
+            includeDocument: false,
+            images: <GenerationAttachment>[image],
+            presetId: 'deepseek',
+            modelId: 'deepseek-chat',
+          ),
+        );
+
+    expect(result.cards, isEmpty);
+    expect(result.failures, hasLength(1));
+    expect(result.failures.single.code, GenerationErrorCode.visionUnsupported);
+    expect(httpAdapter.requests, isEmpty);
+  });
 
   test('production-граф собирает реальные реализации генерации', () {
     expect(

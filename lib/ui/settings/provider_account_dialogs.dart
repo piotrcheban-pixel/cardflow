@@ -284,6 +284,14 @@ class _PresetProviderDialogState extends State<_PresetProviderDialog> {
           ],
           onChanged: (String? modelId) => setState(() => _modelId = modelId),
         ),
+        const SizedBox(height: 4),
+        Text(
+          (preset?.modelById(_resolvedModelId ?? '')?.supportsVision ?? false)
+              ? l10n.providersVisionSupported
+              : l10n.providersVisionNotSupported,
+          key: const ValueKey<String>('provider-preset-vision'),
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
         const SizedBox(height: 12),
         TextField(
           key: const ValueKey<String>('provider-key'),
@@ -332,6 +340,8 @@ class _CustomProviderDialogState extends State<_CustomProviderDialog> {
   String? _baseUrlError;
   String? _modelError;
   bool _deleteKey = false;
+  bool _supportsVision = false;
+  bool _visionTouched = false;
 
   @override
   void initState() {
@@ -344,6 +354,8 @@ class _CustomProviderDialogState extends State<_CustomProviderDialog> {
     _protocol = initial.protocol == ProviderProtocol.openai
         ? ProviderProtocol.openaiCompletions
         : initial.protocol;
+    _supportsVision = initial.supportsVision;
+    _visionTouched = true;
   }
 
   @override
@@ -394,6 +406,7 @@ class _CustomProviderDialogState extends State<_CustomProviderDialog> {
       protocol: _protocol,
       baseUrl: baseUrl,
       modelId: model,
+      supportsVision: _supportsVision,
     );
     final String apiKey = _apiKeyController.text.trim();
     Navigator.of(context).pop(
@@ -478,6 +491,12 @@ class _CustomProviderDialogState extends State<_CustomProviderDialog> {
           autocorrect: false,
           enableSuggestions: false,
           textInputAction: TextInputAction.next,
+          onChanged: (String value) {
+            if (_visionTouched) return;
+            final bool inferred = inferSupportsVisionFromModelId(value);
+            if (inferred == _supportsVision) return;
+            setState(() => _supportsVision = inferred);
+          },
           decoration: InputDecoration(
             labelText: l10n.settingsModelLabel,
             hintText: l10n.providersModelHint,
@@ -485,7 +504,19 @@ class _CustomProviderDialogState extends State<_CustomProviderDialog> {
             border: _fieldBorder,
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 4),
+        SwitchListTile(
+          key: const ValueKey<String>('provider-supports-vision'),
+          contentPadding: EdgeInsets.zero,
+          title: Text(l10n.providersVisionLabel),
+          subtitle: Text(l10n.providersVisionHint),
+          value: _supportsVision,
+          onChanged: (bool value) => setState(() {
+            _supportsVision = value;
+            _visionTouched = true;
+          }),
+        ),
+        const SizedBox(height: 8),
         TextField(
           key: const ValueKey<String>('provider-key'),
           controller: _apiKeyController,

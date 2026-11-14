@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'package:cardflow/api/parsers/document_parser.dart';
 import 'package:cardflow/api/parsers/file_parsing_service.dart';
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/decks/deck_summary.dart';
@@ -15,6 +16,9 @@ import 'package:cardflow/domain/generation/generation_job.dart';
 import 'package:cardflow/domain/generation/generation_run.dart';
 import 'package:cardflow/domain/generation/document_gateway.dart';
 import 'package:cardflow/domain/generation/provider_account.dart';
+import 'package:cardflow/domain/text/document_format.dart';
+import 'package:cardflow/domain/text/parsed_document.dart';
+import 'package:cardflow/domain/text/parser_exception.dart';
 import 'package:cardflow/ui/generation/generation_screen.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
 
@@ -42,11 +46,11 @@ void main() {
     deckRepository = FakeDeckRepository();
   });
 
-  List<Override> overrides() {
+  List<Override> overrides({FileParsingService? parsingService}) {
     return <Override>[
       documentGatewayProvider.overrideWithValue(gateway),
       fileParsingServiceProvider.overrideWithValue(
-        FileParsingService(isolateRunner: inlineIsolate),
+        parsingService ?? FileParsingService(isolateRunner: inlineIsolate),
       ),
       generationRunnerProvider.overrideWithValue(runner),
       generationCardStoreProvider.overrideWithValue(FakeGenerationCardStore()),
@@ -71,10 +75,14 @@ void main() {
     );
   }
 
-  Future<void> pumpScreen(WidgetTester tester, {String? deckId}) async {
+  Future<void> pumpScreen(
+    WidgetTester tester, {
+    String? deckId,
+    FileParsingService? parsingService,
+  }) async {
     await tester.pumpWidget(
       appWithHome(
-        overrides: overrides(),
+        overrides: overrides(parsingService: parsingService),
         home: GenerationScreen(deckId: deckId),
       ),
     );
@@ -92,6 +100,32 @@ void main() {
     gateway.bytesByPath['/tmp/лекция.txt'] = Uint8List.fromList(
       utf8.encode('Материал лекции'),
     );
+    await tester.tap(
+      find.byKey(const ValueKey<String>('generation-attach-zone')),
+    );
+    await tester.pumpAndSettle();
+  }
+
+  Future<void> attachImageFile(WidgetTester tester) async {
+    gateway.picked = <PickedDocument>[
+      const PickedDocument(
+        path: '/tmp/схема.png',
+        name: 'схема.png',
+        sizeBytes: 16,
+      ),
+    ];
+    gateway.bytesByPath['/tmp/схема.png'] = Uint8List.fromList(<int>[
+      0x89,
+      0x50,
+      0x4E,
+      0x47,
+      0x0D,
+      0x0A,
+      0x1A,
+      0x0A,
+      0,
+      0,
+    ]);
     await tester.tap(
       find.byKey(const ValueKey<String>('generation-attach-zone')),
     );
@@ -518,4 +552,105 @@ void main() {
     );
     await tester.pumpAndSettle();
   });
+
+  testWidgets('картинка: статус «Изображение», модель без Vision — ошибка', (
+    tester,
+  ) async {
+    await pumpScreen(tester);
+    await attachImageFile(tester);
+    final l10n = l10nOf(tester);
+    expect(find.text(l10n.generationFileImage), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey<String>('generation-start')));
+    await tester.pumpAndSettle();
+    expect(runner.runCalls, 0);
+    expect(find.text(l10n.generationErrorVisionUnsupported), findsOneWidget);
+  });
+
+  testWidgets('картинка + модель Vision: уходит в GenerationRunRequest', (
+    tester,
+  ) async {
+    accountsStore.accounts = ProviderAccounts.empty.withAccount(
+      testProviderAccount(presetId: 'openai', modelId: 'gpt-4o'),
+    );
+    keyStore.keys['openai'] = 'sk-openai';
+    await pumpScreen(tester);
+    await attachImageFile(tester);
+    runner.result = resultWith(<GeneratedCard>[
+      const GeneratedCard(
+        front: 'Вопрос',
+        back: 'Ответ',
+        cardType: CardType.basic,
+      ),
+    ]);
+
+    await tester.tap(find.byKey(const ValueKey<String>('generation-start')));
+    await tester.pumpAndSettle();
+
+    expect(runner.runCalls, 1);
+    expect(runner.lastRequest!.images, hasLength(1));
+    expect(runner.lastRequest!.images.single.fileName, 'схема.png');
+    expect(runner.lastRequest!.documents, isEmpty);
+    expect(runner.lastRequest!.deckName, 'схема');
+  });
+
+  testWidgets('PDF-скан: статус, без Vision — понятная ошибка', (tester) async {
+    gateway.picked = <PickedDocument>[
+      const PickedDocument(
+        path: '/tmp/скан.pdf',
+        name: 'скан.pdf',
+        sizeBytes: 8,
+      ),
+    ];
+    gateway.bytesByPath['/tmp/скан.pdf'] = Uint8List.fromList(<int>[
+      0x25,
+      0x50,
+      0x44,
+      0x46,
+      0x2D,
+      0x31,
+      0x2E,
+      0x37,
+    ]);
+    await pumpScreen(
+      tester,
+      parsingService: FileParsingService(
+        parsers: <DocumentParser>[const _ScannedPdfParser()],
+        isolateRunner: inlineIsolate,
+      ),
+    );
+    await tester.tap(
+      find.byKey(const ValueKey<String>('generation-attach-zone')),
+    );
+    await tester.pumpAndSettle();
+    final l10n = l10nOf(tester);
+    expect(find.text(l10n.generationFileScannedPdf), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey<String>('generation-start')));
+    await tester.pumpAndSettle();
+    expect(runner.runCalls, 0);
+    expect(
+      find.text(l10n.generationErrorFileWithoutTextAndVision),
+      findsOneWidget,
+    );
+  });
+}
+
+/// Парсер PDF, который всегда сообщает «скан» (проводка UI, итерация 7.8).
+class _ScannedPdfParser implements DocumentParser {
+  const _ScannedPdfParser();
+
+  @override
+  DocumentFormat get format => DocumentFormat.pdf;
+
+  @override
+  Future<ParsedDocument> parse(
+    Uint8List bytes, {
+    required String fileName,
+  }) async {
+    throw const ParserException(
+      ParserErrorCode.scannedPdf,
+      details: 'тестовый скан',
+    );
+  }
 }

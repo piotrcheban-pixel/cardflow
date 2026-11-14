@@ -1,8 +1,10 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cardflow/api/generation/card_generation_service.dart';
+import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
 import 'package:cardflow/domain/generation/generation_provider.dart';
 import 'package:cardflow/domain/generation/generation_request.dart';
@@ -16,7 +18,10 @@ import '../../../helpers/generation_fakes.dart';
 /// транспорт → разбор → схема → контент-валидация (SPEC A8.5 шаги 6–7).
 void main() {
   /// Облачный аккаунт с ключом в хранилище.
-  ProviderAccount openAiAccount({String modelId = 'gpt-test'}) {
+  ProviderAccount openAiAccount({
+    String modelId = 'gpt-test',
+    bool supportsVision = false,
+  }) {
     return ProviderAccount(
       id: 'openai',
       label: 'OpenAI',
@@ -26,6 +31,7 @@ void main() {
       modelId: modelId,
       contextTokens: 128000,
       requiresApiKey: true,
+      supportsVision: supportsVision,
     );
   }
 
@@ -35,6 +41,7 @@ void main() {
     String baseUrl = 'https://api.deepseek.com',
     String modelId = 'deepseek-chat',
     bool requiresApiKey = false,
+    bool supportsVision = false,
   }) {
     return ProviderAccount(
       id: id,
@@ -45,6 +52,7 @@ void main() {
       modelId: modelId,
       contextTokens: 128000,
       requiresApiKey: requiresApiKey,
+      supportsVision: supportsVision,
     );
   }
 
@@ -53,12 +61,14 @@ void main() {
     String materialsText = 'Материал лекции',
     String? wishes = 'Акцент на датах',
     int limit = 10,
+    List<GenerationAttachment> images = const <GenerationAttachment>[],
   }) {
     return GenerationRequest(
       account: account,
       materialsText: materialsText,
       wishes: wishes,
       limit: limit,
+      images: images,
     );
   }
 
@@ -519,6 +529,259 @@ void main() {
       await expectLater(
         openAiService.generate(requestFor(openAiAccount())),
         throwsGeneration(GenerationErrorCode.invalidResponse),
+      );
+    });
+  });
+
+  group('Итерация 7.8: вложения и Vision', () {
+    GenerationAttachment pngAttachment({String fileName = 'схема.png'}) {
+      return GenerationAttachment(
+        fileName: fileName,
+        mediaType: AttachmentMediaType.png,
+        bytes: Uint8List.fromList(<int>[
+          0x89,
+          0x50,
+          0x4E,
+          0x47,
+          0x0D,
+          0x0A,
+          0x1A,
+          0x0A,
+          1,
+          2,
+          3,
+        ]),
+      );
+    }
+
+    GenerationAttachment pdfAttachment() {
+      return GenerationAttachment(
+        fileName: 'скан.pdf',
+        mediaType: AttachmentMediaType.pdf,
+        bytes: Uint8List.fromList(<int>[0x25, 0x50, 0x44, 0x46, 0x2D]),
+      );
+    }
+
+    test(
+      'пустой текст без вложений → noMaterials, без адаптера и сети',
+      () async {
+        final adapter = FakeProviderAdapter();
+        final transport = FakeGenerationTransport(
+          response: <String, Object?>{},
+        );
+        final service = serviceWith(adapter: adapter, transport: transport);
+
+        await expectLater(
+          service.generate(
+            requestFor(openAiAccount(), materialsText: ' \u0000\n\n '),
+          ),
+          throwsGeneration(GenerationErrorCode.noMaterials),
+        );
+        expect(adapter.buildCalls, 0);
+        expect(transport.calls, 0);
+      },
+    );
+
+    test('управляющие символы в материалах и пожеланиях удаляются', () async {
+      final adapter = FakeProviderAdapter(
+        cardsJson: cardsJson(<Map<String, Object?>>[]),
+      );
+      final transport = FakeGenerationTransport(response: <String, Object?>{});
+      final service = serviceWith(adapter: adapter, transport: transport);
+
+      await service.generate(
+        requestFor(
+          openAiAccount(),
+          materialsText: 'Текст\u0000лекции\u000B',
+          wishes: 'Акцент\u0000на датах',
+        ),
+      );
+
+      expect(adapter.buildArgs!.userContent, contains('Текстлекции'));
+      expect(adapter.buildArgs!.userContent, contains('Акцентна датах'));
+      expect(adapter.buildArgs!.userContent, isNot(contains('\u0000')));
+      expect(adapter.buildArgs!.userContent, isNot(contains('\u000B')));
+    });
+
+    test('vision=true + картинка → image part в запросе адаптера', () async {
+      final adapter = FakeProviderAdapter(
+        cardsJson: cardsJson(<Map<String, Object?>>[]),
+      );
+      final transport = FakeGenerationTransport(response: <String, Object?>{});
+      final service = serviceWith(adapter: adapter, transport: transport);
+
+      await service.generate(
+        requestFor(
+          openAiAccount(supportsVision: true),
+          materialsText: '',
+          images: <GenerationAttachment>[pngAttachment()],
+        ),
+      );
+
+      expect(adapter.buildArgs!.images, hasLength(1));
+      expect(adapter.buildArgs!.images.single.fileName, 'схема.png');
+      expect(
+        adapter.buildArgs!.userContent,
+        contains('Приложенные изображения'),
+        reason: 'для image-only запроса нужен непустой блок materials',
+      );
+      expect(transport.calls, 1);
+    });
+
+    test('vision=false + картинка → visionUnsupported, без запроса', () async {
+      final adapter = FakeProviderAdapter();
+      final transport = FakeGenerationTransport(response: <String, Object?>{});
+      final service = serviceWith(adapter: adapter, transport: transport);
+
+      await expectLater(
+        service.generate(
+          requestFor(
+            openAiAccount(supportsVision: false),
+            materialsText: '',
+            images: <GenerationAttachment>[pngAttachment()],
+          ),
+        ),
+        throwsGeneration(GenerationErrorCode.visionUnsupported),
+      );
+      expect(adapter.buildCalls, 0);
+      expect(transport.calls, 0);
+    });
+
+    test('PDF-скан без PDF-vision → pdfScanUnsupported, без запроса', () async {
+      final adapter = FakeProviderAdapter();
+      final transport = FakeGenerationTransport(response: <String, Object?>{});
+      final service = serviceWith(adapter: adapter, transport: transport);
+
+      await expectLater(
+        service.generate(
+          requestFor(
+            openAiAccount(supportsVision: true),
+            materialsText: '',
+            images: <GenerationAttachment>[pdfAttachment()],
+          ),
+        ),
+        throwsGeneration(GenerationErrorCode.pdfScanUnsupported),
+      );
+      expect(adapter.buildCalls, 0);
+      expect(transport.calls, 0);
+    });
+
+    test('вложение больше 10 МБ → attachmentTooLarge, без запроса', () async {
+      final adapter = FakeProviderAdapter();
+      final transport = FakeGenerationTransport(response: <String, Object?>{});
+      final service = serviceWith(adapter: adapter, transport: transport);
+      final GenerationAttachment huge = GenerationAttachment(
+        fileName: 'огромная.png',
+        mediaType: AttachmentMediaType.png,
+        bytes: Uint8List(kMaxInlineAttachmentBytes + 1),
+      );
+
+      await expectLater(
+        service.generate(
+          requestFor(
+            openAiAccount(supportsVision: true),
+            materialsText: '',
+            images: <GenerationAttachment>[huge],
+          ),
+        ),
+        throwsGeneration(GenerationErrorCode.attachmentTooLarge),
+      );
+      expect(adapter.buildCalls, 0);
+      expect(transport.calls, 0);
+    });
+
+    test(
+      'модель без Vision: причина «нет изображений» важнее размера',
+      () async {
+        final adapter = FakeProviderAdapter();
+        final transport = FakeGenerationTransport(
+          response: <String, Object?>{},
+        );
+        final service = serviceWith(adapter: adapter, transport: transport);
+        final GenerationAttachment huge = GenerationAttachment(
+          fileName: 'огромная.png',
+          mediaType: AttachmentMediaType.png,
+          bytes: Uint8List(kMaxInlineAttachmentBytes + 1),
+        );
+
+        await expectLater(
+          service.generate(
+            requestFor(
+              openAiAccount(supportsVision: false),
+              materialsText: '',
+              images: <GenerationAttachment>[huge],
+            ),
+          ),
+          throwsGeneration(GenerationErrorCode.visionUnsupported),
+        );
+        expect(adapter.buildCalls, 0);
+        expect(transport.calls, 0);
+      },
+    );
+
+    test('PDF-скан + Anthropic (PDF-vision) → вложение передаётся', () async {
+      final adapter = FakeProviderAdapter(
+        provider: GenerationProvider.anthropic,
+        cardsJson: cardsJson(<Map<String, Object?>>[]),
+      );
+      final transport = FakeGenerationTransport(response: <String, Object?>{});
+      final ProviderAccount account = ProviderAccount(
+        id: 'anthropic',
+        label: 'Anthropic',
+        presetId: 'anthropic',
+        protocol: ProviderProtocol.anthropicMessages,
+        baseUrl: 'https://api.anthropic.com',
+        modelId: 'claude-3-5-haiku-latest',
+        contextTokens: 200000,
+        requiresApiKey: true,
+        supportsVision: true,
+      );
+      final service = serviceWith(
+        adapter: adapter,
+        transport: transport,
+        apiKeyStore: FakeApiKeyStore(<String, String>{'anthropic': 'key'}),
+      );
+
+      await service.generate(
+        requestFor(
+          account,
+          materialsText: '',
+          images: <GenerationAttachment>[pdfAttachment()],
+        ),
+      );
+
+      expect(adapter.buildArgs!.images.single.isPdf, isTrue);
+      expect(transport.calls, 1);
+    });
+
+    test('400 с причиной провайдера доходит до GenerationException', () async {
+      final adapter = FakeProviderAdapter(
+        provider: GenerationProvider.openai,
+        cardsJson: cardsJson(<Map<String, Object?>>[]),
+      );
+      final transport = FakeGenerationTransport(
+        error: const GenerationException(
+          GenerationErrorCode.badRequest,
+          providerReason: 'invalid characters in content',
+        ),
+      );
+      final service = serviceWith(adapter: adapter, transport: transport);
+
+      await expectLater(
+        service.generate(requestFor(openAiAccount())),
+        throwsA(
+          isA<GenerationException>()
+              .having(
+                (GenerationException error) => error.code,
+                'code',
+                GenerationErrorCode.badRequest,
+              )
+              .having(
+                (GenerationException error) => error.providerReason,
+                'providerReason',
+                'invalid characters in content',
+              ),
+        ),
       );
     });
   });

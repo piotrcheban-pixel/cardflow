@@ -5,6 +5,7 @@
 library;
 
 import 'package:cardflow/domain/generation/generated_card.dart';
+import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
 import 'package:cardflow/domain/generation/generation_job.dart';
 import 'package:cardflow/domain/generation/provider_account.dart';
@@ -19,10 +20,14 @@ class GenerationRunRequest {
     required this.deckName,
     this.wishes,
     this.targetDeckId,
+    this.images = const <GenerationAttachment>[],
   });
 
   /// Разобранные документы (порядок прикрепления).
   final List<ParsedDocument> documents;
+
+  /// Изображения и PDF-сканы (порядок прикрепления).
+  final List<GenerationAttachment> images;
 
   /// Провайдер: протокол, адрес, модель и id ключа (ADR-020).
   final ProviderAccount account;
@@ -82,6 +87,8 @@ class GenerationChunkFailure {
     this.sourceFiles = const <String>[],
     this.retryable = true,
     this.splitAttempted = false,
+    this.providerReason,
+    this.images = const <GenerationAttachment>[],
   });
 
   /// Номер фрагмента (с 1).
@@ -105,6 +112,12 @@ class GenerationChunkFailure {
   /// Фрагмент уже дробился до этой ошибки (повтор не должен дробить снова
   /// без нового разрешения A8.5 шаг 8).
   final bool splitAttempted;
+
+  /// Безопасная причина отказа провайдера (HTTP 400) для сообщения UI.
+  final String? providerReason;
+
+  /// Вложения фрагмента (для повтора image-запроса).
+  final List<GenerationAttachment> images;
 }
 
 /// Результат генерации (он же данные предпросмотра).
@@ -121,6 +134,7 @@ class GenerationRunResult {
     required this.chunkCount,
     required this.cancelled,
     this.fatalErrorCode,
+    this.fatalProviderReason,
   });
 
   /// Идентификатор задания `generation_jobs`.
@@ -154,4 +168,7 @@ class GenerationRunResult {
   /// (например, ключ отозван после первого фрагмента). Сообщение показывается
   /// пользователю, предпросмотр остаётся доступным.
   final GenerationErrorCode? fatalErrorCode;
+
+  /// Безопасная причина отказа провайдера для [fatalErrorCode].
+  final String? fatalProviderReason;
 }

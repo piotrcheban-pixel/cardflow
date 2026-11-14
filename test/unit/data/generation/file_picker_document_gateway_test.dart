@@ -17,6 +17,13 @@ void main() {
     }
   });
 
+  test('фильтр пикера содержит изображения JPG/JPEG/PNG (итерация 7.8)', () {
+    expect(
+      generationDocumentExtensions,
+      containsAll(<String>['jpg', 'jpeg', 'png']),
+    );
+  });
+
   test('readDocument читает локальный файл', () async {
     final Directory directory = Directory.systemTemp.createTempSync(
       'cardflow_doc_',

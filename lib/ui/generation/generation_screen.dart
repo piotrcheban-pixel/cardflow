@@ -19,7 +19,10 @@ import 'package:cardflow/api/parsers/file_parsing_service.dart';
 import 'package:cardflow/domain/decks/deck.dart';
 import 'package:cardflow/domain/generation/api_key_store.dart';
 import 'package:cardflow/domain/generation/document_gateway.dart';
+import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/generation/generation_card_store.dart';
+import 'package:cardflow/domain/generation/generation_chunker.dart'
+    show kImageTokenEstimate;
 import 'package:cardflow/domain/generation/generation_error.dart';
 import 'package:cardflow/domain/generation/generation_model.dart';
 import 'package:cardflow/domain/generation/generation_run.dart';
@@ -43,7 +46,7 @@ import 'package:cardflow/ui/state/decks_ui_providers.dart';
 const int _largeMaterialTokenThreshold = 100000;
 
 /// Статус локального парсинга прикреплённого файла.
-enum _FileStatus { parsing, parsed, failed }
+enum _FileStatus { parsing, parsed, image, scanned, failed }
 
 /// Прикреплённый файл и результат его парсинга.
 class _AttachedFile {
@@ -52,6 +55,7 @@ class _AttachedFile {
   final PickedDocument picked;
   _FileStatus status = _FileStatus.parsing;
   ParsedDocument? document;
+  GenerationAttachment? attachment;
   ParserErrorCode? errorCode;
 }
 
@@ -150,6 +154,7 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
     return account.copyWith(
       modelId: modelId,
       contextTokens: model?.contextTokens ?? account.contextTokens,
+      supportsVision: model?.supportsVision ?? account.supportsVision,
     );
   }
 
@@ -171,6 +176,19 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
         file.document!,
   ];
 
+  /// Вложения: изображения и PDF-сканы.
+  List<GenerationAttachment> get _attachments => <GenerationAttachment>[
+    for (final _AttachedFile file in _files)
+      if ((file.status == _FileStatus.image ||
+              file.status == _FileStatus.scanned) &&
+          file.attachment != null)
+        file.attachment!,
+  ];
+
+  /// Есть ли материалы для генерации (текст или вложения).
+  bool get _hasContent =>
+      _parsedDocuments.isNotEmpty || _attachments.isNotEmpty;
+
   /// Есть ли файлы, которые ещё читаются/парсятся.
   bool get _anyParsing =>
       _files.any((_AttachedFile file) => file.status == _FileStatus.parsing);
@@ -179,6 +197,7 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
       _estimator.estimateAll(
         _parsedDocuments.map((ParsedDocument document) => document.text),
       ) +
+      _attachments.length * kImageTokenEstimate +
       _estimator.estimate(systemPromptGenRuV2) +
       kPromptWrapperTokenReserve;
 
@@ -235,12 +254,35 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
     }
   }
 
-  /// Парсит один файл; ошибка файла не блокирует остальные.
+  /// Парсит один файл; изображения и PDF-сканы сохраняются как вложения.
   Future<void> _parse(_AttachedFile file) async {
     try {
       final bytes = await ref
           .read(documentGatewayProvider)
           .readDocument(file.picked);
+      if (!mounted) return;
+      final AttachmentMediaType? imageType = attachmentMediaTypeForFileName(
+        file.picked.name,
+      );
+      if (imageType != null) {
+        final bool valid = hasValidAttachmentSignature(imageType, bytes);
+        setState(() {
+          if (!valid) {
+            file
+              ..status = _FileStatus.failed
+              ..errorCode = ParserErrorCode.unreadableFile;
+            return;
+          }
+          file
+            ..status = _FileStatus.image
+            ..attachment = GenerationAttachment(
+              fileName: file.picked.name,
+              mediaType: imageType,
+              bytes: bytes,
+            );
+        });
+        return;
+      }
       final ParsingOutcome outcome = await ref
           .read(fileParsingServiceProvider)
           .parseFile(
@@ -253,9 +295,25 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
             ..status = _FileStatus.parsed
             ..document = outcome.document;
         } else if (outcome is ParsedFileFailure) {
-          file
-            ..status = _FileStatus.failed
-            ..errorCode = outcome.code;
+          final bool scannedPdf =
+              outcome.code == ParserErrorCode.scannedPdf &&
+              documentFormatFromFileName(file.picked.name) ==
+                  DocumentFormat.pdf;
+          if (scannedPdf) {
+            // PDF без текстового слоя не теряем: при Vision он уйдёт как
+            // документ, иначе сервис вернёт понятную ошибку (ADR-022).
+            file
+              ..status = _FileStatus.scanned
+              ..attachment = GenerationAttachment(
+                fileName: file.picked.name,
+                mediaType: AttachmentMediaType.pdf,
+                bytes: bytes,
+              );
+          } else {
+            file
+              ..status = _FileStatus.failed
+              ..errorCode = outcome.code;
+          }
         }
       });
     } on ParserException catch (error) {
@@ -288,6 +346,7 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
     final AppLocalizations l10n = AppLocalizations.of(context);
     if (_generating || _loading) return;
     final List<ParsedDocument> documents = _parsedDocuments;
+    final List<GenerationAttachment> attachments = _attachments;
     if (_files.isEmpty) {
       showAppMessage(context, l10n.generationNoFilesError);
       return;
@@ -296,7 +355,7 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
       showAppMessage(context, l10n.generationFilesParsing);
       return;
     }
-    if (documents.isEmpty) {
+    if (documents.isEmpty && attachments.isEmpty) {
       showAppMessage(context, l10n.generationNoParsedFilesError);
       return;
     }
@@ -309,14 +368,31 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
       showAppMessage(context, l10n.generationErrorProviderNotConfigured);
       return;
     }
+    final bool hasScans = attachments.any(
+      (GenerationAttachment attachment) => attachment.isPdf,
+    );
+    if (attachments.isNotEmpty && !account.supportsVision) {
+      showAppMessage(
+        context,
+        hasScans
+            ? l10n.generationErrorFileWithoutTextAndVision
+            : l10n.generationErrorVisionUnsupported,
+      );
+      return;
+    }
+    if (hasScans && !account.protocol.supportsPdfAttachments) {
+      showAppMessage(context, l10n.generationErrorPdfScanUnsupported);
+      return;
+    }
     final String deckName = widget.deckId == null
-        ? _resolveDeckName(l10n, documents)
+        ? _resolveDeckName(l10n, documents, attachments)
         : '';
     final String? wishes = _wishesController.text.trim().isEmpty
         ? null
         : _wishesController.text.trim();
     final GenerationRunRequest request = GenerationRunRequest(
       documents: documents,
+      images: attachments,
       account: account,
       deckName: deckName,
       wishes: wishes,
@@ -354,7 +430,11 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
       if (result.fatalErrorCode != null && result.cards.isNotEmpty) {
         showAppMessage(
           context,
-          generationErrorCodeMessage(l10n, result.fatalErrorCode!),
+          generationErrorCodeMessage(
+            l10n,
+            result.fatalErrorCode!,
+            providerReason: result.fatalProviderReason,
+          ),
         );
       }
       if (result.cards.isEmpty) {
@@ -387,6 +467,7 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
           l10n,
           error.code,
           retryAfter: error.retryAfter,
+          providerReason: error.providerReason,
         ),
       );
     } on Object {
@@ -423,11 +504,17 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
   String _resolveDeckName(
     AppLocalizations l10n,
     List<ParsedDocument> documents,
+    List<GenerationAttachment> attachments,
   ) {
     final String typed = _deckNameController.text.trim();
     if (typed.isNotEmpty) return typed;
-    if (documents.isNotEmpty) {
-      final String base = p.basenameWithoutExtension(documents.first.fileName);
+    final String? fileName = documents.isNotEmpty
+        ? documents.first.fileName
+        : attachments.isNotEmpty
+        ? attachments.first.fileName
+        : null;
+    if (fileName != null) {
+      final String base = p.basenameWithoutExtension(fileName);
       if (base.trim().isNotEmpty) return base.trim();
     }
     return l10n.generationDeckDefaultName;
@@ -536,7 +623,7 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
     Deck? targetDeck,
   ) {
     final ThemeData theme = Theme.of(context);
-    final bool hasParsed = _parsedDocuments.isNotEmpty;
+    final bool hasContent = _hasContent;
     final int estimate = _estimatedTokens;
     return DropTarget(
       onDragEntered: (_) => setState(() => _dragging = true),
@@ -630,7 +717,7 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
             )
           else
             Text(l10n.generationTargetDeck(targetDeck?.name ?? '')),
-          if (hasParsed) ...<Widget>[
+          if (hasContent) ...<Widget>[
             const SizedBox(height: 8),
             Text(
               l10n.generationEstimate(estimate),
@@ -758,9 +845,14 @@ class _FileTile extends StatelessWidget {
     final AppLocalizations l10n = AppLocalizations.of(context);
     final ThemeData theme = Theme.of(context);
     final DocumentFormat? format = documentFormatFromFileName(file.picked.name);
+    final AttachmentMediaType? imageType = attachmentMediaTypeForFileName(
+      file.picked.name,
+    );
     final String status = switch (file.status) {
       _FileStatus.parsing => l10n.generationFileParsing,
       _FileStatus.parsed => l10n.generationFileParsed,
+      _FileStatus.image => l10n.generationFileImage,
+      _FileStatus.scanned => l10n.generationFileScannedPdf,
       _FileStatus.failed => parserErrorCodeMessage(
         l10n,
         file.errorCode ?? ParserErrorCode.unreadableFile,
@@ -770,7 +862,9 @@ class _FileTile extends StatelessWidget {
         ? null
         : formatFileSize(l10n, file.picked.sizeBytes);
     return ListTile(
-      leading: Icon(_formatIcon(format)),
+      leading: Icon(
+        imageType == null ? _formatIcon(format) : Icons.image_outlined,
+      ),
       title: Text(file.picked.name),
       subtitle: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

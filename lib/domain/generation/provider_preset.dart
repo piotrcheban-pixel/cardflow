@@ -16,6 +16,7 @@ class ProviderPresetModel {
     required this.id,
     required this.label,
     required this.contextTokens,
+    this.supportsVision = false,
   });
 
   /// Идентификатор модели в запросе провайдеру.
@@ -27,16 +28,20 @@ class ProviderPresetModel {
   /// Окно контекста модели, токенов (для нарезки фрагментов).
   final int contextTokens;
 
+  /// Принимает ли модель изображения (Vision).
+  final bool supportsVision;
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is ProviderPresetModel &&
           other.id == id &&
           other.label == label &&
-          other.contextTokens == contextTokens;
+          other.contextTokens == contextTokens &&
+          other.supportsVision == supportsVision;
 
   @override
-  int get hashCode => Object.hash(id, label, contextTokens);
+  int get hashCode => Object.hash(id, label, contextTokens, supportsVision);
 
   @override
   String toString() => 'ProviderPresetModel($id)';
@@ -118,8 +123,14 @@ const List<ProviderPreset> kProviderPresets = <ProviderPreset>[
         id: 'gpt-4o-mini',
         label: 'GPT-4o mini',
         contextTokens: 128000,
+        supportsVision: true,
       ),
-      ProviderPresetModel(id: 'gpt-4o', label: 'GPT-4o', contextTokens: 128000),
+      ProviderPresetModel(
+        id: 'gpt-4o',
+        label: 'GPT-4o',
+        contextTokens: 128000,
+        supportsVision: true,
+      ),
     ],
     requiresApiKey: true,
   ),
@@ -133,11 +144,13 @@ const List<ProviderPreset> kProviderPresets = <ProviderPreset>[
         id: 'claude-3-5-haiku-latest',
         label: 'Claude 3.5 Haiku',
         contextTokens: 200000,
+        supportsVision: true,
       ),
       ProviderPresetModel(
         id: 'claude-3-5-sonnet-latest',
         label: 'Claude 3.5 Sonnet',
         contextTokens: 200000,
+        supportsVision: true,
       ),
     ],
     requiresApiKey: true,
@@ -152,11 +165,13 @@ const List<ProviderPreset> kProviderPresets = <ProviderPreset>[
         id: 'gemini-2.0-flash',
         label: 'Gemini 2.0 Flash',
         contextTokens: 1048576,
+        supportsVision: true,
       ),
       ProviderPresetModel(
         id: 'gemini-2.5-flash',
         label: 'Gemini 2.5 Flash',
         contextTokens: 1048576,
+        supportsVision: true,
       ),
     ],
     requiresApiKey: true,
@@ -171,11 +186,13 @@ const List<ProviderPreset> kProviderPresets = <ProviderPreset>[
         id: 'openai/gpt-4o-mini',
         label: 'GPT-4o mini',
         contextTokens: 128000,
+        supportsVision: true,
       ),
       ProviderPresetModel(
         id: 'anthropic/claude-3.5-sonnet',
         label: 'Claude 3.5 Sonnet',
         contextTokens: 200000,
+        supportsVision: true,
       ),
       ProviderPresetModel(
         id: 'deepseek/deepseek-chat',

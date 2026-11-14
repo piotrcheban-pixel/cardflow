@@ -12,17 +12,22 @@ import 'package:cardflow/l10n/app_localizations.dart';
 /// Сообщение для кода ошибки генерации.
 ///
 /// [retryAfter] используется для кода `rateLimited` («Повтор через N секунд»).
+/// [providerReason] — безопасная причина HTTP 400 от провайдера (ADR-022).
 String generationErrorCodeMessage(
   AppLocalizations l10n,
   GenerationErrorCode code, {
   Duration? retryAfter,
+  String? providerReason,
 }) {
   return switch (code) {
     GenerationErrorCode.missingApiKey => l10n.generationErrorMissingApiKey,
     GenerationErrorCode.providerNotConfigured =>
       l10n.generationErrorProviderNotConfigured,
     GenerationErrorCode.invalidApiKey => l10n.generationErrorInvalidApiKey,
-    GenerationErrorCode.badRequest => l10n.generationErrorBadRequest,
+    GenerationErrorCode.badRequest =>
+      providerReason == null || providerReason.trim().isEmpty
+          ? l10n.generationErrorBadRequest
+          : l10n.generationErrorBadRequestReason(providerReason.trim()),
     GenerationErrorCode.rateLimited =>
       retryAfter == null
           ? l10n.generationErrorRateLimitedNoDelay
@@ -38,6 +43,14 @@ String generationErrorCodeMessage(
     GenerationErrorCode.invalidResponse =>
       l10n.generationErrorUnexpectedResponse,
     GenerationErrorCode.noMaterials => l10n.generationErrorNoMaterials,
+    GenerationErrorCode.visionUnsupported =>
+      l10n.generationErrorVisionUnsupported,
+    GenerationErrorCode.fileWithoutTextAndVision =>
+      l10n.generationErrorFileWithoutTextAndVision,
+    GenerationErrorCode.pdfScanUnsupported =>
+      l10n.generationErrorPdfScanUnsupported,
+    GenerationErrorCode.attachmentTooLarge =>
+      l10n.generationErrorAttachmentTooLarge,
   };
 }
 
@@ -48,6 +61,7 @@ String generationErrorMessage(AppLocalizations l10n, Object error) {
       l10n,
       error.code,
       retryAfter: error.retryAfter,
+      providerReason: error.providerReason,
     );
   }
   return l10n.generationErrorGeneric;

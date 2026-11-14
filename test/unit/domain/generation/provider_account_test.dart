@@ -131,6 +131,47 @@ void main() {
       expect(account.contextTokens, kCustomProviderContextTokens);
       expect(account.requiresApiKey, isFalse);
     });
+
+    test('supportsVision: из пресета и явное поле JSON', () {
+      final ProviderAccount openAi = ProviderAccount.fromPreset(
+        providerPresetById('openai')!,
+        id: 'openai',
+      );
+      expect(openAi.supportsVision, isTrue);
+      expect(deepseek().supportsVision, isFalse);
+      expect(deepseek().copyWith(supportsVision: true).supportsVision, isTrue);
+      expect(openAi.toJson()['supports_vision'], isTrue);
+      expect(ProviderAccount.fromJson(openAi.toJson())!.supportsVision, isTrue);
+    });
+
+    test('supportsVision: старая запись без поля — пресет или имя модели', () {
+      final ProviderAccount? preset = ProviderAccount.fromJson(
+        <String, Object?>{
+          'id': 'openai-2',
+          'preset_id': 'openai',
+          'protocol': 'openai',
+          'base_url': 'https://api.openai.com/v1',
+          'model': 'gpt-4o',
+        },
+      );
+      expect(preset!.supportsVision, isTrue);
+
+      final ProviderAccount? flash = ProviderAccount.fromJson(<String, Object?>{
+        'id': 'custom',
+        'protocol': 'openai-completions',
+        'base_url': 'https://example.test',
+        'model': 'deepseek-flash',
+      });
+      expect(flash!.supportsVision, isTrue, reason: 'аккаунт владельца');
+
+      final ProviderAccount? text = ProviderAccount.fromJson(<String, Object?>{
+        'id': 'custom-2',
+        'protocol': 'openai-completions',
+        'base_url': 'https://example.test',
+        'model': 'qwen2.5',
+      });
+      expect(text!.supportsVision, isFalse);
+    });
   });
 
   group('ProviderAccounts', () {

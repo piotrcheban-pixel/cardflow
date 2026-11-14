@@ -147,6 +147,7 @@ class _GenerationPreviewScreenState
           l10n,
           error.code,
           retryAfter: error.retryAfter,
+          providerReason: error.providerReason,
         ),
       );
     } on Object {
@@ -283,7 +284,11 @@ class _GenerationPreviewScreenState
                 child: Text(
                   l10n.generationFailureChunk(
                     _result.failures[i].chunkIndex,
-                    generationErrorCodeMessage(l10n, _result.failures[i].code),
+                    generationErrorCodeMessage(
+                      l10n,
+                      _result.failures[i].code,
+                      providerReason: _result.failures[i].providerReason,
+                    ),
                   ),
                   key: ValueKey<String>('generation-preview-failure-$i'),
                   style: theme.textTheme.bodySmall?.copyWith(

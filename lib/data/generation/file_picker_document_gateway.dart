@@ -11,10 +11,14 @@ import 'package:cardflow/domain/text/document_format.dart';
 import 'package:cardflow/domain/text/parser_exception.dart';
 
 /// Фильтр форматов A8.3 в пикере (включая `.doc`/`.xls` — для понятной
-/// ошибки «формат не поддерживается», ADR-003).
+/// ошибки «формат не поддерживается», ADR-003) и изображения JPG/PNG (7.8).
 List<String> get generationDocumentExtensions => <String>[
   for (final DocumentFormat format in DocumentFormat.values) format.extension,
+  ...generationImageExtensions,
 ];
+
+/// Расширения изображений, которые принимает пикер (ADR-022).
+const List<String> generationImageExtensions = <String>['jpg', 'jpeg', 'png'];
 
 /// Реализация [DocumentGateway] на `file_picker` и `dart:io`.
 class FilePickerDocumentGateway implements DocumentGateway {

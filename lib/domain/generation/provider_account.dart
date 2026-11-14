@@ -26,6 +26,7 @@ class ProviderAccount {
     this.presetId,
     this.contextTokens = kCustomProviderContextTokens,
     this.requiresApiKey = false,
+    this.supportsVision = false,
   });
 
   /// Аккаунт из пресета каталога; [id] — id аккаунта (=== ключ secure storage).
@@ -46,6 +47,7 @@ class ProviderAccount {
       modelId: model.id,
       contextTokens: model.contextTokens,
       requiresApiKey: preset.requiresApiKey,
+      supportsVision: model.supportsVision,
     );
   }
 
@@ -74,6 +76,9 @@ class ProviderAccount {
   /// Требуется ли ключ доступа (локальному серверу — нет).
   final bool requiresApiKey;
 
+  /// Принимает ли модель изображения (Vision).
+  final bool supportsVision;
+
   /// Пресет каталога, если аккаунт создан из каталога.
   ProviderPreset? get preset =>
       presetId == null ? null : providerPresetById(presetId!);
@@ -93,6 +98,7 @@ class ProviderAccount {
     String? modelId,
     int? contextTokens,
     bool? requiresApiKey,
+    bool? supportsVision,
   }) {
     return ProviderAccount(
       id: id,
@@ -103,6 +109,7 @@ class ProviderAccount {
       modelId: modelId ?? this.modelId,
       contextTokens: contextTokens ?? this.contextTokens,
       requiresApiKey: requiresApiKey ?? this.requiresApiKey,
+      supportsVision: supportsVision ?? this.supportsVision,
     );
   }
 
@@ -116,6 +123,7 @@ class ProviderAccount {
     'model': modelId,
     'context_tokens': contextTokens,
     'requires_api_key': requiresApiKey,
+    'supports_vision': supportsVision,
   };
 
   /// Разбирает аккаунт из JSON; `null` — запись некорректна и пропускается.
@@ -140,17 +148,23 @@ class ProviderAccount {
     final Object? rawContext = json['context_tokens'];
     final Object? rawRequiresKey = json['requires_api_key'];
     final Object? rawLabel = json['label'];
+    final String modelId = rawModel is String ? rawModel : '';
+    final Object? rawVision = json['supports_vision'];
+    final bool supportsVision = rawVision is bool
+        ? rawVision
+        : _supportsVisionFromLegacy(presetId, modelId);
     return ProviderAccount(
       id: rawId,
       label: rawLabel is String ? rawLabel : '',
       presetId: presetId,
       protocol: protocol,
       baseUrl: rawBaseUrl is String ? rawBaseUrl : '',
-      modelId: rawModel is String ? rawModel : '',
+      modelId: modelId,
       contextTokens: rawContext is num && rawContext > 0
           ? rawContext.toInt()
           : kCustomProviderContextTokens,
       requiresApiKey: rawRequiresKey is bool ? rawRequiresKey : false,
+      supportsVision: supportsVision,
     );
   }
 
@@ -165,7 +179,8 @@ class ProviderAccount {
           other.baseUrl == baseUrl &&
           other.modelId == modelId &&
           other.contextTokens == contextTokens &&
-          other.requiresApiKey == requiresApiKey;
+          other.requiresApiKey == requiresApiKey &&
+          other.supportsVision == supportsVision;
 
   @override
   int get hashCode => Object.hash(
@@ -177,10 +192,42 @@ class ProviderAccount {
     modelId,
     contextTokens,
     requiresApiKey,
+    supportsVision,
   );
 
   @override
   String toString() => 'ProviderAccount($id, ${protocol.wireName}, $modelId)';
+}
+
+/// Vision для старой записи без `supports_vision`: модель пресета или имя.
+bool _supportsVisionFromLegacy(String? presetId, String modelId) {
+  final ProviderPreset? preset = presetId == null
+      ? null
+      : providerPresetById(presetId);
+  final ProviderPresetModel? model = preset?.modelById(modelId);
+  if (model != null) return model.supportsVision;
+  return inferSupportsVisionFromModelId(modelId);
+}
+
+/// Выводит поддержку изображений из имени модели для старой записи или
+/// пользовательской модели: `gpt-4o`, `claude`, `gemini`, `flash`, `vision`,
+/// `vl`, `llava`. Текстовые модели (`deepseek-chat`, `qwen2.5`, `llama`)
+/// остаются без Vision; пользователь может включить его в настройках.
+bool inferSupportsVisionFromModelId(String modelId) {
+  final String id = modelId.trim().toLowerCase();
+  if (id.isEmpty) return false;
+  const List<String> markers = <String>[
+    'gpt-4o',
+    'gpt-4.1',
+    'gpt-5',
+    'claude',
+    'gemini',
+    'flash',
+    'vision',
+    'llava',
+  ];
+  if (markers.any(id.contains)) return true;
+  return RegExp(r'(^|[^a-z0-9])vl([^a-z0-9]|$)').hasMatch(id);
 }
 
 /// Список настроенных провайдеров и выбранный основной аккаунт.

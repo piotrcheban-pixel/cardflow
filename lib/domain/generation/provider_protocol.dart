@@ -49,6 +49,19 @@ enum ProviderProtocol {
     };
   }
 
+  /// Принимает ли протокол PDF как документ (PDF-vision).
+  ///
+  /// Anthropic Messages — блок `document` с `application/pdf`, Gemini —
+  /// `inlineData` с `application/pdf`. Chat Completions (OpenAI и совместимые)
+  /// в MVP принимает только изображения, поэтому PDF-скан туда не отправляется.
+  bool get supportsPdfAttachments {
+    return switch (this) {
+      ProviderProtocol.anthropicMessages ||
+      ProviderProtocol.geminiGenerateContent => true,
+      ProviderProtocol.openai || ProviderProtocol.openaiCompletions => false,
+    };
+  }
+
   /// Разбирает протокол из JSON; неизвестный — [FormatException].
   static ProviderProtocol fromWire(String value) {
     for (final ProviderProtocol protocol in values) {

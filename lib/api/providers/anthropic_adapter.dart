@@ -4,9 +4,11 @@ library;
 import 'dart:convert';
 
 import 'package:cardflow/api/generation/provider_schema.dart';
+import 'package:cardflow/api/providers/attachment_parts.dart';
 import 'package:cardflow/api/providers/generation_provider_adapter.dart';
 import 'package:cardflow/api/providers/provider_endpoint.dart';
 import 'package:cardflow/api/providers/provider_json.dart';
+import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
 import 'package:cardflow/domain/generation/generation_provider.dart';
 import 'package:cardflow/domain/generation/generation_result.dart';
@@ -43,6 +45,7 @@ class AnthropicAdapter implements GenerationProviderAdapter {
     String? baseUrl,
     bool strictSchema = true,
     bool sendMaxTokens = true,
+    List<GenerationAttachment> images = const <GenerationAttachment>[],
   }) {
     final ProviderEndpoint endpoint = ProviderEndpoint.parse(
       protocol: ProviderProtocol.anthropicMessages,
@@ -57,20 +60,28 @@ class AnthropicAdapter implements GenerationProviderAdapter {
         'Некорректный адрес Anthropic',
       );
     }
+    final Map<String, String> headers = <String, String>{
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': _anthropicVersion,
+    };
+    // PDF-документы в Messages API включаются beta-заголовком (ADR-022).
+    if (images.any((GenerationAttachment attachment) => attachment.isPdf)) {
+      headers['anthropic-beta'] = 'pdfs-2024-09-25';
+    }
     return ProviderRequest(
       uri: uri,
-      headers: <String, String>{
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': _anthropicVersion,
-      },
+      headers: headers,
       body: <String, Object?>{
         'model': model,
         // Anthropic требует явный лимит ответа (SPEC A8.2).
         'max_tokens': maxOutputTokens,
         'system': systemPrompt,
         'messages': <Object?>[
-          <String, Object?>{'role': 'user', 'content': userContent},
+          <String, Object?>{
+            'role': 'user',
+            'content': anthropicUserContent(userContent, images),
+          },
         ],
         'tools': <Object?>[
           <String, Object?>{

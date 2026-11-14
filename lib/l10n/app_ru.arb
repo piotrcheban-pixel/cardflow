@@ -672,9 +672,9 @@
   "@parserErrorFileTooLarge": {
     "description": "Ошибка парсинга: файл больше лимита 25 МБ (SPEC A8.3)."
   },
-  "parserErrorEmptyText": "В файле нет текста",
+  "parserErrorEmptyText": "В файле нет текста (скан или пустая форма)",
   "@parserErrorEmptyText": {
-    "description": "Ошибка парсинга: в документе нет извлекаемого текста."
+    "description": "Ошибка парсинга: в документе нет извлекаемого текста (Word/пустая форма, итерация 7.8)."
   },
   "generationErrorMissingApiKey": "Ключ доступа не задан. Добавьте ключ в настройках",
   "@generationErrorMissingApiKey": {
@@ -691,6 +691,31 @@
   "generationErrorBadRequest": "Запрос отклонён. Проверьте выбранную модель и ключ в настройках",
   "@generationErrorBadRequest": {
     "description": "Генерация: запрос отвергнут (HTTP 400/404/422, SPEC A8.6)."
+  },
+  "generationErrorBadRequestReason": "Запрос отклонён: {reason}",
+  "@generationErrorBadRequestReason": {
+    "description": "Генерация: HTTP 400 с причиной провайдера (итерация 7.8).",
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "generationErrorVisionUnsupported": "Модель не поддерживает изображения",
+  "@generationErrorVisionUnsupported": {
+    "description": "Генерация: картинка, а модель без Vision (итерация 7.8)."
+  },
+  "generationErrorFileWithoutTextAndVision": "В файле нет текста. Модель не поддерживает изображения",
+  "@generationErrorFileWithoutTextAndVision": {
+    "description": "Генерация: скан без текста и модель без Vision (итерация 7.8)."
+  },
+  "generationErrorPdfScanUnsupported": "PDF-скан не поддерживается выбранной моделью",
+  "@generationErrorPdfScanUnsupported": {
+    "description": "Генерация: PDF-скан, протокол не принимает PDF (итерация 7.8)."
+  },
+  "generationErrorAttachmentTooLarge": "Файл больше 10 МБ. Уменьшите файл и попробуйте снова",
+  "@generationErrorAttachmentTooLarge": {
+    "description": "Генерация: вложение больше inline-лимита 10 МБ (итерация 7.8)."
   },
   "generationErrorRateLimited": "Превышен лимит запросов. Повтор через {seconds, plural, one{{seconds} секунду} few{{seconds} секунды} many{{seconds} секунд} other{{seconds} секунды}}",
   "@generationErrorRateLimited": {
@@ -793,7 +818,7 @@
   "@generationTitle": {
     "description": "Заголовок экрана генерации карточек (SPEC A6.8)."
   },
-  "generationAttachHint": "Перетащите файлы сюда или нажмите, чтобы выбрать. Поддерживаются Word, Excel, PDF, PowerPoint, текст и другие",
+  "generationAttachHint": "Перетащите файлы сюда или нажмите, чтобы выбрать. Поддерживаются Word, Excel, PDF, PowerPoint, текст, изображения JPG и PNG",
   "@generationAttachHint": {
     "description": "Подпись зоны прикрепления файлов (SPEC A6.8)."
   },
@@ -815,7 +840,15 @@
   },
   "generationFileParsed": "Готово",
   "@generationFileParsed": {
-    "description": "Статус успешного парсинга прикреплённого файла."
+    "description": "Статус файла: локальный разбор завершён (SPEC A8.3)."
+  },
+  "generationFileImage": "Изображение",
+  "@generationFileImage": {
+    "description": "Статус файла: JPG/PNG будет отправлен как изображение (итерация 7.8)."
+  },
+  "generationFileScannedPdf": "Скан — отправится как изображение",
+  "@generationFileScannedPdf": {
+    "description": "Статус файла: PDF без текстового слоя, будет отправлен как документ при Vision (итерация 7.8)."
   },
   "generationFileSizeBytes": "{size} Б",
   "@generationFileSizeBytes": {
@@ -946,7 +979,7 @@
   "@generationCancelled": {
     "description": "Сообщение после отмены генерации."
   },
-  "generationErrorNoMaterials": "Нет текста для генерации. Добавьте файл с текстом",
+  "generationErrorNoMaterials": "В файле нет текста (скан или пустая форма)",
   "@generationErrorNoMaterials": {
     "description": "Генерация: после парсинга нет текста (новый код noMaterials, ADR-015)."
   },
@@ -1718,6 +1751,22 @@
   "providersModelHint": "Имя модели на сервере",
   "@providersModelHint": {
     "description": "Подсказка поля модели."
+  },
+  "providersVisionLabel": "Модель принимает изображения",
+  "@providersVisionLabel": {
+    "description": "Переключатель Vision пользовательской модели (итерация 7.8)."
+  },
+  "providersVisionHint": "Включайте, если модель понимает картинки и сканы",
+  "@providersVisionHint": {
+    "description": "Пояснение к переключателю Vision (итерация 7.8)."
+  },
+  "providersVisionSupported": "Принимает изображения",
+  "@providersVisionSupported": {
+    "description": "Подпись модели/аккаунта с поддержкой Vision (итерация 7.8)."
+  },
+  "providersVisionNotSupported": "Только текст",
+  "@providersVisionNotSupported": {
+    "description": "Подпись модели/аккаунта без Vision (итерация 7.8)."
   },
   "providersBaseUrlHint": "Полный адрес; версию укажите в пути, если сервер её требует",
   "@providersBaseUrlHint": {

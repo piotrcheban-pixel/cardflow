@@ -46,6 +46,11 @@ void main() {
     );
   });
 
+  test('пустой текст: сообщение говорит о скане и пустой форме', () {
+    expect(l10n.parserErrorEmptyText, contains('скан'));
+    expect(l10n.parserErrorEmptyText, contains('пустая форма'));
+  });
+
   test('ParserException маппится по коду, details не утекают', () {
     for (final ParserErrorCode code in ParserErrorCode.values) {
       final String message = parserErrorMessage(

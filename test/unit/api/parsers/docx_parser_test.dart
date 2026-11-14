@@ -103,6 +103,16 @@ void main() {
     expect(document.text, 'Метка\tзначение\nСтрока\nпродолжение');
   });
 
+  test('управляющие символы из Word удаляются (фикс Word-бага 7.8)', () async {
+    final ParsedDocument document = await parse(
+      buildDocx(bodyXml: docxParagraph('Первый\u0000 абзац\u000B')),
+    );
+
+    expect(document.text, 'Первый абзац');
+    expect(document.text, isNot(contains('\u0000')));
+    expect(document.text, isNot(contains('\u000B')));
+  });
+
   test('пустой документ (нет текста) → ParserException(emptyText)', () async {
     await expectLater(
       parse(buildDocx(bodyXml: docxParagraph(''))),

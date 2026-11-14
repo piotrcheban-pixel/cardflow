@@ -138,6 +138,8 @@ class DriftProviderAccountsStore implements ProviderAccountsStore {
       modelId: legacy.model,
       contextTokens: model?.contextTokens ?? kCustomProviderContextTokens,
       requiresApiKey: preset?.requiresApiKey ?? false,
+      supportsVision:
+          model?.supportsVision ?? inferSupportsVisionFromModelId(legacy.model),
     );
   }
 }

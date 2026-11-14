@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cardflow/api/generation/generation_cancellation.dart';
@@ -6,6 +8,7 @@ import 'package:cardflow/api/generation/system_prompt.dart';
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/cards/content_hash.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
+import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/generation/generation_chunker.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
 import 'package:cardflow/domain/generation/generation_job.dart';
@@ -81,9 +84,11 @@ void main() {
   GenerationRunRequest requestWith(
     List<ParsedDocument> documents, {
     String? targetDeckId,
+    List<GenerationAttachment> images = const <GenerationAttachment>[],
   }) {
     return GenerationRunRequest(
       documents: documents,
+      images: images,
       account: testProviderAccount(presetId: 'openai', modelId: 'gpt-4o'),
       deckName: 'Новая колода',
       wishes: 'Покороче',
@@ -687,5 +692,99 @@ void main() {
     expect(caller.calls, 0);
     expect(jobs.saved.last.status, GenerationJobStatus.error);
     expect(jobs.saved.last.errorCode, 'unexpected');
+  });
+
+  test(
+    'изображение: вызывается модель с вложением, job.files его содержит',
+    () async {
+      final GenerationAttachment image = GenerationAttachment(
+        fileName: 'схема.png',
+        mediaType: AttachmentMediaType.png,
+        bytes: Uint8List.fromList(<int>[0x89, 0x50, 0x4E, 0x47]),
+      );
+      caller = FakeGenerationCaller();
+      jobs = FakeGenerationJobRepository();
+      store = FakeGenerationCardStore();
+      final pipeline = GenerationPipeline(
+        caller: caller,
+        jobRepository: jobs,
+        cardStore: store,
+        chunker: const GenerationChunker(),
+        now: () => DateTime.utc(2026),
+        jobIdFactory: () => 'job-1',
+      );
+
+      caller.onGenerate = (GenerationRequest request, int call) async {
+        expect(request.materialsText, isEmpty);
+        expect(request.images, hasLength(1));
+        expect(request.images.single.fileName, 'схема.png');
+        return resultWith(<GeneratedCard>[makeGeneratedCard()]);
+      };
+
+      final result = await pipeline.run(
+        requestWith(
+          const <ParsedDocument>[],
+          images: <GenerationAttachment>[image],
+        ),
+      );
+
+      expect(result.status, GenerationJobStatus.done);
+      expect(result.cards, hasLength(1));
+      expect(jobs.saved.first.files, <String>['схема.png']);
+    },
+  );
+
+  test('повтор упавшего image-фрагмента передаёт вложение', () async {
+    final GenerationAttachment image = GenerationAttachment(
+      fileName: 'скан.pdf',
+      mediaType: AttachmentMediaType.pdf,
+      bytes: Uint8List.fromList(<int>[0x25, 0x50, 0x44, 0x46, 0x2D]),
+    );
+    caller = FakeGenerationCaller();
+    jobs = FakeGenerationJobRepository();
+    store = FakeGenerationCardStore();
+    final GenerationRunResult previous = GenerationRunResult(
+      jobId: 'job-1',
+      status: GenerationJobStatus.error,
+      cards: const <GeneratedCard>[],
+      failures: <GenerationChunkFailure>[
+        GenerationChunkFailure(
+          chunkIndex: 1,
+          code: GenerationErrorCode.serverUnavailable,
+          materialsText: '',
+          limit: 20,
+          images: <GenerationAttachment>[image],
+        ),
+      ],
+      tokensUsed: 0,
+      estimatedTokens: 10,
+      duplicatesRemoved: 0,
+      chunkCount: 1,
+      cancelled: false,
+    );
+
+    caller.onGenerate = (GenerationRequest request, int call) async {
+      expect(request.images.single, same(image));
+      return resultWith(<GeneratedCard>[makeGeneratedCard()]);
+    };
+
+    final pipeline = GenerationPipeline(
+      caller: caller,
+      jobRepository: jobs,
+      cardStore: store,
+      chunker: const GenerationChunker(),
+      now: () => DateTime.utc(2026),
+      jobIdFactory: () => 'job-1',
+    );
+    final result = await pipeline.retryFailed(
+      requestWith(
+        const <ParsedDocument>[],
+        images: <GenerationAttachment>[image],
+      ),
+      previous,
+    );
+
+    expect(result.cards, hasLength(1));
+    expect(caller.calls, 1);
   });
 }

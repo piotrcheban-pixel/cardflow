@@ -44,7 +44,7 @@ void main() {
       expect(exception.toString(), contains('rateLimited'));
     });
 
-    test('все коды A8.6 и noMaterials (3c) присутствуют', () {
+    test('все коды A8.6, noMaterials (3c) и вложений (7.8) присутствуют', () {
       expect(GenerationErrorCode.values.toSet(), <GenerationErrorCode>{
         GenerationErrorCode.missingApiKey,
         GenerationErrorCode.providerNotConfigured,
@@ -60,7 +60,22 @@ void main() {
         GenerationErrorCode.refused,
         GenerationErrorCode.invalidResponse,
         GenerationErrorCode.noMaterials,
+        GenerationErrorCode.visionUnsupported,
+        GenerationErrorCode.fileWithoutTextAndVision,
+        GenerationErrorCode.pdfScanUnsupported,
+        GenerationErrorCode.attachmentTooLarge,
       });
+    });
+
+    test('providerReason — безопасная причина 400, не входит в details', () {
+      const exception = GenerationException(
+        GenerationErrorCode.badRequest,
+        details: 'HTTP 400',
+        providerReason: 'invalid characters in content',
+      );
+      expect(exception.providerReason, 'invalid characters in content');
+      expect(exception.details, 'HTTP 400');
+      expect(exception.toString(), isNot(contains('invalid characters')));
     });
   });
 

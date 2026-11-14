@@ -143,6 +143,61 @@ void main() {
     },
   );
 
+  test('400 с причиной провайдера показывает реальную причину', () {
+    final message = generationErrorCodeMessage(
+      l10n,
+      GenerationErrorCode.badRequest,
+      providerReason: 'invalid characters in content',
+    );
+    expect(message, contains('invalid characters in content'));
+    expect(
+      message,
+      l10n.generationErrorBadRequestReason('invalid characters in content'),
+    );
+    expect(
+      generationErrorCodeMessage(l10n, GenerationErrorCode.badRequest),
+      l10n.generationErrorBadRequest,
+      reason: 'без причины — прежняя строка',
+    );
+  });
+
+  test('вложения: ошибки vision и пустого текста — разные строки', () {
+    expect(
+      generationErrorCodeMessage(l10n, GenerationErrorCode.visionUnsupported),
+      l10n.generationErrorVisionUnsupported,
+    );
+    expect(
+      generationErrorCodeMessage(
+        l10n,
+        GenerationErrorCode.fileWithoutTextAndVision,
+      ),
+      l10n.generationErrorFileWithoutTextAndVision,
+    );
+    expect(
+      generationErrorCodeMessage(l10n, GenerationErrorCode.pdfScanUnsupported),
+      l10n.generationErrorPdfScanUnsupported,
+    );
+    expect(
+      generationErrorCodeMessage(l10n, GenerationErrorCode.attachmentTooLarge),
+      l10n.generationErrorAttachmentTooLarge,
+    );
+    expect(
+      generationErrorCodeMessage(l10n, GenerationErrorCode.noMaterials),
+      l10n.generationErrorNoMaterials,
+    );
+  });
+
+  test('причина провайдера из GenerationException доходит до сообщения', () {
+    final message = generationErrorMessage(
+      l10n,
+      const GenerationException(
+        GenerationErrorCode.badRequest,
+        providerReason: 'invalid characters in content',
+      ),
+    );
+    expect(message, contains('invalid characters in content'));
+  });
+
   test('GenerationException маппится по коду, сырые details не утекают', () {
     const exception = GenerationException(
       GenerationErrorCode.serverUnavailable,

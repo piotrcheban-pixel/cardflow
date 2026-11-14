@@ -1,5 +1,8 @@
+import 'dart:typed_data';
+
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/generation/generation_chunker.dart';
 import 'package:cardflow/domain/generation/token_estimator.dart';
 import 'package:cardflow/domain/text/document_format.dart';
@@ -187,5 +190,53 @@ void main() {
     expect(halves![0].materialsText.runes.length, 2);
     expect(halves[1].materialsText.runes.length, 2);
     expect(halves[0].materialsText + halves[1].materialsText, '😀😀😀😀');
+  });
+
+  group('chunkAll: вложения (итерация 7.8)', () {
+    GenerationAttachment image(String name) => GenerationAttachment(
+      fileName: name,
+      mediaType: AttachmentMediaType.png,
+      bytes: Uint8List.fromList(<int>[0x89, 0x50, 0x4E, 0x47]),
+    );
+
+    test('текст и изображения: отдельные фрагменты, порядок сохранён', () {
+      final chunks = chunker.chunkAll(
+        <ParsedDocument>[
+          docOf('лекция.txt', <String>['Текст']),
+        ],
+        <GenerationAttachment>[image('схема.png'), image('фото.jpg')],
+        maxInputTokens: 1000,
+      );
+
+      expect(chunks, hasLength(3));
+      expect(chunks[0].materialsText, contains('Текст'));
+      expect(chunks[0].images, isEmpty);
+      expect(chunks[1].images.single.fileName, 'схема.png');
+      expect(chunks[2].images.single.fileName, 'фото.jpg');
+      expect(chunks[1].materialsText, isEmpty);
+      expect(chunks.map((chunk) => chunk.index), <int>[1, 2, 3]);
+      expect(chunks[1].sourceFiles, <String>['схема.png']);
+      expect(chunks[1].estimatedTokens(), greaterThan(0));
+    });
+
+    test('только изображения: фрагменты без текста', () {
+      final chunks = chunker.chunkAll(
+        const <ParsedDocument>[],
+        <GenerationAttachment>[image('схема.png')],
+        maxInputTokens: 1000,
+      );
+      expect(chunks, hasLength(1));
+      expect(chunks.single.materialsText, isEmpty);
+      expect(chunks.single.images, hasLength(1));
+    });
+
+    test('splitInHalf не дробит фрагмент с вложением', () {
+      final chunks = chunker.chunkAll(
+        const <ParsedDocument>[],
+        <GenerationAttachment>[image('схема.png')],
+        maxInputTokens: 1000,
+      );
+      expect(chunker.splitInHalf(chunks.single), isNull);
+    });
   });
 }

@@ -543,7 +543,8 @@ class AppLocalizationsRu extends AppLocalizations {
       'Файл больше 25 МБ. Уменьшите файл и попробуйте снова';
 
   @override
-  String get parserErrorEmptyText => 'В файле нет текста';
+  String get parserErrorEmptyText =>
+      'В файле нет текста (скан или пустая форма)';
 
   @override
   String get generationErrorMissingApiKey =>
@@ -560,6 +561,27 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get generationErrorBadRequest =>
       'Запрос отклонён. Проверьте выбранную модель и ключ в настройках';
+
+  @override
+  String generationErrorBadRequestReason(String reason) {
+    return 'Запрос отклонён: $reason';
+  }
+
+  @override
+  String get generationErrorVisionUnsupported =>
+      'Модель не поддерживает изображения';
+
+  @override
+  String get generationErrorFileWithoutTextAndVision =>
+      'В файле нет текста. Модель не поддерживает изображения';
+
+  @override
+  String get generationErrorPdfScanUnsupported =>
+      'PDF-скан не поддерживается выбранной моделью';
+
+  @override
+  String get generationErrorAttachmentTooLarge =>
+      'Файл больше 10 МБ. Уменьшите файл и попробуйте снова';
 
   @override
   String generationErrorRateLimited(int seconds) {
@@ -653,7 +675,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get generationAttachHint =>
-      'Перетащите файлы сюда или нажмите, чтобы выбрать. Поддерживаются Word, Excel, PDF, PowerPoint, текст и другие';
+      'Перетащите файлы сюда или нажмите, чтобы выбрать. Поддерживаются Word, Excel, PDF, PowerPoint, текст, изображения JPG и PNG';
 
   @override
   String get generationAttachButton => 'Выбрать файлы';
@@ -669,6 +691,12 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get generationFileParsed => 'Готово';
+
+  @override
+  String get generationFileImage => 'Изображение';
+
+  @override
+  String get generationFileScannedPdf => 'Скан — отправится как изображение';
 
   @override
   String generationFileSizeBytes(int size) {
@@ -767,7 +795,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get generationErrorNoMaterials =>
-      'Нет текста для генерации. Добавьте файл с текстом';
+      'В файле нет текста (скан или пустая форма)';
 
   @override
   String get generationNoCardsFound =>
@@ -1372,6 +1400,19 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get providersModelHint => 'Имя модели на сервере';
+
+  @override
+  String get providersVisionLabel => 'Модель принимает изображения';
+
+  @override
+  String get providersVisionHint =>
+      'Включайте, если модель понимает картинки и сканы';
+
+  @override
+  String get providersVisionSupported => 'Принимает изображения';
+
+  @override
+  String get providersVisionNotSupported => 'Только текст';
 
   @override
   String get providersBaseUrlHint =>

@@ -2,6 +2,7 @@
 /// разбор ответа, без сети и UI.
 library;
 
+import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/generation/generation_provider.dart';
 import 'package:cardflow/domain/generation/generation_result.dart';
 
@@ -55,6 +56,10 @@ abstract interface class GenerationProviderAdapter {
   /// для OpenAI-совместимого провайдера: часть таких серверов требует
   /// `max_completion_tokens` и отклоняет `max_tokens` (ADR-021). Anthropic и
   /// Gemini передают лимит всегда, OpenAI — не передаёт (устаревшее поле).
+  ///
+  /// [images] — вложения фрагмента (итерация 7.8). Адаптер сам строит
+  /// провайдерские image/document-части; PDF, который протокол не принимает,
+  /// отвергается `GenerationException(pdfScanUnsupported)`.
   ProviderRequest buildRequest({
     required String apiKey,
     required String model,
@@ -64,6 +69,7 @@ abstract interface class GenerationProviderAdapter {
     String? baseUrl,
     bool strictSchema = true,
     bool sendMaxTokens = true,
+    List<GenerationAttachment> images = const <GenerationAttachment>[],
   });
 
   /// Разбирает ответ провайдера; причины остановки/отказы → `GenerationException`.

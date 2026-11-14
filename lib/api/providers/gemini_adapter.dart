@@ -2,9 +2,11 @@
 library;
 
 import 'package:cardflow/api/generation/provider_schema.dart';
+import 'package:cardflow/api/providers/attachment_parts.dart';
 import 'package:cardflow/api/providers/generation_provider_adapter.dart';
 import 'package:cardflow/api/providers/provider_endpoint.dart';
 import 'package:cardflow/api/providers/provider_json.dart';
+import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
 import 'package:cardflow/domain/generation/generation_provider.dart';
 import 'package:cardflow/domain/generation/generation_result.dart';
@@ -43,6 +45,7 @@ class GeminiAdapter implements GenerationProviderAdapter {
     String? baseUrl,
     bool strictSchema = true,
     bool sendMaxTokens = true,
+    List<GenerationAttachment> images = const <GenerationAttachment>[],
   }) {
     final ProviderEndpoint endpoint = ProviderEndpoint.parse(
       protocol: ProviderProtocol.geminiGenerateContent,
@@ -72,9 +75,7 @@ class GeminiAdapter implements GenerationProviderAdapter {
         'contents': <Object?>[
           <String, Object?>{
             'role': 'user',
-            'parts': <Object?>[
-              <String, Object?>{'text': userContent},
-            ],
+            'parts': geminiParts(userContent, images),
           },
         ],
         'generationConfig': <String, Object?>{

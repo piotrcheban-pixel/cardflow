@@ -210,11 +210,16 @@ class GenerationHttpClient implements GenerationTransport {
         return _fromStatusCode(
           error.response?.statusCode,
           retryAfter: retryAfter,
+          providerReason: _providerReasonOf(error.response?.data),
         );
       case DioExceptionType.unknown:
         final statusCode = error.response?.statusCode;
         if (statusCode != null) {
-          return _fromStatusCode(statusCode, retryAfter: retryAfter);
+          return _fromStatusCode(
+            statusCode,
+            retryAfter: retryAfter,
+            providerReason: _providerReasonOf(error.response?.data),
+          );
         }
         return const GenerationException(
           GenerationErrorCode.network,
@@ -224,7 +229,11 @@ class GenerationHttpClient implements GenerationTransport {
   }
 
   /// Классификация HTTP-статуса (ADR-012 §2).
-  GenerationException _fromStatusCode(int? statusCode, {Duration? retryAfter}) {
+  GenerationException _fromStatusCode(
+    int? statusCode, {
+    Duration? retryAfter,
+    String? providerReason,
+  }) {
     final details = statusCode == null
         ? 'HTTP без статуса'
         : 'HTTP $statusCode';
@@ -250,6 +259,60 @@ class GenerationHttpClient implements GenerationTransport {
     return GenerationException(
       GenerationErrorCode.badRequest,
       details: details,
+      // Причина показывается пользователю только для 4xx запроса (400/404/422),
+      // а не для ошибок авторизации/лимитов: там своё сообщение.
+      providerReason: providerReason,
     );
+  }
+
+  /// Короткая безопасная причина отказа из тела ответа провайдера.
+  ///
+  /// Поддерживает OpenAI (`error.message`), Gemini (`error.message`),
+  /// Anthropic (`error.message`) и плоские `message`/`detail`. Управляющие
+  /// символы заменяются, секретоподобные значения редактируются, длина
+  /// ограничена — тело ответа целиком не показывается и не логируется.
+  String? _providerReasonOf(Object? data) {
+    Object? decoded = data;
+    if (data is String) {
+      final text = data.trim();
+      if (text.isEmpty) return null;
+      try {
+        decoded = jsonDecode(text);
+      } on FormatException {
+        // HTML/текстовая страница ошибки: безопасной причины нет.
+        return null;
+      }
+    }
+    if (decoded is! Map) return null;
+
+    final Object? error = decoded['error'];
+    Object? message;
+    if (error is Map) {
+      message = error['message'] ?? error['type'];
+    } else if (error is String) {
+      message = error;
+    } else {
+      message = decoded['message'] ?? decoded['detail'];
+    }
+    if (message is! String) return null;
+
+    var reason = message
+        .replaceAll(RegExp(r'[\u0000-\u001F\u007F]+'), ' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+    reason = _redactSecrets(reason);
+    if (reason.isEmpty) return null;
+    return reason.length <= 200 ? reason : '${reason.substring(0, 200)}…';
+  }
+
+  /// Редактирует похожие на ключи фрагменты в причине отказа.
+  String _redactSecrets(String text) {
+    return text
+        .replaceAll(RegExp(r'sk-[A-Za-z0-9_\-]{8,}'), '***')
+        .replaceAll(RegExp(r'AIza[0-9A-Za-z_\-]{8,}'), '***')
+        .replaceAll(
+          RegExp(r'Bearer\s+[A-Za-z0-9._\-]+', caseSensitive: false),
+          'Bearer ***',
+        );
   }
 }

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 
@@ -9,6 +10,7 @@ import 'package:cardflow/api/providers/generation_provider_adapter.dart';
 import 'package:cardflow/api/providers/openai_adapter.dart';
 import 'package:cardflow/api/providers/openai_compatible_adapter.dart';
 import 'package:cardflow/api/providers/provider_json.dart';
+import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
 import 'package:cardflow/domain/generation/generation_provider.dart';
 import 'package:cardflow/domain/generation/generation_result.dart';
@@ -21,6 +23,18 @@ void main() {
       'code',
       code,
     ),
+  );
+
+  GenerationAttachment imageAttachment() => GenerationAttachment(
+    fileName: 'схема.png',
+    mediaType: AttachmentMediaType.png,
+    bytes: Uint8List.fromList(<int>[1, 2, 3]),
+  );
+
+  GenerationAttachment pdfAttachment() => GenerationAttachment(
+    fileName: 'скан.pdf',
+    mediaType: AttachmentMediaType.pdf,
+    bytes: Uint8List.fromList(<int>[4, 5, 6]),
   );
 
   group('OpenAI adapter', () {
@@ -68,6 +82,44 @@ void main() {
       expect(strict['schema'], openAiStrictCardSchema());
       expect(request.body.containsKey('max_tokens'), isFalse);
       expect(jsonEncode(request.body), isNotEmpty);
+    });
+
+    test('image part: data URI base64 в content пользователя', () {
+      final withImage = adapter.buildRequest(
+        apiKey: 'test-key-openai',
+        model: 'gpt-4o',
+        systemPrompt: 'СИСТЕМНЫЙ ПРОМПТ',
+        userContent: 'ПОЛЬЗОВАТЕЛЬСКИЙ ТЕКСТ',
+        maxOutputTokens: 4096,
+        images: <GenerationAttachment>[imageAttachment()],
+      );
+      final messages = withImage.body['messages']! as List<Object?>;
+      final user = messages[1]! as Map<String, Object?>;
+      final content = user['content']! as List<Object?>;
+      expect(content, hasLength(2));
+      expect((content[0]! as Map<String, Object?>)['type'], 'text');
+      expect(
+        (content[0]! as Map<String, Object?>)['text'],
+        'ПОЛЬЗОВАТЕЛЬСКИЙ ТЕКСТ',
+      );
+      final image = content[1]! as Map<String, Object?>;
+      expect(image['type'], 'image_url');
+      final imageUrl = image['image_url']! as Map<String, Object?>;
+      expect(imageUrl['url'], 'data:image/png;base64,AQID');
+    });
+
+    test('PDF-скан в OpenAI Chat Completions → pdfScanUnsupported', () {
+      expect(
+        () => adapter.buildRequest(
+          apiKey: 'test-key-openai',
+          model: 'gpt-4o',
+          systemPrompt: 'СИСТЕМНЫЙ ПРОМПТ',
+          userContent: 'ТЕКСТ',
+          maxOutputTokens: 4096,
+          images: <GenerationAttachment>[pdfAttachment()],
+        ),
+        throwsGeneration(GenerationErrorCode.pdfScanUnsupported),
+      );
     });
 
     test('ответ: content → cardsJson, usage', () {
@@ -215,6 +267,49 @@ void main() {
       },
     );
 
+    test('image part: inlineData с mimeType и base64', () {
+      final withImage = adapter.buildRequest(
+        apiKey: 'test-key-gemini',
+        model: 'gemini-test',
+        systemPrompt: 'СИСТЕМНЫЙ ПРОМПТ',
+        userContent: 'ПОЛЬЗОВАТЕЛЬСКИЙ ТЕКСТ',
+        maxOutputTokens: 4096,
+        images: <GenerationAttachment>[imageAttachment()],
+      );
+      final contents = withImage.body['contents']! as List<Object?>;
+      final parts =
+          (contents.single! as Map<String, Object?>)['parts']! as List<Object?>;
+      expect(parts, hasLength(2));
+      expect(
+        (parts[0]! as Map<String, Object?>)['text'],
+        'ПОЛЬЗОВАТЕЛЬСКИЙ ТЕКСТ',
+      );
+      final inline =
+          (parts[1]! as Map<String, Object?>)['inlineData']!
+              as Map<String, Object?>;
+      expect(inline['mimeType'], 'image/png');
+      expect(inline['data'], 'AQID');
+    });
+
+    test('PDF-скан: inlineData application/pdf', () {
+      final withPdf = adapter.buildRequest(
+        apiKey: 'test-key-gemini',
+        model: 'gemini-test',
+        systemPrompt: 'СИСТЕМНЫЙ ПРОМПТ',
+        userContent: 'ТЕКСТ',
+        maxOutputTokens: 4096,
+        images: <GenerationAttachment>[pdfAttachment()],
+      );
+      final contents = withPdf.body['contents']! as List<Object?>;
+      final parts =
+          (contents.single! as Map<String, Object?>)['parts']! as List<Object?>;
+      final inline =
+          (parts[1]! as Map<String, Object?>)['inlineData']!
+              as Map<String, Object?>;
+      expect(inline['mimeType'], 'application/pdf');
+      expect(inline['data'], 'BAUG');
+    });
+
     test('ответ: candidates[0].content.parts[].text и usageMetadata', () {
       final response = adapter.parseResponse(<String, Object?>{
         'candidates': <Object?>[
@@ -360,6 +455,49 @@ void main() {
       expect(jsonEncode(request.body), isNotEmpty);
     });
 
+    test('image part: блок image с base64-источником', () {
+      final withImage = adapter.buildRequest(
+        apiKey: 'test-key-anthropic',
+        model: 'claude-test',
+        systemPrompt: 'СИСТЕМНЫЙ ПРОМПТ',
+        userContent: 'ПОЛЬЗОВАТЕЛЬСКИЙ ТЕКСТ',
+        maxOutputTokens: 4096,
+        images: <GenerationAttachment>[imageAttachment()],
+      );
+      final messages = withImage.body['messages']! as List<Object?>;
+      final user = messages.single! as Map<String, Object?>;
+      final content = user['content']! as List<Object?>;
+      expect(content, hasLength(2));
+      expect((content[0]! as Map<String, Object?>)['type'], 'text');
+      final image = content[1]! as Map<String, Object?>;
+      expect(image['type'], 'image');
+      final source = image['source']! as Map<String, Object?>;
+      expect(source['type'], 'base64');
+      expect(source['media_type'], 'image/png');
+      expect(source['data'], 'AQID');
+    });
+
+    test('PDF-скан: блок document с application/pdf', () {
+      final withPdf = adapter.buildRequest(
+        apiKey: 'test-key-anthropic',
+        model: 'claude-test',
+        systemPrompt: 'СИСТЕМНЫЙ ПРОМПТ',
+        userContent: 'ТЕКСТ',
+        maxOutputTokens: 4096,
+        images: <GenerationAttachment>[pdfAttachment()],
+      );
+      final messages = withPdf.body['messages']! as List<Object?>;
+      final user = messages.single! as Map<String, Object?>;
+      final content = user['content']! as List<Object?>;
+      final document = content[1]! as Map<String, Object?>;
+      expect(document['type'], 'document');
+      final source = document['source']! as Map<String, Object?>;
+      expect(source['type'], 'base64');
+      expect(source['media_type'], 'application/pdf');
+      expect(source['data'], 'BAUG');
+      expect(withPdf.headers['anthropic-beta'], 'pdfs-2024-09-25');
+    });
+
     test('ответ: tool_use emit_cards → cardsJson и usage', () {
       final response = adapter.parseResponse(<String, Object?>{
         'content': <Object?>[
@@ -447,6 +585,46 @@ void main() {
           reason: 'payload=$payload',
         );
       }
+    });
+  });
+
+  group('OpenAI-compatible adapter: вложения', () {
+    const adapter = OpenAiCompatibleAdapter();
+
+    test('image part кодируется так же, как в OpenAI', () {
+      final request = adapter.buildRequest(
+        apiKey: '',
+        model: 'vision-model',
+        systemPrompt: 'СИСТЕМНЫЙ ПРОМПТ',
+        userContent: 'ТЕКСТ',
+        maxOutputTokens: 4096,
+        baseUrl: 'http://localhost:1234/v1',
+        images: <GenerationAttachment>[imageAttachment()],
+      );
+      final messages = request.body['messages']! as List<Object?>;
+      final user = messages[1]! as Map<String, Object?>;
+      final content = user['content']! as List<Object?>;
+      final image = content[1]! as Map<String, Object?>;
+      expect(image['type'], 'image_url');
+      expect(
+        (image['image_url']! as Map<String, Object?>)['url'],
+        'data:image/png;base64,AQID',
+      );
+    });
+
+    test('PDF-скан → pdfScanUnsupported', () {
+      expect(
+        () => adapter.buildRequest(
+          apiKey: '',
+          model: 'vision-model',
+          systemPrompt: 'СИСТЕМНЫЙ ПРОМПТ',
+          userContent: 'ТЕКСТ',
+          maxOutputTokens: 4096,
+          baseUrl: 'http://localhost:1234/v1',
+          images: <GenerationAttachment>[pdfAttachment()],
+        ),
+        throwsGeneration(GenerationErrorCode.pdfScanUnsupported),
+      );
     });
   });
 

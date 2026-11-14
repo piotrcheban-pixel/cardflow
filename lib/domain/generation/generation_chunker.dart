@@ -2,11 +2,15 @@
 /// ADR-015). Домен не зависит от Flutter.
 library;
 
+import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/generation/token_estimator.dart';
 import 'package:cardflow/domain/text/parsed_document.dart';
 
 /// Максимальное число карточек в одном запросе (`<limit>`).
 const int kMaxCardsPerChunk = 20;
+
+/// Оценка стоимости одного изображения/PDF-скана в токенах (для UI/оценки).
+const int kImageTokenEstimate = 1000;
 
 /// Один фрагмент материалов для вызова модели.
 class GenerationChunk {
@@ -17,12 +21,13 @@ class GenerationChunk {
     required this.sourceFiles,
     required this.limit,
     this.splitAttempted = false,
+    this.images = const <GenerationAttachment>[],
   });
 
   /// Порядковый номер фрагмента (с 1) для прогресса «фрагмент K из M».
   final int index;
 
-  /// Текст материалов фрагмента.
+  /// Текст материалов фрагмента. Пустой у фрагмента-вложения.
   final String materialsText;
 
   /// Имена файлов, из которых собран фрагмент.
@@ -34,9 +39,15 @@ class GenerationChunk {
   /// Фрагмент уже дробился после `truncated` (дробить можно только раз).
   final bool splitAttempted;
 
+  /// Вложения фрагмента (не больше одного файла на MVP-запрос).
+  final List<GenerationAttachment> images;
+
+  /// true, если фрагмент несёт вложение.
+  bool get hasImages => images.isNotEmpty;
+
   /// Оценка токенов фрагмента (для тестов и отладочного вывода).
   int estimatedTokens([TokenEstimator estimator = const TokenEstimator()]) =>
-      estimator.estimate(materialsText);
+      estimator.estimate(materialsText) + images.length * kImageTokenEstimate;
 
   /// Копия с изменёнными полями.
   GenerationChunk copyWith({
@@ -45,6 +56,7 @@ class GenerationChunk {
     List<String>? sourceFiles,
     int? limit,
     bool? splitAttempted,
+    List<GenerationAttachment>? images,
   }) {
     return GenerationChunk(
       index: index ?? this.index,
@@ -52,13 +64,14 @@ class GenerationChunk {
       sourceFiles: sourceFiles ?? this.sourceFiles,
       limit: limit ?? this.limit,
       splitAttempted: splitAttempted ?? this.splitAttempted,
+      images: images ?? this.images,
     );
   }
 
   @override
   String toString() =>
       'GenerationChunk($index, ${materialsText.length} символов, '
-      'limit: $limit, split: $splitAttempted)';
+      'images: ${images.length}, limit: $limit, split: $splitAttempted)';
 }
 
 /// Делит текст на фрагменты, укладывающиеся в бюджет модели.
@@ -130,6 +143,34 @@ class GenerationChunker {
     ];
   }
 
+  /// Режет все материалы: текстовые документы, затем вложения.
+  ///
+  /// Изображение/PDF-скан — отдельный фрагмент: провайдер получает его как
+  /// inline-часть и не смешивает с текстом другого файла (итерация 7.8).
+  List<GenerationChunk> chunkAll(
+    List<ParsedDocument> documents,
+    List<GenerationAttachment> images, {
+    required int maxInputTokens,
+  }) {
+    final List<GenerationChunk> textChunks = chunkDocuments(
+      documents,
+      maxInputTokens: maxInputTokens,
+    );
+    final List<GenerationChunk> result = <GenerationChunk>[...textChunks];
+    for (final GenerationAttachment image in images) {
+      result.add(
+        GenerationChunk(
+          index: result.length + 1,
+          materialsText: '',
+          sourceFiles: <String>[image.fileName],
+          limit: maxCardsPerChunk,
+          images: <GenerationAttachment>[image],
+        ),
+      );
+    }
+    return result;
+  }
+
   /// Имена файлов группы без дублей, в порядке появления.
   List<String> _uniqueFiles(List<_MaterialSegment> group) {
     final List<String> names = <String>[];
@@ -145,6 +186,7 @@ class GenerationChunker {
   /// обе половины помечаются `splitAttempted`, чтобы пайплайн не дробил их
   /// повторно (A8.5 шаг 8).
   List<GenerationChunk>? splitInHalf(GenerationChunk chunk) {
+    if (chunk.images.isNotEmpty) return null;
     final String text = chunk.materialsText;
     final List<int> runes = text.runes.toList(growable: false);
     if (runes.length < 2) return null;

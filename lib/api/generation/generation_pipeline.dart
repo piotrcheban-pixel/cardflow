@@ -103,6 +103,7 @@ class GenerationPipeline implements GenerationRunner {
       cardsCount: 0,
       files: <String>[
         for (final document in request.documents) document.fileName,
+        for (final image in request.images) image.fileName,
       ],
     );
     await jobRepository.save(initialJob);
@@ -115,8 +116,9 @@ class GenerationPipeline implements GenerationRunner {
         contextTokens: request.account.contextTokens,
         systemPromptTokens: systemPromptTokens,
       );
-      final List<GenerationChunk> chunks = chunker.chunkDocuments(
+      final List<GenerationChunk> chunks = chunker.chunkAll(
         request.documents,
+        request.images,
         maxInputTokens: budget,
       );
       if (chunks.isEmpty) {
@@ -133,6 +135,7 @@ class GenerationPipeline implements GenerationRunner {
           estimator.estimateAll(<String>[
             for (final document in request.documents) document.text,
           ]) +
+          request.images.length * kImageTokenEstimate +
           chunks.length * (systemPromptTokens + kPromptWrapperTokenReserve);
       final Set<String> seen = <String>{
         ...?await _existingHashes(request.targetDeckId),
@@ -177,6 +180,7 @@ class GenerationPipeline implements GenerationRunner {
           promptVersion: systemPromptVersion,
           files: <String>[
             for (final document in request.documents) document.fileName,
+            for (final image in request.images) image.fileName,
           ],
         );
     final Set<String> seen = <String>{
@@ -191,6 +195,7 @@ class GenerationPipeline implements GenerationRunner {
           sourceFiles: failure.sourceFiles,
           limit: failure.limit,
           splitAttempted: failure.splitAttempted,
+          images: failure.images,
         ),
     ];
 
@@ -263,6 +268,7 @@ class GenerationPipeline implements GenerationRunner {
             materialsText: chunk.materialsText,
             wishes: request.wishes,
             limit: chunk.limit,
+            images: chunk.images,
           ),
           cancelToken: cancellation?.token,
         );
@@ -288,7 +294,9 @@ class GenerationPipeline implements GenerationRunner {
           }
         }
         processed++;
-        failures.add(_failureOf(chunk, error.code));
+        failures.add(
+          _failureOf(chunk, error.code, providerReason: error.providerReason),
+        );
         await _saveProgress(job, processed, cards.length, tokensUsed);
         index++;
         continue;
@@ -371,6 +379,7 @@ class GenerationPipeline implements GenerationRunner {
       chunkCount: processed,
       cancelled: cancelled,
       fatalErrorCode: fatal?.code,
+      fatalProviderReason: fatal?.providerReason,
     );
   }
 
@@ -418,8 +427,9 @@ class GenerationPipeline implements GenerationRunner {
   /// Описание упавшего фрагмента для повтора.
   GenerationChunkFailure _failureOf(
     GenerationChunk chunk,
-    GenerationErrorCode code,
-  ) {
+    GenerationErrorCode code, {
+    String? providerReason,
+  }) {
     return GenerationChunkFailure(
       chunkIndex: chunk.index,
       code: code,
@@ -427,6 +437,8 @@ class GenerationPipeline implements GenerationRunner {
       limit: chunk.limit,
       sourceFiles: chunk.sourceFiles,
       splitAttempted: chunk.splitAttempted,
+      providerReason: providerReason,
+      images: chunk.images,
     );
   }
 

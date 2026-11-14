@@ -19,12 +19,14 @@ import 'package:cardflow/api/generation/system_prompt.dart';
 import 'package:cardflow/api/http/generation_http_client.dart';
 import 'package:cardflow/api/providers/generation_provider_adapter.dart';
 import 'package:cardflow/domain/generation/api_key_store.dart';
+import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
 import 'package:cardflow/domain/generation/generation_provider.dart';
 import 'package:cardflow/domain/generation/generation_request.dart';
 import 'package:cardflow/domain/generation/generation_result.dart';
 import 'package:cardflow/domain/generation/provider_account.dart';
 import 'package:cardflow/domain/generation/provider_protocol.dart';
+import 'package:cardflow/domain/text/text_sanitizer.dart';
 
 /// Вызов модели и локальная валидация ответа (SPEC A8.2, A8.4–A8.6).
 class CardGenerationService implements GenerationCaller {
@@ -39,6 +41,7 @@ class CardGenerationService implements GenerationCaller {
     this.systemPrompt = systemPromptGenRuV2,
     this.promptVersion = systemPromptVersion,
     this.maxOutputTokens = 8192,
+    this.textSanitizer = const TextSanitizer(),
   }) : responseSchema = responseSchema ?? CardResponseSchema(),
        contentValidator = contentValidator ?? const CardContentValidator();
 
@@ -69,6 +72,9 @@ class CardGenerationService implements GenerationCaller {
   /// Верхняя граница ответа модели (Anthropic требует `max_tokens`).
   final int maxOutputTokens;
 
+  /// Санитайзер локально извлечённого текста (итерация 7.8).
+  final TextSanitizer textSanitizer;
+
   /// Генерирует карточки для одного фрагмента материалов.
   ///
   /// Бросает [GenerationException] с кодом из `lib/domain/generation/generation_error.dart`;
@@ -98,9 +104,21 @@ class CardGenerationService implements GenerationCaller {
     final bool tolerantFallback =
         account.protocol == ProviderProtocol.openaiCompletions;
 
+    _validateAttachments(account, request.images);
+
+    final String materialsText = textSanitizer.sanitize(request.materialsText);
+    if (materialsText.isEmpty && request.images.isEmpty) {
+      throw const GenerationException(
+        GenerationErrorCode.noMaterials,
+        details: 'После санитизации текст пуст, вложений нет',
+      );
+    }
+    final String materials = materialsText.isEmpty
+        ? _attachmentMaterials(request.images)
+        : materialsText;
     final String userContent = buildGenerationUserContent(
-      materialsText: request.materialsText,
-      wishes: request.wishes,
+      materialsText: materials,
+      wishes: _sanitizedWishes(request.wishes),
       limit: request.limit,
     );
 
@@ -110,6 +128,7 @@ class CardGenerationService implements GenerationCaller {
       model: model,
       baseUrl: baseUrl,
       userContent: userContent,
+      images: request.images,
       tolerantFallback: tolerantFallback,
       cancelToken: cancelToken,
     );
@@ -131,7 +150,7 @@ class CardGenerationService implements GenerationCaller {
 
     final cards = contentValidator.validateResponse(
       decoded,
-      sourceText: request.materialsText,
+      sourceText: materialsText,
     );
     return GenerationResult(
       provider: account.protocol.adapterProvider,
@@ -159,6 +178,7 @@ class CardGenerationService implements GenerationCaller {
     required String model,
     required String? baseUrl,
     required String userContent,
+    required List<GenerationAttachment> images,
     required bool tolerantFallback,
     required CancelToken? cancelToken,
   }) async {
@@ -177,6 +197,7 @@ class CardGenerationService implements GenerationCaller {
           model: model,
           baseUrl: baseUrl,
           userContent: userContent,
+          images: images,
           strictSchema: attempt.strictSchema,
           sendMaxTokens: attempt.sendMaxTokens,
           cancelToken: cancelToken,
@@ -198,6 +219,7 @@ class CardGenerationService implements GenerationCaller {
     required String model,
     required String? baseUrl,
     required String userContent,
+    required List<GenerationAttachment> images,
     required bool strictSchema,
     required bool sendMaxTokens,
     required CancelToken? cancelToken,
@@ -211,12 +233,66 @@ class CardGenerationService implements GenerationCaller {
       baseUrl: baseUrl,
       strictSchema: strictSchema,
       sendMaxTokens: sendMaxTokens,
+      images: images,
     );
     final rawJson = await httpClient.postJson(
       providerRequest,
       cancelToken: cancelToken,
     );
     return adapter.parseResponse(rawJson);
+  }
+
+  /// Проверяет вложения до сборки запроса (итерация 7.8).
+  ///
+  /// Порядок важен: сначала vision модели, затем PDF-возможность протокола и
+  /// лимит; ошибка не доходит до сети и не тратит токены.
+  void _validateAttachments(
+    ProviderAccount account,
+    List<GenerationAttachment> images,
+  ) {
+    for (final GenerationAttachment image in images) {
+      if (!account.supportsVision) {
+        throw GenerationException(
+          image.isPdf
+              ? GenerationErrorCode.fileWithoutTextAndVision
+              : GenerationErrorCode.visionUnsupported,
+          details: 'Модель не поддерживает изображения',
+        );
+      }
+      if (image.bytes.length > kMaxInlineAttachmentBytes) {
+        throw const GenerationException(
+          GenerationErrorCode.attachmentTooLarge,
+          details: 'Вложение больше 10 МБ',
+        );
+      }
+      if (image.isPdf && !account.protocol.supportsPdfAttachments) {
+        throw const GenerationException(
+          GenerationErrorCode.pdfScanUnsupported,
+          details: 'Протокол не принимает PDF как документ',
+        );
+      }
+    }
+  }
+
+  /// Текст блока `<materials>` для image-only запроса.
+  String _attachmentMaterials(List<GenerationAttachment> images) {
+    final String names = images
+        .map((GenerationAttachment image) => image.fileName)
+        .join(', ');
+    if (images.every((GenerationAttachment image) => image.isPdf)) {
+      return 'Приложенный документ (скан): $names';
+    }
+    if (images.every((GenerationAttachment image) => !image.isPdf)) {
+      return 'Приложенные изображения: $names';
+    }
+    return 'Приложенные файлы: $names';
+  }
+
+  /// Пожелания после санитизации; пустые — не передаются.
+  String? _sanitizedWishes(String? wishes) {
+    if (wishes == null) return null;
+    final String sanitized = textSanitizer.sanitize(wishes);
+    return sanitized.isEmpty ? null : sanitized;
   }
 
   GenerationProviderAdapter _adapterFor(GenerationProvider provider) {

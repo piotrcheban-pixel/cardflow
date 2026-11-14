@@ -511,6 +511,15 @@ class _ProviderCard extends StatelessWidget {
                     : theme.colorScheme.onSurfaceVariant,
               ),
             ),
+            Text(
+              account.supportsVision
+                  ? l10n.providersVisionSupported
+                  : l10n.providersVisionNotSupported,
+              key: ValueKey<String>('provider-vision-${account.id}'),
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
             const SizedBox(height: 4),
             Wrap(
               spacing: 4,

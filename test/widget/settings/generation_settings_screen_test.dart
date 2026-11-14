@@ -386,6 +386,58 @@ void main() {
     expect(store.writeCalls, 0);
   });
 
+  testWidgets(
+    'пользовательская модель: переключатель изображений сохраняется',
+    (WidgetTester tester) async {
+      await pumpScreen(tester);
+      await openCustomDialog(tester);
+      await tester.enterText(
+        find.byKey(const ValueKey<String>('provider-name')),
+        'Свой сервер',
+      );
+      await tester.enterText(
+        find.byKey(const ValueKey<String>('provider-base-url')),
+        'http://localhost:1234/v1',
+      );
+      await tester.enterText(
+        find.byKey(const ValueKey<String>('provider-model')),
+        'qwen2.5',
+      );
+      await tester.tap(
+        find.byKey(const ValueKey<String>('provider-supports-vision')),
+      );
+      await tester.pumpAndSettle();
+      await tapSave(tester);
+
+      expect(store.accounts.accounts.single.supportsVision, isTrue);
+      await hideSnackbar(tester);
+    },
+  );
+
+  testWidgets('пользовательская модель: Vision выводится из имени flash', (
+    WidgetTester tester,
+  ) async {
+    await pumpScreen(tester);
+    await openCustomDialog(tester);
+    await tester.enterText(
+      find.byKey(const ValueKey<String>('provider-name')),
+      'DeepSeek Flash',
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey<String>('provider-base-url')),
+      'https://api.deepseek.com',
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey<String>('provider-model')),
+      'deepseek-flash',
+    );
+    await tester.pumpAndSettle();
+    await tapSave(tester);
+
+    expect(store.accounts.accounts.single.supportsVision, isTrue);
+    await hideSnackbar(tester);
+  });
+
   testWidgets('изменение: новая модель, ключ не трогаем пустым полем', (
     WidgetTester tester,
   ) async {
