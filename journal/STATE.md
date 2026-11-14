@@ -14,6 +14,9 @@ Xcode, Linux — отсутствуют. `DEEPSEEK_API_KEY`: present в Windows 
 **CI:** push итерации 4 + handoff выполнен 2026-11-14: `origin/main` = `e90f660`; run
 [`43588247850`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43588247850) — **9/9 success**
 (prior run `43587472135` для `4ef3038` — тоже 9/9). Для 3c run `43583803312` (`e5f64c4`) — 9/9 success.
+**Внешний блокер:** run `43589108294` (`490eb80`, docs-only) — все job'ы не стартовали из-за GitHub
+billing/spending limit; код не выполнялся. Владельцу — проверить Billing & plans; текущий docs-коммит
+`[skip ci]`.
 
 ## Передача итерации 5
 

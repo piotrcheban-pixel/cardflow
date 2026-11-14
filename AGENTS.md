@@ -137,4 +137,5 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   Ревью Lead (независимый reviewer недоступен — L35), fix `1857589`; push 2026-11-14: `origin/main` =
   `e90f660`, CI runs [`43587472135`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43587472135)
   и [`43588247850`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43588247850) — оба **9/9 success**.
-  Ограничения: L36 (таймер при покрытии маршрутом), L37 (реальные жесты).
+  После них docs-only run `43589108294` (`490eb80`) не стартовал (GitHub billing/spending limit — внешний
+  блокер владельца); код не выполнялся. Ограничения: L36 (таймер при покрытии маршрутом), L37 (реальные жесты).

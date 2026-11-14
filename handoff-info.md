@@ -13,6 +13,12 @@
   (commit `4ef3038`) — **9/9 job success**; run
   [`43588247850`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43588247850) (commit `e90f660`) —
   **9/9 job success**. CI итерации 3c — run `43583803312` (commit `e5f64c4`) — 9/9 success.
+- **Внешний блокер после зелёных прогонов:** run
+  [`43589108294`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43589108294) (commit `490eb80`,
+  docs-only синхронизация handoff) — **все 9 job'ов не стартовали**: GitHub вернул
+  «recent account payments have failed or your spending limit needs to be increased». Код не выполнялся,
+  это не регрессия; владельцу нужно проверить Billing & plans. Этот docs-коммит `[skip ci]` — только
+  фиксация факта, без запуска очередного гарантированно красного billing-прогона.
 - Локальные гейты итерации 4 зелёные: `fvm flutter test --coverage --exclude-tags golden` → **959 passed +
   1 skipped**, покрытие **93.6% (5788/6181)**, `analyze` 0, `format` 0 changed, Windows release — `cardflow.exe`.
 - Актуальный status — вкладка Actions репозитория; workflow — `.github/workflows/ci.yml` (push/PR,
