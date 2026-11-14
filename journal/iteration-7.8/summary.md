@@ -1,6 +1,7 @@
 # Итерация 7.8 — универсальная обработка вложений (гибридный подход), 2026-11-15
 
-**Статус:** завершена, локальные гейты зелёные; push/CI — см. `STATE.md` после отправки.
+**Статус:** завершена, локальные гейты зелёные; push `ea9fc16..5ac3789`, код-снимок CI
+[`43650756271`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43650756271) — **9/9 job success**.
 **Owner note:** любая модель; прямая загрузка файлов у провайдеров разная; Word — локальный текст +
 санитизация; картинки/сканы — только при Vision.
 
@@ -45,6 +46,7 @@
 | `fvm flutter analyze` | `No issues found!` |
 | `fvm dart format lib test integration_test` | 324 файла, 0 changed |
 | `fvm flutter build windows --release` | `cardflow.exe` (52,2 с) |
+| CI run [`43650756271`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43650756271) (`5ac3789`) | **9/9 job success** |
 
 ## ADR итерации
 

@@ -10,6 +10,7 @@
 | `fvm flutter analyze` | `No issues found!` |
 | `fvm dart format lib test integration_test` | 324 файла, 0 changed; `--set-exit-if-changed` — 0 changed |
 | `fvm flutter build windows --release` | `√ Built build\windows\x64\runner\Release\cardflow.exe` (52,2 с) |
+| GitHub Actions, run [`43650756271`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43650756271) (`5ac3789`) | **9/9 job success**: format+analyze, test × 3 ОС, build-desktop × 3, build-mobile Android + iOS |
 
 Красная фаза — `red.md`/`red-phase.txt`; полный прогон зелёной фазы — `final-test.txt`; покрытие — `coverage-test.txt`.
 
