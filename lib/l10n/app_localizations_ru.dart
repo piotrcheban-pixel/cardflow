@@ -770,6 +770,10 @@ class AppLocalizationsRu extends AppLocalizations {
       'Нет текста для генерации. Добавьте файл с текстом';
 
   @override
+  String get generationNoCardsFound =>
+      'Модель не нашла в материалах фактов для карточек. Проверьте, что в файлах есть текст (не скан и не пустая форма); если текст есть — смените модель';
+
+  @override
   String get generationPreviewTitle => 'Предпросмотр карточек';
 
   @override

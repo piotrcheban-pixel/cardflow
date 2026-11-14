@@ -371,7 +371,10 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
           );
           return;
         }
-        showAppMessage(context, l10n.generationErrorEmptyResponse);
+        // Валидный ответ модели с пустым массивом cards (правило 13 промпта):
+        // материалы без фактов (скан/пустая форма), а не пустой ответ
+        // провайдера — повтор не поможет (ADR-021).
+        showAppMessage(context, l10n.generationNoCardsFound);
         return;
       }
       await _openPreview(request, result);

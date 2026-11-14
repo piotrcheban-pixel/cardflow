@@ -418,6 +418,24 @@ void main() {
     expect(find.text(l10n.generationPreviewTitle), findsNothing);
   });
 
+  testWidgets(
+    'модель вернула валидный пустой массив: понятное сообщение о материалах',
+    (tester) async {
+      await pumpScreen(tester);
+      await attachTextFile(tester);
+      // status=done + ноль карточек: модель ответила по схеме пустым списком
+      // (пустой бланк/скан в материалах), это не пустой ответ провайдера.
+      runner.result = resultWith(const <GeneratedCard>[]);
+      await tester.tap(find.byKey(const ValueKey<String>('generation-start')));
+      await tester.pumpAndSettle();
+
+      final l10n = l10nOf(tester);
+      expect(find.text(l10n.generationNoCardsFound), findsOneWidget);
+      expect(find.text(l10n.generationErrorEmptyResponse), findsNothing);
+      expect(find.text(l10n.generationPreviewTitle), findsNothing);
+    },
+  );
+
   testWidgets('пока файл парсится, кнопка генерации недоступна', (
     tester,
   ) async {
