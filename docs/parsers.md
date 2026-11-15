@@ -15,7 +15,7 @@
 |---|---|---|
 | Домен | `lib/domain/text/document_format.dart` | `DocumentFormat`, определение по расширению, проверка сигнатур |
 | Домен | `lib/domain/text/parsed_document.dart` | `ParsedDocument`, `ParsedSection` (`start/end/title`), `ParsedDocumentMetadata`; инварианты и immutable-списки |
-| Домен | `lib/domain/text/parser_exception.dart` | `ParserErrorCode` (5 кодов) и `ParserException` (`details` — не в UI) |
+| Домен | `lib/domain/text/parser_exception.dart` | `ParserErrorCode` (6 кодов) и `ParserException` (`details` — не в UI) |
 | Домен | `lib/domain/text/document_text_normalization.dart` | Единый нормализатор извлечённого текста; с итерации 7.8 делегирует в `TextSanitizer` (`lib/domain/text/text_sanitizer.dart`) |
 | Домен | `lib/domain/generation/generation_attachment.dart` | Вложения-изображения JPG/PNG и PDF-сканы (ADR-022); парсеры их не разбирают |
 | API | `lib/api/parsers/*_parser.dart` | Нативные парсеры форматов; один общий интерфейс `DocumentParser` |
@@ -28,7 +28,7 @@
 
 | Формат | Библиотека | Разделы | Особенности |
 |---|---|---|---|
-| PDF | `pdfrx` (PDFium, MIT) в изоляте | страницы | Только текстовый слой; скан без слоя → `scannedPdf`; запароленный/битый → `unreadableFile`; `metadata.pageCount` |
+| PDF | `pdfrx` (PDFium, MIT) в изоляте | страницы | Только текстовый слой; скан без слоя → `scannedPdf`; запароленный/битый → `unreadableFile`; нечитаемый текстовый слой (U+FFFD/битая кодировка) → `garbledText`; текст санитизируется (`TextSanitizer`: C1, BOM, zero-width, одиночные суррогаты); `metadata.pageCount` |
 | DOCX | `archive` + `xml` | заголовки `Heading*`/`Title` | абзацы → строки; таблицы → строки через `\t`; `w:tab`/`w:br`; content controls `w:sdt` и `w:customXml` разворачиваются; таб-стопы `w:pPr` игнорируются; текст до первого заголовка — раздел без title |
 | PPTX | `archive` + `xml` | слайды | порядок из `ppt/presentation.xml` + rels; fallback — номер файла `slideN.xml`; `metadata.slideCount` |
 | ODT | `archive` + `xml` | `text:h` | `text:p` — абзацы; оглавление (`index-body`/`table-of-content`), `office:annotation`, `tracked-changes` пропускаются |
@@ -46,6 +46,7 @@
 | `unreadableFile` | битый/не тот формат, запароленный PDF, нарушены ZIP-лимиты, неизвестное исключение | «Не удалось прочитать файл» |
 | `scannedPdf` | PDF без текстового слоя | «В файле нет текстового слоя. Похоже, это скан. Загрузите PDF с текстом» |
 | `emptyText` | после извлечения/нормализации текста нет | «В файле нет текста» |
+| `garbledText` | текстовый слой PDF нечитаем: `U+FFFD` ≥ 5 и доля > 5 % после нормализации UTF-8 (`PdfTextQuality`) | «PDF содержит нечитаемый текст. Сохраните файл в другом формате и попробуйте снова» |
 
 Ошибка одного файла **не блокирует остальные**: `FileParsingService.parseAll` возвращает
 `ParsedFileSuccess`/`ParsedFileFailure` в порядке входа (SPEC A8.3). `ParserException.details` и сырые
@@ -53,10 +54,12 @@
 
 ## Нормализация и границы разделов
 
-`normalizeDocumentText`: `\r\n`/`\r` → `\n`; NUL/control-символы (кроме `\t\n`) удаляются; NBSP → пробел;
-хвостовые пробелы строк убираются; 3+ пустых строк → 2; текст обрезается по краям. Разделы нормализуются
-по отдельности, между разделами — ровно пустая строка; `ParsedSection.start/end` — смещения в итоговом
-тексте (используются чанкингом A8.5 в итерации 3c).
+`normalizeDocumentText`: `\r\n`/`\r` → `\n`; управляющие символы Unicode (Cc/Cf, кроме `\t\n`), BOM,
+zero-width/bidi-марки и одиночные суррогаты удаляются; `U+2028`/`U+2029` → `\n`; NBSP → пробел;
+хвостовые пробелы строк убираются; 3+ пустых строк → 2; текст обрезается по краям. С итерации 7.10 это
+делает `TextSanitizer` (PDFium отдаёт из PDF C1-управляющие `U+0080–U+009F`, которые раньше попадали в
+запрос к API). Разделы нормализуются по отдельности, между разделами — ровно пустая строка;
+`ParsedSection.start/end` — смещения в итоговом тексте (используются чанкингом A8.5 в итерации 3c).
 
 ## Лимиты и изоляты
 
@@ -90,7 +93,8 @@ for (final outcome in outcomes) {
 ## Тесты и фикстуры
 
 - Фикстуры **программные** (`test/unit/api/parsers/fixtures/document_fixtures.dart`): DOCX/PPTX/ODT/XLSX/PDF
-  (включая скан и запароленный PDF V1/R2 RC4 40-bit), RTF (cp1251/KOI8-R/`\uN`), тексты в
+  (включая скан, запароленный PDF V1/R2 RC4 40-bit и Type0/ToUnicode-PDF с `U+FFFD`/одиночными
+  суррогатами для проверки `garbledText`), RTF (cp1251/KOI8-R/`\uN`), тексты в
   UTF-8/BOM/UTF-16LE/BE/cp1251/KOI8-R. Бинарные файлы в репозиторий не коммитятся.
 - Unit-тесты: домен, каждый парсер, `SecureZip` (лимиты/повреждения/кодировки XML), сервис, маппинг ARB.
 - Интеграционный срез: производственный сервис с реальным `Isolate.run` — все форматы, ошибки по файлам,

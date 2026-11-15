@@ -1,9 +1,10 @@
 # API-схема генерации CardFlow
 
-**Версия:** 4 (2026-11-15; `image_query`, wire-формат occlusion, PDF-страницы и
-поиск иллюстраций, ADR-023) ·
+**Версия:** 4.1 (2026-11-15; `image_query`, wire-формат occlusion, PDF-страницы и
+поиск иллюстраций, ADR-023; промпт `gen-ru-v4`, prompt-only, debug-диагностика и
+нечитаемый текст PDF, ADR-024) ·
 **Связано:** SPEC A8.1, A8.2, A8.4, A8.5, A8.6; ADR-011; ADR-012; ADR-013; ADR-021;
-ADR-022; ADR-023
+ADR-022; ADR-023; ADR-024
 **Источник правды в коде:** `lib/api/generation/card_json_schema.dart` (канон), `provider_schema.dart`
 (проекции), `card_response_schema.dart` (валидатор), `cards_json_extractor.dart` (разбор текста ответа),
 `lib/domain/generation/` (коды ошибок).
@@ -43,9 +44,10 @@ ADR-022; ADR-023
 ```
 
 `image_query` — краткий поисковый запрос **на английском** для иллюстрации (например,
-`photosynthesis diagram`, `Eiffel Tower`), или `null`. Модель добавляет его, если без
-иллюстрации карточка непонятна; для `occlusion` — обязательно. Если пользователь запретил
-картинки в `<wishes>`, `image_query` не заполняется (правило промпта `gen-ru-v3`).
+`photosynthesis diagram`, `Eiffel Tower`), или `null`. С `gen-ru-v4` (ADR-024) поле
+**обязательно** для `basic`/`cloze`, если карточка описывает объект, животное или понятие
+(правило 14 промпта); для `occlusion` — обязательно всегда. Если пользователь запретил
+картинки в `<wishes>`, `image_query` не заполняется.
 
 `card_type: "occlusion"` — **только wire-значение ответа модели**. В приложении такая
 карточка импортируется как `basic` с `occlusion_json` и медиа (SPEC A5: occlusion — разметка,
@@ -117,7 +119,8 @@ Anthropic — `<base_url>/v1/messages`, Gemini — `<base_url>/v1beta/models/{mo
 
 | Файл | Условие | Что уходит провайдеру |
 |---|---|---|
-| DOCX/PPTX/ODT/XLSX/TXT/MD/RTF | локально извлечён непустой текст | текст в `<materials>` (любая модель; `TextSanitizer` удаляет управляющие символы) |
+| DOCX/PPTX/ODT/XLSX/TXT/MD/RTF | локально извлечён непустой текст | текст в `<materials>` (любая модель; `TextSanitizer` удаляет ASCII/Unicode-управляющие, C1, BOM и одиночные суррогаты) |
+| — (нет файлов) | в `<wishes>` есть тема/описание | пустой `<materials>` + `<wishes>`: генерация по общим знаниям (ADR-024) |
 | JPG/PNG | `supportsVision=true` | OpenAI/совместимые — `image_url` data URI; Gemini — `inlineData`; Anthropic — блок `image` с base64 |
 | JPG/PNG | `supportsVision=false` | запрос не выполняется: `visionUnsupported` |
 | PDF, текста ≥ 50 символов | любой парсер | обычный текст |
@@ -145,7 +148,13 @@ thumbnail ≤ 5 МБ, JPEG/PNG по сигнатуре, троттлинг 1 з�
 извлекается `error.message`/`message`/`detail`, очищается от управляющих символов и
 секретоподобных значений, ограничивается 200 символами и передаётся в
 `GenerationException.providerReason`; UI показывает «Запрос отклонён: {reason}» (ARB
-`generationErrorBadRequestReason`). Тело ответа целиком не показывается и не логируется.
+`generationErrorBadRequestReason`). Тело ответа целиком в UI не показывается.
+
+**Debug-диагностика (ADR-024).** `GenerationDiagnostics` (`lib/api/generation/`,
+`enabled = !dart.vm.product`, sink инжектируется) пишет в консоль: статус и
+редактированное тело ответа при ошибке провайдера, сырой ответ модели (для проверки
+`image_query`), итог поиска иллюстрации. Сообщения не попадают в UI/БД/ARB, в release
+методы — no-op; ключи и `Bearer`-значения редактируются, длина ≤ 2000 символов.
 
 ## 3. Причины остановки и ошибки провайдеров
 
@@ -225,8 +234,9 @@ markdown-ограждения/текста, и ответ fallback-пути, н�
   только secure storage (`cardflow.api_key.openai_compatible`, необязателен). Схемы — `http` и `https`;
   `https` рекомендован для облачных, `http` — для локальных/доверенных (жёсткого запрета нет; ключ по
   `http` — риск пользователя); `userinfo`/query/fragment из адреса вычищаются (ADR-013 §3).
-- Логи: `Authorization`, `x-api-key`, `x-goog-api-key`, query `key`/`api_key` редактируются; тела запросов
-  и ответов не логируются (материалы пользователя и ответ модели в логи не попадают).
+- Логи: `Authorization`, `x-api-key`, `x-goog-api-key`, query `key`/`api_key` редактируются. Тела
+  запросов не логируются никогда; тела ответов — только debug-диагностикой ADR-024 (редакция
+  секретов, лимит длины, no-op в release); в release ни материалы, ни ответ модели не логируются.
 - Причина 400 (`providerReason`) — только серверное объяснение: управляющие символы удаляются,
   ключеподобные строки (`sk-…`, `AIza…`, `Bearer …`) редактируются, длина ≤ 200 символов; тело
   ответа и заголовки не показываются.

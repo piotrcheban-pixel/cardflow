@@ -6,14 +6,18 @@
 ## 1. Поток
 
 ```
-файлы (picker / drag-n-drop)
+файлы (picker / drag-n-drop) — необязательны (итерация 7.10, ADR-024)
   → изображения JPG/PNG и PDF-сканы: GenerationAttachment (Vision)
   → PDF-скан: первые ≤ 4 страницы → PNG (pdfrx + image, изолят), groupKey
   → FileParsingService (изолят, ParsedDocument, ошибки по файлу) + TextSanitizer
+      → PDF: нечитаемый текстовый слой (U+FFFD/битая кодировка) → garbledText
+  → нет файлов, есть тема в пожеланиях: один фрагмент с пустым <materials>
   → TokenEstimator + GenerationChunker (разделы, бюджет модели, <limit>, вложения/группы)
   → GenerationPipeline (последовательно, progress/cancel)
       → CardGenerationService (ключ → проверка Vision/PDF → адаптер → HTTP → схема A8.4 → контент-правила)
+      → GenerationDiagnostics (debug): тело ошибки провайдера, сырой ответ модели
       → image_query → ImageSearchService (Openverse) → GeneratedCard.image
+          (итог поиска — тоже в debug-диагностику)
       → occlusion без картинки → basic + пометка; с картинкой → базовая маска
       → generation_jobs (running → done | partial | error | cancelled)
   → GenerationRunResult (карточки + ошибки фрагментов + токены + дубли)
@@ -42,6 +46,8 @@
 | домен | `lib/domain/generation/generation_card_store.dart` | хеши колоды и импорт карточек |
 | api | `lib/api/generation/generation_pipeline.dart` | оркестрация: оценка, чанкинг, вызовы, поиск картинок, дедуп, job |
 | api | `lib/api/parsers/pdf_scan_renderer.dart` | PDFium → PNG первых страниц скана (изолят) |
+| api | `lib/api/parsers/pdf_text_quality.dart` | порог U+FFFD/UTF-8: нечитаемый текстовый слой PDF → `garbledText` |
+| api | `lib/api/generation/generation_diagnostics.dart` | debug-only тело ошибки провайдера, сырой ответ модели, итог поиска картинки |
 | api | `lib/api/images/image_search_service.dart` | Openverse: поиск, скачивание, JPEG/PNG, троттлинг |
 | api | `lib/api/generation/generation_caller.dart` | узкий интерфейс вызова модели (реализует сервис 3b) |
 | api | `lib/api/generation/generation_cancellation.dart` | отмена (обёртка Dio `CancelToken`) |
@@ -73,6 +79,10 @@ inputBudget = max(inputBudget, 2000)
 - Соседние разделы склеиваются, пока оценка ≤ бюджета; между ними — пустая строка.
 - Раздел больше бюджета: абзацы → строки → жёсткое деление по символам (запас 20 %).
 - `<limit>` фрагмента — не больше 20 карточек (`kMaxCardsPerChunk`).
+- **Prompt-only (ADR-024):** если файлов нет, а `<wishes>` задаёт тему, чанкер не даёт
+  фрагментов — пайплайн создаёт один фрагмент с пустым `materialsText`; сервис шлёт пустой
+  `<materials>` + `<wishes>`. Если темы нет — прежний `noMaterials` без сети. Оценка токенов
+  учитывает системный промпт, обёртку и текст пожеланий.
 - Вложения (`GenerationAttachment`) — отдельный фрагмент на файл: текст `materialsText` пуст,
   `images` содержит файл; оценка — `kImageTokenEstimate` (1000) на вложение. Смешивать
   изображение с текстом другого файла в MVP нельзя.
@@ -94,10 +104,18 @@ inputBudget = max(inputBudget, 2000)
 | `truncated` | split-once; затем ошибка фрагмента | «Повторить неудавшиеся» |
 | `missingApiKey`, `providerNotConfigured`, `invalidApiKey` | fatal: остановка всего задания; если карточки уже получены — `partial` + `fatalErrorCode`, иначе исключение | переход в настройки / сообщение + предпросмотр |
 | `rateLimited`, `serverUnavailable`, `timeout`, `network`, `emptyResponse`, `refused`, `invalidResponse`, `visionUnsupported`, `fileWithoutTextAndVision`, `pdfScanUnsupported`, `pdfScanVisionRequired`, `attachmentTooLarge` | ошибка фрагмента, остальные фрагменты продолжаются | частичный успех + повтор |
-| `noMaterials` | генерация не начинается | «В файле нет текста (скан или пустая форма)» |
+| `noMaterials` | генерация не начинается | «Нет материалов для генерации: прикрепите файл или напишите тему» |
 
 `generation_jobs.error_code` — машинный код (имя `GenerationErrorCode`) или `unexpected` при сбое
 инфраструктуры/БД; не текст.
+
+**Текст PDF.** `PdfParser` санитизирует текст (C1-управляющие, BOM, zero-width, одиночные
+суррогаты — `TextSanitizer`, итерация 7.10) и проверяет его `PdfTextQuality`: если замен
+`U+FFFD` не меньше 5 и их доля строго больше 5 %, файл считается нечитаемым
+(`ParserErrorCode.garbledText`, ARB «PDF содержит нечитаемый текст»). Раньше такой текст уходил
+в запрос и провайдер отвечал 400 или мусором. Диагностика (ADR-024) пишет тело ошибки
+провайдера и сырой ответ модели только в debug; для 400 UI показывает безопасную причину
+(`providerReason`).
 
 ## 6. Дедупликация и импорт
 
@@ -125,6 +143,10 @@ inputBudget = max(inputBudget, 2000)
   изображение»; подпись и ошибки — только ARB. Перед запуском проверяются `supportsVision`
   (для страниц — `pdfScanVisionRequired`) и PDF-возможность протокола выбранного аккаунта
   (ADR-022/ADR-023).
+- **Файлы необязательны (ADR-024):** без вложений генерация запускается по теме из поля
+  пожеланий; без темы — ARB «Напишите тему или описание — файлы не обязательны». Оценка
+  токенов показывается и для prompt-only. Если файлы приложены, но ни один не разобран и темы
+  нет — прежнее «Ни один файл не удалось прочитать».
 - Предпросмотр показывает найденную иллюстрацию, подпись «Изображение с маской» для occlusion
   и пометку «Нет изображения для карточки с маской»; картинка не редактируется (только
   front/back/чекбокс).
@@ -140,7 +162,10 @@ inputBudget = max(inputBudget, 2000)
 - Реальный drag-n-drop на ОС (L33) и эвристическая оценка токенов (L34) — известные ограничения.
 - `desktop_drop` 0.8.4 вместо 0.9.x — конфликт `cross_file` (L8, `docs/dependencies.md` §7).
 - PDF-страницы рендерятся максимум 4 штук; Openverse-поиск зависит от доступности публичного
-  API и анонимного лимита (~1 запрос/с) — при 429 карточка остаётся без картинки (L57).
+  API и анонимного лимита (~1 запрос/с) — при 429 карточка остаётся без картинки (L57). На хосте
+  агента живой Openverse-запрос не завершается за 20 с (L61): производственная проводка проверена
+  интеграционным тестом с реальным `ImageSearchService` и fake-Dio, debug-диагностика показывает
+  причину отказа.
 - Атрибуция CC-картинок не переносится в БД (в `media` нет метаданных); изображения
   используются локально (L58). Живые Vision-вызовы PDF-страниц у облачных провайдеров
   не проверялись (L52/L53 в силе).

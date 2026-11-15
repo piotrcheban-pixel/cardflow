@@ -42,15 +42,25 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   без схемы и `max_tokens`, не больше трёх запросов, только по `badRequest`; разбор текста ответа —
   `lib/api/generation/cards_json_extractor.dart` (BOM, markdown-ограждение, текст вокруг JSON —
   только для compatible-протокола); пустой `cards` — не ошибка ответа: в UI отдельная строка
-  `generationNoCardsFound`. Промпт `gen-ru-v3` скрыт в коде (`system_prompt.dart`),
+  `generationNoCardsFound`. Промпт `gen-ru-v4` скрыт в коде (`system_prompt.dart`),
   пользовательское сообщение — `generation_prompt.dart`; контентные правила A8.4 — `card_content_validator.dart`
   (пометки `CardIssueCode`, карточка не отбрасывается); HTTP — только через `GenerationTransport`
   (`lib/api/http/generation_http_client.dart`) с `RetryPolicy` и `RedactingLogInterceptor`. Ошибки — только
   `GenerationErrorCode` → строка ARB (`lib/ui/generation/generation_error_message.dart`). Ключи — только
   `ApiKeyStore` (secure storage). LaTeX-проверка `flutter_math_fork` допустима только в
   `lib/api/generation/latex_checker.dart` и инжектируется в валидатор; остальной `lib/api/` от Flutter не зависит.
+  **Prompt-only и диагностика (ADR-024, итерация 7.10):** файлы необязательны — без вложений, но с темой
+  в `<wishes>` пайплайн создаёт фрагмент с пустым `materialsText`, сервис шлёт пустой `<materials>`;
+  `buildGenerationUserContent` допускает пустые материалы; `noMaterials` — только когда нет ни текста,
+  ни вложений, ни пожеланий. `GenerationDiagnostics` (`lib/api/generation/generation_diagnostics.dart`,
+  `enabled = !dart.vm.product`, sink инжектируется) — debug-only тело ошибки провайдера, сырой ответ
+  модели (`image_query`) и итог поиска картинки; в release — no-op, секреты редактируются.
+  **Текст документов (ADR-024):** `TextSanitizer` удаляет Unicode Cc/Cf (включая C1 `U+0080–U+009F`),
+  BOM/zero-width/bidi и одиночные суррогаты, `U+2028/2029` → `\n`; `PdfTextQuality` (порог 5 замен / 5 %)
+  поднимает `ParserErrorCode.garbledText` — «PDF содержит нечитаемый текст».
   **Вложения (ADR-022, итерация 7.8):** `TextSanitizer` (`lib/domain/text/text_sanitizer.dart`) — единый
-  санитайзер локального текста, `normalizeDocumentText` делегирует в него; пустой текст → `noMaterials`.
+  санитайзер локального текста, `normalizeDocumentText` делегирует в него; пустой текст без вложений и
+  пожеланий → `noMaterials` (с 7.10 пожелания-тема тоже вход, ADR-024).
   Картинки JPG/PNG и PDF-сканы — `GenerationAttachment` (`lib/domain/generation/generation_attachment.dart`),
   передаются inline только при `ProviderAccount.supportsVision`; PDF — только Anthropic/Gemini
   (`ProviderProtocol.supportsPdfAttachments`), OpenAI/совместимые получают `image_url`, тела собирает
@@ -61,7 +71,7 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   (или `scannedPdf`) рендерится `PdfScanRenderer` (`lib/api/parsers/pdf_scan_renderer.dart`, pdfrx
   + `image`, `Isolate.run`) в первые ≤ 4 PNG; страницы одного PDF — один фрагмент (`groupKey`).
   Модель без Vision → `pdfScanVisionRequired`; при сбое рендера — fallback на PDF для
-  Anthropic/Gemini. `image_query` (схема `gen-ru-v3`) → доменный порт `CardImageFinder` →
+  Anthropic/Gemini. `image_query` (схема `gen-ru-v4`) → доменный порт `CardImageFinder` →
   `ImageSearchService` (`lib/api/images/`, Openverse без ключа, CC0/PDM/CC BY/CC BY-SA, JPEG/PNG
   ≤ 5 МБ, троттлинг 1 запрос/с); байты `GeneratedCard.image` пишутся в `MediaStore` + `media`
   только при импорте (`DriftGenerationCardStore`). `card_type: "occlusion"` — wire-формат
@@ -122,7 +132,7 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
 
 - Локаль только `ru`; `supportedLocales: [Locale('ru')]`; системные строки Flutter — через `GlobalMaterialLocalizations`.
 - Никаких WebView/HTML-обёрток, включая транзитивные зависимости (guard-тест по `pubspec.lock`). LaTeX — только `flutter_math_fork`.
-- Ключи API — только `flutter_secure_storage` (контракт `ApiKeyStore`); вне кода, логов, БД, экспорта, git. В логах редактировать `Authorization`, `x-api-key`, `x-goog-api-key` (и query `key`/`api_key`) через `lib/api/http/log_redaction.dart`; **тела запросов/ответов генерации не логируются вообще** (материалы и ответ модели), перехватчик — только debug. Значения ключей не выводить в терминал; проверка — present/absent.
+- Ключи API — только `flutter_secure_storage` (контракт `ApiKeyStore`); вне кода, логов, БД, экспорта, git. В логах редактировать `Authorization`, `x-api-key`, `x-goog-api-key` (и query `key`/`api_key`) через `lib/api/http/log_redaction.dart`; **тела запросов генерации не логируются вообще**; тела ответов — только debug-диагностикой `GenerationDiagnostics` (ADR-024: `enabled = !dart.vm.product`, редакция секретов, лимит длины, no-op в release), перехватчик — только debug. Значения ключей не выводить в терминал; проверка — present/absent.
 - Сырые ошибки API/исключения пользователю не показывать — только сообщения из ARB.
 - Никаких мёртвых кнопок и заглушек: функция либо работает, либо её нет (фича-флаг выключен).
 - Нельзя ослаблять/удалять тесты, отключать анализатор, ставить `// ignore:` без ADR, понижать порог покрытия.
@@ -201,6 +211,11 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   новому обязательному platform-зависимому сервису (MediaStore в `generationCardStoreProvider`) сразу
   прогонять production-интеграционный тест — он ловит `UnimplementedError` в проводке, который unit-тесты
   слоёв не видят; риск «тяжёлый PDFium в изоляте» снимать реальным тестом (`Isolate.run`) до UI.
+- **Ретроспектива итерации 7.10:** owner-note «PDF → неожиданный ответ» разбирать спайком **до** плана
+  (PDFium отдаёт C1-управляющие и одиночные суррогаты — видно на программной фикстуре), а не догадками;
+  для молчаливых сервисов с `null`-контрактом (поиск картинок) добавлять debug-диагностику **вместе** с
+  фиксом, иначе «модель не дала image_query» и «не удалось скачать» неразличимы; `fvm flutter test` без
+  `--no-pub` в сессии агента зависает на `pub get --example` — прогоны только с `--no-pub`.
 
 ## Факты хоста (обновлять при изменении)
 
@@ -308,3 +323,17 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   **Push итерации 7.9:** `31a5999..63330da`; CI run
   [`43703387395`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43703387395) —
   **9/9 job success**.
+
+- **Prompt-only, PDF и картинки проверены локально (итерация 7.10, 2026-11-15, ADR-024):**
+  старт: `git status --porcelain` → пусто, `HEAD = origin/main = bdb0bd1` (в STATE 7.9 было `31a5999` —
+  исправлено); baseline **1369 passed + 2 skipped**. Спайк PDFium: C1 `U+0080–U+009F` и `U+FFFD`/
+  одиночные суррогаты из Type0/ToUnicode-PDF подтверждены программной фикстурой. Гейты:
+  `fvm flutter test --no-pub --coverage --exclude-tags golden` → **1405 passed + 2 skipped**; покрытие
+  **92.9 % (9377/10097)**; `analyze` 0; `dart format` 334 файла / 0 changed;
+  `fvm flutter build windows --release` → `cardflow.exe` (см. verify). **Живой DeepSeek:** 3 live-теста
+  passed — `cards=3, tokens=1467`; fallback `strict=400 → tolerant=200`; **prompt-only без файлов:
+  `cards=3, image_query=3, prompt=gen-ru-v4, tokens=1502`** (промпт v4 действительно возвращает
+  `image_query`). Живой Openverse с хоста агента не завершается (L61), проводка проверена
+  интеграционным тестом с реальным `ImageSearchService` и fake-Dio (media + файл). Ограничения: L61–L64.
+  Замечание окружения: `fvm flutter test` без `--no-pub` зависает на `pub get --example` — все прогоны
+  итерации с `--no-pub`.
