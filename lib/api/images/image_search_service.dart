@@ -59,10 +59,10 @@ class ImageSearchService implements CardImageFinder {
 
   /// Таймаут одного запроса поиска/скачивания.
   ///
-  /// Openverse нестабилен (L61): короткий таймаут оставляет генерации шанс
-  /// продолжить, а основной источник (Wikimedia Commons, ADR-027) закрывает
-  /// потребность в иллюстрации.
-  static const Duration _timeout = Duration(seconds: 8);
+  /// Openverse нестабилен (L61) и в цепочке источников стоит последним
+  /// (ADR-028): короткий таймаут оставляет генерации шанс продолжить, а
+  /// Commons и Wikipedia уже попробовали найти иллюстрацию.
+  static const Duration _timeout = Duration(seconds: 5);
 
   @override
   Future<GeneratedCardImage?> findImage(String query) async {

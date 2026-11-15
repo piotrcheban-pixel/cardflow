@@ -7,16 +7,27 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cardflow/api/generation/card_generation_service.dart';
 import 'package:cardflow/api/generation/generation_diagnostics.dart';
+import 'package:cardflow/api/generation/generation_pipeline.dart';
 import 'package:cardflow/api/generation/system_prompt.dart';
 import 'package:cardflow/api/http/generation_http_client.dart';
 import 'package:cardflow/api/http/retry_policy.dart';
+import 'package:cardflow/api/images/composite_card_image_finder.dart';
+import 'package:cardflow/api/images/image_search_service.dart';
+import 'package:cardflow/api/images/wikimedia_image_search_service.dart';
+import 'package:cardflow/api/images/wikipedia_image_search_service.dart';
 import 'package:cardflow/api/parsers/pdf_scan_renderer.dart';
 import 'package:cardflow/api/providers/openai_compatible_adapter.dart';
+import 'package:cardflow/domain/generation/card_image_finder.dart';
+import 'package:cardflow/domain/generation/generated_card.dart';
 import 'package:cardflow/domain/generation/generation_attachment.dart';
+import 'package:cardflow/domain/generation/generation_chunker.dart';
+import 'package:cardflow/domain/generation/generation_job.dart';
 import 'package:cardflow/domain/generation/generation_provider.dart';
 import 'package:cardflow/domain/generation/generation_request.dart';
+import 'package:cardflow/domain/generation/generation_run.dart';
 import 'package:cardflow/domain/generation/provider_account.dart';
 import 'package:cardflow/domain/generation/provider_protocol.dart';
+import 'package:cardflow/domain/text/parsed_document.dart';
 
 import '../helpers/generation_fakes.dart';
 import '../unit/api/parsers/fixtures/document_fixtures.dart';
@@ -231,6 +242,12 @@ void main() {
       final int withQuery = result.cards
           .where((card) => (card.imageQuery ?? '').isNotEmpty)
           .length;
+      // ignore: avoid_print — evidence: сырой ответ модели (диагностика ADR-024),
+      // чтобы видеть `image_query` при разборе owner-note (итерация 7.12).
+      for (final String line in diagnostics) {
+        // ignore: avoid_print
+        print(line);
+      }
       // ignore: avoid_print — evidence без ключа и тел ответа.
       print(
         'LIVE DeepSeek prompt-only: cards=${result.cards.length}, '
@@ -251,6 +268,105 @@ void main() {
     timeout: const Timeout(Duration(minutes: 2)),
     tags: <String>['live'],
   );
+  // Итерация 7.12 (ADR-028): production-пайплайн с живым DeepSeek и живым
+  // поиском картинок — карточки должны прийти с иллюстрациями.
+  test(
+    'живой DeepSeek → image_query → реальный поиск → карточки с картинками',
+    () async {
+      final List<String> diagnostics = <String>[];
+      final Dio dio = Dio();
+      addTearDown(() => dio.close(force: true));
+      final GenerationDiagnostics diag = GenerationDiagnostics(
+        enabled: true,
+        sink: diagnostics.add,
+      );
+      final service = CardGenerationService(
+        adapters: <OpenAiCompatibleAdapter>[const OpenAiCompatibleAdapter()],
+        apiKeyStore: FakeApiKeyStore(<String, String>{'deepseek': apiKey!}),
+        httpClient: GenerationHttpClient(
+          dio: dio,
+          retryPolicy: RetryPolicy(),
+          delay: (Duration _) async {},
+        ),
+        maxOutputTokens: 8192,
+        diagnostics: diag,
+      );
+      final pipeline = GenerationPipeline(
+        caller: service,
+        jobRepository: FakeGenerationJobRepository(),
+        cardStore: FakeGenerationCardStore(),
+        chunker: const GenerationChunker(),
+        imageFinder: CompositeCardImageFinder(<CardImageFinder>[
+          WikimediaImageSearchService(dio: dio, diagnostics: diag),
+          WikipediaImageSearchService(dio: dio, diagnostics: diag),
+          ImageSearchService(dio: dio, diagnostics: diag),
+        ]),
+        imageSearchBudget: const Duration(seconds: 90),
+        diagnostics: diag,
+      );
+
+      final GenerationRunResult result = await pipeline.run(
+        GenerationRunRequest(
+          documents: const <ParsedDocument>[],
+          account: ProviderAccount(
+            id: 'deepseek',
+            label: 'DeepSeek',
+            presetId: 'deepseek',
+            protocol: ProviderProtocol.openaiCompletions,
+            baseUrl: baseUrl,
+            modelId: model,
+            contextTokens: 16000,
+            requiresApiKey: true,
+          ),
+          deckName: 'Живые картинки',
+          wishes: 'Животные Африки: слон, жираф и лев. 3 карточки',
+        ),
+      );
+
+      // ignore: avoid_print — evidence: итог и причины до проверок.
+      for (final String line in diagnostics) {
+        // ignore: avoid_print
+        print(line);
+      }
+      // ignore: avoid_print — evidence без ключа.
+      print(
+        'LIVE image pipeline status=${result.status.name}, '
+        'cards=${result.cards.length}, '
+        'failures=${result.failures.map((failure) => failure.code.name).toList()}, '
+        'model=$model',
+      );
+      expect(result.status, GenerationJobStatus.done);
+      expect(result.cards, isNotEmpty);
+      final int withImage = result.cards
+          .where((card) => card.image != null)
+          .length;
+      // ignore: avoid_print — evidence без ключа и тел ответа.
+      print(
+        'LIVE image pipeline: cards=${result.cards.length}, '
+        'with_image=$withImage, model=$model',
+      );
+      for (final GeneratedCard card in result.cards) {
+        // ignore: avoid_print
+        print(
+          'LIVE card: image_query=${card.imageQuery}, '
+          'image=${card.image == null ? 'null' : '${card.image!.bytes.length} Б '
+                    '${card.image!.mediaType.name}'}, '
+          'issues=${card.issues.map((issue) => issue.name).toList()}',
+        );
+      }
+      expect(
+        withImage,
+        greaterThan(0),
+        reason: 'живой поиск должен приложить хотя бы одну картинку',
+      );
+    },
+    skip: apiKey == null
+        ? 'Нет DEEPSEEK_API_KEY — live-тест пропущен (L30)'
+        : false,
+    timeout: const Timeout(Duration(minutes: 5)),
+    tags: <String>['live'],
+  );
+
   // Итерация 7.11 (owner-note): страницы PDF-скана отправляются реальной
   // Vision-модели как image parts и дают карточки.
   test(

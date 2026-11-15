@@ -358,4 +358,62 @@ void main() {
     final GeneratedCard imported = store.importedCards.single.single;
     expect(imported.image, same(card.image));
   });
+
+  // ADR-028 (итерация 7.12): неудачный поиск картинки виден пользователю.
+  testWidgets('поиск картинки не удался — предупреждение и пометка карточки', (
+    tester,
+  ) async {
+    final GeneratedCard failed = makeGeneratedCard(
+      front: 'Что такое спайность минерала?',
+      back: 'Способность раскалываться.',
+      imageQuery: 'mineral cleavage',
+      issues: const <CardIssueCode>[CardIssueCode.imageNotFound],
+    );
+    final GeneratedCard found = makeGeneratedCard(
+      front: 'Что на фото?',
+      back: 'Кремль',
+      image: makeCardImage(),
+    );
+    await pumpPreview(
+      tester,
+      resultWith(cards: <GeneratedCard>[failed, found]),
+    );
+    final l10n = l10nOf(tester);
+
+    expect(
+      find.byKey(const ValueKey<String>('generation-preview-image-warning')),
+      findsOneWidget,
+    );
+    expect(find.text(l10n.generationImageSearchFailed(1)), findsOneWidget);
+    expect(find.text(l10n.generationIssueImageNotFound), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey<String>('generation-preview-image-1')),
+      findsOneWidget,
+      reason: 'скачанная картинка всё равно видна',
+    );
+
+    // Снятая галочка убирает карточку из импорта — предупреждение тоже уходит.
+    await tester.tap(
+      find.byKey(const ValueKey<String>('generation-preview-checkbox-0')),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey<String>('generation-preview-image-warning')),
+      findsNothing,
+    );
+  });
+
+  testWidgets('без проблем с картинками предупреждения нет', (tester) async {
+    final GeneratedCard found = makeGeneratedCard(
+      front: 'Что на фото?',
+      back: 'Кремль',
+      image: makeCardImage(),
+    );
+    await pumpPreview(tester, resultWith(cards: <GeneratedCard>[found]));
+
+    expect(
+      find.byKey(const ValueKey<String>('generation-preview-image-warning')),
+      findsNothing,
+    );
+  });
 }

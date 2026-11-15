@@ -12,6 +12,7 @@ import 'package:cardflow/api/http/retry_policy.dart';
 import 'package:cardflow/api/images/composite_card_image_finder.dart';
 import 'package:cardflow/api/images/image_search_service.dart';
 import 'package:cardflow/api/images/wikimedia_image_search_service.dart';
+import 'package:cardflow/api/images/wikipedia_image_search_service.dart';
 import 'package:cardflow/api/providers/anthropic_adapter.dart';
 import 'package:cardflow/api/providers/gemini_adapter.dart';
 import 'package:cardflow/api/providers/openai_adapter.dart';
@@ -343,9 +344,11 @@ final generationDioProvider = Provider<Dio>((ref) {
 
 /// Debug-диагностика ответов провайдеров (ADR-024, итерация 7.10).
 ///
-/// В release-сборке методы — no-op; sink инжектируется в тестах.
+/// В release-сборке методы — no-op; sink инжектируется в тестах. В debug
+/// сообщения идут в консоль `flutter run` (`debugPrint`), чтобы сырой ответ
+/// модели и итог поиска картинки были видны при разборе (итерация 7.12).
 final generationDiagnosticsProvider = Provider<GenerationDiagnostics>((ref) {
-  return const GenerationDiagnostics();
+  return GenerationDiagnostics(sink: kDebugMode ? debugPrint : null);
 });
 
 /// HTTP-клиент генерации (ретраи/backoff, нормализация ошибок).
@@ -392,10 +395,11 @@ final generationCardStoreProvider = Provider<GenerationCardStore>((ref) {
   );
 });
 
-/// Поиск иллюстраций по `image_query` (ADR-023, ADR-027).
+/// Поиск иллюстраций по `image_query` (ADR-023, ADR-027, ADR-028).
 ///
-/// Wikimedia Commons — первый источник (быстро и по-русски), Openverse —
-/// резерв (CC0/PDM/CC BY). Бюджет поиска ограничивает пайплайн: недоступный
+/// Порядок источников: Wikimedia Commons (быстро по конкретным запросам) →
+/// Wikipedia pageimages (понимает русские словоформы: статья, а не имя файла) →
+/// Openverse (CC-резерв). Бюджет поиска ограничивает пайплайн: недоступный
 /// источник не задерживает импорт карточек.
 final cardImageFinderProvider = Provider<CardImageFinder>((ref) {
   final Dio dio = ref.watch(generationDioProvider);
@@ -404,6 +408,7 @@ final cardImageFinderProvider = Provider<CardImageFinder>((ref) {
   );
   return CompositeCardImageFinder(<CardImageFinder>[
     WikimediaImageSearchService(dio: dio, diagnostics: diagnostics),
+    WikipediaImageSearchService(dio: dio, diagnostics: diagnostics),
     ImageSearchService(dio: dio, diagnostics: diagnostics),
   ]);
 });

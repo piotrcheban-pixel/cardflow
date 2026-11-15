@@ -1023,6 +1023,106 @@ void main() {
       expect(finder.queries, <String>['eiffel tower']);
       expect(result.cards.single.image, same(image));
     });
+
+    // ADR-028 (итерация 7.12): deepseek-flash часто отдаёт image_query = null
+    // для определений; запрос выводится из текста карточки.
+    test(
+      'image_query модели пуст → запрос выведен из текста карточки',
+      () async {
+        final finder = FakeCardImageFinder(
+          byQuery: <String, GeneratedCardImage?>{'спайность минерала': image},
+        );
+        final card = makeGeneratedCard(
+          front: 'Что такое спайность минерала?',
+          back: 'Способность раскалываться по плоскостям.',
+          imageQuery: null,
+        );
+
+        final result = await runWithCards(<GeneratedCard>[
+          card,
+        ], finder: finder);
+
+        expect(finder.queries, <String>['спайность минерала']);
+        expect(result.cards.single.image, same(image));
+        expect(
+          result.cards.single.issues,
+          isNot(contains(CardIssueCode.imageNotFound)),
+        );
+      },
+    );
+
+    test('неудачный поиск помечает карточку imageNotFound', () async {
+      final finder = FakeCardImageFinder();
+      final card = makeGeneratedCard(
+        front: 'Что это?',
+        back: 'Кремль.',
+        imageQuery: 'missing photo',
+      );
+
+      final result = await runWithCards(<GeneratedCard>[card], finder: finder);
+
+      expect(result.cards.single.image, isNull);
+      expect(
+        result.cards.single.issues,
+        contains(CardIssueCode.imageNotFound),
+        reason: 'предпросмотр должен показать предупреждение',
+      );
+    });
+
+    test(
+      'пожелания «без картинок» отключают поиск и производный запрос',
+      () async {
+        final finder = FakeCardImageFinder(
+          byQuery: <String, GeneratedCardImage?>{'спайность минерала': image},
+        );
+        final pipeline = pipelineWith(<GenerationChunk>[
+          chunkOf(1, 'материал'),
+        ], imageFinder: finder);
+        caller.onGenerate = (request, call) async => resultWith(<GeneratedCard>[
+          makeGeneratedCard(
+            front: 'Что такое спайность минерала?',
+            back: 'Способность раскалываться.',
+            imageQuery: 'mineral cleavage',
+          ),
+        ]);
+
+        final result = await pipeline.run(
+          GenerationRunRequest(
+            documents: <ParsedDocument>[
+              docOf('a.txt', <String>['материал']),
+            ],
+            account: testProviderAccount(presetId: 'openai', modelId: 'gpt-4o'),
+            deckName: 'Новая колода',
+            wishes: 'Без картинок, только текст',
+          ),
+        );
+
+        expect(finder.queries, isEmpty);
+        expect(result.cards.single.image, isNull);
+        expect(
+          result.cards.single.issues,
+          isNot(contains(CardIssueCode.imageNotFound)),
+          reason: 'пользователь сам запретил картинки',
+        );
+      },
+    );
+
+    test('без imageFinder нет пометки imageNotFound', () async {
+      final card = makeGeneratedCard(
+        front: 'Что то',
+        back: 'Ответ',
+        imageQuery: 'diagram',
+      );
+
+      final result = await runWithCards(<GeneratedCard>[card]);
+
+      expect(result.cards.single.image, isNull);
+      expect(
+        result.cards.single.issues,
+        isNot(contains(CardIssueCode.imageNotFound)),
+        reason: 'поиск отключён — это не ошибка поиска',
+      );
+    });
   });
 }
 

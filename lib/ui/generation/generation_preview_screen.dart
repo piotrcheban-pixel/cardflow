@@ -128,6 +128,16 @@ class _GenerationPreviewScreenState
   int get _selectedCount =>
       _cards.where((_EditableCard card) => card.selected).length;
 
+  /// Сколько **выбранных** карточек осталось без картинки после поиска
+  /// (ADR-028). Снятая галочка убирает карточку из импорта и из предупреждения.
+  int get _imagesNotFound => _cards
+      .where(
+        (_EditableCard card) =>
+            card.selected &&
+            card.original.issues.contains(CardIssueCode.imageNotFound),
+      )
+      .length;
+
   Future<void> _retryFailed() async {
     if (_retrying || _importing) return;
     final AppLocalizations l10n = AppLocalizations.of(context);
@@ -265,6 +275,32 @@ class _GenerationPreviewScreenState
                 ),
               ),
             ),
+            if (_imagesNotFound > 0)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Row(
+                  key: const ValueKey<String>(
+                    'generation-preview-image-warning',
+                  ),
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Icon(
+                      Icons.image_not_supported_outlined,
+                      size: 18,
+                      color: theme.colorScheme.tertiary,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        l10n.generationImageSearchFailed(_imagesNotFound),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.tertiary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             const SizedBox(height: 12),
             for (var i = 0; i < _cards.length; i++)
               _PreviewCardTile(
@@ -470,5 +506,6 @@ String issueLabel(AppLocalizations l10n, CardIssueCode issue) {
     CardIssueCode.tagsAdjusted => l10n.generationIssueTagsAdjusted,
     CardIssueCode.occlusionImageMissing =>
       l10n.generationIssueOcclusionImageMissing,
+    CardIssueCode.imageNotFound => l10n.generationIssueImageNotFound,
   };
 }

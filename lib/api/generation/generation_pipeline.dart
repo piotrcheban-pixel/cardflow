@@ -22,6 +22,7 @@ import 'package:cardflow/domain/generation/generation_model.dart';
 import 'package:cardflow/domain/generation/generation_request.dart';
 import 'package:cardflow/domain/generation/generation_result.dart';
 import 'package:cardflow/domain/generation/generation_run.dart';
+import 'package:cardflow/domain/generation/image_query.dart';
 import 'package:cardflow/domain/generation/token_estimator.dart';
 
 /// Коды ошибок, после которых повторять следующие фрагменты бессмысленно.
@@ -63,7 +64,7 @@ class GenerationPipeline implements GenerationRunner {
     this.estimator = const TokenEstimator(),
     this.chunker = const GenerationChunker(),
     this.imageFinder,
-    this.imageSearchBudget = const Duration(seconds: 45),
+    this.imageSearchBudget = const Duration(seconds: 90),
     this.diagnostics = const GenerationDiagnostics(),
     this.now = _defaultNow,
     this.jobIdFactory = _defaultJobId,
@@ -93,7 +94,9 @@ class GenerationPipeline implements GenerationRunner {
   /// ответа модели бюджет не расходует. Недоступный/медленный источник не
   /// задерживает импорт: после бюджета оставшиеся карточки получают
   /// `image == null`, а генерация завершается (диагностика ADR-024 фиксирует
-  /// пропуск).
+  /// пропуск). С итерации 7.12 бюджет увеличен до 90 с: цепочка источников
+  /// (Commons → Wikipedia → Openverse) на неудачном русском запросе тратит
+  /// больше времени, и 45 с обрезали карточки, которые ещё можно было найти.
   final Duration imageSearchBudget;
 
   /// Debug-диагностика (ADR-024).
@@ -369,7 +372,9 @@ class GenerationPipeline implements GenerationRunner {
       processed++;
       for (final GeneratedCard card in result.cards) {
         if (_acceptCard(card, seen)) {
-          cards.add(await _withCardImage(card, cancellation));
+          cards.add(
+            await _withCardImage(card, cancellation, wishes: request.wishes),
+          );
         } else {
           duplicates++;
         }
@@ -439,44 +444,68 @@ class GenerationPipeline implements GenerationRunner {
   }
 
   /// Привязывает найденную картинку или понижает occlusion до basic.
+  ///
+  /// Если модель не дала `image_query`, для предметного `basic`-вопроса запрос
+  /// выводится из текста карточки (ADR-028). Пожелания, запрещающие картинки,
+  /// отключают и поиск модели, и производный запрос. Неудачный поиск помечает
+  /// карточку [CardIssueCode.imageNotFound], чтобы предпросмотр показал
+  /// предупреждение, а не проглотил ошибку.
   Future<GeneratedCard> _withCardImage(
     GeneratedCard card,
-    GenerationCancellation? cancellation,
-  ) async {
+    GenerationCancellation? cancellation, {
+    required String? wishes,
+  }) async {
     if (card.image != null) return card;
-    final String? query = card.imageQuery?.trim();
-    if (query == null ||
+    final bool imagesForbidden = wishesForbidImages(wishes);
+    String? query = card.imageQuery?.trim();
+    if (!imagesForbidden && (query == null || query.isEmpty)) {
+      query = derivedImageQuery(
+        front: card.front,
+        back: card.back,
+        cardType: card.cardType,
+      );
+      if (query != null) {
+        diagnostics.imageSearch(
+          query: query,
+          outcome:
+              'запрос выведен из текста карточки (image_query модели пуст)',
+        );
+      }
+    }
+    if (imagesForbidden ||
+        query == null ||
         query.isEmpty ||
         imageFinder == null ||
         (cancellation?.isCancelled ?? false)) {
       return _withoutImage(card);
     }
+    final String searchQuery = query;
     final DateTime? searchStartedAt = _imageSearchBudgeted ? now() : null;
     final bool budgetExhausted =
         _imageSearchBudgeted && _imageSearchSpent >= imageSearchBudget;
     if (budgetExhausted) {
       diagnostics.imageSearch(
-        query: query,
+        query: searchQuery,
         outcome: 'пропущен: бюджет времени поиска исчерпан',
       );
-      return _withoutImage(card);
+      return _withoutImage(card, imageNotFound: true);
     }
     GeneratedCardImage? image;
     try {
       image = await _imageCache.putIfAbsent(
-        query,
-        () => imageFinder!.findImage(query),
+        searchQuery,
+        () => imageFinder!.findImage(searchQuery),
       );
     } on Object {
-      _imageCache.remove(query);
+      _imageCache.remove(searchQuery);
       image = null;
     }
     if (searchStartedAt != null) {
       _imageSearchSpent += now().difference(searchStartedAt);
     }
     if (image == null) {
-      _imageCache.remove(query);
-      return _withoutImage(card);
+      _imageCache.remove(searchQuery);
+      return _withoutImage(card, imageNotFound: true);
     }
     return card.copyWith(
       image: image,
@@ -491,17 +520,32 @@ class GenerationPipeline implements GenerationRunner {
     _imageSearchSpent = Duration.zero;
   }
 
-  /// Карточка без картинки: occlusion без иллюстрации становится обычной.
-  GeneratedCard _withoutImage(GeneratedCard card) {
-    if (!card.isOcclusion) return card;
-    return card.copyWith(
-      isOcclusion: false,
-      issues: List<CardIssueCode>.unmodifiable(<CardIssueCode>[
-        ...card.issues,
-        if (!card.issues.contains(CardIssueCode.occlusionImageMissing))
-          CardIssueCode.occlusionImageMissing,
-      ]),
-    );
+  /// Карточка без картинки: occlusion без иллюстрации становится обычной,
+  /// неудачный поиск оставляет пометку для предупреждения в UI (ADR-028).
+  GeneratedCard _withoutImage(
+    GeneratedCard card, {
+    bool imageNotFound = false,
+  }) {
+    var result = card;
+    if (card.isOcclusion) {
+      result = result.copyWith(
+        isOcclusion: false,
+        issues: List<CardIssueCode>.unmodifiable(<CardIssueCode>[
+          ...result.issues,
+          if (!result.issues.contains(CardIssueCode.occlusionImageMissing))
+            CardIssueCode.occlusionImageMissing,
+        ]),
+      );
+    }
+    if (imageNotFound && !result.issues.contains(CardIssueCode.imageNotFound)) {
+      result = result.copyWith(
+        issues: List<CardIssueCode>.unmodifiable(<CardIssueCode>[
+          ...result.issues,
+          CardIssueCode.imageNotFound,
+        ]),
+      );
+    }
+    return result;
   }
 
   /// Сохраняет пошаговый прогресс задания (`generation_jobs` A8.5 шаг 12).

@@ -69,4 +69,30 @@ void main() {
       isNull,
     );
   });
+
+  // ADR-028: цепочка Commons → Wikipedia → Openverse пробуется целиком.
+  test('картинка в третьем источнике находится', () async {
+    final commons = FakeCardImageFinder(
+      byQuery: <String, GeneratedCardImage?>{'спайность': null},
+    );
+    final wikipedia = FakeCardImageFinder(
+      byQuery: <String, GeneratedCardImage?>{'спайность': null},
+    );
+    final openverse = FakeCardImageFinder(
+      byQuery: <String, GeneratedCardImage?>{
+        'спайность': makeCardImage(query: 'спайность'),
+      },
+    );
+
+    final result = await CompositeCardImageFinder(<CardImageFinder>[
+      commons,
+      wikipedia,
+      openverse,
+    ]).findImage('спайность');
+
+    expect(result, isNotNull);
+    expect(commons.queries, <String>['спайность']);
+    expect(wikipedia.queries, <String>['спайность']);
+    expect(openverse.queries, <String>['спайность']);
+  });
 }

@@ -38,7 +38,7 @@ void main() {
   late Directory mediaDirectory;
 
   Map<String, Object?> cardJson() => <String, Object?>{
-    'front': 'Что такое FSRS?',
+    'front': 'Для чего нужен FSRS?',
     'back': 'Алгоритм интервального повторения.',
     'hint': null,
     'tags': <Object?>['fsrs'],
@@ -260,7 +260,7 @@ void main() {
       expect(deckRows.single.id, imported.deckId);
       final cardRows = await database.select(database.cards).get();
       expect(cardRows, hasLength(1));
-      expect(cardRows.single.front, 'Что такое FSRS?');
+      expect(cardRows.single.front, 'Для чего нужен FSRS?');
       expect(cardRows.single.deckId, imported.deckId);
 
       final importedJob = (await container
