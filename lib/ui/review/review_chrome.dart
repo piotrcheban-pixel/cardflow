@@ -196,8 +196,9 @@ class ReviewEmptyView extends StatelessWidget {
                 child: Text(l10n.practiceStartAction),
               ),
               const SizedBox(height: 8),
-            ],
-            OutlinedButton(onPressed: onBack, child: Text(l10n.reviewBack)),
+              OutlinedButton(onPressed: onBack, child: Text(l10n.reviewBack)),
+            ] else
+              FilledButton(onPressed: onBack, child: Text(l10n.reviewBack)),
           ],
         ),
       ),
