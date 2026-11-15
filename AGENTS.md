@@ -328,12 +328,14 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   старт: `git status --porcelain` → пусто, `HEAD = origin/main = bdb0bd1` (в STATE 7.9 было `31a5999` —
   исправлено); baseline **1369 passed + 2 skipped**. Спайк PDFium: C1 `U+0080–U+009F` и `U+FFFD`/
   одиночные суррогаты из Type0/ToUnicode-PDF подтверждены программной фикстурой. Гейты:
-  `fvm flutter test --no-pub --coverage --exclude-tags golden` → **1405 passed + 2 skipped**; покрытие
-  **92.9 % (9377/10097)**; `analyze` 0; `dart format` 334 файла / 0 changed;
-  `fvm flutter build windows --release` → `cardflow.exe` (см. verify). **Живой DeepSeek:** 3 live-теста
+  `fvm flutter test --no-pub --coverage --exclude-tags golden` → **1409 passed + 3 skipped**; покрытие
+  **92.9 % (9393/10114)**; `analyze` 0; `dart format` 334 файла / 0 changed;
+  `fvm flutter build windows --release --no-pub` → `cardflow.exe` (63,9 с). **Живой DeepSeek:** 3 live-теста
   passed — `cards=3, tokens=1467`; fallback `strict=400 → tolerant=200`; **prompt-only без файлов:
   `cards=3, image_query=3, prompt=gen-ru-v4, tokens=1502`** (промпт v4 действительно возвращает
   `image_query`). Живой Openverse с хоста агента не завершается (L61), проводка проверена
   интеграционным тестом с реальным `ImageSearchService` и fake-Dio (media + файл). Ограничения: L61–L64.
   Замечание окружения: `fvm flutter test` без `--no-pub` зависает на `pub get --example` — все прогоны
-  итерации с `--no-pub`.
+  итерации с `--no-pub`. **Push итерации 7.10:** `bdb0bd1..5cbb653`; CI run
+  [`43728048903`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43728048903) —
+  **9/9 job success**.

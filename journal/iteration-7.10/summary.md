@@ -1,6 +1,7 @@
 # Итерация 7.10 — «Фикс генерации без файлов, PDF и картинок»
 
-**Статус:** завершена локально; push `bdb0bd1..<см. STATE>`, CI — ожидается.
+**Статус:** завершена; push `bdb0bd1..5cbb653`, CI run
+[`43728048903`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43728048903) — 9/9 job success.
 
 ## Что сделано
 
