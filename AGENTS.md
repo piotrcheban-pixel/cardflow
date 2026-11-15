@@ -42,13 +42,35 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   без схемы и `max_tokens`, не больше трёх запросов, только по `badRequest`; разбор текста ответа —
   `lib/api/generation/cards_json_extractor.dart` (BOM, markdown-ограждение, текст вокруг JSON —
   только для compatible-протокола); пустой `cards` — не ошибка ответа: в UI отдельная строка
-  `generationNoCardsFound`. Промпт `gen-ru-v4` скрыт в коде (`system_prompt.dart`),
-  пользовательское сообщение — `generation_prompt.dart`; контентные правила A8.4 — `card_content_validator.dart`
-  (пометки `CardIssueCode`, карточка не отбрасывается); HTTP — только через `GenerationTransport`
-  (`lib/api/http/generation_http_client.dart`) с `RetryPolicy` и `RedactingLogInterceptor`. Ошибки — только
-  `GenerationErrorCode` → строка ARB (`lib/ui/generation/generation_error_message.dart`). Ключи — только
-  `ApiKeyStore` (secure storage). LaTeX-проверка `flutter_math_fork` допустима только в
+  `generationNoCardsFound`. Промпт `gen-ru-v5` скрыт в коде
+  (`lib/api/prompts/system_prompt.dart`, сырой литерал; дословная копия —
+  `docs/prompts/gen-ru-v5.txt`, тест сверяет байты), пользовательское сообщение —
+  `generation_prompt.dart` (блоки `<materials>`, `<wishes>`, `<limit>`, `<images>`;
+  пустые — одной строкой); каждый файл в `<materials>` начинается со строки
+  `Файл: <имя>`. Схема A8.4 содержит `image_id` (изображение из приложенных файлов) и
+  `image_query`; проверка схемы — поштучно (`CardResponseSchema.splitValid`): одна плохая
+  карточка не отбрасывает фрагмент. Контентные правила и мягкие проверки качества A8.4/A8.1 —
+  `card_content_validator.dart` (пометки `CardIssueCode`, карточка не отбрасывается);
+  LaTeX-экранирование ответа восстанавливается до/после разбора JSON
+  (`latex_escape_repair.dart`: `\frac`/`\alpha`, `\(\)`/`\[\]`). HTTP — только через
+  `GenerationTransport` (`lib/api/http/generation_http_client.dart`) с `RetryPolicy` и
+  `RedactingLogInterceptor`. Ошибки — только `GenerationErrorCode` → строка ARB
+  (`lib/ui/generation/generation_error_message.dart`); причина сбоя фрагмента —
+  `GenerationFailureReason` (`json_parse`, `schema_invalid`, `validator_rejected`,
+  `truncated`, `refusal`, `safety`, `network`, `http_4xx/5xx`, …) пишется в
+  `generation_jobs.error_code` и debug-лог `GenerationDiagnostics.fragmentFailure`.
+  Ключи — только `ApiKeyStore` (secure storage). LaTeX-проверка `flutter_math_fork` допустима только в
   `lib/api/generation/latex_checker.dart` и инжектируется в валидатор; остальной `lib/api/` от Flutter не зависит.
+  **Изображения из документов (fix-gen, Д3):** парсеры DOCX (`word/media` + `r:embed`), PPTX
+  (`ppt/media` + слайд), ODT (`Pictures/`) отдают `DocumentImage` (`lib/domain/generation/document_image.dart`)
+  с подписью/контекстом/номером страницы; мусор (< 4 КБ, < 64 px, повторы по SHA-256, не JPEG/PNG)
+  отбрасывается. Изображения раздела входят в каталог `<images>` только своего фрагмента
+  (`id | файл | подпись | окружающий текст`); `image_id` разрешается в байты до внешнего поиска.
+  Приоритет: файл → внешний поиск по `image_query` модели; производного запроса из текста вопроса нет.
+  Общий лимит карточек из пожеланий делится по фрагментам пропорционально объёму
+  (`generation_card_limit.dart`). Предпросмотр импортирует успешные карточки при упавших
+  фрагментах, невалидные карточки пропускает, картинку можно убрать/заменить; ошибки фрагментов —
+  списком «Фрагмент K из M: причина» + «Повторить неудавшиеся».
   **Prompt-only и диагностика (ADR-024, итерация 7.10):** файлы необязательны — без вложений, но с темой
   в `<wishes>` пайплайн создаёт фрагмент с пустым `materialsText`, сервис шлёт пустой `<materials>`;
   `buildGenerationUserContent` допускает пустые материалы; `noMaterials` — только когда нет ни текста,
@@ -71,16 +93,15 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   (или `scannedPdf`) рендерится `PdfScanRenderer` (`lib/api/parsers/pdf_scan_renderer.dart`, pdfrx
   + `image`, `Isolate.run`) в первые **≤ 3 PNG** (ADR-027); страницы одного PDF — один фрагмент
   (`groupKey`). Модель без Vision → `pdfScanVisionRequired`; при сбое рендера — fallback на PDF для
-  Anthropic/Gemini. `image_query` (схема `gen-ru-v4`) → доменный порт `CardImageFinder` →
-  `CompositeCardImageFinder` (`lib/api/images/`): **Wikimedia Commons**, затем **Wikipedia
-  pageimages** (ru → en; ADR-028, итерация 7.12), Openverse резервом (CC0/PDM/CC BY/CC BY-SA,
+  Anthropic/Gemini. `image_query` (схема `gen-ru-v5`), только если `image_id` не задан, → доменный порт
+  `CardImageFinder` → `CompositeCardImageFinder` (`lib/api/images/`): **Wikimedia Commons**, затем
+  **Wikipedia pageimages** (ru → en; ADR-028, итерация 7.12), Openverse резервом (CC0/PDM/CC BY/CC BY-SA,
   таймаут 5 с); бюджет `GenerationPipeline.imageSearchBudget` = 90 с **суммарного времени поиска**
   (ожидание модели не считается), после бюджета карточки импортируются без картинок.
-  Если модель не дала `image_query`, для предметных `basic`-определений запрос выводится локально
-  (`lib/domain/generation/image_query.dart`), кроме пожеланий, запрещающих картинки
-  (`wishesForbidImages`); неудачный поиск ставит `CardIssueCode.imageNotFound` и предупреждение
-  в предпросмотре, а не теряется. Debug-диагностика ADR-024 пишет сырой ответ модели в консоль
-  `flutter run` (`generationDiagnosticsProvider`, sink `debugPrint` в debug).
+  Если модель не дала ни `image_id`, ни `image_query`, карточка остаётся без картинки;
+  `wishesForbidImages` отключает поиск, неудачный поиск ставит `CardIssueCode.imageNotFound`
+  и предупреждение в предпросмотре, а не теряется. Debug-диагностика ADR-024 пишет сырой ответ модели
+  в консоль `flutter run` (`generationDiagnosticsProvider`, sink `debugPrint` в debug).
   Байты `GeneratedCard.image` пишутся в `MediaStore` + `media` только при импорте
   (`DriftGenerationCardStore`). `card_type: "occlusion"` — wire-формат ответа модели: в БД/экспорте
   `basic` + `occlusion_json` + media (SPEC A5); без найденной картинки — `basic` +

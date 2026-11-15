@@ -1,19 +1,21 @@
 # API-схема генерации CardFlow
 
-**Версия:** 4.1 (2026-11-15; `image_query`, wire-формат occlusion, PDF-страницы и
-поиск иллюстраций, ADR-023; промпт `gen-ru-v4`, prompt-only, debug-диагностика и
-нечитаемый текст PDF, ADR-024) ·
+**Версия:** 5.0 (2026-11-15; промпт `gen-ru-v5`, поле `image_id` и приоритет
+изображений из прикреплённых файлов, поштучная проверка схемы, причины сбоя
+фрагментов; ADR-029, ADR-030) ·
 **Связано:** SPEC A8.1, A8.2, A8.4, A8.5, A8.6; ADR-011; ADR-012; ADR-013; ADR-021;
-ADR-022; ADR-023; ADR-024
+ADR-022; ADR-023; ADR-024; ADR-029; ADR-030
 **Источник правды в коде:** `lib/api/generation/card_json_schema.dart` (канон), `provider_schema.dart`
 (проекции), `card_response_schema.dart` (валидатор), `cards_json_extractor.dart` (разбор текста ответа),
-`lib/domain/generation/` (коды ошибок).
+`latex_escape_repair.dart` (восстановление LaTeX), `lib/domain/generation/` (коды ошибок и причин).
 
 ## 1. Каноническая схема ответа модели (A8.4)
 
 Совместима со строгим режимом OpenAI: **все** свойства в `required`, опциональные значения — union-тип
 с `null`, на каждом объекте `additionalProperties: false`. Один и тот же JSON ожидается от всех провайдеров,
 включая OpenAI-совместимый сервер (для него схема — ещё и локальный контракт fallback-пути, §2).
+Схема проверяется **по каждой карточке** (`CardResponseSchema.splitValid`): одна плохая карточка
+отбрасывается сама, остальные идут в предпросмотр.
 
 ```json
 {
@@ -31,9 +33,10 @@ ADR-022; ADR-023; ADR-024
           "card_type": { "type": "string", "enum": ["basic", "basic_reversed", "cloze", "occlusion"] },
           "source_excerpt": { "type": ["string", "null"] },
           "source_file": { "type": ["string", "null"] },
+          "image_id": { "type": ["string", "null"] },
           "image_query": { "type": ["string", "null"] }
         },
-        "required": ["front", "back", "hint", "tags", "card_type", "source_excerpt", "source_file", "image_query"],
+        "required": ["front", "back", "hint", "tags", "card_type", "source_excerpt", "source_file", "image_id", "image_query"],
         "additionalProperties": false
       }
     }
@@ -43,11 +46,18 @@ ADR-022; ADR-023; ADR-024
 }
 ```
 
-`image_query` — краткий поисковый запрос **на английском** для иллюстрации (например,
-`photosynthesis diagram`, `Eiffel Tower`), или `null`. С `gen-ru-v4` (ADR-024) поле
-**обязательно** для `basic`/`cloze`, если карточка описывает объект, животное или понятие
-(правило 14 промпта); для `occlusion` — обязательно всегда. Если пользователь запретил
-картинки в `<wishes>`, `image_query` не заполняется.
+`image_id` — идентификатор изображения из каталога `<images>` прикреплённых файлов
+(`img1`, `img2`, …; формат строки каталога — `id | файл | подпись | окружающий текст`).
+Правила локального валидатора (ADR-029):
+
+- `image_id` вне каталога фрагмента → `null` + пометка `imageIdUnknown`;
+- если `image_id` задан, `image_query` игнорируется (картинка из файла приоритетна);
+- `image_query` — только латиница, 3–7 слов, ≤ 200 символов; иначе `null` +
+  `imageQueryAdjusted`;
+- `image_query` для абстрактного понятия (аксиома, закон, теорема, формула,
+  определение, свойство, принцип, классификация, правило, термин, алгоритм) →
+  `null` + `abstractImageQuery` (Д2: лучше без картинки, чем с неподходящей);
+- `tags` — 1–3, строчные, без `#` и пустых.
 
 `card_type: "occlusion"` — **только wire-значение ответа модели**. В приложении такая
 карточка импортируется как `basic` с `occlusion_json` и медиа (SPEC A5: occlusion — разметка,
@@ -57,6 +67,29 @@ ADR-022; ADR-023; ADR-024
 ошибка ответа: UI показывает отдельное сообщение ARB `generationNoCardsFound` («Модель не нашла в
 материалах фактов для карточек…», ADR-021), а `generationErrorEmptyResponse` остаётся за случаем, когда
 сам провайдер вернул пустой `content` (`emptyResponse`).
+
+## 1a. Внутренние коды причин сбоя фрагмента (fix-gen, Д6)
+
+Код пишется в `generation_jobs.error_code` (перечень через запятую, без текста
+материалов и ключей) и в debug-лог `GenerationDiagnostics.fragmentFailure`:
+
+| Код | Значение |
+|---|---|
+| `truncated` | ответ обрезан по лимиту токенов (после попытки деления) |
+| `refusal` | модель отказалась отвечать |
+| `safety` | ответ заблокирован safety-фильтром (Gemini) |
+| `json_parse` | текст ответа не разобрался как JSON (например, одиночные `\` LaTeX) |
+| `schema_invalid` | JSON не соответствует схеме карточки (поштучно) |
+| `validator_rejected` | структура карточки непригодна (не объект/нет строк) |
+| `network` | нет сети/таймаут |
+| `http_4xx` / `http_5xx` | HTTP-ошибка после попыток `RetryPolicy` |
+| `empty_response` | провайдер вернул пустой контент |
+| `provider_response` | ответ провайдера не разобрался (нет `choices`/`tool_use`) |
+| `cancelled` | отмена пользователем |
+| `unknown` | непредвиденная ошибка |
+
+UI показывает «Фрагмент K из M: понятная причина» (строки ARB
+`generationReason*`), импорт успешных карточек при этом доступен.
 
 ## 2. Проекции под провайдеров (A8.2)
 
@@ -171,10 +204,16 @@ markdown-ограждения/текста, и ответ fallback-пути, н�
 
 ## 4. Локальная валидация (A8.4)
 
-1. **Схема** (целиком): нарушение → `invalidResponse` (сообщение A8.6 «Нейросеть вернула неожиданный
-   ответ. Попробовать снова?»), карточки фрагмента не импортируются.
-2. **Контентные правила** — карточка остаётся, ставится машинная пометка (`CardIssueCode`, предпросмотр 3c
-   покажет и даст отредактировать):
+1. **Схема — поштучно** (`CardResponseSchema.splitValid`): корень не
+   `{"cards": [...]}` → `invalidResponse` + причина `schema_invalid` (фрагмент
+   не импортируется); невалидная карточка внутри массива отбрасывается сама
+   (счётчик `GenerationResult.rejectedCards` → предпросмотр показывает
+   «N карточек отброшено»), остальные идут в предпросмотр (fix-gen, Д6).
+2. **LaTeX до проверки** (`latex_escape_repair.dart`): одиночные `\` LaTeX в
+   JSON удваиваются перед разбором; управляющие `\f/t/b/r/n` внутри `$…$`
+   восстанавливаются; `\(…\)`/`\[…\]` → `$…$`/`$$…$$`; `\$` — не формула.
+3. **Контентные правила** — карточка остаётся, ставится машинная пометка
+   (`CardIssueCode`, предпросмотр покажет и даст отредактировать):
 
 | Пометка | Правило |
 |---|---|
@@ -183,8 +222,19 @@ markdown-ограждения/текста, и ответ fallback-пути, н�
 | `backTooLong` | `back` > 2000 символов |
 | `clozeMissing` | `card_type == cloze` и нет ни одного `{{cN::…}}` |
 | `latexBroken` | формула `$…$` / `$$…$$` не парсится `flutter_math_fork` |
-| `excerptMismatch` | `source_excerpt` после сжатия пробелов не входит в исходный текст → обнуляется |
+| `excerptMismatch` | `source_excerpt` после сжатия пробелов не входит в исходный текст → обнуляется; при пустых материалах — просто `null` без пометки |
 | `tagsAdjusted` | теги обрезаны до 3, удалены пустые и `#` |
+| `occlusionImageMissing` | occlusion без иллюстрации стал `basic` |
+| `imageNotFound` | внешний поиск по `image_query` не дал картинку |
+| `imageIdUnknown` | `image_id` вне каталога `<images>` → `null` |
+| `imageQueryAdjusted` | `image_query` обнулён/проигнорирован (не латиница, > 7 слов, задан `image_id`) |
+| `abstractImageQuery` | абстрактное понятие — картинка не ищется |
+| `answerInFront` | ответ или формула из `back` целиком во `front` |
+| `frontLooksLikeHeading` | `front` без «?» и не cloze (≥ 2 слов) |
+| `backTooVerbose` | `back` > ~200 символов или > 3 предложений |
+| `backOnlyNotation` | `back` — только «x — …, y — …» без утверждения |
+| `unicodeMath` | индексы/греческие буквы вне `$…$` |
+| `markdownInText` | Markdown-выделение в тексте карточки |
 
 ## 5. Коды ошибок слоя генерации
 
