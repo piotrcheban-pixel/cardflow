@@ -83,6 +83,11 @@ LIVE card: image_query=male lion pride savanna, image=134919 Б jpeg, issues=[]
 (ожидалось отсутствие редактора масок — найден `occlusion-editor-canvas`),
 `wishesForbidImages` (ожидалось `true`, получено `false`).
 
+## Push и CI
+
+- Push: `origin/main = c6dd64e` (`e9ea08b..c6dd64e`).
+- CI run [`43750931989`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43750931989) — **9/9 job success** (`format + analyze`, `test` × 3 ОС, `build-desktop` × 3, `build-mobile` Android + iOS).
+
 ## Замечания
 
 - `fvm flutter test` без `--no-pub` зависает на `pub get --example` — все

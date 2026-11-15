@@ -408,4 +408,4 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   **`deepseek-flash` (модель владельца):** prompt-only `image_query=3, tokens=2421`;
   production-пайплайн → **3 карточки, 3 картинки** (218 670 / 458 295 / 134 919 Б JPEG).
   Ограничения: L71–L75; L60/L70 обновлены.
-  **Push итерации 7.12:** `e9ea08b..` (CI — во вкладке Actions репозитория).
+  **Push итерации 7.12:** `e9ea08b..c6dd64e`; CI run [`43750931989`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43750931989) — **9/9 job success**.

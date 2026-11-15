@@ -1,8 +1,7 @@
 # STATE — текущее состояние CardFlow
 
 **Дата:** 2026-11-15 · **Этап:** итерация **7.12** «Фикс UX картинок, лимитов и
-поиска ИИ» (ADR-028) — реализация и локальные гейты зелёные; **push выполнен,
-CI ожидается** · **Режим:** ИТЕРАЦИИ
+поиска ИИ» (ADR-028) — завершена; **push выполнен, CI 9/9 job success** · **Режим:** ИТЕРАЦИИ
 **Факты (сверено командами в этой сессии):** на старте `git status --porcelain`
 → пусто, `HEAD = origin/main = e9ea08b` (`docs: record green CI for iteration
 7.11`; в STATE 7.11 было записано `8925e99` — после него был ещё docs-коммит,
@@ -10,6 +9,8 @@ CI ожидается** · **Режим:** ИТЕРАЦИИ
 Flutter 3.47.9 / Dart 3.13.7 (FVM); Windows 11; Android SDK/JDK/Xcode нет (L2).
 Прогоны — только с `--no-pub`: `fvm flutter test`/`build` без него зависают на
 `dart pub get --example` (L64).
+
+**Push/CI (2026-11-15):** `origin/main = c6dd64e` (`e9ea08b..c6dd64e`, 4 коммита итерации 7.12); снимок `c6dd64e` — run [`43750931989`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43750931989) — **9/9 job success** (`format + analyze`, `test` × 3 ОС, `build-desktop` × 3, `build-mobile` Android + iOS).
 
 **Гейты 7.12:** `fvm flutter test --no-pub --coverage --exclude-tags golden` →
 **1512 passed + 5 skipped** (skipped — live DeepSeek без ключа в env прогона;

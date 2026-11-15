@@ -59,4 +59,5 @@
 - `lib/domain/generation/image_query.dart`
 - `journal/iteration-7.12/{plan,red-output,review,verify}.md`
 - ограничения L71–L75, L60/L70 обновлены в `journal/KNOWN_LIMITATIONS.md`
+- push: `origin/main = c6dd64e`; CI run [`43750931989`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43750931989) — **9/9 job success**
 
