@@ -10,6 +10,7 @@ import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 
+import 'package:cardflow/api/generation/generation_diagnostics.dart';
 import 'package:cardflow/domain/generation/card_image_finder.dart';
 import 'package:cardflow/domain/generation/generated_card_image.dart';
 import 'package:cardflow/domain/generation/generation_attachment.dart';
@@ -24,10 +25,15 @@ class ImageSearchService implements CardImageFinder {
     this.maxImageBytes = 5 * 1024 * 1024,
     this.minSearchInterval = const Duration(seconds: 1),
     this.userAgent = 'CardFlow/1.0',
-  }) : endpoint = endpoint ?? Uri.parse('https://api.openverse.org/v1/images/');
+    GenerationDiagnostics? diagnostics,
+  }) : endpoint = endpoint ?? Uri.parse('https://api.openverse.org/v1/images/'),
+       diagnostics = diagnostics ?? const GenerationDiagnostics();
 
   /// HTTP-клиент (Dio с таймаутами и redaction в production-проводке).
   final Dio dio;
+
+  /// Debug-диагностика поиска картинок (ADR-024).
+  final GenerationDiagnostics diagnostics;
 
   /// Базовый адрес поиска.
   final Uri endpoint;
@@ -83,6 +89,10 @@ class ImageSearchService implements CardImageFinder {
         if (bytes == null) continue;
         final AttachmentMediaType? mediaType = _mediaTypeOf(bytes);
         if (mediaType == null) continue;
+        diagnostics.imageSearch(
+          query: normalized,
+          outcome: 'скачано ${bytes.length} Б, ${mediaType.name}',
+        );
         return GeneratedCardImage(
           bytes: bytes,
           mediaType: mediaType,
@@ -91,8 +101,19 @@ class ImageSearchService implements CardImageFinder {
           attribution: _asString(raw['attribution']),
         );
       }
-    } on Object {
+      diagnostics.imageSearch(
+        query: normalized,
+        outcome:
+            'нет подходящей картинки среди '
+            '${results.length < maxResults ? results.length : maxResults} '
+            'результатов',
+      );
+    } on Object catch (error) {
       // Сеть/API недоступны: генерация продолжится без иллюстрации.
+      diagnostics.imageSearch(
+        query: normalized,
+        outcome: 'ошибка запроса: $error',
+      );
       return null;
     }
     return null;

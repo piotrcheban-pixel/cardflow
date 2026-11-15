@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cardflow/api/generation/generation_diagnostics.dart';
 import 'package:cardflow/api/http/redacting_log_interceptor.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
 import 'package:cardflow/domain/generation/generation_provider.dart';
@@ -11,6 +12,8 @@ import 'package:cardflow/domain/generation/generation_request.dart';
 import 'package:cardflow/domain/generation/generation_result.dart';
 import 'package:cardflow/domain/generation/provider_account.dart';
 import 'package:cardflow/domain/generation/provider_protocol.dart';
+import 'package:cardflow/l10n/app_localizations_ru.dart';
+import 'package:cardflow/ui/generation/generation_error_message.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
 
 import '../helpers/fake_http_adapter.dart';
@@ -116,7 +119,7 @@ void main() {
       expect(result.cards, hasLength(1));
       expect(result.cards.single.front, 'Что такое FSRS?');
       expect(result.usage.totalTokens, 30);
-      expect(result.promptVersion, 'gen-ru-v3');
+      expect(result.promptVersion, 'gen-ru-v4');
 
       expect(adapter.requests, hasLength(1));
       final sent = adapter.requests.single;
@@ -442,5 +445,73 @@ void main() {
       service.adapters.map((adapter) => adapter.provider).toSet(),
       GenerationProvider.values.toSet(),
     );
+  });
+
+  // Итерация 7.10, ADR-024: 400 Bad Request → текст ошибки API в UI-строке,
+  // тело ошибки уходит в debug-диагностику.
+  test('production-граф: 400 → причина API в ARB и в диагностике', () async {
+    final List<String> diagnostics = <String>[];
+    final adapter = FakeHttpAdapter(
+      (options) => jsonResponse(<String, Object?>{
+        'error': <String, Object?>{
+          'message': 'invalid characters in content: control char U+0085',
+        },
+      }, statusCode: 400),
+    );
+    final container = ProviderContainer(
+      overrides: [
+        generationDioProvider.overrideWithValue(dioWithAdapter(adapter)),
+        apiKeyStoreProvider.overrideWithValue(
+          FakeApiKeyStore(<String, String>{'openai': openAiKey}),
+        ),
+        generationSettingsStoreProvider.overrideWithValue(
+          FakeGenerationSettingsStore(),
+        ),
+        generationDiagnosticsProvider.overrideWithValue(
+          GenerationDiagnostics(enabled: true, sink: diagnostics.add),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    GenerationException? failure;
+    try {
+      await container
+          .read(cardGenerationServiceProvider)
+          .generate(
+            GenerationRequest(
+              account: accountWith(
+                id: 'openai',
+                protocol: ProviderProtocol.openai,
+                modelId: 'gpt-test',
+              ),
+              materialsText: 'Материал лекции с C1-символами',
+              limit: 5,
+            ),
+          );
+    } on GenerationException catch (error) {
+      failure = error;
+    }
+
+    expect(failure, isNotNull);
+    expect(failure!.code, GenerationErrorCode.badRequest);
+    expect(
+      failure.providerReason,
+      'invalid characters in content: control char U+0085',
+    );
+    final String uiMessage = generationErrorCodeMessage(
+      AppLocalizationsRu(),
+      failure.code,
+      providerReason: failure.providerReason,
+    );
+    expect(
+      uiMessage,
+      contains('invalid characters in content'),
+      reason: 'UI для 400 показывает текст ошибки API, а не общее сообщение',
+    );
+    expect(uiMessage, isNot(contains('неожиданный')));
+    expect(diagnostics, hasLength(1));
+    expect(diagnostics.single, contains('HTTP 400'));
+    expect(diagnostics.single, contains('invalid characters in content'));
   });
 }

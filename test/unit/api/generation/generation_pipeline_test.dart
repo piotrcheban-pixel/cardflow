@@ -470,6 +470,60 @@ void main() {
     expect(jobs.saved.last.errorCode, 'noMaterials');
   });
 
+  // Итерация 7.10, ADR-024: без файлов генерируем по теме из пожеланий.
+  test(
+    'prompt-only: нет файлов, есть пожелания — один пустой фрагмент',
+    () async {
+      final pipeline = pipelineWith(const <GenerationChunk>[]);
+      caller.onGenerate = (GenerationRequest request, int call) async {
+        expect(request.materialsText, isEmpty);
+        expect(request.wishes, 'Фотосинтез');
+        return resultWith(<GeneratedCard>[makeGeneratedCard()], tokens: 15);
+      };
+
+      final result = await pipeline.run(
+        GenerationRunRequest(
+          documents: const <ParsedDocument>[],
+          account: testProviderAccount(presetId: 'openai', modelId: 'gpt-4o'),
+          deckName: 'Фотосинтез',
+          wishes: 'Фотосинтез',
+        ),
+      );
+
+      expect(caller.calls, 1);
+      expect(result.status, GenerationJobStatus.done);
+      expect(result.cards, hasLength(1));
+      expect(result.tokensUsed, 15);
+      expect(jobs.saved.first.files, isEmpty);
+      expect(jobs.saved.last.chunkCount, 1);
+      expect(jobs.saved.last.cardsCount, 1);
+    },
+  );
+
+  test('prompt-only без пожеланий — noMaterials, к модели не идём', () async {
+    final pipeline = pipelineWith(const <GenerationChunk>[]);
+
+    await expectLater(
+      pipeline.run(
+        GenerationRunRequest(
+          documents: const <ParsedDocument>[],
+          account: testProviderAccount(presetId: 'openai', modelId: 'gpt-4o'),
+          deckName: 'Пустая колода',
+          wishes: '   ',
+        ),
+      ),
+      throwsA(
+        isA<GenerationException>().having(
+          (error) => error.code,
+          'code',
+          GenerationErrorCode.noMaterials,
+        ),
+      ),
+    );
+    expect(caller.calls, 0);
+    expect(jobs.saved.last.status, GenerationJobStatus.error);
+  });
+
   test(
     'прогресс: chunking → sending/receiving с номерами фрагментов',
     () async {

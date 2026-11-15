@@ -6,6 +6,7 @@ import 'dart:convert';
 
 import 'package:dio/dio.dart';
 
+import 'package:cardflow/api/generation/generation_diagnostics.dart';
 import 'package:cardflow/api/http/retry_policy.dart';
 import 'package:cardflow/api/providers/generation_provider_adapter.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
@@ -27,18 +28,24 @@ abstract interface class GenerationTransport {
 class GenerationHttpClient implements GenerationTransport {
   /// Создаёт клиент.
   ///
-  /// [delay] инжектируется для быстрых детерминированных тестов.
+  /// [delay] инжектируется для быстрых детерминированных тестов;
+  /// [diagnostics] — debug-диагностика ответов (ADR-024).
   GenerationHttpClient({
     required this.dio,
     required this.retryPolicy,
+    GenerationDiagnostics? diagnostics,
     Future<void> Function(Duration duration)? delay,
-  }) : delay = delay ?? Future<void>.delayed;
+  }) : diagnostics = diagnostics ?? const GenerationDiagnostics(),
+       delay = delay ?? Future<void>.delayed;
 
   /// Dio с настроенными таймаутами, redaction-перехватчиком и адаптером.
   final Dio dio;
 
   /// Политика повторов.
   final RetryPolicy retryPolicy;
+
+  /// Debug-диагностика тел ответов при ошибках (ADR-024).
+  final GenerationDiagnostics diagnostics;
 
   /// Пауза перед повтором (инжектируется в тестах).
   final Future<void> Function(Duration duration) delay;
@@ -133,6 +140,7 @@ class GenerationHttpClient implements GenerationTransport {
     if (data is String) {
       final text = data.trim();
       if (text.isEmpty) {
+        diagnostics.apiError(statusCode: response.statusCode, body: data);
         throw const GenerationException(
           GenerationErrorCode.invalidResponse,
           details: 'пустой ответ провайдера',
@@ -141,6 +149,7 @@ class GenerationHttpClient implements GenerationTransport {
       try {
         data = jsonDecode(text);
       } on FormatException {
+        diagnostics.apiError(statusCode: response.statusCode, body: text);
         throw const GenerationException(
           GenerationErrorCode.invalidResponse,
           details: 'ответ провайдера не является JSON',
@@ -152,6 +161,7 @@ class GenerationHttpClient implements GenerationTransport {
         (key, value) => MapEntry(key.toString(), value),
       );
     }
+    diagnostics.apiError(statusCode: response.statusCode, body: data);
     throw const GenerationException(
       GenerationErrorCode.invalidResponse,
       details: 'ответ провайдера не является JSON-объектом',
@@ -207,18 +217,23 @@ class GenerationHttpClient implements GenerationTransport {
           details: 'недоверенный сертификат провайдера',
         );
       case DioExceptionType.badResponse:
+        final Response<dynamic>? response = error.response;
+        final int? statusCode = response?.statusCode;
+        diagnostics.apiError(statusCode: statusCode, body: response?.data);
         return _fromStatusCode(
-          error.response?.statusCode,
+          statusCode,
           retryAfter: retryAfter,
-          providerReason: _providerReasonOf(error.response?.data),
+          providerReason: _providerReasonOf(response?.data),
         );
       case DioExceptionType.unknown:
-        final statusCode = error.response?.statusCode;
+        final Response<dynamic>? response = error.response;
+        final statusCode = response?.statusCode;
         if (statusCode != null) {
+          diagnostics.apiError(statusCode: statusCode, body: response?.data);
           return _fromStatusCode(
             statusCode,
             retryAfter: retryAfter,
-            providerReason: _providerReasonOf(error.response?.data),
+            providerReason: _providerReasonOf(response?.data),
           );
         }
         return const GenerationException(

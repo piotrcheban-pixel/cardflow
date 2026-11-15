@@ -2,19 +2,32 @@ import 'dart:typed_data';
 
 import 'package:cardflow/api/parsers/document_parser.dart';
 import 'package:cardflow/api/parsers/parsed_document_builder.dart';
+import 'package:cardflow/api/parsers/pdf_text_quality.dart';
 import 'package:cardflow/domain/text/document_format.dart';
 import 'package:cardflow/domain/text/parsed_document.dart';
 import 'package:cardflow/domain/text/parser_exception.dart';
+import 'package:cardflow/domain/text/text_sanitizer.dart';
 import 'package:pdfrx/pdfrx.dart';
 
 /// Парсер PDF: текстовый слой через `pdfrx` (PDFium, MIT) (SPEC A8.3).
 ///
 /// Страницы → разделы; пустой текстовый слой (скан) → `scannedPdf`; битый или
-/// запароленный PDF → `unreadableFile`. Вызывается в отдельном изоляте
-/// (ADR-010), инициализация PDFium — `pdfrxInitialize()`.
+/// запароленный PDF → `unreadableFile`; нечитаемый текстовый слой (символы
+/// замены/битая кодировка) → `garbledText` (итерация 7.10, ADR-024).
+/// Вызывается в отдельном изоляте (ADR-010), инициализация PDFium —
+/// `pdfrxInitialize()`.
 class PdfParser implements DocumentParser {
   /// Создаёт парсер PDF.
-  const PdfParser();
+  const PdfParser({
+    this.sanitizer = const TextSanitizer(),
+    this.quality = const PdfTextQuality(),
+  });
+
+  /// Санитайзер извлечённого текста (C1/суррогаты/BOM).
+  final TextSanitizer sanitizer;
+
+  /// Проверка «нечитаемого» текста.
+  final PdfTextQuality quality;
 
   @override
   DocumentFormat get format => DocumentFormat.pdf;
@@ -70,14 +83,27 @@ class PdfParser implements DocumentParser {
         String text = '';
         try {
           final PdfPageRawText? raw = await page.loadText();
-          text = raw?.fullText.trim() ?? '';
+          text = raw?.fullText ?? '';
         } on Object {
           pageErrors++;
           text = '';
         }
         pageTexts.add(text);
       }
-      if (pageTexts.every((String text) => text.isEmpty)) {
+      // Нечитаемый текстовый слой (битый ToUnicode/кодировка) — раньше это
+      // уходило в API и провайдер отвечал 400/мусором (ADR-024).
+      for (final String pageText in pageTexts) {
+        if (quality.isUnreadable(pageText)) {
+          throw const ParserException(
+            ParserErrorCode.garbledText,
+            details: 'Текстовый слой PDF содержит символы замены',
+          );
+        }
+      }
+      final List<String> cleanedTexts = <String>[
+        for (final String pageText in pageTexts) sanitizer.sanitize(pageText),
+      ];
+      if (cleanedTexts.every((String text) => text.isEmpty)) {
         if (pageErrors > 0) {
           throw const ParserException(
             ParserErrorCode.unreadableFile,
@@ -94,7 +120,7 @@ class PdfParser implements DocumentParser {
         fileName: fileName,
         metadata: ParsedDocumentMetadata(pageCount: pageTexts.length),
       );
-      for (final String pageText in pageTexts) {
+      for (final String pageText in cleanedTexts) {
         if (pageText.isEmpty) {
           continue;
         }

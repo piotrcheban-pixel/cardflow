@@ -680,6 +680,10 @@
   "@parserErrorEmptyText": {
     "description": "Ошибка парсинга: в документе нет извлекаемого текста (Word/пустая форма, итерация 7.8)."
   },
+  "parserErrorGarbledText": "PDF содержит нечитаемый текст. Сохраните файл в другом формате и попробуйте снова",
+  "@parserErrorGarbledText": {
+    "description": "Ошибка парсинга: текстовый слой PDF состоит из символов замены/битой кодировки (итерация 7.10, ADR-024)."
+  },
   "generationErrorMissingApiKey": "Ключ доступа не задан. Добавьте ключ в настройках",
   "@generationErrorMissingApiKey": {
     "description": "Генерация: ключ API не задан (SPEC A8.6)."
@@ -834,7 +838,7 @@
   "@generationAttachButton": {
     "description": "Кнопка открытия файлового пикера на экране генерации."
   },
-  "generationFilesEmpty": "Файлы не прикреплены",
+  "generationFilesEmpty": "Файлы не прикреплены (необязательно)",
   "@generationFilesEmpty": {
     "description": "Пустой список прикреплённых файлов."
   },
@@ -943,9 +947,9 @@
   "@generationEstimateWarning": {
     "description": "Предупреждение при большом объёме материалов (SPEC A8.5 шаг 4)."
   },
-  "generationNoFilesError": "Прикрепите хотя бы один файл",
-  "@generationNoFilesError": {
-    "description": "Валидация: генерация без прикреплённых файлов."
+  "generationTopicRequired": "Напишите тему или описание — файлы не обязательны",
+  "@generationTopicRequired": {
+    "description": "Валидация: не прикреплено ни одного файла и не задана тема (итерация 7.10, ADR-024)."
   },
   "generationNoParsedFilesError": "Ни один файл не удалось прочитать. Проверьте формат и размер файлов",
   "@generationNoParsedFilesError": {
@@ -991,13 +995,13 @@
   "@generationCancelled": {
     "description": "Сообщение после отмены генерации."
   },
-  "generationErrorNoMaterials": "В файле нет текста (скан или пустая форма)",
+  "generationErrorNoMaterials": "Нет материалов для генерации: прикрепите файл или напишите тему",
   "@generationErrorNoMaterials": {
     "description": "Генерация: после парсинга нет текста (новый код noMaterials, ADR-015)."
   },
-  "generationNoCardsFound": "Модель не нашла в материалах фактов для карточек. Проверьте, что в файлах есть текст (не скан и не пустая форма); если текст есть — смените модель",
+  "generationNoCardsFound": "Модель не нашла фактов для карточек. Проверьте текст файлов или уточните тему; если материал есть — смените модель",
   "@generationNoCardsFound": {
-    "description": "Генерация: модель вернула валидный пустой массив cards (правило 13 промпта) — это не ошибка ответа, а материалы без фактов (ADR-021)."
+    "description": "Генерация: модель вернула валидный пустой массив cards (правило 13 промпта) — это не ошибка ответа, а материал/тема без фактов (ADR-021, ADR-024)."
   },
   "generationPreviewTitle": "Предпросмотр карточек",
   "@generationPreviewTitle": {

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
@@ -237,7 +238,7 @@ void main() {
       expect(job.cardsCount, 1);
       expect(job.chunkCount, 1);
       expect(job.files, <String>['лекция.txt']);
-      expect(job.promptVersion, 'gen-ru-v3');
+      expect(job.promptVersion, 'gen-ru-v4');
 
       final imported = await container
           .read(generationCardStoreProvider)
@@ -440,4 +441,192 @@ void main() {
     );
     expect(container.read(documentGatewayProvider), isNotNull);
   });
+
+  // Итерация 7.10, ADR-024: генерация по теме без единого файла.
+  test(
+    'production-граф: prompt-only — пустой <materials> и тема в <wishes>',
+    () async {
+      final FakeHttpAdapter adapter = FakeHttpAdapter(
+        (options) => jsonResponse(openAiPayload()),
+      );
+      final ProviderContainer local = ProviderContainer(
+        overrides: <Override>[
+          appDatabaseProvider.overrideWithValue(database),
+          mediaStoreProvider.overrideWithValue(MediaStore(mediaDirectory)),
+          generationDioProvider.overrideWithValue(dioWithAdapter(adapter)),
+          apiKeyStoreProvider.overrideWithValue(
+            FakeApiKeyStore(<String, String>{'openai': 'test-key-openai'}),
+          ),
+          generationSettingsStoreProvider.overrideWithValue(
+            FakeGenerationSettingsStore(),
+          ),
+        ],
+      );
+      addTearDown(local.dispose);
+
+      final GenerationRunResult result = await local
+          .read(generationRunnerProvider)
+          .run(
+            GenerationRunRequest(
+              documents: const <ParsedDocument>[],
+              account: testProviderAccount(
+                presetId: 'openai',
+                modelId: 'gpt-4o-mini',
+              ),
+              deckName: 'Фотосинтез',
+              wishes: 'Фотосинтез: световая и темновая фазы',
+            ),
+          );
+
+      expect(result.status, GenerationJobStatus.done);
+      expect(result.cards, hasLength(1));
+      expect(adapter.requests, hasLength(1));
+      final body = jsonDecode(
+        adapter.requests.single.data! as String,
+      ) as Map<String, Object?>;
+      final messages = body['messages']! as List<Object?>;
+      final userContent =
+          (messages[1]! as Map<String, Object?>)['content']! as String;
+      expect(userContent, contains('<materials>\n</materials>'));
+      expect(
+        userContent,
+        contains('<wishes>\nФотосинтез: световая и темновая фазы\n</wishes>'),
+      );
+
+      final GenerationJob job = (await local
+          .read(generationJobRepositoryProvider)
+          .jobById(result.jobId))!;
+      expect(job.status, GenerationJobStatus.done);
+      expect(job.files, isEmpty);
+      expect(job.promptVersion, 'gen-ru-v4');
+      expect(job.cardsCount, 1);
+    },
+  );
+
+  // Итерация 7.10, ADR-024: поиск картинок — реальный ImageSearchService на
+  // production-проводке (fake-Dio вместо сети): image_query → скачивание →
+  // карточка с байтами → MediaStore/media при импорте.
+  test(
+    'production-граф: image_query → ImageSearchService → картинка и media',
+    () async {
+      final Uint8List jpeg = Uint8List.fromList(<int>[
+        0xFF,
+        0xD8,
+        0xFF,
+        0xE0,
+        0x00,
+        0x10,
+        0x4A,
+        0x46,
+        0x49,
+        0x46,
+      ]);
+      final FakeHttpAdapter adapter = FakeHttpAdapter((options) {
+        final String path = options.uri.path;
+        if (path.endsWith('/chat/completions')) {
+          return jsonResponse(<String, Object?>{
+            'choices': <Object?>[
+              <String, Object?>{
+                'message': <String, Object?>{
+                  'role': 'assistant',
+                  'content': jsonEncode(<String, Object?>{
+                    'cards': <Object?>[
+                      <String, Object?>{
+                        'front': 'Какая органелла изображена?',
+                        'back': 'Хлоропласт.',
+                        'hint': null,
+                        'tags': <Object?>['биология'],
+                        'card_type': 'basic',
+                        'source_excerpt': null,
+                        'source_file': 'лекция.txt',
+                        'image_query': 'chloroplast diagram',
+                      },
+                    ],
+                  }),
+                },
+                'finish_reason': 'stop',
+              },
+            ],
+            'usage': <String, Object?>{'total_tokens': 30},
+          });
+        }
+        if (path.endsWith('/v1/images/')) {
+          return jsonResponse(<String, Object?>{
+            'results': <Object?>[
+              <String, Object?>{
+                'url': 'https://example.test/original.jpg',
+                'thumbnail': 'https://api.openverse.org/v1/images/abc/thumb/',
+                'license': 'cc0',
+                'attribution': '"Chloroplast" is licensed under CC0.',
+              },
+            ],
+          });
+        }
+        if (path.endsWith('/thumb/')) return bytesResponse(jpeg);
+        return bytesResponse(<int>[1, 2, 3], contentType: 'text/plain');
+      });
+      final ProviderContainer local = ProviderContainer(
+        overrides: <Override>[
+          appDatabaseProvider.overrideWithValue(database),
+          mediaStoreProvider.overrideWithValue(MediaStore(mediaDirectory)),
+          generationDioProvider.overrideWithValue(dioWithAdapter(adapter)),
+          apiKeyStoreProvider.overrideWithValue(
+            FakeApiKeyStore(<String, String>{'openai': 'test-key-openai'}),
+          ),
+          generationSettingsStoreProvider.overrideWithValue(
+            FakeGenerationSettingsStore(),
+          ),
+        ],
+      );
+      addTearDown(local.dispose);
+
+      final GenerationRunResult result = await local
+          .read(generationRunnerProvider)
+          .run(
+            GenerationRunRequest(
+              documents: <ParsedDocument>[document()],
+              account: testProviderAccount(
+                presetId: 'openai',
+                modelId: 'gpt-4o-mini',
+              ),
+              deckName: 'Биология',
+            ),
+          );
+
+      expect(result.cards, hasLength(1));
+      final GeneratedCard card = result.cards.single;
+      expect(card.imageQuery, 'chloroplast diagram');
+      expect(card.image, isNotNull);
+      expect(card.image!.bytes, jpeg);
+      expect(
+        adapter.requests.any(
+          (RequestOptions options) =>
+              options.method == 'GET' &&
+              options.uri.path.endsWith('/v1/images/') &&
+              options.uri.queryParameters['q'] == 'chloroplast diagram',
+        ),
+        isTrue,
+        reason: 'ImageSearchService должен быть вызван по image_query',
+      );
+
+      await local
+          .read(generationCardStoreProvider)
+          .importGeneratedCards(
+            deckId: null,
+            deckName: 'Биология',
+            cards: result.cards,
+            jobId: result.jobId,
+            now: DateTime.now(),
+          );
+      final CardRow row = (await database.select(database.cards).get()).single;
+      expect(jsonDecode(row.mediaJson), hasLength(1));
+      final MediaRow mediaRow =
+          (await database.select(database.media).get()).single;
+      expect(
+        File('${mediaDirectory.path}${Platform.pathSeparator}${mediaRow.path}')
+            .readAsBytesSync(),
+        jpeg,
+      );
+    },
+  );
 }

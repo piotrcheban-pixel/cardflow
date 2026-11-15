@@ -260,6 +260,40 @@ void main() {
     expect(find.text(l10n.generationPreviewEmpty), findsOneWidget);
   });
 
+  // Итерация 7.10, ADR-024: 400 Bad Request — в предпросмотре текст ошибки API,
+  // а не общее «неожиданный ответ».
+  testWidgets('400: причина API в строке ошибки фрагмента', (tester) async {
+    final failure = GenerationChunkFailure(
+      chunkIndex: 1,
+      code: GenerationErrorCode.badRequest,
+      materialsText: 'материалы',
+      limit: 10,
+      providerReason: 'invalid characters in content',
+    );
+    await pumpPreview(
+      tester,
+      resultWith(
+        cards: <GeneratedCard>[
+          const GeneratedCard(
+            front: 'Вопрос',
+            back: 'Ответ',
+            cardType: CardType.basic,
+          ),
+        ],
+        failures: <GenerationChunkFailure>[failure],
+      ),
+    );
+    final l10n = l10nOf(tester);
+
+    expect(find.text(l10n.generationFailuresTitle), findsOneWidget);
+    expect(
+      find.textContaining('invalid characters in content'),
+      findsOneWidget,
+      reason: 'для 400 показываем причину провайдера',
+    );
+    expect(find.text(l10n.generationErrorUnexpectedResponse), findsNothing);
+  });
+
   testWidgets('occlusion: подпись формата, картинка и импорт полей (7.9)', (
     tester,
   ) async {

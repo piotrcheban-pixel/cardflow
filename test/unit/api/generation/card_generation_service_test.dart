@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cardflow/api/generation/card_generation_service.dart';
+import 'package:cardflow/api/generation/generation_diagnostics.dart';
 import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
 import 'package:cardflow/domain/generation/generation_provider.dart';
@@ -91,6 +92,7 @@ void main() {
     required FakeGenerationTransport transport,
     FakeApiKeyStore? apiKeyStore,
     String systemPrompt = 'СИСТЕМНЫЙ ПРОМПТ',
+    GenerationDiagnostics? diagnostics,
   }) {
     return CardGenerationService(
       adapters: <FakeProviderAdapter>[adapter],
@@ -101,6 +103,7 @@ void main() {
       systemPrompt: systemPrompt,
       promptVersion: 'gen-ru-v2',
       maxOutputTokens: 1234,
+      diagnostics: diagnostics,
     );
   }
 
@@ -586,7 +589,7 @@ void main() {
     }
 
     test(
-      'пустой текст без вложений → noMaterials, без адаптера и сети',
+      'пустой текст без вложений и пожеланий → noMaterials, без сети',
       () async {
         final adapter = FakeProviderAdapter();
         final transport = FakeGenerationTransport(
@@ -596,7 +599,11 @@ void main() {
 
         await expectLater(
           service.generate(
-            requestFor(openAiAccount(), materialsText: ' \u0000\n\n '),
+            requestFor(
+              openAiAccount(),
+              materialsText: ' \u0000\n\n ',
+              wishes: null,
+            ),
           ),
           throwsGeneration(GenerationErrorCode.noMaterials),
         );
@@ -856,6 +863,106 @@ void main() {
               ),
         ),
       );
+    });
+  });
+
+  // Итерация 7.10, ADR-024.
+  group('prompt-only и диагностика', () {
+    test(
+      'пустой текст + пожелания: запрос собирается с пустым <materials>',
+      () async {
+        final adapter = FakeProviderAdapter(
+          cardsJson: cardsJson(<Map<String, Object?>>[validCardJson()]),
+        );
+        final transport = FakeGenerationTransport(
+          response: <String, Object?>{'ok': true},
+        );
+        final service = serviceWith(adapter: adapter, transport: transport);
+
+        final GenerationResult result = await service.generate(
+          requestFor(openAiAccount(), materialsText: '', wishes: 'Фотосинтез'),
+        );
+
+        expect(result.cards, hasLength(1));
+        expect(
+          adapter.buildArgs!.userContent,
+          contains('<materials>\n</materials>'),
+        );
+        expect(
+          adapter.buildArgs!.userContent,
+          contains('<wishes>\nФотосинтез\n</wishes>'),
+        );
+        expect(transport.calls, 1);
+      },
+    );
+
+    test(
+      'ни текста, ни вложений, ни пожеланий — noMaterials без сети',
+      () async {
+        final adapter = FakeProviderAdapter();
+        final transport = FakeGenerationTransport(
+          response: <String, Object?>{},
+        );
+        final service = serviceWith(adapter: adapter, transport: transport);
+
+        await expectLater(
+          service.generate(
+            requestFor(openAiAccount(), materialsText: '', wishes: null),
+          ),
+          throwsGeneration(GenerationErrorCode.noMaterials),
+        );
+        expect(adapter.buildCalls, 0);
+        expect(transport.calls, 0);
+      },
+    );
+
+    test('сырой ответ модели уходит в диагностику (для image_query)', () async {
+      final messages = <String>[];
+      final adapter = FakeProviderAdapter(
+        cardsJson: jsonEncode(<String, Object?>{
+          'cards': <Object?>[
+            <String, Object?>{
+              ...validCardJson(),
+              'image_query': 'plant cell diagram',
+            },
+          ],
+        }),
+      );
+      final transport = FakeGenerationTransport(
+        response: <String, Object?>{'ok': true},
+      );
+      final service = serviceWith(
+        adapter: adapter,
+        transport: transport,
+        diagnostics: GenerationDiagnostics(enabled: true, sink: messages.add),
+      );
+
+      final GenerationResult result = await service.generate(
+        requestFor(openAiAccount()),
+      );
+
+      expect(result.cards.single.imageQuery, 'plant cell diagram');
+      expect(messages, hasLength(1));
+      expect(messages.single, contains('image_query'));
+      expect(messages.single, contains('plant cell diagram'));
+    });
+
+    test('диагностика выключена — сырой ответ не пишется', () async {
+      final messages = <String>[];
+      final adapter = FakeProviderAdapter(
+        cardsJson: cardsJson(<Map<String, Object?>>[validCardJson()]),
+      );
+      final transport = FakeGenerationTransport(
+        response: <String, Object?>{'ok': true},
+      );
+      final service = serviceWith(
+        adapter: adapter,
+        transport: transport,
+        diagnostics: GenerationDiagnostics(enabled: false, sink: messages.add),
+      );
+
+      await service.generate(requestFor(openAiAccount()));
+      expect(messages, isEmpty);
     });
   });
 }

@@ -103,7 +103,7 @@ class GenerationPipeline implements GenerationRunner {
     _imageCache.clear();
     final String jobId = jobIdFactory();
     final DateTime createdAt = now();
-    final int systemPromptTokens = estimator.estimate(systemPromptGenRuV3);
+    final int systemPromptTokens = estimator.estimate(systemPromptGenRuV4);
     final GenerationJob initialJob = GenerationJob(
       id: jobId,
       status: GenerationJobStatus.running,
@@ -125,11 +125,7 @@ class GenerationPipeline implements GenerationRunner {
         contextTokens: request.account.contextTokens,
         systemPromptTokens: systemPromptTokens,
       );
-      final List<GenerationChunk> chunks = chunker.chunkAll(
-        request.documents,
-        request.images,
-        maxInputTokens: budget,
-      );
+      final List<GenerationChunk> chunks = _chunksFor(request, budget);
       if (chunks.isEmpty) {
         await jobRepository.save(
           initialJob.copyWith(
@@ -144,6 +140,7 @@ class GenerationPipeline implements GenerationRunner {
           estimator.estimateAll(<String>[
             for (final document in request.documents) document.text,
           ]) +
+          estimator.estimate(request.wishes ?? '') +
           request.images.length * kImageTokenEstimate +
           chunks.length * (systemPromptTokens + kPromptWrapperTokenReserve);
       final Set<String> seen = <String>{
@@ -164,6 +161,33 @@ class GenerationPipeline implements GenerationRunner {
       await _markUnexpected(jobId, initialJob);
       rethrow;
     }
+  }
+
+  /// Фрагменты запуска: обычная нарезка или prompt-only фрагмент по теме.
+  ///
+  /// Если файлов нет, а пожелания задают тему, создаётся один фрагмент с пустым
+  /// `materialsText` (итерация 7.10, ADR-024): тема уходит в `<wishes>`.
+  /// Пустая нарезка при наличии файлов — прежний `noMaterials`.
+  List<GenerationChunk> _chunksFor(GenerationRunRequest request, int budget) {
+    final List<GenerationChunk> chunks = chunker.chunkAll(
+      request.documents,
+      request.images,
+      maxInputTokens: budget,
+    );
+    if (chunks.isNotEmpty ||
+        request.documents.isNotEmpty ||
+        request.images.isNotEmpty) {
+      return chunks;
+    }
+    if ((request.wishes ?? '').trim().isEmpty) return chunks;
+    return <GenerationChunk>[
+      const GenerationChunk(
+        index: 1,
+        materialsText: '',
+        sourceFiles: <String>[],
+        limit: kMaxCardsPerChunk,
+      ),
+    ];
   }
 
   @override

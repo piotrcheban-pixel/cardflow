@@ -8,9 +8,9 @@ import 'package:cardflow/api/generation/system_prompt.dart';
 /// сообщение (SPEC A8.1), проверка LaTeX (SPEC A8.4).
 void main() {
   group('системный промпт A8.1', () {
-    test('версия gen-ru-v3 и текст не пустой', () {
-      expect(systemPromptVersion, 'gen-ru-v3');
-      expect(systemPromptGenRuV3.trim(), isNotEmpty);
+    test('версия gen-ru-v4 и текст не пустой', () {
+      expect(systemPromptVersion, 'gen-ru-v4');
+      expect(systemPromptGenRuV4.trim(), isNotEmpty);
     });
 
     test('содержит ключевые правила и структуру блоков A8.1', () {
@@ -26,7 +26,7 @@ void main() {
         'Отвечай строго по схеме.',
       ]) {
         expect(
-          systemPromptGenRuV3,
+          systemPromptGenRuV4,
           contains(fragment),
           reason: 'В промпте нет фрагмента: $fragment',
         );
@@ -41,15 +41,44 @@ void main() {
         'Не добавляй картинки и image_query, если пользователь запретил',
       ]) {
         expect(
-          systemPromptGenRuV3,
+          systemPromptGenRuV4,
           contains(fragment),
           reason: 'В промпте нет фрагмента: $fragment',
         );
       }
     });
 
+    // Итерация 7.10, ADR-024: генерация по теме без файлов и обязательный
+    // image_query для предметных карточек.
+    test('gen-ru-v4: пустой <materials> — тема из <wishes>', () {
+      for (final fragment in <String>[
+        'Если <materials> пуст',
+        'используй <wishes> как тему',
+        'общим знаниям',
+      ]) {
+        expect(
+          systemPromptGenRuV4,
+          contains(fragment),
+          reason: 'В промпте нет фрагмента: $fragment',
+        );
+      }
+    });
+
+    test('gen-ru-v4: image_query обязателен для basic и cloze', () {
+      expect(
+        systemPromptGenRuV4,
+        contains('Для типов basic и cloze'),
+        reason: 'Правило об обязательном image_query отсутствует',
+      );
+      expect(
+        systemPromptGenRuV4,
+        contains('ОБЯЗАТЕЛЬНО добавь image_query'),
+        reason: 'Правило должно требовать image_query, а не советовать',
+      );
+    });
+
     test('промпт не содержит подстановок Dart (raw-строка)', () {
-      expect(systemPromptGenRuV3, isNot(contains(r'${')));
+      expect(systemPromptGenRuV4, isNot(contains(r'${')));
     });
   });
 
@@ -107,21 +136,40 @@ void main() {
       expect(content, contains('<wishes>\nакцент\n</wishes>'));
     });
 
-    test('пустые материалы и неверный limit — ArgumentError', () {
-      expect(
-        () => buildGenerationUserContent(materialsText: '   ', limit: 1),
-        throwsArgumentError,
+    // Итерация 7.10, ADR-024: генерация по теме без файлов — пустой блок
+    // <materials> допустим, если пожелания задают тему.
+    test('пустые материалы и тема в пожеланиях — валидный запрос', () {
+      final content = buildGenerationUserContent(
+        materialsText: '',
+        wishes: 'Фотосинтез: световая и темновая фазы',
+        limit: 20,
       );
       expect(
-        () => buildGenerationUserContent(materialsText: '', limit: 1),
-        throwsArgumentError,
+        content,
+        '<materials>\n</materials>\n'
+        '<wishes>\n'
+        'Фотосинтез: световая и темновая фазы\n'
+        '</wishes>\n'
+        '<limit>20</limit>',
       );
+    });
+
+    test('неверный limit — ArgumentError', () {
       for (final limit in <int>[0, -1]) {
         expect(
           () =>
               buildGenerationUserContent(materialsText: 'Текст', limit: limit),
           throwsArgumentError,
           reason: 'limit=$limit',
+        );
+        expect(
+          () => buildGenerationUserContent(
+            materialsText: '',
+            wishes: 'Тема',
+            limit: limit,
+          ),
+          throwsArgumentError,
+          reason: 'limit=$limit (prompt-only)',
         );
       }
     });

@@ -475,6 +475,85 @@ Uint8List buildPdfPages(List<String> pageTexts) {
   return Uint8List.fromList(latin1.encode(buffer.toString()));
 }
 
+// --- PDF с Type0/Identity-H и заданным ToUnicode (итерация 7.10, ADR-024) ---
+
+/// PDF с Type0-шрифтом (`Identity-H`) и ToUnicode, который отображает CIDs на
+/// заданные 16-битные code units.
+///
+/// Нужен, чтобы программно получить «битый» текстовый слой: PDFium отдаёт из
+/// такого PDF ровно то, что записано в `beginbfchar` — например, U+FFFD или
+/// одиночные суррогаты (`D800`), которые ломают запрос к API провайдера.
+Uint8List buildType0UnicodePdf(List<String> unicodeTargets) {
+  final StringBuffer cmap = StringBuffer()
+    ..writeln('/CIDInit /ProcSet findresource begin')
+    ..writeln('12 dict begin')
+    ..writeln('begincmap')
+    ..writeln(
+      '/CIDSystemInfo << /Registry (Adobe) /Ordering (UCS) /Supplement 0 >> def',
+    )
+    ..writeln('/CMapName /Adobe-Identity-UCS def')
+    ..writeln('/CMapType 2 def')
+    ..writeln('1 begincodespacerange')
+    ..writeln('<0000> <FFFF>')
+    ..writeln('endcodespacerange')
+    ..writeln('${unicodeTargets.length} beginbfchar');
+  for (int i = 0; i < unicodeTargets.length; i++) {
+    final String cid = (i + 1).toRadixString(16).padLeft(4, '0');
+    cmap.writeln('<$cid> <${unicodeTargets[i]}>');
+  }
+  cmap
+    ..writeln('endbfchar')
+    ..writeln('endcmap')
+    ..writeln('CMapName currentdict /CMap defineresource pop')
+    ..writeln('end')
+    ..writeln('end');
+  final String cmapText = cmap.toString();
+
+  final String hex = <String>[
+    for (int i = 0; i < unicodeTargets.length; i++)
+      (i + 1).toRadixString(16).padLeft(4, '0'),
+  ].join();
+  final String content = 'BT /F1 24 Tf 72 720 Td <$hex> Tj ET';
+
+  final StringBuffer buffer = StringBuffer('%PDF-1.4\n');
+  final List<int> offsets = <int>[];
+  final List<String> objects = <String>[
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R '
+        '/Resources << /Font << /F1 5 0 R >> >> >>',
+    '<< /Length ${content.length} >>\nstream\n$content\nendstream',
+    '<< /Type /Font /Subtype /Type0 /BaseFont /Dummy /Encoding /Identity-H '
+        '/DescendantFonts [6 0 R] /ToUnicode 7 0 R >>',
+    '<< /Type /Font /Subtype /CIDFontType2 /BaseFont /Dummy '
+        '/CIDSystemInfo << /Registry (Adobe) /Ordering (Identity) /Supplement 0 >> '
+        '/FontDescriptor 8 0 R /DW 1000 >>',
+    '<< /Length ${cmapText.length} >>\nstream\n$cmapText\nendstream',
+    '<< /Type /FontDescriptor /FontName /Dummy /Flags 4 '
+        '/FontBBox [0 0 1000 1000] /ItalicAngle 0 /Ascent 1000 /Descent 0 '
+        '/CapHeight 700 /StemV 80 >>',
+  ];
+  for (int i = 0; i < objects.length; i++) {
+    offsets.add(buffer.length);
+    buffer.write('${i + 1} 0 obj\n${objects[i]}\nendobj\n');
+  }
+  final int xrefOffset = buffer.length;
+  buffer.write('xref\n0 ${objects.length + 1}\n');
+  buffer.write('0000000000 65535 f \n');
+  for (final int offset in offsets) {
+    buffer.write('${offset.toString().padLeft(10, '0')} 00000 n \n');
+  }
+  buffer.write(
+    'trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\n'
+    'startxref\n$xrefOffset\n%%EOF\n',
+  );
+  return Uint8List.fromList(latin1.encode(buffer.toString()));
+}
+
+/// PDF, текстовый слой которого целиком состоит из символов замены U+FFFD.
+Uint8List buildGarbledPdf({int replacements = 10}) =>
+    buildType0UnicodePdf(List<String>.filled(replacements, 'FFFD'));
+
 // --- Зашифрованный PDF (стандартный security handler V1/R2, RC4 40 бит) ---
 
 /// Стандартный padding-пароль PDF (PDF 1.7, Algorithm 2).

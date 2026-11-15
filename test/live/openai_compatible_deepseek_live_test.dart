@@ -5,6 +5,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cardflow/api/generation/card_generation_service.dart';
+import 'package:cardflow/api/generation/generation_diagnostics.dart';
+import 'package:cardflow/api/generation/system_prompt.dart';
 import 'package:cardflow/api/http/generation_http_client.dart';
 import 'package:cardflow/api/http/retry_policy.dart';
 import 'package:cardflow/api/providers/openai_compatible_adapter.dart';
@@ -170,6 +172,74 @@ void main() {
         'tolerant=${statuses.last}, max_tokens=${bodies.last['max_tokens']}, '
         'cards=${result.cards.length}',
       );
+    },
+    skip: apiKey == null
+        ? 'Нет DEEPSEEK_API_KEY — live-тест пропущен (L30)'
+        : false,
+    timeout: const Timeout(Duration(minutes: 2)),
+    tags: <String>['live'],
+  );
+
+  // Итерация 7.10, ADR-024: генерация по теме без файлов и проверка того, что
+  // модель возвращает image_query по правилу 14 промпта `gen-ru-v4`.
+  test(
+    'живой DeepSeek: prompt-only без файлов и image_query (gen-ru-v4)',
+    () async {
+      final List<String> diagnostics = <String>[];
+      final Dio dio = Dio();
+      addTearDown(() => dio.close(force: true));
+
+      final service = CardGenerationService(
+        adapters: <OpenAiCompatibleAdapter>[const OpenAiCompatibleAdapter()],
+        apiKeyStore: FakeApiKeyStore(<String, String>{'deepseek': apiKey!}),
+        httpClient: GenerationHttpClient(
+          dio: dio,
+          retryPolicy: RetryPolicy(),
+          delay: (Duration _) async {},
+        ),
+        maxOutputTokens: 8192,
+        diagnostics: GenerationDiagnostics(
+          enabled: true,
+          sink: diagnostics.add,
+        ),
+      );
+
+      final result = await service.generate(
+        GenerationRequest(
+          account: ProviderAccount(
+            id: 'deepseek',
+            label: 'DeepSeek',
+            presetId: 'deepseek',
+            protocol: ProviderProtocol.openaiCompletions,
+            baseUrl: baseUrl,
+            modelId: model,
+            contextTokens: 128000,
+            requiresApiKey: true,
+          ),
+          materialsText: '',
+          wishes: 'Животные Африки: слон, жираф и лев. 3 карточки',
+          limit: 3,
+        ),
+      );
+
+      expect(result.cards, isNotEmpty);
+      expect(result.promptVersion, systemPromptVersion);
+      final int withQuery = result.cards
+          .where((card) => (card.imageQuery ?? '').isNotEmpty)
+          .length;
+      // ignore: avoid_print — evidence без ключа и тел ответа.
+      print(
+        'LIVE DeepSeek prompt-only: cards=${result.cards.length}, '
+        'image_query=$withQuery, prompt=${result.promptVersion}, '
+        'tokens=${result.usage.totalTokens}',
+      );
+      expect(
+        withQuery,
+        greaterThan(0),
+        reason: 'промпт v4 требует image_query для предметных basic/cloze',
+      );
+      expect(diagnostics, isNotEmpty);
+      expect(diagnostics.single, contains('image_query'));
     },
     skip: apiKey == null
         ? 'Нет DEEPSEEK_API_KEY — live-тест пропущен (L30)'

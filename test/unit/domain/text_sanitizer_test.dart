@@ -49,4 +49,40 @@ void main() {
       expect(sanitizer.isEmpty('факт'), isFalse);
     });
   });
+
+  // Итерация 7.10, ADR-024: PDFium отдаёт C1-управляющие (U+0080–U+009F),
+  // BOM/zero-width и одиночные суррогаты — API провайдера отклоняет такой текст.
+  group('TextSanitizer: Unicode-управляющие и кодировка', () {
+    test('удаляет C1-управляющие из PDF', () {
+      expect(sanitizer.sanitize('a\u0080b\u0085c\u009Fd'), 'abcd');
+      expect(sanitizer.isEmpty('\u0080\u0081\u0082'), isTrue);
+    });
+
+    test('удаляет BOM, zero-width и bidi-марки', () {
+      expect(
+        sanitizer.sanitize('текст\uFEFF\u200B\u200E\u202E\u2066'),
+        'текст',
+      );
+    });
+
+    test('переводит разделители строк U+2028/U+2029 в \\n', () {
+      expect(sanitizer.sanitize('a\u2028b\u2029c'), 'a\nb\nc');
+    });
+
+    test('удаляет одиночные суррогаты и сохраняет эмодзи', () {
+      expect(sanitizer.sanitize('a\uD800b\uDC00c'), 'abc');
+      expect(sanitizer.sanitize('смайл \u{1F600} и текст'), 'смайл 😀 и текст');
+    });
+
+    test('сохраняет кириллицу, CJK и математические символы', () {
+      expect(sanitizer.sanitize('Москва 東京 ∑ x²'), 'Москва 東京 ∑ x²');
+    });
+
+    test('идемпотентен для текста с Unicode-мусором', () {
+      const String source = '\uFEFF  A\u0085\n\n\n\u2028B\uD800 \u200B';
+      final String once = sanitizer.sanitize(source);
+      expect(sanitizer.sanitize(once), once);
+      expect(once, 'A\n\nB');
+    });
+  });
 }

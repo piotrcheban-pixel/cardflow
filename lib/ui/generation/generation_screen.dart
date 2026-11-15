@@ -106,14 +106,22 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
   @override
   void initState() {
     super.initState();
+    _wishesController.addListener(_onWishesChanged);
     _loadProviderConfig();
   }
 
   @override
   void dispose() {
-    _wishesController.dispose();
+    _wishesController
+      ..removeListener(_onWishesChanged)
+      ..dispose();
     _deckNameController.dispose();
     super.dispose();
+  }
+
+  /// Пересчитывает оценку токенов при вводе темы (prompt-only, ADR-024).
+  void _onWishesChanged() {
+    if (mounted && !_generating) setState(() {});
   }
 
   /// Читает настроенных провайдеров и наличие их ключей.
@@ -197,17 +205,23 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
   bool get _hasContent =>
       _parsedDocuments.isNotEmpty || _attachments.isNotEmpty;
 
+  /// Есть ли тема/описание для генерации без файлов (ADR-024).
+  bool get _hasWishes => _wishesController.text.trim().isNotEmpty;
+
   /// Есть ли файлы, которые ещё читаются/парсятся.
   bool get _anyParsing =>
       _files.any((_AttachedFile file) => file.status == _FileStatus.parsing);
 
-  int get _estimatedTokens =>
-      _estimator.estimateAll(
-        _parsedDocuments.map((ParsedDocument document) => document.text),
-      ) +
-      _attachments.length * kImageTokenEstimate +
-      _estimator.estimate(systemPromptGenRuV3) +
-      kPromptWrapperTokenReserve;
+  int get _estimatedTokens {
+    final String wishes = _wishesController.text.trim();
+    return _estimator.estimateAll(
+          _parsedDocuments.map((ParsedDocument document) => document.text),
+        ) +
+        _attachments.length * kImageTokenEstimate +
+        _estimator.estimate(systemPromptGenRuV4) +
+        kPromptWrapperTokenReserve +
+        (wishes.isEmpty ? 0 : _estimator.estimate(wishes));
+  }
 
   Future<void> _pickFiles() async {
     try {
@@ -409,16 +423,19 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
     if (_generating || _loading) return;
     final List<ParsedDocument> documents = _parsedDocuments;
     final List<GenerationAttachment> attachments = _attachments;
-    if (_files.isEmpty) {
-      showAppMessage(context, l10n.generationNoFilesError);
-      return;
-    }
+    final String wishes = _wishesController.text.trim();
     if (_anyParsing) {
       showAppMessage(context, l10n.generationFilesParsing);
       return;
     }
-    if (documents.isEmpty && attachments.isEmpty) {
-      showAppMessage(context, l10n.generationNoParsedFilesError);
+    // Файлы необязательны: достаточно темы/описания (итерация 7.10, ADR-024).
+    if (documents.isEmpty && attachments.isEmpty && wishes.isEmpty) {
+      showAppMessage(
+        context,
+        _files.isEmpty
+            ? l10n.generationTopicRequired
+            : l10n.generationNoParsedFilesError,
+      );
       return;
     }
     if (_providerNeedsKey) {
@@ -455,15 +472,12 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
     final String deckName = widget.deckId == null
         ? _resolveDeckName(l10n, documents, attachments)
         : '';
-    final String? wishes = _wishesController.text.trim().isEmpty
-        ? null
-        : _wishesController.text.trim();
     final GenerationRunRequest request = GenerationRunRequest(
       documents: documents,
       images: attachments,
       account: account,
       deckName: deckName,
-      wishes: wishes,
+      wishes: wishes.isEmpty ? null : wishes,
       targetDeckId: widget.deckId,
     );
 
@@ -692,6 +706,7 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
   ) {
     final ThemeData theme = Theme.of(context);
     final bool hasContent = _hasContent;
+    final bool showEstimate = hasContent || _hasWishes;
     final int estimate = _estimatedTokens;
     return DropTarget(
       onDragEntered: (_) => setState(() => _dragging = true),
@@ -785,7 +800,7 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
             )
           else
             Text(l10n.generationTargetDeck(targetDeck?.name ?? '')),
-          if (hasContent) ...<Widget>[
+          if (showEstimate) ...<Widget>[
             const SizedBox(height: 8),
             Text(
               l10n.generationEstimate(estimate),

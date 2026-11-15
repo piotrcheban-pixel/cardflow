@@ -18,6 +18,7 @@ void main() {
       ParserErrorCode.unreadableFile: l10n.parserErrorUnreadableFile,
       ParserErrorCode.scannedPdf: l10n.parserErrorScannedPdf,
       ParserErrorCode.emptyText: l10n.parserErrorEmptyText,
+      ParserErrorCode.garbledText: l10n.parserErrorGarbledText,
     };
 
     expect(
@@ -49,6 +50,12 @@ void main() {
   test('пустой текст: сообщение говорит о скане и пустой форме', () {
     expect(l10n.parserErrorEmptyText, contains('скан'));
     expect(l10n.parserErrorEmptyText, contains('пустая форма'));
+  });
+
+  // Итерация 7.10, ADR-024: битый текстовый слой PDF.
+  test('нечитаемый PDF: сообщение говорит о нечитаемом тексте', () {
+    expect(l10n.parserErrorGarbledText, contains('PDF'));
+    expect(l10n.parserErrorGarbledText, contains('нечитаем'));
   });
 
   test('ParserException маппится по коду, details не утекают', () {

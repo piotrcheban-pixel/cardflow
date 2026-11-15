@@ -110,4 +110,42 @@ void main() {
       ),
     );
   });
+
+  // Итерация 7.10, ADR-024: битый ToUnicode-словарь → U+FFFD → понятная ошибка
+  // вместо мусорного текста в запросе к API.
+  test('PDF с символами замены → ParserException(garbledText)', () async {
+    await expectLater(
+      parse(buildGarbledPdf()),
+      throwsA(
+        isA<ParserException>().having(
+          (ParserException e) => e.code,
+          'code',
+          ParserErrorCode.garbledText,
+        ),
+      ),
+    );
+  });
+
+  test('PDF с C1-управляющими: они удаляются, текст остаётся', () async {
+    final ParsedDocument document = await parse(
+      buildPdf('Hello\u0080\u0085\u009F CardFlow'),
+    );
+
+    expect(document.text, 'Hello CardFlow');
+    for (final int code in document.text.codeUnits) {
+      expect(
+        code < 0x80 || code > 0x9F,
+        isTrue,
+        reason: 'C1-управляющий U+${code.toRadixString(16)} остался в тексте',
+      );
+    }
+  });
+
+  test('PDF с одиночными суррогатами: они вычищаются из текста', () async {
+    final ParsedDocument document = await parse(
+      buildType0UnicodePdf(<String>['0041', 'D800', 'D800', '0042']),
+    );
+
+    expect(document.text, 'AB');
+  });
 }

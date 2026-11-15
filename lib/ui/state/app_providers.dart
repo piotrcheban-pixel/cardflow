@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:cardflow/api/generation/api_key_verifier.dart';
 import 'package:cardflow/api/generation/card_generation_service.dart';
+import 'package:cardflow/api/generation/generation_diagnostics.dart';
 import 'package:cardflow/api/generation/generation_pipeline.dart';
 import 'package:cardflow/api/http/generation_http_client.dart';
 import 'package:cardflow/api/http/redacting_log_interceptor.dart';
@@ -331,11 +332,19 @@ final generationDioProvider = Provider<Dio>((ref) {
   return dio;
 });
 
+/// Debug-диагностика ответов провайдеров (ADR-024, итерация 7.10).
+///
+/// В release-сборке методы — no-op; sink инжектируется в тестах.
+final generationDiagnosticsProvider = Provider<GenerationDiagnostics>((ref) {
+  return const GenerationDiagnostics();
+});
+
 /// HTTP-клиент генерации (ретраи/backoff, нормализация ошибок).
 final generationHttpClientProvider = Provider<GenerationHttpClient>((ref) {
   return GenerationHttpClient(
     dio: ref.watch(generationDioProvider),
     retryPolicy: RetryPolicy(),
+    diagnostics: ref.watch(generationDiagnosticsProvider),
   );
 });
 
@@ -345,6 +354,7 @@ final cardGenerationServiceProvider = Provider<CardGenerationService>((ref) {
     adapters: generationAdapters,
     apiKeyStore: ref.watch(apiKeyStoreProvider),
     httpClient: ref.watch(generationHttpClientProvider),
+    diagnostics: ref.watch(generationDiagnosticsProvider),
   );
 });
 
@@ -377,7 +387,10 @@ final generationCardStoreProvider = Provider<GenerationCardStore>((ref) {
 ///
 /// Openverse API не требует ключа; сеть — тот же Dio с таймаутами и redaction.
 final cardImageFinderProvider = Provider<CardImageFinder>((ref) {
-  return ImageSearchService(dio: ref.watch(generationDioProvider));
+  return ImageSearchService(
+    dio: ref.watch(generationDioProvider),
+    diagnostics: ref.watch(generationDiagnosticsProvider),
+  );
 });
 
 /// Пайплайн генерации: чанкинг, вызовы, прогресс/отмена, дедупликация.

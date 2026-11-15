@@ -550,6 +550,10 @@ class AppLocalizationsRu extends AppLocalizations {
       'В файле нет текста (скан или пустая форма)';
 
   @override
+  String get parserErrorGarbledText =>
+      'PDF содержит нечитаемый текст. Сохраните файл в другом формате и попробуйте снова';
+
+  @override
   String get generationErrorMissingApiKey =>
       'Ключ доступа не задан. Добавьте ключ в настройках';
 
@@ -688,7 +692,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get generationAttachButton => 'Выбрать файлы';
 
   @override
-  String get generationFilesEmpty => 'Файлы не прикреплены';
+  String get generationFilesEmpty => 'Файлы не прикреплены (необязательно)';
 
   @override
   String get generationFileRemoveTooltip => 'Убрать файл';
@@ -772,7 +776,8 @@ class AppLocalizationsRu extends AppLocalizations {
       'Материала много: запрос будет разбит на несколько частей';
 
   @override
-  String get generationNoFilesError => 'Прикрепите хотя бы один файл';
+  String get generationTopicRequired =>
+      'Напишите тему или описание — файлы не обязательны';
 
   @override
   String get generationNoParsedFilesError =>
@@ -806,11 +811,11 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get generationErrorNoMaterials =>
-      'В файле нет текста (скан или пустая форма)';
+      'Нет материалов для генерации: прикрепите файл или напишите тему';
 
   @override
   String get generationNoCardsFound =>
-      'Модель не нашла в материалах фактов для карточек. Проверьте, что в файлах есть текст (не скан и не пустая форма); если текст есть — смените модель';
+      'Модель не нашла фактов для карточек. Проверьте текст файлов или уточните тему; если материал есть — смените модель';
 
   @override
   String get generationPreviewTitle => 'Предпросмотр карточек';

@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cardflow/api/generation/generation_diagnostics.dart';
 import 'package:cardflow/api/images/image_search_service.dart';
 import 'package:cardflow/domain/generation/generation_attachment.dart';
 
@@ -59,10 +60,12 @@ void main() {
   ImageSearchService serviceWith(
     FakeHttpAdapter adapter, {
     int? maxImageBytes,
+    GenerationDiagnostics? diagnostics,
   }) {
     return ImageSearchService(
       dio: dioWithAdapter(adapter),
       maxImageBytes: maxImageBytes ?? 5 * 1024 * 1024,
+      diagnostics: diagnostics,
     );
   }
 
@@ -175,5 +178,73 @@ void main() {
       (_) => textResponse('<html>Service Unavailable</html>'),
     );
     expect(await serviceWith(adapter).findImage('broken'), isNull);
+  });
+
+  // Итерация 7.10, ADR-024: поиск картинок виден в debug-диагностике —
+  // без этого «картинок нет» не отличить от «скачать не удалось».
+  test('успешный поиск пишется в диагностику', () async {
+    final List<String> messages = <String>[];
+    final adapter = FakeHttpAdapter((RequestOptions options) {
+      if (options.uri.path.endsWith('/v1/images/')) {
+        return jsonResponse(searchPayload());
+      }
+      return bytesResponse(jpeg);
+    });
+    final service = serviceWith(
+      adapter,
+      diagnostics: GenerationDiagnostics(enabled: true, sink: messages.add),
+    );
+
+    await service.findImage('eiffel tower');
+
+    expect(messages, hasLength(1));
+    expect(messages.single, contains('eiffel tower'));
+    expect(messages.single, contains('скачано'));
+    expect(messages.single, contains('jpeg'));
+  });
+
+  test('ошибка сети и пустая выдача пишутся в диагностику', () async {
+    final List<String> messages = <String>[];
+    final diagnostics = GenerationDiagnostics(
+      enabled: true,
+      sink: messages.add,
+    );
+    final offline = FakeHttpAdapter(
+      (RequestOptions options) =>
+          throw dioException(options, DioExceptionType.connectionError),
+    );
+    expect(
+      await serviceWith(offline, diagnostics: diagnostics).findImage('offline'),
+      isNull,
+    );
+
+    final empty = FakeHttpAdapter(
+      (_) => jsonResponse(<String, Object?>{'results': <Object?>[]}),
+    );
+    expect(
+      await serviceWith(empty, diagnostics: diagnostics).findImage('нет'),
+      isNull,
+    );
+
+    expect(messages, hasLength(2));
+    expect(messages.first, contains('ошибка запроса'));
+    expect(messages.last, contains('нет подходящей картинки'));
+  });
+
+  test('диагностика выключена — поиск ничего не пишет', () async {
+    final List<String> messages = <String>[];
+    final adapter = FakeHttpAdapter((RequestOptions options) {
+      if (options.uri.path.endsWith('/v1/images/')) {
+        return jsonResponse(searchPayload());
+      }
+      return bytesResponse(jpeg);
+    });
+    final service = serviceWith(
+      adapter,
+      diagnostics: GenerationDiagnostics(enabled: false, sink: messages.add),
+    );
+
+    await service.findImage('eiffel tower');
+    expect(messages, isEmpty);
   });
 }

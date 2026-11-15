@@ -12,6 +12,7 @@ String parserErrorCodeMessage(AppLocalizations l10n, ParserErrorCode code) {
     ParserErrorCode.unreadableFile => l10n.parserErrorUnreadableFile,
     ParserErrorCode.scannedPdf => l10n.parserErrorScannedPdf,
     ParserErrorCode.emptyText => l10n.parserErrorEmptyText,
+    ParserErrorCode.garbledText => l10n.parserErrorGarbledText,
   };
 }
 

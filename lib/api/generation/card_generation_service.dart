@@ -14,6 +14,7 @@ import 'package:cardflow/api/generation/card_content_validator.dart';
 import 'package:cardflow/api/generation/card_response_schema.dart';
 import 'package:cardflow/api/generation/cards_json_extractor.dart';
 import 'package:cardflow/api/generation/generation_caller.dart';
+import 'package:cardflow/api/generation/generation_diagnostics.dart';
 import 'package:cardflow/api/generation/generation_prompt.dart';
 import 'package:cardflow/api/generation/system_prompt.dart';
 import 'package:cardflow/api/http/generation_http_client.dart';
@@ -38,12 +39,14 @@ class CardGenerationService implements GenerationCaller {
     CardResponseSchema? responseSchema,
     CardContentValidator? contentValidator,
     this.jsonExtractor = const CardsJsonExtractor(),
-    this.systemPrompt = systemPromptGenRuV3,
+    this.systemPrompt = systemPromptGenRuV4,
     this.promptVersion = systemPromptVersion,
     this.maxOutputTokens = 8192,
     this.textSanitizer = const TextSanitizer(),
+    GenerationDiagnostics? diagnostics,
   }) : responseSchema = responseSchema ?? CardResponseSchema(),
-       contentValidator = contentValidator ?? const CardContentValidator();
+       contentValidator = contentValidator ?? const CardContentValidator(),
+       diagnostics = diagnostics ?? const GenerationDiagnostics();
 
   /// Адаптеры провайдеров (по одному на протокол).
   final List<GenerationProviderAdapter> adapters;
@@ -74,6 +77,9 @@ class CardGenerationService implements GenerationCaller {
 
   /// Санитайзер локально извлечённого текста (итерация 7.8).
   final TextSanitizer textSanitizer;
+
+  /// Debug-диагностика ответа модели (ADR-024, итерация 7.10).
+  final GenerationDiagnostics diagnostics;
 
   /// Генерирует карточки для одного фрагмента материалов.
   ///
@@ -107,18 +113,23 @@ class CardGenerationService implements GenerationCaller {
     _validateAttachments(account, request.images);
 
     final String materialsText = textSanitizer.sanitize(request.materialsText);
-    if (materialsText.isEmpty && request.images.isEmpty) {
+    final String? wishes = _sanitizedWishes(request.wishes);
+    // «Генерация по теме» (итерация 7.10, ADR-024): без файлов тема задана в
+    // пожеланиях, поэтому пустой текст допустим.
+    if (materialsText.isEmpty && request.images.isEmpty && wishes == null) {
       throw const GenerationException(
         GenerationErrorCode.noMaterials,
-        details: 'После санитизации текст пуст, вложений нет',
+        details: 'После санитизации нет текста, вложений и пожеланий',
       );
     }
     final String materials = materialsText.isEmpty
-        ? _attachmentMaterials(request.images)
+        ? request.images.isEmpty
+              ? ''
+              : _attachmentMaterials(request.images)
         : materialsText;
     final String userContent = buildGenerationUserContent(
       materialsText: materials,
-      wishes: _sanitizedWishes(request.wishes),
+      wishes: wishes,
       limit: request.limit,
     );
 
@@ -132,6 +143,10 @@ class CardGenerationService implements GenerationCaller {
       tolerantFallback: tolerantFallback,
       cancelToken: cancelToken,
     );
+
+    // Debug-диагностика (ADR-024): сырой ответ — чтобы видеть поля вроде
+    // image_query; в release метод — no-op.
+    diagnostics.modelResponse(rawResponse.cardsJson);
 
     final decoded = jsonExtractor.decode(
       rawResponse.cardsJson,

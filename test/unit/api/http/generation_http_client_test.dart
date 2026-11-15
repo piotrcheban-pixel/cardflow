@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cardflow/api/generation/generation_diagnostics.dart';
 import 'package:cardflow/api/http/generation_http_client.dart';
 import 'package:cardflow/api/http/retry_policy.dart';
 import 'package:cardflow/api/providers/generation_provider_adapter.dart';
@@ -35,10 +36,12 @@ void main() {
     Dio dio, {
     List<Duration>? delays,
     RetryPolicy? policy,
+    GenerationDiagnostics? diagnostics,
   }) {
     return GenerationHttpClient(
       dio: dio,
       retryPolicy: policy ?? RetryPolicy(jitter: () => 1.0),
+      diagnostics: diagnostics,
       delay: (Duration duration) async {
         delays?.add(duration);
       },
@@ -228,6 +231,91 @@ void main() {
       expect(exception.providerReason, isNot(contains('\u0000')));
       expect(exception.providerReason, contains('bad key'));
     }
+  });
+
+  // Итерация 7.10, ADR-024: тело ошибки провайдера — в debug-диагностику,
+  // с редакцией секретов; UI получает безопасную причину отдельно.
+  test('400 с телом: тело ошибки уходит в диагностику без секретов', () async {
+    final List<String> messages = <String>[];
+    final adapter = FakeHttpAdapter(
+      (options) => jsonResponse(<String, Object?>{
+        'error': <String, Object?>{
+          'message': 'bad key sk-${'A' * 32} in content',
+        },
+      }, statusCode: 400),
+    );
+    final client = clientWith(
+      dioWithAdapter(adapter),
+      diagnostics: GenerationDiagnostics(enabled: true, sink: messages.add),
+    );
+
+    await expectLater(
+      client.postJson(request),
+      throwsGeneration(GenerationErrorCode.badRequest),
+    );
+
+    expect(messages, hasLength(1));
+    expect(messages.single, contains('HTTP 400'));
+    expect(messages.single, contains('bad key'));
+    expect(
+      messages.single,
+      isNot(contains('sk-${'A' * 32}')),
+      reason: 'секретоподобные значения редактируются в диагностике',
+    );
+    expect(messages.single, isNot(contains('\u0000')));
+  });
+
+  test('диагностика выключена — тело ответа не пишется', () async {
+    final List<String> messages = <String>[];
+    final adapter = FakeHttpAdapter(
+      (options) => jsonResponse(<String, Object?>{
+        'error': <String, Object?>{'message': 'boom'},
+      }, statusCode: 400),
+    );
+    final client = clientWith(
+      dioWithAdapter(adapter),
+      diagnostics: GenerationDiagnostics(enabled: false, sink: messages.add),
+    );
+
+    await expectLater(
+      client.postJson(request),
+      throwsGeneration(GenerationErrorCode.badRequest),
+    );
+
+    expect(messages, isEmpty);
+  });
+
+  test('успешный ответ — диагностика молчит', () async {
+    final List<String> messages = <String>[];
+    final adapter = FakeHttpAdapter(
+      (options) => jsonResponse(<String, Object?>{'cards': <Object?>[]}),
+    );
+    final client = clientWith(
+      dioWithAdapter(adapter),
+      diagnostics: GenerationDiagnostics(enabled: true, sink: messages.add),
+    );
+
+    await client.postJson(request);
+    expect(messages, isEmpty);
+  });
+
+  test('200 с не-JSON телом: invalidResponse и тело в диагностике', () async {
+    final List<String> messages = <String>[];
+    final adapter = FakeHttpAdapter(
+      (_) => textResponse('<html>Not an API</html>'),
+    );
+    final client = clientWith(
+      dioWithAdapter(adapter),
+      diagnostics: GenerationDiagnostics(enabled: true, sink: messages.add),
+    );
+
+    await expectLater(
+      client.postJson(request),
+      throwsGeneration(GenerationErrorCode.invalidResponse),
+    );
+    expect(messages, hasLength(1));
+    expect(messages.single, contains('HTTP 200'));
+    expect(messages.single, contains('Not an API'));
   });
 
   test('таймаут: ретраи и итоговый код timeout', () async {

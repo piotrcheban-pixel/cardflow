@@ -240,13 +240,53 @@ void main() {
     expect(find.text(l10n.parserErrorUnsupportedFormat), findsOneWidget);
   });
 
-  testWidgets('старт без файлов — сообщение ARB', (tester) async {
+  testWidgets('старт без файлов и без темы — сообщение ARB', (tester) async {
     await pumpScreen(tester);
     await tester.tap(find.byKey(const ValueKey<String>('generation-start')));
     await tester.pumpAndSettle();
     final l10n = l10nOf(tester);
-    expect(find.text(l10n.generationNoFilesError), findsOneWidget);
+    expect(find.text(l10n.generationTopicRequired), findsOneWidget);
     expect(runner.runCalls, 0);
+  });
+
+  // Итерация 7.10, ADR-024: тема без файлов — валидный вход генерации.
+  testWidgets('старт только с темой (без файлов) — prompt-only запрос', (
+    tester,
+  ) async {
+    await pumpScreen(tester);
+    runner.result = resultWith(<GeneratedCard>[
+      const GeneratedCard(
+        front: 'Что такое фотосинтез?',
+        back: 'Процесс синтеза органики на свету.',
+        cardType: CardType.basic,
+      ),
+    ]);
+    final Finder wishes = find.byKey(
+      const ValueKey<String>('generation-wishes'),
+    );
+    await tester.scrollUntilVisible(
+      wishes,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.enterText(wishes, 'Фотосинтез');
+    await tester.pump();
+    expect(
+      find.byKey(const ValueKey<String>('generation-estimate')),
+      findsOneWidget,
+      reason: 'для prompt-only тоже показываем оценку токенов',
+    );
+
+    await tester.tap(find.byKey(const ValueKey<String>('generation-start')));
+    await tester.pumpAndSettle();
+
+    final l10n = l10nOf(tester);
+    expect(runner.runCalls, 1);
+    expect(runner.lastRequest!.documents, isEmpty);
+    expect(runner.lastRequest!.images, isEmpty);
+    expect(runner.lastRequest!.wishes, 'Фотосинтез');
+    expect(runner.lastRequest!.deckName, l10n.generationDeckDefaultName);
+    expect(find.text(l10n.generationPreviewTitle), findsOneWidget);
   });
 
   testWidgets('старт: запрос с документами и именем колоды из файла', (
