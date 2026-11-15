@@ -22,6 +22,7 @@ import 'package:cardflow/domain/decks/deck.dart';
 import 'package:cardflow/domain/generation/api_key_store.dart';
 import 'package:cardflow/domain/generation/document_gateway.dart';
 import 'package:cardflow/domain/generation/generation_attachment.dart';
+import 'package:cardflow/domain/generation/deck_name.dart';
 import 'package:cardflow/domain/generation/generation_card_store.dart';
 import 'package:cardflow/domain/generation/generation_chunker.dart'
     show kImageTokenEstimate;
@@ -218,7 +219,7 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
           _parsedDocuments.map((ParsedDocument document) => document.text),
         ) +
         _attachments.length * kImageTokenEstimate +
-        _estimator.estimate(systemPromptGenRuV4) +
+        _estimator.estimate(systemPromptGenRuV5) +
         kPromptWrapperTokenReserve +
         (wishes.isEmpty ? 0 : _estimator.estimate(wishes));
   }
@@ -599,6 +600,9 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
       final String base = p.basenameWithoutExtension(fileName);
       if (base.trim().isNotEmpty) return base.trim();
     }
+    // Файлов нет — имя колоды из темы пожелания (fix-gen, Д1).
+    final String topic = deckNameFromWishes(_wishesController.text);
+    if (topic.isNotEmpty) return topic;
     return l10n.generationDeckDefaultName;
   }
 
@@ -688,14 +692,35 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
         ],
       );
     }
-    return FilledButton(
-      key: const ValueKey<String>('generation-start'),
-      onPressed: _anyParsing ? null : _generate,
-      style: FilledButton.styleFrom(
-        minimumSize: const Size.fromHeight(48),
-        shape: const StadiumBorder(),
-      ),
-      child: Text(l10n.generationStart),
+    // Без файлов и без темы генерировать нечего: кнопка неактивна, подсказка
+    // из ARB (fix-gen, Д1).
+    final bool canGenerate = _hasContent || _hasWishes;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        if (!canGenerate)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(
+              l10n.generationTopicRequired,
+              key: const ValueKey<String>('generation-start-hint'),
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+        FilledButton(
+          key: const ValueKey<String>('generation-start'),
+          onPressed: _anyParsing || !canGenerate ? null : _generate,
+          style: FilledButton.styleFrom(
+            minimumSize: const Size.fromHeight(48),
+            shape: const StadiumBorder(),
+          ),
+          child: Text(l10n.generationStart),
+        ),
+      ],
     );
   }
 

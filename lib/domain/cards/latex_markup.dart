@@ -11,7 +11,12 @@ class LatexSegment {
   bool get isFormula => kind != LatexSegmentKind.text;
 }
 
-/// Разбор `$…$` и `$$…$$` без зависимости от Flutter.
+/// Разбор `$…$`/`$$…$$` (и допустимых `\(…\)`/`\[…\]`) без зависимости от Flutter.
+///
+/// Правила (SPEC A7.10, fix-gen Д4):
+/// - экранированный `\$` — не разделитель формулы, в тексте остаётся `$`;
+/// - `\(…\)` и `\[…\]` нормализуются к `$…$` и `$$…$$`;
+/// - незакрытый разделитель — [hasUnclosedDelimiter], текст показывается как есть.
 class LatexMarkup {
   const LatexMarkup({
     required this.segments,
@@ -25,31 +30,55 @@ class LatexMarkup {
 
   static LatexMarkup parse(String source) {
     final segments = <LatexSegment>[];
-    var cursor = 0;
+    final text = StringBuffer();
     var index = 0;
+
+    void flushText() {
+      if (text.isEmpty) return;
+      _addText(segments, text.toString());
+      text.clear();
+    }
+
     while (index < source.length) {
-      final display = source.startsWith(r'$$', index);
-      if (!display && source[index] != r'$') {
+      if (source.startsWith(r'\$', index)) {
+        text.write(r'$');
+        index += 2;
+        continue;
+      }
+      final bool displayDollar = source.startsWith(r'$$', index);
+      final bool displayBracket = source.startsWith(r'\[', index);
+      final bool inlineParen = source.startsWith(r'\(', index);
+      final bool inlineDollar = !displayDollar && source[index] == r'$';
+      if (!displayDollar && !displayBracket && !inlineParen && !inlineDollar) {
+        text.write(source[index]);
         index++;
         continue;
       }
-      final delimiter = display ? r'$$' : r'$';
-      final start = index + delimiter.length;
-      final end = source.indexOf(delimiter, start);
+      final bool display = displayDollar || displayBracket;
+      final String close = displayDollar
+          ? r'$$'
+          : displayBracket
+          ? r'\]'
+          : inlineParen
+          ? r'\)'
+          : r'$';
+      final int delimiterLength = displayDollar || inlineParen || displayBracket
+          ? 2
+          : 1;
+      final int start = index + delimiterLength;
+      final int end = source.indexOf(close, start);
       if (end < 0) {
         return LatexMarkup(
           segments: <LatexSegment>[LatexSegment(LatexSegmentKind.text, source)],
           hasUnclosedDelimiter: true,
         );
       }
-      final expression = source.substring(start, end).trim();
+      final String expression = source.substring(start, end).trim();
       if (expression.isEmpty) {
-        index = end + delimiter.length;
+        index = end + close.length;
         continue;
       }
-      if (index > cursor) {
-        _addText(segments, source.substring(cursor, index));
-      }
+      flushText();
       segments.add(
         LatexSegment(
           display
@@ -58,10 +87,9 @@ class LatexMarkup {
           expression,
         ),
       );
-      index = end + delimiter.length;
-      cursor = index;
+      index = end + close.length;
     }
-    if (cursor < source.length) _addText(segments, source.substring(cursor));
+    flushText();
     if (segments.isEmpty) {
       _addText(segments, source);
     }

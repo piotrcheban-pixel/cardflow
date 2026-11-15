@@ -31,7 +31,12 @@ class _LatexTextState extends State<LatexText> {
   Widget build(BuildContext context) {
     final markup = LatexMarkup.parse(widget.source);
     if (markup.hasUnclosedDelimiter) return _fallback(context);
-    if (!markup.hasFormulas) return Text(widget.source);
+    if (!markup.hasFormulas) {
+      // Экранированный `\$` возвращается в текст без слэша (fix-gen, Д4).
+      return Text(
+        markup.segments.map((LatexSegment segment) => segment.value).join(),
+      );
+    }
     for (final segment in markup.segments.where((item) => item.isFormula)) {
       if (!_isParsable(segment.value)) return _fallback(context);
     }

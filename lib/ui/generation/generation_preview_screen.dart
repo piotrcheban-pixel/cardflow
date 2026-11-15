@@ -2,7 +2,9 @@
 ///
 /// Чекбоксы, инлайн-редактирование front/back, пометки A8.4, импорт всех или
 /// выбранных карточек одной транзакцией, частичный успех с повтором упавших
-/// фрагментов. Все сообщения — из ARB.
+/// фрагментов. Упавшие фрагменты импорт не блокируют, невалидная карточка
+/// пропускается сама (fix-gen, Д6). Картинку из файла/поиска можно убрать или
+/// заменить до импорта (Д3). Все сообщения — из ARB.
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,12 +13,18 @@ import 'package:material_ui/material_ui.dart';
 import 'package:cardflow/domain/cards/card.dart' show CardType;
 import 'package:cardflow/domain/cards/card_draft.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
+import 'package:cardflow/domain/generation/generated_card_image.dart';
+import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/generation/generation_card_store.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
+import 'package:cardflow/domain/generation/generation_failure_reason.dart';
 import 'package:cardflow/domain/generation/generation_run.dart';
+import 'package:cardflow/domain/generation/document_gateway.dart'
+    show PickedDocument;
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/decks/deck_actions.dart' show showAppMessage;
 import 'package:cardflow/ui/generation/generation_error_message.dart';
+import 'package:cardflow/ui/generation/generation_failure_message.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
 
 /// Экран предпросмотра.
@@ -44,12 +52,20 @@ class _EditableCard {
   _EditableCard(this.original)
     : front = TextEditingController(text: original.front),
       back = TextEditingController(text: original.back),
+      image = original.image,
+      imageId = original.imageId,
       selected = true;
 
   final GeneratedCard original;
   final TextEditingController front;
   final TextEditingController back;
   bool selected;
+
+  /// Текущая картинка карточки (из файла или поиска); `null` — нет.
+  GeneratedCardImage? image;
+
+  /// Идентификатор изображения из `<images>`; `null` — нет.
+  String? imageId;
 
   void dispose() {
     front.dispose();
@@ -58,6 +74,17 @@ class _EditableCard {
 
   /// Карточка с текущими правками пользователя.
   GeneratedCard toCard() {
+    // Если картинка выбрана/заменена вручную, пометки о ненайденной картинке
+    // больше не актуальны (fix-gen, Д3).
+    final List<CardIssueCode> issues = image == null
+        ? original.issues
+        : original.issues
+              .where(
+                (CardIssueCode issue) =>
+                    issue != CardIssueCode.imageNotFound &&
+                    issue != CardIssueCode.imageIdUnknown,
+              )
+              .toList(growable: false);
     return GeneratedCard(
       front: front.text.trim(),
       back: back.text.trim(),
@@ -66,9 +93,10 @@ class _EditableCard {
       tags: original.tags,
       sourceExcerpt: original.sourceExcerpt,
       sourceFile: original.sourceFile,
-      issues: original.issues,
+      issues: issues,
       imageQuery: original.imageQuery,
-      image: original.image,
+      imageId: imageId,
+      image: image,
       isOcclusion: original.isOcclusion,
       occlusionJson: original.occlusionJson,
     );
@@ -134,6 +162,7 @@ class _GenerationPreviewScreenState
       .where(
         (_EditableCard card) =>
             card.selected &&
+            card.image == null &&
             card.original.issues.contains(CardIssueCode.imageNotFound),
       )
       .length;
@@ -171,6 +200,55 @@ class _GenerationPreviewScreenState
     }
   }
 
+  /// Убирает картинку карточки — она импортируется без изображения (Д3).
+  void _removeImage(int index) {
+    setState(() {
+      _cards[index]
+        ..image = null
+        ..imageId = null;
+    });
+  }
+
+  /// Заменяет картинку карточки изображением JPG/PNG пользователя (Д3).
+  Future<void> _replaceImage(int index) async {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    try {
+      final List<PickedDocument> picked = await ref
+          .read(documentGatewayProvider)
+          .pickDocuments();
+      if (picked.isEmpty || !mounted) return;
+      final PickedDocument document = picked.first;
+      final AttachmentMediaType? mediaType = attachmentMediaTypeForFileName(
+        document.name,
+      );
+      if (mediaType == null) {
+        showAppMessage(context, l10n.generationPreviewImageReplaceError);
+        return;
+      }
+      final bytes = await ref
+          .read(documentGatewayProvider)
+          .readDocument(document);
+      if (!mounted) return;
+      if (!hasValidAttachmentSignature(mediaType, bytes)) {
+        showAppMessage(context, l10n.generationPreviewImageReplaceError);
+        return;
+      }
+      setState(() {
+        _cards[index]
+          ..image = GeneratedCardImage(
+            bytes: bytes,
+            mediaType: mediaType,
+            query: document.name,
+          )
+          ..imageId = null;
+      });
+      showAppMessage(context, l10n.generationPreviewImageReplaced);
+    } on Object {
+      if (!mounted) return;
+      showAppMessage(context, l10n.generationPreviewImageReplaceError);
+    }
+  }
+
   Future<void> _import({required bool all}) async {
     final AppLocalizations l10n = AppLocalizations.of(context);
     if (_importing || _retrying) return;
@@ -181,7 +259,10 @@ class _GenerationPreviewScreenState
       showAppMessage(context, l10n.generationPreviewNoSelection);
       return;
     }
+    // Невалидная карточка пропускается сама, остальные импортируются
+    // (fix-gen, Д6): один пустой вопрос не должен блокировать пак.
     final List<GeneratedCard> cards = <GeneratedCard>[];
+    var skipped = 0;
     for (final _EditableCard card in picked) {
       final GeneratedCard candidate = card.toCard();
       final CardDraft draft = CardDraft(
@@ -191,10 +272,14 @@ class _GenerationPreviewScreenState
         tags: candidate.tags,
       );
       if (!draft.isValid) {
-        showAppMessage(context, l10n.generationPreviewValidationError);
-        return;
+        skipped++;
+        continue;
       }
       cards.add(candidate);
+    }
+    if (cards.isEmpty) {
+      showAppMessage(context, l10n.generationPreviewValidationError);
+      return;
     }
 
     setState(() => _importing = true);
@@ -210,7 +295,15 @@ class _GenerationPreviewScreenState
           );
       if (!mounted) return;
       setState(() => _importing = false);
-      showAppMessage(context, l10n.generationImported(imported.importedCards));
+      showAppMessage(
+        context,
+        skipped > 0
+            ? l10n.generationImportedWithSkipped(
+                imported.importedCards,
+                skipped,
+              )
+            : l10n.generationImported(imported.importedCards),
+      );
       final NavigatorState navigator = Navigator.of(context);
       if (navigator.canPop()) {
         navigator.pop(imported);
@@ -222,10 +315,36 @@ class _GenerationPreviewScreenState
     }
   }
 
+  /// Текст ошибки фрагмента: причина из кода/внутреннего кода (fix-gen, Д6).
+  ///
+  /// Для HTTP 400 показывается очищенная причина провайдера (ADR-022), если
+  /// она есть: она конкретнее общей формулировки причины.
+  String _failureMessage(
+    AppLocalizations l10n,
+    GenerationChunkFailure failure,
+  ) {
+    final String? providerReason = failure.providerReason?.trim();
+    if (failure.code == GenerationErrorCode.badRequest &&
+        providerReason != null &&
+        providerReason.isNotEmpty) {
+      return generationErrorCodeMessage(
+        l10n,
+        failure.code,
+        providerReason: providerReason,
+      );
+    }
+    final GenerationFailureReason reason =
+        failure.reason ?? GenerationFailureReason.forErrorCode(failure.code);
+    return generationFailureReasonMessage(l10n, reason);
+  }
+
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
     final ThemeData theme = Theme.of(context);
+    final int chunkTotal = _result.chunkCount == 0
+        ? _result.failures.length
+        : _result.chunkCount;
     return Scaffold(
       appBar: AppBar(title: Text(l10n.generationPreviewTitle)),
       body: ListView(
@@ -266,6 +385,17 @@ class _GenerationPreviewScreenState
                   style: theme.textTheme.bodySmall,
                 ),
               ),
+            if (_result.rejectedCards > 0)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  l10n.generationRejectedCards(_result.rejectedCards),
+                  key: const ValueKey<String>('generation-preview-rejected'),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.tertiary,
+                  ),
+                ),
+              ),
             Padding(
               padding: const EdgeInsets.only(top: 4),
               child: Text(
@@ -302,17 +432,10 @@ class _GenerationPreviewScreenState
                 ),
               ),
             const SizedBox(height: 12),
-            for (var i = 0; i < _cards.length; i++)
-              _PreviewCardTile(
-                key: ValueKey<String>('generation-preview-card-$i'),
-                card: _cards[i],
-                index: i,
-                onSelected: (bool selected) =>
-                    setState(() => _cards[i].selected = selected),
-              ),
           ],
+          // Ошибки фрагментов — до карточек: при частичном успехе их видно
+          // сразу, не прокручивая список (fix-gen, Д6).
           if (_result.failures.isNotEmpty) ...<Widget>[
-            const SizedBox(height: 20),
             Text(
               l10n.generationFailuresTitle,
               style: theme.textTheme.titleSmall,
@@ -322,13 +445,10 @@ class _GenerationPreviewScreenState
               Padding(
                 padding: const EdgeInsets.only(bottom: 4),
                 child: Text(
-                  l10n.generationFailureChunk(
+                  l10n.generationFailureChunkOf(
                     _result.failures[i].chunkIndex,
-                    generationErrorCodeMessage(
-                      l10n,
-                      _result.failures[i].code,
-                      providerReason: _result.failures[i].providerReason,
-                    ),
+                    chunkTotal,
+                    _failureMessage(l10n, _result.failures[i]),
                   ),
                   key: ValueKey<String>('generation-preview-failure-$i'),
                   style: theme.textTheme.bodySmall?.copyWith(
@@ -342,7 +462,19 @@ class _GenerationPreviewScreenState
               onPressed: _retrying ? null : _retryFailed,
               child: Text(l10n.generationRetryFailed),
             ),
+            const SizedBox(height: 16),
           ],
+          if (_result.cards.isNotEmpty)
+            for (var i = 0; i < _cards.length; i++)
+              _PreviewCardTile(
+                key: ValueKey<String>('generation-preview-card-$i'),
+                card: _cards[i],
+                index: i,
+                onSelected: (bool selected) =>
+                    setState(() => _cards[i].selected = selected),
+                onRemoveImage: () => _removeImage(i),
+                onReplaceImage: () => _replaceImage(i),
+              ),
         ],
       ),
       bottomNavigationBar: SafeArea(
@@ -354,7 +486,7 @@ class _GenerationPreviewScreenState
             children: <Widget>[
               FilledButton(
                 key: const ValueKey<String>('generation-preview-import-all'),
-                onPressed: _importing || _result.cards.isEmpty
+                onPressed: _importing || _cards.isEmpty
                     ? null
                     : () => _import(all: true),
                 style: FilledButton.styleFrom(
@@ -368,7 +500,7 @@ class _GenerationPreviewScreenState
                 key: const ValueKey<String>(
                   'generation-preview-import-selected',
                 ),
-                onPressed: _importing || _result.cards.isEmpty
+                onPressed: _importing || _selectedCount == 0
                     ? null
                     : () => _import(all: false),
                 child: Text(l10n.generationPreviewImportSelected),
@@ -389,23 +521,28 @@ class _GenerationPreviewScreenState
   }
 }
 
-/// Карточка предпросмотра: чекбокс, поля front/back, пометки.
+/// Карточка предпросмотра: чекбокс, поля front/back, картинка, пометки.
 class _PreviewCardTile extends StatelessWidget {
   const _PreviewCardTile({
     required this.card,
     required this.index,
     required this.onSelected,
+    required this.onRemoveImage,
+    required this.onReplaceImage,
     super.key,
   });
 
   final _EditableCard card;
   final int index;
   final ValueChanged<bool> onSelected;
+  final VoidCallback onRemoveImage;
+  final VoidCallback onReplaceImage;
 
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
     final ThemeData theme = Theme.of(context);
+    final GeneratedCardImage? image = card.image;
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
@@ -433,14 +570,36 @@ class _PreviewCardTile extends StatelessWidget {
                     style: theme.textTheme.labelMedium,
                   ),
                 ),
+                if (image != null)
+                  IconButton(
+                    key: ValueKey<String>(
+                      'generation-preview-remove-image-$index',
+                    ),
+                    tooltip: l10n.generationPreviewRemoveImage,
+                    onPressed: onRemoveImage,
+                    icon: const Icon(Icons.hide_image_outlined, size: 20),
+                  ),
+                IconButton(
+                  key: ValueKey<String>(
+                    'generation-preview-replace-image-$index',
+                  ),
+                  tooltip: l10n.generationPreviewReplaceImage,
+                  onPressed: onReplaceImage,
+                  icon: Icon(
+                    image == null
+                        ? Icons.add_photo_alternate_outlined
+                        : Icons.swap_horiz,
+                    size: 20,
+                  ),
+                ),
               ],
             ),
-            if (card.original.image != null) ...<Widget>[
+            if (image != null) ...<Widget>[
               const SizedBox(height: 8),
               ClipRRect(
                 borderRadius: BorderRadius.circular(8),
                 child: Image.memory(
-                  card.original.image!.bytes,
+                  image.bytes,
                   key: ValueKey<String>('generation-preview-image-$index'),
                   height: 120,
                   fit: BoxFit.contain,
@@ -507,5 +666,15 @@ String issueLabel(AppLocalizations l10n, CardIssueCode issue) {
     CardIssueCode.occlusionImageMissing =>
       l10n.generationIssueOcclusionImageMissing,
     CardIssueCode.imageNotFound => l10n.generationIssueImageNotFound,
+    CardIssueCode.imageIdUnknown => l10n.generationIssueImageIdUnknown,
+    CardIssueCode.imageQueryAdjusted => l10n.generationIssueImageQueryAdjusted,
+    CardIssueCode.abstractImageQuery => l10n.generationIssueAbstractImageQuery,
+    CardIssueCode.answerInFront => l10n.generationIssueAnswerInFront,
+    CardIssueCode.frontLooksLikeHeading =>
+      l10n.generationIssueFrontLooksLikeHeading,
+    CardIssueCode.backTooVerbose => l10n.generationIssueBackTooVerbose,
+    CardIssueCode.backOnlyNotation => l10n.generationIssueBackOnlyNotation,
+    CardIssueCode.unicodeMath => l10n.generationIssueUnicodeMath,
+    CardIssueCode.markdownInText => l10n.generationIssueMarkdownInText,
   };
 }

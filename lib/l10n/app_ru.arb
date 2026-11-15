@@ -1153,6 +1153,155 @@
       }
     }
   },
+  "generationIssueImageIdUnknown": "Изображение не найдено в файлах — карточка без картинки",
+  "@generationIssueImageIdUnknown": {
+    "description": "Пометка fix-gen: image_id модели не найден в каталоге <images>."
+  },
+  "generationIssueImageQueryAdjusted": "Поисковый запрос картинки скорректирован",
+  "@generationIssueImageQueryAdjusted": {
+    "description": "Пометка fix-gen: image_query обнулён (не латиница, длиннее 7 слов, задан image_id)."
+  },
+  "generationIssueAbstractImageQuery": "Для абстрактного понятия картинка не ищется",
+  "@generationIssueAbstractImageQuery": {
+    "description": "Пометка fix-gen: image_query для аксиомы/закона/теоремы/формулы обнулён."
+  },
+  "generationIssueAnswerInFront": "Ответ уже содержится в вопросе",
+  "@generationIssueAnswerInFront": {
+    "description": "Пометка качества A8.1: back (или формула из него) повторяется во front."
+  },
+  "generationIssueFrontLooksLikeHeading": "Вопрос похож на заголовок",
+  "@generationIssueFrontLooksLikeHeading": {
+    "description": "Пометка качества A8.1: во front нет вопроса."
+  },
+  "generationIssueBackTooVerbose": "Ответ слишком длинный для карточки",
+  "@generationIssueBackTooVerbose": {
+    "description": "Пометка качества A8.1: back длиннее ~200 символов или трёх предложений."
+  },
+  "generationIssueBackOnlyNotation": "Ответ только расшифровывает обозначения",
+  "@generationIssueBackOnlyNotation": {
+    "description": "Пометка качества A8.1: back — список обозначений без утверждения."
+  },
+  "generationIssueUnicodeMath": "Индексы и греческие буквы вне формул",
+  "@generationIssueUnicodeMath": {
+    "description": "Пометка качества A8.1: индексы/греческие буквы вне $…$."
+  },
+  "generationIssueMarkdownInText": "В тексте есть разметка выделения",
+  "@generationIssueMarkdownInText": {
+    "description": "Пометка качества A8.1: Markdown-разметка в тексте карточки."
+  },
+  "generationRejectedCards": "{count, plural, one{{count} карточка отброшена} few{{count} карточки отброшены} many{{count} карточек отброшено} other{{count} карточки отброшено}}",
+  "@generationRejectedCards": {
+    "description": "Сколько карточек отброшено поштучно из-за схемы/структуры (fix-gen).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "generationPreviewRemoveImage": "Убрать картинку",
+  "@generationPreviewRemoveImage": {
+    "description": "Кнопка предпросмотра: убрать выбранную картинку до импорта."
+  },
+  "generationPreviewReplaceImage": "Заменить картинку",
+  "@generationPreviewReplaceImage": {
+    "description": "Кнопка предпросмотра: заменить картинку своим файлом."
+  },
+  "generationPreviewImageReplaced": "Картинка заменена",
+  "@generationPreviewImageReplaced": {
+    "description": "Сообщение после замены картинки в предпросмотре."
+  },
+  "generationPreviewImageReplaceError": "Не удалось прочитать изображение. Нужен JPG или PNG",
+  "@generationPreviewImageReplaceError": {
+    "description": "Ошибка замены картинки в предпросмотре."
+  },
+  "generationPreviewInvalidSkipped": "{count, plural, one{{count} невалидная карточка пропущена} few{{count} невалидные карточки пропущены} many{{count} невалидных карточек пропущено} other{{count} невалидные карточки пропущены}}",
+  "@generationPreviewInvalidSkipped": {
+    "description": "Предпросмотр: невалидные карточки не блокируют импорт (fix-gen, Д6).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "generationImportedWithSkipped": "Импортировано карточек: {imported}, невалидных пропущено: {skipped}",
+  "@generationImportedWithSkipped": {
+    "description": "Итог импорта, когда часть карточек не прошла валидацию (fix-gen, Д6).",
+    "placeholders": {
+      "imported": {
+        "type": "int"
+      },
+      "skipped": {
+        "type": "int"
+      }
+    }
+  },
+  "generationFailureChunkOf": "Фрагмент {index} из {total}: {message}",
+  "@generationFailureChunkOf": {
+    "description": "Ошибка фрагмента K из M с понятной причиной (SPEC A6.8, fix-gen).",
+    "placeholders": {
+      "index": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      },
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "generationReasonTruncated": "ответ модели обрезан по лимиту токенов",
+  "@generationReasonTruncated": {
+    "description": "Причина падения фрагмента: truncated (fix-gen, Д6)."
+  },
+  "generationReasonRefusal": "модель отказалась отвечать",
+  "@generationReasonRefusal": {
+    "description": "Причина падения фрагмента: refusal."
+  },
+  "generationReasonSafety": "ответ заблокирован фильтром безопасности",
+  "@generationReasonSafety": {
+    "description": "Причина падения фрагмента: safety."
+  },
+  "generationReasonJsonParse": "ответ модели не разобрался: некорректные обратные слэши в формулах",
+  "@generationReasonJsonParse": {
+    "description": "Причина падения фрагмента: json_parse."
+  },
+  "generationReasonSchemaInvalid": "ответ модели не соответствует схеме карточки",
+  "@generationReasonSchemaInvalid": {
+    "description": "Причина падения фрагмента: schema_invalid."
+  },
+  "generationReasonValidatorRejected": "структура ответа модели непригодна",
+  "@generationReasonValidatorRejected": {
+    "description": "Причина падения фрагмента: validator_rejected."
+  },
+  "generationReasonNetwork": "нет сети или истекло время ожидания",
+  "@generationReasonNetwork": {
+    "description": "Причина падения фрагмента: network."
+  },
+  "generationReasonHttpClientError": "провайдер отклонил запрос",
+  "@generationReasonHttpClientError": {
+    "description": "Причина падения фрагмента: http_4xx."
+  },
+  "generationReasonHttpServerError": "ошибка на стороне провайдера",
+  "@generationReasonHttpServerError": {
+    "description": "Причина падения фрагмента: http_5xx."
+  },
+  "generationReasonEmptyResponse": "модель вернула пустой ответ",
+  "@generationReasonEmptyResponse": {
+    "description": "Причина падения фрагмента: empty_response."
+  },
+  "generationReasonProviderResponse": "провайдер вернул неожиданный ответ",
+  "@generationReasonProviderResponse": {
+    "description": "Причина падения фрагмента: provider_response."
+  },
+  "generationReasonCancelled": "запрос отменён",
+  "@generationReasonCancelled": {
+    "description": "Причина падения фрагмента: cancelled."
+  },
+  "generationReasonUnknown": "неизвестная ошибка фрагмента",
+  "@generationReasonUnknown": {
+    "description": "Причина падения фрагмента: unknown."
+  },
   "generationDuplicatesRemoved": "{count, plural, =0{Дубликатов нет} one{{count} дубликат пропущен} few{{count} дубликата пропущено} many{{count} дубликатов пропущено} other{{count} дубликата пропущено}}",
   "@generationDuplicatesRemoved": {
     "description": "Сколько дублей отсеяла дедупликация (SPEC A8.5 шаг 9).",

@@ -2,8 +2,12 @@ import 'package:material_ui/material_ui.dart';
 
 import 'package:cardflow/domain/cards/cloze_markup.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
+import 'package:cardflow/ui/cards/content/inline_latex_text.dart';
 
 /// Интерактивное раскрытие cloze-групп по одному номеру.
+///
+/// Формулы внутри и вокруг пропусков рендерятся LaTeX-ом (fix-gen, Д4):
+/// `{{c1::$2n - 3$}}` показывает формулу, а не сырой `$…$`.
 class ClozeText extends StatefulWidget {
   const ClozeText({required this.source, required this.revealed, super.key});
 
@@ -28,17 +32,35 @@ class _ClozeTextState extends State<ClozeText> {
 
   @override
   Widget build(BuildContext context) {
-    final markup = ClozeMarkup.parse(widget.source);
+    final ClozeMarkup markup = ClozeMarkup.parse(widget.source);
     if (!markup.hasGaps) return Text(widget.source);
-    final l10n = AppLocalizations.of(context);
+    final AppLocalizations l10n = AppLocalizations.of(context);
     final spans = <InlineSpan>[];
-    for (final segment in markup.segments) {
+    for (final ClozeSegment segment in markup.segments) {
       if (!segment.isGap) {
-        spans.add(TextSpan(text: segment.text));
+        spans.add(
+          WidgetSpan(
+            alignment: PlaceholderAlignment.baseline,
+            baseline: TextBaseline.alphabetic,
+            child: InlineLatexText(source: segment.text ?? ''),
+          ),
+        );
         continue;
       }
-      final number = segment.number!;
-      final show = widget.revealed || _revealedGroups.contains(number);
+      final int number = segment.number!;
+      final bool show = widget.revealed || _revealedGroups.contains(number);
+      final Widget child = show
+          ? InlineLatexText(
+              source: segment.answer ?? '',
+              style: TextStyle(color: Theme.of(context).colorScheme.primary),
+            )
+          : Text(
+              l10n.clozeHiddenAnswer,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                decoration: TextDecoration.underline,
+              ),
+            );
       spans.add(
         WidgetSpan(
           alignment: PlaceholderAlignment.baseline,
@@ -50,15 +72,7 @@ class _ClozeTextState extends State<ClozeText> {
             onTap: widget.revealed
                 ? null
                 : () => setState(() => _revealedGroups.add(number)),
-            child: Text(
-              show ? segment.answer! : l10n.clozeHiddenAnswer,
-              style: TextStyle(
-                color: show
-                    ? Theme.of(context).colorScheme.primary
-                    : Theme.of(context).colorScheme.onSurfaceVariant,
-                decoration: show ? null : TextDecoration.underline,
-              ),
-            ),
+            child: child,
           ),
         ),
       );

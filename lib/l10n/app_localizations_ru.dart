@@ -926,6 +926,135 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String get generationIssueImageIdUnknown =>
+      'Изображение не найдено в файлах — карточка без картинки';
+
+  @override
+  String get generationIssueImageQueryAdjusted =>
+      'Поисковый запрос картинки скорректирован';
+
+  @override
+  String get generationIssueAbstractImageQuery =>
+      'Для абстрактного понятия картинка не ищется';
+
+  @override
+  String get generationIssueAnswerInFront => 'Ответ уже содержится в вопросе';
+
+  @override
+  String get generationIssueFrontLooksLikeHeading =>
+      'Вопрос похож на заголовок';
+
+  @override
+  String get generationIssueBackTooVerbose =>
+      'Ответ слишком длинный для карточки';
+
+  @override
+  String get generationIssueBackOnlyNotation =>
+      'Ответ только расшифровывает обозначения';
+
+  @override
+  String get generationIssueUnicodeMath =>
+      'Индексы и греческие буквы вне формул';
+
+  @override
+  String get generationIssueMarkdownInText =>
+      'В тексте есть разметка выделения';
+
+  @override
+  String generationRejectedCards(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count карточки отброшено',
+      many: '$count карточек отброшено',
+      few: '$count карточки отброшены',
+      one: '$count карточка отброшена',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get generationPreviewRemoveImage => 'Убрать картинку';
+
+  @override
+  String get generationPreviewReplaceImage => 'Заменить картинку';
+
+  @override
+  String get generationPreviewImageReplaced => 'Картинка заменена';
+
+  @override
+  String get generationPreviewImageReplaceError =>
+      'Не удалось прочитать изображение. Нужен JPG или PNG';
+
+  @override
+  String generationPreviewInvalidSkipped(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count невалидные карточки пропущены',
+      many: '$count невалидных карточек пропущено',
+      few: '$count невалидные карточки пропущены',
+      one: '$count невалидная карточка пропущена',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String generationImportedWithSkipped(int imported, int skipped) {
+    return 'Импортировано карточек: $imported, невалидных пропущено: $skipped';
+  }
+
+  @override
+  String generationFailureChunkOf(int index, int total, String message) {
+    return 'Фрагмент $index из $total: $message';
+  }
+
+  @override
+  String get generationReasonTruncated =>
+      'ответ модели обрезан по лимиту токенов';
+
+  @override
+  String get generationReasonRefusal => 'модель отказалась отвечать';
+
+  @override
+  String get generationReasonSafety =>
+      'ответ заблокирован фильтром безопасности';
+
+  @override
+  String get generationReasonJsonParse =>
+      'ответ модели не разобрался: некорректные обратные слэши в формулах';
+
+  @override
+  String get generationReasonSchemaInvalid =>
+      'ответ модели не соответствует схеме карточки';
+
+  @override
+  String get generationReasonValidatorRejected =>
+      'структура ответа модели непригодна';
+
+  @override
+  String get generationReasonNetwork => 'нет сети или истекло время ожидания';
+
+  @override
+  String get generationReasonHttpClientError => 'провайдер отклонил запрос';
+
+  @override
+  String get generationReasonHttpServerError => 'ошибка на стороне провайдера';
+
+  @override
+  String get generationReasonEmptyResponse => 'модель вернула пустой ответ';
+
+  @override
+  String get generationReasonProviderResponse =>
+      'провайдер вернул неожиданный ответ';
+
+  @override
+  String get generationReasonCancelled => 'запрос отменён';
+
+  @override
+  String get generationReasonUnknown => 'неизвестная ошибка фрагмента';
+
+  @override
   String generationDuplicatesRemoved(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

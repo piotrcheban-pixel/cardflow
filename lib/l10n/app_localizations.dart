@@ -1576,6 +1576,186 @@ abstract class AppLocalizations {
   /// **'Не удалось найти картинку по запросу: {count}. Добавьте её вручную или измените вопрос.'**
   String generationImageSearchFailed(int count);
 
+  /// Пометка fix-gen: image_id модели не найден в каталоге <images>.
+  ///
+  /// In ru, this message translates to:
+  /// **'Изображение не найдено в файлах — карточка без картинки'**
+  String get generationIssueImageIdUnknown;
+
+  /// Пометка fix-gen: image_query обнулён (не латиница, длиннее 7 слов, задан image_id).
+  ///
+  /// In ru, this message translates to:
+  /// **'Поисковый запрос картинки скорректирован'**
+  String get generationIssueImageQueryAdjusted;
+
+  /// Пометка fix-gen: image_query для аксиомы/закона/теоремы/формулы обнулён.
+  ///
+  /// In ru, this message translates to:
+  /// **'Для абстрактного понятия картинка не ищется'**
+  String get generationIssueAbstractImageQuery;
+
+  /// Пометка качества A8.1: back (или формула из него) повторяется во front.
+  ///
+  /// In ru, this message translates to:
+  /// **'Ответ уже содержится в вопросе'**
+  String get generationIssueAnswerInFront;
+
+  /// Пометка качества A8.1: во front нет вопроса.
+  ///
+  /// In ru, this message translates to:
+  /// **'Вопрос похож на заголовок'**
+  String get generationIssueFrontLooksLikeHeading;
+
+  /// Пометка качества A8.1: back длиннее ~200 символов или трёх предложений.
+  ///
+  /// In ru, this message translates to:
+  /// **'Ответ слишком длинный для карточки'**
+  String get generationIssueBackTooVerbose;
+
+  /// Пометка качества A8.1: back — список обозначений без утверждения.
+  ///
+  /// In ru, this message translates to:
+  /// **'Ответ только расшифровывает обозначения'**
+  String get generationIssueBackOnlyNotation;
+
+  /// Пометка качества A8.1: индексы/греческие буквы вне $…$.
+  ///
+  /// In ru, this message translates to:
+  /// **'Индексы и греческие буквы вне формул'**
+  String get generationIssueUnicodeMath;
+
+  /// Пометка качества A8.1: Markdown-разметка в тексте карточки.
+  ///
+  /// In ru, this message translates to:
+  /// **'В тексте есть разметка выделения'**
+  String get generationIssueMarkdownInText;
+
+  /// Сколько карточек отброшено поштучно из-за схемы/структуры (fix-gen).
+  ///
+  /// In ru, this message translates to:
+  /// **'{count, plural, one{{count} карточка отброшена} few{{count} карточки отброшены} many{{count} карточек отброшено} other{{count} карточки отброшено}}'**
+  String generationRejectedCards(int count);
+
+  /// Кнопка предпросмотра: убрать выбранную картинку до импорта.
+  ///
+  /// In ru, this message translates to:
+  /// **'Убрать картинку'**
+  String get generationPreviewRemoveImage;
+
+  /// Кнопка предпросмотра: заменить картинку своим файлом.
+  ///
+  /// In ru, this message translates to:
+  /// **'Заменить картинку'**
+  String get generationPreviewReplaceImage;
+
+  /// Сообщение после замены картинки в предпросмотре.
+  ///
+  /// In ru, this message translates to:
+  /// **'Картинка заменена'**
+  String get generationPreviewImageReplaced;
+
+  /// Ошибка замены картинки в предпросмотре.
+  ///
+  /// In ru, this message translates to:
+  /// **'Не удалось прочитать изображение. Нужен JPG или PNG'**
+  String get generationPreviewImageReplaceError;
+
+  /// Предпросмотр: невалидные карточки не блокируют импорт (fix-gen, Д6).
+  ///
+  /// In ru, this message translates to:
+  /// **'{count, plural, one{{count} невалидная карточка пропущена} few{{count} невалидные карточки пропущены} many{{count} невалидных карточек пропущено} other{{count} невалидные карточки пропущены}}'**
+  String generationPreviewInvalidSkipped(int count);
+
+  /// Итог импорта, когда часть карточек не прошла валидацию (fix-gen, Д6).
+  ///
+  /// In ru, this message translates to:
+  /// **'Импортировано карточек: {imported}, невалидных пропущено: {skipped}'**
+  String generationImportedWithSkipped(int imported, int skipped);
+
+  /// Ошибка фрагмента K из M с понятной причиной (SPEC A6.8, fix-gen).
+  ///
+  /// In ru, this message translates to:
+  /// **'Фрагмент {index} из {total}: {message}'**
+  String generationFailureChunkOf(int index, int total, String message);
+
+  /// Причина падения фрагмента: truncated (fix-gen, Д6).
+  ///
+  /// In ru, this message translates to:
+  /// **'ответ модели обрезан по лимиту токенов'**
+  String get generationReasonTruncated;
+
+  /// Причина падения фрагмента: refusal.
+  ///
+  /// In ru, this message translates to:
+  /// **'модель отказалась отвечать'**
+  String get generationReasonRefusal;
+
+  /// Причина падения фрагмента: safety.
+  ///
+  /// In ru, this message translates to:
+  /// **'ответ заблокирован фильтром безопасности'**
+  String get generationReasonSafety;
+
+  /// Причина падения фрагмента: json_parse.
+  ///
+  /// In ru, this message translates to:
+  /// **'ответ модели не разобрался: некорректные обратные слэши в формулах'**
+  String get generationReasonJsonParse;
+
+  /// Причина падения фрагмента: schema_invalid.
+  ///
+  /// In ru, this message translates to:
+  /// **'ответ модели не соответствует схеме карточки'**
+  String get generationReasonSchemaInvalid;
+
+  /// Причина падения фрагмента: validator_rejected.
+  ///
+  /// In ru, this message translates to:
+  /// **'структура ответа модели непригодна'**
+  String get generationReasonValidatorRejected;
+
+  /// Причина падения фрагмента: network.
+  ///
+  /// In ru, this message translates to:
+  /// **'нет сети или истекло время ожидания'**
+  String get generationReasonNetwork;
+
+  /// Причина падения фрагмента: http_4xx.
+  ///
+  /// In ru, this message translates to:
+  /// **'провайдер отклонил запрос'**
+  String get generationReasonHttpClientError;
+
+  /// Причина падения фрагмента: http_5xx.
+  ///
+  /// In ru, this message translates to:
+  /// **'ошибка на стороне провайдера'**
+  String get generationReasonHttpServerError;
+
+  /// Причина падения фрагмента: empty_response.
+  ///
+  /// In ru, this message translates to:
+  /// **'модель вернула пустой ответ'**
+  String get generationReasonEmptyResponse;
+
+  /// Причина падения фрагмента: provider_response.
+  ///
+  /// In ru, this message translates to:
+  /// **'провайдер вернул неожиданный ответ'**
+  String get generationReasonProviderResponse;
+
+  /// Причина падения фрагмента: cancelled.
+  ///
+  /// In ru, this message translates to:
+  /// **'запрос отменён'**
+  String get generationReasonCancelled;
+
+  /// Причина падения фрагмента: unknown.
+  ///
+  /// In ru, this message translates to:
+  /// **'неизвестная ошибка фрагмента'**
+  String get generationReasonUnknown;
+
   /// Сколько дублей отсеяла дедупликация (SPEC A8.5 шаг 9).
   ///
   /// In ru, this message translates to:

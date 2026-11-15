@@ -15,6 +15,7 @@ import 'package:cardflow/api/images/composite_card_image_finder.dart';
 import 'package:cardflow/api/images/image_search_service.dart';
 import 'package:cardflow/api/images/wikimedia_image_search_service.dart';
 import 'package:cardflow/api/images/wikipedia_image_search_service.dart';
+import 'package:cardflow/api/parsers/docx_parser.dart';
 import 'package:cardflow/api/parsers/pdf_scan_renderer.dart';
 import 'package:cardflow/api/providers/openai_compatible_adapter.dart';
 import 'package:cardflow/domain/generation/card_image_finder.dart';
@@ -61,7 +62,6 @@ void main() {
           retryPolicy: RetryPolicy(),
           delay: (Duration _) async {},
         ),
-        promptVersion: 'gen-ru-v2',
         maxOutputTokens: 4096,
       );
 
@@ -89,6 +89,7 @@ void main() {
       // валидация схемы A8.4 и контентные правила пройдены.
       expect(result.provider, GenerationProvider.openaiCompatible);
       expect(result.model, model);
+      expect(result.promptVersion, systemPromptVersion);
       expect(result.cards, isNotEmpty);
       expect(result.cards.length, lessThanOrEqualTo(3));
       for (final card in result.cards) {
@@ -242,8 +243,16 @@ void main() {
       final int withQuery = result.cards
           .where((card) => (card.imageQuery ?? '').isNotEmpty)
           .length;
+      final int withAbstractQuery = result.cards
+          .where(
+            (card) => card.issues.contains(CardIssueCode.abstractImageQuery),
+          )
+          .length;
+      final int malformed = result.cards
+          .where((card) => card.issues.contains(CardIssueCode.latexBroken))
+          .length;
       // ignore: avoid_print — evidence: сырой ответ модели (диагностика ADR-024),
-      // чтобы видеть `image_query` при разборе owner-note (итерация 7.12).
+      // чтобы видеть `image_query` при разборе owner-note (итерация fix-gen).
       for (final String line in diagnostics) {
         // ignore: avoid_print
         print(line);
@@ -251,13 +260,15 @@ void main() {
       // ignore: avoid_print — evidence без ключа и тел ответа.
       print(
         'LIVE DeepSeek prompt-only: cards=${result.cards.length}, '
-        'image_query=$withQuery, prompt=${result.promptVersion}, '
-        'tokens=${result.usage.totalTokens}',
+        'image_query=$withQuery, abstract_query=$withAbstractQuery, '
+        'latex_broken=$malformed, prompt=${result.promptVersion}, '
+        'tokens=${result.usage.totalTokens}, '
+        'rejected=${result.rejectedCards}',
       );
       expect(
         withQuery,
         greaterThan(0),
-        reason: 'промпт v4 требует image_query для предметных basic/cloze',
+        reason: 'промпт v5 требует image_query для конкретных объектов',
       );
       expect(diagnostics, isNotEmpty);
       expect(diagnostics.single, contains('image_query'));
@@ -440,6 +451,170 @@ void main() {
         ? 'Нет DEEPSEEK_API_KEY — live-тест пропущен (L30)'
         : false,
     timeout: const Timeout(Duration(minutes: 3)),
+    tags: <String>['live'],
+  );
+
+  // Итерация fix-gen (Д5): автоматическая оценка качества по теме без файлов.
+  test(
+    'живой DeepSeek: тема «Статика: аксиомы, связи, плоские фермы», '
+    '20 карточек, доля пометок качества',
+    () async {
+      final Dio dio = Dio();
+      addTearDown(() => dio.close(force: true));
+      final service = CardGenerationService(
+        adapters: <OpenAiCompatibleAdapter>[const OpenAiCompatibleAdapter()],
+        apiKeyStore: FakeApiKeyStore(<String, String>{'deepseek': apiKey!}),
+        httpClient: GenerationHttpClient(
+          dio: dio,
+          retryPolicy: RetryPolicy(),
+          delay: (Duration _) async {},
+        ),
+        maxOutputTokens: 8192,
+      );
+
+      final result = await service.generate(
+        GenerationRequest(
+          account: ProviderAccount(
+            id: 'deepseek',
+            label: 'DeepSeek',
+            presetId: 'deepseek',
+            protocol: ProviderProtocol.openaiCompletions,
+            baseUrl: baseUrl,
+            modelId: model,
+            contextTokens: 16000,
+            requiresApiKey: true,
+          ),
+          materialsText: '',
+          wishes:
+              'Статика: аксиомы, связи, плоские фермы. Сделай 20 карточек, '
+              'с уровнем сложности вуза',
+          limit: 20,
+        ),
+        cancelToken: null,
+      );
+
+      expect(result.cards, isNotEmpty);
+      expect(result.cards.length, lessThanOrEqualTo(20));
+      final Map<String, int> byIssue = <String, int>{};
+      for (final GeneratedCard card in result.cards) {
+        expect(card.front.trim(), isNotEmpty);
+        for (final CardIssueCode issue in card.issues) {
+          byIssue[issue.name] = (byIssue[issue.name] ?? 0) + 1;
+        }
+      }
+      final int marked = result.cards.where((card) => card.hasIssues).length;
+      final double share = marked / result.cards.length;
+      // ignore: avoid_print — evidence без ключа и тел ответа (fix-gen Д5).
+      print(
+        'LIVE statics quality: cards=${result.cards.length}, '
+        'prompt=${result.promptVersion}, rejected=${result.rejectedCards}, '
+        'tokens=${result.usage.totalTokens}, marked=$marked '
+        '(${(share * 100).toStringAsFixed(1)} %), issues=$byIssue',
+      );
+      for (final GeneratedCard card in result.cards.take(10)) {
+        // ignore: avoid_print
+        print(
+          'LIVE statics card: front="${card.front}" | '
+          'back="${card.back}" | image_id=${card.imageId}, '
+          'image_query=${card.imageQuery}, '
+          'issues=${card.issues.map((issue) => issue.name).toList()}',
+        );
+      }
+      expect(result.promptVersion, 'gen-ru-v5');
+    },
+    skip: apiKey == null
+        ? 'Нет DEEPSEEK_API_KEY — live-тест пропущен (L30)'
+        : false,
+    timeout: const Timeout(Duration(minutes: 5)),
+    tags: <String>['live'],
+  );
+
+  // Итерация fix-gen (Д3): DOCX с рисунком → каталог <images> → карточки
+  // с иллюстрацией из файла (приоритет над внешним поиском).
+  test(
+    'живой DeepSeek: DOCX с формулами и рисунком → image_id из файла',
+    () async {
+      final Uint8List docx = buildDocxWithImage(
+        paragraphs: <String>[
+          'Статика. Аксиома о равновесии двух сил.',
+          'Две силы, приложенные к твёрдому телу, уравновешены, если равны '
+              'по модулю и направлены вдоль одной прямой в противоположные '
+              'стороны.',
+          'Плоская ферма геометрически неизменяема при s = 2n - 3.',
+        ],
+        imageBytes: pngFixture(seed: 21),
+        caption: 'Рис. 1. Тело под действием двух сил',
+      );
+      final ParsedDocument parsed = await const DocxParser().parse(
+        docx,
+        fileName: 'статика-fixgen.docx',
+      );
+      expect(parsed.images, isNotEmpty);
+
+      final Dio dio = Dio();
+      addTearDown(() => dio.close(force: true));
+      final List<String> diagnostics = <String>[];
+      final GenerationDiagnostics diag = GenerationDiagnostics(
+        enabled: true,
+        sink: diagnostics.add,
+      );
+      final service = CardGenerationService(
+        adapters: <OpenAiCompatibleAdapter>[const OpenAiCompatibleAdapter()],
+        apiKeyStore: FakeApiKeyStore(<String, String>{'deepseek': apiKey!}),
+        httpClient: GenerationHttpClient(
+          dio: dio,
+          retryPolicy: RetryPolicy(),
+          delay: (Duration _) async {},
+        ),
+        maxOutputTokens: 8192,
+        diagnostics: diag,
+      );
+      final pipeline = GenerationPipeline(
+        caller: service,
+        jobRepository: FakeGenerationJobRepository(),
+        cardStore: FakeGenerationCardStore(),
+        imageFinder: null,
+        diagnostics: diag,
+      );
+
+      final GenerationRunResult result = await pipeline.run(
+        GenerationRunRequest(
+          documents: <ParsedDocument>[parsed],
+          account: ProviderAccount(
+            id: 'deepseek',
+            label: 'DeepSeek',
+            presetId: 'deepseek',
+            protocol: ProviderProtocol.openaiCompletions,
+            baseUrl: baseUrl,
+            modelId: model,
+            contextTokens: 16000,
+            requiresApiKey: true,
+          ),
+          deckName: 'Статика fix-gen',
+          wishes: 'Акцент на аксиомах и фермах',
+        ),
+      );
+
+      final int withImage = result.cards
+          .where((card) => card.image != null)
+          .length;
+      final int withImageId = result.cards
+          .where((card) => (card.imageId ?? '').isNotEmpty)
+          .length;
+      // ignore: avoid_print — evidence без ключа и тел ответа.
+      print(
+        'LIVE docx images: images=${parsed.images.length}, '
+        'status=${result.status.name}, cards=${result.cards.length}, '
+        'image_id=$withImageId, with_image=$withImage, '
+        'tokens=${result.tokensUsed}',
+      );
+      expect(result.cards, isNotEmpty);
+      expect(result.cards.length, lessThanOrEqualTo(20));
+    },
+    skip: apiKey == null
+        ? 'Нет DEEPSEEK_API_KEY — live-тест пропущен (L30)'
+        : false,
+    timeout: const Timeout(Duration(minutes: 5)),
     tags: <String>['live'],
   );
 }

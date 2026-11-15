@@ -45,6 +45,7 @@ void main() {
     'card_type': 'basic',
     'source_excerpt': null,
     'source_file': 'лекция.txt',
+    'image_id': null,
     'image_query': null,
   };
 
@@ -146,6 +147,7 @@ void main() {
                       'card_type': 'occlusion',
                       'source_excerpt': null,
                       'source_file': 'лекция.txt',
+                      'image_id': null,
                       'image_query': 'plant cell diagram',
                     },
                   ],
@@ -241,7 +243,7 @@ void main() {
       expect(job.cardsCount, 1);
       expect(job.chunkCount, 1);
       expect(job.files, <String>['лекция.txt']);
-      expect(job.promptVersion, 'gen-ru-v4');
+      expect(job.promptVersion, 'gen-ru-v5');
 
       final imported = await container
           .read(generationCardStoreProvider)
@@ -547,7 +549,7 @@ void main() {
       final messages = body['messages']! as List<Object?>;
       final userContent =
           (messages[1]! as Map<String, Object?>)['content']! as String;
-      expect(userContent, contains('<materials>\n</materials>'));
+      expect(userContent, contains('<materials></materials>'));
       expect(
         userContent,
         contains('<wishes>\nФотосинтез: световая и темновая фазы\n</wishes>'),
@@ -558,7 +560,7 @@ void main() {
           .jobById(result.jobId))!;
       expect(job.status, GenerationJobStatus.done);
       expect(job.files, isEmpty);
-      expect(job.promptVersion, 'gen-ru-v4');
+      expect(job.promptVersion, 'gen-ru-v5');
       expect(job.cardsCount, 1);
     },
   );
@@ -599,6 +601,7 @@ void main() {
                         'card_type': 'basic',
                         'source_excerpt': null,
                         'source_file': 'лекция.txt',
+                        'image_id': null,
                         'image_query': 'chloroplast diagram',
                       },
                     ],
@@ -716,6 +719,7 @@ void main() {
                       'card_type': 'basic',
                       'source_excerpt': null,
                       'source_file': 'лекция.txt',
+                      'image_id': null,
                       'image_query': 'chloroplast diagram',
                     },
                   ],

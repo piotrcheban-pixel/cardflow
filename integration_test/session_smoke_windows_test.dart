@@ -165,7 +165,8 @@ void main() {
                       'card_type': 'basic',
                       'source_excerpt': null,
                       'source_file': null,
-                      'image_query': 'Московский Кремль',
+                      'image_id': null,
+                      'image_query': 'Moscow Kremlin',
                     },
                     <String, Object?>{
                       'front': 'В каком году основан Кремль?',
@@ -175,6 +176,7 @@ void main() {
                       'card_type': 'basic',
                       'source_excerpt': null,
                       'source_file': null,
+                      'image_id': null,
                       'image_query': null,
                     },
                   ],

@@ -240,11 +240,23 @@ void main() {
     expect(find.text(l10n.parserErrorUnsupportedFormat), findsOneWidget);
   });
 
-  testWidgets('старт без файлов и без темы — сообщение ARB', (tester) async {
+  testWidgets('старт без файлов и без темы — кнопка неактивна, подсказка ARB', (
+    tester,
+  ) async {
     await pumpScreen(tester);
-    await tester.tap(find.byKey(const ValueKey<String>('generation-start')));
-    await tester.pumpAndSettle();
     final l10n = l10nOf(tester);
+    final FilledButton button = tester.widget<FilledButton>(
+      find.byKey(const ValueKey<String>('generation-start')),
+    );
+    expect(
+      button.onPressed,
+      isNull,
+      reason: 'нечего генерировать (fix-gen Д1)',
+    );
+    expect(
+      find.byKey(const ValueKey<String>('generation-start-hint')),
+      findsOneWidget,
+    );
     expect(find.text(l10n.generationTopicRequired), findsOneWidget);
     expect(runner.runCalls, 0);
   });
@@ -285,7 +297,8 @@ void main() {
     expect(runner.lastRequest!.documents, isEmpty);
     expect(runner.lastRequest!.images, isEmpty);
     expect(runner.lastRequest!.wishes, 'Фотосинтез');
-    expect(runner.lastRequest!.deckName, l10n.generationDeckDefaultName);
+    // fix-gen Д1: имя колоды по умолчанию берётся из темы пожелания.
+    expect(runner.lastRequest!.deckName, 'Фотосинтез');
     expect(find.text(l10n.generationPreviewTitle), findsOneWidget);
   });
 
