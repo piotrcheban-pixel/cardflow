@@ -374,3 +374,6 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   **PDF-скан: `pages=3, cards=2, tokens=2905`**; **живой Wikimedia: JPEG 97 КБ, CC BY-SA 4.0**.
   `deepseek-flash` дал 2/5 `invalidResponse` (strict-схема) — L66. Ограничения: L65–L70.
   Замечание: `flutter test -d windows` собирает Debug-приложение и требует десктоп-дисплея (в CI нет).
+  **Push итерации 7.11:** `14b1a71..8925e99`; CI run
+  [`43742161910`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43742161910) —
+  **9/9 job success**.

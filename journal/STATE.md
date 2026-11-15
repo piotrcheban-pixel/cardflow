@@ -1,14 +1,22 @@
 # STATE — текущее состояние CardFlow
 
 **Дата:** 2026-11-15 · **Этап:** итерация **7.11** «FSRS новых карточек, картинки,
-сканы и Practice Mode» (ADR-025/026/027) — завершена локально, verify зелёный;
-**push выполнен, CI ожидается/зелёный по факту прогона** · **Режим:** ИТЕРАЦИИ
+сканы и Practice Mode» (ADR-025/026/027) — завершена, verify зелёный; **push выполнен,
+CI 9/9 success** · **Режим:** ИТЕРАЦИИ
 **Факты (сверено командами в этой сессии):** на старте `git status --porcelain` → пусто,
 `HEAD = origin/main = 14b1a71` (`docs: record green CI for prompt-only iteration`;
 в STATE 7.10 было записано `5cbb653` — исправлено). Baseline — **1409 passed + 3 skipped**.
 Flutter 3.47.9 / Dart 3.13.7 (FVM); Windows 11; Android SDK/JDK/Xcode нет (L2).
 Прогоны — только с `--no-pub`: `fvm flutter test`/`build` без него зависают на
 `dart pub get --example` (сеть pub в сессии агента).
+
+**Push/CI (2026-11-15):** `origin/main = 8925e99` (`14b1a71..8925e99`, 6 коммитов
+итерации 7.11); снимок `8925e99` — run
+[`43742161910`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43742161910) —
+**9/9 job success** (`format + analyze`, `test` × 3 ОС, `build-desktop` × 3,
+`build-mobile` Android + iOS). Код-снимок `1f953ec` идентичен по `lib/`/`test/`
+(последний коммит — только docs-метрика покрытия). Предыдущий снимок 7.10 — run
+`43728048903` 9/9.
 
 ## Следующее действие
 
