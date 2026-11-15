@@ -4,9 +4,11 @@
 /// `lib/api/generation/`.
 library;
 
+import 'package:cardflow/domain/generation/document_image.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
 import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
+import 'package:cardflow/domain/generation/generation_failure_reason.dart';
 import 'package:cardflow/domain/generation/generation_job.dart';
 import 'package:cardflow/domain/generation/provider_account.dart';
 import 'package:cardflow/domain/text/parsed_document.dart';
@@ -89,6 +91,8 @@ class GenerationChunkFailure {
     this.splitAttempted = false,
     this.providerReason,
     this.images = const <GenerationAttachment>[],
+    this.documentImages = const <DocumentImage>[],
+    this.reason,
   });
 
   /// Номер фрагмента (с 1).
@@ -96,6 +100,10 @@ class GenerationChunkFailure {
 
   /// Код ошибки.
   final GenerationErrorCode code;
+
+  /// Внутренняя причина сбоя (fix-gen): `json_parse`, `schema_invalid`,
+  /// `truncated`, `safety`, `http_4xx/5xx` и т.п.
+  final GenerationFailureReason? reason;
 
   /// Текст фрагмента для повтора (в UI не показывается).
   final String materialsText;
@@ -118,6 +126,9 @@ class GenerationChunkFailure {
 
   /// Вложения фрагмента (для повтора image-запроса).
   final List<GenerationAttachment> images;
+
+  /// Изображения из документов фрагмента (для повтора, fix-gen Д3).
+  final List<DocumentImage> documentImages;
 }
 
 /// Результат генерации (он же данные предпросмотра).
@@ -133,6 +144,7 @@ class GenerationRunResult {
     required this.duplicatesRemoved,
     required this.chunkCount,
     required this.cancelled,
+    this.rejectedCards = 0,
     this.fatalErrorCode,
     this.fatalProviderReason,
   });
@@ -163,6 +175,9 @@ class GenerationRunResult {
 
   /// Пользователь отменил генерацию.
   final bool cancelled;
+
+  /// Сколько карточек отброшено поштучно (схема/структура) — fix-gen Д6.
+  final int rejectedCards;
 
   /// Fatal-код, после которого пайплайн остановился, но карточки уже получены
   /// (например, ключ отозван после первого фрагмента). Сообщение показывается

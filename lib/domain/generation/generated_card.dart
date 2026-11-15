@@ -33,6 +33,36 @@ enum CardIssueCode {
   /// Иллюстрация не найдена: поиск по `image_query` (модели или выведенному из
   /// текста) не дал результата (ADR-028, итерация 7.12).
   imageNotFound,
+
+  /// `image_id` не найден в каталоге `<images>` — поле обнулено (fix-gen).
+  imageIdUnknown,
+
+  /// `image_query` сброшен локальным валидатором: не латиница, длиннее 7 слов,
+  /// абстрактное понятие или задан `image_id` (fix-gen).
+  imageQueryAdjusted,
+
+  /// Абстрактное понятие (аксиома/закон/теорема/формула): картинку не ищем.
+  abstractImageQuery,
+
+  /// Ответ (или формула из ответа) целиком содержится во `front` — карточка
+  /// проверяет вопрос, в котором уже есть ответ (SPEC A8.1, правило 2).
+  answerInFront,
+
+  /// `front` без вопросительного знака и не cloze — похоже на заголовок
+  /// (SPEC A8.1, правило 2).
+  frontLooksLikeHeading,
+
+  /// `back` длиннее ~200 символов или трёх предложений (правило 3).
+  backTooVerbose,
+
+  /// `back` — только расшифровка обозначений («x — …, y — …») без утверждения.
+  backOnlyNotation,
+
+  /// Unicode-математика вместо LaTeX (`F₁`, `α`, `√2`).
+  unicodeMath,
+
+  /// Markdown-выделение в тексте карточки (`**…**`, `_…_`, `#`).
+  markdownInText,
 }
 
 /// Карточка, полученная от модели и прошедшая локальную валидацию (SPEC A8.4).
@@ -50,6 +80,7 @@ class GeneratedCard {
     this.sourceFile,
     this.issues = const <CardIssueCode>[],
     this.imageQuery,
+    this.imageId,
     this.image,
     this.isOcclusion = false,
     this.occlusionJson,
@@ -82,6 +113,12 @@ class GeneratedCard {
   /// Краткий поисковый запрос на английском (итерация 7.9, ADR-023).
   final String? imageQuery;
 
+  /// Идентификатор изображения из `<images>` прикреплённых файлов (fix-gen).
+  ///
+  /// Хранится только в памяти до импорта: pipeline превращает его в [image],
+  /// байты пишутся в `media` при импорте, колонки БД не меняются.
+  final String? imageId;
+
   /// Найденная и скачанная иллюстрация; `null` — не искали/не нашли.
   final GeneratedCardImage? image;
 
@@ -107,6 +144,7 @@ class GeneratedCard {
     String? sourceFile,
     List<CardIssueCode>? issues,
     String? imageQuery,
+    String? imageId,
     GeneratedCardImage? image,
     bool? isOcclusion,
     String? occlusionJson,
@@ -121,9 +159,29 @@ class GeneratedCard {
       sourceFile: sourceFile ?? this.sourceFile,
       issues: issues ?? this.issues,
       imageQuery: imageQuery ?? this.imageQuery,
+      imageId: imageId ?? this.imageId,
       image: image ?? this.image,
       isOcclusion: isOcclusion ?? this.isOcclusion,
       occlusionJson: occlusionJson ?? this.occlusionJson,
+    );
+  }
+
+  /// Копия с явно сброшенными `imageId`/`imageQuery` (без «умолчаний» copyWith).
+  GeneratedCard clearedImageSelection() {
+    return GeneratedCard(
+      front: front,
+      back: back,
+      cardType: cardType,
+      hint: hint,
+      tags: tags,
+      sourceExcerpt: sourceExcerpt,
+      sourceFile: sourceFile,
+      issues: issues,
+      imageQuery: null,
+      imageId: null,
+      image: image,
+      isOcclusion: isOcclusion,
+      occlusionJson: occlusionJson,
     );
   }
 
@@ -140,6 +198,7 @@ class GeneratedCard {
         other.sourceFile == sourceFile &&
         _listEquals(other.issues, issues) &&
         other.imageQuery == imageQuery &&
+        other.imageId == imageId &&
         identical(other.image, image) &&
         other.isOcclusion == isOcclusion &&
         other.occlusionJson == occlusionJson;
@@ -156,6 +215,7 @@ class GeneratedCard {
     sourceFile,
     Object.hashAll(issues),
     imageQuery,
+    imageId,
     identityHashCode(image),
     isOcclusion,
     occlusionJson,

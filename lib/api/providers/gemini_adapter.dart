@@ -8,6 +8,7 @@ import 'package:cardflow/api/providers/provider_endpoint.dart';
 import 'package:cardflow/api/providers/provider_json.dart';
 import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
+import 'package:cardflow/domain/generation/generation_failure_reason.dart';
 import 'package:cardflow/domain/generation/generation_provider.dart';
 import 'package:cardflow/domain/generation/generation_result.dart';
 import 'package:cardflow/domain/generation/provider_protocol.dart';
@@ -92,7 +93,10 @@ class GeminiAdapter implements GenerationProviderAdapter {
     final promptFeedback = jsonObjectOrNull(json['promptFeedback']);
     final blockReason = promptFeedback?['blockReason'];
     if (blockReason is String && blockReason.isNotEmpty) {
-      throw const GenerationException(GenerationErrorCode.refused);
+      throw const GenerationException(
+        GenerationErrorCode.refused,
+        failureReason: GenerationFailureReason.safety,
+      );
     }
 
     final rawCandidates = json['candidates'];
@@ -117,7 +121,10 @@ class GeminiAdapter implements GenerationProviderAdapter {
     }
     if (finishReason is String &&
         _refusalFinishReasons.contains(finishReason)) {
-      throw const GenerationException(GenerationErrorCode.refused);
+      throw const GenerationException(
+        GenerationErrorCode.refused,
+        failureReason: GenerationFailureReason.safety,
+      );
     }
 
     final content = jsonObjectOrNull(candidate['content']);

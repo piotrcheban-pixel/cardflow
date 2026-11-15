@@ -5,6 +5,7 @@
 /// передаются как inline-части только при поддержке Vision (итерация 7.8).
 library;
 
+import 'package:cardflow/domain/generation/document_image.dart';
 import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/generation/provider_account.dart';
 
@@ -17,6 +18,7 @@ class GenerationRequest {
     required this.limit,
     this.wishes,
     this.images = const <GenerationAttachment>[],
+    this.documentImages = const <DocumentImage>[],
   });
 
   /// Провайдер: протокол, адрес, модель и id ключа.
@@ -34,4 +36,7 @@ class GenerationRequest {
 
   /// Вложения фрагмента: изображения или PDF-скан.
   final List<GenerationAttachment> images;
+
+  /// Каталог изображений из документов с id (`img1…`) для `<images>` (fix-gen).
+  final List<DocumentImage> documentImages;
 }

@@ -9,7 +9,9 @@ library;
 
 import 'dart:convert';
 
+import 'package:cardflow/api/generation/latex_escape_repair.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
+import 'package:cardflow/domain/generation/generation_failure_reason.dart';
 
 /// Извлекатель JSON-объекта из текста ответа модели.
 class CardsJsonExtractor {
@@ -18,14 +20,18 @@ class CardsJsonExtractor {
 
   /// Декодирует [raw] в JSON-значение.
   ///
+  /// Перед разбором LaTeX-escape восстанавливаются (fix-gen, Д4/Д6):
+  /// модель пишет `\frac`/`\alpha` одним слэшем, из-за чего JSON либо молча
+  /// портится, либо не разбирается вовсе.
+  ///
   /// [tolerant] — разрешить markdown-ограждение и текст вокруг JSON
   /// (OpenAI-совместимый протокол, ADR-021). Иначе ответ обязан быть чистым
   /// JSON-документом.
   ///
-  /// Бросает [GenerationException] c `invalidResponse`, если JSON не найден;
-  /// текст ошибки не содержит ответа модели.
+  /// Бросает [GenerationException] c `invalidResponse` и причиной `json_parse`,
+  /// если JSON не найден; текст ошибки не содержит ответа модели.
   Object? decode(String raw, {required bool tolerant}) {
-    final String text = stripBom(raw);
+    final String text = stripBom(repairLatexJsonEscapes(raw));
     final direct = _tryDecode(text);
     if (direct.ok) return direct.value;
     if (tolerant) {
@@ -38,6 +44,7 @@ class CardsJsonExtractor {
     throw const GenerationException(
       GenerationErrorCode.invalidResponse,
       details: 'Ответ модели не является JSON',
+      failureReason: GenerationFailureReason.jsonParse,
     );
   }
 

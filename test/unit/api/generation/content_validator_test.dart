@@ -20,6 +20,7 @@ void main() {
     String cardType = 'basic',
     String? sourceExcerpt,
     String? sourceFile,
+    String? imageId,
     String? imageQuery,
   }) => <String, Object?>{
     'front': front,
@@ -29,16 +30,20 @@ void main() {
     'card_type': cardType,
     'source_excerpt': sourceExcerpt,
     'source_file': sourceFile,
+    'image_id': imageId,
     'image_query': imageQuery,
   };
 
   List<GeneratedCard> validate(
     List<Map<String, Object?>> cards, {
     String? source,
+    Set<String> imageIds = const <String>{},
   }) {
-    return validator.validateResponse(<String, Object?>{
-      'cards': cards,
-    }, sourceText: source ?? sourceText);
+    return validator.validateResponse(
+      <String, Object?>{'cards': cards},
+      sourceText: source ?? sourceText,
+      imageIds: imageIds,
+    );
   }
 
   List<CardIssueCode> issuesOf(Map<String, Object?> raw) =>
@@ -75,9 +80,13 @@ void main() {
     expect(issuesOf(card(front: 'a' * 501)), <CardIssueCode>[
       CardIssueCode.frontTooLong,
     ]);
-    expect(issuesOf(card(back: 'b' * 2000)), isEmpty);
+    // 2000 символов — граница A8.4, но мягкий предел A8.1 (~200) уже превышен.
+    expect(issuesOf(card(back: 'b' * 2000)), <CardIssueCode>[
+      CardIssueCode.backTooVerbose,
+    ]);
     expect(issuesOf(card(back: 'b' * 2001)), <CardIssueCode>[
       CardIssueCode.backTooLong,
+      CardIssueCode.backTooVerbose,
     ]);
   });
 
@@ -105,7 +114,7 @@ void main() {
   });
 
   test('сломанный LaTeX — пометка latexBroken, карточка не отбрасывается', () {
-    expect(issuesOf(card(front: r'Формула $\frac{$')), <CardIssueCode>[
+    expect(issuesOf(card(front: r'Чему равна $\frac{$')), <CardIssueCode>[
       CardIssueCode.latexBroken,
     ]);
     expect(issuesOf(card(back: r'Ответ $x^2$')), isEmpty);
@@ -117,6 +126,16 @@ void main() {
       'cards': <Object?>[card()],
     }, sourceText: sourceText);
     expect(cards.single.issues, contains(CardIssueCode.latexBroken));
+  });
+
+  test('пустые materials (prompt-only): source_excerpt обнуляется, '
+      'карточка остаётся (fix-gen Д1)', () {
+    final parsed = validate(<Map<String, Object?>>[
+      card(sourceExcerpt: 'Цитата, которой нет в пустом тексте'),
+    ], source: '').single;
+    expect(parsed.sourceExcerpt, isNull);
+    expect(parsed.issues, isNot(contains(CardIssueCode.excerptMismatch)));
+    expect(parsed.front, isNotEmpty);
   });
 
   test('source_excerpt: пробелы нормализуются и проверяется вхождение', () {
@@ -172,34 +191,76 @@ void main() {
     },
   );
 
-  test('image_query: пустой/null → null, длинный обрезается', () {
-    expect(validate(<Map<String, Object?>>[card()]).single.imageQuery, isNull);
-    expect(
-      validate(<Map<String, Object?>>[card(imageQuery: '   ')])
-          .single
-          .imageQuery,
-      isNull,
-    );
-    final long = 'a' * (CardContentValidator.maxImageQueryLength + 20);
-    final parsed = validate(<Map<String, Object?>>[card(imageQuery: long)])
-        .single;
-    expect(
-      parsed.imageQuery,
-      hasLength(CardContentValidator.maxImageQueryLength),
-    );
+  test(
+    'image_query: пустой/null → null, не латиница/длиннее 7 слов → null',
+    () {
+      expect(
+        validate(<Map<String, Object?>>[card()]).single.imageQuery,
+        isNull,
+      );
+      expect(
+        validate(<Map<String, Object?>>[card(imageQuery: '   ')])
+            .single
+            .imageQuery,
+        isNull,
+      );
+      // Слишком длинный запрос (fix-gen): не обрезается, а обнуляется.
+      final long = 'a' * (CardContentValidator.maxImageQueryLength + 20);
+      final parsed = validate(<Map<String, Object?>>[card(imageQuery: long)])
+          .single;
+      expect(parsed.imageQuery, isNull);
+      expect(parsed.issues, contains(CardIssueCode.imageQueryAdjusted));
+      // Кириллица в запросе: только латиница.
+      final cyrillic = validate(<Map<String, Object?>>[
+        card(imageQuery: 'схема фермы'),
+      ]).single;
+      expect(cyrillic.imageQuery, isNull);
+      // Больше 7 слов.
+      final tooManyWords = validate(<Map<String, Object?>>[
+        card(imageQuery: 'one two three four five six seven eight'),
+      ]).single;
+      expect(tooManyWords.imageQuery, isNull);
+    },
+  );
+
+  test('image_query для абстрактного понятия обнуляется (Д2)', () {
+    final parsed = validate(<Map<String, Object?>>[
+      card(
+        front: 'При каком условии две силы уравновешивают друг друга?',
+        back: 'Аксиома о равновесии двух сил',
+        imageQuery: 'ball physics',
+      ),
+    ]).single;
+    expect(parsed.imageQuery, isNull);
+    expect(parsed.issues, contains(CardIssueCode.abstractImageQuery));
   });
 
-  test('неизвестный card_type → invalidResponse', () {
-    expect(
-      () => validate(<Map<String, Object?>>[card(cardType: 'image')]),
-      throwsA(
-        isA<GenerationException>().having(
-          (GenerationException error) => error.code,
-          'code',
-          GenerationErrorCode.invalidResponse,
-        ),
-      ),
-    );
+  test('image_id из каталога: неизвестный обнуляется, при известном '
+      'image_query игнорируется (Д3)', () {
+    final known = validate(
+      <Map<String, Object?>>[card(imageId: 'img1', imageQuery: 'truss bridge')],
+      imageIds: <String>{'img1'},
+    ).single;
+    expect(known.imageId, 'img1');
+    expect(known.imageQuery, isNull);
+    expect(known.issues, contains(CardIssueCode.imageQueryAdjusted));
+
+    final unknown = validate(<Map<String, Object?>>[card(imageId: 'img9')])
+        .single;
+    expect(unknown.imageId, isNull);
+    expect(unknown.issues, contains(CardIssueCode.imageIdUnknown));
+  });
+
+  test('неизвестный card_type отбрасывается сам, остальные карточки живы', () {
+    final outcome = validator.validateResponseWithRejects(<String, Object?>{
+      'cards': <Object?>[
+        card(cardType: 'image'),
+        card(front: 'Что такое FSRS?', back: 'Алгоритм.'),
+      ],
+    }, sourceText: sourceText);
+    expect(outcome.rejectedCards, 1);
+    expect(outcome.cards, hasLength(1));
+    expect(outcome.cards.single.front, 'Что такое FSRS?');
   });
 
   test('пустой массив карточек — пустой результат', () {
@@ -213,9 +274,6 @@ void main() {
         null,
         <String, Object?>{},
         <String, Object?>{'cards': 'нет'},
-        <String, Object?>{
-          'cards': <Object?>['нет'],
-        },
       ]) {
         expect(
           () => validator.validateResponse(response, sourceText: sourceText),
@@ -229,6 +287,11 @@ void main() {
           reason: 'response=$response',
         );
       }
+      final outcome = validator.validateResponseWithRejects(<String, Object?>{
+        'cards': <Object?>['нет'],
+      }, sourceText: sourceText);
+      expect(outcome.cards, isEmpty);
+      expect(outcome.rejectedCards, 1);
     },
   );
 
@@ -236,6 +299,7 @@ void main() {
     expect(issuesOf(card(front: 'a' * 501, back: 'b' * 2001)), <CardIssueCode>[
       CardIssueCode.frontTooLong,
       CardIssueCode.backTooLong,
+      CardIssueCode.backTooVerbose,
     ]);
   });
 }

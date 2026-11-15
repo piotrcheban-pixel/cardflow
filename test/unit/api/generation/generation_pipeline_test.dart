@@ -1024,32 +1024,28 @@ void main() {
       expect(result.cards.single.image, same(image));
     });
 
-    // ADR-028 (итерация 7.12): deepseek-flash часто отдаёт image_query = null
-    // для определений; запрос выводится из текста карточки.
-    test(
-      'image_query модели пуст → запрос выведен из текста карточки',
-      () async {
-        final finder = FakeCardImageFinder(
-          byQuery: <String, GeneratedCardImage?>{'спайность минерала': image},
-        );
-        final card = makeGeneratedCard(
-          front: 'Что такое спайность минерала?',
-          back: 'Способность раскалываться по плоскостям.',
-          imageQuery: null,
-        );
+    // fix-gen Д2: производных запросов из текста вопроса больше нет —
+    // неподходящая картинка хуже, чем её отсутствие.
+    test('image_query модели пуст → внешний поиск не вызывается', () async {
+      final finder = FakeCardImageFinder(
+        byQuery: <String, GeneratedCardImage?>{'спайность минерала': image},
+      );
+      final card = makeGeneratedCard(
+        front: 'Что такое спайность минерала?',
+        back: 'Способность раскалываться по плоскостям.',
+        imageQuery: null,
+      );
 
-        final result = await runWithCards(<GeneratedCard>[
-          card,
-        ], finder: finder);
+      final result = await runWithCards(<GeneratedCard>[card], finder: finder);
 
-        expect(finder.queries, <String>['спайность минерала']);
-        expect(result.cards.single.image, same(image));
-        expect(
-          result.cards.single.issues,
-          isNot(contains(CardIssueCode.imageNotFound)),
-        );
-      },
-    );
+      expect(finder.queries, isEmpty);
+      expect(result.cards.single.image, isNull);
+      expect(
+        result.cards.single.issues,
+        isNot(contains(CardIssueCode.imageNotFound)),
+        reason: 'запроса не было — это не ошибка поиска',
+      );
+    });
 
     test('неудачный поиск помечает карточку imageNotFound', () async {
       final finder = FakeCardImageFinder();

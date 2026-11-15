@@ -32,10 +32,23 @@ void main() {
     expect(markup.segments.single.value, r'Ошибка $x+1');
   });
 
-  test(r'\(…\) не поддерживается и остаётся текстом', () {
-    const source = r'Формула \(x^2\)';
-    final markup = LatexMarkup.parse(source);
-    expect(markup.segments.single.kind, LatexSegmentKind.text);
-    expect(markup.segments.single.value, source);
+  // fix-gen (Д4): `\(…\)`/`\[…\]` модель иногда пишет вместо `$…$`; разметка
+  // нормализует их к поддерживаемым разделителям (SPEC A7.10).
+  test(r'\(…\) и \[…\] нормализуются к $…$ и $$…$$', () {
+    final inline = LatexMarkup.parse(r'Формула \(x^2\)');
+    expect(inline.segments, hasLength(2));
+    expect(inline.segments[1].kind, LatexSegmentKind.inlineFormula);
+    expect(inline.segments[1].value, 'x^2');
+
+    final display = LatexMarkup.parse(r'Блок \[c=d\]');
+    expect(display.segments[1].kind, LatexSegmentKind.displayFormula);
+    expect(display.segments[1].value, 'c=d');
+  });
+
+  test(r'экранированный \$ — текст, а не делимитер', () {
+    final markup = LatexMarkup.parse(r'Цена \$5 и формула $x^2$');
+    expect(markup.hasUnclosedDelimiter, isFalse);
+    expect(markup.segments.where((segment) => segment.isFormula), hasLength(1));
+    expect(markup.segments.first.value, contains(r'$5'));
   });
 }

@@ -81,6 +81,7 @@ void main() {
     'card_type': 'basic',
     'source_excerpt': null,
     'source_file': null,
+    'image_id': null,
     'image_query': null,
   };
 
@@ -146,7 +147,10 @@ void main() {
         adapter.buildArgs!.userContent,
         contains('<wishes>\nАкцент на датах\n</wishes>'),
       );
-      expect(adapter.buildArgs!.userContent, endsWith('<limit>10</limit>'));
+      expect(adapter.buildArgs!.userContent, contains('<limit>10</limit>'));
+      // Пустые блоки пишутся одной строкой (fix-gen, Д1).
+      expect(adapter.buildArgs!.userContent, contains('<images></images>'));
+      expect(adapter.buildArgs!.userContent, isNot(contains('<images>\n')));
       expect(transport.calls, 1);
     },
   );
@@ -234,7 +238,8 @@ void main() {
     );
   });
 
-  test('JSON не по схеме A8.4 → invalidResponse (back отсутствует)', () async {
+  // fix-gen Д6: одна невалидная карточка не отбрасывает весь фрагмент.
+  test('карточка без back отбрасывается поштучно, ответ не падает', () async {
     final card = validCardJson()..remove('back');
     final service = serviceWith(
       adapter: FakeProviderAdapter(
@@ -242,10 +247,9 @@ void main() {
       ),
       transport: FakeGenerationTransport(response: <String, Object?>{}),
     );
-    await expectLater(
-      service.generate(requestFor(openAiAccount())),
-      throwsGeneration(GenerationErrorCode.invalidResponse),
-    );
+    final result = await service.generate(requestFor(openAiAccount()));
+    expect(result.cards, isEmpty);
+    expect(result.rejectedCards, 1);
   });
 
   test('пустой массив cards — валидный результат без карточек', () async {
@@ -652,8 +656,8 @@ void main() {
       expect(adapter.buildArgs!.images.single.fileName, 'схема.png');
       expect(
         adapter.buildArgs!.userContent,
-        contains('Приложенные изображения'),
-        reason: 'для image-only запроса нужен непустой блок materials',
+        contains('Файл: схема.png'),
+        reason: 'файл в <materials> начинается со строки «Файл:» (A8.1)',
       );
       expect(transport.calls, 1);
     });
@@ -740,10 +744,7 @@ void main() {
 
       expect(adapter.buildArgs!.images, hasLength(2));
       expect(transport.calls, 1);
-      expect(
-        adapter.buildArgs!.userContent,
-        contains('Приложенный PDF-скан (страницы)'),
-      );
+      expect(adapter.buildArgs!.userContent, contains('Файл: скан.pdf'));
     });
 
     test('вложение больше 10 МБ → attachmentTooLarge, без запроса', () async {
@@ -886,7 +887,7 @@ void main() {
         expect(result.cards, hasLength(1));
         expect(
           adapter.buildArgs!.userContent,
-          contains('<materials>\n</materials>'),
+          contains('<materials></materials>'),
         );
         expect(
           adapter.buildArgs!.userContent,

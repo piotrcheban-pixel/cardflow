@@ -48,6 +48,7 @@ class GenerationResult {
     required this.promptVersion,
     required this.cards,
     required this.usage,
+    this.rejectedCards = 0,
   });
 
   /// Провайдер ответа.
@@ -65,8 +66,12 @@ class GenerationResult {
   /// Фактический расход токенов (если провайдер вернул).
   final TokenUsage usage;
 
+  /// Сколько карточек отброшено поштучно (схема/структура), fix-gen Д6.
+  final int rejectedCards;
+
   @override
   String toString() =>
       'GenerationResult(provider: ${provider.wireName}, model: $model, '
-      'cards: ${cards.length}, promptVersion: $promptVersion)';
+      'cards: ${cards.length}, rejected: $rejectedCards, '
+      'promptVersion: $promptVersion)';
 }

@@ -89,6 +89,22 @@ class GenerationDiagnostics {
     );
   }
 
+  /// Причина падения фрагмента (fix-gen, Д6): только машинные коды, без
+  /// текста материалов, без ключей.
+  void fragmentFailure({
+    required int chunkIndex,
+    required int chunkCount,
+    required String errorCode,
+    required String reason,
+    bool retryable = true,
+  }) {
+    if (!enabled) return;
+    _write(
+      'Генерация: фрагмент $chunkIndex из $chunkCount упал: '
+      'code=$errorCode, reason=$reason, retryable=$retryable',
+    );
+  }
+
   /// Записывает сообщение в приёмник (лейзи-`dart:developer.log`).
   void _write(String message) {
     final GenerationDiagnosticsSink? target = sink;

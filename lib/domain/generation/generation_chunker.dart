@@ -2,6 +2,7 @@
 /// ADR-015). Домен не зависит от Flutter.
 library;
 
+import 'package:cardflow/domain/generation/document_image.dart';
 import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/generation/token_estimator.dart';
 import 'package:cardflow/domain/text/parsed_document.dart';
@@ -11,6 +12,9 @@ const int kMaxCardsPerChunk = 20;
 
 /// Оценка стоимости одного изображения/PDF-скана в токенах (для UI/оценки).
 const int kImageTokenEstimate = 1000;
+
+/// Префикс строки-заголовка файла в `<materials>` (SPEC A8.1: «Файл: <имя>»).
+const String kMaterialsFileHeaderPrefix = 'Файл: ';
 
 /// Один фрагмент материалов для вызова модели.
 class GenerationChunk {
@@ -22,6 +26,7 @@ class GenerationChunk {
     required this.limit,
     this.splitAttempted = false,
     this.images = const <GenerationAttachment>[],
+    this.documentImages = const <DocumentImage>[],
   });
 
   /// Порядковый номер фрагмента (с 1) для прогресса «фрагмент K из M».
@@ -42,12 +47,20 @@ class GenerationChunk {
   /// Вложения фрагмента (не больше одного файла на MVP-запрос).
   final List<GenerationAttachment> images;
 
+  /// Изображения из прикреплённых файлов этого фрагмента (fix-gen, Д3).
+  final List<DocumentImage> documentImages;
+
   /// true, если фрагмент несёт вложение.
   bool get hasImages => images.isNotEmpty;
 
+  /// true, если у фрагмента есть каталог `<images>` из документов.
+  bool get hasDocumentImages => documentImages.isNotEmpty;
+
   /// Оценка токенов фрагмента (для тестов и отладочного вывода).
   int estimatedTokens([TokenEstimator estimator = const TokenEstimator()]) =>
-      estimator.estimate(materialsText) + images.length * kImageTokenEstimate;
+      estimator.estimate(materialsText) +
+      images.length * kImageTokenEstimate +
+      documentImages.length * kImageTokenEstimate;
 
   /// Копия с изменёнными полями.
   GenerationChunk copyWith({
@@ -57,6 +70,7 @@ class GenerationChunk {
     int? limit,
     bool? splitAttempted,
     List<GenerationAttachment>? images,
+    List<DocumentImage>? documentImages,
   }) {
     return GenerationChunk(
       index: index ?? this.index,
@@ -65,13 +79,15 @@ class GenerationChunk {
       limit: limit ?? this.limit,
       splitAttempted: splitAttempted ?? this.splitAttempted,
       images: images ?? this.images,
+      documentImages: documentImages ?? this.documentImages,
     );
   }
 
   @override
   String toString() =>
       'GenerationChunk($index, ${materialsText.length} символов, '
-      'images: ${images.length}, limit: $limit, split: $splitAttempted)';
+      'images: ${images.length}, documentImages: ${documentImages.length}, '
+      'limit: $limit, split: $splitAttempted)';
 }
 
 /// Делит текст на фрагменты, укладывающиеся в бюджет модели.
@@ -92,22 +108,49 @@ class GenerationChunker {
   ///
   /// Границы разделов `ParsedDocument` сохраняются: раздел не смешивается с
   /// частью другого раздела, пока помещается целиком. Слишком большой раздел
-  /// делится по абзацам, затем по строкам, затем жёстко по символам.
+  /// делится по абзацам, затем по строкам, затем жёстко по символам. Каждый
+  /// файл в тексте начинается со строки `Файл: <имя>` (SPEC A8.1), изображения
+  /// раздела попадают в каталог того фрагмента, где оказался раздел (Д3).
   List<GenerationChunk> chunkDocuments(
     List<ParsedDocument> documents, {
     required int maxInputTokens,
   }) {
     final int budget = maxInputTokens < 1 ? 1 : maxInputTokens;
     final List<_MaterialSegment> segments = <_MaterialSegment>[];
+    final Map<String, List<DocumentImage>> imagesBySection =
+        <String, List<DocumentImage>>{};
     for (final ParsedDocument document in documents) {
-      for (final ParsedSection section in document.sections) {
+      final int headerTokens = estimator.estimate(
+        '$kMaterialsFileHeaderPrefix${document.fileName}\n',
+      );
+      final int textBudget = budget - headerTokens > 0
+          ? budget - headerTokens
+          : 1;
+      for (
+        var sectionIndex = 0;
+        sectionIndex < document.sections.length;
+        sectionIndex++
+      ) {
+        final ParsedSection section = document.sections[sectionIndex];
         final String text = document.text
             .substring(section.start, section.end)
             .trim();
+        final List<DocumentImage> sectionImages = document.images
+            .where((DocumentImage image) => image.sectionIndex == sectionIndex)
+            .toList(growable: false);
+        if (sectionImages.isNotEmpty) {
+          imagesBySection[_sectionKey(document.fileName, sectionIndex)] =
+              sectionImages;
+        }
         if (text.isEmpty) continue;
-        for (final String part in _splitOversized(text, budget)) {
+        final List<String> parts = _splitOversized(text, textBudget);
+        for (var partIndex = 0; partIndex < parts.length; partIndex++) {
           segments.add(
-            _MaterialSegment(text: part, fileName: document.fileName),
+            _MaterialSegment(
+              text: parts[partIndex],
+              fileName: document.fileName,
+              sectionIndex: sectionIndex,
+            ),
           );
         }
       }
@@ -122,7 +165,7 @@ class GenerationChunker {
         current.add(segment);
         continue;
       }
-      final String candidate = _join(current, segment);
+      final String candidate = _render(<_MaterialSegment>[...current, segment]);
       if (estimator.estimate(candidate) <= budget) {
         current.add(segment);
       } else {
@@ -136,9 +179,10 @@ class GenerationChunker {
       for (var i = 0; i < groups.length; i++)
         GenerationChunk(
           index: i + 1,
-          materialsText: groups[i].map((segment) => segment.text).join('\n\n'),
+          materialsText: _render(groups[i]),
           sourceFiles: _uniqueFiles(groups[i]),
           limit: maxCardsPerChunk,
+          documentImages: _imagesOf(groups[i], imagesBySection),
         ),
     ];
   }
@@ -173,6 +217,24 @@ class GenerationChunker {
     }
     return result;
   }
+
+  /// Изображения разделов, попавших во фрагмент, в порядке документа.
+  List<DocumentImage> _imagesOf(
+    List<_MaterialSegment> group,
+    Map<String, List<DocumentImage>> imagesBySection,
+  ) {
+    final List<DocumentImage> result = <DocumentImage>[];
+    final Set<String> seenSections = <String>{};
+    for (final _MaterialSegment segment in group) {
+      final String key = _sectionKey(segment.fileName, segment.sectionIndex);
+      if (!seenSections.add(key)) continue;
+      result.addAll(imagesBySection[key] ?? const <DocumentImage>[]);
+    }
+    return List<DocumentImage>.unmodifiable(result);
+  }
+
+  String _sectionKey(String fileName, int sectionIndex) =>
+      '$fileName\u0000$sectionIndex';
 
   /// Группирует вложения: страницы одного PDF — вместе, остальные — по одной.
   List<List<GenerationAttachment>> _attachmentGroups(
@@ -250,21 +312,33 @@ class GenerationChunker {
         index: chunk.index,
         materialsText: left,
         splitAttempted: true,
+        documentImages: const <DocumentImage>[],
       ),
       chunk.copyWith(
         index: chunk.index + 1,
         materialsText: right,
         splitAttempted: true,
+        documentImages: const <DocumentImage>[],
       ),
     ];
   }
 
-  /// Текст группы сегментов плюс новый сегмент (проверка бюджета).
-  String _join(List<_MaterialSegment> group, _MaterialSegment next) {
-    return <String>[
-      for (final _MaterialSegment segment in group) segment.text,
-      next.text,
-    ].join('\n\n');
+  /// Текст группы сегментов: файлы начинаются со строки «Файл: <имя>».
+  String _render(List<_MaterialSegment> group) {
+    final StringBuffer buffer = StringBuffer();
+    String? currentFile;
+    for (final _MaterialSegment segment in group) {
+      if (buffer.isNotEmpty) buffer.write('\n\n');
+      if (segment.fileName != currentFile) {
+        buffer
+          ..write(kMaterialsFileHeaderPrefix)
+          ..write(segment.fileName)
+          ..write('\n');
+        currentFile = segment.fileName;
+      }
+      buffer.write(segment.text);
+    }
+    return buffer.toString();
   }
 
   /// Режет слишком большой раздел до бюджета, не теряя текст.
@@ -346,10 +420,15 @@ class GenerationChunker {
   }
 }
 
-/// Кусок материала с именем файла-источника.
+/// Кусок материала с именем файла-источника и номером раздела.
 class _MaterialSegment {
-  const _MaterialSegment({required this.text, required this.fileName});
+  const _MaterialSegment({
+    required this.text,
+    required this.fileName,
+    required this.sectionIndex,
+  });
 
   final String text;
   final String fileName;
+  final int sectionIndex;
 }

@@ -7,16 +7,20 @@ import 'package:uuid/uuid.dart';
 import 'package:cardflow/api/generation/generation_caller.dart';
 import 'package:cardflow/api/generation/generation_cancellation.dart';
 import 'package:cardflow/api/generation/generation_diagnostics.dart';
+import 'package:cardflow/api/generation/generation_images.dart';
 import 'package:cardflow/api/generation/system_prompt.dart';
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/cards/content_hash.dart';
 import 'package:cardflow/domain/cards/occlusion.dart';
 import 'package:cardflow/domain/generation/card_image_finder.dart';
+import 'package:cardflow/domain/generation/document_image.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
 import 'package:cardflow/domain/generation/generated_card_image.dart';
+import 'package:cardflow/domain/generation/generation_card_limit.dart';
 import 'package:cardflow/domain/generation/generation_card_store.dart';
 import 'package:cardflow/domain/generation/generation_chunker.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
+import 'package:cardflow/domain/generation/generation_failure_reason.dart';
 import 'package:cardflow/domain/generation/generation_job.dart';
 import 'package:cardflow/domain/generation/generation_model.dart';
 import 'package:cardflow/domain/generation/generation_request.dart';
@@ -129,7 +133,7 @@ class GenerationPipeline implements GenerationRunner {
     _resetImageBudget();
     final String jobId = jobIdFactory();
     final DateTime createdAt = now();
-    final int systemPromptTokens = estimator.estimate(systemPromptGenRuV4);
+    final int systemPromptTokens = estimator.estimate(systemPromptGenRuV5);
     final GenerationJob initialJob = GenerationJob(
       id: jobId,
       status: GenerationJobStatus.running,
@@ -151,7 +155,10 @@ class GenerationPipeline implements GenerationRunner {
         contextTokens: request.account.contextTokens,
         systemPromptTokens: systemPromptTokens,
       );
-      final List<GenerationChunk> chunks = _chunksFor(request, budget);
+      final List<GenerationChunk> chunks = _withCardLimits(
+        _chunksFor(request, budget),
+        request.wishes,
+      );
       if (chunks.isEmpty) {
         await jobRepository.save(
           initialJob.copyWith(
@@ -216,6 +223,33 @@ class GenerationPipeline implements GenerationRunner {
     ];
   }
 
+  /// Распределяет общее число карточек из пожеланий по фрагментам (fix-gen).
+  ///
+  /// «20 карточек» в пожеланиях → каждый фрагмент получает долю,
+  /// пропорциональную объёму (сумма = 20, не больше [kMaxCardsPerChunk] на
+  /// фрагмент). Число не указано — остаются лимиты фрагментов.
+  List<GenerationChunk> _withCardLimits(
+    List<GenerationChunk> chunks,
+    String? wishes,
+  ) {
+    final int? requested = requestedCardCount(wishes);
+    if (requested == null || chunks.isEmpty) return chunks;
+    final List<int> volumes = <int>[
+      for (final GenerationChunk chunk in chunks)
+        chunk.materialsText.trim().isEmpty
+            ? 1
+            : estimator.estimate(chunk.materialsText),
+    ];
+    final List<int> limits = distributeCardLimits(
+      volumes: volumes,
+      total: requested,
+    );
+    return <GenerationChunk>[
+      for (var index = 0; index < chunks.length; index++)
+        chunks[index].copyWith(limit: limits[index]),
+    ];
+  }
+
   @override
   Future<GenerationRunResult> retryFailed(
     GenerationRunRequest request,
@@ -254,6 +288,7 @@ class GenerationPipeline implements GenerationRunner {
           limit: failure.limit,
           splitAttempted: failure.splitAttempted,
           images: failure.images,
+          documentImages: failure.documentImages,
         ),
     ];
 
@@ -271,6 +306,7 @@ class GenerationPipeline implements GenerationRunner {
         initialTokens: previous.tokensUsed,
         initialProcessed: previous.chunkCount,
         initialDuplicates: previous.duplicatesRemoved,
+        initialRejected: previous.rejectedCards,
         onProgress: onProgress,
         cancellation: cancellation,
       );
@@ -293,6 +329,7 @@ class GenerationPipeline implements GenerationRunner {
     int initialTokens = 0,
     int initialProcessed = 0,
     int initialDuplicates = 0,
+    int initialRejected = 0,
   }) async {
     final List<GenerationChunk> queue = List<GenerationChunk>.of(chunks);
     final List<GeneratedCard> cards = List<GeneratedCard>.of(initialCards);
@@ -300,6 +337,7 @@ class GenerationPipeline implements GenerationRunner {
     var tokensUsed = initialTokens;
     var processed = initialProcessed;
     var duplicates = initialDuplicates;
+    var rejected = initialRejected;
     var cancelled = false;
     GenerationException? fatal;
 
@@ -310,6 +348,16 @@ class GenerationPipeline implements GenerationRunner {
         break;
       }
       final GenerationChunk chunk = queue[index];
+      // Фрагмент без доли общего лимита (например, «1 карточка» на три
+      // фрагмента) моделью не обрабатывается: иначе карточек будет больше,
+      // чем просил пользователь.
+      if (chunk.limit < 1) {
+        index++;
+        continue;
+      }
+      final List<DocumentImage> documentImages = withCatalogIds(
+        chunk.documentImages,
+      );
       onProgress?.call(
         GenerationProgress(
           phase: GenerationProgressPhase.sending,
@@ -327,6 +375,7 @@ class GenerationPipeline implements GenerationRunner {
             wishes: request.wishes,
             limit: chunk.limit,
             images: chunk.images,
+            documentImages: documentImages,
           ),
           cancelToken: cancellation?.token,
         );
@@ -353,7 +402,13 @@ class GenerationPipeline implements GenerationRunner {
         }
         processed++;
         failures.add(
-          _failureOf(chunk, error.code, providerReason: error.providerReason),
+          _failureOf(
+            chunk,
+            error.code,
+            providerReason: error.providerReason,
+            reason: error.reason,
+            chunkCount: queue.length,
+          ),
         );
         await _saveProgress(job, processed, cards.length, tokensUsed);
         index++;
@@ -362,18 +417,31 @@ class GenerationPipeline implements GenerationRunner {
         // Непредвиденная ошибка адаптера: карточки фрагмента не принимаются,
         // остальные фрагменты продолжаются (A6.8 «частичный успех»).
         processed++;
-        failures.add(_failureOf(chunk, GenerationErrorCode.invalidResponse));
+        failures.add(
+          _failureOf(
+            chunk,
+            GenerationErrorCode.invalidResponse,
+            reason: GenerationFailureReason.unknown,
+            chunkCount: queue.length,
+          ),
+        );
         await _saveProgress(job, processed, cards.length, tokensUsed);
         index++;
         continue;
       }
 
+      rejected += result.rejectedCards;
       tokensUsed += result.usage.totalTokens ?? 0;
       processed++;
       for (final GeneratedCard card in result.cards) {
         if (_acceptCard(card, seen)) {
           cards.add(
-            await _withCardImage(card, cancellation, wishes: request.wishes),
+            await _withCardImage(
+              card,
+              documentImages,
+              cancellation,
+              wishes: request.wishes,
+            ),
           );
         } else {
           duplicates++;
@@ -413,7 +481,7 @@ class GenerationPipeline implements GenerationRunner {
         ? fatal.code.name
         : failures.isEmpty
         ? null
-        : failures.first.code.name;
+        : _failureCodesOf(failures);
     await jobRepository.save(
       job.copyWith(
         status: status,
@@ -438,54 +506,81 @@ class GenerationPipeline implements GenerationRunner {
       duplicatesRemoved: duplicates,
       chunkCount: processed,
       cancelled: cancelled,
+      rejectedCards: rejected,
       fatalErrorCode: fatal?.code,
       fatalProviderReason: fatal?.providerReason,
     );
   }
 
-  /// Привязывает найденную картинку или понижает occlusion до basic.
+  /// Машинные коды причин упавших фрагментов через запятую (fix-gen, Д6):
+  /// `generation_jobs.error_code` = перечень причин, отладочный лог — по одной
+  /// строке на фрагмент.
+  String _failureCodesOf(List<GenerationChunkFailure> failures) {
+    final List<String> codes = <String>[];
+    for (final GenerationChunkFailure failure in failures) {
+      final String code =
+          (failure.reason ?? GenerationFailureReason.forErrorCode(failure.code))
+              .code;
+      if (!codes.contains(code)) codes.add(code);
+    }
+    return codes.join(',');
+  }
+
+  /// Привязывает картинку к карточке (fix-gen, Д2/Д3).
   ///
-  /// Если модель не дала `image_query`, для предметного `basic`-вопроса запрос
-  /// выводится из текста карточки (ADR-028). Пожелания, запрещающие картинки,
-  /// отключают и поиск модели, и производный запрос. Неудачный поиск помечает
-  /// карточку [CardIssueCode.imageNotFound], чтобы предпросмотр показал
-  /// предупреждение, а не проглотил ошибку.
+  /// Приоритет 1 — изображение из прикреплённого файла по `image_id`; байты
+  /// берутся из каталога фрагмента, внешний поиск не вызывается. Приоритет 2 —
+  /// внешний поиск по `image_query` модели, только если `image_id` нет.
+  /// Производных запросов из текста вопроса больше нет: неподходящая картинка
+  /// хуже, чем её отсутствие (Д2).
   Future<GeneratedCard> _withCardImage(
     GeneratedCard card,
+    List<DocumentImage> documentImages,
     GenerationCancellation? cancellation, {
     required String? wishes,
   }) async {
     if (card.image != null) return card;
-    final bool imagesForbidden = wishesForbidImages(wishes);
-    String? query = card.imageQuery?.trim();
-    if (!imagesForbidden && (query == null || query.isEmpty)) {
-      query = derivedImageQuery(
-        front: card.front,
-        back: card.back,
-        cardType: card.cardType,
+    if (wishesForbidImages(wishes)) {
+      return _withoutImage(card.clearedImageSelection());
+    }
+    final String? imageId = card.imageId?.trim();
+    if (imageId != null && imageId.isNotEmpty) {
+      final DocumentImage? documentImage = _documentImageById(
+        documentImages,
+        imageId,
       );
-      if (query != null) {
+      if (documentImage != null) {
         diagnostics.imageSearch(
-          query: query,
+          query: 'image_id:$imageId',
           outcome:
-              'запрос выведен из текста карточки (image_query модели пуст)',
+              'изображение из файла ${documentImage.fileName} '
+              '(${documentImage.bytes.length} Б)',
+        );
+        return card.copyWith(
+          image: GeneratedCardImage(
+            bytes: documentImage.bytes,
+            mediaType: documentImage.mediaType,
+            query: imageId,
+          ),
+          occlusionJson: card.isOcclusion
+              ? card.occlusionJson ?? defaultOcclusionDocumentJson()
+              : card.occlusionJson,
         );
       }
     }
-    if (imagesForbidden ||
-        query == null ||
+    final String? query = card.imageQuery?.trim();
+    if (query == null ||
         query.isEmpty ||
         imageFinder == null ||
         (cancellation?.isCancelled ?? false)) {
       return _withoutImage(card);
     }
-    final String searchQuery = query;
     final DateTime? searchStartedAt = _imageSearchBudgeted ? now() : null;
     final bool budgetExhausted =
         _imageSearchBudgeted && _imageSearchSpent >= imageSearchBudget;
     if (budgetExhausted) {
       diagnostics.imageSearch(
-        query: searchQuery,
+        query: query,
         outcome: 'пропущен: бюджет времени поиска исчерпан',
       );
       return _withoutImage(card, imageNotFound: true);
@@ -493,18 +588,18 @@ class GenerationPipeline implements GenerationRunner {
     GeneratedCardImage? image;
     try {
       image = await _imageCache.putIfAbsent(
-        searchQuery,
-        () => imageFinder!.findImage(searchQuery),
+        query,
+        () => imageFinder!.findImage(query),
       );
     } on Object {
-      _imageCache.remove(searchQuery);
+      _imageCache.remove(query);
       image = null;
     }
     if (searchStartedAt != null) {
       _imageSearchSpent += now().difference(searchStartedAt);
     }
     if (image == null) {
-      _imageCache.remove(searchQuery);
+      _imageCache.remove(query);
       return _withoutImage(card, imageNotFound: true);
     }
     return card.copyWith(
@@ -513,6 +608,14 @@ class GenerationPipeline implements GenerationRunner {
           ? card.occlusionJson ?? defaultOcclusionDocumentJson()
           : card.occlusionJson,
     );
+  }
+
+  /// Изображение фрагмента по идентификатору каталога; `null` — нет такого.
+  DocumentImage? _documentImageById(List<DocumentImage> images, String id) {
+    for (final DocumentImage image in images) {
+      if (image.id == id) return image;
+    }
+    return null;
   }
 
   /// Сбрасывает счётчик бюджета поиска иллюстраций (начало запуска/повтора).
@@ -589,12 +692,22 @@ class GenerationPipeline implements GenerationRunner {
     return cardStore.existingContentHashes(deckId);
   }
 
-  /// Описание упавшего фрагмента для повтора.
+  /// Описание упавшего фрагмента для повтора plus запись причины в лог.
   GenerationChunkFailure _failureOf(
     GenerationChunk chunk,
     GenerationErrorCode code, {
     String? providerReason,
+    GenerationFailureReason? reason,
+    int? chunkCount,
   }) {
+    final GenerationFailureReason effective =
+        reason ?? GenerationFailureReason.forErrorCode(code);
+    diagnostics.fragmentFailure(
+      chunkIndex: chunk.index,
+      chunkCount: chunkCount ?? 1,
+      errorCode: code.name,
+      reason: effective.code,
+    );
     return GenerationChunkFailure(
       chunkIndex: chunk.index,
       code: code,
@@ -604,6 +717,8 @@ class GenerationPipeline implements GenerationRunner {
       splitAttempted: chunk.splitAttempted,
       providerReason: providerReason,
       images: chunk.images,
+      documentImages: chunk.documentImages,
+      reason: effective,
     );
   }
 

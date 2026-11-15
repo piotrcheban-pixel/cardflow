@@ -1,40 +1,59 @@
 /// Сборка пользовательского сообщения для модели (SPEC A8.1, A8.5).
 library;
 
-/// Собирает сообщение пользователя из блоков `<materials>`, `<wishes>` и `<limit>`.
+/// Собирает сообщение пользователя из блоков `<materials>`, `<wishes>`,
+/// `<limit>` и `<images>` (промпт `gen-ru-v5`).
 ///
-/// Пожелания передаются отдельным блоком `<wishes>` (A8.1: промпт одинаков для
-/// всех фрагментов и может кэшироваться провайдером); пустые пожелания блок не
-/// добавляют. [limit] — максимум карточек в ответе (A8.1 правило 13).
-///
-/// Пустые [materialsText] допустимы: это режим «генерация по теме», где тема
-/// и требования заданы в `<wishes>` (итерация 7.10, ADR-024); блок
-/// `<materials>` всё равно передаётся пустым.
+/// [materialsText] — материалы фрагмента; у каждого файла уже есть строка
+/// `Файл: <имя>` (чанкер). Пустой блок пишется как `<materials></materials>`:
+/// это режим «генерация по теме», тема — в `<wishes>` (ADR-024).
+/// [imagesCatalog] — строки `id | файл | подпись | окружающий текст`
+/// (пустой каталог — `<images></images>`).
+/// [limit] — максимум карточек в ответе (A8.1: жёсткий лимит).
 String buildGenerationUserContent({
   required String materialsText,
   String? wishes,
   required int limit,
+  String? imagesCatalog,
 }) {
   final materials = materialsText.trim();
   if (limit < 1) {
     throw ArgumentError.value(limit, 'limit', 'Лимит карточек должен быть ≥ 1');
   }
+  final String trimmedWishes = wishes?.trim() ?? '';
+  final String catalog = imagesCatalog?.trim() ?? '';
 
-  final StringBuffer buffer = StringBuffer()..write('<materials>\n');
-  if (materials.isNotEmpty) buffer.write('$materials\n');
-  buffer.write('</materials>');
-
-  final trimmedWishes = wishes?.trim();
-  if (trimmedWishes != null && trimmedWishes.isNotEmpty) {
+  final StringBuffer buffer = StringBuffer();
+  if (materials.isEmpty) {
+    buffer.write('<materials></materials>');
+  } else {
     buffer
-      ..write('\n<wishes>\n')
-      ..write(trimmedWishes)
-      ..write('\n</wishes>');
+      ..write('<materials>\n')
+      ..write(materials)
+      ..write('\n</materials>');
   }
+
+  buffer.write('\n<wishes>');
+  if (trimmedWishes.isNotEmpty) {
+    buffer
+      ..write('\n')
+      ..write(trimmedWishes)
+      ..write('\n');
+  }
+  buffer.write('</wishes>');
 
   buffer
     ..write('\n<limit>')
     ..write(limit)
     ..write('</limit>');
+
+  buffer.write('\n<images>');
+  if (catalog.isNotEmpty) {
+    buffer
+      ..write('\n')
+      ..write(catalog)
+      ..write('\n');
+  }
+  buffer.write('</images>');
   return buffer.toString();
 }

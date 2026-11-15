@@ -83,10 +83,12 @@ void main() {
   });
 
   test('порядок фрагментов и нумерация с 1', () {
+    // С fix-gen каждый файл начинается со строки «Файл: <имя>», она тоже
+    // расходует бюджет фрагмента: 12 токенов хватает на заголовок и раздел.
     final chunks = chunker.chunkDocuments(<ParsedDocument>[
       docOf('a.txt', <String>['Первый раздел длиной побольше']),
       docOf('b.txt', <String>['Второй раздел длиной побольше']),
-    ], maxInputTokens: 6);
+    ], maxInputTokens: 12);
     expect(chunks.length, greaterThanOrEqualTo(2));
     for (var i = 0; i < chunks.length; i++) {
       expect(chunks[i].index, i + 1);
@@ -117,7 +119,10 @@ void main() {
       );
     }
     final joined = chunks.map((chunk) => chunk.materialsText).join('\n\n');
-    expect(joined.replaceAll(RegExp(r'\s'), ''), 'а' * 120);
+    expect(
+      joined.replaceAll(RegExp(r'Файл: \S+'), '').replaceAll(RegExp(r'\s'), ''),
+      'а' * 120,
+    );
   });
 
   test('слишком длинный абзац режется жёстко по символам', () {
@@ -133,7 +138,10 @@ void main() {
       );
     }
     final joined = chunks.map((chunk) => chunk.materialsText).join();
-    expect(joined.replaceAll(RegExp(r'\s'), ''), 'б' * 100);
+    expect(
+      joined.replaceAll(RegExp(r'Файл: \S+'), '').replaceAll(RegExp(r'\s'), ''),
+      'б' * 100,
+    );
   });
 
   test('sourceFiles объединяются без дублей', () {

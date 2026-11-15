@@ -12,6 +12,10 @@ List<String> extractLatexFormulas(String text) {
   final formulas = <String>[];
   var index = 0;
   while (index < text.length) {
+    if (text.startsWith(r'\$', index)) {
+      index += 2;
+      continue;
+    }
     if (text.startsWith(r'$$', index)) {
       final end = text.indexOf(r'$$', index + 2);
       if (end < 0) break;
@@ -36,6 +40,10 @@ List<String> extractLatexFormulas(String text) {
 bool latexIsValid(String text) {
   var index = 0;
   while (index < text.length) {
+    if (text.startsWith(r'\$', index)) {
+      index += 2;
+      continue;
+    }
     if (text.startsWith(r'$$', index)) {
       final end = text.indexOf(r'$$', index + 2);
       if (end < 0) return false;

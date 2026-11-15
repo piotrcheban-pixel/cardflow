@@ -39,6 +39,9 @@ const Map<String, Object?> canonicalCardsResponseSchema = <String, Object?>{
           'source_file': <String, Object?>{
             'type': <String>['string', 'null'],
           },
+          'image_id': <String, Object?>{
+            'type': <String>['string', 'null'],
+          },
           'image_query': <String, Object?>{
             'type': <String>['string', 'null'],
           },
@@ -51,6 +54,7 @@ const Map<String, Object?> canonicalCardsResponseSchema = <String, Object?>{
           'card_type',
           'source_excerpt',
           'source_file',
+          'image_id',
           'image_query',
         ],
         'additionalProperties': false,
@@ -60,6 +64,17 @@ const Map<String, Object?> canonicalCardsResponseSchema = <String, Object?>{
   'required': <String>['cards'],
   'additionalProperties': false,
 };
+
+/// Схема одной карточки (items массива `cards`) — для поштучной проверки.
+///
+/// Провайдер со strict-схемой может вернуть одну плохую карточку из двадцати;
+/// тогда отбрасывается только она, остальные идут в предпросмотр (fix-gen, Д6).
+Map<String, Object?> canonicalCardItemSchema() {
+  final cards =
+      canonicalCardsResponseSchema['properties']! as Map<String, Object?>;
+  final items = cards['cards']! as Map<String, Object?>;
+  return _copyMap(items['items']! as Map<String, Object?>);
+}
 
 /// Возвращает независимую копию канонической схемы.
 ///

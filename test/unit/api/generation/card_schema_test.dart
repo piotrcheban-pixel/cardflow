@@ -27,6 +27,7 @@ void main() {
     'card_type': 'basic',
     'source_excerpt': 'FSRS — алгоритм интервального повторения.',
     'source_file': 'лекция.docx',
+    'image_id': null,
     'image_query': null,
   };
 
@@ -55,6 +56,7 @@ void main() {
         'card_type',
         'source_excerpt',
         'source_file',
+        'image_id',
         'image_query',
       });
       expect(
@@ -85,6 +87,7 @@ void main() {
         'hint',
         'source_excerpt',
         'source_file',
+        'image_id',
         'image_query',
       ]) {
         expect(
@@ -162,6 +165,7 @@ void main() {
         ..['hint'] = null
         ..['source_excerpt'] = null
         ..['source_file'] = null
+        ..['image_id'] = null
         ..['image_query'] = null;
       expect(
         schema.isValid(<String, Object?>{
@@ -243,6 +247,7 @@ void main() {
         'card_type',
         'source_excerpt',
         'source_file',
+        'image_id',
         'image_query',
       ]);
       final naming = properties['card_type']! as Map<String, Object?>;

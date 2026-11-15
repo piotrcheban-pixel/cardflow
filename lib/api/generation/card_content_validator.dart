@@ -1,16 +1,35 @@
-/// Локальная валидация карточек поверх схемы (SPEC A8.4).
+/// Локальная валидация карточек поверх схемы (SPEC A8.4, A8.1).
 ///
 /// Карточку не отбрасывает: правила качества ставят машинные пометки
 /// `CardIssueCode`, чтобы предпросмотр (итерация 3c) показал их и дал
-/// отредактировать.
+/// отредактировать. Структурно невалидная запись (не объект, нет обязательных
+/// строк, неизвестный тип) отбрасывается **сама**, а не весь фрагмент
+/// (fix-gen, Д6): остальные карточки сохраняются.
 library;
 
 import 'package:cardflow/api/generation/latex_checker.dart';
+import 'package:cardflow/api/generation/latex_escape_repair.dart';
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
+import 'package:cardflow/domain/generation/generation_failure_reason.dart';
 
-/// Валидатор контентных правил A8.4.
+/// Результат локальной валидации ответа модели.
+class CardValidationOutcome {
+  /// Создаёт результат.
+  const CardValidationOutcome({
+    required this.cards,
+    required this.rejectedCards,
+  });
+
+  /// Валидные карточки (с пометками качества).
+  final List<GeneratedCard> cards;
+
+  /// Сколько записей отброшено как структурно невалидные.
+  final int rejectedCards;
+}
+
+/// Валидатор контентных правил A8.4 и качества (A8.1).
 class CardContentValidator {
   /// Создаёт валидатор.
   ///
@@ -23,6 +42,53 @@ class CardContentValidator {
 
   static final RegExp _clozePattern = RegExp(r'\{\{c\d+::.+?\}\}');
   static final RegExp _whitespace = RegExp(r'\s+');
+  static final RegExp _sentenceEnd = RegExp(r'[.!?…]+(?=\s|$)');
+  static final RegExp _subscripts = RegExp('[₀-₉₊₋₌₍₎ₐₑₒₓₔₕₖₗₘₙₚₛₜⁿᵢ]');
+  static final RegExp _superscripts = RegExp('[⁰-⁹⁺⁻⁼⁽⁾ⁿⁱ]');
+  static final RegExp _greek = RegExp('[Ͱ-Ͽἀ-῿]');
+  static final RegExp _cyrillic = RegExp('[А-Яа-яЁё]');
+  static final RegExp _latinOnly = RegExp(r"^[A-Za-z0-9\s\-_.()/,:+&'%]+$");
+
+  /// Вопросительные слова, с которых начинается настоящий вопрос.
+  ///
+  /// Граница слова — lookahead, а не `\b`: в ECMAScript-регексе Dart `\b`
+  /// считает словом только ASCII, поэтому после кириллицы не срабатывает.
+  static final RegExp _questionWord = RegExp(
+    r'^\s*(?:как|что|чему|чем|чьи|чья|чьё|почему|зачем|какой|какая|какое|'
+    r'какие|каким|каких|каков|какова|при\s+каком|в\s+каком|где|когда|кто|'
+    r'кого|кому|сколько|насколько|является\s+ли|можно\s+ли|верно\s+ли|'
+    r'какую|какой\s+вид|what|how|why|when|where|which|who)'
+    r'(?=\s|$|[,.!?;:…])',
+    caseSensitive: false,
+    unicode: true,
+  );
+
+  /// Абстрактные понятия, для которых иллюстрация не ищется (A8.1, правило 7).
+  static final RegExp _abstractConcept = RegExp(
+    r'аксиом|закон[а-я]*|теорем|формул|определен|свойств|принцип|'
+    r'классификац|правил[оа]|поняти|термин|алгоритм|метод[а-я]*',
+    caseSensitive: false,
+    unicode: true,
+  );
+
+  static final RegExp _markdownPattern = RegExp(
+    r'(\*\*|__|`|^#{1,6}\s|\[[^\]]+\]\([^)]+\))',
+    multiLine: true,
+  );
+
+  /// Строка списка обозначений: «x — …» (только типографское тире, не минус).
+  static final RegExp _notationItem = RegExp(
+    r'^\s*[^—–]{1,24}\s*[—–]\s*\S+',
+    unicode: true,
+  );
+
+  /// Глаголы/связки, из-за которых ответ — утверждение, а не список обозначений.
+  static final RegExp _assertionWord = RegExp(
+    r'равен|равна|равно|означает|называется|вычисляется|определяет|'
+    r'показывает|является|зависит|обратно|прямо\s+пропорционал',
+    caseSensitive: false,
+    unicode: true,
+  );
 
   /// Максимальная длина `front` (SPEC A8.4).
   static const int maxFrontLength = 500;
@@ -33,15 +99,41 @@ class CardContentValidator {
   /// Максимальное число тегов (SPEC A8.4).
   static const int maxTags = 3;
 
-  /// Максимальная длина `image_query` (итерация 7.9).
+  /// Мягкий предел длины `back` (A8.1, правило 3).
+  static const int softBackLength = 200;
+
+  /// Максимальная длина поискового запроса (итерация 7.9).
   static const int maxImageQueryLength = 200;
+
+  /// Максимум слов в `image_query` (A8.1, правило 7).
+  static const int maxImageQueryWords = 7;
 
   /// Валидирует декодированный ответ модели (уже прошедший проверку схемы).
   ///
   /// [sourceText] — исходный текст материалов для проверки `source_excerpt`.
+  /// [imageIds] — идентификаторы каталога `<images>` этого фрагмента: `image_id`
+  /// вне каталога обнуляется (fix-gen, Д3).
   List<GeneratedCard> validateResponse(
     Object? json, {
     required String sourceText,
+    Set<String> imageIds = const <String>{},
+  }) {
+    return validateResponseWithRejects(
+      json,
+      sourceText: sourceText,
+      imageIds: imageIds,
+    ).cards;
+  }
+
+  /// Валидирует ответ и сообщает, сколько записей отброшено (fix-gen, Д6).
+  ///
+  /// Бросает [GenerationException] (`validator_rejected`) только если корень
+  /// ответа не объект `{"cards": [...]}`: одна плохая карточка фрагмент не
+  /// роняет.
+  CardValidationOutcome validateResponseWithRejects(
+    Object? json, {
+    required String sourceText,
+    Set<String> imageIds = const <String>{},
   }) {
     if (json is! Map) {
       throw _invalidResponse();
@@ -52,23 +144,44 @@ class CardContentValidator {
     }
 
     final normalizedSource = _collapseSpaces(sourceText);
+    final hasSource = normalizedSource.isNotEmpty;
     final result = <GeneratedCard>[];
+    var rejected = 0;
     for (final raw in cards) {
-      if (raw is! Map) throw _invalidResponse();
-      result.add(_validateCard(raw.cast<String, Object?>(), normalizedSource));
+      if (raw is! Map) {
+        rejected++;
+        continue;
+      }
+      final card = _tryValidateCard(
+        raw.cast<String, Object?>(),
+        normalizedSource,
+        hasSource: hasSource,
+        imageIds: imageIds,
+      );
+      if (card == null) {
+        rejected++;
+      } else {
+        result.add(card);
+      }
     }
-    return result;
+    return CardValidationOutcome(
+      cards: List<GeneratedCard>.unmodifiable(result),
+      rejectedCards: rejected,
+    );
   }
 
-  GeneratedCard _validateCard(
+  /// Валидирует одну карточку; `null` — запись структурно непригодна.
+  GeneratedCard? _tryValidateCard(
     Map<String, Object?> raw,
-    String normalizedSource,
-  ) {
-    final front = raw['front'];
-    final back = raw['back'];
+    String normalizedSource, {
+    required bool hasSource,
+    required Set<String> imageIds,
+  }) {
+    final rawFront = raw['front'];
+    final rawBack = raw['back'];
     final cardTypeWire = raw['card_type'];
-    if (front is! String || back is! String || cardTypeWire is! String) {
-      throw _invalidResponse();
+    if (rawFront is! String || rawBack is! String || cardTypeWire is! String) {
+      return null;
     }
     final CardType cardType;
     final bool isOcclusion = cardTypeWire == 'occlusion';
@@ -79,9 +192,18 @@ class CardContentValidator {
       try {
         cardType = CardType.fromWire(cardTypeWire);
       } on FormatException {
-        throw _invalidResponse();
+        return null;
       }
     }
+
+    // LaTeX-нормализация до правил качества (fix-gen, Д4): восстановление
+    // испорченных escape и чужих разделителей.
+    final String front = normalizeLatexDelimiters(
+      repairLatexControlCharacters(rawFront),
+    );
+    final String back = normalizeLatexDelimiters(
+      repairLatexControlCharacters(rawBack),
+    );
 
     final issues = <CardIssueCode>[];
     if (front.trim().isEmpty) issues.add(CardIssueCode.emptyFront);
@@ -95,6 +217,9 @@ class CardContentValidator {
     if (!isLatexOk(front) || !isLatexOk(back)) {
       issues.add(CardIssueCode.latexBroken);
     }
+
+    _markFormattingIssues(front, back, issues);
+    _markQualityIssues(front, back, cardType, issues);
 
     final rawTags = raw['tags'];
     final tags = <String>[];
@@ -114,7 +239,10 @@ class CardContentValidator {
     final rawExcerpt = raw['source_excerpt'];
     if (rawExcerpt is String) {
       final normalized = _collapseSpaces(rawExcerpt);
-      if (normalized.isEmpty || !normalizedSource.contains(normalized)) {
+      if (!hasSource) {
+        // Prompt-only: цитата невозможна, карточка остаётся (fix-gen, Д1).
+        sourceExcerpt = null;
+      } else if (normalized.isEmpty || !normalizedSource.contains(normalized)) {
         issues.add(CardIssueCode.excerptMismatch);
       } else {
         sourceExcerpt = normalized;
@@ -123,29 +251,191 @@ class CardContentValidator {
 
     final hint = raw['hint'];
     final sourceFile = raw['source_file'];
-    final rawQuery = raw['image_query'];
-    final String? imageQuery = rawQuery is String && rawQuery.trim().isNotEmpty
-        ? _limitQuery(rawQuery.trim())
-        : null;
+    final imageSelection = _imageSelectionOf(
+      raw['image_id'],
+      raw['image_query'],
+      front: front,
+      back: back,
+      imageIds: imageIds,
+      issues: issues,
+    );
     return GeneratedCard(
       front: front,
       back: back,
       cardType: cardType,
-      hint: hint is String ? hint : null,
+      hint: hint is String
+          ? normalizeLatexDelimiters(repairLatexControlCharacters(hint))
+          : null,
       tags: tags,
       sourceExcerpt: sourceExcerpt,
-      sourceFile: sourceFile is String ? sourceFile : null,
+      sourceFile: sourceFile is String && sourceFile.trim().isNotEmpty
+          ? sourceFile.trim()
+          : null,
       issues: List<CardIssueCode>.unmodifiable(issues),
-      imageQuery: imageQuery,
+      imageQuery: imageSelection.query,
+      imageId: imageSelection.id,
       isOcclusion: isOcclusion,
     );
   }
 
-  /// Обрезает поисковый запрос до [maxImageQueryLength] символов.
-  static String _limitQuery(String value) {
-    return value.length <= maxImageQueryLength
-        ? value
-        : value.substring(0, maxImageQueryLength).trim();
+  /// Проверяет `image_id`/`image_query` (fix-gen, Д2/Д3, A8.1 правило 7).
+  ({String? id, String? query}) _imageSelectionOf(
+    Object? rawId,
+    Object? rawQuery, {
+    required String front,
+    required String back,
+    required Set<String> imageIds,
+    required List<CardIssueCode> issues,
+  }) {
+    String? id;
+    if (rawId is String && rawId.trim().isNotEmpty) {
+      final candidate = rawId.trim();
+      if (imageIds.contains(candidate)) {
+        id = candidate;
+      } else {
+        issues.add(CardIssueCode.imageIdUnknown);
+      }
+    }
+    String? query;
+    if (rawQuery is String && rawQuery.trim().isNotEmpty) {
+      final candidate = _collapseSpaces(rawQuery);
+      if (id != null) {
+        // Приоритет 1: изображение из файла — поиск не нужен.
+        issues.add(CardIssueCode.imageQueryAdjusted);
+      } else if (!_latinOnly.hasMatch(candidate) ||
+          _cyrillic.hasMatch(candidate)) {
+        issues.add(CardIssueCode.imageQueryAdjusted);
+      } else if (candidate.split(' ').where((w) => w.isNotEmpty).length >
+          maxImageQueryWords) {
+        issues.add(CardIssueCode.imageQueryAdjusted);
+      } else if (_isAbstractCard(front, back)) {
+        // Абстрактные понятия: лучше без картинки, чем шар для аксиомы (Д2).
+        issues.add(CardIssueCode.abstractImageQuery);
+      } else if (candidate.length > maxImageQueryLength) {
+        issues.add(CardIssueCode.imageQueryAdjusted);
+      } else {
+        query = candidate;
+      }
+    }
+    return (id: id, query: query);
+  }
+
+  /// Карточка об абстрактном понятии (аксиома/закон/теорема/формула/…).
+  static bool _isAbstractCard(String front, String back) =>
+      _abstractConcept.hasMatch(front) || _abstractConcept.hasMatch(back);
+
+  /// Пометки форматирования: Unicode-математика и Markdown (A8.1, правило 4).
+  void _markFormattingIssues(
+    String front,
+    String back,
+    List<CardIssueCode> issues,
+  ) {
+    final plain = _withoutFormulas('$front\n$back');
+    if (_subscripts.hasMatch(plain) ||
+        _superscripts.hasMatch(plain) ||
+        _greek.hasMatch(plain)) {
+      issues.add(CardIssueCode.unicodeMath);
+    }
+    if (_markdownPattern.hasMatch(plain)) {
+      issues.add(CardIssueCode.markdownInText);
+    }
+  }
+
+  /// Мягкие правила качества (A8.1, правила 2 и 3) — пометки, не удаление.
+  void _markQualityIssues(
+    String front,
+    String back,
+    CardType cardType,
+    List<CardIssueCode> issues,
+  ) {
+    if (cardType != CardType.cloze) {
+      if (_answerAppearsInFront(front, back)) {
+        issues.add(CardIssueCode.answerInFront);
+      }
+      if (!_looksLikeQuestion(front)) {
+        issues.add(CardIssueCode.frontLooksLikeHeading);
+      }
+    }
+    if (back.trim().isNotEmpty) {
+      if (back.length > softBackLength || _sentenceCount(back) > 3) {
+        issues.add(CardIssueCode.backTooVerbose);
+      }
+      if (_looksLikeNotationList(back)) {
+        issues.add(CardIssueCode.backOnlyNotation);
+      }
+    }
+  }
+
+  /// Ответ (или формула из ответа) целиком содержится во `front`.
+  static bool _answerAppearsInFront(String front, String back) {
+    final String normalizedFront = _normalizeForCompare(front);
+    final String normalizedBack = _normalizeForCompare(back);
+    if (normalizedBack.length >= 8 &&
+        normalizedFront.contains(normalizedBack)) {
+      return true;
+    }
+    for (final String formula in extractLatexFormulas(back)) {
+      final String normalizedFormula = _normalizeForCompare(formula);
+      if (normalizedFormula.length >= 4 &&
+          normalizedFront.contains(normalizedFormula)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /// `front` похож на заголовок: нет «?» и нет вопросительного слова.
+  ///
+  /// Односложные вопросы («Митохондрия?») не считаются заголовком: правило
+  /// ловит именно названия тем («Шкала Мооса», «Формула геометрической
+  /// неизменяемости…») — два и более слова без вопросительной формы.
+  static bool _looksLikeQuestion(String front) {
+    final String text = front.trim();
+    if (text.isEmpty) return true;
+    if (text.contains('?')) return true;
+    if (_questionWord.hasMatch(text)) return true;
+    final int words = text
+        .split(_whitespace)
+        .where((String word) => word.isNotEmpty)
+        .length;
+    return words < 2;
+  }
+
+  static int _sentenceCount(String back) =>
+      _sentenceEnd.allMatches(back).length;
+
+  /// `back` — только расшифровка обозначений («x — …, y — …») без утверждения.
+  static bool _looksLikeNotationList(String back) {
+    final String text = back.trim();
+    if (text.isEmpty) return false;
+    if (_assertionWord.hasMatch(text)) return false;
+    final List<String> items = text
+        .split(RegExp(r'[;,\n]'))
+        .map((String item) => item.trim())
+        .where((String item) => item.isNotEmpty)
+        .toList();
+    if (items.length < 2) return false;
+    return items.every((String item) => _notationItem.hasMatch(item));
+  }
+
+  /// Текст без формул `$…$`/`$$…$$` — Markdown и Unicode ищем вне LaTeX.
+  static String _withoutFormulas(String text) {
+    return text
+        .replaceAll(RegExp(r'\$\$[\s\S]*?\$\$'), ' ')
+        .replaceAll(RegExp(r'\$[^$]*\$'), ' ');
+  }
+
+  /// Нормализация для сравнения: без LaTeX-разметки, регистра и пунктуации.
+  static String _normalizeForCompare(String value) {
+    final String text = value
+        .replaceAll(RegExp(r'\$\$?'), ' ')
+        .replaceAll(RegExp(r'\{\{c\d+::'), ' ')
+        .replaceAll('}}', ' ')
+        .replaceAll(RegExp(r'\\(?:[a-zA-Z]+)'), ' ')
+        .replaceAll(RegExp(r'[{}\\]'), ' ')
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^\p{L}\p{N}\s]', unicode: true), ' ');
+    return _collapseSpaces(text);
   }
 
   static String _normalizeTag(String tag) {
@@ -170,5 +460,6 @@ class CardContentValidator {
   static GenerationException _invalidResponse() => const GenerationException(
     GenerationErrorCode.invalidResponse,
     details: 'Ответ модели не соответствует структуре карточек (A8.4)',
+    failureReason: GenerationFailureReason.validatorRejected,
   );
 }

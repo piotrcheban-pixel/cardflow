@@ -15,13 +15,16 @@ import 'package:cardflow/api/generation/card_response_schema.dart';
 import 'package:cardflow/api/generation/cards_json_extractor.dart';
 import 'package:cardflow/api/generation/generation_caller.dart';
 import 'package:cardflow/api/generation/generation_diagnostics.dart';
+import 'package:cardflow/api/generation/generation_images.dart';
 import 'package:cardflow/api/generation/generation_prompt.dart';
 import 'package:cardflow/api/generation/system_prompt.dart';
 import 'package:cardflow/api/http/generation_http_client.dart';
 import 'package:cardflow/api/providers/generation_provider_adapter.dart';
 import 'package:cardflow/domain/generation/api_key_store.dart';
+import 'package:cardflow/domain/generation/document_image.dart';
 import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
+import 'package:cardflow/domain/generation/generation_failure_reason.dart';
 import 'package:cardflow/domain/generation/generation_provider.dart';
 import 'package:cardflow/domain/generation/generation_request.dart';
 import 'package:cardflow/domain/generation/generation_result.dart';
@@ -39,7 +42,7 @@ class CardGenerationService implements GenerationCaller {
     CardResponseSchema? responseSchema,
     CardContentValidator? contentValidator,
     this.jsonExtractor = const CardsJsonExtractor(),
-    this.systemPrompt = systemPromptGenRuV4,
+    this.systemPrompt = systemPromptGenRuV5,
     this.promptVersion = systemPromptVersion,
     this.maxOutputTokens = 8192,
     this.textSanitizer = const TextSanitizer(),
@@ -127,10 +130,16 @@ class CardGenerationService implements GenerationCaller {
               ? ''
               : _attachmentMaterials(request.images)
         : materialsText;
+    final List<DocumentImage> documentImages = withCatalogIds(
+      request.documentImages,
+    );
     final String userContent = buildGenerationUserContent(
       materialsText: materials,
       wishes: wishes,
       limit: request.limit,
+      imagesCatalog: documentImages.isEmpty
+          ? null
+          : buildImageCatalog(documentImages),
     );
 
     final ProviderRawResponse rawResponse = await _postWithFallbacks(
@@ -153,26 +162,31 @@ class CardGenerationService implements GenerationCaller {
       tolerant: tolerantFallback,
     );
 
-    final schemaErrors = responseSchema.validate(decoded);
-    if (schemaErrors.isNotEmpty) {
+    // Поштучная проверка схемы (fix-gen, Д6): одна невалидная карточка не
+    // отбрасывает весь фрагмент.
+    final CardPayloadValidation payload = responseSchema.splitValid(decoded);
+    if (payload.rootInvalid) {
       throw GenerationException(
         GenerationErrorCode.invalidResponse,
-        details:
-            'Ответ модели не соответствует схеме A8.4 '
-            '(${schemaErrors.length} нарушений)',
+        details: 'Ответ модели не соответствует схеме A8.4',
+        failureReason: GenerationFailureReason.schemaInvalid,
       );
     }
-
-    final cards = contentValidator.validateResponse(
-      decoded,
-      sourceText: materialsText,
-    );
+    final CardValidationOutcome outcome = contentValidator
+        .validateResponseWithRejects(
+          <String, Object?>{'cards': payload.cards},
+          sourceText: materialsText,
+          imageIds: <String>{
+            for (final DocumentImage image in documentImages) image.id,
+          },
+        );
     return GenerationResult(
       provider: account.protocol.adapterProvider,
       model: model,
       promptVersion: promptVersion,
-      cards: cards,
+      cards: outcome.cards,
       usage: rawResponse.usage,
+      rejectedCards: payload.rejectedCards + outcome.rejectedCards,
     );
   }
 
@@ -292,20 +306,15 @@ class CardGenerationService implements GenerationCaller {
   }
 
   /// Текст блока `<materials>` для image-only запроса.
+  ///
+  /// Каждый файл начинается со строки «Файл: <имя>» (SPEC A8.1, промпт v5);
+  /// сами изображения/страницы передаются провайдеру отдельными частями.
   String _attachmentMaterials(List<GenerationAttachment> images) {
-    final String names = images
-        .map((GenerationAttachment image) => image.fileName)
-        .join(', ');
-    if (images.every((GenerationAttachment image) => image.isPdf)) {
-      return 'Приложенный документ (скан): $names';
+    final List<String> names = <String>[];
+    for (final GenerationAttachment image in images) {
+      if (!names.contains(image.fileName)) names.add(image.fileName);
     }
-    if (images.every((GenerationAttachment image) => image.isPdfPage)) {
-      return 'Приложенный PDF-скан (страницы): $names';
-    }
-    if (images.every((GenerationAttachment image) => !image.isPdf)) {
-      return 'Приложенные изображения: $names';
-    }
-    return 'Приложенные файлы: $names';
+    return names.map((String name) => 'Файл: $name').join('\n');
   }
 
   /// Пожелания после санитизации; пустые — не передаются.

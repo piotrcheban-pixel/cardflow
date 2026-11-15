@@ -4,6 +4,8 @@
 /// предназначены для журналов/тестов и не показываются пользователю.
 library;
 
+import 'package:cardflow/domain/generation/generation_failure_reason.dart';
+
 /// Коды ошибок генерации.
 enum GenerationErrorCode {
   /// Ключ API не задан в настройках.
@@ -68,11 +70,16 @@ enum GenerationErrorCode {
 /// Исключение слоя генерации.
 class GenerationException implements Exception {
   /// Создаёт исключение с кодом [code].
+  ///
+  /// [failureReason] — внутренняя причина (fix-gen): уточняет, что именно
+  /// сломалось у фрагмента (`json_parse`, `schema_invalid`, ...), и пишется в
+  /// `generation_jobs`/отладочный лог. По умолчанию выводится из [code].
   const GenerationException(
     this.code, {
     this.retryAfter,
     this.details,
     this.providerReason,
+    this.failureReason,
   });
 
   /// Код ошибки для маппинга в ARB.
@@ -89,7 +96,16 @@ class GenerationException implements Exception {
   /// управляющих символов и секретоподобных значений, ограничена по длине.
   final String? providerReason;
 
+  /// Внутренняя причина сбоя фрагмента (fix-gen); `null` — выводится из [code].
+  final GenerationFailureReason? failureReason;
+
+  /// Итоговая причина сбоя фрагмента для журнала и `generation_jobs`.
+  GenerationFailureReason get reason =>
+      failureReason ?? GenerationFailureReason.forErrorCode(code);
+
   @override
   String toString() =>
-      'GenerationException(${code.name}${details == null ? '' : ': $details'})';
+      'GenerationException(${code.name}'
+      '${reason == GenerationFailureReason.forErrorCode(code) ? '' : '/${reason.code}'}'
+      '${details == null ? '' : ': $details'})';
 }
