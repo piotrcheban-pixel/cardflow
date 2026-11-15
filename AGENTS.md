@@ -67,18 +67,34 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   `lib/api/providers/attachment_parts.dart`. Каталог `ProviderPresetModel.supportsVision`, JSON аккаунта
   `supports_vision`; старые записи — пресет или инференс по имени модели. `providerReason` для 400 —
   очищенная причина провайдера (ARB `generationErrorBadRequestReason`), тела не логируются.
-  **PDF-сканы, иллюстрации и occlusion (ADR-023, итерация 7.9):** PDF с текстом < 50 символов
+  **PDF-сканы, иллюстрации и occlusion (ADR-023, итерации 7.9/7.11):** PDF с текстом < 50 символов
   (или `scannedPdf`) рендерится `PdfScanRenderer` (`lib/api/parsers/pdf_scan_renderer.dart`, pdfrx
-  + `image`, `Isolate.run`) в первые ≤ 4 PNG; страницы одного PDF — один фрагмент (`groupKey`).
-  Модель без Vision → `pdfScanVisionRequired`; при сбое рендера — fallback на PDF для
+  + `image`, `Isolate.run`) в первые **≤ 3 PNG** (ADR-027); страницы одного PDF — один фрагмент
+  (`groupKey`). Модель без Vision → `pdfScanVisionRequired`; при сбое рендера — fallback на PDF для
   Anthropic/Gemini. `image_query` (схема `gen-ru-v4`) → доменный порт `CardImageFinder` →
-  `ImageSearchService` (`lib/api/images/`, Openverse без ключа, CC0/PDM/CC BY/CC BY-SA, JPEG/PNG
-  ≤ 5 МБ, троттлинг 1 запрос/с); байты `GeneratedCard.image` пишутся в `MediaStore` + `media`
-  только при импорте (`DriftGenerationCardStore`). `card_type: "occlusion"` — wire-формат
-  ответа модели: в БД/экспорте `basic` + `occlusion_json` + media (SPEC A5); без найденной
-  картинки — `basic` + `CardIssueCode.occlusionImageMissing`, с картинкой — базовая маска
+  `CompositeCardImageFinder` (`lib/api/images/`): **Wikimedia Commons первым** (русские запросы,
+  JPEG/PNG ≤ 5 МБ, атрибуция из `extmetadata`), Openverse резервом (CC0/PDM/CC BY/CC BY-SA,
+  таймаут 8 с); бюджет `GenerationPipeline.imageSearchBudget` = 45 с **суммарного времени поиска**
+  (ожидание модели не считается), после бюджета карточки импортируются без картинок.
+  Байты `GeneratedCard.image` пишутся в `MediaStore` + `media` только при импорте
+  (`DriftGenerationCardStore`). `card_type: "occlusion"` — wire-формат ответа модели: в БД/экспорте
+  `basic` + `occlusion_json` + media (SPEC A5); без найденной картинки — `basic` +
+  `CardIssueCode.occlusionImageMissing`, с картинкой — базовая маска
   `defaultOcclusionDocumentJson()`. Basic-карточка с media показывает иллюстрацию в
   `CardContentView`; ошибка поиска не отменяет карточку.
+- **Новые карточки и очередь (ADR-026, итерация 7.11):** `DriftCardRepository.createCards` и
+  `DriftGenerationCardStore` пишут `due = now` и валидный `fsrs_json` начального состояния
+  (`CardSchedulingMapper.initialScheduling`, state `new`, шаг 0) — «новизну» определяет
+  `state`, а не `due IS NULL`; счётчик «к повторению» (`DriftDeckRepository`) исключает
+  `state='new'`, `SessionBuilder._baseOrder` делит по `state`. Пустая сессия при исчерпанном
+  дневном лимите объясняет причину (`reviewDailyLimitTitle`) и предлагает тренировку; экран
+  колоды проверяет очередь тем же остатком лимитов (`lib/ui/state/review_limits.dart`).
+- **Режим «Тренировка» (ADR-025, итерация 7.11):** домен — `PracticeQueue` (все карточки, кроме
+  `suspended`) и порт `PracticeRepository`; данные — `DriftPracticeRepository` пишет
+  `review_logs` с `mode='practice'` (`scheduled_days`/`actual_days` = NULL) и **не** меняет
+  `cards.state`/`fsrs_json`/`due`; дневные лимиты (`DriftDailyUsageRepository`) тренировку не
+  считают. UI — `PracticeSessionEngine` + `PracticeSessionScreen` (каркас `ReviewChrome`, без
+  прогноза интервалов), маршрут `/decks/:deckId/practice`, пункт «Тренировка» в листе режимов.
 - `ui/` — экраны, виджеты, локализация. Компоненты M3 Expressive — только через слой `lib/ui/m3e/` (библиотеку можно заменить). Токены движения — `lib/ui/motion.dart`.
 - **Режим «Лента»** (SPEC A7.3, ADR-016): движок `lib/ui/review/feed_session_engine.dart` (очередь
   `ReviewQueue`, по-карточные revealed/rated, `visit` без записи, `rate`/`undo` через тот же
@@ -339,3 +355,22 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   итерации с `--no-pub`. **Push итерации 7.10:** `bdb0bd1..5cbb653`; CI run
   [`43728048903`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43728048903) —
   **9/9 job success**.
+
+- **FSRS новых карточек, картинки, сканы и «Тренировка» проверены локально (итерация 7.11, 2026-11-15,
+  ADR-025/026/027):** старт: `git status --porcelain` → пусто, `HEAD = origin/main = 14b1a71`
+  (в STATE 7.10 было `5cbb653` — исправлено); baseline **1409 passed + 3 skipped**.
+  Диагностика owner-note по **фактической БД приложения** (копия `%APPDATA%\ru.example\cardflow\cardflow\cardflow.sqlite`):
+  43 новые карточки с `due`/`fsrs_json` = NULL; за день 30 оценок «новых» при `daily_new_limit=20`;
+  экран колоды проверял очередь без лимитов → пустая сессия. Openverse с хоста таймаутил (первый GET 200,
+  дальше > 30 с), Wikimedia Commons по русским запросам — 1–2 с. Гейты:
+  `fvm flutter test --no-pub --coverage --exclude-tags golden` → **1458 passed + 4 skipped**; покрытие
+  рукописного кода **92.0 % (10316/11216)**; `analyze` 0; `dart format --set-exit-if-changed lib test`
+  → 349/0; `fvm flutter build windows --release --no-pub` → `cardflow.exe` (79,3 с);
+  `fvm flutter run -d windows --no-pub` → окно открылось, ошибок старта нет.
+  **Windows-смоук на реальном процессе:** `fvm flutter test integration_test/session_smoke_windows_test.dart
+  -d windows` → `All tests passed!` (генерация с картинкой → файловая drift-БД + MediaStore → лимит →
+  тренировка → видимая иллюстрация → practice-оценка). **Живые тесты (deepseek-chat):** 5 passed —
+  `cards=3, tokens=1601`; `strict=400 → tolerant=200`; prompt-only `image_query=3`;
+  **PDF-скан: `pages=3, cards=2, tokens=2905`**; **живой Wikimedia: JPEG 97 КБ, CC BY-SA 4.0**.
+  `deepseek-flash` дал 2/5 `invalidResponse` (strict-схема) — L66. Ограничения: L65–L70.
+  Замечание: `flutter test -d windows` собирает Debug-приложение и требует десктоп-дисплея (в CI нет).
