@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cardflow/data/db/app_database.dart';
 import 'package:cardflow/data/transfer/media_store.dart';
+import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/cards/card_draft.dart';
 import 'package:cardflow/domain/review/review.dart';
 import 'package:cardflow/domain/scheduling/rating.dart';
@@ -93,8 +94,11 @@ void main() {
     expect(await engine.undo(), isTrue);
     expect(await db.select(db.reviewLogs).get(), isEmpty);
     final restored = (await cardRepository.cardById(first.id))!;
-    expect(restored.fsrsJson, isNull);
-    expect(restored.due, isNull);
+    // Итерация 7.11: у новой карточки уже есть начальное FSRS-состояние
+    // (ADR-026), undo обязан восстановить именно его, а не NULL.
+    expect(restored.fsrsJson, first.fsrsJson);
+    expect(restored.due, first.due);
+    expect(restored.state, CardState.newCard);
     expect(engine.state.current!.card.id, first.id);
     expect(engine.state.current!.revealed, isTrue);
 

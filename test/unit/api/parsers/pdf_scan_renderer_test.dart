@@ -50,6 +50,24 @@ void main() {
     expect(decoded.width, lessThanOrEqualTo(800));
   });
 
+  // Итерация 7.11: скан отправляется максимум тремя страницами (ADR-026).
+  test('по умолчанию рендерятся первые 3 страницы', () async {
+    const PdfScanRenderer production = PdfScanRenderer();
+    expect(production.maxPages, 3);
+
+    final List<Uint8List> pages = await production.render(
+      buildPdfPages(<String>['1', '2', '3', '4', '5']),
+    );
+
+    expect(pages, hasLength(3));
+    for (final Uint8List page in pages) {
+      expect(
+        hasValidAttachmentSignature(AttachmentMediaType.png, page),
+        isTrue,
+      );
+    }
+  });
+
   test('нечитаемый PDF → ParserException(scannedPdf)', () async {
     await expectLater(
       renderer.render(

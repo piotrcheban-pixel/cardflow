@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cardflow/api/generation/generation_cancellation.dart';
+import 'package:cardflow/api/generation/generation_diagnostics.dart';
 import 'package:cardflow/api/generation/generation_pipeline.dart';
 import 'package:cardflow/api/generation/system_prompt.dart';
 import 'package:cardflow/domain/cards/card.dart';
@@ -962,6 +963,65 @@ void main() {
         result.cards.single.issues,
         contains(CardIssueCode.occlusionImageMissing),
       );
+    });
+
+    // Итерация 7.11 (ADR-026): недоступный источник картинок не задерживает
+    // генерацию — после бюджета времени карточки импортируются без иллюстраций.
+    test('после бюджета поиска картинки не ищутся', () async {
+      DateTime clockNow = DateTime.utc(2026, 11, 14, 10);
+      final List<String> diagnostics = <String>[];
+      final finder = FakeCardImageFinder(
+        byQuery: <String, GeneratedCardImage?>{'eiffel tower': image},
+      );
+      final pipeline = GenerationPipeline(
+        caller: caller = FakeGenerationCaller(),
+        jobRepository: jobs = FakeGenerationJobRepository(),
+        cardStore: store = FakeGenerationCardStore(),
+        chunker: FixedChunker(<GenerationChunk>[chunkOf(1, 'материал')]),
+        now: () => clockNow,
+        jobIdFactory: () => 'job-1',
+        imageFinder: finder,
+        imageSearchBudget: const Duration(seconds: 10),
+        diagnostics: GenerationDiagnostics(
+          enabled: true,
+          sink: diagnostics.add,
+        ),
+      );
+      caller.onGenerate = (GenerationRequest request, int call) async {
+        // Пока модель отвечает, бюджет поиска истёк (медленный источник).
+        clockNow = clockNow.add(const Duration(seconds: 30));
+        return resultWith(<GeneratedCard>[
+          makeGeneratedCard(front: 'Первый', imageQuery: 'eiffel tower'),
+          makeGeneratedCard(front: 'Второй', imageQuery: 'eiffel tower'),
+        ]);
+      };
+
+      final result = await pipeline.run(
+        requestWith(<ParsedDocument>[
+          docOf('a.txt', <String>['материал']),
+        ]),
+      );
+
+      expect(result.status, GenerationJobStatus.done);
+      expect(result.cards, hasLength(2));
+      expect(finder.queries, isEmpty, reason: 'бюджет истёк до поиска');
+      expect(result.cards.every((card) => card.image == null), isTrue);
+      expect(
+        diagnostics.where((message) => message.contains('бюджет')),
+        hasLength(2),
+      );
+    });
+
+    test('в пределах бюджета картинки ищутся', () async {
+      final finder = FakeCardImageFinder(
+        byQuery: <String, GeneratedCardImage?>{'eiffel tower': image},
+      );
+      final card = makeGeneratedCard(imageQuery: 'eiffel tower');
+
+      final result = await runWithCards(<GeneratedCard>[card], finder: finder);
+
+      expect(finder.queries, <String>['eiffel tower']);
+      expect(result.cards.single.image, same(image));
     });
   });
 }

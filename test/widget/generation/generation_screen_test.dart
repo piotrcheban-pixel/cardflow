@@ -682,7 +682,7 @@ void main() {
     Future<void> attachScan(
       WidgetTester tester, {
       String name = 'скан.pdf',
-      int pageCount = 4,
+      int pageCount = 3,
     }) async {
       gateway.picked = <PickedDocument>[
         PickedDocument(path: '/tmp/$name', name: name, sizeBytes: 8),
@@ -727,12 +727,11 @@ void main() {
 
       expect(runner.runCalls, 1);
       final attachments = runner.lastRequest!.images;
-      expect(attachments, hasLength(4));
+      expect(attachments, hasLength(3));
       expect(attachments.map((attachment) => attachment.pageNumber), <int>[
         1,
         2,
         3,
-        4,
       ]);
       expect(
         attachments.map((attachment) => attachment.groupKey).toSet(),
@@ -863,7 +862,7 @@ class _ShortTextPdfParser implements DocumentParser {
 
 /// Фейковый рендер PDF-страниц в PNG для widget-тестов экрана генерации.
 class _FakePdfScanRenderer extends PdfScanRenderer {
-  _FakePdfScanRenderer({this.pageCount = 4, this.error});
+  _FakePdfScanRenderer({this.pageCount = 3, this.error});
 
   final int pageCount;
   final Object? error;

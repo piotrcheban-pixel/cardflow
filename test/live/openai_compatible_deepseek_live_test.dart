@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -9,13 +10,16 @@ import 'package:cardflow/api/generation/generation_diagnostics.dart';
 import 'package:cardflow/api/generation/system_prompt.dart';
 import 'package:cardflow/api/http/generation_http_client.dart';
 import 'package:cardflow/api/http/retry_policy.dart';
+import 'package:cardflow/api/parsers/pdf_scan_renderer.dart';
 import 'package:cardflow/api/providers/openai_compatible_adapter.dart';
+import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/generation/generation_provider.dart';
 import 'package:cardflow/domain/generation/generation_request.dart';
 import 'package:cardflow/domain/generation/provider_account.dart';
 import 'package:cardflow/domain/generation/provider_protocol.dart';
 
 import '../helpers/generation_fakes.dart';
+import '../unit/api/parsers/fixtures/document_fixtures.dart';
 
 /// Live-проверка OpenAI-совместимого адаптера на реальном DeepSeek (ADR-013).
 ///
@@ -245,6 +249,81 @@ void main() {
         ? 'Нет DEEPSEEK_API_KEY — live-тест пропущен (L30)'
         : false,
     timeout: const Timeout(Duration(minutes: 2)),
+    tags: <String>['live'],
+  );
+  // Итерация 7.11 (owner-note): страницы PDF-скана отправляются реальной
+  // Vision-модели как image parts и дают карточки.
+  test(
+    'живой DeepSeek: страницы PDF-скана как image parts (7.11)',
+    () async {
+      // Фикстура `buildPdfPages` пишет страницы в Latin-1, поэтому текст
+      // страниц латинский: для Vision важен сам PNG-скан, а не алфавит.
+      final Uint8List pdf = buildPdfPages(<String>[
+        'Ivan the Terrible ruled from 1533 to 1584.',
+        'The Time of Troubles began after the Rurik dynasty ended.',
+        'In 1613 the Zemsky Sobor elected Mikhail Romanov as tsar.',
+      ]);
+      final List<Uint8List> pages = await const PdfScanRenderer(
+        maxPages: 3,
+        maxWidth: 1000,
+      ).render(pdf);
+      expect(pages, hasLength(3));
+
+      final List<GenerationAttachment> attachments = <GenerationAttachment>[
+        for (var index = 0; index < pages.length; index++)
+          GenerationAttachment(
+            fileName: 'скан.pdf',
+            mediaType: AttachmentMediaType.png,
+            bytes: pages[index],
+            pageNumber: index + 1,
+            groupKey: '/tmp/скан.pdf',
+          ),
+      ];
+
+      final Dio dio = Dio();
+      addTearDown(() => dio.close(force: true));
+      final service = CardGenerationService(
+        adapters: <OpenAiCompatibleAdapter>[const OpenAiCompatibleAdapter()],
+        apiKeyStore: FakeApiKeyStore(<String, String>{'deepseek': apiKey!}),
+        httpClient: GenerationHttpClient(
+          dio: dio,
+          retryPolicy: RetryPolicy(),
+          delay: (Duration _) async {},
+        ),
+        maxOutputTokens: 8192,
+      );
+
+      final result = await service.generate(
+        GenerationRequest(
+          account: ProviderAccount(
+            id: 'deepseek',
+            label: 'DeepSeek',
+            presetId: 'deepseek',
+            protocol: ProviderProtocol.openaiCompletions,
+            baseUrl: baseUrl,
+            modelId: model,
+            contextTokens: 128000,
+            requiresApiKey: true,
+            supportsVision: true,
+          ),
+          materialsText: '',
+          wishes: 'Сделай 2 карточки по содержанию скана',
+          limit: 2,
+          images: attachments,
+        ),
+      );
+
+      expect(result.cards, isNotEmpty);
+      // ignore: avoid_print — evidence без ключа и тел ответа.
+      print(
+        'LIVE DeepSeek scan OK: pages=${pages.length}, '
+        'cards=${result.cards.length}, tokens=${result.usage.totalTokens}',
+      );
+    },
+    skip: apiKey == null
+        ? 'Нет DEEPSEEK_API_KEY — live-тест пропущен (L30)'
+        : false,
+    timeout: const Timeout(Duration(minutes: 3)),
     tags: <String>['live'],
   );
 }

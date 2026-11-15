@@ -17,9 +17,11 @@ import 'package:cardflow/domain/text/parser_exception.dart';
 class PdfScanRenderer {
   /// Создаёт рендерер.
   ///
-  /// [maxPages] — максимум страниц (первые страницы документа);
+  /// [maxPages] — максимум страниц (первые страницы документа); по умолчанию
+  /// 3 страницы (итерация 7.11): этого хватает модели для первых карточек, а
+  /// размер запроса с PNG-страницами остаётся разумным;
   /// [maxWidth] — максимальная ширина PNG в пикселях.
-  const PdfScanRenderer({this.maxPages = 4, this.maxWidth = 1600});
+  const PdfScanRenderer({this.maxPages = 3, this.maxWidth = 1600});
 
   /// Максимум рендерируемых страниц.
   final int maxPages;

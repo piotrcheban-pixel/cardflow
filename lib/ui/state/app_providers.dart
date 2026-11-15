@@ -9,7 +9,9 @@ import 'package:cardflow/api/generation/generation_pipeline.dart';
 import 'package:cardflow/api/http/generation_http_client.dart';
 import 'package:cardflow/api/http/redacting_log_interceptor.dart';
 import 'package:cardflow/api/http/retry_policy.dart';
+import 'package:cardflow/api/images/composite_card_image_finder.dart';
 import 'package:cardflow/api/images/image_search_service.dart';
+import 'package:cardflow/api/images/wikimedia_image_search_service.dart';
 import 'package:cardflow/api/providers/anthropic_adapter.dart';
 import 'package:cardflow/api/providers/gemini_adapter.dart';
 import 'package:cardflow/api/providers/openai_adapter.dart';
@@ -390,14 +392,20 @@ final generationCardStoreProvider = Provider<GenerationCardStore>((ref) {
   );
 });
 
-/// Поиск иллюстраций по `image_query` (итерация 7.9, ADR-023).
+/// Поиск иллюстраций по `image_query` (ADR-023, ADR-026).
 ///
-/// Openverse API не требует ключа; сеть — тот же Dio с таймаутами и redaction.
+/// Wikimedia Commons — первый источник (быстро и по-русски), Openverse —
+/// резерв (CC0/PDM/CC BY). Бюджет поиска ограничивает пайплайн: недоступный
+/// источник не задерживает импорт карточек.
 final cardImageFinderProvider = Provider<CardImageFinder>((ref) {
-  return ImageSearchService(
-    dio: ref.watch(generationDioProvider),
-    diagnostics: ref.watch(generationDiagnosticsProvider),
+  final Dio dio = ref.watch(generationDioProvider);
+  final GenerationDiagnostics diagnostics = ref.watch(
+    generationDiagnosticsProvider,
   );
+  return CompositeCardImageFinder(<CardImageFinder>[
+    WikimediaImageSearchService(dio: dio, diagnostics: diagnostics),
+    ImageSearchService(dio: dio, diagnostics: diagnostics),
+  ]);
 });
 
 /// Пайплайн генерации: чанкинг, вызовы, прогресс/отмена, дедупликация.
@@ -407,5 +415,6 @@ final generationRunnerProvider = Provider<GenerationRunner>((ref) {
     jobRepository: ref.watch(generationJobRepositoryProvider),
     cardStore: ref.watch(generationCardStoreProvider),
     imageFinder: ref.watch(cardImageFinderProvider),
+    diagnostics: ref.watch(generationDiagnosticsProvider),
   );
 });

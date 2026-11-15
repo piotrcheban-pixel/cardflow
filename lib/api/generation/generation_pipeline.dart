@@ -6,6 +6,7 @@ import 'package:uuid/uuid.dart';
 
 import 'package:cardflow/api/generation/generation_caller.dart';
 import 'package:cardflow/api/generation/generation_cancellation.dart';
+import 'package:cardflow/api/generation/generation_diagnostics.dart';
 import 'package:cardflow/api/generation/system_prompt.dart';
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/cards/content_hash.dart';
@@ -62,6 +63,8 @@ class GenerationPipeline implements GenerationRunner {
     this.estimator = const TokenEstimator(),
     this.chunker = const GenerationChunker(),
     this.imageFinder,
+    this.imageSearchBudget = const Duration(seconds: 45),
+    this.diagnostics = const GenerationDiagnostics(),
     this.now = _defaultNow,
     this.jobIdFactory = _defaultJobId,
   });
@@ -84,9 +87,23 @@ class GenerationPipeline implements GenerationRunner {
   /// Поиск иллюстраций по `image_query` (итерация 7.9); `null` — без картинок.
   final CardImageFinder? imageFinder;
 
+  /// Бюджет времени на поиск иллюстраций в рамках одного запуска (7.11).
+  ///
+  /// Недоступный/медленный источник картинок не должен задерживать импорт:
+  /// после бюджета оставшиеся карточки получают `image == null`, а генерация
+  /// завершается (диагностика ADR-024 фиксирует пропуск).
+  final Duration imageSearchBudget;
+
+  /// Debug-диагностика (ADR-024).
+  final GenerationDiagnostics diagnostics;
+
   /// Кэш картинок по запросу в рамках одного запуска/повтора.
   final Map<String, Future<GeneratedCardImage?>> _imageCache =
       <String, Future<GeneratedCardImage?>>{};
+
+  /// Момент, после которого поиск иллюстраций прекращается; `null` — без
+  /// ограничения (поиска нет или бюджет не задан).
+  DateTime? _imageDeadline;
 
   /// Часы (инжектируются в тестах).
   final DateTime Function() now;
@@ -101,6 +118,7 @@ class GenerationPipeline implements GenerationRunner {
     GenerationCancellation? cancellation,
   }) async {
     _imageCache.clear();
+    _resetImageBudget();
     final String jobId = jobIdFactory();
     final DateTime createdAt = now();
     final int systemPromptTokens = estimator.estimate(systemPromptGenRuV4);
@@ -202,6 +220,7 @@ class GenerationPipeline implements GenerationRunner {
         .toList(growable: false);
     if (retryable.isEmpty) return previous;
     _imageCache.clear();
+    _resetImageBudget();
 
     final GenerationJob job =
         await jobRepository.jobById(previous.jobId) ??
@@ -427,6 +446,14 @@ class GenerationPipeline implements GenerationRunner {
         (cancellation?.isCancelled ?? false)) {
       return _withoutImage(card);
     }
+    final DateTime? deadline = _imageDeadline;
+    if (deadline != null && !now().isBefore(deadline)) {
+      diagnostics.imageSearch(
+        query: query,
+        outcome: 'пропущен: бюджет времени поиска исчерпан',
+      );
+      return _withoutImage(card);
+    }
     GeneratedCardImage? image;
     try {
       image = await _imageCache.putIfAbsent(
@@ -447,6 +474,13 @@ class GenerationPipeline implements GenerationRunner {
           ? card.occlusionJson ?? defaultOcclusionDocumentJson()
           : card.occlusionJson,
     );
+  }
+
+  /// Отсчитывает бюджет поиска иллюстраций от текущего момента.
+  void _resetImageBudget() {
+    _imageDeadline = imageFinder == null || imageSearchBudget <= Duration.zero
+        ? null
+        : now().toUtc().add(imageSearchBudget);
   }
 
   /// Карточка без картинки: occlusion без иллюстрации становится обычной.

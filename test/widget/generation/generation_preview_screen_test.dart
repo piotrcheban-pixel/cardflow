@@ -323,9 +323,39 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    final GeneratedCard occlusionImported = store.importedCards.single.single;
+    expect(occlusionImported.isOcclusion, isTrue);
+    expect(occlusionImported.image, same(card.image));
+    expect(occlusionImported.occlusionJson, defaultOcclusionDocumentJson());
+  });
+
+  testWidgets('basic-карточка с картинкой показывает иллюстрацию (7.11)', (
+    tester,
+  ) async {
+    final Uint8List png = base64Decode(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk'
+      '+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+    );
+    final GeneratedCard card = makeGeneratedCard(
+      front: 'Какая органелла изображена?',
+      back: 'Хлоропласт',
+      imageQuery: 'chloroplast diagram',
+      image: makeCardImage(mediaType: AttachmentMediaType.png, bytes: png),
+    );
+    await pumpPreview(tester, resultWith(cards: <GeneratedCard>[card]));
+
+    expect(
+      find.byKey(const ValueKey<String>('generation-preview-image-0')),
+      findsOneWidget,
+    );
+    expect(find.byType(Image), findsOneWidget);
+
+    await tester.tap(
+      find.byKey(const ValueKey<String>('generation-preview-import-all')),
+    );
+    await tester.pumpAndSettle();
+
     final GeneratedCard imported = store.importedCards.single.single;
-    expect(imported.isOcclusion, isTrue);
     expect(imported.image, same(card.image));
-    expect(imported.occlusionJson, defaultOcclusionDocumentJson());
   });
 }

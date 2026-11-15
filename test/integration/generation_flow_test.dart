@@ -433,6 +433,63 @@ void main() {
     expect(httpAdapter.requests, isEmpty);
   });
 
+  // Итерация 7.11 (owner-note): страницы PDF-скана уходят модели как image
+  // parts одного фрагмента, а `job.files` хранит имя PDF один раз.
+  test('PDF-скан: страницы PNG уходят как image parts', () async {
+    final Uint8List png = Uint8List.fromList(<int>[
+      0x89,
+      0x50,
+      0x4E,
+      0x47,
+      0x0D,
+      0x0A,
+      0x1A,
+      0x0A,
+      1,
+      2,
+    ]);
+    final List<GenerationAttachment> pages = <GenerationAttachment>[
+      for (var page = 1; page <= 3; page++)
+        GenerationAttachment(
+          fileName: 'скан.pdf',
+          mediaType: AttachmentMediaType.png,
+          bytes: png,
+          pageNumber: page,
+          groupKey: '/tmp/скан.pdf',
+        ),
+    ];
+
+    final GenerationRunResult result = await container
+        .read(generationRunnerProvider)
+        .run(request(includeDocument: false, images: pages, modelId: 'gpt-4o'));
+
+    expect(result.status, GenerationJobStatus.done);
+    expect(httpAdapter.requests, hasLength(1));
+    final Map<String, Object?> body = jsonDecode(
+      httpAdapter.requests.single.data! as String,
+    ) as Map<String, Object?>;
+    final List<Object?> messages = body['messages']! as List<Object?>;
+    final Map<String, Object?> user = messages[1]! as Map<String, Object?>;
+    final List<Object?> content = user['content']! as List<Object?>;
+    expect(content, hasLength(4), reason: 'текст + 3 страницы');
+    expect((content.first! as Map<String, Object?>)['type'], 'text');
+    for (final Object? part in content.skip(1)) {
+      final Map<String, Object?> map = part! as Map<String, Object?>;
+      expect(map['type'], 'image_url');
+      expect(
+        (map['image_url']! as Map<String, Object?>)['url'],
+        startsWith('data:image/png;base64,'),
+      );
+    }
+
+    final GenerationJob job = (await container
+        .read(generationJobRepositoryProvider)
+        .jobById(result.jobId))!;
+    expect(job.files, <String>[
+      'скан.pdf',
+    ], reason: 'страницы одного PDF считаются одним файлом');
+  });
+
   test('production-граф собирает реальные реализации генерации', () {
     expect(
       container.read(generationJobRepositoryProvider),
@@ -709,6 +766,14 @@ void main() {
       final Card card = cards.single;
       expect(card.state, CardState.newCard);
       expect(card.mediaIds, hasLength(1));
+      // Картинка не теряется после импорта: файл и строка media читаются
+      // боевым репозиторием сессий (ADR-017).
+      final Map<String, Uint8List> media = await local
+          .read(cardMediaRepositoryProvider)
+          .readMedia(card.mediaIds);
+      expect(media.keys, card.mediaIds);
+      expect(media[card.mediaIds.single], isNotNull);
+      expect(media[card.mediaIds.single]!.isNotEmpty, isTrue);
       expect(
         card.due,
         isNotNull,

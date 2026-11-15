@@ -58,7 +58,11 @@ class ImageSearchService implements CardImageFinder {
   static const String _licenses = 'cc0,pdm,by,by-sa';
 
   /// Таймаут одного запроса поиска/скачивания.
-  static const Duration _timeout = Duration(seconds: 20);
+  ///
+  /// Openverse отвечает не всегда: при недоступности бюджета времени 8 с
+  /// оставляют генерации шанс продолжить, а резервный источник (Wikimedia,
+  /// ADR-026) закроет потребность в иллюстрации.
+  static const Duration _timeout = Duration(seconds: 8);
 
   @override
   Future<GeneratedCardImage?> findImage(String query) async {
