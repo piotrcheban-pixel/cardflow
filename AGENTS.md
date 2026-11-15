@@ -304,4 +304,7 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   `test/integration/generation_flow_test.dart`. **Живой DeepSeek с `gen-ru-v3`:** 2 live-теста
   passed (`cards=3, tokens=1351`; fallback strict=400 → tolerant=200, `max_tokens=8192`).
   Схема БД/`schemaVersion` и `format_version` не менялись; `card_type: occlusion` — wire-формат,
-  в БД `basic` + `occlusion_json`. Ограничения: L57–L60. Push 7.9 и CI — после команды владельца.
+  в БД `basic` + `occlusion_json`. Ограничения: L57–L60.
+  **Push итерации 7.9:** `31a5999..63330da`; CI run
+  [`43703387395`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43703387395) —
+  **9/9 job success**.

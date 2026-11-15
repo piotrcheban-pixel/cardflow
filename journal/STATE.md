@@ -7,14 +7,18 @@
 записано `5ac3789` — исправлено). Flutter 3.47.9 / Dart 3.13.7 (FVM); Windows 11;
 Android SDK/JDK/Xcode нет (L2).
 
-**Push/CI (2026-11-15):** `origin/main = 31a5999`; код-снимок итерации 7.8 (`5ac3789`) — run
-[`43650756271`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43650756271) —
-**9/9 job success**.
+**Push/CI (2026-11-15):** `origin/main = 63330da` (`31a5999..63330da`, 5 коммитов итерации 7.9);
+код-снимок `63330da` — run
+[`43703387395`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43703387395) —
+**9/9 job success** (`format + analyze`, `test` × 3 ОС, `build-desktop` × 3, `build-mobile`
+Android + iOS). Итерация 7.8: run [`43650756271`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43650756271) — 9/9.
 
 ## Следующее действие
 
-1. Push коммитов 7.9 (`31a5999..HEAD`) и дождаться одного CI-прогона; записать run в STATE/AGENTS.
-2. Отчёт владельцу и стоп до команды.
+1. **Стоп:** итерация 7.9 принята локальными гейтами; код-снимок CI 9/9; ждать команды владельца.
+2. Приёмка владельцем: PDF-скан к модели с Vision — страницы как изображения; без Vision —
+   «PDF-скан без текста. Выберите модель с поддержкой изображений»; генерация с `image_query` —
+   картинка из интернета в карточке; occlusion — изображение с центральной маской.
 3. Дизайн (стекло, тени, анимации) — отдельная задача, не начиналась.
 
 ## Итерация 7.9 — итог

@@ -30,7 +30,7 @@
 | 2 | PDF-скан: < 50 символов → первые ≤ 4 страницы PNG, один фрагмент; модель без Vision — понятная ошибка; сбой рендера — fallback | **выполнено локально** | `pdf_scan_renderer_test.dart` (5 тестов, включая isolate), `generation_screen_test.dart` (4 теста), `generation_chunker_test.dart` (groupKey), `card_generation_service_test.dart` (`pdfScanVisionRequired`); живой Vision — L52/L59 |
 | 3 | Схема/промпт `gen-ru-v3`: `image_query`, wire `occlusion`; поиск Openverse без ключа; пайплайн + MediaStore | **выполнено** | `card_schema_test`/`prompt_test`/`content_validator_test`; `image_search_service_test` (8 тестов, fake Dio); `generation_pipeline_test` (6 тестов); `drift_generation_card_store_test` (4 теста); integration production-граф; живой DeepSeek принял v3-схему |
 | 4 | Occlusion: базовая прямоугольная маска по центру; без картинки — basic + пометка; карточка показывает изображение | **выполнено** | `occlusion_test` (`kDefaultOcclusionMask`), `generation_pipeline_test`, `drift_generation_card_store_test`, `card_content_test`, `generation_preview_screen_test` |
-| 5 | Тесты/analyze/format/build, push и CI | **выполнено локально; CI — после push** | см. таблицу выше; CI-прогон фиксируется в STATE/AGENTS после завершения |
+| 5 | Тесты/analyze/format/build, push и CI | **выполнено** | локальные гейты — см. выше; push `31a5999..63330da`; CI run [`43703387395`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43703387395) — **9/9 job success** (`format + analyze`, `test` × 3 ОС, `build-desktop` × 3, `build-mobile` Android + iOS) |
 
 ## Не проверено и почему
 

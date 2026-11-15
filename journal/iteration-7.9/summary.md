@@ -1,6 +1,7 @@
 # Итерация 7.9 — «Фиксы UI, PDF-сканы и Rich-генерация с поиском картинок»
 
-**Статус:** завершена локально; push/CI — по команде владельца (см. итог).
+**Статус:** завершена; push `31a5999..63330da`, CI run
+[`43703387395`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43703387395) — 9/9 job success.
 
 ## Что сделано
 
@@ -41,6 +42,8 @@
   max_tokens=8192, cards=2`.
 - Production-граф: occlusion + `image_query` → поиск → drift-БД → `MediaStore` → `media`/маска
   (`test/integration/generation_flow_test.dart`); рендер PDF в `Isolate.run` на реальном PDFium.
+- CI run [`43703387395`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43703387395):
+  **9/9 job success** (`format + analyze`, `test` × 3 ОС, `build-desktop` × 3, Android + iOS).
 - Полный список — `journal/iteration-7.9/verify.md`.
 
 ## ADR итерации
