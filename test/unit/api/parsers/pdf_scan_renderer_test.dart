@@ -1,3 +1,4 @@
+import 'dart:isolate';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -68,6 +69,20 @@ void main() {
     await expectLater(
       renderer.render(Uint8List(0)),
       throwsA(isA<ParserException>()),
+    );
+  });
+
+  test('рендер работает в отдельном изоляте (production-путь)', () async {
+    final Uint8List source = buildPdfPages(<String>['Isolate page']);
+    final List<Uint8List> pages = await Isolate.run(() async {
+      await pdfrxInitialize();
+      return const PdfScanRenderer(maxPages: 1, maxWidth: 400).render(source);
+    });
+
+    expect(pages, hasLength(1));
+    expect(
+      hasValidAttachmentSignature(AttachmentMediaType.png, pages.single),
+      isTrue,
     );
   });
 }

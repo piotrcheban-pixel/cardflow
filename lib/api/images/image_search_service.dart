@@ -22,6 +22,7 @@ class ImageSearchService implements CardImageFinder {
     Uri? endpoint,
     this.maxResults = 5,
     this.maxImageBytes = 5 * 1024 * 1024,
+    this.minSearchInterval = const Duration(seconds: 1),
     this.userAgent = 'CardFlow/1.0',
   }) : endpoint = endpoint ?? Uri.parse('https://api.openverse.org/v1/images/');
 
@@ -37,8 +38,15 @@ class ImageSearchService implements CardImageFinder {
   /// Максимальный размер скачанной картинки.
   final int maxImageBytes;
 
+  /// Минимальная пауза между поисковыми запросами (анонимный лимит Openverse
+  /// ~1 запрос/с).
+  final Duration minSearchInterval;
+
   /// User-Agent для Openverse (анонимный доступ).
   final String userAgent;
+
+  /// Время последнего поискового запроса (для троттлинга).
+  DateTime? _lastSearchAt;
 
   /// Лицензии, которые разрешены к скачиванию (атрибуция — в источнике).
   static const String _licenses = 'cc0,pdm,by,by-sa';
@@ -51,6 +59,7 @@ class ImageSearchService implements CardImageFinder {
     final String normalized = query.trim();
     if (normalized.isEmpty) return null;
     try {
+      await _throttleSearch();
       final Response<Map<String, Object?>> response = await dio
           .getUri<Map<String, Object?>>(
             _searchUri(normalized),
@@ -87,6 +96,18 @@ class ImageSearchService implements CardImageFinder {
       return null;
     }
     return null;
+  }
+
+  /// Выдерживает паузу между поисковыми запросами Openverse.
+  Future<void> _throttleSearch() async {
+    final DateTime? last = _lastSearchAt;
+    if (last != null) {
+      final Duration elapsed = DateTime.now().difference(last);
+      if (elapsed < minSearchInterval) {
+        await Future<void>.delayed(minSearchInterval - elapsed);
+      }
+    }
+    _lastSearchAt = DateTime.now();
   }
 
   /// URI поиска Openverse с фильтрами лицензий и размером страницы.
