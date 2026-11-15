@@ -294,6 +294,36 @@ class AppLocalizationsRu extends AppLocalizations {
   String get reviewModeFeed => 'Лента';
 
   @override
+  String get reviewModePractice => 'Тренировка';
+
+  @override
+  String get practiceTitle => 'Тренировка';
+
+  @override
+  String get practiceSubtitle =>
+      'Карточки идут без учёта интервалов: FSRS не меняется.';
+
+  @override
+  String get practiceEmptyTitle => 'Нет карточек для тренировки';
+
+  @override
+  String get practiceEmptyMessage =>
+      'Добавьте карточки в колоду или снимите приостановку.';
+
+  @override
+  String get practiceCompletedTitle => 'Тренировка завершена';
+
+  @override
+  String practiceCompletedMessage(int count) {
+    return 'Пройдено карточек: $count.';
+  }
+
+  @override
+  String practiceRatedLabel(int count, int total) {
+    return 'Пройдено $count из $total';
+  }
+
+  @override
   String get reviewSessionModeTitle => 'Выберите режим';
 
   @override
@@ -308,6 +338,20 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get reviewEmptyMessage =>
       'Все карточки на сегодня повторены. Возвращайтесь позже или добавьте новые.';
+
+  @override
+  String get reviewDailyLimitTitle => 'Дневной лимит исчерпан';
+
+  @override
+  String get reviewDailyLimitMessage =>
+      'Новые карточки этой колоды ждут следующего дня. Пройдите их сейчас в режиме «Тренировка» — интервалы FSRS не изменятся.';
+
+  @override
+  String get reviewStartEmptyLimitedMessage =>
+      'Дневной лимит исчерпан — откройте «Тренировку», чтобы пройти карточки сейчас';
+
+  @override
+  String get practiceStartAction => 'Тренировать';
 
   @override
   String get reviewBack => 'Назад';

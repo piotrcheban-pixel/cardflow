@@ -5,11 +5,13 @@ import 'package:material_ui/material_ui.dart' hide Card;
 
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/decks/deck_summary.dart';
+import 'package:cardflow/domain/review/daily_limits.dart';
 import 'package:cardflow/domain/scheduling/rating.dart';
 import 'package:cardflow/domain/session/session_plan.dart';
 import 'package:cardflow/domain/settings/app_settings.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/decks/deck_screen.dart';
+import 'package:cardflow/ui/review/practice_session_screen.dart';
 import 'package:cardflow/ui/review/review_session_screen.dart';
 
 import '../../helpers/decks_fakes.dart';
@@ -270,6 +272,54 @@ void main() {
     expect(find.text(l10n.reviewEmptyTitle), findsOneWidget);
     expect(find.text(l10n.reviewEmptyMessage), findsOneWidget);
     expect(find.text(l10n.reviewBack), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey<String>('review-empty-practice')),
+      findsNothing,
+      reason: 'в колоде нет карточек — тренировать нечего',
+    );
+  });
+
+  // Итерация 7.11 (owner-note): пустая сессия при исчерпанном дневном лимите
+  // объясняет причину и предлагает тренировку вместо тупика.
+  testWidgets('дневной лимит исчерпан: причина и переход в тренировку', (
+    WidgetTester tester,
+  ) async {
+    final List<Card> deckCards = twoCards();
+    final List<Override> overrides = decksOverrides(
+      deckRepository: FakeDeckRepository(
+        summaries: <DeckSummary>[
+          makeSummary(
+            id: 'deck-1',
+            name: 'Испанский',
+            totalCards: deckCards.length,
+            newCards: deckCards.length,
+          ),
+        ],
+      ),
+      cardRepository: FakeCardRepository(cards: deckCards),
+      reviewRepository: FakeReviewRepository(),
+      appSettingsStore: FakeAppSettingsStore(
+        settings: AppSettings.defaults.copyWith(dailyNewLimit: 20),
+      ),
+      dailyUsageRepository: FakeDailyUsageRepository(
+        usage: const DailyReviewUsage(newCards: 20),
+      ),
+    );
+    await pumpSession(tester, overrides: overrides);
+    final AppLocalizations l10n = l10nOf(tester);
+
+    expect(find.text(l10n.reviewDailyLimitTitle), findsOneWidget);
+    expect(find.text(l10n.reviewDailyLimitMessage), findsOneWidget);
+    final Finder practice = find.byKey(
+      const ValueKey<String>('review-empty-practice'),
+    );
+    expect(practice, findsOneWidget);
+
+    await tester.tap(practice);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(PracticeSessionScreen), findsOneWidget);
+    expect(find.text('Первый вопрос'), findsOneWidget);
   });
 
   testWidgets('ошибка загрузки карточек — строка из ARB и «Повторить»', (

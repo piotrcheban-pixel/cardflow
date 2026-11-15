@@ -30,6 +30,7 @@ import 'package:cardflow/data/generation/file_picker_document_gateway.dart';
 import 'package:cardflow/data/review/drift_review_repository.dart';
 import 'package:cardflow/data/review/drift_leech_repository.dart';
 import 'package:cardflow/data/review/drift_daily_usage_repository.dart';
+import 'package:cardflow/data/review/drift_practice_repository.dart';
 import 'package:cardflow/data/security/secure_api_key_store.dart';
 import 'package:cardflow/data/session/drift_session_preset_repository.dart';
 import 'package:cardflow/data/settings/drift_app_settings_store.dart';
@@ -51,6 +52,7 @@ import 'package:cardflow/domain/generation/generation_settings_store.dart';
 import 'package:cardflow/domain/generation/provider_account.dart';
 import 'package:cardflow/domain/generation/provider_accounts_store.dart';
 import 'package:cardflow/domain/review/daily_usage_repository.dart';
+import 'package:cardflow/domain/review/practice_repository.dart';
 import 'package:cardflow/domain/review/review_repository.dart';
 import 'package:cardflow/domain/scheduling/scheduler.dart';
 import 'package:cardflow/domain/session/leech_repository.dart';
@@ -119,6 +121,11 @@ final mediaGarbageCollectorProvider = Provider<MediaGarbageCollector>((ref) {
 /// Запись повторений (review_logs + due/fsrs_json в одной транзакции).
 final reviewRepositoryProvider = Provider<ReviewRepository>((ref) {
   return DriftReviewRepository(ref.watch(appDatabaseProvider));
+});
+
+/// Запись оценок тренировки (review_logs.mode = 'practice', ADR-025).
+final practiceRepositoryProvider = Provider<PracticeRepository>((ref) {
+  return DriftPracticeRepository(ref.watch(appDatabaseProvider));
 });
 
 /// Счётчики провалов для фильтра «Пиявки» конструктора (ADR-018).

@@ -18,6 +18,7 @@ class ReviewSessionAppBar extends StatelessWidget
     required this.whyExcerpt,
     required this.onClose,
     this.onWhyPressed,
+    this.title,
     super.key,
   });
 
@@ -37,6 +38,11 @@ class ReviewSessionAppBar extends StatelessWidget
   /// если не задан — открывается стандартный bottom sheet с [whyExcerpt].
   final VoidCallback? onWhyPressed;
 
+  /// Заголовок панели; `null` — «Повторение» (классика/лента).
+  ///
+  /// Тренировка передаёт свой заголовок (`practiceTitle`, ADR-025).
+  final String? title;
+
   @override
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
 
@@ -47,7 +53,7 @@ class ReviewSessionAppBar extends StatelessWidget
     final VoidCallback? onWhy = onWhyPressed;
     return AppBar(
       automaticallyImplyLeading: false,
-      title: Text(l10n.reviewTitle),
+      title: Text(title ?? l10n.reviewTitle),
       actions: <Widget>[
         IconButton(
           key: const ValueKey<String>('review-undo'),
@@ -130,16 +136,36 @@ Future<void> showReviewSourceExcerpt(BuildContext context, String excerpt) {
 }
 
 /// Пустое состояние сессии (нет карточек к повторению).
+///
+/// [title]/[message] переопределяют стандартный текст (дневной лимит,
+/// тренировка — ADR-025). [onPractice] добавляет кнопку «Тренировать»: сессия
+/// пуста из-за лимита, но карточки в колоде есть.
 class ReviewEmptyView extends StatelessWidget {
   /// Создаёт пустое состояние.
-  const ReviewEmptyView({required this.onBack, super.key});
+  const ReviewEmptyView({
+    required this.onBack,
+    this.title,
+    this.message,
+    this.onPractice,
+    super.key,
+  });
 
   /// Возврат назад.
   final VoidCallback onBack;
 
+  /// Заголовок; `null` — «Нет карточек к повторению».
+  final String? title;
+
+  /// Пояснение; `null` — стандартный текст ARB.
+  final String? message;
+
+  /// Переход в тренировку; `null` — кнопки нет.
+  final VoidCallback? onPractice;
+
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
+    final VoidCallback? practice = onPractice;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -153,13 +179,25 @@ class ReviewEmptyView extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              l10n.reviewEmptyTitle,
+              title ?? l10n.reviewEmptyTitle,
+              textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 8),
-            Text(l10n.reviewEmptyMessage, textAlign: TextAlign.center),
+            Text(
+              message ?? l10n.reviewEmptyMessage,
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 16),
-            FilledButton(onPressed: onBack, child: Text(l10n.reviewBack)),
+            if (practice != null) ...<Widget>[
+              FilledButton(
+                key: const ValueKey<String>('review-empty-practice'),
+                onPressed: practice,
+                child: Text(l10n.practiceStartAction),
+              ),
+              const SizedBox(height: 8),
+            ],
+            OutlinedButton(onPressed: onBack, child: Text(l10n.reviewBack)),
           ],
         ),
       ),

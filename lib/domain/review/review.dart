@@ -9,6 +9,13 @@ const String reviewModeClassic = 'classic';
 /// Режим «Лента» (SPEC A7.3); пишется в `review_logs.mode` (ADR-016).
 const String reviewModeFeed = 'feed';
 
+/// Режим «Тренировка» (ADR-025); пишется в `review_logs.mode`.
+///
+/// Тренировка не меняет `cards.state`/`fsrs_json`/`due` и не расходует дневные
+/// лимиты: это отдельное значение журнала, которое статистика FSRS и
+/// `DailyUsageRepository` не считают запланированным повторением.
+const String reviewModePractice = 'practice';
+
 /// Данные для отката одной оценки (undo, SPEC A6.4).
 ///
 /// [previousCard] — полный снимок карточки до оценки, чтобы компенсирующая

@@ -7,6 +7,7 @@ import 'package:material_ui/material_ui.dart' hide Card;
 
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/review/daily_limits.dart';
+import 'package:cardflow/domain/review/review_queue.dart';
 import 'package:cardflow/domain/scheduling/rating.dart';
 import 'package:cardflow/domain/session/session_plan.dart';
 import 'package:cardflow/domain/settings/app_settings.dart';
@@ -17,7 +18,9 @@ import 'package:cardflow/ui/review/review_card_view.dart';
 import 'package:cardflow/ui/review/review_chrome.dart';
 import 'package:cardflow/ui/review/review_session_engine.dart';
 import 'package:cardflow/ui/review/review_toolbar.dart';
+import 'package:cardflow/ui/router/app_router.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
+import 'package:cardflow/ui/state/review_limits.dart';
 
 /// Экран классической сессии повторения (SPEC A6.4, A7.2).
 ///
@@ -49,6 +52,7 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
   bool _planMissing = false;
   bool _loading = true;
   bool _loadFailed = false;
+  bool _limitReached = false;
   bool _completionHapticPlayed = false;
   Map<String, Uint8List> _mediaBytes = const <String, Uint8List>{};
 
@@ -95,28 +99,36 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
       final mediaBytes = mediaIds.isEmpty
           ? const <String, Uint8List>{}
           : await ref.read(cardMediaRepositoryProvider).readMedia(mediaIds);
-      AppSettings settings;
-      try {
-        settings = await ref.read(appSettingsProvider.future);
-      } on Object {
-        settings = AppSettings.defaults;
-      }
       // Дневные лимиты A6.6 — остаток на локальный календарный день по
       // `review_logs`, а не свежий лимит на каждую сессию (ADR-019 §8, L45).
-      final RemainingReviewLimits limits = RemainingReviewLimits.of(
-        newLimit: settings.dailyNewLimit,
-        reviewLimit: settings.dailyReviewLimit,
-        usage: await ref
-            .read(dailyUsageRepositoryProvider)
-            .usageOnDay(DateTime.now()),
-      );
+      // Расчёт тот же, что использует экран колоды (итерация 7.11): иначе
+      // предварительная проверка и сессия расходятся, и пользователь видит
+      // пустую сессию без причины.
+      final RemainingReviewLimits limits = await readRemainingReviewLimits(ref);
       if (!mounted) return;
+      // Пустая очередь при непустой колоде = исчерпан дневной лимит: экран
+      // объясняет причину и предлагает тренировку (ADR-025).
+      final DateTime queueNow = DateTime.now().toUtc();
+      final bool prebuilt = plan != null;
+      final List<Card> unlimitedQueue = prebuilt
+          ? cards
+          : ReviewQueue.build(cards, now: queueNow);
+      final List<Card> limitedQueue = prebuilt
+          ? cards
+          : ReviewQueue.build(
+              cards,
+              now: queueNow,
+              newLimit: limits.newCards,
+              reviewLimit: limits.reviews,
+            );
+      final bool limitReached =
+          !prebuilt && unlimitedQueue.isNotEmpty && limitedQueue.isEmpty;
       final engine = ReviewSessionEngine(
         cards: cards,
         scheduler: ref.read(schedulerProvider),
         reviewRepository: ref.read(reviewRepositoryProvider),
         clock: DateTime.now,
-        prebuilt: plan != null,
+        prebuilt: prebuilt,
         newLimit: limits.newCards,
         reviewLimit: limits.reviews,
       )..addListener(_onEngineChanged);
@@ -124,6 +136,7 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
       setState(() {
         _engine = engine;
         _mediaBytes = mediaBytes;
+        _limitReached = limitReached;
         _loading = false;
       });
       _startBudgetTimer(plan?.timeBudget);
@@ -248,6 +261,11 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
     if (confirmed && mounted) _leave();
   }
 
+  /// Переход в тренировку из состояния «дневной лимит исчерпан».
+  void _startPractice(String deckId) {
+    context.pushReplacement(AppRoutes.practicePath(deckId));
+  }
+
   void _leave() {
     if (context.canPop()) context.pop();
   }
@@ -294,7 +312,19 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
     if (_loadFailed || state == null) {
       return ReviewLoadErrorView(onRetry: _retry);
     }
-    if (state.total == 0) return ReviewEmptyView(onBack: _leave);
+    if (state.total == 0) {
+      // Причина пустоты: исчерпанный дневной лимит (итерация 7.11) или
+      // «всё повторено». В первом случае даём тренировку (ADR-025).
+      final String? deckId = widget.deckId;
+      return ReviewEmptyView(
+        title: _limitReached ? l10n.reviewDailyLimitTitle : null,
+        message: _limitReached ? l10n.reviewDailyLimitMessage : null,
+        onPractice: _limitReached && deckId != null
+            ? () => _startPractice(deckId)
+            : null,
+        onBack: _leave,
+      );
+    }
     if (_timeExpired) {
       return ReviewTimeUpView(ratedCount: state.ratedCount, onDone: _leave);
     }

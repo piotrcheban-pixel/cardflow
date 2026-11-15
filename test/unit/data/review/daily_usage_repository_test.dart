@@ -170,4 +170,40 @@ void main() {
     await (db.delete(db.reviewLogs)..where((t) => t.id.equals('l1'))).go();
     expect(await usageToday(), DailyReviewUsage.empty);
   });
+
+  // Итерация 7.11, ADR-025: тренировка не расходует дневной лимит.
+  test('записи mode=practice не расходуют дневной лимит', () async {
+    await seedLog(
+      id: 'l1',
+      cardId: 'card-a',
+      at: day.from.add(const Duration(hours: 1)),
+    );
+    await db
+        .into(db.reviewLogs)
+        .insert(
+          ReviewLogsCompanion.insert(
+            id: 'practice-1',
+            cardId: 'card-b',
+            rating: 4,
+            reviewedAt: toEpochMs(day.from.add(const Duration(hours: 2))),
+            mode: 'practice',
+          ),
+        );
+    await db
+        .into(db.reviewLogs)
+        .insert(
+          ReviewLogsCompanion.insert(
+            id: 'practice-2',
+            cardId: 'card-c',
+            rating: 1,
+            reviewedAt: toEpochMs(day.from.add(const Duration(hours: 3))),
+            mode: 'practice',
+          ),
+        );
+
+    final DailyReviewUsage usage = await usageToday();
+    expect(usage.newCards, 1, reason: 'только классическая оценка');
+    expect(usage.repeats, 0);
+    expect(usage.total, 1);
+  });
 }

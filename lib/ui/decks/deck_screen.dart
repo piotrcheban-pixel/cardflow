@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart' hide Card;
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/decks/deck.dart';
 import 'package:cardflow/domain/decks/deck_summary.dart';
+import 'package:cardflow/domain/review/daily_limits.dart';
 import 'package:cardflow/domain/review/review_queue.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/cards/card_form_screen.dart';
@@ -12,6 +13,7 @@ import 'package:cardflow/ui/decks/deck_actions.dart';
 import 'package:cardflow/ui/m3e/m3e.dart';
 import 'package:cardflow/ui/router/app_router.dart';
 import 'package:cardflow/ui/state/decks_ui_providers.dart';
+import 'package:cardflow/ui/state/review_limits.dart';
 
 /// Действие меню экрана колоды.
 enum _DeckMenuAction { generate, rename, export, delete }
@@ -147,7 +149,7 @@ class DeckScreen extends ConsumerWidget {
             headline: l10n.reviewStartSession,
             semanticLabel: l10n.reviewStartSession,
             onPressed: () =>
-                _startSession(context, deckId: deckId, cards: cards),
+                _startSession(context, ref, deckId: deckId, cards: cards),
           ),
         ),
         const Divider(height: 1),
@@ -194,13 +196,16 @@ class DeckScreen extends ConsumerWidget {
     });
   }
 
-  /// Bottom sheet режима сессии: классика, лента или конструктор (SPEC A6.3).
+  /// Bottom sheet режима сессии: классика, лента, тренировка или конструктор
+  /// (SPEC A6.3, ADR-025).
   ///
-  /// Пустая колода — сообщение вместо перехода. Колода без карточек к
-  /// повторению открывает лист: конструктор может собрать сессию из фильтров
-  /// (например, «Повторение»), а классика/лента сообщают, что карточек нет.
+  /// Пустая колода — сообщение вместо перехода. Очередь классики/ленты
+  /// проверяется с тем же остатком дневных лимитов, что и сама сессия
+  /// (A6.6, ADR-019 §8): если лимит на сегодня исчерпан, пользователь видит
+  /// это здесь и может сразу пройти карточки тренировкой, не меняя FSRS.
   Future<void> _startSession(
-    BuildContext context, {
+    BuildContext context,
+    WidgetRef ref, {
     required String deckId,
     required List<Card> cards,
   }) async {
@@ -209,14 +214,38 @@ class DeckScreen extends ConsumerWidget {
       showAppMessage(context, l10n.reviewStartEmptyMessage);
       return;
     }
+    RemainingReviewLimits? limits;
+    try {
+      limits = await readRemainingReviewLimits(ref);
+    } on Object {
+      // Настройки/журнал недоступны — проверяем без лимитов, как раньше.
+      limits = null;
+    }
+    if (!context.mounted) return;
+    final DateTime now = DateTime.now();
+    final bool queueWithoutLimits = ReviewQueue.build(
+      cards,
+      now: now,
+    ).isNotEmpty;
+    final bool queueWithLimits = ReviewQueue.build(
+      cards,
+      now: now,
+      newLimit: limits?.newCards,
+      reviewLimit: limits?.reviews,
+    ).isNotEmpty;
     final String? selected = await showModalBottomSheet<String>(
       context: context,
       showDragHandle: true,
       builder: (BuildContext sheetContext) {
         void chooseQueueMode(String path) {
-          if (ReviewQueue.build(cards, now: DateTime.now()).isEmpty) {
+          if (!queueWithLimits) {
             Navigator.of(sheetContext).pop();
-            showAppMessage(context, l10n.reviewStartEmptyMessage);
+            showAppMessage(
+              context,
+              queueWithoutLimits && limits != null
+                  ? l10n.reviewStartEmptyLimitedMessage
+                  : l10n.reviewStartEmptyMessage,
+            );
             return;
           }
           Navigator.of(sheetContext).pop(path);
@@ -247,6 +276,15 @@ class DeckScreen extends ConsumerWidget {
                 leading: const Icon(Icons.view_agenda_outlined),
                 title: Text(l10n.reviewModeFeed),
                 onTap: () => chooseQueueMode(AppRoutes.feedPath(deckId)),
+              ),
+              ListTile(
+                key: const ValueKey<String>('review-mode-practice'),
+                leading: const Icon(Icons.sports_esports_outlined),
+                title: Text(l10n.reviewModePractice),
+                subtitle: Text(l10n.practiceSubtitle),
+                onTap: () =>
+                    Navigator.of(sheetContext)
+                        .pop(AppRoutes.practicePath(deckId)),
               ),
               ListTile(
                 key: const ValueKey<String>('review-mode-constructor'),

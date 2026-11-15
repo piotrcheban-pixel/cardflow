@@ -19,6 +19,7 @@ import 'package:cardflow/data/db/app_database.dart';
 import 'package:cardflow/data/db/epoch.dart';
 import 'package:cardflow/domain/review/daily_limits.dart';
 import 'package:cardflow/domain/review/daily_usage_repository.dart';
+import 'package:cardflow/domain/review/review.dart';
 
 /// Дневной расход оценок поверх существующих таблиц.
 class DriftDailyUsageRepository implements DailyUsageRepository {
@@ -37,10 +38,13 @@ class DriftDailyUsageRepository implements DailyUsageRepository {
           'COALESCE(SUM(CASE WHEN actual_days IS NULL THEN 1 ELSE 0 END), 0) '
           'AS new_cards '
           'FROM review_logs '
-          'WHERE reviewed_at >= ? AND reviewed_at < ?',
+          'WHERE reviewed_at >= ? AND reviewed_at < ? AND mode <> ?',
           variables: <Variable<Object>>[
             Variable<int>(toEpochMs(day.from)),
             Variable<int>(toEpochMs(day.to)),
+            // Тренировка (ADR-025) не расходует дневной лимит: она не меняет
+            // расписание и не вводит карточку в FSRS.
+            const Variable<String>(reviewModePractice),
           ],
         )
         .getSingle();

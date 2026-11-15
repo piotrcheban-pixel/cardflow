@@ -347,6 +347,51 @@
   "@reviewModeFeed": {
     "description": "Название режима «Лента» в листе выбора режима (SPEC A7.3)."
   },
+  "reviewModePractice": "Тренировка",
+  "@reviewModePractice": {
+    "description": "Название режима «Тренировка» в листе выбора режима (ADR-025)."
+  },
+  "practiceTitle": "Тренировка",
+  "@practiceTitle": {
+    "description": "Заголовок экрана тренировки (ADR-025)."
+  },
+  "practiceSubtitle": "Карточки идут без учёта интервалов: FSRS не меняется.",
+  "@practiceSubtitle": {
+    "description": "Пояснение режима тренировки на экране и в листе режимов."
+  },
+  "practiceEmptyTitle": "Нет карточек для тренировки",
+  "@practiceEmptyTitle": {
+    "description": "Пустое состояние тренировки: в колоде нет доступных карточек."
+  },
+  "practiceEmptyMessage": "Добавьте карточки в колоду или снимите приостановку.",
+  "@practiceEmptyMessage": {
+    "description": "Пояснение пустого состояния тренировки."
+  },
+  "practiceCompletedTitle": "Тренировка завершена",
+  "@practiceCompletedTitle": {
+    "description": "Итоговый экран тренировки."
+  },
+  "practiceCompletedMessage": "Пройдено карточек: {count}.",
+  "@practiceCompletedMessage": {
+    "description": "Сколько карточек пройдено в тренировке.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "practiceRatedLabel": "Пройдено {count} из {total}",
+  "@practiceRatedLabel": {
+    "description": "Прогресс тренировки: пройдено карточек из всего.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "reviewSessionModeTitle": "Выберите режим",
   "@reviewSessionModeTitle": {
     "description": "Заголовок bottom sheet выбора режима сессии (SPEC A6.3)."
@@ -366,6 +411,22 @@
   "reviewEmptyMessage": "Все карточки на сегодня повторены. Возвращайтесь позже или добавьте новые.",
   "@reviewEmptyMessage": {
     "description": "Пояснение пустого состояния экрана сессии."
+  },
+  "reviewDailyLimitTitle": "Дневной лимит исчерпан",
+  "@reviewDailyLimitTitle": {
+    "description": "Пустое состояние сессии, когда дневной лимит новых карточек израсходован (A6.6, ADR-019 §8)."
+  },
+  "reviewDailyLimitMessage": "Новые карточки этой колоды ждут следующего дня. Пройдите их сейчас в режиме «Тренировка» — интервалы FSRS не изменятся.",
+  "@reviewDailyLimitMessage": {
+    "description": "Пояснение к исчерпанному дневному лимиту с предложением тренировки."
+  },
+  "reviewStartEmptyLimitedMessage": "Дневной лимит исчерпан — откройте «Тренировку», чтобы пройти карточки сейчас",
+  "@reviewStartEmptyLimitedMessage": {
+    "description": "Сообщение при попытке начать сессию, когда очередь пуста из-за дневного лимита."
+  },
+  "practiceStartAction": "Тренировать",
+  "@practiceStartAction": {
+    "description": "Кнопка запуска тренировки из пустой сессии и листа режимов."
   },
   "reviewBack": "Назад",
   "@reviewBack": {

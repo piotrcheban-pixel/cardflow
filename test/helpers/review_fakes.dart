@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/review/daily_limits.dart';
 import 'package:cardflow/domain/review/daily_usage_repository.dart';
+import 'package:cardflow/domain/review/practice_repository.dart';
 import 'package:cardflow/domain/review/review.dart';
 import 'package:cardflow/domain/review/review_repository.dart';
 import 'package:cardflow/domain/scheduling/rating.dart';
@@ -100,5 +101,57 @@ class FakeReviewRepository implements ReviewRepository {
   Future<void> undoReview(ReviewUndo undo) async {
     if (undoError != null) throw undoError!;
     undone.add(undo);
+  }
+}
+
+/// Фейковый порт тренировки (ADR-025) для widget-тестов без drift.
+class FakePracticeRepository implements PracticeRepository {
+  /// Ошибка, бросаемая `recordPractice`.
+  Object? recordError;
+
+  /// Если задано — `recordPractice` ждёт завершения (проверка busy-состояния).
+  Completer<void>? recordGate;
+
+  /// Ошибка, бросаемая `undoPractice`.
+  Object? undoError;
+
+  /// Оценки в порядке вызовов.
+  final List<Rating> ratings = <Rating>[];
+
+  /// Id карточек в порядке вызовов.
+  final List<String> cardIds = <String>[];
+
+  /// Моменты тренировок в порядке вызовов.
+  final List<DateTime> reviewedAts = <DateTime>[];
+
+  /// Замеры времени в порядке вызовов.
+  final List<Duration?> elapsedTimes = <Duration?>[];
+
+  /// Id удалённых записей (undo).
+  final List<String> undoneLogIds = <String>[];
+
+  int _logCounter = 0;
+
+  @override
+  Future<String> recordPractice({
+    required String cardId,
+    required Rating rating,
+    required DateTime reviewedAt,
+    Duration? elapsed,
+  }) async {
+    if (recordError != null) throw recordError!;
+    final Completer<void>? gate = recordGate;
+    if (gate != null) await gate.future;
+    ratings.add(rating);
+    cardIds.add(cardId);
+    reviewedAts.add(reviewedAt);
+    elapsedTimes.add(elapsed);
+    return 'practice-log-${++_logCounter}';
+  }
+
+  @override
+  Future<void> undoPractice(String logId) async {
+    if (undoError != null) throw undoError!;
+    undoneLogIds.add(logId);
   }
 }

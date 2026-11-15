@@ -532,6 +532,54 @@ abstract class AppLocalizations {
   /// **'Лента'**
   String get reviewModeFeed;
 
+  /// Название режима «Тренировка» в листе выбора режима (ADR-025).
+  ///
+  /// In ru, this message translates to:
+  /// **'Тренировка'**
+  String get reviewModePractice;
+
+  /// Заголовок экрана тренировки (ADR-025).
+  ///
+  /// In ru, this message translates to:
+  /// **'Тренировка'**
+  String get practiceTitle;
+
+  /// Пояснение режима тренировки на экране и в листе режимов.
+  ///
+  /// In ru, this message translates to:
+  /// **'Карточки идут без учёта интервалов: FSRS не меняется.'**
+  String get practiceSubtitle;
+
+  /// Пустое состояние тренировки: в колоде нет доступных карточек.
+  ///
+  /// In ru, this message translates to:
+  /// **'Нет карточек для тренировки'**
+  String get practiceEmptyTitle;
+
+  /// Пояснение пустого состояния тренировки.
+  ///
+  /// In ru, this message translates to:
+  /// **'Добавьте карточки в колоду или снимите приостановку.'**
+  String get practiceEmptyMessage;
+
+  /// Итоговый экран тренировки.
+  ///
+  /// In ru, this message translates to:
+  /// **'Тренировка завершена'**
+  String get practiceCompletedTitle;
+
+  /// Сколько карточек пройдено в тренировке.
+  ///
+  /// In ru, this message translates to:
+  /// **'Пройдено карточек: {count}.'**
+  String practiceCompletedMessage(int count);
+
+  /// Прогресс тренировки: пройдено карточек из всего.
+  ///
+  /// In ru, this message translates to:
+  /// **'Пройдено {count} из {total}'**
+  String practiceRatedLabel(int count, int total);
+
   /// Заголовок bottom sheet выбора режима сессии (SPEC A6.3).
   ///
   /// In ru, this message translates to:
@@ -561,6 +609,30 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Все карточки на сегодня повторены. Возвращайтесь позже или добавьте новые.'**
   String get reviewEmptyMessage;
+
+  /// Пустое состояние сессии, когда дневной лимит новых карточек израсходован (A6.6, ADR-019 §8).
+  ///
+  /// In ru, this message translates to:
+  /// **'Дневной лимит исчерпан'**
+  String get reviewDailyLimitTitle;
+
+  /// Пояснение к исчерпанному дневному лимиту с предложением тренировки.
+  ///
+  /// In ru, this message translates to:
+  /// **'Новые карточки этой колоды ждут следующего дня. Пройдите их сейчас в режиме «Тренировка» — интервалы FSRS не изменятся.'**
+  String get reviewDailyLimitMessage;
+
+  /// Сообщение при попытке начать сессию, когда очередь пуста из-за дневного лимита.
+  ///
+  /// In ru, this message translates to:
+  /// **'Дневной лимит исчерпан — откройте «Тренировку», чтобы пройти карточки сейчас'**
+  String get reviewStartEmptyLimitedMessage;
+
+  /// Кнопка запуска тренировки из пустой сессии и листа режимов.
+  ///
+  /// In ru, this message translates to:
+  /// **'Тренировать'**
+  String get practiceStartAction;
 
   /// Кнопка возврата из пустого/завершённого экрана сессии.
   ///

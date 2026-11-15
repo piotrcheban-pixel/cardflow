@@ -1,10 +1,13 @@
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/decks/deck_summary.dart';
+import 'package:cardflow/domain/review/daily_limits.dart';
+import 'package:cardflow/domain/settings/app_settings.dart';
 import 'package:cardflow/domain/transfer/deck_archive.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/cards/card_form_screen.dart';
 import 'package:cardflow/ui/decks/deck_screen.dart';
 import 'package:cardflow/ui/decks/decks_screen.dart';
+import 'package:cardflow/ui/review/practice_session_screen.dart';
 import 'package:cardflow/ui/review/review_session_screen.dart';
 import 'package:cardflow/ui/session/session_constructor_screen.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -12,6 +15,8 @@ import 'package:material_ui/material_ui.dart' hide Card;
 
 import '../../helpers/decks_fakes.dart';
 import '../../helpers/pump_app.dart';
+import '../../helpers/review_fakes.dart';
+import '../../helpers/settings_fakes.dart';
 
 /// Красная фаза: экран «Колода» (SPEC A6.3, минимальный для итерации 1).
 void main() {
@@ -21,6 +26,8 @@ void main() {
     FakeCardRepository? cards,
     FakeDeckTransferService? transfer,
     FakeFileGateway? gateway,
+    FakeDailyUsageRepository? dailyUsage,
+    FakeAppSettingsStore? appSettingsStore,
     String initialLocation = '/decks/deck-1',
   }) async {
     await tester.pumpWidget(
@@ -30,6 +37,8 @@ void main() {
           cardRepository: cards,
           transferService: transfer,
           fileGateway: gateway,
+          dailyUsageRepository: dailyUsage,
+          appSettingsStore: appSettingsStore,
         ),
         routes: decksRoutes(),
         initialLocation: initialLocation,
@@ -425,5 +434,107 @@ void main() {
         reason: 'колода с экрана колоды предвыбрана',
       );
     });
+
+    // Итерация 7.11 (owner-note): тренировка доступна из листа режимов и не
+    // зависит от FSRS/дневного лимита.
+    testWidgets('лист режимов: «Тренировка» открывает экран тренировки', (
+      WidgetTester tester,
+    ) async {
+      final FakeDeckRepository repository = FakeDeckRepository(
+        summaries: <DeckSummary>[
+          makeSummary(
+            id: 'deck-1',
+            name: 'Испанский',
+            totalCards: 1,
+            newCards: 1,
+          ),
+        ],
+      );
+      final FakeCardRepository cards = FakeCardRepository(
+        cards: <Card>[
+          makeCard(
+            id: 'card-1',
+            deckId: 'deck-1',
+            front: 'Вопрос',
+            state: CardState.review,
+            due: DateTime.now().add(const Duration(days: 3)),
+          ),
+        ],
+      );
+      // Дневной лимит новых исчерпан — тренировка всё равно доступна.
+      final FakeDailyUsageRepository usage = FakeDailyUsageRepository(
+        usage: const DailyReviewUsage(newCards: 20),
+      );
+
+      await pumpDeck(
+        tester,
+        repository: repository,
+        cards: cards,
+        dailyUsage: usage,
+        appSettingsStore: FakeAppSettingsStore(
+          settings: AppSettings.defaults.copyWith(dailyNewLimit: 20),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final AppLocalizations l10n = l10nOf(tester);
+
+      await tester.tap(find.text(l10n.reviewStartSession));
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.reviewModePractice), findsOneWidget);
+
+      await tester.tap(find.text(l10n.reviewModePractice));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(PracticeSessionScreen), findsOneWidget);
+      expect(find.text(l10n.practiceSubtitle), findsWidgets);
+      expect(find.text('Вопрос'), findsOneWidget);
+    });
+
+    // Итерация 7.11: причина пустой сессии — исчерпанный дневной лимит, а не
+    // «нет карточек»; при этом доступна тренировка.
+    testWidgets(
+      'дневной лимит исчерпан: сообщение о лимите вместо «нет карточек»',
+      (WidgetTester tester) async {
+        final FakeDeckRepository repository = FakeDeckRepository(
+          summaries: <DeckSummary>[
+            makeSummary(
+              id: 'deck-1',
+              name: 'Испанский',
+              totalCards: 1,
+              newCards: 1,
+            ),
+          ],
+        );
+        final FakeCardRepository cards = FakeCardRepository(
+          cards: <Card>[
+            makeCard(id: 'card-1', deckId: 'deck-1', front: 'Вопрос'),
+          ],
+        );
+        final FakeDailyUsageRepository usage = FakeDailyUsageRepository(
+          usage: const DailyReviewUsage(newCards: 20),
+        );
+
+        await pumpDeck(
+          tester,
+          repository: repository,
+          cards: cards,
+          dailyUsage: usage,
+          appSettingsStore: FakeAppSettingsStore(
+            settings: AppSettings.defaults.copyWith(dailyNewLimit: 20),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final AppLocalizations l10n = l10nOf(tester);
+
+        await tester.tap(find.text(l10n.reviewStartSession));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.reviewModeClassic));
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.reviewStartEmptyLimitedMessage), findsOneWidget);
+        expect(find.text(l10n.reviewStartEmptyMessage), findsNothing);
+        expect(find.byType(ReviewSessionScreen), findsNothing);
+      },
+    );
   });
 }

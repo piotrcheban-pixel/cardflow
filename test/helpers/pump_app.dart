@@ -6,6 +6,7 @@ import 'package:cardflow/domain/generation/api_key_store.dart';
 import 'package:cardflow/domain/generation/generation_settings_store.dart';
 import 'package:cardflow/domain/generation/provider_accounts_store.dart';
 import 'package:cardflow/domain/review/daily_usage_repository.dart';
+import 'package:cardflow/domain/review/practice_repository.dart';
 import 'package:cardflow/domain/review/review_repository.dart';
 import 'package:cardflow/domain/scheduling/scheduler.dart';
 import 'package:cardflow/domain/session/leech_repository.dart';
@@ -20,6 +21,7 @@ import 'package:cardflow/ui/decks/deck_screen.dart';
 import 'package:cardflow/ui/decks/decks_screen.dart';
 import 'package:cardflow/ui/m3e/m3e.dart';
 import 'package:cardflow/ui/review/feed_session_screen.dart';
+import 'package:cardflow/ui/review/practice_session_screen.dart';
 import 'package:cardflow/ui/review/review_session_screen.dart';
 import 'package:cardflow/ui/router/app_router.dart';
 import 'package:cardflow/ui/session/session_constructor_screen.dart';
@@ -127,6 +129,11 @@ List<GoRoute> decksRoutes() {
           FeedSessionScreen(deckId: state.pathParameters['id']!),
     ),
     GoRoute(
+      path: '/decks/:id/practice',
+      builder: (BuildContext context, GoRouterState state) =>
+          PracticeSessionScreen(deckId: state.pathParameters['id']!),
+    ),
+    GoRoute(
       path: '/constructor',
       builder: (BuildContext context, GoRouterState state) =>
           SessionConstructorScreen(
@@ -167,6 +174,7 @@ List<Override> decksOverrides({
   required DeckRepository deckRepository,
   CardRepository? cardRepository,
   ReviewRepository? reviewRepository,
+  PracticeRepository? practiceRepository,
   Scheduler? scheduler,
   DeckTransferService? transferService,
   FileGateway? fileGateway,
@@ -189,6 +197,9 @@ List<Override> decksOverrides({
     ),
     reviewRepositoryProvider.overrideWithValue(
       reviewRepository ?? FakeReviewRepository(),
+    ),
+    practiceRepositoryProvider.overrideWithValue(
+      practiceRepository ?? FakePracticeRepository(),
     ),
     schedulerProvider.overrideWithValue(scheduler ?? FsrsScheduler()),
     deckTransferServiceProvider.overrideWithValue(
