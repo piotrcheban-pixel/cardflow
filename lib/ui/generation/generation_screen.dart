@@ -6,6 +6,8 @@
 /// файлов и провайдера показываются кодами без сырых исключений.
 library;
 
+import 'dart:typed_data';
+
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -45,8 +47,12 @@ import 'package:cardflow/ui/state/decks_ui_providers.dart';
 /// Порог предупреждения о большом объёме материалов (SPEC A8.5 шаг 4).
 const int _largeMaterialTokenThreshold = 100000;
 
+/// Порог «PDF-скан»: меньше символов текста — отправляем страницы как PNG
+/// (итерация 7.9, ADR-023).
+const int kPdfScanMinTextLength = 50;
+
 /// Статус локального парсинга прикреплённого файла.
-enum _FileStatus { parsing, parsed, image, scanned, failed }
+enum _FileStatus { parsing, parsed, image, scanned, pdfPages, failed }
 
 /// Прикреплённый файл и результат его парсинга.
 class _AttachedFile {
@@ -55,7 +61,9 @@ class _AttachedFile {
   final PickedDocument picked;
   _FileStatus status = _FileStatus.parsing;
   ParsedDocument? document;
-  GenerationAttachment? attachment;
+
+  /// Вложения файла: JPG/PNG, PDF-скан или отрендеренные страницы PDF.
+  List<GenerationAttachment> attachments = const <GenerationAttachment>[];
   ParserErrorCode? errorCode;
 }
 
@@ -176,13 +184,13 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
         file.document!,
   ];
 
-  /// Вложения: изображения и PDF-сканы.
+  /// Вложения: изображения, PDF-сканы и страницы PDF-сканов.
   List<GenerationAttachment> get _attachments => <GenerationAttachment>[
     for (final _AttachedFile file in _files)
-      if ((file.status == _FileStatus.image ||
-              file.status == _FileStatus.scanned) &&
-          file.attachment != null)
-        file.attachment!,
+      if (file.status == _FileStatus.image ||
+          file.status == _FileStatus.scanned ||
+          file.status == _FileStatus.pdfPages)
+        ...file.attachments,
   ];
 
   /// Есть ли материалы для генерации (текст или вложения).
@@ -275,11 +283,13 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
           }
           file
             ..status = _FileStatus.image
-            ..attachment = GenerationAttachment(
-              fileName: file.picked.name,
-              mediaType: imageType,
-              bytes: bytes,
-            );
+            ..attachments = <GenerationAttachment>[
+              GenerationAttachment(
+                fileName: file.picked.name,
+                mediaType: imageType,
+                bytes: bytes,
+              ),
+            ];
         });
         return;
       }
@@ -289,32 +299,36 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
             FileParsingInput(fileName: file.picked.name, bytes: bytes),
           );
       if (!mounted) return;
-      setState(() {
-        if (outcome is ParsedFileSuccess) {
+      if (outcome is ParsedFileSuccess) {
+        final bool shortPdfScan =
+            outcome.document.format == DocumentFormat.pdf &&
+            outcome.document.text.trim().length < kPdfScanMinTextLength;
+        if (shortPdfScan) {
+          await _attachPdfPages(file, bytes);
+          return;
+        }
+        setState(() {
           file
             ..status = _FileStatus.parsed
             ..document = outcome.document;
-        } else if (outcome is ParsedFileFailure) {
-          final bool scannedPdf =
-              outcome.code == ParserErrorCode.scannedPdf &&
-              documentFormatFromFileName(file.picked.name) ==
-                  DocumentFormat.pdf;
-          if (scannedPdf) {
-            // PDF без текстового слоя не теряем: при Vision он уйдёт как
-            // документ, иначе сервис вернёт понятную ошибку (ADR-022).
-            file
-              ..status = _FileStatus.scanned
-              ..attachment = GenerationAttachment(
-                fileName: file.picked.name,
-                mediaType: AttachmentMediaType.pdf,
-                bytes: bytes,
-              );
-          } else {
-            file
-              ..status = _FileStatus.failed
-              ..errorCode = outcome.code;
-          }
-        }
+        });
+        return;
+      }
+      final ParsedFileFailure failure = outcome as ParsedFileFailure;
+      final bool scannedPdf =
+          failure.code == ParserErrorCode.scannedPdf &&
+          documentFormatFromFileName(file.picked.name) == DocumentFormat.pdf;
+      if (scannedPdf) {
+        // PDF без текстового слоя: сначала пробуем отрендерить страницы в PNG
+        // для Vision-моделей; при неудаче — fallback на PDF-документ для
+        // протоколов Anthropic/Gemini (ADR-022/ADR-023).
+        await _attachPdfPages(file, bytes);
+        return;
+      }
+      setState(() {
+        file
+          ..status = _FileStatus.failed
+          ..errorCode = failure.code;
       });
     } on ParserException catch (error) {
       if (!mounted) return;
@@ -331,6 +345,54 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
           ..errorCode = ParserErrorCode.unreadableFile;
       });
     }
+  }
+
+  /// Рендерит страницы PDF-скана в PNG; при неудаче — fallback на PDF.
+  Future<void> _attachPdfPages(_AttachedFile file, Uint8List bytes) async {
+    try {
+      final List<Uint8List> pages = await ref
+          .read(fileParsingServiceProvider)
+          .renderPdfPages(bytes, fileName: file.picked.name);
+      if (!mounted) return;
+      final List<GenerationAttachment> attachments = <GenerationAttachment>[
+        for (var index = 0; index < pages.length; index++)
+          if (hasValidAttachmentSignature(
+            AttachmentMediaType.png,
+            pages[index],
+          ))
+            GenerationAttachment(
+              fileName: file.picked.name,
+              mediaType: AttachmentMediaType.png,
+              bytes: pages[index],
+              pageNumber: index + 1,
+              groupKey: file.picked.path,
+            ),
+      ];
+      if (attachments.isNotEmpty) {
+        setState(() {
+          file
+            ..status = _FileStatus.pdfPages
+            ..attachments = List<GenerationAttachment>.unmodifiable(
+              attachments,
+            );
+        });
+        return;
+      }
+    } on Object {
+      // Ниже — fallback на PDF-документ, если протокол его принимает.
+    }
+    if (!mounted) return;
+    setState(() {
+      file
+        ..status = _FileStatus.scanned
+        ..attachments = <GenerationAttachment>[
+          GenerationAttachment(
+            fileName: file.picked.name,
+            mediaType: AttachmentMediaType.pdf,
+            bytes: bytes,
+          ),
+        ];
+    });
   }
 
   void _removeFile(int index) {
@@ -368,19 +430,25 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
       showAppMessage(context, l10n.generationErrorProviderNotConfigured);
       return;
     }
-    final bool hasScans = attachments.any(
+    final bool hasPdfDocuments = attachments.any(
       (GenerationAttachment attachment) => attachment.isPdf,
     );
+    final bool hasPdfPages = attachments.any(
+      (GenerationAttachment attachment) => attachment.isPdfPage,
+    );
     if (attachments.isNotEmpty && !account.supportsVision) {
-      showAppMessage(
-        context,
-        hasScans
-            ? l10n.generationErrorFileWithoutTextAndVision
-            : l10n.generationErrorVisionUnsupported,
-      );
+      final String message;
+      if (hasPdfPages) {
+        message = l10n.generationErrorPdfScanVisionRequired;
+      } else if (hasPdfDocuments) {
+        message = l10n.generationErrorFileWithoutTextAndVision;
+      } else {
+        message = l10n.generationErrorVisionUnsupported;
+      }
+      showAppMessage(context, message);
       return;
     }
-    if (hasScans && !account.protocol.supportsPdfAttachments) {
+    if (hasPdfDocuments && !account.protocol.supportsPdfAttachments) {
       showAppMessage(context, l10n.generationErrorPdfScanUnsupported);
       return;
     }
@@ -853,6 +921,7 @@ class _FileTile extends StatelessWidget {
       _FileStatus.parsed => l10n.generationFileParsed,
       _FileStatus.image => l10n.generationFileImage,
       _FileStatus.scanned => l10n.generationFileScannedPdf,
+      _FileStatus.pdfPages => l10n.generationFilePdfPages,
       _FileStatus.failed => parserErrorCodeMessage(
         l10n,
         file.errorCode ?? ParserErrorCode.unreadableFile,

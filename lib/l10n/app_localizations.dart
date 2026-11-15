@@ -826,6 +826,12 @@ abstract class AppLocalizations {
   /// **'С пропусками'**
   String get cardTypeCloze;
 
+  /// Формат карточки occlusion в предпросмотре генерации (итерация 7.9).
+  ///
+  /// In ru, this message translates to:
+  /// **'Изображение с маской'**
+  String get cardTypeOcclusion;
+
   /// Подсказка при выборе двустороннего типа карточки (SPEC A5).
   ///
   /// In ru, this message translates to:
@@ -1011,6 +1017,12 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'PDF-скан не поддерживается выбранной моделью'**
   String get generationErrorPdfScanUnsupported;
+
+  /// Генерация: PDF-скан отрендерен в страницы, а у модели нет Vision (итерация 7.9).
+  ///
+  /// In ru, this message translates to:
+  /// **'PDF-скан без текста. Выберите модель с поддержкой изображений'**
+  String get generationErrorPdfScanVisionRequired;
 
   /// Генерация: вложение больше inline-лимита 10 МБ (итерация 7.8).
   ///
@@ -1209,6 +1221,12 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Скан — отправится как изображение'**
   String get generationFileScannedPdf;
+
+  /// Статус файла: PDF-скан отрендерен в PNG-страницы (итерация 7.9).
+  ///
+  /// In ru, this message translates to:
+  /// **'Скан — страницы отправятся как изображения'**
+  String get generationFilePdfPages;
 
   /// Размер прикреплённого файла в байтах.
   ///
@@ -1455,6 +1473,12 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Теги скорректированы'**
   String get generationIssueTagsAdjusted;
+
+  /// Пометка итерации 7.9: occlusion без найденной картинки стала обычной.
+  ///
+  /// In ru, this message translates to:
+  /// **'Нет изображения для карточки с маской'**
+  String get generationIssueOcclusionImageMissing;
 
   /// Сколько дублей отсеяла дедупликация (SPEC A8.5 шаг 9).
   ///

@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:cardflow/api/parsers/document_parser.dart';
 import 'package:cardflow/api/parsers/file_parsing_service.dart';
+import 'package:cardflow/api/parsers/pdf_scan_renderer.dart';
 import 'package:cardflow/api/parsers/txt_parser.dart';
 import 'package:cardflow/domain/text/document_format.dart';
 import 'package:cardflow/domain/text/parsed_document.dart';
@@ -28,6 +29,24 @@ class _UnexpectedFailureParser implements DocumentParser {
   @override
   Future<ParsedDocument> parse(Uint8List bytes, {required String fileName}) =>
       throw StateError('сырой внутренний стек: boom');
+}
+
+/// Фейковый рендерер PDF-страниц (проводка `FileParsingService`).
+class _FakePdfScanRenderer extends PdfScanRenderer {
+  _FakePdfScanRenderer({this.pages = const <Uint8List>[], this.error});
+
+  final List<Uint8List> pages;
+  final Object? error;
+
+  @override
+  Future<List<Uint8List>> render(
+    Uint8List bytes, {
+    String? fileName,
+    int? maxPages,
+  }) async {
+    if (error != null) throw error!;
+    return pages;
+  }
 }
 
 FileParsingInput _input(String fileName, List<int> bytes) =>
@@ -178,6 +197,54 @@ void main() {
       expect(document.format, DocumentFormat.md);
       expect(document.fileName, 'лекция.md');
       expect(document.text, '# Тема\n\nТекст');
+    });
+  });
+
+  group('FileParsingService: рендер PDF-скана (итерация 7.9)', () {
+    test('рендер страниц идёт через изолятор и возвращает PNG', () async {
+      final Uint8List png = Uint8List.fromList(<int>[
+        0x89,
+        0x50,
+        0x4E,
+        0x47,
+        1,
+      ]);
+      final FileParsingService service = FileParsingService(
+        isolateRunner: _recordingRunner,
+        pdfScanRenderer: _FakePdfScanRenderer(
+          pages: <Uint8List>[png, png],
+        ),
+      );
+
+      final List<Uint8List> pages = await service.renderPdfPages(
+        Uint8List.fromList(<int>[0x25, 0x50, 0x44, 0x46]),
+        fileName: 'скан.pdf',
+        maxPages: 4,
+      );
+
+      expect(pages, <Uint8List>[png, png]);
+      expect(_isolateRuns, 1, reason: 'Тяжёлый рендер — в изоляте');
+    });
+
+    test('ошибка рендера → ParserException(scannedPdf)', () async {
+      final FileParsingService service = FileParsingService(
+        isolateRunner: _recordingRunner,
+        pdfScanRenderer: _FakePdfScanRenderer(error: StateError('PDFium')),
+      );
+
+      await expectLater(
+        service.renderPdfPages(
+          Uint8List.fromList(<int>[0x25, 0x50, 0x44, 0x46]),
+          fileName: 'скан.pdf',
+        ),
+        throwsA(
+          isA<ParserException>().having(
+            (ParserException error) => error.code,
+            'code',
+            ParserErrorCode.scannedPdf,
+          ),
+        ),
+      );
     });
   });
 

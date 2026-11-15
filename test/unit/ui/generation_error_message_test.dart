@@ -178,6 +178,13 @@ void main() {
       l10n.generationErrorPdfScanUnsupported,
     );
     expect(
+      generationErrorCodeMessage(
+        l10n,
+        GenerationErrorCode.pdfScanVisionRequired,
+      ),
+      l10n.generationErrorPdfScanVisionRequired,
+    );
+    expect(
       generationErrorCodeMessage(l10n, GenerationErrorCode.attachmentTooLarge),
       l10n.generationErrorAttachmentTooLarge,
     );

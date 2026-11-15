@@ -238,5 +238,30 @@ void main() {
       );
       expect(chunker.splitInHalf(chunks.single), isNull);
     });
+
+    test('страницы одного PDF — один фрагмент (groupKey)', () {
+      GenerationAttachment page(int number) => GenerationAttachment(
+        fileName: 'скан.pdf',
+        mediaType: AttachmentMediaType.png,
+        bytes: Uint8List.fromList(<int>[0x89, 0x50, 0x4E, 0x47]),
+        pageNumber: number,
+        groupKey: '/tmp/скан.pdf',
+      );
+
+      final chunks = chunker.chunkAll(
+        const <ParsedDocument>[],
+        <GenerationAttachment>[page(1), page(2), page(3), image('схема.png')],
+        maxInputTokens: 1000,
+      );
+
+      expect(chunks, hasLength(2));
+      expect(
+        chunks[0].images.map((attachment) => attachment.pageNumber),
+        <int>[1, 2, 3],
+      );
+      expect(chunks[0].sourceFiles, <String>['скан.pdf']);
+      expect(chunks[1].images.single.fileName, 'схема.png');
+      expect(chunks.map((chunk) => chunk.index), <int>[1, 2]);
+    });
   });
 }

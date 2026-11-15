@@ -64,4 +64,25 @@ void main() {
     expect(image.isPdf, isFalse);
     expect(image.mimeType, 'image/png');
   });
+
+  test('страница PDF-скана: pageNumber, groupKey, isPdfPage', () {
+    final page = GenerationAttachment(
+      fileName: 'скан.pdf',
+      mediaType: AttachmentMediaType.png,
+      bytes: Uint8List.fromList(<int>[0x89, 0x50, 0x4E, 0x47]),
+      pageNumber: 2,
+      groupKey: '/tmp/скан.pdf',
+    );
+    expect(page.isPdfPage, isTrue);
+    expect(page.isPdf, isFalse);
+    expect(page.pageNumber, 2);
+    expect(page.groupKey, '/tmp/скан.pdf');
+
+    final plain = GenerationAttachment(
+      fileName: 'схема.png',
+      mediaType: AttachmentMediaType.png,
+      bytes: Uint8List.fromList(<int>[0x89, 0x50, 0x4E, 0x47]),
+    );
+    expect(plain.isPdfPage, isFalse);
+  });
 }

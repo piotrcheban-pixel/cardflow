@@ -584,6 +584,10 @@
   "@cardTypeCloze": {
     "description": "Тип карточки cloze (разметка — итерация 5)."
   },
+  "cardTypeOcclusion": "Изображение с маской",
+  "@cardTypeOcclusion": {
+    "description": "Формат карточки occlusion в предпросмотре генерации (итерация 7.9)."
+  },
   "cardFormReversedHint": "Будет создана вторая карточка с обратным вопросом.",
   "@cardFormReversedHint": {
     "description": "Подсказка при выборе двустороннего типа карточки (SPEC A5)."
@@ -712,6 +716,10 @@
   "generationErrorPdfScanUnsupported": "PDF-скан не поддерживается выбранной моделью",
   "@generationErrorPdfScanUnsupported": {
     "description": "Генерация: PDF-скан, протокол не принимает PDF (итерация 7.8)."
+  },
+  "generationErrorPdfScanVisionRequired": "PDF-скан без текста. Выберите модель с поддержкой изображений",
+  "@generationErrorPdfScanVisionRequired": {
+    "description": "Генерация: PDF-скан отрендерен в страницы, а у модели нет Vision (итерация 7.9)."
   },
   "generationErrorAttachmentTooLarge": "Файл больше 10 МБ. Уменьшите файл и попробуйте снова",
   "@generationErrorAttachmentTooLarge": {
@@ -849,6 +857,10 @@
   "generationFileScannedPdf": "Скан — отправится как изображение",
   "@generationFileScannedPdf": {
     "description": "Статус файла: PDF без текстового слоя, будет отправлен как документ при Vision (итерация 7.8)."
+  },
+  "generationFilePdfPages": "Скан — страницы отправятся как изображения",
+  "@generationFilePdfPages": {
+    "description": "Статус файла: PDF-скан отрендерен в PNG-страницы (итерация 7.9)."
   },
   "generationFileSizeBytes": "{size} Б",
   "@generationFileSizeBytes": {
@@ -1054,6 +1066,10 @@
   "generationIssueTagsAdjusted": "Теги скорректированы",
   "@generationIssueTagsAdjusted": {
     "description": "Пометка A8.4: теги обрезаны/нормализованы."
+  },
+  "generationIssueOcclusionImageMissing": "Нет изображения для карточки с маской",
+  "@generationIssueOcclusionImageMissing": {
+    "description": "Пометка итерации 7.9: occlusion без найденной картинки стала обычной."
   },
   "generationDuplicatesRemoved": "{count, plural, =0{Дубликатов нет} one{{count} дубликат пропущен} few{{count} дубликата пропущено} many{{count} дубликатов пропущено} other{{count} дубликата пропущено}}",
   "@generationDuplicatesRemoved": {

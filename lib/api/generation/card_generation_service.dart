@@ -253,7 +253,9 @@ class CardGenerationService implements GenerationCaller {
     for (final GenerationAttachment image in images) {
       if (!account.supportsVision) {
         throw GenerationException(
-          image.isPdf
+          image.isPdfPage
+              ? GenerationErrorCode.pdfScanVisionRequired
+              : image.isPdf
               ? GenerationErrorCode.fileWithoutTextAndVision
               : GenerationErrorCode.visionUnsupported,
           details: 'Модель не поддерживает изображения',
@@ -281,6 +283,9 @@ class CardGenerationService implements GenerationCaller {
         .join(', ');
     if (images.every((GenerationAttachment image) => image.isPdf)) {
       return 'Приложенный документ (скан): $names';
+    }
+    if (images.every((GenerationAttachment image) => image.isPdfPage)) {
+      return 'Приложенный PDF-скан (страницы): $names';
     }
     if (images.every((GenerationAttachment image) => !image.isPdf)) {
       return 'Приложенные изображения: $names';

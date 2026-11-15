@@ -5,6 +5,7 @@ import 'package:cardflow/api/parsers/document_parser.dart';
 import 'package:cardflow/api/parsers/docx_parser.dart';
 import 'package:cardflow/api/parsers/odt_parser.dart';
 import 'package:cardflow/api/parsers/pdf_parser.dart';
+import 'package:cardflow/api/parsers/pdf_scan_renderer.dart';
 import 'package:cardflow/api/parsers/pptx_parser.dart';
 import 'package:cardflow/api/parsers/rtf_parser.dart';
 import 'package:cardflow/api/parsers/txt_parser.dart';
@@ -72,7 +73,9 @@ class FileParsingService {
     List<DocumentParser>? parsers,
     this.isolateRunner,
     this.maxFileBytes = 25 * 1024 * 1024,
-  }) : _parsers = parsers ?? _defaultParsers;
+    PdfScanRenderer pdfScanRenderer = const PdfScanRenderer(),
+  }) : _parsers = parsers ?? _defaultParsers,
+       _pdfScanRenderer = pdfScanRenderer;
 
   /// Парсеры по умолчанию: все поддерживаемые форматы A8.3.
   static const List<DocumentParser> _defaultParsers = <DocumentParser>[
@@ -88,11 +91,41 @@ class FileParsingService {
 
   final List<DocumentParser> _parsers;
 
+  /// Рендер страниц PDF-скана в PNG (итерация 7.9).
+  final PdfScanRenderer _pdfScanRenderer;
+
   /// Запуск парсинга в изоляте; `null` — использовать `Isolate.run`.
   final IsolateRunner? isolateRunner;
 
   /// Максимальный размер файла в байтах (SPEC A8.3: 25 МБ).
   final int maxFileBytes;
+
+  /// Рендерит первые страницы PDF-скана в PNG (итерация 7.9, ADR-023).
+  ///
+  /// Ошибка PDFium/PDF → `ParserException(scannedPdf)` без сырых исключений:
+  /// экран генерации покажет понятную строку ARB.
+  Future<List<Uint8List>> renderPdfPages(
+    Uint8List bytes, {
+    required String fileName,
+    int? maxPages,
+  }) async {
+    try {
+      return await _runInIsolate(
+        () => _pdfScanRenderer.render(
+          bytes,
+          fileName: fileName,
+          maxPages: maxPages,
+        ),
+      );
+    } on ParserException {
+      rethrow;
+    } on Object catch (error) {
+      throw ParserException(
+        ParserErrorCode.scannedPdf,
+        details: 'Не удалось отрендерить страницы PDF: $error',
+      );
+    }
+  }
 
   /// Разбирает один файл.
   ///

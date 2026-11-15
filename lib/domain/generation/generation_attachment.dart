@@ -37,6 +37,8 @@ class GenerationAttachment {
     required this.fileName,
     required this.mediaType,
     required this.bytes,
+    this.pageNumber,
+    this.groupKey,
   });
 
   /// Имя исходного файла (для prompt и `generation_jobs.files`).
@@ -48,11 +50,20 @@ class GenerationAttachment {
   /// Содержимое файла.
   final Uint8List bytes;
 
+  /// Номер страницы PDF-скана (с 1); `null` — не страница скана.
+  final int? pageNumber;
+
+  /// Ключ группы: страницы одного PDF отправляются одним фрагментом.
+  final String? groupKey;
+
   /// MIME-тип строкой.
   String get mimeType => mediaType.mimeType;
 
   /// true, если это PDF-скан (document-part, а не image-part).
   bool get isPdf => mediaType == AttachmentMediaType.pdf;
+
+  /// true, если это отрендеренная страница PDF-скана (image-part).
+  bool get isPdfPage => pageNumber != null;
 
   @override
   String toString() =>

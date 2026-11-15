@@ -63,6 +63,7 @@ void main() {
         GenerationErrorCode.visionUnsupported,
         GenerationErrorCode.fileWithoutTextAndVision,
         GenerationErrorCode.pdfScanUnsupported,
+        GenerationErrorCode.pdfScanVisionRequired,
         GenerationErrorCode.attachmentTooLarge,
       });
     });

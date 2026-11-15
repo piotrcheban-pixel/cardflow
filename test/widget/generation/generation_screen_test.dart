@@ -8,9 +8,11 @@ import 'package:material_ui/material_ui.dart';
 
 import 'package:cardflow/api/parsers/document_parser.dart';
 import 'package:cardflow/api/parsers/file_parsing_service.dart';
+import 'package:cardflow/api/parsers/pdf_scan_renderer.dart';
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/decks/deck_summary.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
+import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
 import 'package:cardflow/domain/generation/generation_job.dart';
 import 'package:cardflow/domain/generation/generation_run.dart';
@@ -617,6 +619,7 @@ void main() {
       parsingService: FileParsingService(
         parsers: <DocumentParser>[const _ScannedPdfParser()],
         isolateRunner: inlineIsolate,
+        pdfScanRenderer: _FakePdfScanRenderer(error: StateError('PDFium')),
       ),
     );
     await tester.tap(
@@ -633,6 +636,145 @@ void main() {
       find.text(l10n.generationErrorFileWithoutTextAndVision),
       findsOneWidget,
     );
+  });
+
+  group('PDF-скан → PNG-страницы (итерация 7.9)', () {
+    Future<void> attachScan(
+      WidgetTester tester, {
+      String name = 'скан.pdf',
+      int pageCount = 4,
+    }) async {
+      gateway.picked = <PickedDocument>[
+        PickedDocument(path: '/tmp/$name', name: name, sizeBytes: 8),
+      ];
+      gateway.bytesByPath['/tmp/$name'] = Uint8List.fromList(<int>[
+        0x25,
+        0x50,
+        0x44,
+        0x46,
+        0x2D,
+        0x31,
+        0x2E,
+        0x37,
+      ]);
+      await pumpScreen(
+        tester,
+        parsingService: FileParsingService(
+          parsers: <DocumentParser>[const _ShortTextPdfParser()],
+          isolateRunner: inlineIsolate,
+          pdfScanRenderer: _FakePdfScanRenderer(pageCount: pageCount),
+        ),
+      );
+      await tester.tap(
+        find.byKey(const ValueKey<String>('generation-attach-zone')),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('Vision: страницы уходят одним запросом как PNG', (
+      tester,
+    ) async {
+      accountsStore.accounts = ProviderAccounts.empty.withAccount(
+        testProviderAccount(presetId: 'openai', modelId: 'gpt-4o'),
+      );
+      keyStore.keys['openai'] = 'sk-openai';
+      await attachScan(tester);
+      final l10n = l10nOf(tester);
+      expect(find.text(l10n.generationFilePdfPages), findsOneWidget);
+
+      await tester.tap(find.byKey(const ValueKey<String>('generation-start')));
+      await tester.pumpAndSettle();
+
+      expect(runner.runCalls, 1);
+      final attachments = runner.lastRequest!.images;
+      expect(attachments, hasLength(4));
+      expect(
+        attachments.map((attachment) => attachment.pageNumber),
+        <int>[1, 2, 3, 4],
+      );
+      expect(
+        attachments.map((attachment) => attachment.groupKey).toSet(),
+        <String>{'/tmp/скан.pdf'},
+        reason: 'Страницы одного PDF — один фрагмент запроса',
+      );
+      for (final attachment in attachments) {
+        expect(attachment.mediaType, AttachmentMediaType.png);
+        expect(
+          hasValidAttachmentSignature(
+            AttachmentMediaType.png,
+            attachment.bytes,
+          ),
+          isTrue,
+        );
+        expect(attachment.isPdfPage, isTrue);
+        expect(attachment.fileName, 'скан.pdf');
+      }
+      expect(runner.lastRequest!.documents, isEmpty);
+    });
+
+    testWidgets('без Vision — понятная ошибка и запрос не отправлен', (
+      tester,
+    ) async {
+      accountsStore.accounts = ProviderAccounts.empty.withAccount(
+        testProviderAccount(),
+      );
+      keyStore.keys['deepseek'] = 'sk-deepseek';
+      await attachScan(tester);
+      final l10n = l10nOf(tester);
+
+      await tester.tap(find.byKey(const ValueKey<String>('generation-start')));
+      await tester.pumpAndSettle();
+
+      expect(runner.runCalls, 0);
+      expect(
+        find.text(l10n.generationErrorPdfScanVisionRequired),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('рендер не удался — fallback на PDF и понятная ошибка', (
+      tester,
+    ) async {
+      gateway.picked = <PickedDocument>[
+        const PickedDocument(
+          path: '/tmp/битый.pdf',
+          name: 'битый.pdf',
+          sizeBytes: 8,
+        ),
+      ];
+      gateway.bytesByPath['/tmp/битый.pdf'] = Uint8List.fromList(<int>[
+        0x25,
+        0x50,
+        0x44,
+        0x46,
+        0x2D,
+        0x31,
+        0x2E,
+        0x37,
+      ]);
+      await pumpScreen(
+        tester,
+        parsingService: FileParsingService(
+          parsers: <DocumentParser>[const _ShortTextPdfParser()],
+          isolateRunner: inlineIsolate,
+          pdfScanRenderer: _FakePdfScanRenderer(error: StateError('PDFium')),
+        ),
+      );
+      await tester.tap(
+        find.byKey(const ValueKey<String>('generation-attach-zone')),
+      );
+      await tester.pumpAndSettle();
+      final l10n = l10nOf(tester);
+
+      expect(find.text(l10n.generationFileScannedPdf), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey<String>('generation-start')));
+      await tester.pumpAndSettle();
+      expect(runner.runCalls, 0);
+      expect(
+        find.text(l10n.generationErrorFileWithoutTextAndVision),
+        findsOneWidget,
+      );
+    });
   });
 }
 
@@ -652,5 +794,59 @@ class _ScannedPdfParser implements DocumentParser {
       ParserErrorCode.scannedPdf,
       details: 'тестовый скан',
     );
+  }
+}
+
+/// PDF, из которого извлёкся почти пустой текст (< 50 символов).
+class _ShortTextPdfParser implements DocumentParser {
+  const _ShortTextPdfParser();
+
+  @override
+  DocumentFormat get format => DocumentFormat.pdf;
+
+  @override
+  Future<ParsedDocument> parse(
+    Uint8List bytes, {
+    required String fileName,
+  }) async {
+    const String text = '1';
+    return ParsedDocument(
+      format: DocumentFormat.pdf,
+      fileName: fileName,
+      text: text,
+      sections: const <ParsedSection>[ParsedSection(start: 0, end: 1)],
+    );
+  }
+}
+
+/// Фейковый рендер PDF-страниц в PNG для widget-тестов экрана генерации.
+class _FakePdfScanRenderer extends PdfScanRenderer {
+  _FakePdfScanRenderer({this.pageCount = 4, this.error});
+
+  final int pageCount;
+  final Object? error;
+
+  static final Uint8List _png = Uint8List.fromList(<int>[
+    0x89,
+    0x50,
+    0x4E,
+    0x47,
+    0x0D,
+    0x0A,
+    0x1A,
+    0x0A,
+    0,
+    0,
+    0,
+  ]);
+
+  @override
+  Future<List<Uint8List>> render(
+    Uint8List bytes, {
+    String? fileName,
+    int? maxPages,
+  }) async {
+    if (error != null) throw error!;
+    return List<Uint8List>.generate(pageCount, (_) => _png);
   }
 }

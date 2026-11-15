@@ -49,6 +49,8 @@ String generationErrorCodeMessage(
       l10n.generationErrorFileWithoutTextAndVision,
     GenerationErrorCode.pdfScanUnsupported =>
       l10n.generationErrorPdfScanUnsupported,
+    GenerationErrorCode.pdfScanVisionRequired =>
+      l10n.generationErrorPdfScanVisionRequired,
     GenerationErrorCode.attachmentTooLarge =>
       l10n.generationErrorAttachmentTooLarge,
   };

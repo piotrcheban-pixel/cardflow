@@ -562,6 +562,28 @@ void main() {
       );
     }
 
+    GenerationAttachment pdfPageAttachment({int pageNumber = 1}) {
+      return GenerationAttachment(
+        fileName: 'скан.pdf',
+        mediaType: AttachmentMediaType.png,
+        pageNumber: pageNumber,
+        groupKey: '/tmp/скан.pdf',
+        bytes: Uint8List.fromList(<int>[
+          0x89,
+          0x50,
+          0x4E,
+          0x47,
+          0x0D,
+          0x0A,
+          0x1A,
+          0x0A,
+          1,
+          2,
+          3,
+        ]),
+      );
+    }
+
     test(
       'пустой текст без вложений → noMaterials, без адаптера и сети',
       () async {
@@ -664,6 +686,56 @@ void main() {
       );
       expect(adapter.buildCalls, 0);
       expect(transport.calls, 0);
+    });
+
+    test(
+      'страницы PDF-скана без Vision → pdfScanVisionRequired, без запроса',
+      () async {
+        final adapter = FakeProviderAdapter();
+        final transport = FakeGenerationTransport(
+          response: <String, Object?>{},
+        );
+        final service = serviceWith(adapter: adapter, transport: transport);
+
+        await expectLater(
+          service.generate(
+            requestFor(
+              openAiAccount(supportsVision: false),
+              materialsText: '',
+              images: <GenerationAttachment>[pdfPageAttachment()],
+            ),
+          ),
+          throwsGeneration(GenerationErrorCode.pdfScanVisionRequired),
+        );
+        expect(adapter.buildCalls, 0);
+        expect(transport.calls, 0);
+      },
+    );
+
+    test('страницы PDF-скана при Vision → image parts, один запрос', () async {
+      final adapter = FakeProviderAdapter(
+        cardsJson: cardsJson(<Map<String, Object?>>[]),
+      );
+      final transport = FakeGenerationTransport(response: <String, Object?>{});
+      final service = serviceWith(adapter: adapter, transport: transport);
+
+      await service.generate(
+        requestFor(
+          openAiAccount(supportsVision: true),
+          materialsText: '',
+          images: <GenerationAttachment>[
+            pdfPageAttachment(pageNumber: 1),
+            pdfPageAttachment(pageNumber: 2),
+          ],
+        ),
+      );
+
+      expect(adapter.buildArgs!.images, hasLength(2));
+      expect(transport.calls, 1);
+      expect(
+        adapter.buildArgs!.userContent,
+        contains('Приложенный PDF-скан (страницы)'),
+      );
     });
 
     test('вложение больше 10 МБ → attachmentTooLarge, без запроса', () async {

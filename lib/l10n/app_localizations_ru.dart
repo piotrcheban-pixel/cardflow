@@ -469,6 +469,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get cardTypeCloze => 'С пропусками';
 
   @override
+  String get cardTypeOcclusion => 'Изображение с маской';
+
+  @override
   String get cardFormReversedHint =>
       'Будет создана вторая карточка с обратным вопросом.';
 
@@ -578,6 +581,10 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get generationErrorPdfScanUnsupported =>
       'PDF-скан не поддерживается выбранной моделью';
+
+  @override
+  String get generationErrorPdfScanVisionRequired =>
+      'PDF-скан без текста. Выберите модель с поддержкой изображений';
 
   @override
   String get generationErrorAttachmentTooLarge =>
@@ -697,6 +704,10 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get generationFileScannedPdf => 'Скан — отправится как изображение';
+
+  @override
+  String get generationFilePdfPages =>
+      'Скан — страницы отправятся как изображения';
 
   @override
   String generationFileSizeBytes(int size) {
@@ -849,6 +860,10 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get generationIssueTagsAdjusted => 'Теги скорректированы';
+
+  @override
+  String get generationIssueOcclusionImageMissing =>
+      'Нет изображения для карточки с маской';
 
   @override
   String generationDuplicatesRemoved(int count) {

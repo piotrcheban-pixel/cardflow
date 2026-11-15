@@ -58,6 +58,9 @@ enum GenerationErrorCode {
   /// PDF-скан, но протокол/модель не принимает PDF как документ.
   pdfScanUnsupported,
 
+  /// PDF-скан отрендерен в страницы, а у модели нет Vision (итерация 7.9).
+  pdfScanVisionRequired,
+
   /// Вложение больше inline-лимита (10 МБ).
   attachmentTooLarge,
 }

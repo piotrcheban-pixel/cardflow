@@ -101,10 +101,7 @@ class GenerationPipeline implements GenerationRunner {
       promptVersion: systemPromptVersion,
       chunkCount: 0,
       cardsCount: 0,
-      files: <String>[
-        for (final document in request.documents) document.fileName,
-        for (final image in request.images) image.fileName,
-      ],
+      files: _fileNames(request),
     );
     await jobRepository.save(initialJob);
 
@@ -178,10 +175,7 @@ class GenerationPipeline implements GenerationRunner {
           provider: request.account.id,
           model: request.account.modelId,
           promptVersion: systemPromptVersion,
-          files: <String>[
-            for (final document in request.documents) document.fileName,
-            for (final image in request.images) image.fileName,
-          ],
+          files: _fileNames(request),
         );
     final Set<String> seen = <String>{
       ..._hashesOfCards(previous.cards),
@@ -470,5 +464,17 @@ Set<String> _hashesOfCards(List<GeneratedCard> cards) {
 }
 
 DateTime _defaultNow() => DateTime.now();
+
+/// Имена файлов задания без дублей (страницы одного PDF-скана считаются одним
+/// файлом) в порядке появления (итерация 7.9).
+List<String> _fileNames(GenerationRunRequest request) {
+  final List<String> names = <String>[
+    for (final document in request.documents) document.fileName,
+  ];
+  for (final image in request.images) {
+    if (!names.contains(image.fileName)) names.add(image.fileName);
+  }
+  return List<String>.unmodifiable(names);
+}
 
 String _defaultJobId() => const Uuid().v4();

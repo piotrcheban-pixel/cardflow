@@ -56,6 +56,9 @@ dependencies:
   enough_convert: ^1.7.1
   excel_plus: ^2.29.2
   pdfrx: ^2.12.0
+  # PNG-рендер страниц PDF-скана (итерация 7.9, ADR-023): encodePng для
+  # PdfImage.pixels; раньше приходил транзитивно через pdfrx_engine 0.9.1.
+  image: ^4.12.0
   file_picker: ^13.3.3
   url_launcher: ^6.3.3
   json_schema: ^5.2.2

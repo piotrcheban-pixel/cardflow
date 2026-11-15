@@ -147,6 +147,9 @@ class GenerationChunker {
   ///
   /// Изображение/PDF-скан — отдельный фрагмент: провайдер получает его как
   /// inline-часть и не смешивает с текстом другого файла (итерация 7.8).
+  /// Вложения с одинаковым [GenerationAttachment.groupKey] (страницы одного
+  /// PDF-скана) идут одним фрагментом — несколько image parts в одном запросе
+  /// (итерация 7.9, ADR-023).
   List<GenerationChunk> chunkAll(
     List<ParsedDocument> documents,
     List<GenerationAttachment> images, {
@@ -157,18 +160,53 @@ class GenerationChunker {
       maxInputTokens: maxInputTokens,
     );
     final List<GenerationChunk> result = <GenerationChunk>[...textChunks];
-    for (final GenerationAttachment image in images) {
+    for (final List<GenerationAttachment> group in _attachmentGroups(images)) {
       result.add(
         GenerationChunk(
           index: result.length + 1,
           materialsText: '',
-          sourceFiles: <String>[image.fileName],
+          sourceFiles: _uniqueAttachmentFiles(group),
           limit: maxCardsPerChunk,
-          images: <GenerationAttachment>[image],
+          images: List<GenerationAttachment>.unmodifiable(group),
         ),
       );
     }
     return result;
+  }
+
+  /// Группирует вложения: страницы одного PDF — вместе, остальные — по одной.
+  List<List<GenerationAttachment>> _attachmentGroups(
+    List<GenerationAttachment> images,
+  ) {
+    final List<List<GenerationAttachment>> groups =
+        <List<GenerationAttachment>>[];
+    final Map<String, List<GenerationAttachment>> byGroup =
+        <String, List<GenerationAttachment>>{};
+    for (final GenerationAttachment image in images) {
+      final String? key = image.groupKey;
+      if (key == null || key.isEmpty) {
+        groups.add(<GenerationAttachment>[image]);
+        continue;
+      }
+      final List<GenerationAttachment>? existing = byGroup[key];
+      if (existing != null) {
+        existing.add(image);
+      } else {
+        final List<GenerationAttachment> group = <GenerationAttachment>[image];
+        byGroup[key] = group;
+        groups.add(group);
+      }
+    }
+    return groups;
+  }
+
+  /// Уникальные имена файлов группы вложений в порядке появления.
+  List<String> _uniqueAttachmentFiles(List<GenerationAttachment> group) {
+    final List<String> names = <String>[];
+    for (final GenerationAttachment attachment in group) {
+      if (!names.contains(attachment.fileName)) names.add(attachment.fileName);
+    }
+    return List<String>.unmodifiable(names);
   }
 
   /// Имена файлов группы без дублей, в порядке появления.
