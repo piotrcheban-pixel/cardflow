@@ -286,3 +286,25 @@ dev_dependencies:
 Итерация сама новых runtime-зависимостей не вводит: каталог провайдеров — статические данные,
 аккаунты — строка `app_settings`, ключи — существующий `flutter_secure_storage` 11.2.0, сеть —
 существующий `dio` 5.11.1.
+
+## 14. Фактическое состояние после итерации 7.9 (2026-11-15)
+
+**Новый прямой runtime-пакет — `image ^4.12.0`.** Проверка pub.dev/факт: MIT, чистый Dart,
+Android/iOS/Linux/macOS/Windows/Web, активные релизы (2026). Пакет уже приходил
+транзитивно через `pdfrx_engine 0.9.1`; теперь объявлен явно, потому что
+`lib/api/parsers/pdf_scan_renderer.dart` кодирует растр PDF-страницы в PNG
+(`encodePng`) — это публичный API пакета, а не деталь транзитивной зависимости.
+`fvm flutter pub get` → `Changed 1 dependency!` (version constraint закреплён).
+Документация — ADR-023 §1.
+
+**Внешний сервис без пакета и ключа:** Openverse API
+(`https://api.openverse.org/v1/images/`) — открытый эндпоинт для поиска CC-изображений,
+анонимный лимит ~1 запрос/с, ключ не требуется. Сеть — существующий `dio 5.11.1`;
+`ImageSearchService` троттлит поисковые запросы и не логирует тела. Новых пакетов
+для поиска нет.
+
+**PDFium** остаётся прежним пином (`pdfrx 2.12.0` / `pdfium_dart 0.4.1`,
+`bblanchon/pdfium-binaries chromium/8125`); рендер страниц использует тот же
+PDFium, что и текстовый парсер, отдельного нативного ассета не добавлено.
+Рендер в `Isolate.run` проверен на Windows тестом
+`test/unit/api/parsers/pdf_scan_renderer_test.dart`.

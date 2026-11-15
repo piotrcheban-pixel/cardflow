@@ -42,7 +42,7 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   без схемы и `max_tokens`, не больше трёх запросов, только по `badRequest`; разбор текста ответа —
   `lib/api/generation/cards_json_extractor.dart` (BOM, markdown-ограждение, текст вокруг JSON —
   только для compatible-протокола); пустой `cards` — не ошибка ответа: в UI отдельная строка
-  `generationNoCardsFound`. Промпт `gen-ru-v2` скрыт в коде (`system_prompt.dart`),
+  `generationNoCardsFound`. Промпт `gen-ru-v3` скрыт в коде (`system_prompt.dart`),
   пользовательское сообщение — `generation_prompt.dart`; контентные правила A8.4 — `card_content_validator.dart`
   (пометки `CardIssueCode`, карточка не отбрасывается); HTTP — только через `GenerationTransport`
   (`lib/api/http/generation_http_client.dart`) с `RetryPolicy` и `RedactingLogInterceptor`. Ошибки — только
@@ -57,6 +57,18 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   `lib/api/providers/attachment_parts.dart`. Каталог `ProviderPresetModel.supportsVision`, JSON аккаунта
   `supports_vision`; старые записи — пресет или инференс по имени модели. `providerReason` для 400 —
   очищенная причина провайдера (ARB `generationErrorBadRequestReason`), тела не логируются.
+  **PDF-сканы, иллюстрации и occlusion (ADR-023, итерация 7.9):** PDF с текстом < 50 символов
+  (или `scannedPdf`) рендерится `PdfScanRenderer` (`lib/api/parsers/pdf_scan_renderer.dart`, pdfrx
+  + `image`, `Isolate.run`) в первые ≤ 4 PNG; страницы одного PDF — один фрагмент (`groupKey`).
+  Модель без Vision → `pdfScanVisionRequired`; при сбое рендера — fallback на PDF для
+  Anthropic/Gemini. `image_query` (схема `gen-ru-v3`) → доменный порт `CardImageFinder` →
+  `ImageSearchService` (`lib/api/images/`, Openverse без ключа, CC0/PDM/CC BY/CC BY-SA, JPEG/PNG
+  ≤ 5 МБ, троттлинг 1 запрос/с); байты `GeneratedCard.image` пишутся в `MediaStore` + `media`
+  только при импорте (`DriftGenerationCardStore`). `card_type: "occlusion"` — wire-формат
+  ответа модели: в БД/экспорте `basic` + `occlusion_json` + media (SPEC A5); без найденной
+  картинки — `basic` + `CardIssueCode.occlusionImageMissing`, с картинкой — базовая маска
+  `defaultOcclusionDocumentJson()`. Basic-карточка с media показывает иллюстрацию в
+  `CardContentView`; ошибка поиска не отменяет карточку.
 - `ui/` — экраны, виджеты, локализация. Компоненты M3 Expressive — только через слой `lib/ui/m3e/` (библиотеку можно заменить). Токены движения — `lib/ui/motion.dart`.
 - **Режим «Лента»** (SPEC A7.3, ADR-016): движок `lib/ui/review/feed_session_engine.dart` (очередь
   `ReviewQueue`, по-карточные revealed/rated, `visit` без записи, `rate`/`undo` через тот же
@@ -183,6 +195,12 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   обратной совместимостью (инференс для старых записей и переключатель в UI), а «сырую» диагностику
   провайдера (причина 400) — отдельным безопасным полем `providerReason`, не через `details`; проверять
   сквозной путь HTTP → ARB → UI и приоритет ошибок (vision раньше размера/PDF-протокола).
+- **Ретроспектива итерации 7.9:** wire-значение, конфликтующее со SPEC (occlusion), проецировать в
+  существующий тип + ADR, а не менять публичный контракт; при добавлении обязательного поля strict-схемы
+  (`image_query`) обновлять одну общую JSON-фикстуру карточки, а не три копии; при привязке провайдера к
+  новому обязательному platform-зависимому сервису (MediaStore в `generationCardStoreProvider`) сразу
+  прогонять production-интеграционный тест — он ловит `UnimplementedError` в проводке, который unit-тесты
+  слоёв не видят; риск «тяжёлый PDFium в изоляте» снимать реальным тестом (`Isolate.run`) до UI.
 
 ## Факты хоста (обновлять при изменении)
 
@@ -277,3 +295,13 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   **Push итерации 7.5:** `7892b08..a20cd5e`; CI run
   [`43632334916`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43632334916) —
   **9/9 job success**.
+- **PDF-сканы, иллюстрации и occlusion проверены локально (итерация 7.9, 2026-11-15, ADR-023):**
+  `fvm flutter test --coverage --exclude-tags golden` → **1369 passed + 2 skipped**; покрытие
+  **92.8 % (9277/9994)**; `analyze` 0; `dart format` 331 файл / 0 changed;
+  `fvm flutter build windows --release` → `cardflow.exe` (80,5 с). Рендер PDF-страниц в `Isolate.run`
+  проверен на реальном PDFium (`pdf_scan_renderer_test.dart`); production-граф
+  «occlusion + image_query → поиск → drift-БД → MediaStore → media/маска» — в
+  `test/integration/generation_flow_test.dart`. **Живой DeepSeek с `gen-ru-v3`:** 2 live-теста
+  passed (`cards=3, tokens=1351`; fallback strict=400 → tolerant=200, `max_tokens=8192`).
+  Схема БД/`schemaVersion` и `format_version` не менялись; `card_type: occlusion` — wire-формат,
+  в БД `basic` + `occlusion_json`. Ограничения: L57–L60. Push 7.9 и CI — после команды владельца.

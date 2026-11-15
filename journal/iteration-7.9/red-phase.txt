@@ -1,0 +1,34 @@
+Итерация 7.9 — фрагменты красной фазы (assertion-level)
+
+feed_card_view_test.dart (до фикса):
+  00:01 +0 -2: Some tests failed.
+  Failing tests: обратная сторона при revealed=true не зеркалится;
+                 после анимации переворота текст не отзеркален
+
+pdf_scan_renderer_test.dart (до реализации):
+  Expected: an object with length of <2>
+    Actual: []
+  Which: has length of <0>
+  Expected: throws <Instance of 'ParserException'>
+    Actual: <Instance of 'Future<List<Uint8List>>'>
+    Which: emitted []
+
+generation_chunker_test.dart (groupKey, до реализации):
+  Expected: an object with length of <2>
+    Actual: [GenerationChunk(1 ...), GenerationChunk(2 ...),
+             GenerationChunk(3 ...), GenerationChunk(4 ...)]
+  Which: has length of <4>
+
+generation_screen_test.dart (PDF-страницы, до проводки):
+  Expected: exactly one matching candidate
+    Actual: Found 0 widgets with text
+            "Скан — страницы отправятся как изображения": []
+
+image_search_service_test.dart (до реализации):
+  Expected: not null
+    Actual: <null>
+  Null check operator used on a null value
+
+Первый полный прогон (до проводки MediaStore): 7 failures
+  - 6 × generation_flow_test: UnimplementedError: mediaStoreProvider должен быть переопределён
+  - 1 × generation_pipeline_test: Expected 'gen-ru-v2', Actual 'gen-ru-v3'

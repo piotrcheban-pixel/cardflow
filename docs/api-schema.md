@@ -1,8 +1,9 @@
 # API-схема генерации CardFlow
 
-**Версия:** 3 (2026-11-14; `max_tokens` и лестница совместимости OpenAI-совместимого
-протокола, ADR-021) ·
-**Связано:** SPEC A8.1, A8.2, A8.4, A8.5, A8.6; ADR-011; ADR-012; ADR-013; ADR-021
+**Версия:** 4 (2026-11-15; `image_query`, wire-формат occlusion, PDF-страницы и
+поиск иллюстраций, ADR-023) ·
+**Связано:** SPEC A8.1, A8.2, A8.4, A8.5, A8.6; ADR-011; ADR-012; ADR-013; ADR-021;
+ADR-022; ADR-023
 **Источник правды в коде:** `lib/api/generation/card_json_schema.dart` (канон), `provider_schema.dart`
 (проекции), `card_response_schema.dart` (валидатор), `cards_json_extractor.dart` (разбор текста ответа),
 `lib/domain/generation/` (коды ошибок).
@@ -26,11 +27,12 @@
           "back": { "type": "string" },
           "hint": { "type": ["string", "null"] },
           "tags": { "type": "array", "items": { "type": "string" } },
-          "card_type": { "type": "string", "enum": ["basic", "basic_reversed", "cloze"] },
+          "card_type": { "type": "string", "enum": ["basic", "basic_reversed", "cloze", "occlusion"] },
           "source_excerpt": { "type": ["string", "null"] },
-          "source_file": { "type": ["string", "null"] }
+          "source_file": { "type": ["string", "null"] },
+          "image_query": { "type": ["string", "null"] }
         },
-        "required": ["front", "back", "hint", "tags", "card_type", "source_excerpt", "source_file"],
+        "required": ["front", "back", "hint", "tags", "card_type", "source_excerpt", "source_file", "image_query"],
         "additionalProperties": false
       }
     }
@@ -39,6 +41,15 @@
   "additionalProperties": false
 }
 ```
+
+`image_query` — краткий поисковый запрос **на английском** для иллюстрации (например,
+`photosynthesis diagram`, `Eiffel Tower`), или `null`. Модель добавляет его, если без
+иллюстрации карточка непонятна; для `occlusion` — обязательно. Если пользователь запретил
+картинки в `<wishes>`, `image_query` не заполняется (правило промпта `gen-ru-v3`).
+
+`card_type: "occlusion"` — **только wire-значение ответа модели**. В приложении такая
+карточка импортируется как `basic` с `occlusion_json` и медиа (SPEC A5: occlusion — разметка,
+а не тип). Это решение ADR-023 §4; `cards.card_type` и экспорт не меняются.
 
 Пустой массив `cards` — валидный ответ (мало материала / материала нет, правило 13 A8.1). Это **не**
 ошибка ответа: UI показывает отдельное сообщение ARB `generationNoCardsFound` («Модель не нашла в
@@ -100,23 +111,35 @@ Anthropic — `<base_url>/v1/messages`, Gemini — `<base_url>/v1beta/models/{mo
 Резолвер один — `lib/api/providers/provider_endpoint.dart`; схема только http/https, ключ только
 в заголовке.
 
-**Вложения и Vision (ADR-022, итерация 7.8).** Адрес и модель — из аккаунта; `supportsVision`
-(JSON `supports_vision`) задаёт, можно ли отправлять изображения. Маршрутизация на каждый файл:
+**Вложения и Vision (ADR-022, ADR-023, итерации 7.8–7.9).** Адрес и модель — из аккаунта;
+`supportsVision` (JSON `supports_vision`) задаёт, можно ли отправлять изображения.
+Маршрутизация на каждый файл:
 
 | Файл | Условие | Что уходит провайдеру |
 |---|---|---|
 | DOCX/PPTX/ODT/XLSX/TXT/MD/RTF | локально извлечён непустой текст | текст в `<materials>` (любая модель; `TextSanitizer` удаляет управляющие символы) |
 | JPG/PNG | `supportsVision=true` | OpenAI/совместимые — `image_url` data URI; Gemini — `inlineData`; Anthropic — блок `image` с base64 |
 | JPG/PNG | `supportsVision=false` | запрос не выполняется: `visionUnsupported` |
-| PDF-скан без текста | Vision + протокол принимает PDF | Gemini — `inlineData application/pdf`; Anthropic — блок `document` с base64 |
-| PDF-скан без текста | Vision есть, PDF-протокола нет (OpenAI/совместимые) | `pdfScanUnsupported` |
-| PDF-скан без текста | Vision нет | `fileWithoutTextAndVision` |
+| PDF, текста ≥ 50 символов | любой парсер | обычный текст |
+| PDF-скан, текста < 50 символов | Vision | первые ≤ 4 страницы рендерятся в PNG (`pdfrx` + `package:image`) и уходят image parts **одним** фрагментом (`groupKey`) |
+| PDF-скан, текста < 50 символов | Vision нет | `pdfScanVisionRequired` |
+| PDF-скан | рендер не удался, протокол принимает PDF | PDF-part (Gemini `inlineData application/pdf`, Anthropic `document`) |
+| PDF-скан | рендер не удался, PDF-протокола нет | `pdfScanUnsupported` |
 | любой файл | больше 10 МБ inline | `attachmentTooLarge` |
 
-Каждый файл-вложение — отдельный запрос (1 файл = 1 фрагмент), имя попадает в
-`generation_jobs.files` и `sourceFiles`; вложения сохраняются в `GenerationChunkFailure` для
-повтора. Inline-base64 увеличивает тело на ~33 %; лимит 10 МБ на файл. Прямые file API
-провайдеров и рендер PDF-страниц в изображения в MVP не используются.
+Каждый файл-вложение — отдельный фрагмент (1 файл = 1 запрос), кроме страниц одного
+PDF: они идут вместе. Имя попадает в `generation_jobs.files` (без дублей страниц) и
+`sourceFiles`; вложения сохраняются в `GenerationChunkFailure` для повтора. Inline-base64
+увеличивает тело на ~33 %; лимит 10 МБ на файл.
+
+**Иллюстрации из интернета (ADR-023 §2–3).** После ответа модели пайплайн разрешает
+`image_query` через `ImageSearchService` (Openverse API без ключа, только CC0/PDM/CC BY/CC BY-SA,
+thumbnail ≤ 5 МБ, JPEG/PNG по сигнатуре, троттлинг 1 запрос/с). Байты попадают в
+`GeneratedCard.image` и записываются в `MediaStore` + `media` только при импорте
+(`DriftGenerationCardStore`), `cards.media_json = [media.id]`. Для `occlusion` без
+найденной картинки карточка понижается до `basic` с пометкой `occlusionImageMissing`;
+с картинкой — `occlusion_json` v1 с центральной прямоугольной маской.
+Ошибка поиска картинки не прерывает генерацию.
 
 **Причина HTTP 400.** Для 4xx (после того как retry/fallback исчерпаны) из тела ответа
 извлекается `error.message`/`message`/`detail`, очищается от управляющих символов и
@@ -177,10 +200,11 @@ markdown-ограждения/текста, и ответ fallback-пути, н�
 | `visionUnsupported` | картинка, а `supportsVision=false` | нет | «Модель не поддерживает изображения» |
 | `fileWithoutTextAndVision` | PDF-скан, а `supportsVision=false` | нет | «В файле нет текста. Модель не поддерживает изображения» |
 | `pdfScanUnsupported` | PDF-скан, протокол не принимает PDF | нет | «PDF-скан не поддерживается выбранной моделью» |
+| `pdfScanVisionRequired` | PDF-скан отрендерен в страницы, а у модели нет Vision | нет | «PDF-скан без текста. Выберите модель с поддержкой изображений» |
 | `attachmentTooLarge` | вложение больше 10 МБ | нет | «Файл больше 10 МБ. Уменьшите файл и попробуйте снова» |
 
-Кодов 18: двенадцать из ADR-011 §5, `providerNotConfigured` (ADR-013), `noMaterials` (3c) и четыре
-кода вложений (ADR-022). Сырые `DioException`, стектрейсы и `details` в UI не попадают — только
+Кодов 19: двенадцать из ADR-011 §5, `providerNotConfigured` (ADR-013), `noMaterials` (3c),
+четыре кода вложений (ADR-022) и `pdfScanVisionRequired` (ADR-023). Сырые `DioException`, стектрейсы и `details` в UI не попадают — только
 строки ARB. Исключение — очищенный `providerReason` для 400 по требованию владельца (ADR-022 §5).
 
 ## 6. Ретраи и таймауты (A8.6)
@@ -208,5 +232,9 @@ markdown-ограждения/текста, и ответ fallback-пути, н�
   ответа и заголовки не показываются.
 - Изображения/PDF-сканы уходят только выбранному провайдеру как base64-части запроса; локальные
   копии вложений не сохраняются (вложения живут в памяти экрана генерации).
+- Поиск иллюстраций — отдельный запрос к Openverse только с английским `image_query`
+  (без материалов, ключей и идентификаторов пользователя); скачанные картинки пишутся
+  в локальное `MediaStore` при импорте. Openverse — открытый сервис без ключа; лицензии
+  CC0/PDM/CC BY/CC BY-SA, атрибуция в БД не переносится (L58).
 - Материалы пользователя уходят только в выбранного провайдера (для OpenAI-совместимого — на адрес из
   настроек) в составе сообщения; собственного сервера CardFlow нет.

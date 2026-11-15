@@ -1,24 +1,39 @@
 # STATE — текущее состояние CardFlow
 
-**Дата:** 2026-11-15 · **Этап:** итерация **7.8** «Универсальная обработка вложений (гибридный подход)» —
-завершена и запушена, код-снимок CI зелёный · **Режим:** ИТЕРАЦИИ
+**Дата:** 2026-11-15 · **Этап:** итерация **7.9** «Фиксы UI, PDF-сканы и Rich-генерация с поиском
+картинок» — завершена локально (verify зелёный), ждёт push и CI · **Режим:** ИТЕРАЦИИ
 **Факты (сверено командами в этой сессии):** на старте `git status --porcelain` → пусто, `HEAD` =
-`origin/main` = `ea9fc16` (docs-коммит итерации 7.6; в STATE 7.6 было записано `5925ea0` — исправлено).
-Flutter 3.47.9 / Dart 3.13.7 (FVM); Windows 11; Android SDK/JDK/Xcode нет (L2).
+`origin/main` = `31a5999` (`docs: record green CI for attachment iteration`; в STATE 7.8 было
+записано `5ac3789` — исправлено). Flutter 3.47.9 / Dart 3.13.7 (FVM); Windows 11;
+Android SDK/JDK/Xcode нет (L2).
 
-**Push/CI (2026-11-15):** `origin/main = 5ac3789` (`ea9fc16..5ac3789`, 2 коммита итерации 7.8);
-код-снимок `5ac3789` — run
+**Push/CI (2026-11-15):** `origin/main = 31a5999`; код-снимок итерации 7.8 (`5ac3789`) — run
 [`43650756271`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43650756271) —
-**9/9 job success** (`format + analyze`, `test` × 3 ОС, `build-desktop` × 3, `build-mobile`
-Android + iOS). Финальный docs-прогон этого коммита запускается push-ем; код-снимок уже проверен.
+**9/9 job success**.
 
 ## Следующее действие
 
-1. **Стоп:** итерация 7.8 принята локальными гейтами; код-снимок CI 9/9; ждать команды владельца.
-2. Приёмка владельцем: приложить JPG/PNG и PDF-скан к модели с Vision и без: картинка при Vision
-   уходит в генерацию, без Vision — «Модель не поддерживает изображения»; Word с управляющими
-   символами больше не даёт 400; при 400 в сообщении видна реальная причина.
+1. Push коммитов 7.9 (`31a5999..HEAD`) и дождаться одного CI-прогона; записать run в STATE/AGENTS.
+2. Отчёт владельцу и стоп до команды.
 3. Дизайн (стекло, тени, анимации) — отдельная задача, не начиналась.
+
+## Итерация 7.9 — итог
+
+**Сделано:**
+- Лента: контр-поворот обратной стороны (`Matrix4.rotationY(pi)`), widget-тест `m00 > 0`.
+- PDF-скан < 50 символов → первые ≤ 4 страницы PNG (pdfrx + image, `Isolate.run`), один фрагмент
+  по `groupKey`, `pdfScanVisionRequired` без Vision, fallback на PDF при сбое рендера.
+- Схема/промпт `gen-ru-v3`: `image_query` и wire `card_type: occlusion`; Openverse-поиск без ключа
+  (`ImageSearchService`, CC, ≤ 5 МБ, троттлинг); пайплайн привязывает `GeneratedCard.image`,
+  occlusion → базовая маска по центру / понижение до basic с пометкой.
+- Импорт: `MediaStore` + `media` + `media_json` + `occlusion_json` одной транзакцией; basic-карточка
+  показывает иллюстрацию. ADR-023, docs, L57–L60.
+
+**Доказательства (эта сессия):** `fvm flutter test --coverage --exclude-tags golden` → **1369 passed
++ 2 skipped**; покрытие **92.8 % (9277/9994)**; `analyze` 0; `format` 331 файл / 0 changed;
+`fvm flutter build windows --release` → `cardflow.exe` (80,5 с); live DeepSeek — 2 passed
+(`cards=3, tokens=1351`; fallback strict=400 → tolerant=200).
+Детали — `journal/iteration-7.9/{plan,red,review,verify,summary}.md`.
 
 ## Итерация 7.8 — итог
 
