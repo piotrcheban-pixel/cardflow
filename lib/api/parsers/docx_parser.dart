@@ -1,9 +1,11 @@
 import 'dart:typed_data';
 
+import 'package:cardflow/api/parsers/document_images.dart';
 import 'package:cardflow/api/parsers/document_parser.dart';
 import 'package:cardflow/api/parsers/parsed_document_builder.dart';
 import 'package:cardflow/api/parsers/xml_local_names.dart';
 import 'package:cardflow/api/parsers/zip_xml.dart';
+import 'package:cardflow/domain/generation/document_image.dart';
 import 'package:cardflow/domain/text/document_format.dart';
 import 'package:cardflow/domain/text/parsed_document.dart';
 import 'package:cardflow/domain/text/parser_exception.dart';
@@ -13,6 +15,8 @@ import 'package:xml/xml.dart';
 ///
 /// Абзацы (`w:p`/`w:t`) → строки; таблицы (`w:tbl`/`w:tr`/`w:tc`) → строки через
 /// табуляцию; заголовки (`w:pStyle` = `Heading*`/`Title`) открывают раздел.
+/// Изображения (`word/media` + привязка `r:embed` к абзацу) извлекаются с
+/// подписью и окружающим текстом (fix-gen, Д3).
 class DocxParser implements DocumentParser {
   /// Создаёт парсер DOCX.
   const DocxParser();
@@ -51,24 +55,141 @@ class DocxParser implements DocumentParser {
       format: format,
       fileName: fileName,
     );
-    for (final XmlElement block in _blocks(body)) {
-      switch (block.name.local) {
-        case 'p':
-          final String? heading = _headingTitle(block);
-          final String text = _paragraphText(block);
-          if (heading != null) {
-            builder.startSection(title: heading);
-          }
-          builder.addLine(text);
-        case 'tbl':
-          for (final String row in _tableRows(block)) {
-            builder.addLine(row);
-          }
-        default:
-          continue;
+    final List<_DocxBlock> blocks = <_DocxBlock>[
+      for (final XmlElement element in _blocks(body)) _blockOf(element),
+    ];
+    final Map<String, String> relationships = _documentRelationships(zip);
+    final DocumentImageCollector collector = DocumentImageCollector();
+
+    String? currentHeading;
+    String previousText = '';
+    for (var index = 0; index < blocks.length; index++) {
+      final _DocxBlock block = blocks[index];
+      if (block.heading != null) {
+        currentHeading = block.heading;
+        builder.startSection(title: block.heading);
       }
+      if (block.rows.isNotEmpty) {
+        for (final String row in block.rows) {
+          builder.addLine(row);
+        }
+      } else {
+        builder.addLine(block.text);
+      }
+      for (final String relationshipId in block.imageIds) {
+        final DocumentImage? image = _imageFrom(
+          zip,
+          relationships,
+          relationshipId,
+          fileName: fileName,
+          caption: _captionFor(blocks, index),
+          context: block.text.isNotEmpty
+              ? block.text
+              : previousText.isNotEmpty
+              ? previousText
+              : currentHeading,
+          collector: collector,
+        );
+        if (image != null) builder.addImage(image);
+      }
+      if (block.text.isNotEmpty) previousText = block.text;
     }
     return builder.build();
+  }
+
+  /// Блок документа: абзац/таблица, заголовок и привязанные изображения.
+  _DocxBlock _blockOf(XmlElement element) {
+    if (element.name.local == 'tbl') {
+      return _DocxBlock(
+        text: '',
+        rows: _tableRows(element).toList(growable: false),
+        imageIds: const <String>[],
+      );
+    }
+    return _DocxBlock(
+      text: _paragraphText(element),
+      heading: _headingTitle(element),
+      imageIds: _imageRelationshipIds(element),
+    );
+  }
+
+  /// Идентификаторы связей изображений в абзаце (`r:embed`, `r:id`).
+  List<String> _imageRelationshipIds(XmlElement paragraph) {
+    final List<String> ids = <String>[];
+    for (final XmlElement element in paragraph.descendantElements) {
+      if (element.name.local == 'blip') {
+        final String? embed = attributeValueByLocalName(element, 'embed');
+        if (embed != null && !ids.contains(embed)) ids.add(embed);
+      } else if (element.name.local == 'imagedata') {
+        final String? id = attributeValueByPrefix(element, 'id', 'r');
+        if (id != null && !ids.contains(id)) ids.add(id);
+      }
+    }
+    return ids;
+  }
+
+  /// Подпись ближайшего рисунка: сам абзац или следующий за ним.
+  String? _captionFor(List<_DocxBlock> blocks, int index) {
+    final String own = collapseWhitespace(blocks[index].text);
+    if (looksLikeImageCaption(own)) return own;
+    for (
+      var next = index + 1;
+      next < blocks.length && next <= index + 2;
+      next++
+    ) {
+      final String candidate = collapseWhitespace(blocks[next].text);
+      if (looksLikeImageCaption(candidate)) return candidate;
+    }
+    return null;
+  }
+
+  /// Карта `Relationship Id → Target` из `word/_rels/document.xml.rels`.
+  Map<String, String> _documentRelationships(SecureZip zip) {
+    const String relsEntry = 'word/_rels/document.xml.rels';
+    if (!zip.contains(relsEntry)) return const <String, String>{};
+    final Map<String, String> targets = <String, String>{};
+    for (final XmlElement relationship in descendantElementsByLocalName(
+      zip.readXml(relsEntry),
+      'Relationship',
+    )) {
+      final String? id = attributeValueByLocalName(relationship, 'Id');
+      final String? target = attributeValueByLocalName(relationship, 'Target');
+      if (id != null && target != null) targets[id] = target;
+    }
+    return targets;
+  }
+
+  /// Читает изображение связи; `null` — внешняя ссылка/нет записи/мусор.
+  DocumentImage? _imageFrom(
+    SecureZip zip,
+    Map<String, String> relationships,
+    String relationshipId, {
+    required String fileName,
+    required String? caption,
+    required String? context,
+    required DocumentImageCollector collector,
+  }) {
+    final String? target = relationships[relationshipId];
+    if (target == null || target.startsWith('http')) return null;
+    final String entry = target.startsWith('/')
+        ? target.substring(1)
+        : 'word/$target';
+    final String normalized = entry.replaceAll('\\', '/');
+    if (!zip.contains(normalized)) return null;
+    late final Uint8List bytes;
+    try {
+      bytes = zip.readBytes(normalized);
+    } on ParserException {
+      return null;
+    }
+    return collector.add(
+      entryName: normalized,
+      bytes: bytes,
+      fileName: fileName,
+      sectionIndex: 0,
+      caption: caption,
+      context: context,
+    );
   }
 
   /// Блочные элементы тела документа в порядке следования.
@@ -197,4 +318,19 @@ class DocxParser implements DocumentParser {
     }
     return paragraphs.join(' ');
   }
+}
+
+/// Блок DOCX для первого прохода: текст, заголовок, строки таблицы, картинки.
+class _DocxBlock {
+  const _DocxBlock({
+    required this.text,
+    required this.imageIds,
+    this.heading,
+    this.rows = const <String>[],
+  });
+
+  final String text;
+  final String? heading;
+  final List<String> rows;
+  final List<String> imageIds;
 }

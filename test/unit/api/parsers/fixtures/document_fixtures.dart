@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:archive/archive.dart';
 import 'package:crypto/crypto.dart' as crypto;
 import 'package:enough_convert/enough_convert.dart';
+import 'package:image/image.dart' as image;
 
 /// Программные фикстуры документов для тестов парсеров (SPEC A8.3).
 ///
@@ -688,4 +689,211 @@ Uint8List buildEncryptedPdf({
     'startxref\n$xrefOffset\n%%EOF\n',
   );
   return Uint8List.fromList(latin1.encode(buffer.toString()));
+}
+
+/// Собирает ZIP из бинарных записей (изображения в фикстурах документов).
+Uint8List zipFixtureBytes(Map<String, List<int>> files) {
+  final Archive archive = Archive();
+  files.forEach((String name, List<int> content) {
+    archive.addFile(ArchiveFile(name, content.length, content));
+  });
+  return Uint8List.fromList(ZipEncoder().encode(archive));
+}
+
+/// PNG-фикстура с шумом: больше порога фильтра и по байтам, и по сторонам.
+Uint8List pngFixture({int width = 200, int height = 150, int seed = 7}) {
+  final image.Image picture = image.Image(width: width, height: height);
+  var state = seed;
+  for (var y = 0; y < height; y++) {
+    for (var x = 0; x < width; x++) {
+      state = (state * 1103515245 + 12345) & 0x7FFFFFFF;
+      final int r = state & 0xFF;
+      final int g = (state >> 8) & 0xFF;
+      final int b = (state >> 16) & 0xFF;
+      picture.setPixelRgb(x, y, r, g, b);
+    }
+  }
+  return Uint8List.fromList(image.encodePng(picture));
+}
+
+/// Абзац DOCX с изображением-связью (`r:embed`).
+String docxParagraphWithImage(String relationshipId, {String text = ''}) {
+  final String run = text.isEmpty
+      ? ''
+      : '<w:r><w:t xml:space="preserve">${xmlEscape(text)}</w:t></w:r>';
+  return '<w:p>$run<w:r><w:drawing>'
+      '<a:blip r:embed="$relationshipId"/>'
+      '</w:drawing></w:r></w:p>';
+}
+
+/// DOCX с изображением: абзацы + рисунок + связи + запись media.
+Uint8List buildDocxWithImage({
+  required List<String> paragraphs,
+  required List<int> imageBytes,
+  String entryName = 'word/media/image1.png',
+  String relationshipId = 'rId5',
+  String mediaTarget = 'media/image1.png',
+  String? caption,
+}) {
+  final StringBuffer body = StringBuffer();
+  for (final String paragraph in paragraphs) {
+    body.write(docxParagraph(paragraph));
+  }
+  body.write(docxParagraphWithImage(relationshipId));
+  if (caption != null) body.write(docxParagraph(caption));
+  final String documentXml =
+      '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+      '<w:document '
+      'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" '
+      'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" '
+      'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+      '<w:body>$body</w:body></w:document>';
+  return zipFixtureBytes(<String, List<int>>{
+    '[Content_Types].xml': utf8.encode(_contentTypesDocx),
+    '_rels/.rels': utf8.encode(_relsDocx),
+    'word/document.xml': utf8.encode(documentXml),
+    'word/_rels/document.xml.rels': utf8.encode(
+      '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+      '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+      '<Relationship Id="$relationshipId" '
+      'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" '
+      'Target="$mediaTarget"/>'
+      '</Relationships>',
+    ),
+    entryName: imageBytes,
+  });
+}
+
+/// XML слайда PPTX с изображением-связью.
+String pptxSlideXmlWithImage(List<String> paragraphs, String relationshipId) {
+  final String content = paragraphs
+      .map(
+        (String paragraph) =>
+            '<a:p><a:r><a:t>${xmlEscape(paragraph)}</a:t></a:r></a:p>',
+      )
+      .join();
+  return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+      '<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" '
+      'xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" '
+      'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+      '<p:cSld><p:spTree>'
+      '<p:pic><p:blipFill><a:blip r:embed="$relationshipId"/></p:blipFill></p:pic>'
+      '<p:sp><p:txBody>$content</p:txBody></p:sp>'
+      '</p:spTree></p:cSld></p:sld>';
+}
+
+/// PPTX, где первый слайд содержит изображение из `ppt/media`.
+Uint8List buildPptxWithImage({
+  required List<List<String>> slideTexts,
+  required List<int> imageBytes,
+  String relationshipId = 'rId7',
+  String entryName = 'ppt/media/image1.png',
+}) {
+  final Map<String, List<int>> files = <String, List<int>>{
+    '[Content_Types].xml': utf8.encode(
+      '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+      '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+      '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+      '<Default Extension="xml" ContentType="application/xml"/>'
+      '</Types>',
+    ),
+    '_rels/.rels': utf8.encode(
+      '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+      '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+      '<Relationship Id="rId1" '
+      'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" '
+      'Target="ppt/presentation.xml"/>'
+      '</Relationships>',
+    ),
+    'ppt/presentation.xml': utf8.encode(
+      '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+      '<p:presentation '
+      'xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" '
+      'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+      '<p:sldIdLst>'
+      '${<String>[for (var i = 0; i < slideTexts.length; i++) '<p:sldId id="${256 + i}" r:id="rId${i + 1}"/>'].join()}'
+      '</p:sldIdLst></p:presentation>',
+    ),
+    'ppt/_rels/presentation.xml.rels': utf8.encode(
+      '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+      '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+      '${<String>[for (var i = 0; i < slideTexts.length; i++) '<Relationship Id="rId${i + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide${i + 1}.xml"/>'].join()}'
+      '</Relationships>',
+    ),
+    entryName: imageBytes,
+  };
+  for (var i = 0; i < slideTexts.length; i++) {
+    if (i == 0) {
+      files['ppt/slides/slide1.xml'] = utf8.encode(
+        pptxSlideXmlWithImage(slideTexts[i], relationshipId),
+      );
+      files['ppt/slides/_rels/slide1.xml.rels'] = utf8.encode(
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+        '<Relationship Id="$relationshipId" '
+        'Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" '
+        'Target="../media/image1.png"/>'
+        '</Relationships>',
+      );
+    } else {
+      files['ppt/slides/slide${i + 1}.xml'] = utf8.encode(
+        pptxSlideXml(slideTexts[i]),
+      );
+    }
+  }
+  return zipFixtureBytes(files);
+}
+
+/// ODT с изображением из `Pictures/` и подписью.
+Uint8List buildOdtWithImage({
+  required List<({String text, bool heading})> blocks,
+  required List<int> imageBytes,
+  String entryName = 'Pictures/image1.png',
+  String? caption,
+}) {
+  final StringBuffer content = StringBuffer();
+  for (final ({String text, bool heading}) block in blocks) {
+    content.write(
+      block.heading
+          ? '<text:h text:outline-level="1">${xmlEscape(block.text)}</text:h>'
+          : '<text:p>${xmlEscape(block.text)}</text:p>',
+    );
+  }
+  content.write(
+    '<text:p><draw:frame><draw:image xlink:href="$entryName"/></draw:frame></text:p>',
+  );
+  if (caption != null) content.write('<text:p>${xmlEscape(caption)}</text:p>');
+  return zipFixtureBytes(<String, List<int>>{
+    'mimetype': utf8.encode('application/vnd.oasis.opendocument.text'),
+    'content.xml': utf8.encode(
+      '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+      '<office:document-content '
+      'xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" '
+      'xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0" '
+      'xmlns:draw="urn:oasis:names:tc:opendocument:xmlns:drawing:1.0" '
+      'xmlns:xlink="http://www.w3.org/1999/xlink">'
+      '<office:body><office:text>$content</office:text></office:body>'
+      '</office:document-content>',
+    ),
+    entryName: imageBytes,
+  });
+}
+
+/// JPEG-фикстура минимального размера: только заголовок SOF0 + паддинг.
+Uint8List jpegFixture({int width = 200, int height = 100, int size = 5000}) {
+  final List<int> bytes = <int>[
+    0xFF, 0xD8, // SOI
+    0xFF, 0xE0, 0x00, 0x10, // APP0, длина 16
+    ...'JFIF'.codeUnits, 0x00, 0x01, 0x01, 0x00, 0x00, 0x01, 0x00, 0x01,
+    0x00, 0x00,
+    0xFF, 0xC0, 0x00, 0x11, 0x08, // SOF0, длина 17, точность 8
+    (height >> 8) & 0xFF, height & 0xFF,
+    (width >> 8) & 0xFF, width & 0xFF,
+    0x03, 0x01, 0x22, 0x00, 0x02, 0x11, 0x01, 0x03, 0x11, 0x01,
+    0xFF, 0xD9, // EOI
+  ];
+  while (bytes.length < size) {
+    bytes.add(0x00);
+  }
+  return Uint8List.fromList(bytes);
 }

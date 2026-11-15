@@ -1,3 +1,4 @@
+import 'package:cardflow/domain/generation/document_image.dart';
 import 'package:cardflow/domain/text/document_format.dart';
 
 /// Нормализованный документ, полученный нативным парсером (SPEC A8.3).
@@ -19,7 +20,9 @@ class ParsedDocument {
     required this.text,
     required List<ParsedSection> sections,
     ParsedDocumentMetadata metadata = const ParsedDocumentMetadata(),
+    List<DocumentImage> images = const <DocumentImage>[],
   }) : sections = List<ParsedSection>.unmodifiable(sections),
+       images = List<DocumentImage>.unmodifiable(images),
        metadata = _immutableMetadata(metadata) {
     if (text.trim().isEmpty) {
       throw ArgumentError.value(
@@ -70,6 +73,9 @@ class ParsedDocument {
 
   /// Разделы документа в порядке следования; непустые и не пересекаются.
   final List<ParsedSection> sections;
+
+  /// Изображения, извлечённые из файла, с контекстом (fix-gen, Д3).
+  final List<DocumentImage> images;
 
   /// Метаданные формата (страницы/слайды/листы/кодировка).
   final ParsedDocumentMetadata metadata;

@@ -1,3 +1,4 @@
+import 'package:cardflow/domain/generation/document_image.dart';
 import 'package:cardflow/domain/text/document_format.dart';
 import 'package:cardflow/domain/text/document_text_normalization.dart';
 import 'package:cardflow/domain/text/parsed_document.dart';
@@ -28,6 +29,7 @@ class ParsedDocumentBuilder {
 
   final List<_SectionDraft> _drafts = <_SectionDraft>[];
   List<String> _lines = <String>[];
+  List<DocumentImage> _images = <DocumentImage>[];
   String? _title;
   bool _hasCurrent = false;
 
@@ -37,6 +39,13 @@ class ParsedDocumentBuilder {
     _hasCurrent = true;
     _title = title;
     _lines = <String>[];
+    _images = <DocumentImage>[];
+  }
+
+  /// Добавляет изображение в текущий раздел (fix-gen, Д3).
+  void addImage(DocumentImage image) {
+    _ensureCurrent();
+    _images.add(image);
   }
 
   /// Добавляет строку в текущий раздел (раздел начнётся автоматически).
@@ -60,6 +69,7 @@ class ParsedDocumentBuilder {
     _flushCurrent();
     final StringBuffer buffer = StringBuffer();
     final List<ParsedSection> sections = <ParsedSection>[];
+    final List<DocumentImage> images = <DocumentImage>[];
     for (final _SectionDraft draft in _drafts) {
       final String sectionText = normalizeDocumentText(draft.lines.join('\n'));
       if (sectionText.isEmpty) {
@@ -73,6 +83,10 @@ class ParsedDocumentBuilder {
       sections.add(
         ParsedSection(start: start, end: buffer.length, title: draft.title),
       );
+      final int sectionIndex = sections.length - 1;
+      for (final DocumentImage image in draft.images) {
+        images.add(image.withSectionIndex(sectionIndex));
+      }
     }
     final String text = buffer.toString();
     if (text.isEmpty) {
@@ -87,6 +101,7 @@ class ParsedDocumentBuilder {
       text: text,
       sections: sections,
       metadata: metadata,
+      images: images,
     );
   }
 
@@ -97,22 +112,33 @@ class ParsedDocumentBuilder {
     _hasCurrent = true;
     _title = null;
     _lines = <String>[];
+    _images = <DocumentImage>[];
   }
 
   void _flushCurrent() {
     if (_hasCurrent && _lines.isNotEmpty) {
       _drafts.add(
-        _SectionDraft(title: _title, lines: List<String>.unmodifiable(_lines)),
+        _SectionDraft(
+          title: _title,
+          lines: List<String>.unmodifiable(_lines),
+          images: List<DocumentImage>.unmodifiable(_images),
+        ),
       );
     }
     _lines = <String>[];
+    _images = <DocumentImage>[];
   }
 }
 
 /// Накопленный раздел до нормализации.
 class _SectionDraft {
-  const _SectionDraft({required this.title, required this.lines});
+  const _SectionDraft({
+    required this.title,
+    required this.lines,
+    required this.images,
+  });
 
   final String? title;
   final List<String> lines;
+  final List<DocumentImage> images;
 }

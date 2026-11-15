@@ -1,9 +1,11 @@
 import 'dart:typed_data';
 
+import 'package:cardflow/api/parsers/document_images.dart';
 import 'package:cardflow/api/parsers/document_parser.dart';
 import 'package:cardflow/api/parsers/parsed_document_builder.dart';
 import 'package:cardflow/api/parsers/xml_local_names.dart';
 import 'package:cardflow/api/parsers/zip_xml.dart';
+import 'package:cardflow/domain/generation/document_image.dart';
 import 'package:cardflow/domain/text/document_format.dart';
 import 'package:cardflow/domain/text/parsed_document.dart';
 import 'package:cardflow/domain/text/parser_exception.dart';
@@ -13,6 +15,9 @@ import 'package:xml/xml.dart';
 ///
 /// Слайды (`ppt/slides/slideN.xml`, текст `a:t`) → разделы в порядке
 /// `p:sldIdLst` (связи `presentation.xml.rels`); fallback — числовой порядок.
+/// Изображения слайдов (`ppt/media`, привязка `r:embed`) извлекаются с
+/// заголовком слайда и номером (fix-gen, Д3); повторы (логотип на каждом
+/// слайде) отбрасываются по хешу содержимого.
 class PptxParser implements DocumentParser {
   /// Создаёт парсер PPTX.
   const PptxParser();
@@ -45,12 +50,103 @@ class PptxParser implements DocumentParser {
       fileName: fileName,
       metadata: ParsedDocumentMetadata(slideCount: slides.length),
     );
-    for (final String slideEntry in slides) {
-      final List<String> lines = _slideLines(zip.readXml(slideEntry));
+    final DocumentImageCollector collector = DocumentImageCollector();
+    for (var index = 0; index < slides.length; index++) {
+      final String slideEntry = slides[index];
+      final XmlDocument slide = zip.readXml(slideEntry);
+      final List<String> lines = _slideLines(slide);
       builder.startSection();
       builder.addLines(lines);
+      for (final DocumentImage image in _slideImages(
+        zip,
+        slideEntry,
+        slide,
+        lines,
+        page: index + 1,
+        fileName: fileName,
+        collector: collector,
+      )) {
+        builder.addImage(image);
+      }
     }
     return builder.build();
+  }
+
+  /// Изображения слайда с контекстом (заголовок слайда, подпись).
+  List<DocumentImage> _slideImages(
+    SecureZip zip,
+    String slideEntry,
+    XmlDocument slide,
+    List<String> lines, {
+    required int page,
+    required String fileName,
+    required DocumentImageCollector collector,
+  }) {
+    final List<String> relationshipIds = <String>[];
+    for (final XmlElement blip in descendantElementsByLocalName(
+      slide,
+      'blip',
+    )) {
+      final String? embed = attributeValueByLocalName(blip, 'embed');
+      if (embed != null && !relationshipIds.contains(embed)) {
+        relationshipIds.add(embed);
+      }
+    }
+    if (relationshipIds.isEmpty) return const <DocumentImage>[];
+    final Map<String, String> targets = _slideRelationships(zip, slideEntry);
+    String? caption;
+    for (final String line in lines) {
+      final String cleaned = collapseWhitespace(line);
+      if (looksLikeImageCaption(cleaned)) {
+        caption = cleaned;
+        break;
+      }
+    }
+    final String? context = lines.isEmpty
+        ? null
+        : collapseWhitespace(lines.take(2).join(' '));
+    final List<DocumentImage> images = <DocumentImage>[];
+    for (final String relationshipId in relationshipIds) {
+      final String? target = targets[relationshipId];
+      if (target == null || target.startsWith('http')) continue;
+      final String entry = _resolveMediaEntry(slideEntry, target);
+      if (!zip.contains(entry)) continue;
+      final DocumentImage? image = collector.add(
+        entryName: entry,
+        bytes: zip.readBytes(entry),
+        fileName: fileName,
+        sectionIndex: 0,
+        caption: caption,
+        context: context,
+        page: page,
+      );
+      if (image != null) images.add(image);
+    }
+    return images;
+  }
+
+  /// Связи слайда: `ppt/slides/_rels/slideN.xml.rels`.
+  Map<String, String> _slideRelationships(SecureZip zip, String slideEntry) {
+    final int slash = slideEntry.lastIndexOf('/');
+    final String name = slideEntry.substring(slash + 1);
+    final String relsEntry =
+        '${slideEntry.substring(0, slash)}/_rels/$name.rels';
+    if (!zip.contains(relsEntry)) return const <String, String>{};
+    return _relationshipTargets(zip.readXml(relsEntry));
+  }
+
+  /// Путь записи архива для `Target` слайда (`../media/x.png` → `ppt/media/x.png`).
+  String _resolveMediaEntry(String slideEntry, String target) {
+    if (target.startsWith('/')) return target.substring(1);
+    final List<String> parts = slideEntry.split('/')..removeLast();
+    for (final String segment in target.split('/')) {
+      if (segment == '..') {
+        if (parts.isNotEmpty) parts.removeLast();
+      } else if (segment.isNotEmpty && segment != '.') {
+        parts.add(segment);
+      }
+    }
+    return parts.join('/');
   }
 
   /// Порядок файлов слайдов: `presentation.xml` → rels, fallback — номера.
