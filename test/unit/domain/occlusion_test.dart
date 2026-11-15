@@ -55,6 +55,29 @@ void main() {
     );
   });
 
+  test('базовая маска по центру: валидна и читается из JSON (7.9)', () {
+    expect(kDefaultOcclusionMask.isValid, isTrue);
+    expect(kDefaultOcclusionMask.shape, OcclusionShape.rectangle);
+    expect(kDefaultOcclusionMask.x, 0.3);
+    expect(kDefaultOcclusionMask.y, 0.35);
+    expect(kDefaultOcclusionMask.width, 0.4);
+    expect(kDefaultOcclusionMask.height, 0.3);
+
+    final OcclusionDocument? decoded = OcclusionDocument.tryParse(
+      defaultOcclusionDocumentJson(),
+    );
+    expect(decoded, isNotNull);
+    expect(decoded!.masks.single.id, kDefaultOcclusionMask.id);
+    expect(
+      decoded.masks.single.x + decoded.masks.single.width,
+      lessThanOrEqualTo(1),
+    );
+    expect(
+      decoded.masks.single.y + decoded.masks.single.height,
+      lessThanOrEqualTo(1),
+    );
+  });
+
   group('tryParse отклоняет повреждённые данные, не роняя сессию', () {
     final invalid = <String, String?>{
       'null': null,

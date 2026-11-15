@@ -8,9 +8,11 @@ import 'package:uuid/uuid.dart';
 
 import 'package:cardflow/data/db/app_database.dart';
 import 'package:cardflow/data/db/epoch.dart';
+import 'package:cardflow/data/transfer/media_store.dart';
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/cards/content_hash.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
+import 'package:cardflow/domain/generation/generated_card_image.dart';
 import 'package:cardflow/domain/generation/generation_card_store.dart';
 
 /// Импорт карточек поверх drift-БД.
@@ -20,10 +22,15 @@ import 'package:cardflow/domain/generation/generation_card_store.dart';
 /// `basic_reversed` создаёт две строки с взаимными `sibling_id` (SPEC A5).
 class DriftGenerationCardStore implements GenerationCardStore {
   /// Создаёт хранилище поверх БД.
-  DriftGenerationCardStore(this.database);
+  ///
+  /// [mediaStore] нужен для записи найденных иллюстраций (итерация 7.9).
+  DriftGenerationCardStore(this.database, {this.mediaStore});
 
   /// БД приложения.
   final AppDatabase database;
+
+  /// Файловое хранилище иллюстраций карточек.
+  final MediaStore? mediaStore;
 
   static const Uuid _uuid = Uuid();
 
@@ -61,73 +68,141 @@ class DriftGenerationCardStore implements GenerationCardStore {
     final DateTime utcNow = now.toUtc();
     final int epochNow = toEpochMs(utcNow);
 
-    return database.transaction<GenerationImportResult>(() async {
-      final String resolvedDeckId;
-      if (deckId == null) {
-        resolvedDeckId = _uuid.v4();
-        await database
-            .into(database.decks)
-            .insert(
-              DecksCompanion.insert(
-                id: resolvedDeckId,
-                name: trimmedName,
-                createdAt: epochNow,
-                updatedAt: epochNow,
-              ),
-            );
-      } else {
-        final DeckRow? deck = await (database.select(
-          database.decks,
-        )..where((table) => table.id.equals(deckId))).getSingleOrNull();
-        if (deck == null) {
-          throw StateError('Колода не найдена: $deckId');
+    final List<String> writtenPaths = <String>[];
+    try {
+      return await database.transaction<GenerationImportResult>(() async {
+        final String resolvedDeckId;
+        if (deckId == null) {
+          resolvedDeckId = _uuid.v4();
+          await database
+              .into(database.decks)
+              .insert(
+                DecksCompanion.insert(
+                  id: resolvedDeckId,
+                  name: trimmedName,
+                  createdAt: epochNow,
+                  updatedAt: epochNow,
+                ),
+              );
+        } else {
+          final DeckRow? deck = await (database.select(
+            database.decks,
+          )..where((table) => table.id.equals(deckId))).getSingleOrNull();
+          if (deck == null) {
+            throw StateError('Колода не найдена: $deckId');
+          }
+          resolvedDeckId = deckId;
+          await (database.update(database.decks)
+                ..where((table) => table.id.equals(resolvedDeckId)))
+              .write(DecksCompanion(updatedAt: Value<int>(epochNow)));
         }
-        resolvedDeckId = deckId;
-        await (database.update(database.decks)
-              ..where((table) => table.id.equals(resolvedDeckId)))
-            .write(DecksCompanion(updatedAt: Value<int>(epochNow)));
-      }
 
-      final Set<String> existing = await existingContentHashes(resolvedDeckId);
-      final List<GeneratedCard> accepted = <GeneratedCard>[];
-      var skippedDuplicates = 0;
-      for (final GeneratedCard card in cards) {
-        if (_isDuplicate(card, existing)) {
-          skippedDuplicates++;
-          continue;
-        }
-        accepted.add(card);
-      }
-
-      for (final GeneratedCard card in accepted) {
-        await _insertCard(
-          card: card,
-          deckId: resolvedDeckId,
-          epochNow: epochNow,
+        final Set<String> existing = await existingContentHashes(
+          resolvedDeckId,
         );
+        final List<GeneratedCard> accepted = <GeneratedCard>[];
+        var skippedDuplicates = 0;
+        for (final GeneratedCard card in cards) {
+          if (_isDuplicate(card, existing)) {
+            skippedDuplicates++;
+            continue;
+          }
+          accepted.add(card);
+        }
+
+        for (final GeneratedCard card in accepted) {
+          final _PreparedImage? image = await _writeImage(
+            card.image,
+            writtenPaths,
+          );
+          final String cardId = await _insertCard(
+            card: card,
+            deckId: resolvedDeckId,
+            epochNow: epochNow,
+            mediaId: image?.id,
+          );
+          if (image != null) await _insertMedia(image, cardId);
+        }
+
+        await (database.update(
+          database.generationJobs,
+        )..where((table) => table.id.equals(jobId))).write(
+          GenerationJobsCompanion(resultDeckId: Value<String>(resolvedDeckId)),
+        );
+
+        return GenerationImportResult(
+          deckId: resolvedDeckId,
+          importedCards: accepted.length,
+          skippedDuplicates: skippedDuplicates,
+        );
+      });
+    } catch (_) {
+      await _deleteFiles(writtenPaths);
+      rethrow;
+    }
+  }
+
+  /// Пишет иллюстрацию в `MediaStore` и готовит строку `media`.
+  Future<_PreparedImage?> _writeImage(
+    GeneratedCardImage? image,
+    List<String> writtenPaths,
+  ) async {
+    if (image == null) return null;
+    final MediaStore? store = mediaStore;
+    if (store == null) {
+      throw StateError('MediaStore не настроен для иллюстрации карточки');
+    }
+    final String id = _uuid.v4();
+    final String path = 'media/$id.${image.fileExtension}';
+    await store.writeMedia(relativePath: path, bytes: image.bytes);
+    writtenPaths.add(path);
+    return _PreparedImage(
+      id: id,
+      path: path,
+      mimeType: image.mimeType,
+      size: image.bytes.length,
+    );
+  }
+
+  /// Строка `media` для иллюстрации карточки.
+  Future<void> _insertMedia(_PreparedImage image, String cardId) {
+    return database
+        .into(database.media)
+        .insert(
+          MediaCompanion(
+            id: Value<String>(image.id),
+            cardId: Value<String>(cardId),
+            path: Value<String>(image.path),
+            mimeType: Value<String>(image.mimeType),
+            size: Value<int>(image.size),
+          ),
+        );
+  }
+
+  /// Удаляет записанные файлы после отката транзакции.
+  Future<void> _deleteFiles(Iterable<String> paths) async {
+    final MediaStore? store = mediaStore;
+    if (store == null) return;
+    for (final String path in paths) {
+      try {
+        await store.deleteMedia(path);
+      } on Object {
+        // Файл-сирота будет удалён консервативным GC при следующем старте.
       }
-
-      await (database.update(
-        database.generationJobs,
-      )..where((table) => table.id.equals(jobId))).write(
-        GenerationJobsCompanion(resultDeckId: Value<String>(resolvedDeckId)),
-      );
-
-      return GenerationImportResult(
-        deckId: resolvedDeckId,
-        importedCards: accepted.length,
-        skippedDuplicates: skippedDuplicates,
-      );
-    });
+    }
   }
 
   /// Вставляет одну логическую карточку (для reversed — две строки).
-  Future<void> _insertCard({
+  ///
+  /// Возвращает id карточки-владельца media (для reversed — первую строку).
+  Future<String> _insertCard({
     required GeneratedCard card,
     required String deckId,
     required int epochNow,
+    required String? mediaId,
   }) async {
     final String tagsJson = jsonEncode(card.tags);
+    final List<String> mediaIds = <String>[?mediaId];
     if (card.cardType == CardType.basicReversed) {
       final String firstId = _uuid.v4();
       final String secondId = _uuid.v4();
@@ -141,6 +216,7 @@ class DriftGenerationCardStore implements GenerationCardStore {
               back: card.back,
               card: card,
               tagsJson: tagsJson,
+              mediaIds: mediaIds,
               siblingId: secondId,
               epochNow: epochNow,
             ),
@@ -155,26 +231,30 @@ class DriftGenerationCardStore implements GenerationCardStore {
               back: card.front,
               card: card,
               tagsJson: tagsJson,
+              mediaIds: mediaIds,
               siblingId: firstId,
               epochNow: epochNow,
             ),
           );
-      return;
+      return firstId;
     }
+    final String cardId = _uuid.v4();
     await database
         .into(database.cards)
         .insert(
           _companion(
-            id: _uuid.v4(),
+            id: cardId,
             deckId: deckId,
             front: card.front,
             back: card.back,
             card: card,
             tagsJson: tagsJson,
+            mediaIds: mediaIds,
             siblingId: null,
             epochNow: epochNow,
           ),
         );
+    return cardId;
   }
 
   /// Строка `cards` для новой сгенерированной карточки (SPEC A5).
@@ -185,6 +265,7 @@ class DriftGenerationCardStore implements GenerationCardStore {
     required String back,
     required GeneratedCard card,
     required String tagsJson,
+    required List<String> mediaIds,
     required String? siblingId,
     required int epochNow,
   }) {
@@ -196,6 +277,8 @@ class DriftGenerationCardStore implements GenerationCardStore {
       hint: Value<String?>(card.hint),
       cardType: card.cardType.wireName,
       tagsJson: Value<String>(tagsJson),
+      mediaJson: Value<String>(jsonEncode(mediaIds)),
+      occlusionJson: Value<String?>(card.occlusionJson),
       sourceExcerpt: Value<String?>(card.sourceExcerpt),
       state: CardState.newCard.wireName,
       siblingId: Value<String?>(siblingId),
@@ -233,4 +316,19 @@ class DriftGenerationCardStore implements GenerationCardStore {
     }
     return hashes;
   }
+}
+
+/// Подготовленная строка `media` для иллюстрации сгенерированной карточки.
+class _PreparedImage {
+  const _PreparedImage({
+    required this.id,
+    required this.path,
+    required this.mimeType,
+    required this.size,
+  });
+
+  final String id;
+  final String path;
+  final String mimeType;
+  final int size;
 }

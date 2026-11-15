@@ -12,10 +12,7 @@ import '../../helpers/pump_app.dart';
 /// читается слева направо (m00 > 0). До фикса матрица давала m00 < 0 —
 /// зеркальный текст.
 void main() {
-  Widget host({
-    required bool revealed,
-    required VoidCallback onTap,
-  }) {
+  Widget host({required bool revealed, required VoidCallback onTap}) {
     return appWithHome(
       overrides: const <Override>[],
       home: Scaffold(

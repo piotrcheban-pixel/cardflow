@@ -20,6 +20,7 @@ void main() {
     String cardType = 'basic',
     String? sourceExcerpt,
     String? sourceFile,
+    String? imageQuery,
   }) => <String, Object?>{
     'front': front,
     'back': back,
@@ -28,6 +29,7 @@ void main() {
     'card_type': cardType,
     'source_excerpt': sourceExcerpt,
     'source_file': sourceFile,
+    'image_query': imageQuery,
   };
 
   List<GeneratedCard> validate(
@@ -150,6 +152,54 @@ void main() {
     ]);
     expect(cards[0].cardType, CardType.basicReversed);
     expect(cards[1].cardType, CardType.cloze);
+  });
+
+  test(
+    'occlusion — wire-формат: basic + isOcclusion (SPEC A5, итерация 7.9)',
+    () {
+      final parsed = validate(<Map<String, Object?>>[
+        card(
+          cardType: 'occlusion',
+          imageQuery: '  photosynthesis diagram  ',
+          sourceExcerpt: null,
+        ),
+      ]).single;
+
+      expect(parsed.cardType, CardType.basic);
+      expect(parsed.isOcclusion, isTrue);
+      expect(parsed.imageQuery, 'photosynthesis diagram');
+      expect(parsed.occlusionJson, isNull, reason: 'маску ставит пайплайн');
+    },
+  );
+
+  test('image_query: пустой/null → null, длинный обрезается', () {
+    expect(validate(<Map<String, Object?>>[card()]).single.imageQuery, isNull);
+    expect(
+      validate(<Map<String, Object?>>[card(imageQuery: '   ')])
+          .single
+          .imageQuery,
+      isNull,
+    );
+    final long = 'a' * (CardContentValidator.maxImageQueryLength + 20);
+    final parsed = validate(<Map<String, Object?>>[card(imageQuery: long)])
+        .single;
+    expect(
+      parsed.imageQuery,
+      hasLength(CardContentValidator.maxImageQueryLength),
+    );
+  });
+
+  test('неизвестный card_type → invalidResponse', () {
+    expect(
+      () => validate(<Map<String, Object?>>[card(cardType: 'image')]),
+      throwsA(
+        isA<GenerationException>().having(
+          (GenerationException error) => error.code,
+          'code',
+          GenerationErrorCode.invalidResponse,
+        ),
+      ),
+    );
   });
 
   test('пустой массив карточек — пустой результат', () {

@@ -73,9 +73,8 @@ class FileParsingService {
     List<DocumentParser>? parsers,
     this.isolateRunner,
     this.maxFileBytes = 25 * 1024 * 1024,
-    PdfScanRenderer pdfScanRenderer = const PdfScanRenderer(),
-  }) : _parsers = parsers ?? _defaultParsers,
-       _pdfScanRenderer = pdfScanRenderer;
+    this.pdfScanRenderer = const PdfScanRenderer(),
+  }) : _parsers = parsers ?? _defaultParsers;
 
   /// Парсеры по умолчанию: все поддерживаемые форматы A8.3.
   static const List<DocumentParser> _defaultParsers = <DocumentParser>[
@@ -92,7 +91,7 @@ class FileParsingService {
   final List<DocumentParser> _parsers;
 
   /// Рендер страниц PDF-скана в PNG (итерация 7.9).
-  final PdfScanRenderer _pdfScanRenderer;
+  final PdfScanRenderer pdfScanRenderer;
 
   /// Запуск парсинга в изоляте; `null` — использовать `Isolate.run`.
   final IsolateRunner? isolateRunner;
@@ -111,7 +110,7 @@ class FileParsingService {
   }) async {
     try {
       return await _runInIsolate(
-        () => _pdfScanRenderer.render(
+        () => pdfScanRenderer.render(
           bytes,
           fileName: fileName,
           maxPages: maxPages,

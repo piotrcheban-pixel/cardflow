@@ -7,7 +7,9 @@ import 'package:cardflow/api/generation/generation_pipeline.dart';
 import 'package:cardflow/api/generation/system_prompt.dart';
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/cards/content_hash.dart';
+import 'package:cardflow/domain/cards/occlusion.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
+import 'package:cardflow/domain/generation/generated_card_image.dart';
 import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/generation/generation_chunker.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
@@ -100,7 +102,10 @@ void main() {
   late FakeGenerationJobRepository jobs;
   late FakeGenerationCardStore store;
 
-  GenerationPipeline pipelineWith(List<GenerationChunk> chunks) {
+  GenerationPipeline pipelineWith(
+    List<GenerationChunk> chunks, {
+    FakeCardImageFinder? imageFinder,
+  }) {
     caller = FakeGenerationCaller();
     jobs = FakeGenerationJobRepository();
     store = FakeGenerationCardStore();
@@ -111,6 +116,7 @@ void main() {
       chunker: FixedChunker(chunks),
       now: () => DateTime.utc(2026, 11, 14, 10),
       jobIdFactory: () => 'job-1',
+      imageFinder: imageFinder,
     );
   }
 
@@ -786,5 +792,122 @@ void main() {
 
     expect(result.cards, hasLength(1));
     expect(caller.calls, 1);
+  });
+
+  group('поиск картинок и occlusion (итерация 7.9)', () {
+    final GeneratedCardImage image = makeCardImage();
+
+    Future<GenerationRunResult> runWithCards(
+      List<GeneratedCard> cards, {
+      FakeCardImageFinder? finder,
+    }) async {
+      final pipeline = pipelineWith(<GenerationChunk>[
+        chunkOf(1, 'материал'),
+      ], imageFinder: finder);
+      caller.onGenerate = (GenerationRequest request, int call) async =>
+          resultWith(cards);
+      return pipeline.run(
+        requestWith(<ParsedDocument>[
+          docOf('a.txt', <String>['материал']),
+        ]),
+      );
+    }
+
+    test('image_query → картинка привязана к карточке', () async {
+      final finder = FakeCardImageFinder(
+        byQuery: <String, GeneratedCardImage?>{'photosynthesis diagram': image},
+      );
+      final card = makeGeneratedCard(imageQuery: 'photosynthesis diagram');
+
+      final result = await runWithCards(<GeneratedCard>[card], finder: finder);
+
+      expect(finder.queries, <String>['photosynthesis diagram']);
+      expect(result.cards.single.image, same(image));
+      expect(result.cards.single.isOcclusion, isFalse);
+      expect(result.status, GenerationJobStatus.done);
+    });
+
+    test('occlusion с картинкой → базовая маска по центру', () async {
+      final finder = FakeCardImageFinder(
+        byQuery: <String, GeneratedCardImage?>{'plant cell': image},
+      );
+      final card = makeGeneratedCard(
+        imageQuery: 'plant cell',
+        isOcclusion: true,
+      );
+
+      final result = await runWithCards(<GeneratedCard>[card], finder: finder);
+
+      final enriched = result.cards.single;
+      expect(enriched.image, same(image));
+      expect(enriched.isOcclusion, isTrue);
+      final OcclusionDocument? document = OcclusionDocument.tryParse(
+        enriched.occlusionJson,
+      );
+      expect(document, isNotNull);
+      expect(document!.masks, hasLength(1));
+      expect(document.masks.single.shape, OcclusionShape.rectangle);
+      expect(document.masks.single.x, 0.3);
+      expect(document.masks.single.y, 0.35);
+    });
+
+    test('occlusion без найденной картинки → basic + пометка', () async {
+      final finder = FakeCardImageFinder();
+      final card = makeGeneratedCard(
+        imageQuery: 'missing diagram',
+        isOcclusion: true,
+      );
+
+      final result = await runWithCards(<GeneratedCard>[card], finder: finder);
+
+      final enriched = result.cards.single;
+      expect(enriched.isOcclusion, isFalse);
+      expect(enriched.image, isNull);
+      expect(enriched.occlusionJson, isNull);
+      expect(enriched.issues, contains(CardIssueCode.occlusionImageMissing));
+      expect(result.status, GenerationJobStatus.done);
+    });
+
+    test('ошибка поиска не отменяет карточку', () async {
+      final finder = FakeCardImageFinder()..error = StateError('offline');
+      final card = makeGeneratedCard(imageQuery: 'offline query');
+
+      final result = await runWithCards(<GeneratedCard>[card], finder: finder);
+
+      expect(result.status, GenerationJobStatus.done);
+      expect(result.cards, hasLength(1));
+      expect(result.cards.single.image, isNull);
+    });
+
+    test('одинаковый запрос ищется один раз (кэш запуска)', () async {
+      final finder = FakeCardImageFinder(
+        byQuery: <String, GeneratedCardImage?>{'eiffel tower': image},
+      );
+      final cards = <GeneratedCard>[
+        makeGeneratedCard(front: 'Первый', imageQuery: 'eiffel tower'),
+        makeGeneratedCard(front: 'Второй', imageQuery: 'eiffel tower'),
+      ];
+
+      final result = await runWithCards(cards, finder: finder);
+
+      expect(finder.queries, <String>['eiffel tower']);
+      expect(
+        result.cards.every((card) => identical(card.image, image)),
+        isTrue,
+      );
+    });
+
+    test('без finder occlusion понижается, генерация не падает', () async {
+      final card = makeGeneratedCard(imageQuery: 'diagram', isOcclusion: true);
+
+      final result = await runWithCards(<GeneratedCard>[card]);
+
+      expect(result.status, GenerationJobStatus.done);
+      expect(result.cards.single.isOcclusion, isFalse);
+      expect(
+        result.cards.single.issues,
+        contains(CardIssueCode.occlusionImageMissing),
+      );
+    });
   });
 }

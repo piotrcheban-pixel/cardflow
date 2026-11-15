@@ -10,8 +10,10 @@ import 'package:cardflow/api/http/generation_http_client.dart';
 import 'package:cardflow/api/providers/generation_provider_adapter.dart';
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/generation/api_key_store.dart';
+import 'package:cardflow/domain/generation/card_image_finder.dart';
 import 'package:cardflow/domain/generation/document_gateway.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
+import 'package:cardflow/domain/generation/generated_card_image.dart';
 import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/generation/generation_card_store.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
@@ -347,6 +349,10 @@ GeneratedCard makeGeneratedCard({
   List<String> tags = const <String>['fsrs'],
   String? sourceExcerpt,
   List<CardIssueCode> issues = const <CardIssueCode>[],
+  String? imageQuery,
+  GeneratedCardImage? image,
+  bool isOcclusion = false,
+  String? occlusionJson,
 }) {
   return GeneratedCard(
     front: front,
@@ -355,6 +361,47 @@ GeneratedCard makeGeneratedCard({
     tags: tags,
     sourceExcerpt: sourceExcerpt,
     issues: issues,
+    imageQuery: imageQuery,
+    image: image,
+    isOcclusion: isOcclusion,
+    occlusionJson: occlusionJson,
+  );
+}
+
+/// Фейковый поиск картинок: ответы по запросу, журнал и ошибка.
+class FakeCardImageFinder implements CardImageFinder {
+  /// Создаёт фейк с ответами [byQuery].
+  FakeCardImageFinder({Map<String, GeneratedCardImage?>? byQuery})
+    : byQuery = <String, GeneratedCardImage?>{...?byQuery};
+
+  /// Ответы по запросу; отсутствующий запрос → `null`.
+  final Map<String, GeneratedCardImage?> byQuery;
+
+  /// Все запросы в порядке вызовов.
+  final List<String> queries = <String>[];
+
+  /// Если задано — `findImage` бросает это исключение.
+  Object? error;
+
+  @override
+  Future<GeneratedCardImage?> findImage(String query) async {
+    queries.add(query);
+    if (error != null) throw error!;
+    return byQuery[query];
+  }
+}
+
+/// Картинка-фикстура (JPEG-сигнатура).
+GeneratedCardImage makeCardImage({
+  String query = 'photosynthesis diagram',
+  List<int> bytes = const <int>[0xFF, 0xD8, 0xFF, 1, 2, 3],
+  AttachmentMediaType mediaType = AttachmentMediaType.jpeg,
+}) {
+  return GeneratedCardImage(
+    bytes: Uint8List.fromList(bytes),
+    mediaType: mediaType,
+    query: query,
+    sourceUrl: 'https://example.test/image.jpg',
   );
 }
 

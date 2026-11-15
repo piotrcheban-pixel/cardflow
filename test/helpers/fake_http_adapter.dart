@@ -65,6 +65,24 @@ ResponseBody textResponse(String text, {int statusCode = 200}) {
   );
 }
 
+/// Ответ с бинарным телом (скачивание картинки).
+ResponseBody bytesResponse(
+  List<int> bytes, {
+  String contentType = 'image/jpeg',
+  int statusCode = 200,
+  Map<String, List<String>>? headers,
+}) {
+  return ResponseBody.fromBytes(
+    bytes,
+    statusCode,
+    headers:
+        headers ??
+        <String, List<String>>{
+          Headers.contentTypeHeader: <String>[contentType],
+        },
+  );
+}
+
 /// Dio с подменным транспортом для тестов.
 Dio dioWithAdapter(HttpClientAdapter adapter) {
   final dio = Dio();

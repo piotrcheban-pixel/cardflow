@@ -1,9 +1,14 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'package:cardflow/domain/cards/card.dart';
+import 'package:cardflow/domain/cards/occlusion.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
+import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
 import 'package:cardflow/domain/generation/generation_job.dart';
 import 'package:cardflow/domain/generation/generation_run.dart';
@@ -253,5 +258,40 @@ void main() {
     await pumpPreview(tester, resultWith(cards: const <GeneratedCard>[]));
     final l10n = l10nOf(tester);
     expect(find.text(l10n.generationPreviewEmpty), findsOneWidget);
+  });
+
+  testWidgets('occlusion: подпись формата, картинка и импорт полей (7.9)', (
+    tester,
+  ) async {
+    final Uint8List png = base64Decode(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk'
+      '+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+    );
+    final GeneratedCard card = makeGeneratedCard(
+      front: 'Что на схеме?',
+      back: 'Клетка растения',
+      imageQuery: 'plant cell diagram',
+      isOcclusion: true,
+      occlusionJson: defaultOcclusionDocumentJson(),
+      image: makeCardImage(mediaType: AttachmentMediaType.png, bytes: png),
+    );
+    await pumpPreview(tester, resultWith(cards: <GeneratedCard>[card]));
+    final l10n = l10nOf(tester);
+
+    expect(find.text(l10n.cardTypeOcclusion), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey<String>('generation-preview-image-0')),
+      findsOneWidget,
+    );
+
+    await tester.tap(
+      find.byKey(const ValueKey<String>('generation-preview-import-all')),
+    );
+    await tester.pumpAndSettle();
+
+    final GeneratedCard imported = store.importedCards.single.single;
+    expect(imported.isOcclusion, isTrue);
+    expect(imported.image, same(card.image));
+    expect(imported.occlusionJson, defaultOcclusionDocumentJson());
   });
 }

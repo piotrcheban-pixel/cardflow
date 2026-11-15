@@ -67,6 +67,10 @@ class _EditableCard {
       sourceExcerpt: original.sourceExcerpt,
       sourceFile: original.sourceFile,
       issues: original.issues,
+      imageQuery: original.imageQuery,
+      image: original.image,
+      isOcclusion: original.isOcclusion,
+      occlusionJson: original.occlusionJson,
     );
   }
 }
@@ -381,14 +385,34 @@ class _PreviewCardTile extends StatelessWidget {
                   onChanged: (bool? value) => onSelected(value ?? false),
                 ),
                 Expanded(
-                  child: Text(switch (card.original.cardType) {
-                    CardType.basic => l10n.cardTypeBasic,
-                    CardType.basicReversed => l10n.cardTypeBasicReversed,
-                    CardType.cloze => l10n.cardTypeCloze,
-                  }, style: theme.textTheme.labelMedium),
+                  child: Text(
+                    card.original.isOcclusion
+                        ? l10n.cardTypeOcclusion
+                        : switch (card.original.cardType) {
+                            CardType.basic => l10n.cardTypeBasic,
+                            CardType.basicReversed =>
+                              l10n.cardTypeBasicReversed,
+                            CardType.cloze => l10n.cardTypeCloze,
+                          },
+                    style: theme.textTheme.labelMedium,
+                  ),
                 ),
               ],
             ),
+            if (card.original.image != null) ...<Widget>[
+              const SizedBox(height: 8),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.memory(
+                  card.original.image!.bytes,
+                  key: ValueKey<String>('generation-preview-image-$index'),
+                  height: 120,
+                  fit: BoxFit.contain,
+                  errorBuilder: (BuildContext context, Object error, _) =>
+                      const SizedBox.shrink(),
+                ),
+              ),
+            ],
             TextField(
               key: ValueKey<String>('generation-preview-front-$index'),
               controller: card.front,
@@ -444,5 +468,7 @@ String issueLabel(AppLocalizations l10n, CardIssueCode issue) {
     CardIssueCode.latexBroken => l10n.generationIssueLatexBroken,
     CardIssueCode.excerptMismatch => l10n.generationIssueExcerptMismatch,
     CardIssueCode.tagsAdjusted => l10n.generationIssueTagsAdjusted,
+    CardIssueCode.occlusionImageMissing =>
+      l10n.generationIssueOcclusionImageMissing,
   };
 }

@@ -31,12 +31,15 @@ const Map<String, Object?> canonicalCardsResponseSchema = <String, Object?>{
           },
           'card_type': <String, Object?>{
             'type': 'string',
-            'enum': <String>['basic', 'basic_reversed', 'cloze'],
+            'enum': <String>['basic', 'basic_reversed', 'cloze', 'occlusion'],
           },
           'source_excerpt': <String, Object?>{
             'type': <String>['string', 'null'],
           },
           'source_file': <String, Object?>{
+            'type': <String>['string', 'null'],
+          },
+          'image_query': <String, Object?>{
             'type': <String>['string', 'null'],
           },
         },
@@ -48,6 +51,7 @@ const Map<String, Object?> canonicalCardsResponseSchema = <String, Object?>{
           'card_type',
           'source_excerpt',
           'source_file',
+          'image_query',
         ],
         'additionalProperties': false,
       },

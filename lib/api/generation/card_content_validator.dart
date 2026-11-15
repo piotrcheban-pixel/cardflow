@@ -33,6 +33,9 @@ class CardContentValidator {
   /// Максимальное число тегов (SPEC A8.4).
   static const int maxTags = 3;
 
+  /// Максимальная длина `image_query` (итерация 7.9).
+  static const int maxImageQueryLength = 200;
+
   /// Валидирует декодированный ответ модели (уже прошедший проверку схемы).
   ///
   /// [sourceText] — исходный текст материалов для проверки `source_excerpt`.
@@ -68,10 +71,16 @@ class CardContentValidator {
       throw _invalidResponse();
     }
     final CardType cardType;
-    try {
-      cardType = CardType.fromWire(cardTypeWire);
-    } on FormatException {
-      throw _invalidResponse();
+    final bool isOcclusion = cardTypeWire == 'occlusion';
+    if (isOcclusion) {
+      // SPEC A5: occlusion — разметка внутри basic, а не тип карточки.
+      cardType = CardType.basic;
+    } else {
+      try {
+        cardType = CardType.fromWire(cardTypeWire);
+      } on FormatException {
+        throw _invalidResponse();
+      }
     }
 
     final issues = <CardIssueCode>[];
@@ -114,6 +123,10 @@ class CardContentValidator {
 
     final hint = raw['hint'];
     final sourceFile = raw['source_file'];
+    final rawQuery = raw['image_query'];
+    final String? imageQuery = rawQuery is String && rawQuery.trim().isNotEmpty
+        ? _limitQuery(rawQuery.trim())
+        : null;
     return GeneratedCard(
       front: front,
       back: back,
@@ -123,7 +136,16 @@ class CardContentValidator {
       sourceExcerpt: sourceExcerpt,
       sourceFile: sourceFile is String ? sourceFile : null,
       issues: List<CardIssueCode>.unmodifiable(issues),
+      imageQuery: imageQuery,
+      isOcclusion: isOcclusion,
     );
+  }
+
+  /// Обрезает поисковый запрос до [maxImageQueryLength] символов.
+  static String _limitQuery(String value) {
+    return value.length <= maxImageQueryLength
+        ? value
+        : value.substring(0, maxImageQueryLength).trim();
   }
 
   static String _normalizeTag(String tag) {

@@ -688,10 +688,12 @@ void main() {
       expect(runner.runCalls, 1);
       final attachments = runner.lastRequest!.images;
       expect(attachments, hasLength(4));
-      expect(
-        attachments.map((attachment) => attachment.pageNumber),
-        <int>[1, 2, 3, 4],
-      );
+      expect(attachments.map((attachment) => attachment.pageNumber), <int>[
+        1,
+        2,
+        3,
+        4,
+      ]);
       expect(
         attachments.map((attachment) => attachment.groupKey).toSet(),
         <String>{'/tmp/скан.pdf'},

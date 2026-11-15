@@ -198,4 +198,25 @@ void main() {
     await tester.pump();
     expect(find.byKey(const ValueKey('occlusion-cover-m1')), findsNothing);
   });
+
+  testWidgets('basic с иллюстрацией: картинка над текстом (итерация 7.9)', (
+    tester,
+  ) async {
+    await pumpClassic(
+      tester,
+      card(mediaIds: const <String>['media-1']),
+      image: png,
+    );
+    await tester.pump();
+
+    expect(find.byKey(const ValueKey('card-content-image')), findsOneWidget);
+    expect(find.text('Вопрос'), findsOneWidget);
+  });
+
+  testWidgets('basic без media не рисует пустую картинку', (tester) async {
+    await pumpClassic(tester, card());
+    await tester.pump();
+
+    expect(find.byKey(const ValueKey('card-content-image')), findsNothing);
+  });
 }

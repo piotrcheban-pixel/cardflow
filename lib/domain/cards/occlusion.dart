@@ -123,3 +123,22 @@ class OcclusionDocument {
     'masks': <Map<String, Object?>>[for (final mask in masks) mask.toJson()],
   });
 }
+
+/// Базовая прямоугольная маска по центру изображения (итерация 7.9).
+///
+/// Используется, когда формат occlusion выбрала модель, а маски нарисовать
+/// пользователю ещё предстоит: карточка сразу работоспособна.
+const OcclusionMask kDefaultOcclusionMask = OcclusionMask(
+  id: 'mask-1',
+  shape: OcclusionShape.rectangle,
+  x: 0.3,
+  y: 0.35,
+  width: 0.4,
+  height: 0.3,
+);
+
+/// JSON `occlusion_json` v1 с одной центральной прямоугольной маской.
+String defaultOcclusionDocumentJson() {
+  return const OcclusionDocument(masks: <OcclusionMask>[kDefaultOcclusionMask])
+      .encode();
+}

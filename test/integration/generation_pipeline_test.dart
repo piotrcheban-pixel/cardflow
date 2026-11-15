@@ -30,6 +30,7 @@ void main() {
     'card_type': 'basic',
     'source_excerpt': null,
     'source_file': 'лекция.docx',
+    'image_query': null,
   };
 
   Map<String, Object?> openAiSuccessPayload() => <String, Object?>{
@@ -115,7 +116,7 @@ void main() {
       expect(result.cards, hasLength(1));
       expect(result.cards.single.front, 'Что такое FSRS?');
       expect(result.usage.totalTokens, 30);
-      expect(result.promptVersion, 'gen-ru-v2');
+      expect(result.promptVersion, 'gen-ru-v3');
 
       expect(adapter.requests, hasLength(1));
       final sent = adapter.requests.single;

@@ -8,9 +8,9 @@ import 'package:cardflow/api/generation/system_prompt.dart';
 /// сообщение (SPEC A8.1), проверка LaTeX (SPEC A8.4).
 void main() {
   group('системный промпт A8.1', () {
-    test('версия gen-ru-v2 и текст не пустой', () {
-      expect(systemPromptVersion, 'gen-ru-v2');
-      expect(systemPromptGenRuV2.trim(), isNotEmpty);
+    test('версия gen-ru-v3 и текст не пустой', () {
+      expect(systemPromptVersion, 'gen-ru-v3');
+      expect(systemPromptGenRuV3.trim(), isNotEmpty);
     });
 
     test('содержит ключевые правила и структуру блоков A8.1', () {
@@ -26,7 +26,22 @@ void main() {
         'Отвечай строго по схеме.',
       ]) {
         expect(
-          systemPromptGenRuV2,
+          systemPromptGenRuV3,
+          contains(fragment),
+          reason: 'В промпте нет фрагмента: $fragment',
+        );
+      }
+    });
+
+    test('gen-ru-v3: image_query и occlusion (итерация 7.9)', () {
+      for (final fragment in <String>[
+        'image_query',
+        'occlusion',
+        'на английском',
+        'Не добавляй картинки и image_query, если пользователь запретил',
+      ]) {
+        expect(
+          systemPromptGenRuV3,
           contains(fragment),
           reason: 'В промпте нет фрагмента: $fragment',
         );
@@ -34,7 +49,7 @@ void main() {
     });
 
     test('промпт не содержит подстановок Dart (raw-строка)', () {
-      expect(systemPromptGenRuV2, isNot(contains(r'${')));
+      expect(systemPromptGenRuV3, isNot(contains(r'${')));
     });
   });
 

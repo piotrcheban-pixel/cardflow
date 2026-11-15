@@ -1,4 +1,5 @@
 import 'package:cardflow/domain/cards/card.dart';
+import 'package:cardflow/domain/generation/generated_card_image.dart';
 
 /// Пометки качества сгенерированной карточки (SPEC A8.4).
 ///
@@ -23,8 +24,11 @@ enum CardIssueCode {
   /// `source_excerpt` не найдена в исходном тексте (цитата обнулена).
   excerptMismatch,
 
-  /// Теги обрезаны до 3 / удалены пустые и `#`.
+  /// Теги скорректированы (обрезаны до 3 / удалены пустые и `#`).
   tagsAdjusted,
+
+  /// Occlusion без найденной иллюстрации: карточка стала обычной (итерация 7.9).
+  occlusionImageMissing,
 }
 
 /// Карточка, полученная от модели и прошедшая локальную валидацию (SPEC A8.4).
@@ -41,6 +45,10 @@ class GeneratedCard {
     this.sourceExcerpt,
     this.sourceFile,
     this.issues = const <CardIssueCode>[],
+    this.imageQuery,
+    this.image,
+    this.isOcclusion = false,
+    this.occlusionJson,
   });
 
   /// Лицевая сторона (вопрос).
@@ -67,8 +75,53 @@ class GeneratedCard {
   /// Машинные пометки качества (A8.4).
   final List<CardIssueCode> issues;
 
+  /// Краткий поисковый запрос на английском (итерация 7.9, ADR-023).
+  final String? imageQuery;
+
+  /// Найденная и скачанная иллюстрация; `null` — не искали/не нашли.
+  final GeneratedCardImage? image;
+
+  /// Модель запросила формат occlusion (`card_type: "occlusion"`).
+  ///
+  /// В БД и экспорте карточка остаётся `basic` с `occlusion_json` (SPEC A5).
+  final bool isOcclusion;
+
+  /// JSON масок occlusion для импорта (итерация 7.9).
+  final String? occlusionJson;
+
   /// Есть ли пометки, требующие внимания пользователя.
   bool get hasIssues => issues.isNotEmpty;
+
+  /// Копия с изменёнными полями (image/occlusion — результат поиска 7.9).
+  GeneratedCard copyWith({
+    String? front,
+    String? back,
+    CardType? cardType,
+    String? hint,
+    List<String>? tags,
+    String? sourceExcerpt,
+    String? sourceFile,
+    List<CardIssueCode>? issues,
+    String? imageQuery,
+    GeneratedCardImage? image,
+    bool? isOcclusion,
+    String? occlusionJson,
+  }) {
+    return GeneratedCard(
+      front: front ?? this.front,
+      back: back ?? this.back,
+      cardType: cardType ?? this.cardType,
+      hint: hint ?? this.hint,
+      tags: tags ?? this.tags,
+      sourceExcerpt: sourceExcerpt ?? this.sourceExcerpt,
+      sourceFile: sourceFile ?? this.sourceFile,
+      issues: issues ?? this.issues,
+      imageQuery: imageQuery ?? this.imageQuery,
+      image: image ?? this.image,
+      isOcclusion: isOcclusion ?? this.isOcclusion,
+      occlusionJson: occlusionJson ?? this.occlusionJson,
+    );
+  }
 
   @override
   bool operator ==(Object other) {
@@ -81,7 +134,11 @@ class GeneratedCard {
         _listEquals(other.tags, tags) &&
         other.sourceExcerpt == sourceExcerpt &&
         other.sourceFile == sourceFile &&
-        _listEquals(other.issues, issues);
+        _listEquals(other.issues, issues) &&
+        other.imageQuery == imageQuery &&
+        identical(other.image, image) &&
+        other.isOcclusion == isOcclusion &&
+        other.occlusionJson == occlusionJson;
   }
 
   @override
@@ -94,6 +151,10 @@ class GeneratedCard {
     sourceExcerpt,
     sourceFile,
     Object.hashAll(issues),
+    imageQuery,
+    identityHashCode(image),
+    isOcclusion,
+    occlusionJson,
   );
 
   @override

@@ -80,6 +80,7 @@ void main() {
     'card_type': 'basic',
     'source_excerpt': null,
     'source_file': null,
+    'image_query': null,
   };
 
   String cardsJson(List<Map<String, Object?>> cards) =>

@@ -211,9 +211,7 @@ void main() {
       ]);
       final FileParsingService service = FileParsingService(
         isolateRunner: _recordingRunner,
-        pdfScanRenderer: _FakePdfScanRenderer(
-          pages: <Uint8List>[png, png],
-        ),
+        pdfScanRenderer: _FakePdfScanRenderer(pages: <Uint8List>[png, png]),
       );
 
       final List<Uint8List> pages = await service.renderPdfPages(

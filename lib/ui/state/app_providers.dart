@@ -8,6 +8,7 @@ import 'package:cardflow/api/generation/generation_pipeline.dart';
 import 'package:cardflow/api/http/generation_http_client.dart';
 import 'package:cardflow/api/http/redacting_log_interceptor.dart';
 import 'package:cardflow/api/http/retry_policy.dart';
+import 'package:cardflow/api/images/image_search_service.dart';
 import 'package:cardflow/api/providers/anthropic_adapter.dart';
 import 'package:cardflow/api/providers/gemini_adapter.dart';
 import 'package:cardflow/api/providers/openai_adapter.dart';
@@ -41,6 +42,7 @@ import 'package:cardflow/domain/cards/card_media_repository.dart';
 import 'package:cardflow/domain/cards/card_repository.dart';
 import 'package:cardflow/domain/decks/deck_repository.dart';
 import 'package:cardflow/domain/generation/api_key_store.dart';
+import 'package:cardflow/domain/generation/card_image_finder.dart';
 import 'package:cardflow/domain/generation/document_gateway.dart';
 import 'package:cardflow/domain/generation/generation_card_store.dart';
 import 'package:cardflow/domain/generation/generation_job.dart';
@@ -365,7 +367,17 @@ final generationJobRepositoryProvider = Provider<GenerationJobRepository>((
 
 /// Импорт сгенерированных карточек в колоду (A8.5 шаги 9–11).
 final generationCardStoreProvider = Provider<GenerationCardStore>((ref) {
-  return DriftGenerationCardStore(ref.watch(appDatabaseProvider));
+  return DriftGenerationCardStore(
+    ref.watch(appDatabaseProvider),
+    mediaStore: ref.watch(mediaStoreProvider),
+  );
+});
+
+/// Поиск иллюстраций по `image_query` (итерация 7.9, ADR-023).
+///
+/// Openverse API не требует ключа; сеть — тот же Dio с таймаутами и redaction.
+final cardImageFinderProvider = Provider<CardImageFinder>((ref) {
+  return ImageSearchService(dio: ref.watch(generationDioProvider));
 });
 
 /// Пайплайн генерации: чанкинг, вызовы, прогресс/отмена, дедупликация.
@@ -374,5 +386,6 @@ final generationRunnerProvider = Provider<GenerationRunner>((ref) {
     caller: ref.watch(cardGenerationServiceProvider),
     jobRepository: ref.watch(generationJobRepositoryProvider),
     cardStore: ref.watch(generationCardStoreProvider),
+    imageFinder: ref.watch(cardImageFinderProvider),
   );
 });

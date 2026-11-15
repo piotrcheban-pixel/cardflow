@@ -55,6 +55,24 @@ class CardContentView extends StatelessWidget {
         );
       }
       if (content.isNotEmpty) content.add(const SizedBox(height: 12));
+    } else if (image != null) {
+      // Обычная карточка с иллюстрацией из поиска (итерация 7.9).
+      content.add(
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 640, maxHeight: 240),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.memory(
+              image,
+              key: const ValueKey<String>('card-content-image'),
+              fit: BoxFit.contain,
+              errorBuilder: (BuildContext context, Object error, _) =>
+                  const SizedBox.shrink(),
+            ),
+          ),
+        ),
+      );
+      content.add(const SizedBox(height: 12));
     }
 
     final text = _displayText();

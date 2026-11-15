@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,7 +9,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cardflow/data/db/app_database.dart';
 import 'package:cardflow/data/generation/drift_generation_card_store.dart';
 import 'package:cardflow/data/generation/drift_generation_job_repository.dart';
+import 'package:cardflow/data/transfer/media_store.dart';
 import 'package:cardflow/domain/generation/generation_attachment.dart';
+import 'package:cardflow/domain/generation/generated_card.dart';
+import 'package:cardflow/domain/generation/generated_card_image.dart';
+import 'package:cardflow/domain/generation/generation_card_store.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
 import 'package:cardflow/domain/generation/generation_job.dart';
 import 'package:cardflow/domain/generation/generation_run.dart';
@@ -26,6 +31,7 @@ void main() {
   late AppDatabase database;
   late ProviderContainer container;
   late FakeHttpAdapter httpAdapter;
+  late Directory mediaDirectory;
 
   Map<String, Object?> cardJson() => <String, Object?>{
     'front': 'Что такое FSRS?',
@@ -35,6 +41,7 @@ void main() {
     'card_type': 'basic',
     'source_excerpt': null,
     'source_file': 'лекция.txt',
+    'image_query': null,
   };
 
   Map<String, Object?> openAiPayload() => <String, Object?>{
@@ -58,10 +65,12 @@ void main() {
 
   setUp(() {
     database = AppDatabase.inMemory();
+    mediaDirectory = Directory.systemTemp.createTempSync('cardflow_gen_flow_');
     httpAdapter = FakeHttpAdapter((options) => jsonResponse(openAiPayload()));
     container = ProviderContainer(
       overrides: <Override>[
         appDatabaseProvider.overrideWithValue(database),
+        mediaStoreProvider.overrideWithValue(MediaStore(mediaDirectory)),
         generationDioProvider.overrideWithValue(dioWithAdapter(httpAdapter)),
         apiKeyStoreProvider.overrideWithValue(
           FakeApiKeyStore(<String, String>{'openai': 'test-key-openai'}),
@@ -76,6 +85,9 @@ void main() {
   tearDown(() async {
     container.dispose();
     await database.close();
+    if (mediaDirectory.existsSync()) {
+      mediaDirectory.deleteSync(recursive: true);
+    }
   });
 
   ParsedDocument document() {
@@ -107,6 +119,102 @@ void main() {
   }
 
   test(
+    'production-граф: occlusion + image_query → поиск, media и маска (7.9)',
+    () async {
+      final FakeCardImageFinder finder = FakeCardImageFinder(
+        byQuery: <String, GeneratedCardImage?>{
+          'plant cell diagram': makeCardImage(query: 'plant cell diagram'),
+        },
+      );
+      final FakeHttpAdapter adapter = FakeHttpAdapter(
+        (options) => jsonResponse(<String, Object?>{
+          'choices': <Object?>[
+            <String, Object?>{
+              'message': <String, Object?>{
+                'role': 'assistant',
+                'content': jsonEncode(<String, Object?>{
+                  'cards': <Object?>[
+                    <String, Object?>{
+                      'front': 'Что изображено на схеме?',
+                      'back': 'Клетка растения.',
+                      'hint': null,
+                      'tags': <Object?>['биология'],
+                      'card_type': 'occlusion',
+                      'source_excerpt': null,
+                      'source_file': 'лекция.txt',
+                      'image_query': 'plant cell diagram',
+                    },
+                  ],
+                }),
+              },
+              'finish_reason': 'stop',
+            },
+          ],
+          'usage': <String, Object?>{'total_tokens': 30},
+        }),
+      );
+      final ProviderContainer local = ProviderContainer(
+        overrides: <Override>[
+          appDatabaseProvider.overrideWithValue(database),
+          mediaStoreProvider.overrideWithValue(MediaStore(mediaDirectory)),
+          generationDioProvider.overrideWithValue(dioWithAdapter(adapter)),
+          apiKeyStoreProvider.overrideWithValue(
+            FakeApiKeyStore(<String, String>{'openai': 'test-key-openai'}),
+          ),
+          generationSettingsStoreProvider.overrideWithValue(
+            FakeGenerationSettingsStore(),
+          ),
+          cardImageFinderProvider.overrideWithValue(finder),
+        ],
+      );
+      addTearDown(local.dispose);
+
+      final GenerationRunResult result = await local
+          .read(generationRunnerProvider)
+          .run(
+            GenerationRunRequest(
+              documents: <ParsedDocument>[document()],
+              account: testProviderAccount(
+                presetId: 'openai',
+                modelId: 'gpt-4o',
+              ),
+              deckName: 'Биология',
+            ),
+          );
+
+      expect(finder.queries, <String>['plant cell diagram']);
+      final GeneratedCard card = result.cards.single;
+      expect(card.isOcclusion, isTrue);
+      expect(card.image, isNotNull);
+      expect(card.occlusionJson, isNotNull);
+
+      final GenerationImportResult imported = await local
+          .read(generationCardStoreProvider)
+          .importGeneratedCards(
+            deckId: null,
+            deckName: 'Биология',
+            cards: result.cards,
+            jobId: result.jobId,
+            now: DateTime.now(),
+          );
+      expect(imported.importedCards, 1);
+
+      final CardRow row = (await database.select(database.cards).get()).single;
+      expect(row.cardType, 'basic');
+      expect(row.occlusionJson, card.occlusionJson);
+      expect(jsonDecode(row.mediaJson), hasLength(1));
+
+      final MediaRow mediaRow =
+          (await database.select(database.media).get()).single;
+      expect(
+        File('${mediaDirectory.path}${Platform.pathSeparator}${mediaRow.path}')
+            .existsSync(),
+        isTrue,
+      );
+    },
+  );
+
+  test(
     'production-граф: генерация → job done в БД → импорт в новую колоду',
     () async {
       final result = await container
@@ -129,7 +237,7 @@ void main() {
       expect(job.cardsCount, 1);
       expect(job.chunkCount, 1);
       expect(job.files, <String>['лекция.txt']);
-      expect(job.promptVersion, 'gen-ru-v2');
+      expect(job.promptVersion, 'gen-ru-v3');
 
       final imported = await container
           .read(generationCardStoreProvider)

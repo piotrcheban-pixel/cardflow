@@ -1,11 +1,19 @@
+import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
+
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cardflow/data/db/app_database.dart';
 import 'package:cardflow/data/generation/drift_generation_card_store.dart';
 import 'package:cardflow/data/generation/drift_generation_job_repository.dart';
+import 'package:cardflow/data/transfer/media_store.dart';
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/cards/content_hash.dart';
+import 'package:cardflow/domain/cards/occlusion.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
+import 'package:cardflow/domain/generation/generated_card_image.dart';
+import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/generation/generation_job.dart';
 
 import '../../data/db/test_support.dart';
@@ -273,4 +281,118 @@ void main() {
       expect(await db.select(db.cards).get(), isEmpty);
     },
   );
+
+  group('картинки и occlusion при импорте (итерация 7.9)', () {
+    late Directory temp;
+    late MediaStore media;
+
+    setUp(() {
+      temp = Directory.systemTemp.createTempSync('cardflow_gen_media_');
+      media = MediaStore(temp);
+    });
+
+    tearDown(() {
+      if (temp.existsSync()) temp.deleteSync(recursive: true);
+    });
+
+    GeneratedCard cardWithImage({
+      String front = 'Что на схеме?',
+      String query = 'photosynthesis diagram',
+      bool isOcclusion = false,
+      String? occlusionJson,
+    }) {
+      return GeneratedCard(
+        front: front,
+        back: 'Фотосинтез',
+        cardType: CardType.basic,
+        imageQuery: query,
+        isOcclusion: isOcclusion,
+        occlusionJson: occlusionJson,
+        image: GeneratedCardImage(
+          bytes: Uint8List.fromList(<int>[0xFF, 0xD8, 0xFF, 0xE0, 1, 2, 3]),
+          mediaType: AttachmentMediaType.jpeg,
+          query: query,
+        ),
+      );
+    }
+
+    test('картинка пишется в MediaStore, media_json привязан', () async {
+      final storeWithMedia = DriftGenerationCardStore(db, mediaStore: media);
+      final card = cardWithImage();
+
+      await storeWithMedia.importGeneratedCards(
+        deckId: null,
+        deckName: 'Колода',
+        cards: <GeneratedCard>[card],
+        jobId: 'job-1',
+        now: now,
+      );
+
+      final List<MediaRow> mediaRows = await db.select(db.media).get();
+      expect(mediaRows, hasLength(1));
+      final MediaRow row = mediaRows.single;
+      expect(row.mimeType, 'image/jpeg');
+      expect(row.size, card.image!.bytes.length);
+
+      final Uint8List? stored = await media.readMedia(row.path);
+      expect(stored, card.image!.bytes);
+
+      final CardRow cardRow = (await db.select(db.cards).get()).single;
+      expect(jsonDecode(cardRow.mediaJson), <Object?>[row.id]);
+      expect(cardRow.occlusionJson, isNull);
+      expect(row.cardId, cardRow.id);
+    });
+
+    test('occlusion_json сохраняется, карточка остаётся basic', () async {
+      final storeWithMedia = DriftGenerationCardStore(db, mediaStore: media);
+      final String masks = defaultOcclusionDocumentJson();
+      final card = cardWithImage(isOcclusion: true, occlusionJson: masks);
+
+      await storeWithMedia.importGeneratedCards(
+        deckId: null,
+        deckName: 'Колода',
+        cards: <GeneratedCard>[card],
+        jobId: 'job-1',
+        now: now,
+      );
+
+      final CardRow cardRow = (await db.select(db.cards).get()).single;
+      expect(cardRow.cardType, 'basic');
+      expect(cardRow.occlusionJson, masks);
+      expect(jsonDecode(cardRow.mediaJson), hasLength(1));
+      expect(await db.select(db.media).get(), hasLength(1));
+    });
+
+    test('карточка без картинки не создаёт media', () async {
+      final storeWithMedia = DriftGenerationCardStore(db, mediaStore: media);
+      await storeWithMedia.importGeneratedCards(
+        deckId: null,
+        deckName: 'Колода',
+        cards: <GeneratedCard>[cardOf('Вопрос')],
+        jobId: 'job-1',
+        now: now,
+      );
+      expect(await db.select(db.media).get(), isEmpty);
+      expect(
+        jsonDecode((await db.select(db.cards).get()).single.mediaJson),
+        isEmpty,
+      );
+    });
+
+    test('картинка без MediaStore — StateError и откат', () async {
+      await expectLater(
+        store.importGeneratedCards(
+          deckId: null,
+          deckName: 'Колода',
+          cards: <GeneratedCard>[cardWithImage()],
+          jobId: 'job-1',
+          now: now,
+        ),
+        throwsStateError,
+      );
+      expect(await db.select(db.cards).get(), isEmpty);
+      expect(await db.select(db.media).get(), isEmpty);
+      expect(await db.select(db.decks).get(), isEmpty);
+    });
+  });
 }

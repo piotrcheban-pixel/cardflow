@@ -9,7 +9,10 @@ import 'package:cardflow/api/generation/generation_cancellation.dart';
 import 'package:cardflow/api/generation/system_prompt.dart';
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/cards/content_hash.dart';
+import 'package:cardflow/domain/cards/occlusion.dart';
+import 'package:cardflow/domain/generation/card_image_finder.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
+import 'package:cardflow/domain/generation/generated_card_image.dart';
 import 'package:cardflow/domain/generation/generation_card_store.dart';
 import 'package:cardflow/domain/generation/generation_chunker.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
@@ -58,6 +61,7 @@ class GenerationPipeline implements GenerationRunner {
     required this.cardStore,
     this.estimator = const TokenEstimator(),
     this.chunker = const GenerationChunker(),
+    this.imageFinder,
     this.now = _defaultNow,
     this.jobIdFactory = _defaultJobId,
   });
@@ -77,6 +81,13 @@ class GenerationPipeline implements GenerationRunner {
   /// Чанкер.
   final GenerationChunker chunker;
 
+  /// Поиск иллюстраций по `image_query` (итерация 7.9); `null` — без картинок.
+  final CardImageFinder? imageFinder;
+
+  /// Кэш картинок по запросу в рамках одного запуска/повтора.
+  final Map<String, Future<GeneratedCardImage?>> _imageCache =
+      <String, Future<GeneratedCardImage?>>{};
+
   /// Часы (инжектируются в тестах).
   final DateTime Function() now;
 
@@ -89,9 +100,10 @@ class GenerationPipeline implements GenerationRunner {
     GenerationProgressCallback? onProgress,
     GenerationCancellation? cancellation,
   }) async {
+    _imageCache.clear();
     final String jobId = jobIdFactory();
     final DateTime createdAt = now();
-    final int systemPromptTokens = estimator.estimate(systemPromptGenRuV2);
+    final int systemPromptTokens = estimator.estimate(systemPromptGenRuV3);
     final GenerationJob initialJob = GenerationJob(
       id: jobId,
       status: GenerationJobStatus.running,
@@ -165,6 +177,7 @@ class GenerationPipeline implements GenerationRunner {
         .where((failure) => failure.retryable)
         .toList(growable: false);
     if (retryable.isEmpty) return previous;
+    _imageCache.clear();
 
     final GenerationJob job =
         await jobRepository.jobById(previous.jobId) ??
@@ -308,7 +321,7 @@ class GenerationPipeline implements GenerationRunner {
       processed++;
       for (final GeneratedCard card in result.cards) {
         if (_acceptCard(card, seen)) {
-          cards.add(card);
+          cards.add(await _withCardImage(card, cancellation));
         } else {
           duplicates++;
         }
@@ -374,6 +387,54 @@ class GenerationPipeline implements GenerationRunner {
       cancelled: cancelled,
       fatalErrorCode: fatal?.code,
       fatalProviderReason: fatal?.providerReason,
+    );
+  }
+
+  /// Привязывает найденную картинку или понижает occlusion до basic.
+  Future<GeneratedCard> _withCardImage(
+    GeneratedCard card,
+    GenerationCancellation? cancellation,
+  ) async {
+    if (card.image != null) return card;
+    final String? query = card.imageQuery?.trim();
+    if (query == null ||
+        query.isEmpty ||
+        imageFinder == null ||
+        (cancellation?.isCancelled ?? false)) {
+      return _withoutImage(card);
+    }
+    GeneratedCardImage? image;
+    try {
+      image = await _imageCache.putIfAbsent(
+        query,
+        () => imageFinder!.findImage(query),
+      );
+    } on Object {
+      _imageCache.remove(query);
+      image = null;
+    }
+    if (image == null) {
+      _imageCache.remove(query);
+      return _withoutImage(card);
+    }
+    return card.copyWith(
+      image: image,
+      occlusionJson: card.isOcclusion
+          ? card.occlusionJson ?? defaultOcclusionDocumentJson()
+          : card.occlusionJson,
+    );
+  }
+
+  /// Карточка без картинки: occlusion без иллюстрации становится обычной.
+  GeneratedCard _withoutImage(GeneratedCard card) {
+    if (!card.isOcclusion) return card;
+    return card.copyWith(
+      isOcclusion: false,
+      issues: List<CardIssueCode>.unmodifiable(<CardIssueCode>[
+        ...card.issues,
+        if (!card.issues.contains(CardIssueCode.occlusionImageMissing))
+          CardIssueCode.occlusionImageMissing,
+      ]),
     );
   }
 

@@ -206,7 +206,7 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
         _parsedDocuments.map((ParsedDocument document) => document.text),
       ) +
       _attachments.length * kImageTokenEstimate +
-      _estimator.estimate(systemPromptGenRuV2) +
+      _estimator.estimate(systemPromptGenRuV3) +
       kPromptWrapperTokenReserve;
 
   Future<void> _pickFiles() async {

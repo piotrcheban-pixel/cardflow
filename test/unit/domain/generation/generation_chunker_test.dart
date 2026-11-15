@@ -255,10 +255,11 @@ void main() {
       );
 
       expect(chunks, hasLength(2));
-      expect(
-        chunks[0].images.map((attachment) => attachment.pageNumber),
-        <int>[1, 2, 3],
-      );
+      expect(chunks[0].images.map((attachment) => attachment.pageNumber), <int>[
+        1,
+        2,
+        3,
+      ]);
       expect(chunks[0].sourceFiles, <String>['скан.pdf']);
       expect(chunks[1].images.single.fileName, 'схема.png');
       expect(chunks.map((chunk) => chunk.index), <int>[1, 2]);

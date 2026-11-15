@@ -27,6 +27,7 @@ void main() {
     'card_type': 'basic',
     'source_excerpt': 'FSRS — алгоритм интервального повторения.',
     'source_file': 'лекция.docx',
+    'image_query': null,
   };
 
   Map<String, Object?> validResponse() => <String, Object?>{
@@ -54,6 +55,7 @@ void main() {
         'card_type',
         'source_excerpt',
         'source_file',
+        'image_query',
       });
       expect(
         cardItem()['required'],
@@ -62,7 +64,7 @@ void main() {
       expect(cardItem()['additionalProperties'], isFalse);
       expect(
         (cardProperties()['card_type']! as Map<String, Object?>)['enum'],
-        <String>['basic', 'basic_reversed', 'cloze'],
+        <String>['basic', 'basic_reversed', 'cloze', 'occlusion'],
       );
       expect(
         (cardProperties()['front']! as Map<String, Object?>)['type'],
@@ -72,10 +74,19 @@ void main() {
         (cardProperties()['back']! as Map<String, Object?>)['type'],
         'string',
       );
+      expect(
+        (cardProperties()['image_query']! as Map<String, Object?>)['type'],
+        <String>['string', 'null'],
+      );
     });
 
     test('nullable-поля — union с null (строгий режим OpenAI)', () {
-      for (final field in <String>['hint', 'source_excerpt', 'source_file']) {
+      for (final field in <String>[
+        'hint',
+        'source_excerpt',
+        'source_file',
+        'image_query',
+      ]) {
         expect(
           (cardProperties()[field]! as Map<String, Object?>)['type'],
           <String>['string', 'null'],
@@ -132,7 +143,7 @@ void main() {
         (card) => card['front'] = 1,
         (card) => card['tags'] = 'не-массив',
         (card) => card['tags'] = <Object?>[1],
-        (card) => card['card_type'] = 'occlusion',
+        (card) => card['card_type'] = 'image',
         (card) => card['hint'] = 3,
       ]) {
         final card = validCard();
@@ -150,7 +161,8 @@ void main() {
       final card = validCard()
         ..['hint'] = null
         ..['source_excerpt'] = null
-        ..['source_file'] = null;
+        ..['source_file'] = null
+        ..['image_query'] = null;
       expect(
         schema.isValid(<String, Object?>{
           'cards': <Object?>[card],
@@ -231,9 +243,18 @@ void main() {
         'card_type',
         'source_excerpt',
         'source_file',
+        'image_query',
       ]);
       final naming = properties['card_type']! as Map<String, Object?>;
-      expect(naming['enum'], <String>['basic', 'basic_reversed', 'cloze']);
+      expect(naming['enum'], <String>[
+        'basic',
+        'basic_reversed',
+        'cloze',
+        'occlusion',
+      ]);
+      final query = properties['image_query']! as Map<String, Object?>;
+      expect(query['type'], 'STRING');
+      expect(query['nullable'], isTrue);
       expect(
         properties['tags']! as Map<String, Object?>,
         containsPair('items', isA<Map<String, Object?>>()),
