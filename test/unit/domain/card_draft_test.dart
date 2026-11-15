@@ -1,7 +1,10 @@
+import 'dart:typed_data';
+
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/cards/card_draft.dart';
+import 'package:cardflow/domain/cards/card_media.dart';
 
 /// Красная фаза итерации 2: валидация и нормализация черновика ручной формы
 /// (SPEC A8.4, ADR-009). Ожидаемое поведение — в expect до реализации.
@@ -164,6 +167,87 @@ void main() {
       expect(draft.cardType, CardType.basic);
       expect(draft.sourceExcerpt, isNull);
       expect(draft.isValid, isFalse);
+    });
+  });
+
+  // ADR-028 (итерация 7.12): медиа — не только occlusion; картинку можно
+  // привязать к любому типу карточки, маски не обязательны.
+  group('CardDraft — медиа любого типа (ADR-028)', () {
+    test('basic с изображением без масок валиден, primaryMediaId = первый', () {
+      const draft = CardDraft(
+        front: 'Что это?',
+        back: 'Московский Кремль',
+        mediaIds: <String>['media-1'],
+      );
+
+      expect(draft.validate(), isEmpty);
+      expect(draft.primaryMediaId, 'media-1');
+      expect(draft.hasImage, isTrue);
+      expect(draft.occlusionJson, isNull);
+    });
+
+    test('cloze с изображением без масок валиден', () {
+      const draft = CardDraft(
+        front: 'Столица Франции — {{c1::Париж}}',
+        back: '',
+        cardType: CardType.cloze,
+        mediaIds: <String>['media-1'],
+      );
+
+      expect(draft.validate(), isEmpty);
+      expect(draft.hasImage, isTrue);
+    });
+
+    test('basic_reversed с новым изображением без масок валиден', () {
+      final upload = CardImageUpload(
+        fileName: 'photo.png',
+        mimeType: 'image/png',
+        bytes: Uint8List.fromList(<int>[1, 2, 3]),
+      );
+      final draft = CardDraft(
+        front: 'Термин',
+        back: 'Определение',
+        cardType: CardType.basicReversed,
+        imageUpload: upload,
+      );
+
+      expect(draft.validate(), isEmpty);
+      expect(draft.hasImage, isTrue);
+      expect(
+        draft.primaryMediaId,
+        isNull,
+        reason: 'новое медиа ещё не записано',
+      );
+    });
+
+    test('нормализация сохраняет mediaIds и imageUpload', () {
+      final upload = CardImageUpload(
+        fileName: 'photo.png',
+        mimeType: 'image/png',
+        bytes: Uint8List.fromList(<int>[1]),
+      );
+      final draft = CardDraft(
+        front: ' Вопрос ',
+        back: ' Ответ ',
+        mediaIds: const <String>['media-1'],
+        imageUpload: upload,
+      );
+
+      final normalized = draft.normalized();
+      expect(normalized.mediaIds, <String>['media-1']);
+      expect(normalized.imageUpload, same(upload));
+    });
+
+    test('occlusion без изображения остаётся ошибкой', () {
+      const draft = CardDraft(
+        front: 'Схема',
+        back: 'Ответ',
+        occlusionJson: '{"version":1,"masks":[]}',
+      );
+
+      expect(draft.validate(), <CardDraftField, CardValidationError>{
+        CardDraftField.occlusion: CardValidationError.occlusionImageMissing,
+      });
     });
   });
 }

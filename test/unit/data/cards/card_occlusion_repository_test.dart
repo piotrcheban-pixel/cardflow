@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cardflow/data/cards/drift_card_repository.dart';
 import 'package:cardflow/data/db/app_database.dart';
 import 'package:cardflow/data/transfer/media_store.dart';
+import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/cards/card_draft.dart';
 import 'package:cardflow/domain/cards/card_media.dart';
 import 'package:cardflow/domain/cards/occlusion.dart';
@@ -174,5 +175,64 @@ void main() {
     );
     expect(await db.select(db.cards).get(), isEmpty);
     expect(await db.select(db.media).get(), isEmpty);
+  });
+
+  // ADR-028 (итерация 7.12): картинка у обычной карточки — просто иллюстрация.
+  test('createCards: Basic-карточка с картинкой без масок', () async {
+    final card = (await repository.createCards(
+      deckId: 'deck-1',
+      draft: CardDraft(
+        front: 'Что это?',
+        back: 'Московский Кремль',
+        imageUpload: upload(),
+      ),
+      now: now,
+    )).single;
+
+    expect(card.mediaIds, hasLength(1));
+    expect(card.occlusionJson, isNull);
+    expect(card.primaryMediaId, card.mediaIds.single);
+    final mediaRows = await db.select(db.media).get();
+    expect(mediaRows, hasLength(1));
+    expect(mediaRows.single.cardId, card.id);
+    expect(await store.readMedia(mediaRows.single.path), bytes);
+  });
+
+  test('createCards: cloze-карточка с картинкой без масок', () async {
+    final card = (await repository.createCards(
+      deckId: 'deck-1',
+      draft: CardDraft(
+        front: 'Столица Франции — {{c1::Париж}}',
+        back: '',
+        cardType: CardType.cloze,
+        imageUpload: upload(),
+      ),
+      now: now,
+    )).single;
+
+    expect(card.cardType, CardType.cloze);
+    expect(card.mediaIds, hasLength(1));
+    expect(card.occlusionJson, isNull);
+    expect(await db.select(db.media).get(), hasLength(1));
+  });
+
+  test('updateCard: очистка mediaIds удаляет строку media и файл', () async {
+    final original = (await repository.createCards(
+      deckId: 'deck-1',
+      draft: CardDraft(front: 'Что это?', back: 'Ответ', imageUpload: upload()),
+      now: now,
+    )).single;
+    final path = (await db.select(db.media).get()).single.path;
+    expect(await store.readMedia(path), bytes);
+
+    final updated = await repository.updateCard(
+      card: original,
+      draft: const CardDraft(front: 'Что это?', back: 'Ответ'),
+      now: now.add(const Duration(minutes: 1)),
+    );
+
+    expect(updated.mediaIds, isEmpty);
+    expect(await db.select(db.media).get(), isEmpty);
+    expect(await store.readMedia(path), isNull);
   });
 }

@@ -106,6 +106,10 @@ class Card {
   final List<String> tags;
 
   /// Идентификаторы медиа (`media_json`, ссылки на `media.id`).
+  ///
+  /// Поддерживаются всеми типами карточек (ADR-028): у обычной карточки это
+  /// иллюстрация, у occlusion — изображение под маски. Первый id — основное
+  /// изображение.
   final List<String> mediaIds;
 
   /// LaTeX-разметка карточки, если есть.
@@ -149,6 +153,9 @@ class Card {
 
   /// Момент последнего изменения.
   final DateTime updatedAt;
+
+  /// Первый идентификатор медиа (основное изображение); `null` — медиа нет.
+  String? get primaryMediaId => mediaIds.isEmpty ? null : mediaIds.first;
 
   @override
   bool operator ==(Object other) {

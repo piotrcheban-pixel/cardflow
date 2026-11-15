@@ -30,7 +30,12 @@ enum CardFormResult {
 ///
 /// Поля: front (обязателен, ≤500), back (обязателен, ≤2000), hint, теги (≤3),
 /// тип (`basic`/`basic_reversed`/`cloze`, при редактировании неизменяем),
-/// `source_excerpt` для кнопки «Почему?» и редактор масок occlusion.
+/// `source_excerpt` для кнопки «Почему?», изображение и (необязательно) маски
+/// Image Occlusion.
+///
+/// ADR-028 (итерация 7.12): изображение можно привязать к карточке **любого**
+/// типа; это обычная иллюстрация. Маски occlusion — отдельный переключатель
+/// для `basic`, по умолчанию выключен.
 /// Сохранение — через репозиторий;
 /// удаление — с подтверждением.
 class CardFormScreen extends ConsumerStatefulWidget {
@@ -61,7 +66,9 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
   bool _imageLoading = false;
   CardImageUpload? _imageUpload;
   Uint8List? _imageBytes;
+  bool _imageRemoved = false;
   OcclusionDocument? _occlusion;
+  bool _useOcclusion = false;
   CardType _cardType = CardType.basic;
   Map<CardDraftField, CardValidationError> _errors =
       const <CardDraftField, CardValidationError>{};
@@ -126,6 +133,9 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
         _cardType = card.cardType;
         _imageBytes = imageBytes;
         _occlusion = OcclusionDocument.tryParse(card.occlusionJson);
+        // Старая occlusion-карточка открывается с включёнными масками; обычная
+        // карточка с иллюстрацией — с выключенными (ADR-028).
+        _useOcclusion = _occlusion != null;
         _loading = false;
       });
     } catch (_) {
@@ -137,6 +147,7 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
     }
   }
 
+  /// Выбирает изображение; маски при этом не включаются (ADR-028).
   Future<void> _pickImage() async {
     final AppLocalizations l10n = AppLocalizations.of(context);
     setState(() => _imageLoading = true);
@@ -146,11 +157,10 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
       setState(() {
         _imageUpload = upload;
         _imageBytes = upload.bytes;
-        _occlusion = const OcclusionDocument();
-        _errors = <CardDraftField, CardValidationError>{
-          for (final entry in _errors.entries)
-            if (entry.key != CardDraftField.occlusion) entry.key: entry.value,
-        };
+        _imageRemoved = false;
+        // Новая картинка под включённые маски — чистый холст для разметки.
+        if (_useOcclusion) _occlusion = const OcclusionDocument();
+        _clearOcclusionError();
       });
     } on Object {
       if (mounted) showAppMessage(context, l10n.cardFormImageLoadError);
@@ -159,21 +169,50 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
     }
   }
 
+  /// Убирает изображение с карточки (маски при этом становятся недоступны).
+  void _removeImage() {
+    setState(() {
+      _imageUpload = null;
+      _imageBytes = null;
+      _imageRemoved = true;
+      _clearOcclusionError();
+    });
+  }
+
+  /// Включает/выключает маски Image Occlusion (только `basic`).
+  void _toggleOcclusion(bool enabled) {
+    setState(() {
+      _useOcclusion = enabled;
+      if (enabled && _occlusion == null) {
+        _occlusion = const OcclusionDocument();
+      }
+      _clearOcclusionError();
+    });
+  }
+
+  void _clearOcclusionError() {
+    _errors = <CardDraftField, CardValidationError>{
+      for (final entry in _errors.entries)
+        if (entry.key != CardDraftField.occlusion) entry.key: entry.value,
+    };
+  }
+
   Future<void> _save() async {
     final AppLocalizations l10n = AppLocalizations.of(context);
-    final bool hasOcclusion =
-        _occlusion != null &&
-        (_imageBytes != null || _card?.occlusionJson != null);
-    final bool replacingImage = _imageUpload != null;
+    final bool useOcclusion = _useOcclusion && _cardType == CardType.basic;
+    // Существующие медиа: первое — основное изображение. При замене/удалении
+    // основное снимается, а прочие id сохраняются. Если файл не прочитался
+    // (bytes == null), медиа не теряется: удаление — только явное.
+    final List<String> existingMedia = _card?.mediaIds ?? const <String>[];
+    final bool keepExistingPrimary =
+        _imageUpload == null && !_imageRemoved && existingMedia.isNotEmpty;
     final mediaIds = <String>[
-      if (_card != null && (!hasOcclusion || !replacingImage))
-        ..._card!.mediaIds,
-      if (_card != null &&
-          hasOcclusion &&
-          replacingImage &&
-          _card!.mediaIds.length > 1)
-        ..._card!.mediaIds.skip(1),
+      if (keepExistingPrimary) existingMedia.first,
+      ...existingMedia.skip(existingMedia.isEmpty ? 0 : 1),
     ];
+    final OcclusionDocument? occlusion = useOcclusion
+        ? (_occlusion ?? const OcclusionDocument())
+        : null;
     final CardDraft draft = CardDraft(
       front: _front.text,
       back: _back.text,
@@ -182,12 +221,8 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
       cardType: _cardType,
       sourceExcerpt: _sourceExcerpt.text,
       mediaIds: mediaIds,
-      occlusionJson: hasOcclusion && _cardType == CardType.basic
-          ? _occlusion!.encode()
-          : null,
-      imageUpload: hasOcclusion && _cardType == CardType.basic
-          ? _imageUpload
-          : null,
+      occlusionJson: occlusion?.encode(),
+      imageUpload: _imageUpload,
     );
     final Map<CardDraftField, CardValidationError> errors = draft.validate();
     if (errors.isNotEmpty) {
@@ -364,57 +399,106 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
           ),
           const SizedBox(height: 16),
           _buildTypeSection(l10n),
-          if (_cardType == CardType.basic) ...<Widget>[
-            const SizedBox(height: 20),
-            _buildOcclusionSection(l10n),
-          ],
+          const SizedBox(height: 20),
+          _buildMediaSection(l10n),
         ],
       ),
     );
   }
 
-  Widget _buildOcclusionSection(AppLocalizations l10n) {
-    final error = _errorText(l10n, CardDraftField.occlusion);
+  /// Секция изображения для любого типа карточки (ADR-028).
+  ///
+  /// Маски — необязательный переключатель у `basic`: по умолчанию картинка
+  /// показывается как иллюстрация без масок.
+  Widget _buildMediaSection(AppLocalizations l10n) {
+    final ThemeData theme = Theme.of(context);
+    final bool masksAvailable = _cardType == CardType.basic;
+    final bool masksEnabled = masksAvailable && _useOcclusion;
+    final String? error = masksEnabled || _useOcclusion
+        ? _errorText(l10n, CardDraftField.occlusion)
+        : null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
+        Text(l10n.cardFormImageSection, style: theme.textTheme.titleMedium),
+        const SizedBox(height: 4),
         Text(
-          l10n.cardFormOcclusionSection,
-          style: Theme.of(context).textTheme.titleMedium,
+          l10n.cardFormImageHint,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
         ),
+        if (error != null) ...<Widget>[
+          const SizedBox(height: 8),
+          Text(error, style: TextStyle(color: theme.colorScheme.error)),
+        ],
         const SizedBox(height: 8),
-        if (error != null)
+        if (_imageBytes != null) ...<Widget>[
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Image.memory(
+              _imageBytes!,
+              key: const ValueKey<String>('card-form-image-preview'),
+              height: 180,
+              fit: BoxFit.contain,
+              errorBuilder: (BuildContext context, Object error, _) =>
+                  const SizedBox.shrink(),
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: <Widget>[
+            OutlinedButton.icon(
+              key: const ValueKey<String>('card-form-pick-image'),
+              onPressed: _imageLoading || _saving ? null : _pickImage,
+              icon: const Icon(Icons.add_photo_alternate_outlined),
+              label: Text(
+                _imageBytes == null
+                    ? l10n.cardFormPickImage
+                    : l10n.cardFormChangeImage,
+              ),
+            ),
+            if (_imageBytes != null || _imageUpload != null)
+              TextButton.icon(
+                key: const ValueKey<String>('card-form-remove-image'),
+                onPressed: _imageLoading || _saving ? null : _removeImage,
+                icon: const Icon(Icons.delete_outline),
+                label: Text(l10n.cardFormRemoveImage),
+              ),
+          ],
+        ),
+        if (masksAvailable) ...<Widget>[
+          const SizedBox(height: 8),
+          SwitchListTile(
+            key: const ValueKey<String>('card-form-occlusion-toggle'),
+            contentPadding: EdgeInsets.zero,
+            title: Text(l10n.cardFormOcclusionToggle),
+            subtitle: Text(l10n.cardFormOcclusionToggleHint),
+            value: _useOcclusion,
+            onChanged: _saving ? null : _toggleOcclusion,
+          ),
+        ],
+        if (masksEnabled) ...<Widget>[
+          const SizedBox(height: 8),
           Text(
-            error,
-            style: TextStyle(color: Theme.of(context).colorScheme.error),
+            l10n.cardFormOcclusionSection,
+            style: theme.textTheme.titleSmall,
           ),
-        const SizedBox(height: 8),
-        OutlinedButton.icon(
-          key: const ValueKey<String>('card-form-pick-image'),
-          onPressed: _imageLoading || _saving ? null : _pickImage,
-          icon: const Icon(Icons.add_photo_alternate_outlined),
-          label: Text(
-            _imageBytes == null
-                ? l10n.cardFormPickImage
-                : l10n.cardFormChangeImage,
-          ),
-        ),
-        if (_imageBytes != null && _occlusion != null) ...<Widget>[
-          const SizedBox(height: 12),
-          OcclusionMaskEditor(
-            imageBytes: _imageBytes!,
-            document: _occlusion!,
-            onChanged: (document) {
-              setState(() {
-                _occlusion = document;
-                _errors = <CardDraftField, CardValidationError>{
-                  for (final entry in _errors.entries)
-                    if (entry.key != CardDraftField.occlusion)
-                      entry.key: entry.value,
-                };
-              });
-            },
-          ),
+          const SizedBox(height: 8),
+          if (_imageBytes != null && _occlusion != null)
+            OcclusionMaskEditor(
+              imageBytes: _imageBytes!,
+              document: _occlusion!,
+              onChanged: (document) {
+                setState(() {
+                  _occlusion = document;
+                  _clearOcclusionError();
+                });
+              },
+            ),
         ],
       ],
     );

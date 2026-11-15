@@ -55,19 +55,111 @@ void main() {
     expect(cards.createdDrafts.single.back, isEmpty);
   });
 
-  testWidgets('форма содержит рабочий вход выбора occlusion-изображения', (
-    tester,
-  ) async {
+  testWidgets('форма содержит рабочий вход выбора изображения', (tester) async {
     await pumpForm(tester);
 
     expect(
       find.byKey(const ValueKey('card-form-pick-image')),
       findsOneWidget,
-      reason: 'без выбора изображения редактор масок недоступен пользователю',
+      reason: 'изображение можно прикрепить к карточке любого типа',
     );
   });
 
-  testWidgets('выбор изображения, рисование маски и сохранение occlusion', (
+  // ADR-028 (итерация 7.12, owner-note): картинка у basic — просто иллюстрация,
+  // без обязательных масок.
+  testWidgets('basic: картинка без масок сохраняется как иллюстрация', (
+    tester,
+  ) async {
+    final png = base64Decode(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk'
+      '+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+    );
+    final gateway = FakeCardImageGateway()
+      ..result = CardImageUpload(
+        fileName: 'photo.png',
+        mimeType: 'image/png',
+        bytes: Uint8List.fromList(png),
+      );
+    final cards = await pumpForm(tester, imageGateway: gateway);
+
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('card-form-pick-image')),
+    );
+    await tester.tap(find.byKey(const ValueKey('card-form-pick-image')));
+    await tester.pumpAndSettle();
+
+    expect(gateway.calls, 1);
+    expect(
+      find.byKey(const ValueKey('card-form-image-preview')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('occlusion-editor-canvas')),
+      findsNothing,
+      reason: 'маски не включаются принудительно',
+    );
+
+    await tester.enterText(
+      find.byKey(const ValueKey('card-form-front')),
+      'Что это?',
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey('card-form-back')),
+      'Московский Кремль',
+    );
+    await tester.ensureVisible(find.byKey(const ValueKey('card-form-save')));
+    await tester.tap(find.byKey(const ValueKey('card-form-save')));
+    await tester.pumpAndSettle();
+
+    expect(cards.createdDrafts, hasLength(1));
+    final draft = cards.createdDrafts.single;
+    expect(draft.imageUpload, same(gateway.result));
+    expect(draft.occlusionJson, isNull);
+    expect(draft.cardType, CardType.basic);
+  });
+
+  testWidgets('cloze: изображение прикрепляется без масок', (tester) async {
+    final png = base64Decode(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk'
+      '+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+    );
+    final gateway = FakeCardImageGateway()
+      ..result = CardImageUpload(
+        fileName: 'photo.png',
+        mimeType: 'image/png',
+        bytes: Uint8List.fromList(png),
+      );
+    final cards = await pumpForm(tester, imageGateway: gateway);
+
+    await tester.ensureVisible(find.text('С пропусками'));
+    await tester.tap(find.text('С пропусками'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('card-form-pick-image')),
+    );
+    await tester.tap(find.byKey(const ValueKey('card-form-pick-image')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const ValueKey('card-form-front')),
+      'Столица {{c1::Париж}}',
+    );
+    await tester.ensureVisible(find.byKey(const ValueKey('card-form-save')));
+    await tester.tap(find.byKey(const ValueKey('card-form-save')));
+    await tester.pumpAndSettle();
+
+    expect(cards.createdDrafts, hasLength(1));
+    final draft = cards.createdDrafts.single;
+    expect(draft.cardType, CardType.cloze);
+    expect(draft.imageUpload, same(gateway.result));
+    expect(draft.occlusionJson, isNull);
+    expect(
+      find.byKey(const ValueKey('card-form-occlusion-toggle')),
+      findsNothing,
+      reason: 'маски доступны только basic',
+    );
+  });
+
+  testWidgets('выбор изображения, включение масок, рисование и сохранение', (
     tester,
   ) async {
     final png = base64Decode(
@@ -88,6 +180,13 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('card-form-pick-image')));
     await tester.pumpAndSettle();
     expect(gateway.calls, 1);
+    expect(find.byKey(const ValueKey('occlusion-editor-canvas')), findsNothing);
+
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('card-form-occlusion-toggle')),
+    );
+    await tester.tap(find.byKey(const ValueKey('card-form-occlusion-toggle')));
+    await tester.pumpAndSettle();
     expect(
       find.byKey(const ValueKey('occlusion-editor-canvas')),
       findsOneWidget,
@@ -195,4 +294,113 @@ void main() {
       expect(cards.createdDrafts, isEmpty);
     },
   );
+
+  // ADR-028: у старой occlusion-карточки маски можно выключить, картинка
+  // останется иллюстрацией.
+  testWidgets('редактирование occlusion: выключение масок сохраняет картинку', (
+    tester,
+  ) async {
+    const raw =
+        '{"version":1,"masks":[{"id":"m1","shape":"rectangle",'
+        '"x":0.1,"y":0.1,"width":0.2,"height":0.2}]}';
+    final png = Uint8List.fromList(
+      base64Decode(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk'
+        '+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+      ),
+    );
+    final card = makeCard(
+      id: 'card-1',
+      deckId: 'deck-1',
+      front: 'Схема',
+      mediaIds: const <String>['media-1'],
+      occlusionJson: raw,
+    );
+    final cards = FakeCardRepository(cards: <Card>[card]);
+    await tester.pumpWidget(
+      appWithRouter(
+        overrides: decksOverrides(
+          deckRepository: FakeDeckRepository(),
+          cardRepository: cards,
+          cardMediaRepository: FakeCardMediaRepository(
+            bytesById: <String, Uint8List>{'media-1': png},
+          ),
+        ),
+        routes: decksRoutes(),
+        initialLocation: '/decks/deck-1/cards/card-1/edit',
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('occlusion-editor-canvas')),
+      findsOneWidget,
+      reason: 'старая occlusion-карточка открывается с масками',
+    );
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('card-form-occlusion-toggle')),
+    );
+    await tester.tap(find.byKey(const ValueKey('card-form-occlusion-toggle')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('occlusion-editor-canvas')), findsNothing);
+    expect(
+      find.byKey(const ValueKey('card-form-image-preview')),
+      findsOneWidget,
+      reason: 'картинка остаётся на карточке',
+    );
+
+    await tester.tap(find.byKey(const ValueKey('card-form-save')));
+    await tester.pumpAndSettle();
+
+    final draft = cards.updatedDrafts.single;
+    expect(draft.occlusionJson, isNull);
+    expect(draft.mediaIds, <String>['media-1']);
+  });
+
+  testWidgets('удаление изображения снимает media у карточки', (tester) async {
+    final png = Uint8List.fromList(
+      base64Decode(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk'
+        '+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+      ),
+    );
+    final card = makeCard(
+      id: 'card-1',
+      deckId: 'deck-1',
+      front: 'С картинкой',
+      mediaIds: const <String>['media-1'],
+    );
+    final cards = FakeCardRepository(cards: <Card>[card]);
+    await tester.pumpWidget(
+      appWithRouter(
+        overrides: decksOverrides(
+          deckRepository: FakeDeckRepository(),
+          cardRepository: cards,
+          cardMediaRepository: FakeCardMediaRepository(
+            bytesById: <String, Uint8List>{'media-1': png},
+          ),
+        ),
+        routes: decksRoutes(),
+        initialLocation: '/decks/deck-1/cards/card-1/edit',
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('card-form-image-preview')),
+      findsOneWidget,
+    );
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('card-form-remove-image')),
+    );
+    await tester.tap(find.byKey(const ValueKey('card-form-remove-image')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('card-form-image-preview')), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('card-form-save')));
+    await tester.pumpAndSettle();
+
+    final draft = cards.updatedDrafts.single;
+    expect(draft.mediaIds, isEmpty);
+    expect(draft.imageUpload, isNull);
+  });
 }

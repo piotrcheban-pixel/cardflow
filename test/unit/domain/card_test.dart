@@ -111,5 +111,20 @@ void main() {
       expect(text, contains('deck-1'));
       expect(text, contains('basic'));
     });
+
+    test('primaryMediaId — первое медиа, у карточки без медиа null', () {
+      expect(buildCard().primaryMediaId, 'media-1');
+      final Card noMedia = Card(
+        id: 'card-2',
+        deckId: 'deck-1',
+        front: 'Вопрос',
+        back: 'Ответ',
+        cardType: CardType.cloze,
+        state: CardState.newCard,
+        createdAt: created,
+        updatedAt: updated,
+      );
+      expect(noMedia.primaryMediaId, isNull);
+    });
   });
 }
