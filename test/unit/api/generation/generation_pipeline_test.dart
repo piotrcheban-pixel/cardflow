@@ -9,6 +9,7 @@ import 'package:cardflow/api/generation/system_prompt.dart';
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/cards/content_hash.dart';
 import 'package:cardflow/domain/cards/occlusion.dart';
+import 'package:cardflow/domain/generation/card_image_finder.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
 import 'package:cardflow/domain/generation/generated_card_image.dart';
 import 'package:cardflow/domain/generation/generation_attachment.dart';
@@ -965,13 +966,13 @@ void main() {
       );
     });
 
-    // Итерация 7.11 (ADR-026): недоступный источник картинок не задерживает
-    // генерацию — после бюджета времени карточки импортируются без иллюстраций.
+    // Итерация 7.11 (ADR-027): недоступный источник картинок не задерживает
+    // генерацию — суммарное время поиска ограничено бюджетом запуска.
     test('после бюджета поиска картинки не ищутся', () async {
       DateTime clockNow = DateTime.utc(2026, 11, 14, 10);
       final List<String> diagnostics = <String>[];
-      final finder = FakeCardImageFinder(
-        byQuery: <String, GeneratedCardImage?>{'eiffel tower': image},
+      final finder = _SlowImageFinder(
+        onSearch: () => clockNow = clockNow.add(const Duration(seconds: 30)),
       );
       final pipeline = GenerationPipeline(
         caller: caller = FakeGenerationCaller(),
@@ -987,14 +988,11 @@ void main() {
           sink: diagnostics.add,
         ),
       );
-      caller.onGenerate = (GenerationRequest request, int call) async {
-        // Пока модель отвечает, бюджет поиска истёк (медленный источник).
-        clockNow = clockNow.add(const Duration(seconds: 30));
-        return resultWith(<GeneratedCard>[
-          makeGeneratedCard(front: 'Первый', imageQuery: 'eiffel tower'),
-          makeGeneratedCard(front: 'Второй', imageQuery: 'eiffel tower'),
-        ]);
-      };
+      caller.onGenerate = (GenerationRequest request, int call) async =>
+          resultWith(<GeneratedCard>[
+            makeGeneratedCard(front: 'Первый', imageQuery: 'first query'),
+            makeGeneratedCard(front: 'Второй', imageQuery: 'second query'),
+          ]);
 
       final result = await pipeline.run(
         requestWith(<ParsedDocument>[
@@ -1004,11 +1002,13 @@ void main() {
 
       expect(result.status, GenerationJobStatus.done);
       expect(result.cards, hasLength(2));
-      expect(finder.queries, isEmpty, reason: 'бюджет истёк до поиска');
+      expect(finder.queries, <String>[
+        'first query',
+      ], reason: 'второй поиск пропущен: бюджет израсходован первым');
       expect(result.cards.every((card) => card.image == null), isTrue);
       expect(
         diagnostics.where((message) => message.contains('бюджет')),
-        hasLength(2),
+        hasLength(1),
       );
     });
 
@@ -1024,4 +1024,21 @@ void main() {
       expect(result.cards.single.image, same(image));
     });
   });
+}
+
+/// Источник картинок, который «висит» на каждом поиске (сдвигает часы теста).
+class _SlowImageFinder implements CardImageFinder {
+  _SlowImageFinder({required this.onSearch});
+
+  final void Function() onSearch;
+
+  /// Запросы в порядке вызовов.
+  final List<String> queries = <String>[];
+
+  @override
+  Future<GeneratedCardImage?> findImage(String query) async {
+    queries.add(query);
+    onSearch();
+    return null;
+  }
 }

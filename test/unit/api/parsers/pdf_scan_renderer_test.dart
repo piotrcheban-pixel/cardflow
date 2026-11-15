@@ -50,7 +50,7 @@ void main() {
     expect(decoded.width, lessThanOrEqualTo(800));
   });
 
-  // Итерация 7.11: скан отправляется максимум тремя страницами (ADR-026).
+  // Итерация 7.11: скан отправляется максимум тремя страницами (ADR-027).
   test('по умолчанию рендерятся первые 3 страницы', () async {
     const PdfScanRenderer production = PdfScanRenderer();
     expect(production.maxPages, 3);

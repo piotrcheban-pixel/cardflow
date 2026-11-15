@@ -6,7 +6,7 @@ import 'package:cardflow/domain/generation/generated_card_image.dart';
 
 import '../../../helpers/generation_fakes.dart';
 
-/// Составной поиск иллюстраций: источники по очереди (ADR-026).
+/// Составной поиск иллюстраций: источники по очереди (ADR-027).
 void main() {
   test('первый источник дал картинку — второй не вызывается', () async {
     final primary = FakeCardImageFinder(

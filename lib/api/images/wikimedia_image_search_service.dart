@@ -1,5 +1,5 @@
 /// Поиск иллюстраций в Wikimedia Commons для сгенерированных карточек
-/// (ADR-026, итерация 7.11).
+/// (ADR-027, итерация 7.11).
 ///
 /// Commons API не требует ключа и хорошо ищет по русским запросам: `image_query`
 /// модели часто сформулирован по-русски, а Openverse на такие запросы отвечает
@@ -159,14 +159,24 @@ class WikimediaImageSearchService implements CardImageFinder {
   }
 
   /// Разбирает `query.pages` ответа Commons в порядке поисковой выдачи.
+  ///
+  /// API по умолчанию отдаёт `pages` объектом (`formatversion=1`), но
+  /// `formatversion=2` и часть прокси — списком: поддерживаются обе формы.
   static List<_CommonsImage> _imagesOf(Map<String, Object?>? data) {
     final Object? query = data?['query'];
     if (query is! Map) return const <_CommonsImage>[];
     final Object? pages = query['pages'];
-    if (pages is! Map) return const <_CommonsImage>[];
+    final Iterable<Object?> entries;
+    if (pages is Map) {
+      entries = pages.values;
+    } else if (pages is List) {
+      entries = pages;
+    } else {
+      return const <_CommonsImage>[];
+    }
     final List<({int index, _CommonsImage image})> found =
         <({int index, _CommonsImage image})>[];
-    for (final Object? raw in pages.values) {
+    for (final Object? raw in entries) {
       if (raw is! Map) continue;
       final Object? info = raw['imageinfo'];
       if (info is! List || info.isEmpty) continue;

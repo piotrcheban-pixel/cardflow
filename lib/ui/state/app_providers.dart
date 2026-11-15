@@ -392,7 +392,7 @@ final generationCardStoreProvider = Provider<GenerationCardStore>((ref) {
   );
 });
 
-/// Поиск иллюстраций по `image_query` (ADR-023, ADR-026).
+/// Поиск иллюстраций по `image_query` (ADR-023, ADR-027).
 ///
 /// Wikimedia Commons — первый источник (быстро и по-русски), Openverse —
 /// резерв (CC0/PDM/CC BY). Бюджет поиска ограничивает пайплайн: недоступный

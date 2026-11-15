@@ -9,7 +9,7 @@ import 'package:cardflow/domain/generation/generation_attachment.dart';
 
 import '../../../helpers/fake_http_adapter.dart';
 
-/// Wikimedia Commons как источник иллюстраций (ADR-026, итерация 7.11).
+/// Wikimedia Commons как источник иллюстраций (ADR-027, итерация 7.11).
 void main() {
   final Uint8List jpeg = Uint8List.fromList(<int>[
     0xFF,
@@ -229,6 +229,45 @@ void main() {
 
     expect(result, isNull);
     expect(messages.single, contains('нет подходящей картинки'));
+  });
+
+  // API с `formatversion=2` отдаёт `query.pages` списком — разбор не должен
+  // зависеть от формы ответа.
+  test('pages списком (formatversion=2) разбирается', () async {
+    final adapter = FakeHttpAdapter((RequestOptions options) {
+      if (options.uri.path.endsWith('/w/api.php')) {
+        return jsonResponse(<String, Object?>{
+          'batchcomplete': true,
+          'query': <String, Object?>{
+            'pages': <Object?>[
+              <String, Object?>{
+                'pageid': 7,
+                'ns': 6,
+                'title': 'File:Московский Кремль.jpg',
+                'index': 1,
+                'imageinfo': <Object?>[
+                  <String, Object?>{
+                    'url': 'https://upload.wikimedia.org/kremlin.jpg',
+                    'thumburl':
+                        'https://upload.wikimedia.org/thumb/kremlin.jpg',
+                    'mime': 'image/jpeg',
+                    'extmetadata': <String, Object?>{
+                      'LicenseShortName': <String, Object?>{'value': 'CC0'},
+                    },
+                  },
+                ],
+              },
+            ],
+          },
+        });
+      }
+      return bytesResponse(jpeg);
+    });
+
+    final result = await serviceWith(adapter).findImage('кремль');
+
+    expect(result, isNotNull);
+    expect(result!.attribution, contains('CC0'));
   });
 
   test('успех пишется в диагностику', () async {

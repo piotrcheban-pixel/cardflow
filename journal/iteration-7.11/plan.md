@@ -78,7 +78,7 @@
   `GenerationPipeline` — дедлайн поиска.
 
 ### Шаг 5. PDF-сканы (Vision)
-- Red: `PdfScanRenderer` по умолчанию ≤ 3 страниц (ADR-025/ADR-026);
+- Red: `PdfScanRenderer` по умолчанию ≤ 3 страниц (ADR-027);
   `FileParsingService.renderPdfPages` → PNG; интеграционный тест: скан-PDF
   (реальный PDFium) → экран генерации → вложение-страницы → **image parts** в
   теле запроса (fake HTTP); модель без Vision → строка
@@ -92,7 +92,7 @@
   `dart format`, `build windows`, запуск приложения `fvm flutter run -d windows`
   + прогон на Windows интеграционного смоук-теста на реальном графе
   (drift-БД файл + MediaStore + PDFium + роутер).
-- ADR-025 (practice), ADR-026 (источники иллюстраций), обновление
+- ADR-025 (practice), ADR-027 (источники иллюстраций), обновление
   `journal/STATE.md`, `KNOWN_LIMITATIONS.md`, push, один прогон CI.
 
 ## Риски

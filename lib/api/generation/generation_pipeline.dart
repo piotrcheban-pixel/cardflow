@@ -87,11 +87,13 @@ class GenerationPipeline implements GenerationRunner {
   /// Поиск иллюстраций по `image_query` (итерация 7.9); `null` — без картинок.
   final CardImageFinder? imageFinder;
 
-  /// Бюджет времени на поиск иллюстраций в рамках одного запуска (7.11).
+  /// Бюджет **суммарного времени поиска** иллюстраций за один запуск (7.11).
   ///
-  /// Недоступный/медленный источник картинок не должен задерживать импорт:
-  /// после бюджета оставшиеся карточки получают `image == null`, а генерация
-  /// завершается (диагностика ADR-024 фиксирует пропуск).
+  /// Считается только время внутри `CardImageFinder.findImage` — ожидание
+  /// ответа модели бюджет не расходует. Недоступный/медленный источник не
+  /// задерживает импорт: после бюджета оставшиеся карточки получают
+  /// `image == null`, а генерация завершается (диагностика ADR-024 фиксирует
+  /// пропуск).
   final Duration imageSearchBudget;
 
   /// Debug-диагностика (ADR-024).
@@ -101,9 +103,12 @@ class GenerationPipeline implements GenerationRunner {
   final Map<String, Future<GeneratedCardImage?>> _imageCache =
       <String, Future<GeneratedCardImage?>>{};
 
-  /// Момент, после которого поиск иллюстраций прекращается; `null` — без
-  /// ограничения (поиска нет или бюджет не задан).
-  DateTime? _imageDeadline;
+  /// Сколько времени уже потрачено на поиск иллюстраций в этом запуске.
+  Duration _imageSearchSpent = Duration.zero;
+
+  /// Бюджет поиска включён (есть источник и положительный лимит).
+  bool get _imageSearchBudgeted =>
+      imageFinder != null && imageSearchBudget > Duration.zero;
 
   /// Часы (инжектируются в тестах).
   final DateTime Function() now;
@@ -446,8 +451,10 @@ class GenerationPipeline implements GenerationRunner {
         (cancellation?.isCancelled ?? false)) {
       return _withoutImage(card);
     }
-    final DateTime? deadline = _imageDeadline;
-    if (deadline != null && !now().isBefore(deadline)) {
+    final DateTime? searchStartedAt = _imageSearchBudgeted ? now() : null;
+    final bool budgetExhausted =
+        _imageSearchBudgeted && _imageSearchSpent >= imageSearchBudget;
+    if (budgetExhausted) {
       diagnostics.imageSearch(
         query: query,
         outcome: 'пропущен: бюджет времени поиска исчерпан',
@@ -464,6 +471,9 @@ class GenerationPipeline implements GenerationRunner {
       _imageCache.remove(query);
       image = null;
     }
+    if (searchStartedAt != null) {
+      _imageSearchSpent += now().difference(searchStartedAt);
+    }
     if (image == null) {
       _imageCache.remove(query);
       return _withoutImage(card);
@@ -476,11 +486,9 @@ class GenerationPipeline implements GenerationRunner {
     );
   }
 
-  /// Отсчитывает бюджет поиска иллюстраций от текущего момента.
+  /// Сбрасывает счётчик бюджета поиска иллюстраций (начало запуска/повтора).
   void _resetImageBudget() {
-    _imageDeadline = imageFinder == null || imageSearchBudget <= Duration.zero
-        ? null
-        : now().toUtc().add(imageSearchBudget);
+    _imageSearchSpent = Duration.zero;
   }
 
   /// Карточка без картинки: occlusion без иллюстрации становится обычной.
