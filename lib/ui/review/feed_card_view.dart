@@ -292,8 +292,13 @@ class _FlipFace extends StatelessWidget {
           final Matrix4 transform = Matrix4.identity()
             ..setEntry(3, 2, 0.0015)
             ..rotateY(math.pi * value);
+          // Обратная сторона уже повёрнута на π от наблюдателя. Без второго
+          // поворота её текст рисуется зеркально; дополнительный rotationY(π)
+          // разворачивает грань лицом к пользователю (итерация 7.9).
+          if (showBack) transform.rotateY(math.pi);
           return Center(
             child: Transform(
+              key: const ValueKey<String>('feed-card-flip-transform'),
               alignment: Alignment.center,
               transform: transform,
               child: SingleChildScrollView(
