@@ -1,4 +1,5 @@
 import '../cards/card.dart';
+import 'daily_limits.dart';
 
 /// Построение очереди классической сессии (SPEC A7.2, ADR-008).
 ///
@@ -15,6 +16,13 @@ abstract final class ReviewQueue {
   /// - [reviewLimit]/[newLimit] — **остаток** дневных лимитов на момент
   ///   открытия сессии (A6.6, ADR-019 §8): `null` — лимита нет; `0` — лимит на
   ///   сегодня исчерпан, брать нечего; `n` — не больше `n` карточек.
+  ///
+  /// Исключение дневного лимита новых (ADR-028, итерация 7.12): карточки,
+  /// созданные **в текущий локальный календарный день**, входят в очередь всегда.
+  /// Пользователь, только что создавший или импортировавший пачку карточек,
+  /// должен иметь возможность их пройти, даже если лимит новых на сегодня уже
+  /// израсходован. Лимит новых продолжает ограничивать вчерашние и более ранние
+  /// невыученные карточки.
   static List<Card> build(
     List<Card> cards, {
     required DateTime now,
@@ -49,11 +57,38 @@ abstract final class ReviewQueue {
       final int byCreated = a.createdAt.compareTo(b.createdAt);
       return byCreated != 0 ? byCreated : a.id.compareTo(b.id);
     });
+    final ({List<Card> older, List<Card> createdToday}) split = _splitToday(
+      fresh,
+      now,
+    );
 
     return List<Card>.unmodifiable(<Card>[
       ..._limited(due, reviewLimit),
-      ..._limited(fresh, newLimit),
+      ..._limited(split.older, newLimit),
+      // Сортировка `fresh` по `createdAt` ASC означает, что «сегодняшние» стоят
+      // в конце: добавление их без лимита сохраняет порядок ADR-008.
+      ...split.createdToday,
     ]);
+  }
+
+  /// Делит новые карточки на созданные сегодня и более ранние.
+  ///
+  /// День — локальный календарный (ADR-019 §8, ADR-028): границы считаются по
+  /// локальным полуночам и переводятся в UTC, как и расход дневного лимита.
+  static ({List<Card> older, List<Card> createdToday}) _splitToday(
+    List<Card> fresh,
+    DateTime now,
+  ) {
+    final ({DateTime from, DateTime to}) day = DailyLimits.localDayUtc(now);
+    final older = <Card>[];
+    final createdToday = <Card>[];
+    for (final Card card in fresh) {
+      final DateTime createdAt = card.createdAt.toUtc();
+      final bool isToday =
+          !createdAt.isBefore(day.from) && createdAt.isBefore(day.to);
+      (isToday ? createdToday : older).add(card);
+    }
+    return (older: older, createdToday: createdToday);
   }
 
   /// Обрезает [cards] до остатка [limit] (`null` — без ограничения).

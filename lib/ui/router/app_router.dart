@@ -65,14 +65,29 @@ abstract final class AppRoutes {
   /// Путь списка колод.
   static const String decksPath = '/';
 
+  /// Query-параметр отключения дневных лимитов (ADR-028).
+  static const String dailyLimitsQuery = 'limits';
+
+  /// Значение [dailyLimitsQuery]: «продолжить без дневного лимита».
+  static const String ignoreDailyLimitsValue = 'ignore';
+
   /// Путь экрана колоды по id.
   static String deckPath(String deckId) => '/decks/$deckId';
 
   /// Путь сессии по колоде.
-  static String studyPath(String deckId) => '/decks/$deckId/study';
+  ///
+  /// [ignoreDailyLimits] (`?limits=ignore`) — пользователь подтвердил
+  /// «Продолжить без лимита» в предупреждении (ADR-028).
+  static String studyPath(String deckId, {bool ignoreDailyLimits = false}) =>
+      ignoreDailyLimits
+      ? '/decks/$deckId/study?$dailyLimitsQuery=$ignoreDailyLimitsValue'
+      : '/decks/$deckId/study';
 
   /// Путь сессии-ленты по колоде (SPEC A7.3).
-  static String feedPath(String deckId) => '/decks/$deckId/feed';
+  static String feedPath(String deckId, {bool ignoreDailyLimits = false}) =>
+      ignoreDailyLimits
+      ? '/decks/$deckId/feed?$dailyLimitsQuery=$ignoreDailyLimitsValue'
+      : '/decks/$deckId/feed';
 
   /// Путь тренировки по колоде (ADR-025).
   static String practicePath(String deckId) => '/decks/$deckId/practice';
@@ -116,6 +131,11 @@ abstract final class AppRoutes {
 /// План сессии из `GoRouterState.extra`; `null` — extra не передан.
 SessionPlan? sessionPlanFromExtra(Object? extra) =>
     extra is SessionPlan ? extra : null;
+
+/// Маршрут просит игнорировать дневные лимиты (`?limits=ignore`, ADR-028).
+bool _ignoresDailyLimits(GoRouterState state) =>
+    state.uri.queryParameters[AppRoutes.dailyLimitsQuery] ==
+    AppRoutes.ignoreDailyLimitsValue;
 
 /// Собирает маршрутизатор приложения (ADR: GoRouter).
 ///
@@ -170,14 +190,18 @@ GoRouter createAppRouter({String initialLocation = AppRoutes.decksPath}) {
       GoRoute(
         path: '/decks/:deckId/study',
         name: AppRoutes.study,
-        builder: (context, state) =>
-            ReviewSessionScreen(deckId: state.pathParameters['deckId']!),
+        builder: (context, state) => ReviewSessionScreen(
+          deckId: state.pathParameters['deckId']!,
+          ignoreDailyLimits: _ignoresDailyLimits(state),
+        ),
       ),
       GoRoute(
         path: '/decks/:deckId/feed',
         name: AppRoutes.feed,
-        builder: (context, state) =>
-            FeedSessionScreen(deckId: state.pathParameters['deckId']!),
+        builder: (context, state) => FeedSessionScreen(
+          deckId: state.pathParameters['deckId']!,
+          ignoreDailyLimits: _ignoresDailyLimits(state),
+        ),
       ),
       GoRoute(
         path: '/decks/:deckId/practice',

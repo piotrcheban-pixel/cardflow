@@ -88,4 +88,124 @@ void main() {
       ]);
     });
   });
+
+  // ADR-028 (итерация 7.12, owner-note): карточки, созданные сегодня, доступны
+  // сразу — даже если дневной лимит новых уже израсходован.
+  group('ReviewQueue — новые карточки текущего дня (ADR-028)', () {
+    List<Card> mixed() => <Card>[
+      makeCard(
+        id: 'old-new-1',
+        deckId: 'deck-1',
+        front: 'Вчерашняя новая',
+        createdAt: DateTime(2026, 11, 12, 9),
+      ),
+      makeCard(
+        id: 'old-new-2',
+        deckId: 'deck-1',
+        front: 'Позавчерашняя новая',
+        createdAt: DateTime(2026, 11, 11, 9),
+      ),
+      makeCard(
+        id: 'today-1',
+        deckId: 'deck-1',
+        front: 'Только что созданная 1',
+        createdAt: DateTime(2026, 11, 14, 9),
+      ),
+      makeCard(
+        id: 'today-2',
+        deckId: 'deck-1',
+        front: 'Только что созданная 2',
+        createdAt: DateTime(2026, 11, 14, 10),
+      ),
+    ];
+
+    test('лимит новых исчерпан, но сегодняшние карточки доступны', () {
+      final List<Card> queue = ReviewQueue.build(
+        mixed(),
+        now: now,
+        newLimit: 0,
+        reviewLimit: 0,
+      );
+      expect(queue.map((Card card) => card.id).toList(), <String>[
+        'today-1',
+        'today-2',
+      ], reason: 'пользователь должен увидеть только что созданные карточки');
+    });
+
+    test('сегодняшние не расходуют лимит, оставленный вчерашним', () {
+      final List<Card> queue = ReviewQueue.build(
+        mixed(),
+        now: now,
+        newLimit: 1,
+      );
+      expect(queue.map((Card card) => card.id).toList(), <String>[
+        'old-new-2',
+        'today-1',
+        'today-2',
+      ], reason: 'лимит 1 применён к более ранним, порядок createdAt сохранён');
+    });
+
+    test(
+      'без лимита порядок ADR-008 прежний: старые новые раньше сегодняшних',
+      () {
+        final List<Card> queue = ReviewQueue.build(mixed(), now: now);
+        expect(queue.map((Card card) => card.id).toList(), <String>[
+          'old-new-2',
+          'old-new-1',
+          'today-1',
+          'today-2',
+        ]);
+      },
+    );
+
+    test(
+      'граница локального дня: полночь сегодня входит, 23:59 вчера — нет',
+      () {
+        final List<Card> edge = <Card>[
+          makeCard(
+            id: 'yesterday-last-minute',
+            deckId: 'deck-1',
+            front: 'Вчера',
+            createdAt: DateTime(2026, 11, 13, 23, 59),
+          ),
+          makeCard(
+            id: 'today-first-minute',
+            deckId: 'deck-1',
+            front: 'Сегодня',
+            createdAt: DateTime(2026, 11, 14, 0, 0, 1),
+          ),
+        ];
+        final List<Card> queue = ReviewQueue.build(edge, now: now, newLimit: 0);
+        expect(queue.map((Card card) => card.id).toList(), <String>[
+          'today-first-minute',
+        ]);
+      },
+    );
+
+    test('просроченные всё равно ограничены лимитом повторных', () {
+      final List<Card> cards = <Card>[
+        makeCard(
+          id: 'due-1',
+          deckId: 'deck-1',
+          front: 'Просроченная',
+          state: CardState.review,
+          due: now.subtract(const Duration(hours: 1)),
+          createdAt: DateTime(2026, 11, 1),
+        ),
+        makeCard(
+          id: 'today-1',
+          deckId: 'deck-1',
+          front: 'Сегодня',
+          createdAt: DateTime(2026, 11, 14, 9),
+        ),
+      ];
+      final List<Card> queue = ReviewQueue.build(
+        cards,
+        now: now,
+        newLimit: 0,
+        reviewLimit: 0,
+      );
+      expect(queue.map((Card card) => card.id).toList(), <String>['today-1']);
+    });
+  });
 }

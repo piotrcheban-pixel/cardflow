@@ -139,7 +139,8 @@ Future<void> showReviewSourceExcerpt(BuildContext context, String excerpt) {
 ///
 /// [title]/[message] переопределяют стандартный текст (дневной лимит,
 /// тренировка — ADR-025). [onPractice] добавляет кнопку «Тренировать»: сессия
-/// пуста из-за лимита, но карточки в колоде есть.
+/// пуста из-за лимита, но карточки в колоде есть. [onContinue] добавляет
+/// основную кнопку «Продолжить без лимита» (ADR-028, итерация 7.12).
 class ReviewEmptyView extends StatelessWidget {
   /// Создаёт пустое состояние.
   const ReviewEmptyView({
@@ -147,6 +148,7 @@ class ReviewEmptyView extends StatelessWidget {
     this.title,
     this.message,
     this.onPractice,
+    this.onContinue,
     super.key,
   });
 
@@ -162,10 +164,14 @@ class ReviewEmptyView extends StatelessWidget {
   /// Переход в тренировку; `null` — кнопки нет.
   final VoidCallback? onPractice;
 
+  /// Продолжение изучения без дневного лимита; `null` — кнопки нет.
+  final VoidCallback? onContinue;
+
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
     final VoidCallback? practice = onPractice;
+    final VoidCallback? proceed = onContinue;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -189,7 +195,23 @@ class ReviewEmptyView extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
-            if (practice != null) ...<Widget>[
+            if (proceed != null) ...<Widget>[
+              FilledButton(
+                key: const ValueKey<String>('review-empty-continue'),
+                onPressed: proceed,
+                child: Text(l10n.reviewDailyLimitContinueAction),
+              ),
+              const SizedBox(height: 8),
+              if (practice != null) ...<Widget>[
+                OutlinedButton(
+                  key: const ValueKey<String>('review-empty-practice'),
+                  onPressed: practice,
+                  child: Text(l10n.practiceStartAction),
+                ),
+                const SizedBox(height: 8),
+              ],
+              TextButton(onPressed: onBack, child: Text(l10n.reviewBack)),
+            ] else if (practice != null) ...<Widget>[
               FilledButton(
                 key: const ValueKey<String>('review-empty-practice'),
                 onPressed: practice,

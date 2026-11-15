@@ -5,9 +5,11 @@ import 'package:material_ui/material_ui.dart' hide Card;
 
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/decks/deck_summary.dart';
+import 'package:cardflow/domain/review/daily_limits.dart';
 import 'package:cardflow/domain/scheduling/rating.dart';
 import 'package:cardflow/domain/session/session_config.dart';
 import 'package:cardflow/domain/session/session_plan.dart';
+import 'package:cardflow/domain/settings/app_settings.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/review/feed_card_view.dart';
 import 'package:cardflow/ui/review/feed_progress_bar.dart';
@@ -16,6 +18,7 @@ import 'package:cardflow/ui/review/feed_session_screen.dart';
 import '../../helpers/decks_fakes.dart';
 import '../../helpers/pump_app.dart';
 import '../../helpers/review_fakes.dart';
+import '../../helpers/settings_fakes.dart';
 
 /// Красная фаза итерации 4: экран «Лента» (SPEC A7.3, ADR-016) — PageView,
 /// жесты/пороги, Stories-прогресс, авто-продвижение, пауза, haptics, undo.
@@ -810,5 +813,52 @@ void main() {
       expect(find.text(l10n.reviewPlanMissingTitle), findsOneWidget);
       expect(find.text(l10n.reviewPlanMissingMessage), findsOneWidget);
     });
+  });
+
+  // ADR-028 (итерация 7.12): лента тоже объясняет исчерпанный лимит и даёт
+  // «Продолжить без лимита».
+  testWidgets('дневной лимит исчерпан: пустая лента и продолжение без лимита', (
+    WidgetTester tester,
+  ) async {
+    final List<Card> deckCards = twoCards();
+    final List<Override> overrides = decksOverrides(
+      deckRepository: FakeDeckRepository(
+        summaries: <DeckSummary>[
+          makeSummary(
+            id: 'deck-1',
+            name: 'Испанский',
+            totalCards: deckCards.length,
+            newCards: deckCards.length,
+          ),
+        ],
+      ),
+      cardRepository: FakeCardRepository(cards: deckCards),
+      reviewRepository: FakeReviewRepository(),
+      appSettingsStore: FakeAppSettingsStore(
+        settings: AppSettings.defaults.copyWith(dailyNewLimit: 20),
+      ),
+      dailyUsageRepository: FakeDailyUsageRepository(
+        usage: const DailyReviewUsage(newCards: 20),
+      ),
+    );
+    await pumpFeed(tester, overrides: overrides);
+    final AppLocalizations l10n = l10nOf(tester);
+
+    expect(find.text(l10n.reviewDailyLimitTitle), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey<String>('review-empty-continue')),
+      findsOneWidget,
+    );
+
+    await tester.tap(
+      find.byKey(const ValueKey<String>('review-empty-continue')),
+    );
+    // Пульсация Stories — повторяющаяся анимация: pumpAndSettle не завершится.
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.text('Первый вопрос'), findsOneWidget);
+    expect(find.text(l10n.reviewDailyLimitTitle), findsNothing);
   });
 }

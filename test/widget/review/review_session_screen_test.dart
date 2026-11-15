@@ -280,8 +280,9 @@ void main() {
   });
 
   // Итерация 7.11 (owner-note): пустая сессия при исчерпанном дневном лимите
-  // объясняет причину и предлагает тренировку вместо тупика.
-  testWidgets('дневной лимит исчерпан: причина и переход в тренировку', (
+  // объясняет причину и предлагает тренировку вместо тупика. Итерация 7.12
+  // (ADR-028): вместо тупика — ещё и «Продолжить без лимита».
+  testWidgets('дневной лимит исчерпан: причина, продолжение и тренировка', (
     WidgetTester tester,
   ) async {
     final List<Card> deckCards = twoCards();
@@ -314,12 +315,91 @@ void main() {
       const ValueKey<String>('review-empty-practice'),
     );
     expect(practice, findsOneWidget);
+    expect(
+      find.byKey(const ValueKey<String>('review-empty-continue')),
+      findsOneWidget,
+    );
 
-    await tester.tap(practice);
+    // «Продолжить без лимита» перестраивает очередь без ограничений.
+    await tester.tap(
+      find.byKey(const ValueKey<String>('review-empty-continue')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Первый вопрос'), findsOneWidget);
+    expect(find.text(l10n.reviewDailyLimitTitle), findsNothing);
+  });
+
+  testWidgets('дневной лимит исчерпан: тренировка доступна из пустой сессии', (
+    WidgetTester tester,
+  ) async {
+    final List<Card> deckCards = twoCards();
+    final List<Override> overrides = decksOverrides(
+      deckRepository: FakeDeckRepository(
+        summaries: <DeckSummary>[
+          makeSummary(
+            id: 'deck-1',
+            name: 'Испанский',
+            totalCards: deckCards.length,
+            newCards: deckCards.length,
+          ),
+        ],
+      ),
+      cardRepository: FakeCardRepository(cards: deckCards),
+      reviewRepository: FakeReviewRepository(),
+      appSettingsStore: FakeAppSettingsStore(
+        settings: AppSettings.defaults.copyWith(dailyNewLimit: 20),
+      ),
+      dailyUsageRepository: FakeDailyUsageRepository(
+        usage: const DailyReviewUsage(newCards: 20),
+      ),
+    );
+    await pumpSession(tester, overrides: overrides);
+
+    await tester.tap(
+      find.byKey(const ValueKey<String>('review-empty-practice')),
+    );
     await tester.pumpAndSettle();
 
     expect(find.byType(PracticeSessionScreen), findsOneWidget);
     expect(find.text('Первый вопрос'), findsOneWidget);
+  });
+
+  // ADR-028: карточки, созданные сегодня, доступны даже при исчерпанном лимите.
+  testWidgets('сегодняшняя новая карточка не блокируется дневным лимитом', (
+    WidgetTester tester,
+  ) async {
+    final List<Card> deckCards = <Card>[
+      makeCard(
+        id: 'today-1',
+        deckId: 'deck-1',
+        front: 'Сегодняшний вопрос',
+        createdAt: DateTime.now(),
+      ),
+    ];
+    final List<Override> overrides = decksOverrides(
+      deckRepository: FakeDeckRepository(
+        summaries: <DeckSummary>[
+          makeSummary(
+            id: 'deck-1',
+            name: 'Испанский',
+            totalCards: 1,
+            newCards: 1,
+          ),
+        ],
+      ),
+      cardRepository: FakeCardRepository(cards: deckCards),
+      reviewRepository: FakeReviewRepository(),
+      appSettingsStore: FakeAppSettingsStore(
+        settings: AppSettings.defaults.copyWith(dailyNewLimit: 20),
+      ),
+      dailyUsageRepository: FakeDailyUsageRepository(
+        usage: const DailyReviewUsage(newCards: 20),
+      ),
+    );
+    await pumpSession(tester, overrides: overrides);
+
+    expect(find.text(l10nOf(tester).reviewDailyLimitTitle), findsNothing);
+    expect(find.text('Сегодняшний вопрос'), findsOneWidget);
   });
 
   testWidgets('ошибка загрузки карточек — строка из ARB и «Повторить»', (

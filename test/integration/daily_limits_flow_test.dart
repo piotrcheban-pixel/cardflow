@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cardflow/data/db/app_database.dart';
+import 'package:cardflow/data/db/epoch.dart';
 import 'package:cardflow/data/review/drift_daily_usage_repository.dart';
 import 'package:cardflow/data/transfer/media_store.dart';
 import 'package:cardflow/domain/cards/card.dart';
@@ -103,6 +104,24 @@ void main() {
             deckId: 'deck-1',
             draft: CardDraft(front: 'Новая $index', back: 'Ответ $index'),
             now: created.add(Duration(minutes: index)),
+          );
+    }
+  }
+
+  /// Пишет [count] «новых» оценок за локальный день [day].
+  Future<void> seedNewReviews(DateTime day, int count) async {
+    for (int index = 0; index < count; index++) {
+      await db
+          .into(db.reviewLogs)
+          .insert(
+            ReviewLogsCompanion.insert(
+              id: 'log-$index',
+              cardId: 'log-card-$index',
+              rating: 3,
+              reviewedAt: toEpochMs(day),
+              mode: 'classic',
+              actualDays: const Value<double?>(null),
+            ),
           );
     }
   }
@@ -336,5 +355,99 @@ void main() {
       3,
       reason: 'без лимита очередь не обрезается, но оценённая карточка ушла',
     );
+  });
+
+  // ADR-028 (итерация 7.12, owner-note): пак карточек, созданный сегодня,
+  // должен открываться сразу после исчерпания дневного лимита.
+  test(
+    'боевой граф: сегодняшние карточки не блокируются исчерпанным лимитом',
+    () async {
+      await seedDeck();
+      await seedNewReviews(now, 20);
+      final AppSettings settings = AppSettings.defaults.copyWith(
+        dailyNewLimit: 20,
+        dailyReviewLimit: 0,
+      );
+
+      // Карточки созданы «сейчас» — в текущий локальный день.
+      for (int index = 0; index < 2; index++) {
+        await container
+            .read(cardRepositoryProvider)
+            .createCards(
+              deckId: 'deck-1',
+              draft: CardDraft(front: 'Свежая $index', back: 'Ответ $index'),
+              now: now.add(Duration(seconds: index)),
+            );
+      }
+      final RemainingReviewLimits limits = await limitsAt(
+        now,
+        settings: settings,
+      );
+      expect(limits.newCards, 0, reason: 'дневной лимит новых израсходован');
+
+      final ReviewSessionEngine session = await startSession(
+        now,
+        settings: settings,
+      );
+      expect(
+        session.state.total,
+        2,
+        reason: 'только что созданные карточки доступны сразу',
+      );
+      expect(
+        session.state.items.every(
+          (ReviewSessionItem item) => item.card.state == CardState.newCard,
+        ),
+        isTrue,
+      );
+
+      // Оценка расходует лимит дня, но карточка уже в сессии.
+      expect(await session.rate(Rating.good), isTrue);
+      expect((await limitsAt(now, settings: settings)).newCards, 0);
+    },
+  );
+
+  test(
+    'боевой граф: вчерашние новые при исчерпанном лимите по-прежнему ждут',
+    () async {
+      await seedDeck();
+      await seedNewReviews(now, 20);
+      await seedNewCards(2); // созданы 30 дней назад
+      final AppSettings settings = AppSettings.defaults.copyWith(
+        dailyNewLimit: 20,
+        dailyReviewLimit: 0,
+      );
+
+      final ReviewSessionEngine session = await startSession(
+        now,
+        settings: settings,
+      );
+      expect(
+        session.state.total,
+        0,
+        reason: 'лимит новых для старых невыученных карточек действует',
+      );
+    },
+  );
+
+  test('продолжение без лимита: очередь не обрезается (ADR-028)', () async {
+    await seedDeck();
+    await seedNewReviews(now, 20);
+    await seedNewCards(3);
+    final List<Card> cards = await container
+        .read(cardRepositoryProvider)
+        .cardsByDeck('deck-1');
+
+    // Пользователь подтвердил «Продолжить без лимита»: лимиты не читаются.
+    final ReviewSessionEngine engine = ReviewSessionEngine(
+      cards: cards,
+      scheduler: container.read(schedulerProvider),
+      reviewRepository: container.read(reviewRepositoryProvider),
+      clock: () => now,
+      newLimit: null,
+      reviewLimit: null,
+    );
+    engine.start();
+    expect(engine.state.total, 3);
   });
 }

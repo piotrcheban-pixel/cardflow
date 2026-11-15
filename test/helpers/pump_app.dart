@@ -121,12 +121,17 @@ List<GoRoute> decksRoutes() {
     GoRoute(
       path: '/decks/:id/study',
       builder: (BuildContext context, GoRouterState state) =>
-          ReviewSessionScreen(deckId: state.pathParameters['id']!),
+          ReviewSessionScreen(
+            deckId: state.pathParameters['id']!,
+            ignoreDailyLimits: _ignoresDailyLimits(state),
+          ),
     ),
     GoRoute(
       path: '/decks/:id/feed',
-      builder: (BuildContext context, GoRouterState state) =>
-          FeedSessionScreen(deckId: state.pathParameters['id']!),
+      builder: (BuildContext context, GoRouterState state) => FeedSessionScreen(
+        deckId: state.pathParameters['id']!,
+        ignoreDailyLimits: _ignoresDailyLimits(state),
+      ),
     ),
     GoRoute(
       path: '/decks/:id/practice',
@@ -244,3 +249,8 @@ List<Override> decksOverrides({
 AppLocalizations l10nOf(WidgetTester tester) {
   return AppLocalizations.of(tester.element(find.byType(Scaffold).first));
 }
+
+/// Маршрут просит игнорировать дневные лимиты (`?limits=ignore`, ADR-028).
+bool _ignoresDailyLimits(GoRouterState state) =>
+    state.uri.queryParameters[AppRoutes.dailyLimitsQuery] ==
+    AppRoutes.ignoreDailyLimitsValue;

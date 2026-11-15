@@ -18,6 +18,12 @@ import 'package:cardflow/ui/state/review_limits.dart';
 /// Действие меню экрана колоды.
 enum _DeckMenuAction { generate, rename, export, delete }
 
+/// Выбранный режим в листе «Начать сессию».
+enum _SessionModeAction { classic, feed, practice, constructor }
+
+/// Решение в предупреждении об исчерпанном дневном лимите (ADR-028).
+enum _LimitChoice { continueWithoutLimits, practice }
+
 /// Экран «Колода» (SPEC A6.3).
 ///
 /// Заголовок с именем, счётчики (к повторению/новые/в процессе), карточка
@@ -202,7 +208,8 @@ class DeckScreen extends ConsumerWidget {
   /// Пустая колода — сообщение вместо перехода. Очередь классики/ленты
   /// проверяется с тем же остатком дневных лимитов, что и сама сессия
   /// (A6.6, ADR-019 §8): если лимит на сегодня исчерпан, пользователь видит
-  /// это здесь и может сразу пройти карточки тренировкой, не меняя FSRS.
+  /// предупреждение и может продолжить без лимита или пройти карточки
+  /// тренировкой (ADR-028, итерация 7.12).
   Future<void> _startSession(
     BuildContext context,
     WidgetRef ref, {
@@ -233,75 +240,144 @@ class DeckScreen extends ConsumerWidget {
       newLimit: limits?.newCards,
       reviewLimit: limits?.reviews,
     ).isNotEmpty;
-    final String? selected = await showModalBottomSheet<String>(
-      context: context,
-      showDragHandle: true,
-      builder: (BuildContext sheetContext) {
-        void chooseQueueMode(String path) {
-          if (!queueWithLimits) {
-            Navigator.of(sheetContext).pop();
-            showAppMessage(
-              context,
-              queueWithoutLimits && limits != null
-                  ? l10n.reviewStartEmptyLimitedMessage
-                  : l10n.reviewStartEmptyMessage,
-            );
-            return;
-          }
-          Navigator.of(sheetContext).pop(path);
-        }
+    final _SessionModeAction? selected =
+        await showModalBottomSheet<_SessionModeAction>(
+          context: context,
+          showDragHandle: true,
+          builder: (BuildContext sheetContext) {
+            void choose(_SessionModeAction action) {
+              Navigator.of(sheetContext).pop(action);
+            }
 
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Padding(
-                padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
-                child: Align(
-                  alignment: AlignmentDirectional.centerStart,
-                  child: Text(
-                    l10n.reviewSessionModeTitle,
-                    style: Theme.of(sheetContext).textTheme.titleLarge,
+            return SafeArea(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+                    child: Align(
+                      alignment: AlignmentDirectional.centerStart,
+                      child: Text(
+                        l10n.reviewSessionModeTitle,
+                        style: Theme.of(sheetContext).textTheme.titleLarge,
+                      ),
+                    ),
                   ),
-                ),
+                  ListTile(
+                    key: const ValueKey<String>('review-mode-classic'),
+                    leading: const Icon(Icons.style_outlined),
+                    title: Text(l10n.reviewModeClassic),
+                    onTap: () => choose(_SessionModeAction.classic),
+                  ),
+                  ListTile(
+                    key: const ValueKey<String>('review-mode-feed'),
+                    leading: const Icon(Icons.view_agenda_outlined),
+                    title: Text(l10n.reviewModeFeed),
+                    onTap: () => choose(_SessionModeAction.feed),
+                  ),
+                  ListTile(
+                    key: const ValueKey<String>('review-mode-practice'),
+                    leading: const Icon(Icons.sports_esports_outlined),
+                    title: Text(l10n.reviewModePractice),
+                    subtitle: Text(l10n.practiceSubtitle),
+                    onTap: () => choose(_SessionModeAction.practice),
+                  ),
+                  ListTile(
+                    key: const ValueKey<String>('review-mode-constructor'),
+                    leading: const Icon(Icons.tune),
+                    title: Text(l10n.constructorAction),
+                    onTap: () => choose(_SessionModeAction.constructor),
+                  ),
+                ],
               ),
-              ListTile(
-                key: const ValueKey<String>('review-mode-classic'),
-                leading: const Icon(Icons.style_outlined),
-                title: Text(l10n.reviewModeClassic),
-                onTap: () => chooseQueueMode(AppRoutes.studyPath(deckId)),
-              ),
-              ListTile(
-                key: const ValueKey<String>('review-mode-feed'),
-                leading: const Icon(Icons.view_agenda_outlined),
-                title: Text(l10n.reviewModeFeed),
-                onTap: () => chooseQueueMode(AppRoutes.feedPath(deckId)),
-              ),
-              ListTile(
-                key: const ValueKey<String>('review-mode-practice'),
-                leading: const Icon(Icons.sports_esports_outlined),
-                title: Text(l10n.reviewModePractice),
-                subtitle: Text(l10n.practiceSubtitle),
-                onTap: () =>
-                    Navigator.of(sheetContext)
-                        .pop(AppRoutes.practicePath(deckId)),
-              ),
-              ListTile(
-                key: const ValueKey<String>('review-mode-constructor'),
-                leading: const Icon(Icons.tune),
-                title: Text(l10n.constructorAction),
-                onTap: () =>
-                    Navigator.of(sheetContext)
-                        .pop(AppRoutes.constructorDeckPath(deckId)),
-              ),
-            ],
-          ),
+            );
+          },
         );
-      },
-    );
-    if (selected != null && context.mounted) {
-      context.push(selected);
+    if (selected == null || !context.mounted) return;
+    switch (selected) {
+      case _SessionModeAction.practice:
+        await context.push(AppRoutes.practicePath(deckId));
+      case _SessionModeAction.constructor:
+        await context.push(AppRoutes.constructorDeckPath(deckId));
+      case _SessionModeAction.classic:
+        await _openReviewMode(
+          context,
+          deckId: deckId,
+          feed: false,
+          queueWithLimits: queueWithLimits,
+          queueWithoutLimits: queueWithoutLimits,
+          limitedByDay: limits != null,
+        );
+      case _SessionModeAction.feed:
+        await _openReviewMode(
+          context,
+          deckId: deckId,
+          feed: true,
+          queueWithLimits: queueWithLimits,
+          queueWithoutLimits: queueWithoutLimits,
+          limitedByDay: limits != null,
+        );
     }
+  }
+
+  /// Открывает классику/ленту; при исчерпанном лимите — предупреждение с
+  /// «Продолжить без лимита» (ADR-028).
+  Future<void> _openReviewMode(
+    BuildContext context, {
+    required String deckId,
+    required bool feed,
+    required bool queueWithLimits,
+    required bool queueWithoutLimits,
+    required bool limitedByDay,
+  }) async {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    if (queueWithLimits) {
+      await context.push(
+        feed ? AppRoutes.feedPath(deckId) : AppRoutes.studyPath(deckId),
+      );
+      return;
+    }
+    if (!queueWithoutLimits || !limitedByDay) {
+      showAppMessage(context, l10n.reviewStartEmptyMessage);
+      return;
+    }
+    final _LimitChoice? choice = await showDialog<_LimitChoice>(
+      context: context,
+      builder: (BuildContext dialogContext) => AlertDialog(
+        title: Text(l10n.reviewDailyLimitTitle),
+        content: Text(l10n.reviewDailyLimitContinueMessage),
+        actions: <Widget>[
+          TextButton(
+            key: const ValueKey<String>('review-limit-cancel'),
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(l10n.cancel),
+          ),
+          TextButton(
+            key: const ValueKey<String>('review-limit-practice'),
+            onPressed: () =>
+                Navigator.of(dialogContext).pop(_LimitChoice.practice),
+            child: Text(l10n.practiceStartAction),
+          ),
+          FilledButton(
+            key: const ValueKey<String>('review-limit-continue'),
+            onPressed: () =>
+                Navigator.of(dialogContext)
+                    .pop(_LimitChoice.continueWithoutLimits),
+            child: Text(l10n.reviewDailyLimitContinueAction),
+          ),
+        ],
+      ),
+    );
+    if (choice == null || !context.mounted) return;
+    if (choice == _LimitChoice.practice) {
+      await context.push(AppRoutes.practicePath(deckId));
+      return;
+    }
+    await context.push(
+      feed
+          ? AppRoutes.feedPath(deckId, ignoreDailyLimits: true)
+          : AppRoutes.studyPath(deckId, ignoreDailyLimits: true),
+    );
   }
 
   Future<void> _handleMenuAction(

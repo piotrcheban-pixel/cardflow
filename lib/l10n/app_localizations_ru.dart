@@ -344,11 +344,14 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get reviewDailyLimitMessage =>
-      'Новые карточки этой колоды ждут следующего дня. Пройдите их сейчас в режиме «Тренировка» — интервалы FSRS не изменятся.';
+      'Дневной лимит на сегодня исчерпан. Можно продолжить без лимита или пройти карточки в режиме «Тренировка» — интервалы FSRS не изменятся.';
 
   @override
-  String get reviewStartEmptyLimitedMessage =>
-      'Дневной лимит исчерпан — откройте «Тренировку», чтобы пройти карточки сейчас';
+  String get reviewDailyLimitContinueAction => 'Продолжить без лимита';
+
+  @override
+  String get reviewDailyLimitContinueMessage =>
+      'Дневной лимит на сегодня исчерпан. Продолжить изучение без лимита или пройти карточки в режиме «Тренировка» — интервалы FSRS не изменятся.';
 
   @override
   String get practiceStartAction => 'Тренировать';
@@ -915,6 +918,14 @@ class AppLocalizationsRu extends AppLocalizations {
       'Нет изображения для карточки с маской';
 
   @override
+  String get generationIssueImageNotFound => 'Картинка не найдена';
+
+  @override
+  String generationImageSearchFailed(int count) {
+    return 'Не удалось найти картинку по запросу: $count. Добавьте её вручную или измените вопрос.';
+  }
+
+  @override
   String generationDuplicatesRemoved(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -967,6 +978,23 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get cardFormOcclusionSection => 'Изображение и маски';
+
+  @override
+  String get cardFormImageSection => 'Изображение';
+
+  @override
+  String get cardFormImageHint =>
+      'Картинка показывается вместе с вопросом и ответом. Маски нужны, только если части изображения надо скрыть.';
+
+  @override
+  String get cardFormRemoveImage => 'Удалить изображение';
+
+  @override
+  String get cardFormOcclusionToggle => 'Маски изображения';
+
+  @override
+  String get cardFormOcclusionToggleHint =>
+      'Необязательно. Скрывает части изображения на карточке.';
 
   @override
   String get cardFormPickImage => 'Выбрать изображение';

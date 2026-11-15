@@ -32,13 +32,25 @@ class ReviewSessionScreen extends ConsumerStatefulWidget {
   ///
   /// [plan] — очередь конструктора (SPEC A6.7, ADR-018); при наличии
   /// загруженной колоды не требуется.
-  const ReviewSessionScreen({this.deckId, this.plan, super.key});
+  ///
+  /// [ignoreDailyLimits] — пользователь подтвердил «Продолжить без лимита»
+  /// (ADR-028, итерация 7.12): дневные лимиты не читаются и очередь не
+  /// ограничивается.
+  const ReviewSessionScreen({
+    this.deckId,
+    this.plan,
+    this.ignoreDailyLimits = false,
+    super.key,
+  });
 
   /// Идентификатор колоды.
   final String? deckId;
 
   /// План сессии конструктора; `null` — очередь из колоды.
   final SessionPlan? plan;
+
+  /// Игнорировать дневные лимиты (`?limits=ignore`, ADR-028).
+  final bool ignoreDailyLimits;
 
   @override
   ConsumerState<ReviewSessionScreen> createState() =>
@@ -53,6 +65,7 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
   bool _loading = true;
   bool _loadFailed = false;
   bool _limitReached = false;
+  bool _ignoreLimits = false;
   bool _completionHapticPlayed = false;
   Map<String, Uint8List> _mediaBytes = const <String, Uint8List>{};
 
@@ -64,6 +77,7 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
   @override
   void initState() {
     super.initState();
+    _ignoreLimits = widget.ignoreDailyLimits;
     unawaited(_load());
   }
 
@@ -103,11 +117,15 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
       // `review_logs`, а не свежий лимит на каждую сессию (ADR-019 §8, L45).
       // Расчёт тот же, что использует экран колоды (итерация 7.11): иначе
       // предварительная проверка и сессия расходятся, и пользователь видит
-      // пустую сессию без причины.
-      final RemainingReviewLimits limits = await readRemainingReviewLimits(ref);
+      // пустую сессию без причины. `?limits=ignore` (ADR-028) отключает лимиты
+      // по подтверждению пользователя.
+      final RemainingReviewLimits? limits = _ignoreLimits
+          ? null
+          : await readRemainingReviewLimits(ref);
       if (!mounted) return;
       // Пустая очередь при непустой колоде = исчерпан дневной лимит: экран
-      // объясняет причину и предлагает тренировку (ADR-025).
+      // объясняет причину и предлагает тренировку или продолжение без лимита
+      // (ADR-025/ADR-028).
       final DateTime queueNow = DateTime.now().toUtc();
       final bool prebuilt = plan != null;
       final List<Card> unlimitedQueue = prebuilt
@@ -118,19 +136,22 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
           : ReviewQueue.build(
               cards,
               now: queueNow,
-              newLimit: limits.newCards,
-              reviewLimit: limits.reviews,
+              newLimit: limits?.newCards,
+              reviewLimit: limits?.reviews,
             );
       final bool limitReached =
-          !prebuilt && unlimitedQueue.isNotEmpty && limitedQueue.isEmpty;
+          !_ignoreLimits &&
+          !prebuilt &&
+          unlimitedQueue.isNotEmpty &&
+          limitedQueue.isEmpty;
       final engine = ReviewSessionEngine(
         cards: cards,
         scheduler: ref.read(schedulerProvider),
         reviewRepository: ref.read(reviewRepositoryProvider),
         clock: DateTime.now,
         prebuilt: prebuilt,
-        newLimit: limits.newCards,
-        reviewLimit: limits.reviews,
+        newLimit: limits?.newCards,
+        reviewLimit: limits?.reviews,
       )..addListener(_onEngineChanged);
       engine.start();
       setState(() {
@@ -266,6 +287,13 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
     context.pushReplacement(AppRoutes.practicePath(deckId));
   }
 
+  /// Продолжает изучение без дневного лимита (ADR-028): перечитывает колоду и
+  /// строит очередь без ограничений.
+  void _continueWithoutLimits() {
+    _ignoreLimits = true;
+    _retry();
+  }
+
   void _leave() {
     if (context.canPop()) context.pop();
   }
@@ -314,11 +342,15 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
     }
     if (state.total == 0) {
       // Причина пустоты: исчерпанный дневной лимит (итерация 7.11) или
-      // «всё повторено». В первом случае даём тренировку (ADR-025).
+      // «всё повторено». В первом случае даём тренировку и продолжение без
+      // лимита (ADR-025, ADR-028).
       final String? deckId = widget.deckId;
       return ReviewEmptyView(
         title: _limitReached ? l10n.reviewDailyLimitTitle : null,
         message: _limitReached ? l10n.reviewDailyLimitMessage : null,
+        onContinue: _limitReached && deckId != null
+            ? _continueWithoutLimits
+            : null,
         onPractice: _limitReached && deckId != null
             ? () => _startPractice(deckId)
             : null,

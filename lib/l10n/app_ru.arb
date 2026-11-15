@@ -416,13 +416,17 @@
   "@reviewDailyLimitTitle": {
     "description": "Пустое состояние сессии, когда дневной лимит новых карточек израсходован (A6.6, ADR-019 §8)."
   },
-  "reviewDailyLimitMessage": "Новые карточки этой колоды ждут следующего дня. Пройдите их сейчас в режиме «Тренировка» — интервалы FSRS не изменятся.",
+  "reviewDailyLimitMessage": "Дневной лимит на сегодня исчерпан. Можно продолжить без лимита или пройти карточки в режиме «Тренировка» — интервалы FSRS не изменятся.",
   "@reviewDailyLimitMessage": {
-    "description": "Пояснение к исчерпанному дневному лимиту с предложением тренировки."
+    "description": "Пояснение к исчерпанному дневному лимиту с предложением продолжить без лимита или тренировкой (ADR-028)."
   },
-  "reviewStartEmptyLimitedMessage": "Дневной лимит исчерпан — откройте «Тренировку», чтобы пройти карточки сейчас",
-  "@reviewStartEmptyLimitedMessage": {
-    "description": "Сообщение при попытке начать сессию, когда очередь пуста из-за дневного лимита."
+  "reviewDailyLimitContinueAction": "Продолжить без лимита",
+  "@reviewDailyLimitContinueAction": {
+    "description": "Кнопка продолжения изучения с игнорированием дневного лимита (ADR-028, итерация 7.12)."
+  },
+  "reviewDailyLimitContinueMessage": "Дневной лимит на сегодня исчерпан. Продолжить изучение без лимита или пройти карточки в режиме «Тренировка» — интервалы FSRS не изменятся.",
+  "@reviewDailyLimitContinueMessage": {
+    "description": "Предупреждение перед продолжением без дневного лимита на экране колоды (ADR-028)."
   },
   "practiceStartAction": "Тренировать",
   "@practiceStartAction": {
@@ -1136,6 +1140,19 @@
   "@generationIssueOcclusionImageMissing": {
     "description": "Пометка итерации 7.9: occlusion без найденной картинки стала обычной."
   },
+  "generationIssueImageNotFound": "Картинка не найдена",
+  "@generationIssueImageNotFound": {
+    "description": "Пометка карточки, для которой поиск картинки не дал результата (ADR-028)."
+  },
+  "generationImageSearchFailed": "Не удалось найти картинку по запросу: {count}. Добавьте её вручную или измените вопрос.",
+  "@generationImageSearchFailed": {
+    "description": "Предупреждение в предпросмотре, что поиск картинок не дал результата (ADR-028, итерация 7.12).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "generationDuplicatesRemoved": "{count, plural, =0{Дубликатов нет} one{{count} дубликат пропущен} few{{count} дубликата пропущено} many{{count} дубликатов пропущено} other{{count} дубликата пропущено}}",
   "@generationDuplicatesRemoved": {
     "description": "Сколько дублей отсеяла дедупликация (SPEC A8.5 шаг 9).",
@@ -1195,13 +1212,33 @@
   "@cardFormOcclusionSection": {
     "description": "Заголовок редактора Image Occlusion в форме карточки."
   },
+  "cardFormImageSection": "Изображение",
+  "@cardFormImageSection": {
+    "description": "Заголовок секции изображения карточки любого типа (ADR-028, итерация 7.12)."
+  },
+  "cardFormImageHint": "Картинка показывается вместе с вопросом и ответом. Маски нужны, только если части изображения надо скрыть.",
+  "@cardFormImageHint": {
+    "description": "Пояснение: изображение не требует масок."
+  },
+  "cardFormRemoveImage": "Удалить изображение",
+  "@cardFormRemoveImage": {
+    "description": "Кнопка удаления изображения из карточки."
+  },
+  "cardFormOcclusionToggle": "Маски изображения",
+  "@cardFormOcclusionToggle": {
+    "description": "Переключатель масок в форме карточки (ADR-028)."
+  },
+  "cardFormOcclusionToggleHint": "Необязательно. Скрывает части изображения на карточке.",
+  "@cardFormOcclusionToggleHint": {
+    "description": "Пояснение к переключателю масок."
+  },
   "cardFormPickImage": "Выбрать изображение",
   "@cardFormPickImage": {
-    "description": "Кнопка системного выбора изображения для масок."
+    "description": "Кнопка системного выбора изображения карточки."
   },
   "cardFormChangeImage": "Заменить изображение",
   "@cardFormChangeImage": {
-    "description": "Кнопка замены изображения для масок."
+    "description": "Кнопка замены изображения карточки."
   },
   "cardFormImageLoadError": "Не удалось загрузить изображение. Выберите другое изображение до 25 МБ.",
   "@cardFormImageLoadError": {

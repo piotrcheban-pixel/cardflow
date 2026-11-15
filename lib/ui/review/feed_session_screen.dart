@@ -8,6 +8,7 @@ import 'package:material_ui/material_ui.dart' hide Card;
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/decks/deck.dart';
 import 'package:cardflow/domain/review/daily_limits.dart';
+import 'package:cardflow/domain/review/review_queue.dart';
 import 'package:cardflow/domain/scheduling/rating.dart';
 import 'package:cardflow/domain/session/session_plan.dart';
 import 'package:cardflow/domain/settings/app_settings.dart';
@@ -19,6 +20,7 @@ import 'package:cardflow/ui/review/feed_progress_bar.dart';
 import 'package:cardflow/ui/review/feed_session_engine.dart';
 import 'package:cardflow/ui/review/review_chrome.dart';
 import 'package:cardflow/ui/review/review_session_engine.dart';
+import 'package:cardflow/ui/router/app_router.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
 
 /// Экран режима «Лента» (SPEC A7.3, ADR-016).
@@ -32,13 +34,23 @@ class FeedSessionScreen extends ConsumerStatefulWidget {
   ///
   /// [plan] — очередь конструктора (SPEC A6.7, ADR-018); при наличии
   /// загруженной колоды не требуется.
-  const FeedSessionScreen({this.deckId, this.plan, super.key});
+  ///
+  /// [ignoreDailyLimits] — подтверждённое «Продолжить без лимита» (ADR-028).
+  const FeedSessionScreen({
+    this.deckId,
+    this.plan,
+    this.ignoreDailyLimits = false,
+    super.key,
+  });
 
   /// Идентификатор колоды.
   final String? deckId;
 
   /// План сессии конструктора; `null` — очередь из колоды.
   final SessionPlan? plan;
+
+  /// Игнорировать дневные лимиты (`?limits=ignore`, ADR-028).
+  final bool ignoreDailyLimits;
 
   /// Варианты интервала авто-продвижения (SPEC A7.3).
   static const List<int> autoAdvanceSeconds = <int>[3, 5, 8];
@@ -65,6 +77,8 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
   bool _loading = true;
   bool _loadFailed = false;
   bool _completionHapticPlayed = false;
+  bool _limitReached = false;
+  bool _ignoreLimits = false;
   int _resetToken = 0;
   Map<String, Uint8List> _mediaBytes = const <String, Uint8List>{};
 
@@ -76,6 +90,7 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
   @override
   void initState() {
     super.initState();
+    _ignoreLimits = widget.ignoreDailyLimits;
     WidgetsBinding.instance.addObserver(this);
     unawaited(_load());
   }
@@ -141,22 +156,37 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
       }
       // Дневные лимиты A6.6 — остаток на локальный календарный день по
       // `review_logs`, а не свежий лимит на каждую сессию (ADR-019 §8, L45).
-      final RemainingReviewLimits limits = RemainingReviewLimits.of(
-        newLimit: settings.dailyNewLimit,
-        reviewLimit: settings.dailyReviewLimit,
-        usage: await ref
-            .read(dailyUsageRepositoryProvider)
-            .usageOnDay(DateTime.now()),
-      );
+      // `?limits=ignore` (ADR-028) отключает лимиты после предупреждения.
+      final RemainingReviewLimits? limits = _ignoreLimits
+          ? null
+          : RemainingReviewLimits.of(
+              newLimit: settings.dailyNewLimit,
+              reviewLimit: settings.dailyReviewLimit,
+              usage: await ref
+                  .read(dailyUsageRepositoryProvider)
+                  .usageOnDay(DateTime.now()),
+            );
       if (!mounted) return;
+      final DateTime queueNow = DateTime.now().toUtc();
+      final bool prebuilt = plan != null;
+      final bool limitReached =
+          !_ignoreLimits &&
+          !prebuilt &&
+          ReviewQueue.build(cards, now: queueNow).isNotEmpty &&
+          ReviewQueue.build(
+            cards,
+            now: queueNow,
+            newLimit: limits?.newCards,
+            reviewLimit: limits?.reviews,
+          ).isEmpty;
       final FeedSessionEngine engine = FeedSessionEngine(
         cards: cards,
         scheduler: ref.read(schedulerProvider),
         reviewRepository: ref.read(reviewRepositoryProvider),
         clock: DateTime.now,
-        prebuilt: plan != null,
-        newLimit: limits.newCards,
-        reviewLimit: limits.reviews,
+        prebuilt: prebuilt,
+        newLimit: limits?.newCards,
+        reviewLimit: limits?.reviews,
       )..addListener(_onEngineChanged);
       engine.start();
       setState(() {
@@ -164,6 +194,7 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
         _deckCount = deckIds.length;
         _engine = engine;
         _mediaBytes = mediaBytes;
+        _limitReached = limitReached;
         _loading = false;
         _autoAdvancePaused = false;
         _completionHapticPlayed = false;
@@ -371,6 +402,17 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
     }
   }
 
+  /// Переход в тренировку из состояния «дневной лимит исчерпан» (ADR-025).
+  void _startPractice(String deckId) {
+    context.pushReplacement(AppRoutes.practicePath(deckId));
+  }
+
+  /// Продолжает ленту без дневного лимита (ADR-028).
+  void _continueWithoutLimits() {
+    _ignoreLimits = true;
+    _retry();
+  }
+
   void _leave() {
     if (context.canPop()) context.pop();
   }
@@ -413,14 +455,30 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
     if (_loadFailed || state == null) {
       return ReviewLoadErrorView(onRetry: _retry);
     }
-    if (state.total == 0) return ReviewEmptyView(onBack: _leave);
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    if (state.total == 0) {
+      // Пустая лента при непустой колоде — исчерпанный дневной лимит
+      // (ADR-028): объясняем причину и даём «Продолжить без лимита» или
+      // тренировку.
+      final String? deckId = widget.deckId;
+      return ReviewEmptyView(
+        title: _limitReached ? l10n.reviewDailyLimitTitle : null,
+        message: _limitReached ? l10n.reviewDailyLimitMessage : null,
+        onContinue: _limitReached && deckId != null
+            ? _continueWithoutLimits
+            : null,
+        onPractice: _limitReached && deckId != null
+            ? () => _startPractice(deckId)
+            : null,
+        onBack: _leave,
+      );
+    }
     if (_timeExpired) {
       return ReviewTimeUpView(ratedCount: state.ratedCount, onDone: _leave);
     }
     if (state.isCompleted) {
       return ReviewCompletedView(ratedCount: state.ratedCount, onDone: _leave);
     }
-    final AppLocalizations l10n = AppLocalizations.of(context);
     final AppSettings settings = ref.watch(effectiveAppSettingsProvider);
     final List<bool> ratedFlags = <bool>[
       for (final FeedSessionItem item in state.items) item.rated,

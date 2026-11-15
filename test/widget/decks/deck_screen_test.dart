@@ -490,10 +490,10 @@ void main() {
       expect(find.text('Вопрос'), findsOneWidget);
     });
 
-    // Итерация 7.11: причина пустой сессии — исчерпанный дневной лимит, а не
-    // «нет карточек»; при этом доступна тренировка.
+    // Итерация 7.11/7.12: причина пустой сессии — исчерпанный дневной лимит;
+    // предупреждение даёт «Продолжить без лимита» и «Тренировку» (ADR-028).
     testWidgets(
-      'дневной лимит исчерпан: сообщение о лимите вместо «нет карточек»',
+      'дневной лимит исчерпан: предупреждение и «Продолжить без лимита»',
       (WidgetTester tester) async {
         final FakeDeckRepository repository = FakeDeckRepository(
           summaries: <DeckSummary>[
@@ -531,9 +531,119 @@ void main() {
         await tester.tap(find.text(l10n.reviewModeClassic));
         await tester.pumpAndSettle();
 
-        expect(find.text(l10n.reviewStartEmptyLimitedMessage), findsOneWidget);
-        expect(find.text(l10n.reviewStartEmptyMessage), findsNothing);
+        expect(find.text(l10n.reviewDailyLimitTitle), findsOneWidget);
+        expect(find.text(l10n.reviewDailyLimitContinueMessage), findsOneWidget);
         expect(find.byType(ReviewSessionScreen), findsNothing);
+
+        await tester.tap(
+          find.byKey(const ValueKey<String>('review-limit-continue')),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.byType(ReviewSessionScreen), findsOneWidget);
+        expect(find.text('Вопрос'), findsOneWidget);
+        expect(
+          find.text(l10n.reviewDailyLimitTitle),
+          findsNothing,
+          reason: 'после подтверждения лимит не блокирует сессию',
+        );
+      },
+    );
+
+    testWidgets('дневной лимит исчерпан: предупреждение ведёт в тренировку', (
+      WidgetTester tester,
+    ) async {
+      final FakeDeckRepository repository = FakeDeckRepository(
+        summaries: <DeckSummary>[
+          makeSummary(
+            id: 'deck-1',
+            name: 'Испанский',
+            totalCards: 1,
+            newCards: 1,
+          ),
+        ],
+      );
+      final FakeCardRepository cards = FakeCardRepository(
+        cards: <Card>[
+          makeCard(id: 'card-1', deckId: 'deck-1', front: 'Вопрос'),
+        ],
+      );
+
+      await pumpDeck(
+        tester,
+        repository: repository,
+        cards: cards,
+        dailyUsage: FakeDailyUsageRepository(
+          usage: const DailyReviewUsage(newCards: 20),
+        ),
+        appSettingsStore: FakeAppSettingsStore(
+          settings: AppSettings.defaults.copyWith(dailyNewLimit: 20),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final AppLocalizations l10n = l10nOf(tester);
+
+      await tester.tap(find.text(l10n.reviewStartSession));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(l10n.reviewModeFeed));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const ValueKey<String>('review-limit-practice')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(PracticeSessionScreen), findsOneWidget);
+      expect(find.text('Вопрос'), findsOneWidget);
+    });
+
+    // ADR-028 (итерация 7.12, owner-note): карточки, созданные сегодня, не
+    // блокируются исчерпанным дневным лимитом — сессия стартует сразу.
+    testWidgets(
+      'только что созданные карточки доступны при исчерпанном лимите',
+      (WidgetTester tester) async {
+        final FakeDeckRepository repository = FakeDeckRepository(
+          summaries: <DeckSummary>[
+            makeSummary(
+              id: 'deck-1',
+              name: 'Испанский',
+              totalCards: 1,
+              newCards: 1,
+            ),
+          ],
+        );
+        final FakeCardRepository cards = FakeCardRepository(
+          cards: <Card>[
+            makeCard(
+              id: 'card-new',
+              deckId: 'deck-1',
+              front: 'Новая карточка',
+              createdAt: DateTime.now(),
+            ),
+          ],
+        );
+
+        await pumpDeck(
+          tester,
+          repository: repository,
+          cards: cards,
+          dailyUsage: FakeDailyUsageRepository(
+            usage: const DailyReviewUsage(newCards: 20),
+          ),
+          appSettingsStore: FakeAppSettingsStore(
+            settings: AppSettings.defaults.copyWith(dailyNewLimit: 20),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final AppLocalizations l10n = l10nOf(tester);
+
+        await tester.tap(find.text(l10n.reviewStartSession));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.reviewModeClassic));
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.reviewDailyLimitTitle), findsNothing);
+        expect(find.byType(ReviewSessionScreen), findsOneWidget);
+        expect(find.text('Новая карточка'), findsOneWidget);
       },
     );
   });

@@ -616,17 +616,23 @@ abstract class AppLocalizations {
   /// **'Дневной лимит исчерпан'**
   String get reviewDailyLimitTitle;
 
-  /// Пояснение к исчерпанному дневному лимиту с предложением тренировки.
+  /// Пояснение к исчерпанному дневному лимиту с предложением продолжить без лимита или тренировкой (ADR-028).
   ///
   /// In ru, this message translates to:
-  /// **'Новые карточки этой колоды ждут следующего дня. Пройдите их сейчас в режиме «Тренировка» — интервалы FSRS не изменятся.'**
+  /// **'Дневной лимит на сегодня исчерпан. Можно продолжить без лимита или пройти карточки в режиме «Тренировка» — интервалы FSRS не изменятся.'**
   String get reviewDailyLimitMessage;
 
-  /// Сообщение при попытке начать сессию, когда очередь пуста из-за дневного лимита.
+  /// Кнопка продолжения изучения с игнорированием дневного лимита (ADR-028, итерация 7.12).
   ///
   /// In ru, this message translates to:
-  /// **'Дневной лимит исчерпан — откройте «Тренировку», чтобы пройти карточки сейчас'**
-  String get reviewStartEmptyLimitedMessage;
+  /// **'Продолжить без лимита'**
+  String get reviewDailyLimitContinueAction;
+
+  /// Предупреждение перед продолжением без дневного лимита на экране колоды (ADR-028).
+  ///
+  /// In ru, this message translates to:
+  /// **'Дневной лимит на сегодня исчерпан. Продолжить изучение без лимита или пройти карточки в режиме «Тренировка» — интервалы FSRS не изменятся.'**
+  String get reviewDailyLimitContinueMessage;
 
   /// Кнопка запуска тренировки из пустой сессии и листа режимов.
   ///
@@ -1558,6 +1564,18 @@ abstract class AppLocalizations {
   /// **'Нет изображения для карточки с маской'**
   String get generationIssueOcclusionImageMissing;
 
+  /// Пометка карточки, для которой поиск картинки не дал результата (ADR-028).
+  ///
+  /// In ru, this message translates to:
+  /// **'Картинка не найдена'**
+  String get generationIssueImageNotFound;
+
+  /// Предупреждение в предпросмотре, что поиск картинок не дал результата (ADR-028, итерация 7.12).
+  ///
+  /// In ru, this message translates to:
+  /// **'Не удалось найти картинку по запросу: {count}. Добавьте её вручную или измените вопрос.'**
+  String generationImageSearchFailed(int count);
+
   /// Сколько дублей отсеяла дедупликация (SPEC A8.5 шаг 9).
   ///
   /// In ru, this message translates to:
@@ -1612,13 +1630,43 @@ abstract class AppLocalizations {
   /// **'Изображение и маски'**
   String get cardFormOcclusionSection;
 
-  /// Кнопка системного выбора изображения для масок.
+  /// Заголовок секции изображения карточки любого типа (ADR-028, итерация 7.12).
+  ///
+  /// In ru, this message translates to:
+  /// **'Изображение'**
+  String get cardFormImageSection;
+
+  /// Пояснение: изображение не требует масок.
+  ///
+  /// In ru, this message translates to:
+  /// **'Картинка показывается вместе с вопросом и ответом. Маски нужны, только если части изображения надо скрыть.'**
+  String get cardFormImageHint;
+
+  /// Кнопка удаления изображения из карточки.
+  ///
+  /// In ru, this message translates to:
+  /// **'Удалить изображение'**
+  String get cardFormRemoveImage;
+
+  /// Переключатель масок в форме карточки (ADR-028).
+  ///
+  /// In ru, this message translates to:
+  /// **'Маски изображения'**
+  String get cardFormOcclusionToggle;
+
+  /// Пояснение к переключателю масок.
+  ///
+  /// In ru, this message translates to:
+  /// **'Необязательно. Скрывает части изображения на карточке.'**
+  String get cardFormOcclusionToggleHint;
+
+  /// Кнопка системного выбора изображения карточки.
   ///
   /// In ru, this message translates to:
   /// **'Выбрать изображение'**
   String get cardFormPickImage;
 
-  /// Кнопка замены изображения для масок.
+  /// Кнопка замены изображения карточки.
   ///
   /// In ru, this message translates to:
   /// **'Заменить изображение'**
