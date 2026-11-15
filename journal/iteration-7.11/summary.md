@@ -28,7 +28,7 @@
 ## Доказательства (полные — `verify.md`)
 
 - `fvm flutter test --no-pub --coverage --exclude-tags golden` → **1458 passed + 4 skipped**;
-  покрытие рукописного кода **92.0 % (10316/11216)**.
+  покрытие рукописного кода **92.9 % (9804/10557)**.
 - `analyze` 0; `dart format --set-exit-if-changed lib test` → 349/0.
 - `fvm flutter build windows --release --no-pub` → `cardflow.exe` (79,3 с).
 - `fvm flutter run -d windows --no-pub` → приложение запущено (окно, Impeller, VM Service).

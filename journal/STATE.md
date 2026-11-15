@@ -52,7 +52,7 @@ Flutter 3.47.9 / Dart 3.13.7 (FVM); Windows 11; Android SDK/JDK/Xcode нет (L2
   генерация → импорт → лимит → тренировка → видимая картинка → practice-оценка.
 
 **Доказательства:** `fvm flutter test --no-pub --coverage --exclude-tags golden` →
-**1458 passed + 4 skipped**; покрытие рукописного кода **92.0 % (10316/11216)**;
+**1458 passed + 4 skipped**; покрытие рукописного кода **92.9 % (9804/10557)**;
 `analyze` 0; `dart format --set-exit-if-changed lib test` → 349/0; `build windows
 --release` → `cardflow.exe` (79,3 с); `flutter run -d windows` — окно открылось,
 ошибок старта нет. Детали — `journal/iteration-7.11/{plan,red-output,review,verify}.md`.

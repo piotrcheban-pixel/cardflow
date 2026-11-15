@@ -7,7 +7,7 @@
 | Гейт | Команда | Результат |
 |---|---|---|
 | Полный прогон | `fvm flutter test --no-pub --coverage --exclude-tags golden` | **1458 passed + 4 skipped**, 0 failed (3:49) |
-| Покрытие | `coverage/lcov.info` | рукописный код **92.0 % (10316/11216)**; всего 11150/14376 (77.6 %) — сгенерированный `app_database.g.dart` не считается |
+| Покрытие | `coverage/lcov.info` | рукописный код **92.9 % (9804/10557)**; всего 11150/14376 (77.6 %) — сгенерированный `app_database.g.dart` не считается |
 | Покрытие новых файлов | — | Wikimedia 100 %, practice_queue 100 %, review_limits 100 %, practice engine 93.6 %, practice repository 92.6 %, practice screen 86.4 %, pipeline 95.2 %, pdf renderer 89.7 % |
 | Анализатор | `fvm flutter analyze --no-pub` | **No issues found!** |
 | Формат | `fvm dart format --set-exit-if-changed lib test` | **0 changed** (349 файлов) |

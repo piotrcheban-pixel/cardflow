@@ -364,7 +364,7 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   экран колоды проверял очередь без лимитов → пустая сессия. Openverse с хоста таймаутил (первый GET 200,
   дальше > 30 с), Wikimedia Commons по русским запросам — 1–2 с. Гейты:
   `fvm flutter test --no-pub --coverage --exclude-tags golden` → **1458 passed + 4 skipped**; покрытие
-  рукописного кода **92.0 % (10316/11216)**; `analyze` 0; `dart format --set-exit-if-changed lib test`
+  рукописного кода **92.9 % (9804/10557)**; `analyze` 0; `dart format --set-exit-if-changed lib test`
   → 349/0; `fvm flutter build windows --release --no-pub` → `cardflow.exe` (79,3 с);
   `fvm flutter run -d windows --no-pub` → окно открылось, ошибок старта нет.
   **Windows-смоук на реальном процессе:** `fvm flutter test integration_test/session_smoke_windows_test.dart
