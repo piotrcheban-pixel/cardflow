@@ -51,3 +51,9 @@
   владельца (агент не кликает GUI); L79: перечень причин строкой `error_code`.
 - OpenAI/Gemini/Anthropic живьём (L1) — только DeepSeek; проекции схем проверены
   unit-тестами.
+
+## CI (снимок итерации)
+
+Push `c95e5a9..08b42d8`; run [`43764143830`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43764143830) —
+**9/9 job success** (`format + analyze`, `test` × 3 ОС, `build-desktop` × 3,
+`build-mobile` Android + iOS).

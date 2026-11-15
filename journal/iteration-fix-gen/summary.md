@@ -92,3 +92,8 @@ L1 (OpenAI/Gemini/Anthropic живьём).
 
 Push итерации (разрешён владельцем после зелёного прогона) и ожидание CI на
 всей матрице; затем ручная приёмка владельцем сценариев (а)–(в) из задания.
+
+## CI
+
+Push `c95e5a9..08b42d8`; run [`43764143830`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43764143830) —
+**9/9 job success**.

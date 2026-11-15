@@ -430,3 +430,21 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   production-пайплайн → **3 карточки, 3 картинки** (218 670 / 458 295 / 134 919 Б JPEG).
   Ограничения: L71–L75; L60/L70 обновлены.
   **Push итерации 7.12:** `e9ea08b..c6dd64e`; CI run [`43750931989`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43750931989) — **9/9 job success**.
+
+- **Генерация: промпт v5, картинки из файлов, LaTeX и частичный импорт проверены локально (итерация
+  fix-gen, 2026-11-15/16, ADR-029/ADR-030):** старт: `git status --porcelain` → пусто,
+  `HEAD = origin/main = c95e5a9` (в STATE 7.12 было `c6dd64e` — исправлено); baseline
+  **1512 passed + 5 skipped**. Диагностика подтвердила JSON-экранирование LaTeX (`\frac`→form feed,
+  `\alpha`→FormatException) и отбрасывание фрагмента из-за одной карточки; причина «Не удалось
+  обработать фрагмент» разобрана по `generation_jobs`. Гейты:
+  `fvm flutter test --no-pub --coverage --exclude-tags golden` → **1597 passed + 7 skipped**;
+  покрытие **92.3 % (10814/11720)**; `analyze` 0; `dart format --set-exit-if-changed lib test
+  integration_test` → 378/0; `fvm flutter build windows --release --no-pub` → `cardflow.exe`
+  (70,5 с); Windows-смоук `integration_test/session_smoke_windows_test.dart -d windows` →
+  **All tests passed!** (10 с). **Живые тесты (deepseek-chat):** 10 passed — prompt-only v5
+  `cards=3, image_query=3, rejected=0`; **статика 20 карточек, доля пометок 0.0 %**;
+  **DOCX с рисунком: `images=1, cards=9, image_id=1, with_image=1`**; PDF-скан `pages=3,
+  cards=2`; картинки 3/3. Схема БД/`schemaVersion` не менялись (`image_id` — wire-поле до
+  импорта в `media`). Ограничения: L76–L80. **Push итерации fix-gen:** `c95e5a9..08b42d8`;
+  CI run [`43764143830`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43764143830) —
+  **9/9 job success**.
