@@ -64,6 +64,7 @@ SELECT
   COALESCE(SUM(
     CASE WHEN c.due IS NOT NULL
       AND c.due <= ?
+      AND c.state <> 'new'
       AND c.suspended = 0
       AND (c.buried_until IS NULL OR c.buried_until <= ?)
     THEN 1 ELSE 0 END), 0)

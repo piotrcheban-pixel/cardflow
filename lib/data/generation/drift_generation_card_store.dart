@@ -10,6 +10,7 @@ import 'package:cardflow/data/db/app_database.dart';
 import 'package:cardflow/data/db/epoch.dart';
 import 'package:cardflow/data/transfer/media_store.dart';
 import 'package:cardflow/domain/cards/card.dart';
+import 'package:cardflow/domain/cards/card_scheduling.dart';
 import 'package:cardflow/domain/cards/content_hash.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
 import 'package:cardflow/domain/generation/generated_card_image.dart';
@@ -258,6 +259,11 @@ class DriftGenerationCardStore implements GenerationCardStore {
   }
 
   /// Строка `cards` для новой сгенерированной карточки (SPEC A5).
+  ///
+  /// Итерация 7.11: `due` и `fsrs_json` заполняются начальным состоянием
+  /// планировщика (`state = new`, шаг 0) сразу при импорте. Иначе новая
+  /// карточка попадала в БД с `due = NULL`, и любой запрос «due <= now»
+  /// (включая счётчики и будущие выборки) её не видел.
   CardsCompanion _companion({
     required String id,
     required String deckId,
@@ -269,6 +275,10 @@ class DriftGenerationCardStore implements GenerationCardStore {
     required String? siblingId,
     required int epochNow,
   }) {
+    final scheduling = CardSchedulingMapper.initialScheduling(
+      cardId: id,
+      now: fromEpochMs(epochNow),
+    );
     return CardsCompanion.insert(
       id: id,
       deckId: deckId,
@@ -281,6 +291,8 @@ class DriftGenerationCardStore implements GenerationCardStore {
       occlusionJson: Value<String?>(card.occlusionJson),
       sourceExcerpt: Value<String?>(card.sourceExcerpt),
       state: CardState.newCard.wireName,
+      fsrsJson: Value<String?>(jsonEncode(scheduling.toJson())),
+      due: Value<int?>(toEpochMs(scheduling.due)),
       siblingId: Value<String?>(siblingId),
       contentHash: Value<String>(contentHashOf(front: front, back: back)),
       createdAt: epochNow,

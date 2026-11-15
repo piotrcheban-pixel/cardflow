@@ -4,6 +4,7 @@ import 'package:cardflow/data/cards/drift_card_repository.dart';
 import 'package:cardflow/data/db/app_database.dart';
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/cards/card_draft.dart';
+import 'package:cardflow/domain/cards/card_scheduling.dart';
 import 'package:cardflow/domain/cards/content_hash.dart';
 
 import '../db/test_support.dart';
@@ -55,8 +56,14 @@ void main() {
       expect(card.sourceExcerpt, 'Париж — столица Франции.');
       expect(card.cardType, CardType.basic);
       expect(card.state, CardState.newCard);
-      expect(card.due, isNull);
-      expect(card.fsrsJson, isNull);
+      // Итерация 7.11: новая карточка сразу имеет начальное FSRS-состояние.
+      expect(card.due, now, reason: 'due новой карточки — момент создания');
+      expect(card.fsrsJson, isNotNull);
+      final scheduling = CardSchedulingMapper.toSchedulingCard(card, now: now);
+      expect(scheduling.cardId, card.id);
+      expect(scheduling.state, CardState.newCard);
+      expect(scheduling.step, 0);
+      expect(scheduling.lastReview, isNull);
       expect(card.suspended, isFalse);
       expect(card.createdAt, now);
       expect(card.updatedAt, now);

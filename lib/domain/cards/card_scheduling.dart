@@ -10,6 +10,17 @@ import '../scheduling/scheduling_card.dart';
 /// FSRS-состояние из `fsrs_json`: адаптер планировщика работает только со
 /// [SchedulingCard] и не знает про остальные поля карточки.
 abstract final class CardSchedulingMapper {
+  /// Начальное FSRS-состояние новой карточки (итерация 7.11).
+  ///
+  /// Новая карточка сохраняется с `due = now` и валидным `fsrs_json`: очередь
+  /// (`ReviewQueue`) и любой запрос «что учить сейчас» видят её как новую, а не
+  /// как строку с `NULL` в `due`. Состояние остаётся `new`, шаг 0, история
+  /// повторений пуста — планировщик считает её новой так же, как раньше.
+  static SchedulingCard initialScheduling({
+    required String cardId,
+    required DateTime now,
+  }) => SchedulingCard.newCard(cardId: cardId, now: now);
+
   /// Восстанавливает снимок планировщика из карточки.
   ///
   /// Если у карточки уже есть `fsrs_json` — состояние берётся из него (FSRS —

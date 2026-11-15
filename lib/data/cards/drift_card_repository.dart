@@ -1,4 +1,6 @@
 // Drift-реализация репозитория карточек (SPEC A5, A6.3, ADR-009/017).
+import 'dart:convert';
+
 import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
 
@@ -9,6 +11,7 @@ import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/cards/card_draft.dart';
 import 'package:cardflow/domain/cards/card_media.dart';
 import 'package:cardflow/domain/cards/card_repository.dart';
+import 'package:cardflow/domain/cards/card_scheduling.dart';
 import 'package:cardflow/domain/cards/content_hash.dart';
 
 /// Репозиторий карточек поверх drift-БД.
@@ -332,6 +335,13 @@ class DriftCardRepository implements CardRepository {
     required String? siblingId,
     required DateTime now,
   }) {
+    // Итерация 7.11: новая карточка сразу получает `due` и `fsrs_json`
+    // (состояние `new`, шаг 0) — очередь повторения и FSRS-слой не видят
+    // «полупустую» строку, а фильтры по `due` не теряют новые карточки.
+    final scheduling = CardSchedulingMapper.initialScheduling(
+      cardId: id,
+      now: now,
+    );
     return Card(
       id: id,
       deckId: deckId,
@@ -345,6 +355,8 @@ class DriftCardRepository implements CardRepository {
       occlusionJson: draft.occlusionJson,
       sourceExcerpt: draft.sourceExcerpt,
       state: CardState.newCard,
+      fsrsJson: jsonEncode(scheduling.toJson()),
+      due: scheduling.due,
       siblingId: siblingId,
       contentHash: contentHashOf(front: front, back: back),
       createdAt: now,

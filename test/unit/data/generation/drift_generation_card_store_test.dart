@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cardflow/data/db/app_database.dart';
+import 'package:cardflow/data/db/epoch.dart';
 import 'package:cardflow/data/generation/drift_generation_card_store.dart';
 import 'package:cardflow/data/generation/drift_generation_job_repository.dart';
 import 'package:cardflow/data/transfer/media_store.dart';
@@ -117,8 +118,10 @@ void main() {
       expect(row.deckId, result.deckId);
       expect(row.state, 'new');
       expect(row.contentHash, isNotNull);
-      expect(row.fsrsJson, isNull);
-      expect(row.due, isNull);
+      // Итерация 7.11: импорт пишет начальное FSRS-состояние новой карточки.
+      expect(row.fsrsJson, isNotNull);
+      expect(row.due, isNotNull);
+      expect(row.due, lessThanOrEqualTo(toEpochMs(now)));
     }
     expect(cardRows.map((row) => row.contentHash).toSet(), <String>{
       contentHashOf(front: 'Вопрос 1', back: 'Ответ 1'),

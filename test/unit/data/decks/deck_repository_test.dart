@@ -438,6 +438,23 @@ void main() {
       },
     );
 
+    // Итерация 7.11: новая карточка с `due <= now` не считается «к повторению»
+    // — счётчик due относится к запланированным, а не к новым (A7.2).
+    test('новая карточка с due <= now не попадает в счётчик due', () async {
+      final deck = await repository.createDeck(name: 'Новые с due');
+      await insertCardRow(
+        db,
+        id: 'c-new-due',
+        deckId: deck.id,
+        state: 'new',
+        due: clock.nowMs - 1000,
+      );
+
+      final summary = (await repository.watchSummaries().first).single;
+      expect(summary.newCards, 1);
+      expect(summary.dueCards, 0);
+    });
+
     test('пустая колода: все счётчики нулевые', () async {
       await repository.createDeck(name: 'Пустая');
       final summary = (await repository.watchSummaries().first).single;

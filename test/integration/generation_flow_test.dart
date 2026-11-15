@@ -11,6 +11,8 @@ import 'package:cardflow/data/db/app_database.dart';
 import 'package:cardflow/data/generation/drift_generation_card_store.dart';
 import 'package:cardflow/data/generation/drift_generation_job_repository.dart';
 import 'package:cardflow/data/transfer/media_store.dart';
+import 'package:cardflow/domain/cards/card.dart';
+import 'package:cardflow/domain/cards/card_scheduling.dart';
 import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
 import 'package:cardflow/domain/generation/generated_card_image.dart';
@@ -18,6 +20,7 @@ import 'package:cardflow/domain/generation/generation_card_store.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
 import 'package:cardflow/domain/generation/generation_job.dart';
 import 'package:cardflow/domain/generation/generation_run.dart';
+import 'package:cardflow/domain/review/review_queue.dart';
 import 'package:cardflow/domain/text/document_format.dart';
 import 'package:cardflow/domain/text/parsed_document.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
@@ -627,6 +630,100 @@ void main() {
             .readAsBytesSync(),
         jpeg,
       );
+    },
+  );
+
+  // Итерация 7.11 (owner-note): сгенерированная карточка с медиа обязана
+  // попасть в очередь повторения сразу после импорта — без оценки.
+  test(
+    'production-граф: карточка с медиа после импорта входит в ReviewQueue',
+    () async {
+      final FakeCardImageFinder finder = FakeCardImageFinder(
+        byQuery: <String, GeneratedCardImage?>{
+          'chloroplast diagram': makeCardImage(query: 'chloroplast diagram'),
+        },
+      );
+      final FakeHttpAdapter adapter = FakeHttpAdapter(
+        (options) => jsonResponse(<String, Object?>{
+          'choices': <Object?>[
+            <String, Object?>{
+              'message': <String, Object?>{
+                'role': 'assistant',
+                'content': jsonEncode(<String, Object?>{
+                  'cards': <Object?>[
+                    <String, Object?>{
+                      'front': 'Какая органелла изображена?',
+                      'back': 'Хлоропласт.',
+                      'hint': null,
+                      'tags': <Object?>['биология'],
+                      'card_type': 'basic',
+                      'source_excerpt': null,
+                      'source_file': 'лекция.txt',
+                      'image_query': 'chloroplast diagram',
+                    },
+                  ],
+                }),
+              },
+              'finish_reason': 'stop',
+            },
+          ],
+          'usage': <String, Object?>{'total_tokens': 30},
+        }),
+      );
+      final ProviderContainer local = ProviderContainer(
+        overrides: <Override>[
+          appDatabaseProvider.overrideWithValue(database),
+          mediaStoreProvider.overrideWithValue(MediaStore(mediaDirectory)),
+          generationDioProvider.overrideWithValue(dioWithAdapter(adapter)),
+          apiKeyStoreProvider.overrideWithValue(
+            FakeApiKeyStore(<String, String>{'openai': 'test-key-openai'}),
+          ),
+          generationSettingsStoreProvider.overrideWithValue(
+            FakeGenerationSettingsStore(),
+          ),
+          cardImageFinderProvider.overrideWithValue(finder),
+        ],
+      );
+      addTearDown(local.dispose);
+
+      final GenerationRunResult result = await local
+          .read(generationRunnerProvider)
+          .run(request());
+      expect(result.cards.single.image, isNotNull);
+
+      final DateTime now = DateTime.utc(2026, 11, 15, 19, 30);
+      final GenerationImportResult imported = await local
+          .read(generationCardStoreProvider)
+          .importGeneratedCards(
+            deckId: null,
+            deckName: 'Биология',
+            cards: result.cards,
+            jobId: result.jobId,
+            now: now,
+          );
+
+      final List<Card> cards = await local
+          .read(cardRepositoryProvider)
+          .cardsByDeck(imported.deckId);
+      expect(cards, hasLength(1));
+      final Card card = cards.single;
+      expect(card.state, CardState.newCard);
+      expect(card.mediaIds, hasLength(1));
+      expect(
+        card.due,
+        isNotNull,
+        reason: 'due новой карточки — момент импорта',
+      );
+      expect(card.due!.isAfter(now), isFalse, reason: 'due <= now');
+      expect(card.fsrsJson, isNotNull, reason: 'fsrs_json инициализирован');
+      final scheduling = CardSchedulingMapper.toSchedulingCard(card, now: now);
+      expect(scheduling.cardId, card.id);
+      expect(scheduling.state, CardState.newCard);
+
+      final List<Card> queue = ReviewQueue.build(cards, now: now);
+      expect(queue.map((Card value) => value.id), <String>[
+        card.id,
+      ], reason: 'новая карточка должна быть в очереди классической сессии');
     },
   );
 }

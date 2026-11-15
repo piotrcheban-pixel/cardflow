@@ -235,6 +235,9 @@ void main() {
     });
 
     test('пустой набор фильтров — все карточки выбранных колод', () {
+      // Итерация 7.11: различие «запланированная/новая» — по `state`, поэтому
+      // у изучаемой карточки фикстуры есть `due` (инвариант новых карточек:
+      // due = момент создания).
       final List<Card> cards = <Card>[
         makeCard(id: 'a', deckId: 'deck-1', front: 'A', tags: <String>['x']),
         makeCard(
@@ -243,10 +246,11 @@ void main() {
           front: 'B',
           cardType: CardType.cloze,
           state: CardState.learning,
+          due: now,
         ),
       ];
 
-      expect(ids(build(cards)), <String>['a', 'b']);
+      expect(ids(build(cards)), <String>['b', 'a']);
     });
 
     test('пустой список колод — пустая выборка', () {

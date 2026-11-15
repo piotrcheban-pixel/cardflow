@@ -171,19 +171,25 @@ abstract final class SessionBuilder {
 
   /// Базовый порядок ADR-008: карточки с `due` — по `due` ASC, затем новые —
   /// по `createdAt` ASC; тай-брек везде `id` ASC (детерминизм тестов).
+  ///
+  /// С итерации 7.11 новая карточка тоже имеет `due` (момент создания), поэтому
+  /// различие — по `state`, а не по `due == null`: иначе новые карточки
+  /// сортировались бы по времени создания вперемешку с запланированными.
   static List<Card> _baseOrder(List<Card> cards) {
     final List<Card> scheduled =
         <Card>[
           for (final Card card in cards)
-            if (card.due != null) card,
+            if (card.state != CardState.newCard) card,
         ]..sort((Card a, Card b) {
-          final int byDue = a.due!.compareTo(b.due!);
+          final int byDue = (a.due ?? a.createdAt).compareTo(
+            b.due ?? b.createdAt,
+          );
           return byDue != 0 ? byDue : a.id.compareTo(b.id);
         });
     final List<Card> unscheduled =
         <Card>[
           for (final Card card in cards)
-            if (card.due == null) card,
+            if (card.state == CardState.newCard) card,
         ]..sort((Card a, Card b) {
           final int byCreated = a.createdAt.compareTo(b.createdAt);
           return byCreated != 0 ? byCreated : a.id.compareTo(b.id);
