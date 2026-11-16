@@ -44,6 +44,7 @@ Literata/JetBrains Mono, фон Aurora, новые переходы и наст�
 | Сборка | `fvm flutter build windows --release --no-pub` | `√ Built build\windows\x64\runner\Release\cardflow.exe` (61,1 с) |
 | Красная зона | `git diff --stat 7458346..HEAD -- <19 файлов>` | **пусто** |
 | Экраны | `git diff --stat … -- lib/ui/**/*_screen.dart lib/ui/**/*_view.dart review_toolbar.dart app_shell.dart` | **пусто** |
+| CI (GitHub Actions) | push `7458346..9a19d97` → run [`43970683883`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43970683883) | **9/9 job success** (`format + analyze`, `test` × Ubuntu/Windows/macOS, `build` desktop × Linux/Windows/macOS, `build` mobile Android/iOS) |
 
 Изменённые файлы `lib/`: `main.dart`, `ui/app.dart`, `ui/motion.dart`,
 `ui/theme/app_theme.dart` (все — разрешённые) и новые `lib/ui/design/**`.

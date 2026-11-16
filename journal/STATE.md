@@ -54,6 +54,12 @@ JetBrains Mono (переменные, OFL, `LicenseRegistry`) и растров�
 стекла не измерен — нет Android SDK), L97 (guard-долг: 29 литералов цвета +
 7 файлов с `HapticFeedback.`, burn-down в этапах 3–4).
 
+**Push и CI этапа 1:** `7458346..9a19d97` (9 коммитов + пакет
+`redesign/`). CI run
+[`43970683883`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43970683883)
+— **9/9 job success** (`format + analyze`, `test` × Ubuntu/Windows/macOS,
+`build` desktop × Linux/Windows/macOS, `build` mobile Android/iOS).
+
 **Следующий шаг:** этап 2 «Компоненты» — `lib/ui/design/components/` по
 REDESIGN-SPEC §8 (примитивы → действия → ввод → структура → оверлеи →
 прогресс → сессионные), golden-тесты, счётчик групп `BackdropFilter`.
