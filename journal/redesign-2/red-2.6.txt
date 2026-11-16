@@ -1,0 +1,145 @@
+00:00 +0: loading C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/components/nc_progress_test.dart
+00:00 +0: NcProgressLine семантика прогресса и пружина без overshoot
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following TestFailure was thrown running a test:
+Expected: at least one matching candidate
+  Actual: _ElementPredicateWidgetFinder:<Found 0 widgets with a semantics label named "Прогресс
+сессии": []>
+   Which: means none were found but some were expected
+
+When the exception was thrown, this was the stack:
+#4      main.<anonymous closure>.<anonymous closure> (file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/components/nc_progress_test.dart:39:7)
+<asynchronous suspension>
+#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+This was caught by the test expectation on the following line:
+  file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/components/nc_progress_test.dart line 39
+The test description was:
+  семантика прогресса и пружина без overshoot
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:00 +0 -1: NcProgressLine семантика прогресса и пружина без overshoot [E]
+  Test failed. See exception logs above.
+  The test description was: семантика прогресса и пружина без overshoot
+  
+00:00 +0 -1: NcProgressLine textScale 2,0 без overflow
+00:00 +1 -1: NcSegmentedProgress сегменты: пройденные залиты, текущий пульсирует
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following TestFailure was thrown running a test:
+Expected: at least one matching candidate
+  Actual: _ElementPredicateWidgetFinder:<Found 0 widgets with a semantics label named "Оценено 2 из
+6": []>
+   Which: means none were found but some were expected
+
+When the exception was thrown, this was the stack:
+#4      main.<anonymous closure>.<anonymous closure> (file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/components/nc_progress_test.dart:83:7)
+<asynchronous suspension>
+#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+This was caught by the test expectation on the following line:
+  file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/components/nc_progress_test.dart line 83
+The test description was:
+  сегменты: пройденные залиты, текущий пульсирует
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:00 +1 -2: NcSegmentedProgress сегменты: пройденные залиты, текущий пульсирует [E]
+  Test failed. See exception logs above.
+  The test description was: сегменты: пройденные залиты, текущий пульсирует
+  
+00:00 +1 -2: NcSegmentedProgress при уменьшении движения пульса нет (без кадров)
+00:00 +2 -2: NcSegmentedProgress textScale 2,0 без overflow
+00:00 +3 -2: NcRing кольцо держит размер, центр и семантику
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following TestFailure was thrown running a test:
+Expected: <180>
+  Actual: <0.0>
+
+When the exception was thrown, this was the stack:
+#4      main.<anonymous closure>.<anonymous closure> (file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/components/nc_progress_test.dart:147:7)
+<asynchronous suspension>
+#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+This was caught by the test expectation on the following line:
+  file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/components/nc_progress_test.dart line 147
+The test description was:
+  кольцо держит размер, центр и семантику
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:00 +3 -3: NcRing кольцо держит размер, центр и семантику [E]
+  Test failed. See exception logs above.
+  The test description was: кольцо держит размер, центр и семантику
+  
+00:00 +3 -3: NcRing textScale 2,0 без overflow
+00:00 +4 -3: NcAnimatedNumber считает от 0 к значению и завершает на нём
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following StateError was thrown running a test:
+Bad state: No element
+
+When the exception was thrown, this was the stack:
+#0      Iterable.single (dart:core/iterable.dart:694:25)
+#1      WidgetController.widget (package:flutter_test/src/controller.dart:828:30)
+#2      main.<anonymous closure>.<anonymous closure>.text (file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/components/nc_progress_test.dart:184:12)
+#3      main.<anonymous closure>.<anonymous closure> (file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/components/nc_progress_test.dart:191:24)
+<asynchronous suspension>
+#4      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#5      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+The test description was:
+  считает от 0 к значению и завершает на нём
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:00 +4 -4: NcAnimatedNumber считает от 0 к значению и завершает на нём [E]
+  Test failed. See exception logs above.
+  The test description was: считает от 0 к значению и завершает на нём
+  
+00:00 +4 -4: NcAnimatedNumber форматирование значения уважается
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following TestFailure was thrown running a test:
+Expected: exactly one matching candidate
+  Actual: _TextWidgetFinder:<Found 0 widgets with text "42 000": []>
+   Which: means none were found but one was expected
+
+When the exception was thrown, this was the stack:
+#4      main.<anonymous closure>.<anonymous closure> (file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/components/nc_progress_test.dart:218:7)
+<asynchronous suspension>
+#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+This was caught by the test expectation on the following line:
+  file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/components/nc_progress_test.dart line 218
+The test description was:
+  форматирование значения уважается
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:00 +4 -5: NcAnimatedNumber форматирование значения уважается [E]
+  Test failed. See exception logs above.
+  The test description was: форматирование значения уважается
+  
+00:00 +4 -5: NcAnimatedNumber textScale 2,0 без overflow
+00:00 +5 -5: Some tests failed.
+
+Failing tests:
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/components/nc_progress_test.dart: NcAnimatedNumber считает от 0 к значению и завершает на нём
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/components/nc_progress_test.dart: NcAnimatedNumber форматирование значения уважается
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/components/nc_progress_test.dart: NcProgressLine семантика прогресса и пружина без overshoot
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/components/nc_progress_test.dart: NcRing кольцо держит размер, центр и семантику
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/components/nc_progress_test.dart: NcSegmentedProgress сегменты: пройденные залиты, текущий пульсирует
+
