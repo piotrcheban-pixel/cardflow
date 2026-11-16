@@ -1,17 +1,31 @@
 # STATE — текущее состояние CardFlow
 
-**Дата:** 2026-11-16 · **Этап:** итерация **7.16** «Подбор пар» и
-«Верно/Неверно» (ADR-033) — завершена; дальше — итоговый отчёт и СТОП.
-**Режим:** ИТЕРАЦИИ (7.14 → 7.15 → 7.16).
+**Дата:** 2026-11-16 · **Этап:** итерация **7.17** «Глобальный рендер LaTeX и
+cloze во всех режимах» (ADR-034) — завершена; дальше — итоговый отчёт и СТОП.
+**Режим:** ИТЕРАЦИИ (7.15 → 7.16 → 7.17).
 
-**Факты старта 7.14 (сверено командами):** `git status --porcelain` → пусто,
-`HEAD = origin/main = cc88e0c` (`docs: record green CI for generation fix
-iteration`) — в STATE fix-gen записан `08b42d8`, после него был docs-коммит,
-исправлено. Baseline — **1597 passed + 7 skipped** (`flutter test --no-pub
---exclude-tags golden`), `analyze` **0**, `format` **378 / 0**.
+**Факты старта 7.17 (сверено командами):** `git status --porcelain` → пусто,
+`HEAD = origin/main = 4dfe10c` (`docs: note cancelled macos/ios jobs and rerun
+CI`) — в STATE 7.16 последним записан `aad938f`, после него был docs-коммит,
+исправлено. Baseline — **1742 passed + 8 skipped**
+(`flutter test --no-pub --exclude-tags golden`), `analyze` **0**, `format` **0**.
 Flutter 3.47.9 / Dart 3.13.7 (FVM); Windows 11; Android SDK/JDK/Xcode нет (L2).
-Прогоны — только с `--no-pub` (L64). Ключ DeepSeek — present в Windows User
-scope (значение не выводилось); `PIXABAY_API_KEY`/`PEXELS_API_KEY` — absent.
+Прогоны — только с `--no-pub` (L64).
+
+## Сверка STATE с кодом (7.17, старт)
+
+Проверено по файлам, расхождения исправлены:
+
+- **Режимы:** `classic`, `feed`, `practice`, `constructor` (`_SessionModeAction`
+  в `lib/ui/decks/deck_screen.dart`) + новые `test`, `typing`, `match`,
+  `true_false` (7.15/7.16). Маршруты — `/decks/:deckId/{study,feed,practice,
+  test,typing,match,true-false}` и `/constructor`. Подтверждено.
+- **Рендер карточки:** единая точка — `lib/ui/cards/content/`
+  (`CardContentView`, `LatexText`, `ClozeText`, `InlineLatexText`). До 7.17
+  новые режимы использовали `CardContentView` только для вопроса.
+- **Факты приложения:** копия `%APPDATA%\ru.example\cardflow\cardflow\
+  cardflow.sqlite` — 175 карточек, 61 с LaTeX (61 формула в ответах, часть в
+  вопросах), 6 cloze; все 78 уникальных формул парсятся `flutter_math_fork`.
 
 ## Сверка STATE с кодом (7.14, старт)
 
@@ -170,6 +184,52 @@ Push `bf28359..df0e873`; CI run
 [`43904903386`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43904903386)
 — **9/9 job success** (format+analyze, test ×3, build desktop ×3, mobile 2).
 
+## Итерация 7.17 — итог (ADR-034)
+
+**Гейты 7.17:** `test --no-pub --coverage --exclude-tags golden` → **1772
+passed + 8 skipped** (baseline 1742 + 8; первый прогон дал 1771 + 8 и одно
+падение живого Wikimedia-теста — сеть/rate-limit, повторный зелёный, L92) ·
+покрытие рукописного кода **91.9 % (12947/14085)** · `analyze` **0** ·
+`format` 0 changed · `build windows --release --no-pub` → `cardflow.exe`
+(60,8 с).
+
+**Причина по фактам:** вопрос новых режимов уже рендерился через
+`CardContentView`, а остальной текст — сырым `Text`: варианты «Теста», плитки
+«Подбора пар» (все 12), утверждение и пояснение «Верно/Неверно», строка
+правильного ответа и diff «Ввода ответа», список ошибок на итогах. ЛаТеХ в БД
+корректен (78/78 формул парсятся) — ломался только рендер.
+
+**Сделано:**
+- `latexTextSpans()` (`lib/ui/cards/content/latex_spans.dart`) — единый inline-
+  рендер текста с формулами (`$…$`, `$$…$$`, `\(…\)`, `\[…\]`): текст —
+  `TextSpan`, формулы — `WidgetSpan(Math.tex)`, все сразу; стиль наследует
+  родителя, `fontSize`/`color` дозаполняются из темы.
+- `CardText` (`lib/ui/cards/content/card_text.dart`) — «текст карточки вне
+  карточки»: cloze → `ClozeText`, формулы → `InlineLatexText`, plain → `Text`;
+  `style/textAlign/maxLines/overflow/revealed`. `InlineLatexText` переписан на
+  общий хелпер (plain-текст остаётся `Text` с `data` — тесты не ломаются).
+- `CardContentView.showAllFormulas` — вопрос режимов показывает все формулы
+  сразу (пошаговое раскрытие — механика «Классики»); cloze-пропуски скрыты.
+- Семантика вариантов «Теста» — без `$` (`plainTextOfLatex` в
+  `latex_markup.dart`).
+- `AnswerDiffView` (публичный) собирает фрагменты через `latexTextSpans`:
+  полная формула рендерится, обрывок остаётся текстом (без падения).
+- Домен (ADR-034): `AnswerType.isChoice` + `AnswerTypes.isChoice` (короткий/
+  число/**формула**, ≤ 120 символов); `DistractorGenerator`, лист режимов и
+  дистракторы «Верно/Неверно» используют `isChoice`; «Ввод ответа» остаётся на
+  `isTypable`. `classifyAnswer` относит `\(…\)`/`\[…\]` к `formula`.
+- Скриншоты `journal/iteration-7.17/screenshots/` (Тест с формулами в вопросе и
+  четырёх вариантах, Пары, Ввод, Верно/Неверно); `tool/screenshots` грузит
+  KaTeX-шрифты `packages/flutter_math_fork/KaTeX_*`.
+- Тесты: +30 (10 `study_mode_latex_test`, 11 `card_text_test`, 6 доменных,
+  1 лист режимов, 2 в существующих наборах). Отчёт —
+  `journal/iteration-7.17/README.md`.
+
+**Решения/долги:** формульный ответ теперь допустим в «Тесте» (выбор) и как
+дистрактор «Верно/Неверно», но не в «Вводе ответа»: контракт 7.15 «формулы не
+строят вопрос» заменён осознанно (ADR-034). L87/L88 не менялись. Схема БД и
+`format_version` не менялись.
+
 ## Итерация 7.16 — итог (ADR-033)
 
 **Гейты 7.16:** `test --no-pub --coverage --exclude-tags golden` → **1742
@@ -267,10 +327,15 @@ L65, L66 (обновлено L80), L67, L68, L69, L70, L71–L75,
 содержимого), **L84** (семантическая релевантность картинок не проверяется),
 **L85** (метрики на `deepseek-chat`), **L86** (дедуп URL в пределах запуска),
 **L87** (ИИ-дистракторы не подключены: мало ответов → карточка пропускается в
-Тесте), **L88** (новые режимы не учитывают дневные лимиты).
+Тесте), **L88** (новые режимы не учитывают дневные лимиты), **L89** (семантика
+формул — текст без `$`), **L90** (посимвольный diff для формул не показывается),
+**L91** (KaTeX-шрифты в скриншот-харнессе грузятся вручную), **L92** (live-тесты
+поиска картинок идут в общем прогоне и зависят от сети).
 
 ## История
 
+- 7.17 «Глобальный рендер LaTeX и cloze во всех режимах» (2026-11-16) — ADR-034,
+  гейты выше.
 - 7.16 «Подбор пар» и «Верно/Неверно» (2026-11-16) — ADR-033, гейты выше.
 - 7.15 «Тест» и «Ввод ответа» (2026-11-16) — ADR-032, гейты выше.
 - 7.14 «Картинка у каждой карточки» (2026-11-16) — ADR-031, CI run `43901313115` 9/9.

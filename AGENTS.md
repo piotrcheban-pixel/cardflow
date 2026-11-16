@@ -139,6 +139,15 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   `occlusion_json` v1 (нормализованные 0..1); запись файла/строк `media` транзакционная
   (`DriftCardRepository` + `MediaStore`), чтение сессий — `CardMediaRepository`, GC — 
   `MediaGarbageCollector` при старте. LaTeX-рендер — только UI, проверка — `latex_checker.dart`.
+  **Единый inline-рендер (ADR-034, 7.17):** любой текст карточки вне карточки (варианты «Теста»,
+  плитки «Пар», утверждение/пояснение «Верно/Неверно», правильный ответ и diff «Ввода», список
+  ошибок итогов) идёт через `CardText` (`card_text.dart`) → `InlineLatexText` +
+  `latex_spans.dart` (`latexTextSpans`: текст → `TextSpan`, формула → `WidgetSpan(Math.tex)`,
+  все формулы сразу, стиль наследует родителя); cloze-разметка — `ClozeText`. Сырой `Text(card.front/
+  back/option)` в новых режимах запрещён — guard-тесты `test/widget/study/study_mode_latex_test.dart`
+  и `test/widget/cards/card_text_test.dart` проверяют отсутствие `$…$`/`{{` в дереве. Вопрос
+  режимов рендерится `CardContentView(showAllFormulas: true)` (пошаговое раскрытие — только
+  «Классика»); `plainTextOfLatex` даёт текст без разделителей для семантики.
 - **Конструктор сессии** (SPEC A6.7/A7.19–A7.20, ADR-018): домен — `lib/domain/session/`
   (`session_config.dart` — конфиг + JSON `version=1` для `session_presets.config_json`;
   `session_builder.dart` — фильтры OR, базовый порядок ADR-008, разминка ≤4 выученных по stability,
@@ -506,3 +515,21 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   (первый прогон `43909148956` упал на analyze из-за импортов test/tool, фикс `ed83795`);
   финальный run [`43915833682`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43915833682) — 9/9.
   Скриншоты — `journal/iteration-7.15/screenshots/`. Ограничения: L87/L88.
+
+- **Рендер LaTeX/cloze во всех режимах проверен локально (итерация 7.17, 2026-11-16, ADR-034):**
+  старт: `git status --porcelain` → пусто, `HEAD = origin/main = 4dfe10c` (в STATE 7.16 было
+  `aad938f` — исправлено); baseline **1742 passed + 8 skipped**, `analyze` 0, `format` 0.
+  Диагностика owner-note по фактической БД (`cardflow.sqlite`: 175 карточек, 61 с LaTeX, 6 cloze;
+  78/78 формул парсятся `flutter_math_fork`) + зонд widget-тестами: вопрос уже шёл через
+  `CardContentView`, сырой `Text` остался в вариантах «Теста», плитках «Пар» (все 12), утверждении/
+  пояснении «Верно/Неверно», строке ответа и diff «Ввода», списке ошибок итогов. Решение:
+  `CardText` + `latexTextSpans` (единый inline-рендер, все формулы сразу), `CardContentView(showAllFormulas: true)`
+  для вопроса, `AnswerDiffView` на общем хелпере, `plainTextOfLatex` для семантики; домен —
+  `AnswerType.isChoice` (Тест: короткий/число/формула ≤ 120 символов; Ввод — по-прежнему `isTypable`),
+  дистракторы «Верно/Неверно» из `isChoice`, `\(…\)`/`\[…\]` → `formula`. Гейты:
+  `fvm flutter test --no-pub --coverage --exclude-tags golden` → **1772 passed + 8 skipped**;
+  покрытие рукописного кода **91.9 % (12948/14086)**; `analyze` 0; `format` 0 changed;
+  `fvm flutter build windows --release --no-pub` → `cardflow.exe` (60,8 с); скриншоты
+  `journal/iteration-7.17/screenshots/` (Тест с формулами в вопросе и четырёх вариантах, Пары,
+  Ввод, Верно/Неверно; KaTeX-шрифты в харнессе грузятся вручную — L91); первый полный прогон упал
+  на живом Wikimedia-тесте (сеть, повторный зелёный — L92). Ограничения: L89–L92.
