@@ -32,3 +32,6 @@ work/
 
 # Сырые картинки live-прогона 7.14 (генерируются тестом; в отчёте — монтажи)
 journal/iteration-7.14/images/
+
+# Ручной golden-вывод скриншотов (копируется в journal/iteration-7.15)
+tool/screenshots/readable/
