@@ -1,8 +1,67 @@
 # STATE — текущее состояние CardFlow
 
+**Дата:** 2026-11-17 · **Этап:** редизайн **«Nocturne», этап 1 «Фундамент»**
+(ADR-035) — завершён; дальше по плану — этап 2 «Компоненты». Продуктовые
+итерации 7.x остаются зелёными (CI 9/9 на `7458346`).
+**Режим:** ИТЕРАЦИИ.
+
+## Редизайн «Nocturne» — этап 1 «Фундамент» (2026-11-17, ADR-035)
+
+**Факты старта:** `git status --porcelain` → только `?? redesign/` (пакет
+документации), `HEAD = origin/main = 7458346` (`docs: record green CI for
+7.17`). Baseline: **1771 passed + 8 skipped**, одно падение — живой Wikimedia
+(сеть, L92); в STATE 7.17 записано 1772 + 8 (расхождение — тот же live-тест).
+Прогоны — только с `--no-pub` (L64).
+
+**Гейты этапа 1:** `fvm flutter test --no-pub --coverage --exclude-tags golden`
+→ **1924 passed + 8 skipped** (+152 к baseline); покрытие рукописного кода
+**92.8 % (13706/14775)** (`tool/coverage_check.dart --min=80`); `analyze` **0**;
+`dart format --set-exit-if-changed lib test integration_test tool` → **0
+changed**; `fvm flutter build windows --release --no-pub` → `cardflow.exe`
+(61,1 с). Скриншоты: `journal/redesign-1/screenshots/` — 60 PNG (15 экранов ×
+2 темы × 390×844 и 1440×900). Красная зона и экраны: `git diff --stat` пуст
+(`journal/redesign-1/red-zone.md`).
+
+**Сделано (шаги 1.0–1.7):** ADR-035 (замена SPEC A4 в визуальном слое) и
+спайки (`journal/redesign-1/spikes.md`); guard-тесты (`tool/extract_ui_keys.dart`
++ снимок 219 ключей, `design_tokens_test`, `no_network_fonts_test`,
+`haptics_test`, изоляция `design/` в `architecture_test`); токены
+`lib/ui/design/tokens/` (Nocturne/Porcelain/high-contrast/dynamic HCT,
+типографика, сетка, радиусы, глубина, стекло); шрифты Onest/Literata/
+JetBrains Mono (переменные, OFL, `LicenseRegistry`) и растровый тест
+кириллицы; `NcTheme` (ThemeExtension) + ручной `ColorScheme` §1.5 в
+`AppTheme` (публичный API прежний, elevation 0, прозрачный `scaffold`,
+18 тем компонентов, шрифт дислексии во всех ролях); движение
+(press/snap/gentle/celebrate, длительности, кривые) и `NcMotion`/
+`NcHaptics` (throttle 40 мс); `NcAmbientBackground` (Aurora + зерно) и
+`NcPageTransitionsBuilder`; подключение в `builder` `MaterialApp.router`
+(`NcMotionScope → NcHapticsScope → NcAmbientBackground → M3ETheme`).
+
+**Коммиты этапа:** `8158fc6` (ADR/спайки), `1daef8c` (guard-тесты),
+`3559557` (токены), `bed3196` (шрифты), `1787097` (NcTheme/AppTheme),
+`42f13df` + `e4fb90f` (движение/отклик), `a4a5e4c` (фон/переходы/проводка),
+далее — журнал/verify.
+
+**Отклонения (в ADR-035):** light-акценты Porcelain затемнены минимально
+(4,38 → 4,77 : 1) до нормы AA §10; iOS/macOS делегируют Cupertino-переходом
+(жест «назад»), `cupertino_ui` запинен 1.1.6; зерно — тайловый PNG, не
+`grain.frag` (детерминизм golden/CI); `TextTheme.bodyLarge` — роль `bodyL`
+(Onest 16/24), Literata-роль `answer` живёт в `NcTypography`; дрейф Aurora
+выключен под `FLUTTER_TEST`.
+
+**Новые ограничения:** L93 (M3E-виджеты не подчиняются теме), L94 (поля
+ввода без superellipse), L95 (дрейф Aurora не виден в тестах), L96 (бюджет
+стекла не измерен — нет Android SDK), L97 (guard-долг: 29 литералов цвета +
+7 файлов с `HapticFeedback.`, burn-down в этапах 3–4).
+
+**Следующий шаг:** этап 2 «Компоненты» — `lib/ui/design/components/` по
+REDESIGN-SPEC §8 (примитивы → действия → ввод → структура → оверлеи →
+прогресс → сессионные), golden-тесты, счётчик групп `BackdropFilter`.
+
+## Итерация 7.17 — где остановились (до редизайна)
+
 **Дата:** 2026-11-16 · **Этап:** итерация **7.17** «Глобальный рендер LaTeX и
-cloze во всех режимах» (ADR-034) — завершена; дальше — итоговый отчёт и СТОП.
-**Режим:** ИТЕРАЦИИ (7.15 → 7.16 → 7.17).
+cloze во всех режимах» (ADR-034) — завершена.
 
 **Факты старта 7.17 (сверено командами):** `git status --porcelain` → пусто,
 `HEAD = origin/main = 4dfe10c` (`docs: note cancelled macos/ios jobs and rerun
