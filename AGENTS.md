@@ -501,4 +501,7 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   Маршруты `/decks/:deckId/{match,true-false}`, лист режимов, ARB (ru). Гейты:
   `fvm flutter test --no-pub --coverage --exclude-tags golden` → **1742 passed + 8 skipped**;
   покрытие рукописного кода **91.7 % (13521/14743)**; `analyze` 0; `format` 0 changed;
-  `fvm flutter build windows --release --no-pub` → `cardflow.exe` (52,4 с). Ограничения: L87/L88.
+  `fvm flutter build windows --release --no-pub` → `cardflow.exe` (52,4 с);
+  CI run [`43913907014`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43913907014) — 9/9
+  (первый прогон `43909148956` упал на analyze из-за импортов test/tool, фикс `ed83795`).
+  Скриншоты — `journal/iteration-7.15/screenshots/`. Ограничения: L87/L88.

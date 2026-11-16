@@ -203,6 +203,16 @@ passed + 8 skipped** · покрытие рук��писного кода **9
 статистику/экспорт; таймер игры — `Timer.periodic` экрана (L33/L88);
 ИИ-дистракторы по-прежнему не подключены (L87).
 
+## Итерация 7.16 — CI
+
+Первый push (`8eedd84`) — CI run
+[`43909148956`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43909148956)
+**упал только на `format + analyze`** (неиспользуемые импорты в новом
+test/tool), все test/build job'ы зелёные. Фикс `ed83795` → CI run
+[`43913907014`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43913907014)
+— **9/9 job success**. Push 7.16: `df0e873..3aac099` (включая скриншоты
+`3aac099`); финальный docs-прогон — в истории Actions.
+
 ## Итерация fix-gen — итог (архив, v5)
 
 **Причины (диагностика `journal/iteration-fix-gen/diagnosis.md`):**
