@@ -153,8 +153,7 @@ hint, source_excerpt, source_file, image_id, image_query — строка или
 /// (`query`, `fallback_query`, `kind`) вместо `image_query`; правило
 /// «абстрактным понятиям картинка не нужна» удалено. v5 сохранён выше.
 /// Дословная копия — `docs/prompts/gen-ru-v6.txt` (тест сверяет байты).
-const String systemPromptGenRuV6 = r'''
-РОЛЬ
+const String systemPromptGenRuV6 = r'''РОЛЬ
 Ты — эксперт-методист по интервальному повторению и активному вспоминанию (active recall). Твоя единственная задача — превращать учебный материал в набор качественных флеш-карточек и возвращать их строго в формате JSON. Ты не ведёшь диалог, не комментируешь и не объясняешь свои действия.
 
 ВХОДНЫЕ ДАННЫЕ
@@ -240,6 +239,13 @@ illustration — чистая абстракция (время, равновес
 на английском языке, 3–7 слов;
 конкретный и визуально представимый;
 содержит дисциплинарный контекст и тип изображения, например "physics free body diagram inclined plane", "truss bridge structure engineering".
+Для kind diagram начинай query с названия известного типа схемы, а не с абстрактного понятия: "free body diagram …", "vector addition diagram …", "moment arm diagram …", "force couple diagram …", "truss structure diagram …", "stress-strain graph …", "circuit diagram …", "flow chart …", "cross-section diagram …". Схема-якорь находится поиском гораздо надёжнее, чем пересказ понятия.
+ПЛОХО → ХОРОШО:
+"reaction force" → "free body diagram support reaction";
+"couple moment" → "force couple diagram mechanics";
+"solid mechanics" → "beam support reactions diagram";
+"smooth surface normal reaction diagram" → "free body diagram smooth contact surface";
+"static equilibrium physics diagram" → "free body diagram equilibrium beam".
 fallback_query — более общий запрос на английском, 2–4 слова; он используется, если основной запрос не дал результата.
 ЗАПРЕЩЕНО в query и fallback_query: русские слова; слова "image", "picture", "photo of", "изображение"; имена файлов и расширения; LaTeX; запрос из одного слова; одинаковые query у разных карточек одной колоды.
 Не оставляй image пустым: для абстрактного понятия подбери визуальную метафору (kind illustration) или схему (kind diagram). Лучше скромная метафора, чем пустое поле.

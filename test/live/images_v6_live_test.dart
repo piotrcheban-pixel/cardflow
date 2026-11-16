@@ -115,6 +115,10 @@ void main() {
           searchCalls: finder.calls,
           runElapsed: total.elapsed,
           tokens: result.tokensUsed,
+          imageDirectory: Directory(
+            'journal/iteration-7.14/images/'
+            '${topic == 'Статика' ? 'statics' : 'biology'}',
+          ),
         );
         reports.add(report);
         if (result.cards.length < 15) {
@@ -174,7 +178,8 @@ void main() {
         for (final CardReport card in report.cards) {
           markdown.writeln(
             '| ${index++} | ${_cell(card.front)} | ${_cell(card.query)} | '
-            '${card.kind} | ${card.provider} | ${card.status} |',
+            '${card.kind} | ${card.provider} | ${card.status} | '
+            '${card.imagePath ?? '—'} |',
           );
         }
         markdown.writeln();
@@ -188,7 +193,8 @@ void main() {
           // ignore: avoid_print
           print(
             '${report.topic}: «${card.front}» → "${card.query}" '
-            '[${card.kind}, ${card.provider}, ${card.status}]',
+            '[${card.kind}, ${card.provider}, ${card.status}] '
+            '${card.imagePath ?? ''}',
           );
         }
       }
@@ -252,6 +258,7 @@ class CardReport {
     required this.kind,
     required this.provider,
     required this.status,
+    this.imagePath,
   });
 
   final String front;
@@ -259,6 +266,7 @@ class CardReport {
   final String kind;
   final String provider;
   final String status;
+  final String? imagePath;
 
   Map<String, Object?> toJson() => <String, Object?>{
     'front': front,
@@ -266,6 +274,7 @@ class CardReport {
     'kind': kind,
     'provider': provider,
     'status': status,
+    if (imagePath != null) 'imagePath': imagePath,
   };
 }
 
@@ -286,6 +295,7 @@ class DeckReport {
     searchCalls,
     required Duration runElapsed,
     required int tokens,
+    required Directory imageDirectory,
   }) {
     final List<CardReport> reports = <CardReport>[];
     final List<int> times = <int>[];
@@ -303,6 +313,16 @@ class DeckReport {
       if (index < searchCalls.length) {
         times.add(searchCalls[index].elapsed.inMilliseconds);
       }
+      String? imagePath;
+      if (image != null && !image.isPlaceholder) {
+        imageDirectory.createSync(recursive: true);
+        final File file = File(
+          '${imageDirectory.path}${Platform.pathSeparator}'
+          '${(index + 1).toString().padLeft(2, '0')}.${image.fileExtension}',
+        );
+        file.writeAsBytesSync(image.bytes);
+        imagePath = file.path;
+      }
       reports.add(
         CardReport(
           front: card.front,
@@ -310,6 +330,7 @@ class DeckReport {
           kind: (image?.kind ?? card.imageKind).wireName,
           provider: image?.provider ?? '—',
           status: status,
+          imagePath: imagePath,
         ),
       );
     }
