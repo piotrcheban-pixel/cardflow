@@ -58,7 +58,10 @@ JetBrains Mono (переменные, OFL, `LicenseRegistry`) и растров�
 `redesign/`). CI run
 [`43970683883`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43970683883)
 — **9/9 job success** (`format + analyze`, `test` × Ubuntu/Windows/macOS,
-`build` desktop × Linux/Windows/macOS, `build` mobile Android/iOS).
+`build` desktop × Linux/Windows/macOS, `build` mobile Android/iOS). Проверочный
+docs-коммит `734c120` (`docs: record green CI for Nocturne stage 1`) — CI run
+[`43973443414`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43973443414)
+— **9/9 job success** (проверено через GitHub API по SHA, jobs: тот же набор).
 
 **Следующий шаг:** этап 2 «Компоненты» — `lib/ui/design/components/` по
 REDESIGN-SPEC §8 (примитивы → действия → ввод → структура → оверлеи →
