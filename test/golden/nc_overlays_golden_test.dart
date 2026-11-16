@@ -47,6 +47,11 @@ void main() {
         child: NcSheet(
           title: l10n.reviewSessionModeTitle,
           closeTooltip: l10n.commonClose,
+          actions: NcButton(
+            label: l10n.cancel,
+            variant: NcButtonVariant.secondary,
+            onPressed: () {},
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
@@ -56,11 +61,6 @@ void main() {
               ),
               NcListRow(title: Text(l10n.reviewModeFeed), showDivider: false),
             ],
-          ),
-          actions: NcButton(
-            label: l10n.cancel,
-            variant: NcButtonVariant.secondary,
-            onPressed: () {},
           ),
         ),
       ),

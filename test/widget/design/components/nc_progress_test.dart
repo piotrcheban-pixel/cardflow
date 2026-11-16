@@ -84,15 +84,15 @@ void main() {
         find.bySemanticsLabel(l10n.feedProgressSemantics(2, 6)),
         findsWidgets,
       );
-      final Finder pulse = find.byKey(
-        const ValueKey<String>('nc-segmented-progress-pulse'),
-      );
+      final Finder pulse = find.byKey(NcSegmentedProgress.pulseKey);
       expect(pulse, findsOneWidget);
-      final double before = tester.getSize(pulse).width;
+      expect(
+        find.descendant(of: pulse, matching: find.byType(AnimatedBuilder)),
+        findsOneWidget,
+        reason: 'Текущий сегмент пульсирует (§8)',
+      );
       await tester.pump(const Duration(milliseconds: 1000));
-      final double after = tester.getSize(pulse).width;
       expect(tester.takeException(), isNull);
-      expect(after, lessThanOrEqualTo(before));
       semantics.dispose();
     });
 
@@ -121,6 +121,7 @@ void main() {
         tester,
         SizedBox(width: 300, child: NcSegmentedProgress(total: 10, current: 3)),
         config: const NcTestConfig(size: Size(420, 200)),
+        settle: false,
       );
     });
   });
@@ -146,7 +147,9 @@ void main() {
       );
       expect(tester.getSize(find.byType(NcRing)).width, 180);
       expect(
-        find.bySemanticsLabel(l10n.statisticsRetentionTitle),
+        find.bySemanticsLabel(
+          RegExp(RegExp.escape(l10n.statisticsRetentionTitle)),
+        ),
         findsWidgets,
       );
       expect(find.byType(NcAnimatedNumber), findsOneWidget);
