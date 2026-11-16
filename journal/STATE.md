@@ -213,7 +213,10 @@ test/tool), все test/build job'ы зелёные. Фикс `ed83795` → CI r
 — **9/9 job success**. Push 7.16: `ed83795..b58895a` (фикс analyze, скриншоты `3aac099`,
 STATE/AGENTS `b58895a`); финальный CI run
 [`43915833682`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43915833682)
-— **9/9 job success**.
+— **9/9 job success**. Docs-коммит `aad938f` (run
+[`43918913669`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43918913669)):
+все выполнявшиеся job'ы зелёные, `build macos`/`build ios` **отменены раннером**
+(инфраструктура, не ошибка шага) — повторный прогон после docs-правки.
 
 ## Итерация fix-gen — итог (архив, v5)
 
