@@ -49,6 +49,7 @@
 | [path_provider](https://pub.dev/packages/path_provider) | `^2.1.6` | каталоги БД/медиа | Android, iOS, Linux, macOS, Windows | BSD-3-Clause | approved |
 | [uuid](https://pub.dev/packages/uuid) | `^4.6.0` | `TEXT PRIMARY KEY` id (A5) | чистый Dart | MIT | approved |
 | [crypto](https://pub.dev/packages/crypto) | `^3.0.8` | `content_hash` (A5, дедупликация A8.5) | чистый Dart | BSD-3-Clause | approved |
+| [unorm_dart](https://pub.dev/packages/unorm_dart) | `^0.3.3` | Unicode NFC для сравнения ответов в режиме «Ввод ответа» (7.15, ADR-032): `е` + combining acute и `ё`; порт walling/unorm | чистый Dart | MIT | approved · проверено `dart pub add --dry-run` (разрешилось 0.3.3), API `unorm.nfc`; unit-тесты нормализации |
 | [intl](https://pub.dev/packages/intl) | `^0.20.3` | даты/числа/ICU-плюрализация | чистый Dart | BSD-3-Clause | approved · **жёстко** `^0.20.3`: `flutter_localizations` 3.47.9 пинит этот constraint |
 | [dynamic_color](https://pub.dev/packages/dynamic_color) | `^2.1.0` | dynamic color (A4.1): Android 12+ / Linux / macOS / Windows; публикатор material.io, Apache-2.0 | Android, Linux, macOS, Windows (на iOS — no-op) | Apache-2.0 | approved · **пока не используется**, подключается в итерации 7 (KNOWN_LIMITATIONS L6c) |
 | [path](https://pub.dev/packages/path) | `^1.9.1` (транзитивно) | пути к файлам | чистый Dart | BSD-3-Clause | approved · транзитивная зависимость; прямой необходимости в pubspec пока нет |

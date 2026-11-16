@@ -1,4 +1,5 @@
 import '../scheduling/rating.dart';
+import 'review.dart';
 
 /// Порт записи оценок режима «Тренировка» (ADR-025, итерация 7.11).
 ///
@@ -16,8 +17,14 @@ abstract interface class PracticeRepository {
     required Rating rating,
     required DateTime reviewedAt,
     Duration? elapsed,
+
+    /// Значение `review_logs.mode` (с 7.15 — `test`/`typing`/`true_false`).
+    String mode = reviewModePractice,
   });
 
-  /// Удаляет запись тренировки [logId] (undo).
-  Future<void> undoPractice(String logId);
+  /// Удаляет запись тренировки/режима [logId] (undo).
+  ///
+  /// Удаляется только запись с тем же `mode`, что и исходная оценка, — чужой
+  /// журнал (например, классика) не пострадает.
+  Future<void> undoPractice(String logId, {String mode = reviewModePractice});
 }

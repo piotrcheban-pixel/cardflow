@@ -23,6 +23,8 @@ import 'package:cardflow/ui/decks/decks_screen.dart';
 import 'package:cardflow/ui/m3e/m3e.dart';
 import 'package:cardflow/ui/review/feed_session_screen.dart';
 import 'package:cardflow/ui/review/practice_session_screen.dart';
+import 'package:cardflow/ui/study/multiple_choice_screen.dart';
+import 'package:cardflow/ui/study/typing_screen.dart';
 import 'package:cardflow/ui/review/review_session_screen.dart';
 import 'package:cardflow/ui/router/app_router.dart';
 import 'package:cardflow/ui/session/session_constructor_screen.dart';
@@ -138,6 +140,16 @@ List<GoRoute> decksRoutes() {
       path: '/decks/:id/practice',
       builder: (BuildContext context, GoRouterState state) =>
           PracticeSessionScreen(deckId: state.pathParameters['id']!),
+    ),
+    GoRoute(
+      path: '/decks/:id/test',
+      builder: (BuildContext context, GoRouterState state) =>
+          MultipleChoiceScreen(deckId: state.pathParameters['id']!),
+    ),
+    GoRoute(
+      path: '/decks/:id/typing',
+      builder: (BuildContext context, GoRouterState state) =>
+          TypingScreen(deckId: state.pathParameters['id']!),
     ),
     GoRoute(
       path: '/constructor',

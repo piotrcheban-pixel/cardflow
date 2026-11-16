@@ -13,6 +13,8 @@ void main() {
       expect(AppRoutes.studyPath('deck-1'), '/decks/deck-1/study');
       expect(AppRoutes.feedPath('deck-1'), '/decks/deck-1/feed');
       expect(AppRoutes.practicePath('deck-1'), '/decks/deck-1/practice');
+      expect(AppRoutes.testPath('deck-1'), '/decks/deck-1/test');
+      expect(AppRoutes.typingPath('deck-1'), '/decks/deck-1/typing');
       expect(AppRoutes.cardNewPath('deck-1'), '/decks/deck-1/cards/new');
       expect(
         AppRoutes.cardEditPath('deck-1', 'card-1'),
@@ -55,12 +57,12 @@ void main() {
   });
 
   group('createAppRouter', () {
-    test('содержит оболочку A6.1 и 13 верхнеуровневых маршрутов с уникальными именами', () {
+    test('содержит оболочку A6.1 и 15 верхнеуровневых маршрутов с уникальными именами', () {
       final router = createAppRouter();
       addTearDown(router.dispose);
 
       final routes = router.configuration.routes;
-      expect(routes, hasLength(13));
+      expect(routes, hasLength(15));
       final shell = routes.first;
       expect(shell, isA<StatefulShellRoute>());
       final branchRoutes = <GoRoute>[
@@ -83,6 +85,8 @@ void main() {
       expect(paths, contains('/decks/:deckId/study'));
       expect(paths, contains('/decks/:deckId/feed'));
       expect(paths, contains('/decks/:deckId/practice'));
+      expect(paths, contains('/decks/:deckId/test'));
+      expect(paths, contains('/decks/:deckId/typing'));
       expect(paths, contains('/decks/:deckId/generate'));
       expect(paths, contains('/generate'));
       expect(paths, contains('/decks/:deckId/cards/new'));
@@ -101,6 +105,8 @@ void main() {
           AppRoutes.study,
           AppRoutes.feed,
           AppRoutes.practice,
+          AppRoutes.test,
+          AppRoutes.typing,
           AppRoutes.deckGeneration,
           AppRoutes.generation,
           AppRoutes.cardNew,

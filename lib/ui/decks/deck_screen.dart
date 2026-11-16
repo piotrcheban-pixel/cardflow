@@ -7,6 +7,8 @@ import 'package:cardflow/domain/decks/deck.dart';
 import 'package:cardflow/domain/decks/deck_summary.dart';
 import 'package:cardflow/domain/review/daily_limits.dart';
 import 'package:cardflow/domain/review/review_queue.dart';
+import 'package:cardflow/domain/study/answer_type.dart';
+import 'package:cardflow/domain/study/distractor_generator.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/cards/card_form_screen.dart';
 import 'package:cardflow/ui/decks/deck_actions.dart';
@@ -19,7 +21,7 @@ import 'package:cardflow/ui/state/review_limits.dart';
 enum _DeckMenuAction { generate, rename, export, delete }
 
 /// Выбранный режим в листе «Начать сессию».
-enum _SessionModeAction { classic, feed, practice, constructor }
+enum _SessionModeAction { classic, feed, practice, test, typing, constructor }
 
 /// Решение в предупреждении об исчерпанном дневном лимите (ADR-028).
 enum _LimitChoice { continueWithoutLimits, practice }
@@ -240,55 +242,100 @@ class DeckScreen extends ConsumerWidget {
       newLimit: limits?.newCards,
       reviewLimit: limits?.reviews,
     ).isNotEmpty;
+    // 7.15: сколько карточек подходит для «Теста» и «Ввода ответа».
+    final int typingCount = cards
+        .where((Card card) => AnswerTypes.isTypable(card))
+        .length;
+    const DistractorGenerator distractorGenerator = DistractorGenerator();
+    final int testCount = cards
+        .where(
+          (Card card) =>
+              AnswerTypes.isTypable(card) &&
+              distractorGenerator.buildQuestion(card, cards) != null,
+        )
+        .length;
     final _SessionModeAction? selected =
         await showModalBottomSheet<_SessionModeAction>(
           context: context,
           showDragHandle: true,
+          isScrollControlled: true,
           builder: (BuildContext sheetContext) {
             void choose(_SessionModeAction action) {
               Navigator.of(sheetContext).pop(action);
             }
 
             return SafeArea(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
-                    child: Align(
-                      alignment: AlignmentDirectional.centerStart,
-                      child: Text(
-                        l10n.reviewSessionModeTitle,
-                        style: Theme.of(sheetContext).textTheme.titleLarge,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+                      child: Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        child: Text(
+                          l10n.reviewSessionModeTitle,
+                          style: Theme.of(sheetContext).textTheme.titleLarge,
+                        ),
                       ),
                     ),
-                  ),
-                  ListTile(
-                    key: const ValueKey<String>('review-mode-classic'),
-                    leading: const Icon(Icons.style_outlined),
-                    title: Text(l10n.reviewModeClassic),
-                    onTap: () => choose(_SessionModeAction.classic),
-                  ),
-                  ListTile(
-                    key: const ValueKey<String>('review-mode-feed'),
-                    leading: const Icon(Icons.view_agenda_outlined),
-                    title: Text(l10n.reviewModeFeed),
-                    onTap: () => choose(_SessionModeAction.feed),
-                  ),
-                  ListTile(
-                    key: const ValueKey<String>('review-mode-practice'),
-                    leading: const Icon(Icons.sports_esports_outlined),
-                    title: Text(l10n.reviewModePractice),
-                    subtitle: Text(l10n.practiceSubtitle),
-                    onTap: () => choose(_SessionModeAction.practice),
-                  ),
-                  ListTile(
-                    key: const ValueKey<String>('review-mode-constructor'),
-                    leading: const Icon(Icons.tune),
-                    title: Text(l10n.constructorAction),
-                    onTap: () => choose(_SessionModeAction.constructor),
-                  ),
-                ],
+                    ListTile(
+                      key: const ValueKey<String>('review-mode-classic'),
+                      leading: const Icon(Icons.style_outlined),
+                      title: Text(l10n.reviewModeClassic),
+                      onTap: () => choose(_SessionModeAction.classic),
+                    ),
+                    ListTile(
+                      key: const ValueKey<String>('review-mode-feed'),
+                      leading: const Icon(Icons.view_agenda_outlined),
+                      title: Text(l10n.reviewModeFeed),
+                      onTap: () => choose(_SessionModeAction.feed),
+                    ),
+                    ListTile(
+                      key: const ValueKey<String>('review-mode-practice'),
+                      leading: const Icon(Icons.sports_esports_outlined),
+                      title: Text(l10n.reviewModePractice),
+                      subtitle: Text(l10n.practiceSubtitle),
+                      onTap: () => choose(_SessionModeAction.practice),
+                    ),
+                    ListTile(
+                      key: const ValueKey<String>('review-mode-test'),
+                      enabled: testCount > 0,
+                      leading: const Icon(Icons.quiz_outlined),
+                      title: Text(l10n.reviewModeTest),
+                      subtitle: Text(
+                        testCount > 0
+                            ? '${l10n.studyModeTestSubtitle} · '
+                                  '${l10n.studyModeAvailableCount(testCount)}'
+                            : l10n.studyModeNotEnough,
+                      ),
+                      onTap: testCount > 0
+                          ? () => choose(_SessionModeAction.test)
+                          : null,
+                    ),
+                    ListTile(
+                      key: const ValueKey<String>('review-mode-typing'),
+                      enabled: typingCount > 0,
+                      leading: const Icon(Icons.keyboard_outlined),
+                      title: Text(l10n.reviewModeTyping),
+                      subtitle: Text(
+                        typingCount > 0
+                            ? '${l10n.studyModeTypingSubtitle} · '
+                                  '${l10n.studyModeAvailableCount(typingCount)}'
+                            : l10n.studyModeNotEnough,
+                      ),
+                      onTap: typingCount > 0
+                          ? () => choose(_SessionModeAction.typing)
+                          : null,
+                    ),
+                    ListTile(
+                      key: const ValueKey<String>('review-mode-constructor'),
+                      leading: const Icon(Icons.tune),
+                      title: Text(l10n.constructorAction),
+                      onTap: () => choose(_SessionModeAction.constructor),
+                    ),
+                  ],
+                ),
               ),
             );
           },
@@ -297,6 +344,10 @@ class DeckScreen extends ConsumerWidget {
     switch (selected) {
       case _SessionModeAction.practice:
         await context.push(AppRoutes.practicePath(deckId));
+      case _SessionModeAction.test:
+        await context.push(AppRoutes.testPath(deckId));
+      case _SessionModeAction.typing:
+        await context.push(AppRoutes.typingPath(deckId));
       case _SessionModeAction.constructor:
         await context.push(AppRoutes.constructorDeckPath(deckId));
       case _SessionModeAction.classic:

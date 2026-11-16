@@ -1782,4 +1782,113 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get generationLiveImagesPending => 'Догружаем картинки…';
+
+  @override
+  String get reviewModeTest => 'Тест';
+
+  @override
+  String get reviewModeTyping => 'Ввод ответа';
+
+  @override
+  String get studyModeTestSubtitle => 'Четыре варианта ответа';
+
+  @override
+  String get studyModeTypingSubtitle => 'Вспомни и введи ответ';
+
+  @override
+  String studyModeAvailableCount(int count) {
+    return 'Доступно карточек: $count';
+  }
+
+  @override
+  String get studyModeNotEnough => 'Мало подходящих карточек';
+
+  @override
+  String testProgressSemantics(int current, int total) {
+    return 'Вопрос $current из $total';
+  }
+
+  @override
+  String get testNext => 'Далее';
+
+  @override
+  String get testResultsTitle => 'Тест завершён';
+
+  @override
+  String testAccuracy(int percent) {
+    return 'Точность: $percent%';
+  }
+
+  @override
+  String testErrorsCount(int count) {
+    return 'Ошибок: $count';
+  }
+
+  @override
+  String get testRepeatMistakes => 'Повторить ошибки';
+
+  @override
+  String get testEmptyTitle => 'Нет карточек для теста';
+
+  @override
+  String get testEmptyMessage =>
+      'Для теста нужны карточки с коротким ответом и хотя бы четырьмя подходящими вариантами в колоде.';
+
+  @override
+  String testOptionLabel(int index, String answer) {
+    return 'Вариант $index: $answer';
+  }
+
+  @override
+  String get testQuestionLabel => 'Вопрос';
+
+  @override
+  String get typingTitle => 'Ввод ответа';
+
+  @override
+  String get typingInputLabel => 'Введите ответ';
+
+  @override
+  String get typingCheck => 'Проверить';
+
+  @override
+  String get typingCorrect => 'Верно';
+
+  @override
+  String get typingAlmost => 'Почти! Проверь написание';
+
+  @override
+  String get typingWrong => 'Неверно';
+
+  @override
+  String typingRightAnswer(String answer) {
+    return 'Правильный ответ: $answer';
+  }
+
+  @override
+  String get typingIWasRight => 'Я был прав';
+
+  @override
+  String get typingShowAnswer => 'Показать ответ';
+
+  @override
+  String get typingNext => 'Далее';
+
+  @override
+  String get typingInputSemantics => 'Поле ввода ответа';
+
+  @override
+  String get typingEmptyTitle => 'Нет карточек для ввода ответа';
+
+  @override
+  String get typingEmptyMessage =>
+      'Нужны карточки с коротким ответом (до 60 символов, без формул и переносов строк).';
+
+  @override
+  String studyResultsScore(int total, int correct) {
+    return 'Верно: $correct из $total';
+  }
+
+  @override
+  String get studyWrongListTitle => 'Ошибки';
 }

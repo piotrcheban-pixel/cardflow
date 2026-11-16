@@ -2949,6 +2949,192 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Догружаем картинки…'**
   String get generationLiveImagesPending;
+
+  /// Режим «Тест» с четырьмя вариантами ответа.
+  ///
+  /// In ru, this message translates to:
+  /// **'Тест'**
+  String get reviewModeTest;
+
+  /// Режим «Ввод ответа».
+  ///
+  /// In ru, this message translates to:
+  /// **'Ввод ответа'**
+  String get reviewModeTyping;
+
+  /// Подпись режима Тест в листе режимов.
+  ///
+  /// In ru, this message translates to:
+  /// **'Четыре варианта ответа'**
+  String get studyModeTestSubtitle;
+
+  /// Подпись режима Ввод ответа в листе режимов.
+  ///
+  /// In ru, this message translates to:
+  /// **'Вспомни и введи ответ'**
+  String get studyModeTypingSubtitle;
+
+  /// Сколько карточек подходит для режима.
+  ///
+  /// In ru, this message translates to:
+  /// **'Доступно карточек: {count}'**
+  String studyModeAvailableCount(int count);
+
+  /// Режим недоступен: недостаточно подходящих карточек.
+  ///
+  /// In ru, this message translates to:
+  /// **'Мало подходящих карточек'**
+  String get studyModeNotEnough;
+
+  /// Подпись прогресса Теста для screen reader.
+  ///
+  /// In ru, this message translates to:
+  /// **'Вопрос {current} из {total}'**
+  String testProgressSemantics(int current, int total);
+
+  /// Кнопка перехода к следующему вопросу.
+  ///
+  /// In ru, this message translates to:
+  /// **'Далее'**
+  String get testNext;
+
+  /// Заголовок итогов Теста.
+  ///
+  /// In ru, this message translates to:
+  /// **'Тест завершён'**
+  String get testResultsTitle;
+
+  /// Точность ответов в Тесте.
+  ///
+  /// In ru, this message translates to:
+  /// **'Точность: {percent}%'**
+  String testAccuracy(int percent);
+
+  /// Сколько ошибок в Тесте.
+  ///
+  /// In ru, this message translates to:
+  /// **'Ошибок: {count}'**
+  String testErrorsCount(int count);
+
+  /// Кнопка повтора только ошибочных карточек.
+  ///
+  /// In ru, this message translates to:
+  /// **'Повторить ошибки'**
+  String get testRepeatMistakes;
+
+  /// Пустое состояние Теста.
+  ///
+  /// In ru, this message translates to:
+  /// **'Нет карточек для теста'**
+  String get testEmptyTitle;
+
+  /// Пояснение пустого состояния Теста.
+  ///
+  /// In ru, this message translates to:
+  /// **'Для теста нужны карточки с коротким ответом и хотя бы четырьмя подходящими вариантами в колоде.'**
+  String get testEmptyMessage;
+
+  /// Подпись варианта ответа для screen reader.
+  ///
+  /// In ru, this message translates to:
+  /// **'Вариант {index}: {answer}'**
+  String testOptionLabel(int index, String answer);
+
+  /// Подпись вопроса в Тесте для screen reader.
+  ///
+  /// In ru, this message translates to:
+  /// **'Вопрос'**
+  String get testQuestionLabel;
+
+  /// Заголовок режима Ввод ответа.
+  ///
+  /// In ru, this message translates to:
+  /// **'Ввод ответа'**
+  String get typingTitle;
+
+  /// Подпись поля ввода ответа.
+  ///
+  /// In ru, this message translates to:
+  /// **'Введите ответ'**
+  String get typingInputLabel;
+
+  /// Кнопка проверки введённого ответа.
+  ///
+  /// In ru, this message translates to:
+  /// **'Проверить'**
+  String get typingCheck;
+
+  /// Введённый ответ верный.
+  ///
+  /// In ru, this message translates to:
+  /// **'Верно'**
+  String get typingCorrect;
+
+  /// Ответ с опечаткой.
+  ///
+  /// In ru, this message translates to:
+  /// **'Почти! Проверь написание'**
+  String get typingAlmost;
+
+  /// Введённый ответ неверный.
+  ///
+  /// In ru, this message translates to:
+  /// **'Неверно'**
+  String get typingWrong;
+
+  /// Показ правильного ответа после ошибки.
+  ///
+  /// In ru, this message translates to:
+  /// **'Правильный ответ: {answer}'**
+  String typingRightAnswer(String answer);
+
+  /// Кнопка «Я был прав» после неверного ответа или опечатки.
+  ///
+  /// In ru, this message translates to:
+  /// **'Я был прав'**
+  String get typingIWasRight;
+
+  /// Сдаться и показать правильный ответ.
+  ///
+  /// In ru, this message translates to:
+  /// **'Показать ответ'**
+  String get typingShowAnswer;
+
+  /// Переход к следующей карточке после проверки.
+  ///
+  /// In ru, this message translates to:
+  /// **'Далее'**
+  String get typingNext;
+
+  /// Подпись поля ввода для screen reader.
+  ///
+  /// In ru, this message translates to:
+  /// **'Поле ввода ответа'**
+  String get typingInputSemantics;
+
+  /// Пустое состояние режима Ввод ответа.
+  ///
+  /// In ru, this message translates to:
+  /// **'Нет карточек для ввода ответа'**
+  String get typingEmptyTitle;
+
+  /// Пояснение пустого состояния режима Ввод ответа.
+  ///
+  /// In ru, this message translates to:
+  /// **'Нужны карточки с коротким ответом (до 60 символов, без формул и переносов строк).'**
+  String get typingEmptyMessage;
+
+  /// Итог: сколько ответов верно.
+  ///
+  /// In ru, this message translates to:
+  /// **'Верно: {correct} из {total}'**
+  String studyResultsScore(int total, int correct);
+
+  /// Заголовок списка ошибочных карточек.
+  ///
+  /// In ru, this message translates to:
+  /// **'Ошибки'**
+  String get studyWrongListTitle;
 }
 
 class _AppLocalizationsDelegate

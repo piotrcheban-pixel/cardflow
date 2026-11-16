@@ -2231,5 +2231,173 @@
   "generationLiveImagesPending": "Догружаем картинки…",
   "@generationLiveImagesPending": {
     "description": "Поиск картинок продолжается во время генерации."
+  },
+  "reviewModeTest": "Тест",
+  "@reviewModeTest": {
+    "description": "Режим «Тест» с четырьмя вариантами ответа."
+  },
+  "reviewModeTyping": "Ввод ответа",
+  "@reviewModeTyping": {
+    "description": "Режим «Ввод ответа»."
+  },
+  "studyModeTestSubtitle": "Четыре варианта ответа",
+  "@studyModeTestSubtitle": {
+    "description": "Подпись режима Тест в листе режимов."
+  },
+  "studyModeTypingSubtitle": "Вспомни и введи ответ",
+  "@studyModeTypingSubtitle": {
+    "description": "Подпись режима Ввод ответа в листе режимов."
+  },
+  "studyModeAvailableCount": "Доступно карточек: {count}",
+  "@studyModeAvailableCount": {
+    "description": "Сколько карточек подходит для режима.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "studyModeNotEnough": "Мало подходящих карточек",
+  "@studyModeNotEnough": {
+    "description": "Режим недоступен: недостаточно подходящих карточек."
+  },
+  "testProgressSemantics": "Вопрос {current} из {total}",
+  "@testProgressSemantics": {
+    "description": "Подпись прогресса Теста для screen reader.",
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "testNext": "Далее",
+  "@testNext": {
+    "description": "Кнопка перехода к следующему вопросу."
+  },
+  "testResultsTitle": "Тест завершён",
+  "@testResultsTitle": {
+    "description": "Заголовок итогов Теста."
+  },
+  "testAccuracy": "Точность: {percent}%",
+  "@testAccuracy": {
+    "description": "Точность ответов в Тесте.",
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "testErrorsCount": "Ошибок: {count}",
+  "@testErrorsCount": {
+    "description": "Сколько ошибок в Тесте.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "testRepeatMistakes": "Повторить ошибки",
+  "@testRepeatMistakes": {
+    "description": "Кнопка повтора только ошибочных карточек."
+  },
+  "testEmptyTitle": "Нет карточек для теста",
+  "@testEmptyTitle": {
+    "description": "Пустое состояние Теста."
+  },
+  "testEmptyMessage": "Для теста нужны карточки с коротким ответом и хотя бы четырьмя подходящими вариантами в колоде.",
+  "@testEmptyMessage": {
+    "description": "Пояснение пустого состояния Теста."
+  },
+  "testOptionLabel": "Вариант {index}: {answer}",
+  "@testOptionLabel": {
+    "description": "Подпись варианта ответа для screen reader.",
+    "placeholders": {
+      "index": {
+        "type": "int"
+      },
+      "answer": {
+        "type": "String"
+      }
+    }
+  },
+  "testQuestionLabel": "Вопрос",
+  "@testQuestionLabel": {
+    "description": "Подпись вопроса в Тесте для screen reader."
+  },
+  "typingTitle": "Ввод ответа",
+  "@typingTitle": {
+    "description": "Заголовок режима Ввод ответа."
+  },
+  "typingInputLabel": "Введите ответ",
+  "@typingInputLabel": {
+    "description": "Подпись поля ввода ответа."
+  },
+  "typingCheck": "Проверить",
+  "@typingCheck": {
+    "description": "Кнопка проверки введённого ответа."
+  },
+  "typingCorrect": "Верно",
+  "@typingCorrect": {
+    "description": "Введённый ответ верный."
+  },
+  "typingAlmost": "Почти! Проверь написание",
+  "@typingAlmost": {
+    "description": "Ответ с опечаткой."
+  },
+  "typingWrong": "Неверно",
+  "@typingWrong": {
+    "description": "Введённый ответ неверный."
+  },
+  "typingRightAnswer": "Правильный ответ: {answer}",
+  "@typingRightAnswer": {
+    "description": "Показ правильного ответа после ошибки.",
+    "placeholders": {
+      "answer": {
+        "type": "String"
+      }
+    }
+  },
+  "typingIWasRight": "Я был прав",
+  "@typingIWasRight": {
+    "description": "Кнопка «Я был прав» после неверного ответа или опечатки."
+  },
+  "typingShowAnswer": "Показать ответ",
+  "@typingShowAnswer": {
+    "description": "Сдаться и показать правильный ответ."
+  },
+  "typingNext": "Далее",
+  "@typingNext": {
+    "description": "Переход к следующей карточке после проверки."
+  },
+  "typingInputSemantics": "Поле ввода ответа",
+  "@typingInputSemantics": {
+    "description": "Подпись поля ввода для screen reader."
+  },
+  "typingEmptyTitle": "Нет карточек для ввода ответа",
+  "@typingEmptyTitle": {
+    "description": "Пустое состояние режима Ввод ответа."
+  },
+  "typingEmptyMessage": "Нужны карточки с коротким ответом (до 60 символов, без формул и переносов строк).",
+  "@typingEmptyMessage": {
+    "description": "Пояснение пустого состояния режима Ввод ответа."
+  },
+  "studyResultsScore": "Верно: {correct} из {total}",
+  "@studyResultsScore": {
+    "description": "Итог: сколько ответов верно.",
+    "placeholders": {
+      "total": {
+        "type": "int"
+      },
+      "correct": {
+        "type": "int"
+      }
+    }
+  },
+  "studyWrongListTitle": "Ошибки",
+  "@studyWrongListTitle": {
+    "description": "Заголовок списка ошибочных карточек."
   }
 }

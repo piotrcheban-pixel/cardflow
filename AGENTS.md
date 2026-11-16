@@ -474,3 +474,20 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   не исправила полнотекстовый матчинг Commons/Wikipedia — ограничение L84 (рекомендация:
   семантическая проверка релевантности/курируемые схемы). Отчёт:
   `journal/iteration-7.14/{live-metrics.md,relevance.md}`. Ограничения: L81–L86.
+
+- **Режимы «Тест» и «Ввод ответа» проверены локально (итерация 7.15, 2026-11-16, ADR-032):**
+  старт: `git status --porcelain` → пусто, `HEAD = origin/main = bf28359` (CI 7.14 — run
+  [`43901313115`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43901313115) 9/9);
+  baseline **1660 passed + 8 skipped**, `analyze` 0, `format` 0. Домен: `StudyMode`,
+  `StudyFsrsPolicy` (due → FSRS, будущая due → тренировка, новая — как due), `StudyQueue`,
+  `AnswerType` (short_text/number/formula/long_text; для ввода ≤ 60 символов/6 слов без LaTeX),
+  `AnswerMatcher` (NFC через `unorm_dart`, exact/almost/wrong, Левенштейн 1/2, diff), `DistractorGenerator`
+  (3 из колоды того же типа/длины, числа той же единицы, seed-позиция). Общий
+  `StudySessionController` (очередь/прогресс/итоги/undo/повтор ошибок; `review_logs.mode`,
+  undo фильтруется по mode). Экраны `MultipleChoiceScreen`/`TypingScreen`, маршруты
+  `/decks/:deckId/{test,typing}`, лист режимов с числом карточек, ARB (ru). Гейты:
+  `fvm flutter test --no-pub --coverage --exclude-tags golden` → **1715 passed + 8 skipped**;
+  покрытие рукописного кода **91.7 % (12974/14143)**; `analyze` 0; `format` 0 changed;
+  `fvm flutter build windows --release --no-pub` → `cardflow.exe`. Новая зависимость
+  `unorm_dart ^0.3.3` (чистый Dart, MIT) — в `docs/dependencies.md`. Ограничения: L87
+  (ИИ-дистракторы не подключены), L88 (новые режимы не учитывают дневные лимиты).

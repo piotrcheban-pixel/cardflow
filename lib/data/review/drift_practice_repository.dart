@@ -29,6 +29,7 @@ class DriftPracticeRepository implements PracticeRepository {
     required Rating rating,
     required DateTime reviewedAt,
     Duration? elapsed,
+    String mode = reviewModePractice,
   }) {
     final DateTime utcReviewedAt = reviewedAt.toUtc();
     return database.transaction<String>(() async {
@@ -47,7 +48,7 @@ class DriftPracticeRepository implements PracticeRepository {
               cardId: cardId,
               rating: rating.value,
               reviewedAt: toEpochMs(utcReviewedAt),
-              mode: reviewModePractice,
+              mode: mode,
               recognitionFlag: const Value<int>(0),
               scheduledDays: const Value<double?>(null),
               actualDays: const Value<double?>(null),
@@ -59,13 +60,11 @@ class DriftPracticeRepository implements PracticeRepository {
   }
 
   @override
-  Future<void> undoPractice(String logId) {
+  Future<void> undoPractice(String logId, {String mode = reviewModePractice}) {
     return database.transaction<void>(() async {
       final int deleted =
           await (database.delete(database.reviewLogs)..where(
-                (table) =>
-                    table.id.equals(logId) &
-                    table.mode.equals(reviewModePractice),
+                (table) => table.id.equals(logId) & table.mode.equals(mode),
               ))
               .go();
       if (deleted != 1) {

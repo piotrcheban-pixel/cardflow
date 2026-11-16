@@ -116,6 +116,40 @@ void main() {
     expect(logs.map((ReviewLogRow row) => row.id), <String>['classic-log']);
   });
 
+  test(
+    'undoPractice с mode режима удаляет только свою запись (7.15)',
+    () async {
+      final repository = DriftPracticeRepository(db);
+      final String testLog = await repository.recordPractice(
+        cardId: 'card-1',
+        rating: Rating.good,
+        reviewedAt: now,
+        mode: 'test',
+      );
+      await db
+          .into(db.reviewLogs)
+          .insert(
+            ReviewLogsCompanion.insert(
+              id: 'classic-log-2',
+              cardId: 'card-1',
+              rating: 3,
+              reviewedAt: toEpochMs(now),
+              mode: reviewModeClassic,
+            ),
+          );
+
+      await repository.undoPractice(testLog, mode: 'test');
+
+      final List<ReviewLogRow> logs = await db.select(db.reviewLogs).get();
+      expect(logs.map((ReviewLogRow row) => row.id), contains('classic-log-2'));
+      expect(logs.map((ReviewLogRow row) => row.id), isNot(contains(testLog)));
+      expect(
+        logs.firstWhere((ReviewLogRow row) => row.id == 'classic-log-2').mode,
+        reviewModeClassic,
+      );
+    },
+  );
+
   test('undoPractice: обычный лог не удаляется', () async {
     await db
         .into(db.reviewLogs)

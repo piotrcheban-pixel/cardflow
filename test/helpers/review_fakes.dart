@@ -130,6 +130,12 @@ class FakePracticeRepository implements PracticeRepository {
   /// Id удалённых записей (undo).
   final List<String> undoneLogIds = <String>[];
 
+  /// Режимы записей в порядке вызовов (с 7.15).
+  final List<String> modes = <String>[];
+
+  /// Режимы, с которыми вызывали undo (с 7.15).
+  final List<String> undoModes = <String>[];
+
   int _logCounter = 0;
 
   @override
@@ -138,6 +144,7 @@ class FakePracticeRepository implements PracticeRepository {
     required Rating rating,
     required DateTime reviewedAt,
     Duration? elapsed,
+    String mode = 'practice',
   }) async {
     if (recordError != null) throw recordError!;
     final Completer<void>? gate = recordGate;
@@ -146,12 +153,14 @@ class FakePracticeRepository implements PracticeRepository {
     cardIds.add(cardId);
     reviewedAts.add(reviewedAt);
     elapsedTimes.add(elapsed);
+    modes.add(mode);
     return 'practice-log-${++_logCounter}';
   }
 
   @override
-  Future<void> undoPractice(String logId) async {
+  Future<void> undoPractice(String logId, {String mode = 'practice'}) async {
     if (undoError != null) throw undoError!;
     undoneLogIds.add(logId);
+    undoModes.add(mode);
   }
 }

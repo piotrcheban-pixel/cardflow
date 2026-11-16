@@ -9,6 +9,8 @@ import 'package:cardflow/ui/generation/generation_screen.dart';
 import 'package:cardflow/ui/review/feed_session_screen.dart';
 import 'package:cardflow/ui/review/practice_session_screen.dart';
 import 'package:cardflow/ui/review/review_session_screen.dart';
+import 'package:cardflow/ui/study/multiple_choice_screen.dart';
+import 'package:cardflow/ui/study/typing_screen.dart';
 import 'package:cardflow/ui/session/session_constructor_screen.dart';
 import 'package:cardflow/ui/settings/generation_settings_screen.dart';
 import 'package:cardflow/ui/settings/settings_screen.dart';
@@ -31,6 +33,12 @@ abstract final class AppRoutes {
 
   /// Тренировка без учёта FSRS (ADR-025).
   static const String practice = 'practice';
+
+  /// Тест с вариантами ответа (7.15).
+  static const String test = 'test';
+
+  /// Ввод ответа (7.15).
+  static const String typing = 'typing';
 
   /// Конструктор сессии (SPEC A6.7).
   static const String constructor = 'constructor';
@@ -91,6 +99,12 @@ abstract final class AppRoutes {
 
   /// Путь тренировки по колоде (ADR-025).
   static String practicePath(String deckId) => '/decks/$deckId/practice';
+
+  /// Путь режима «Тест» по колоде (7.15).
+  static String testPath(String deckId) => '/decks/$deckId/test';
+
+  /// Путь режима «Ввод ответа» по колоде (7.15).
+  static String typingPath(String deckId) => '/decks/$deckId/typing';
 
   /// Путь конструктора сессии (SPEC A6.7).
   static const String constructorPath = '/constructor';
@@ -208,6 +222,18 @@ GoRouter createAppRouter({String initialLocation = AppRoutes.decksPath}) {
         name: AppRoutes.practice,
         builder: (context, state) =>
             PracticeSessionScreen(deckId: state.pathParameters['deckId']!),
+      ),
+      GoRoute(
+        path: '/decks/:deckId/test',
+        name: AppRoutes.test,
+        builder: (context, state) =>
+            MultipleChoiceScreen(deckId: state.pathParameters['deckId']!),
+      ),
+      GoRoute(
+        path: '/decks/:deckId/typing',
+        name: AppRoutes.typing,
+        builder: (context, state) =>
+            TypingScreen(deckId: state.pathParameters['deckId']!),
       ),
       GoRoute(
         path: AppRoutes.constructorPath,
