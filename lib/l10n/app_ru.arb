@@ -2399,5 +2399,134 @@
   "studyWrongListTitle": "Ошибки",
   "@studyWrongListTitle": {
     "description": "Заголовок списка ошибочных карточек."
+  },
+  "reviewModeMatch": "Подбор пар",
+  "@reviewModeMatch": {
+    "description": "Режим «Подбор пар» (7.16)."
+  },
+  "reviewModeTrueFalse": "Верно/Неверно",
+  "@reviewModeTrueFalse": {
+    "description": "Режим «Верно/Неверно» (7.16)."
+  },
+  "studyModeMatchSubtitle": "Найди пары вопрос-ответ",
+  "@studyModeMatchSubtitle": {
+    "description": "Подпись режима Подбор пар."
+  },
+  "studyModeTrueFalseSubtitle": "Ответ верный или нет?",
+  "@studyModeTrueFalseSubtitle": {
+    "description": "Подпись режима Верно/Неверно."
+  },
+  "studyModeMatchNotEnough": "Нужно минимум 6 карточек с вопросом и ответом",
+  "@studyModeMatchNotEnough": {
+    "description": "Режим Подбор пар недоступен."
+  },
+  "studyModeTrueFalseNotEnough": "Нужен хотя бы один другой ответ в колоде",
+  "@studyModeTrueFalseNotEnough": {
+    "description": "Режим Верно/Неверно недоступен."
+  },
+  "matchTitle": "Подбор пар",
+  "@matchTitle": {
+    "description": "Заголовок игры."
+  },
+  "matchTimer": "Время: {time}",
+  "@matchTimer": {
+    "description": "Таймер игры, время строкой.",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "matchBest": "Лучшее время: {time}",
+  "@matchBest": {
+    "description": "Лучший результат по колоде.",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "matchMoves": "Ходов: {count}",
+  "@matchMoves": {
+    "description": "Число ходов в игре.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "matchCompletedTitle": "Все пары найдены",
+  "@matchCompletedTitle": {
+    "description": "Заголовок итога игры."
+  },
+  "matchRestart": "Ещё раз",
+  "@matchRestart": {
+    "description": "Кнопка новой игры."
+  },
+  "matchDone": "Готово",
+  "@matchDone": {
+    "description": "Кнопка выхода после игры."
+  },
+  "matchEmptyTitle": "Мало карточек для пар",
+  "@matchEmptyTitle": {
+    "description": "Пустое состояние игры."
+  },
+  "matchEmptyMessage": "Нужно минимум 6 карточек с непустым вопросом и ответом.",
+  "@matchEmptyMessage": {
+    "description": "Пояснение пустого состояния."
+  },
+  "trueFalseTitle": "Верно/Неверно",
+  "@trueFalseTitle": {
+    "description": "Заголовок режима."
+  },
+  "trueFalseStatement": "Ответ: {answer}",
+  "@trueFalseStatement": {
+    "description": "Показанное утверждение.",
+    "placeholders": {
+      "answer": {
+        "type": "String"
+      }
+    }
+  },
+  "trueFalseTrueAction": "Верно",
+  "@trueFalseTrueAction": {
+    "description": "Кнопка «верно»."
+  },
+  "trueFalseFalseAction": "Неверно",
+  "@trueFalseFalseAction": {
+    "description": "Кнопка «неверно»."
+  },
+  "trueFalseCorrect": "Верно!",
+  "@trueFalseCorrect": {
+    "description": "Ответ игрока правильный."
+  },
+  "trueFalseWrong": "Ошибка",
+  "@trueFalseWrong": {
+    "description": "Ответ игрока неправильный."
+  },
+  "trueFalseExplanation": "Правильный ответ: {answer}",
+  "@trueFalseExplanation": {
+    "description": "Показ правильного ответа после ошибки.",
+    "placeholders": {
+      "answer": {
+        "type": "String"
+      }
+    }
+  },
+  "trueFalseSwipeHint": "Свайп вправо — верно, влево — неверно",
+  "@trueFalseSwipeHint": {
+    "description": "Подсказка жестов."
+  },
+  "trueFalseNext": "Далее",
+  "@trueFalseNext": {
+    "description": "Переход к следующему утверждению."
+  },
+  "trueFalseEmptyTitle": "Нет карточек для режима",
+  "@trueFalseEmptyTitle": {
+    "description": "Пустое состояние режима."
+  },
+  "trueFalseEmptyMessage": "Нужны карточки с ответом и хотя бы один другой ответ в колоде.",
+  "@trueFalseEmptyMessage": {
+    "description": "Пояснение пустого состояния."
   }
 }

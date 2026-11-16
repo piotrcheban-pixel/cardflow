@@ -488,6 +488,17 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   `/decks/:deckId/{test,typing}`, лист режимов с числом карточек, ARB (ru). Гейты:
   `fvm flutter test --no-pub --coverage --exclude-tags golden` → **1715 passed + 8 skipped**;
   покрытие рукописного кода **91.7 % (12974/14143)**; `analyze` 0; `format` 0 changed;
-  `fvm flutter build windows --release --no-pub` → `cardflow.exe`. Новая зависимость
-  `unorm_dart ^0.3.3` (чистый Dart, MIT) — в `docs/dependencies.md`. Ограничения: L87
+  `fvm flutter build windows --release --no-pub` → `cardflow.exe` (56,4 с); CI run
+  [`43904903386`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43904903386) — 9/9.
+  Новая зависимость `unorm_dart ^0.3.3` (чистый Dart, MIT) — в `docs/dependencies.md`. Ограничения: L87
   (ИИ-дистракторы не подключены), L88 (новые режимы не учитывают дневные лимиты).
+
+- **Режимы «Подбор пар» и «Верно/Неверно» проверены локально (итерация 7.16, 2026-11-16, ADR-033):**
+  домен `MatchGame` (6 пар/12 плиток, seed, selected/matched/mismatch), `MatchScreen` (таймер,
+  встряхивание, лучшее время), `MatchBestStore` + `DriftMatchBestStore` (JSON v1 в `app_settings`,
+  ключ `study.match.best`, схема БД не менялась); `TrueFalseQuestion` 50/50 и `TrueFalseScreen`
+  (кнопки ✓/✗, свайпы, общий `StudySessionController`, `mode='true_false'`, FSRS только для due).
+  Маршруты `/decks/:deckId/{match,true-false}`, лист режимов, ARB (ru). Гейты:
+  `fvm flutter test --no-pub --coverage --exclude-tags golden` → **1742 passed + 8 skipped**;
+  покрытие рукописного кода **91.7 % (13521/14743)**; `analyze` 0; `format` 0 changed;
+  `fvm flutter build windows --release --no-pub` → `cardflow.exe` (52,4 с). Ограничения: L87/L88.

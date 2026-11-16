@@ -7,6 +7,7 @@ import 'package:cardflow/domain/generation/generation_settings_store.dart';
 import 'package:cardflow/domain/generation/provider_accounts_store.dart';
 import 'package:cardflow/domain/review/daily_usage_repository.dart';
 import 'package:cardflow/domain/review/practice_repository.dart';
+import 'package:cardflow/domain/study/match_best_store.dart';
 import 'package:cardflow/domain/review/review_repository.dart';
 import 'package:cardflow/data/cards/card_image_refresher.dart';
 import 'package:cardflow/domain/scheduling/scheduler.dart';
@@ -23,7 +24,9 @@ import 'package:cardflow/ui/decks/decks_screen.dart';
 import 'package:cardflow/ui/m3e/m3e.dart';
 import 'package:cardflow/ui/review/feed_session_screen.dart';
 import 'package:cardflow/ui/review/practice_session_screen.dart';
+import 'package:cardflow/ui/study/match_screen.dart';
 import 'package:cardflow/ui/study/multiple_choice_screen.dart';
+import 'package:cardflow/ui/study/true_false_screen.dart';
 import 'package:cardflow/ui/study/typing_screen.dart';
 import 'package:cardflow/ui/review/review_session_screen.dart';
 import 'package:cardflow/ui/router/app_router.dart';
@@ -152,6 +155,16 @@ List<GoRoute> decksRoutes() {
           TypingScreen(deckId: state.pathParameters['id']!),
     ),
     GoRoute(
+      path: '/decks/:id/match',
+      builder: (BuildContext context, GoRouterState state) =>
+          MatchScreen(deckId: state.pathParameters['id']!),
+    ),
+    GoRoute(
+      path: '/decks/:id/true-false',
+      builder: (BuildContext context, GoRouterState state) =>
+          TrueFalseScreen(deckId: state.pathParameters['id']!),
+    ),
+    GoRoute(
       path: '/constructor',
       builder: (BuildContext context, GoRouterState state) =>
           SessionConstructorScreen(
@@ -208,6 +221,7 @@ List<Override> decksOverrides({
   FakeExternalLinkLauncher? externalLinkLauncher,
   DailyUsageRepository? dailyUsageRepository,
   CardImageRefresher? cardImageRefresher,
+  MatchBestStore? matchBestStore,
 }) {
   return <Override>[
     deckRepositoryProvider.overrideWithValue(deckRepository),
@@ -258,6 +272,9 @@ List<Override> decksOverrides({
     ),
     if (cardImageRefresher != null)
       cardImageRefresherProvider.overrideWithValue(cardImageRefresher),
+    matchBestStoreProvider.overrideWithValue(
+      matchBestStore ?? FakeMatchBestStore(),
+    ),
   ];
 }
 

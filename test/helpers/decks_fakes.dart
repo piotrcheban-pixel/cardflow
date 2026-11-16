@@ -8,6 +8,7 @@ import 'package:cardflow/domain/cards/card_media_repository.dart';
 import 'package:cardflow/domain/cards/card_repository.dart';
 import 'package:cardflow/domain/cards/content_hash.dart';
 import 'package:cardflow/domain/cards/media_metadata.dart';
+import 'package:cardflow/domain/study/match_best_store.dart';
 import 'package:cardflow/domain/decks/deck.dart';
 import 'package:cardflow/domain/decks/deck_query.dart';
 import 'package:cardflow/domain/decks/deck_repository.dart';
@@ -645,5 +646,30 @@ class FakeCardImageGateway implements CardImageGateway {
     calls++;
     if (error != null) throw error!;
     return result;
+  }
+}
+
+/// Фейковое хранилище лучших результатов «Подбора пар» (7.16).
+class FakeMatchBestStore implements MatchBestStore {
+  FakeMatchBestStore({Map<String, int>? bestByDeck})
+    : bestByDeck = <String, int>{...?bestByDeck};
+
+  /// Лучшее время по колоде.
+  final Map<String, int> bestByDeck;
+
+  /// Записи в порядке вызовов.
+  final List<({String deckId, int milliseconds})> saves =
+      <({String deckId, int milliseconds})>[];
+
+  @override
+  Future<int?> bestMs(String deckId) async => bestByDeck[deckId];
+
+  @override
+  Future<void> saveIfBetter(String deckId, int milliseconds) async {
+    saves.add((deckId: deckId, milliseconds: milliseconds));
+    final int? current = bestByDeck[deckId];
+    if (current == null || milliseconds < current) {
+      bestByDeck[deckId] = milliseconds;
+    }
   }
 }

@@ -1891,4 +1891,96 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get studyWrongListTitle => 'Ошибки';
+
+  @override
+  String get reviewModeMatch => 'Подбор пар';
+
+  @override
+  String get reviewModeTrueFalse => 'Верно/Неверно';
+
+  @override
+  String get studyModeMatchSubtitle => 'Найди пары вопрос-ответ';
+
+  @override
+  String get studyModeTrueFalseSubtitle => 'Ответ верный или нет?';
+
+  @override
+  String get studyModeMatchNotEnough =>
+      'Нужно минимум 6 карточек с вопросом и ответом';
+
+  @override
+  String get studyModeTrueFalseNotEnough =>
+      'Нужен хотя бы один другой ответ в колоде';
+
+  @override
+  String get matchTitle => 'Подбор пар';
+
+  @override
+  String matchTimer(String time) {
+    return 'Время: $time';
+  }
+
+  @override
+  String matchBest(String time) {
+    return 'Лучшее время: $time';
+  }
+
+  @override
+  String matchMoves(int count) {
+    return 'Ходов: $count';
+  }
+
+  @override
+  String get matchCompletedTitle => 'Все пары найдены';
+
+  @override
+  String get matchRestart => 'Ещё раз';
+
+  @override
+  String get matchDone => 'Готово';
+
+  @override
+  String get matchEmptyTitle => 'Мало карточек для пар';
+
+  @override
+  String get matchEmptyMessage =>
+      'Нужно минимум 6 карточек с непустым вопросом и ответом.';
+
+  @override
+  String get trueFalseTitle => 'Верно/Неверно';
+
+  @override
+  String trueFalseStatement(String answer) {
+    return 'Ответ: $answer';
+  }
+
+  @override
+  String get trueFalseTrueAction => 'Верно';
+
+  @override
+  String get trueFalseFalseAction => 'Неверно';
+
+  @override
+  String get trueFalseCorrect => 'Верно!';
+
+  @override
+  String get trueFalseWrong => 'Ошибка';
+
+  @override
+  String trueFalseExplanation(String answer) {
+    return 'Правильный ответ: $answer';
+  }
+
+  @override
+  String get trueFalseSwipeHint => 'Свайп вправо — верно, влево — неверно';
+
+  @override
+  String get trueFalseNext => 'Далее';
+
+  @override
+  String get trueFalseEmptyTitle => 'Нет карточек для режима';
+
+  @override
+  String get trueFalseEmptyMessage =>
+      'Нужны карточки с ответом и хотя бы один другой ответ в колоде.';
 }

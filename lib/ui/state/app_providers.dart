@@ -21,6 +21,7 @@ import 'package:cardflow/api/providers/generation_provider_adapter.dart';
 import 'package:cardflow/api/parsers/file_parsing_service.dart';
 import 'package:cardflow/data/cards/card_image_refresher.dart';
 import 'package:cardflow/data/cards/drift_card_media_repository.dart';
+import 'package:cardflow/data/study/drift_match_best_store.dart';
 import 'package:cardflow/data/cards/drift_card_repository.dart';
 import 'package:cardflow/data/cards/file_picker_image_gateway.dart';
 import 'package:cardflow/data/cards/media_garbage_collector.dart';
@@ -59,6 +60,7 @@ import 'package:cardflow/domain/review/daily_usage_repository.dart';
 import 'package:cardflow/domain/review/practice_repository.dart';
 import 'package:cardflow/domain/review/review_repository.dart';
 import 'package:cardflow/domain/scheduling/scheduler.dart';
+import 'package:cardflow/domain/study/match_best_store.dart';
 import 'package:cardflow/domain/session/leech_repository.dart';
 import 'package:cardflow/domain/session/session_preset_repository.dart';
 import 'package:cardflow/domain/settings/app_settings.dart';
@@ -435,6 +437,11 @@ final cardImageRefresherProvider = Provider<CardImageRefresher>((ref) {
     mediaStore: ref.watch(mediaStoreProvider),
     imageFinder: ref.watch(cardImageFinderProvider),
   );
+});
+
+/// Лучшие результаты «Подбора пар» (`app_settings`, 7.16).
+final matchBestStoreProvider = Provider<MatchBestStore>((ref) {
+  return DriftMatchBestStore(ref.watch(appDatabaseProvider));
 });
 
 /// Пайплайн генерации: чанкинг, вызовы, прогресс/отмена, дедупликация.

@@ -9,7 +9,9 @@ import 'package:cardflow/ui/generation/generation_screen.dart';
 import 'package:cardflow/ui/review/feed_session_screen.dart';
 import 'package:cardflow/ui/review/practice_session_screen.dart';
 import 'package:cardflow/ui/review/review_session_screen.dart';
+import 'package:cardflow/ui/study/match_screen.dart';
 import 'package:cardflow/ui/study/multiple_choice_screen.dart';
+import 'package:cardflow/ui/study/true_false_screen.dart';
 import 'package:cardflow/ui/study/typing_screen.dart';
 import 'package:cardflow/ui/session/session_constructor_screen.dart';
 import 'package:cardflow/ui/settings/generation_settings_screen.dart';
@@ -39,6 +41,12 @@ abstract final class AppRoutes {
 
   /// Ввод ответа (7.15).
   static const String typing = 'typing';
+
+  /// Подбор пар (7.16).
+  static const String match = 'match';
+
+  /// Верно/Неверно (7.16).
+  static const String trueFalse = 'trueFalse';
 
   /// Конструктор сессии (SPEC A6.7).
   static const String constructor = 'constructor';
@@ -105,6 +113,12 @@ abstract final class AppRoutes {
 
   /// Путь режима «Ввод ответа» по колоде (7.15).
   static String typingPath(String deckId) => '/decks/$deckId/typing';
+
+  /// Путь «Подбора пар» по колоде (7.16).
+  static String matchPath(String deckId) => '/decks/$deckId/match';
+
+  /// Путь «Верно/Неверно» по колоде (7.16).
+  static String trueFalsePath(String deckId) => '/decks/$deckId/true-false';
 
   /// Путь конструктора сессии (SPEC A6.7).
   static const String constructorPath = '/constructor';
@@ -234,6 +248,18 @@ GoRouter createAppRouter({String initialLocation = AppRoutes.decksPath}) {
         name: AppRoutes.typing,
         builder: (context, state) =>
             TypingScreen(deckId: state.pathParameters['deckId']!),
+      ),
+      GoRoute(
+        path: '/decks/:deckId/match',
+        name: AppRoutes.match,
+        builder: (context, state) =>
+            MatchScreen(deckId: state.pathParameters['deckId']!),
+      ),
+      GoRoute(
+        path: '/decks/:deckId/true-false',
+        name: AppRoutes.trueFalse,
+        builder: (context, state) =>
+            TrueFalseScreen(deckId: state.pathParameters['deckId']!),
       ),
       GoRoute(
         path: AppRoutes.constructorPath,

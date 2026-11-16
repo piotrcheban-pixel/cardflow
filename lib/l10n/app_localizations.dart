@@ -3135,6 +3135,162 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Ошибки'**
   String get studyWrongListTitle;
+
+  /// Режим «Подбор пар» (7.16).
+  ///
+  /// In ru, this message translates to:
+  /// **'Подбор пар'**
+  String get reviewModeMatch;
+
+  /// Режим «Верно/Неверно» (7.16).
+  ///
+  /// In ru, this message translates to:
+  /// **'Верно/Неверно'**
+  String get reviewModeTrueFalse;
+
+  /// Подпись режима Подбор пар.
+  ///
+  /// In ru, this message translates to:
+  /// **'Найди пары вопрос-ответ'**
+  String get studyModeMatchSubtitle;
+
+  /// Подпись режима Верно/Неверно.
+  ///
+  /// In ru, this message translates to:
+  /// **'Ответ верный или нет?'**
+  String get studyModeTrueFalseSubtitle;
+
+  /// Режим Подбор пар недоступен.
+  ///
+  /// In ru, this message translates to:
+  /// **'Нужно минимум 6 карточек с вопросом и ответом'**
+  String get studyModeMatchNotEnough;
+
+  /// Режим Верно/Неверно недоступен.
+  ///
+  /// In ru, this message translates to:
+  /// **'Нужен хотя бы один другой ответ в колоде'**
+  String get studyModeTrueFalseNotEnough;
+
+  /// Заголовок игры.
+  ///
+  /// In ru, this message translates to:
+  /// **'Подбор пар'**
+  String get matchTitle;
+
+  /// Таймер игры, время строкой.
+  ///
+  /// In ru, this message translates to:
+  /// **'Время: {time}'**
+  String matchTimer(String time);
+
+  /// Лучший результат по колоде.
+  ///
+  /// In ru, this message translates to:
+  /// **'Лучшее время: {time}'**
+  String matchBest(String time);
+
+  /// Число ходов в игре.
+  ///
+  /// In ru, this message translates to:
+  /// **'Ходов: {count}'**
+  String matchMoves(int count);
+
+  /// Заголовок итога игры.
+  ///
+  /// In ru, this message translates to:
+  /// **'Все пары найдены'**
+  String get matchCompletedTitle;
+
+  /// Кнопка новой игры.
+  ///
+  /// In ru, this message translates to:
+  /// **'Ещё раз'**
+  String get matchRestart;
+
+  /// Кнопка выхода после игры.
+  ///
+  /// In ru, this message translates to:
+  /// **'Готово'**
+  String get matchDone;
+
+  /// Пустое состояние игры.
+  ///
+  /// In ru, this message translates to:
+  /// **'Мало карточек для пар'**
+  String get matchEmptyTitle;
+
+  /// Пояснение пустого состояния.
+  ///
+  /// In ru, this message translates to:
+  /// **'Нужно минимум 6 карточек с непустым вопросом и ответом.'**
+  String get matchEmptyMessage;
+
+  /// Заголовок режима.
+  ///
+  /// In ru, this message translates to:
+  /// **'Верно/Неверно'**
+  String get trueFalseTitle;
+
+  /// Показанное утверждение.
+  ///
+  /// In ru, this message translates to:
+  /// **'Ответ: {answer}'**
+  String trueFalseStatement(String answer);
+
+  /// Кнопка «верно».
+  ///
+  /// In ru, this message translates to:
+  /// **'Верно'**
+  String get trueFalseTrueAction;
+
+  /// Кнопка «неверно».
+  ///
+  /// In ru, this message translates to:
+  /// **'Неверно'**
+  String get trueFalseFalseAction;
+
+  /// Ответ игрока правильный.
+  ///
+  /// In ru, this message translates to:
+  /// **'Верно!'**
+  String get trueFalseCorrect;
+
+  /// Ответ игрока неправильный.
+  ///
+  /// In ru, this message translates to:
+  /// **'Ошибка'**
+  String get trueFalseWrong;
+
+  /// Показ правильного ответа после ошибки.
+  ///
+  /// In ru, this message translates to:
+  /// **'Правильный ответ: {answer}'**
+  String trueFalseExplanation(String answer);
+
+  /// Подсказка жестов.
+  ///
+  /// In ru, this message translates to:
+  /// **'Свайп вправо — верно, влево — неверно'**
+  String get trueFalseSwipeHint;
+
+  /// Переход к следующему утверждению.
+  ///
+  /// In ru, this message translates to:
+  /// **'Далее'**
+  String get trueFalseNext;
+
+  /// Пустое состояние режима.
+  ///
+  /// In ru, this message translates to:
+  /// **'Нет карточек для режима'**
+  String get trueFalseEmptyTitle;
+
+  /// Пояснение пустого состояния.
+  ///
+  /// In ru, this message translates to:
+  /// **'Нужны карточки с ответом и хотя бы один другой ответ в колоде.'**
+  String get trueFalseEmptyMessage;
 }
 
 class _AppLocalizationsDelegate

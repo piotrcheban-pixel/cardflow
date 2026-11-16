@@ -10,7 +10,9 @@ import 'package:cardflow/ui/decks/decks_screen.dart';
 import 'package:cardflow/ui/review/practice_session_screen.dart';
 import 'package:cardflow/ui/review/review_session_screen.dart';
 import 'package:cardflow/ui/session/session_constructor_screen.dart';
+import 'package:cardflow/ui/study/match_screen.dart';
 import 'package:cardflow/ui/study/multiple_choice_screen.dart';
+import 'package:cardflow/ui/study/true_false_screen.dart';
 import 'package:cardflow/ui/study/typing_screen.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart' hide Card;
@@ -421,6 +423,10 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text(l10n.constructorAction), findsOneWidget);
 
+      await tester.ensureVisible(
+        find.byKey(const ValueKey<String>('review-mode-constructor')),
+      );
+      await tester.pumpAndSettle();
       await tester.tap(find.text(l10n.constructorAction));
       await tester.pumpAndSettle();
 
@@ -587,7 +593,17 @@ void main() {
       );
       expect(testTile.enabled, isFalse);
       expect(typingTile.enabled, isFalse);
+      final ListTile matchTile = tester.widget<ListTile>(
+        find.byKey(const ValueKey<String>('review-mode-match')),
+      );
+      final ListTile trueFalseTile = tester.widget<ListTile>(
+        find.byKey(const ValueKey<String>('review-mode-true-false')),
+      );
+      expect(matchTile.enabled, isFalse);
+      expect(trueFalseTile.enabled, isFalse);
       expect(find.text(l10n.studyModeNotEnough), findsNWidgets(2));
+      expect(find.text(l10n.studyModeMatchNotEnough), findsOneWidget);
+      expect(find.text(l10n.studyModeTrueFalseNotEnough), findsOneWidget);
     });
 
     testWidgets('лист режимов: «Ввод ответа» открывает экран ввода', (
@@ -621,6 +637,91 @@ void main() {
       await tester.tap(find.text(l10n.reviewModeTyping));
       await tester.pumpAndSettle();
       expect(find.byType(TypingScreen), findsOneWidget);
+    });
+
+    testWidgets('лист режимов: «Подбор пар» открывает игру', (
+      WidgetTester tester,
+    ) async {
+      final FakeDeckRepository repository = FakeDeckRepository(
+        summaries: <DeckSummary>[
+          makeSummary(
+            id: 'deck-1',
+            name: 'Биология',
+            totalCards: 6,
+            newCards: 6,
+          ),
+        ],
+      );
+      final FakeCardRepository cards = FakeCardRepository(
+        cards: <Card>[
+          for (var index = 0; index < 6; index++)
+            makeCard(
+              id: 'card-$index',
+              deckId: 'deck-1',
+              front: 'Вопрос $index',
+              back: <String>[
+                'Митохондрия',
+                'Рибосома',
+                'Хлоропласт',
+                'Лизосома',
+                'Гольджи',
+                'Ядро',
+              ][index],
+            ),
+        ],
+      );
+      await pumpDeck(tester, repository: repository, cards: cards);
+      await tester.pumpAndSettle();
+      final AppLocalizations l10n = l10nOf(tester);
+      await tester.tap(find.text(l10n.reviewStartSession));
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.reviewModeMatch), findsOneWidget);
+      expect(find.text(l10n.reviewModeTrueFalse), findsOneWidget);
+
+      await tester.tap(find.text(l10n.reviewModeMatch));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(find.byType(MatchScreen), findsOneWidget);
+    });
+
+    testWidgets('лист режимов: «Верно/Неверно» открывает режим', (
+      WidgetTester tester,
+    ) async {
+      final FakeDeckRepository repository = FakeDeckRepository(
+        summaries: <DeckSummary>[
+          makeSummary(
+            id: 'deck-1',
+            name: 'Биология',
+            totalCards: 2,
+            newCards: 2,
+          ),
+        ],
+      );
+      final FakeCardRepository cards = FakeCardRepository(
+        cards: <Card>[
+          makeCard(
+            id: 'a',
+            deckId: 'deck-1',
+            front: 'Вопрос a',
+            back: 'Ответ a',
+          ),
+          makeCard(
+            id: 'b',
+            deckId: 'deck-1',
+            front: 'Вопрос b',
+            back: 'Ответ b',
+          ),
+        ],
+      );
+      await pumpDeck(tester, repository: repository, cards: cards);
+      await tester.pumpAndSettle();
+      final AppLocalizations l10n = l10nOf(tester);
+      await tester.tap(find.text(l10n.reviewStartSession));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(l10n.reviewModeTrueFalse));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(find.byType(TrueFalseScreen), findsOneWidget);
     });
 
     // Итерация 7.11/7.12: причина пустой сессии — исчерпанный дневной лимит;
