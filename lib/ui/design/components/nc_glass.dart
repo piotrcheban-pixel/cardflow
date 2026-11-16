@@ -29,6 +29,7 @@ class NcGlass extends StatelessWidget {
     required this.child,
     this.tier = NcGlassTier.regular,
     this.radius = NcRadii.xl,
+    this.borderRadiusGeometry,
     this.padding,
     this.grouped = false,
     this.showNoise = true,
@@ -46,6 +47,10 @@ class NcGlass extends StatelessWidget {
 
   /// Радиус скругления (из `NcRadii`).
   final double radius;
+
+  /// Геометрия скругления (например, только верхние углы листа); важнее
+  /// [radius].
+  final BorderRadiusGeometry? borderRadiusGeometry;
 
   /// Внутренние отступы.
   final EdgeInsetsGeometry? padding;
@@ -81,7 +86,8 @@ class NcGlass extends StatelessWidget {
     final NcGlassMaterial effective = solid
         ? NcGlassMaterials.solid(colors)
         : material;
-    final BorderRadius borderRadius = BorderRadius.circular(radius);
+    final BorderRadiusGeometry borderRadius =
+        borderRadiusGeometry ?? BorderRadius.circular(radius);
 
     Widget content = Padding(padding: padding ?? EdgeInsets.zero, child: child);
     if (showNoise && effective.noiseOpacity > 0) {

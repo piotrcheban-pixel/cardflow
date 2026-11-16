@@ -7,7 +7,7 @@ import 'package:cardflow/domain/transfer/deck_archive.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/decks/archive_error_message.dart';
 import 'package:cardflow/ui/decks/deck_archive_file_name.dart';
-import 'package:cardflow/ui/m3e/m3e.dart';
+import 'package:cardflow/ui/design/design.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
 
 /// Действия над колодами (SPEC A6.2/A6.3/A6.9): диалоги, экспорт, импорт.
@@ -16,13 +16,9 @@ import 'package:cardflow/ui/state/app_providers.dart';
 /// маппятся в ARB (`archiveErrorMessage`), прочие — в общую строку. Сырые
 /// исключения наружу не выводятся.
 
-/// Показывает короткое сообщение снекбаром (M3 Expressive).
+/// Показывает короткое сообщение тостом Nocturne (`NcToast`, §8).
 void showAppMessage(BuildContext context, String message) {
-  M3ESnackbar.show(
-    context,
-    message: message,
-    duration: const Duration(seconds: 4),
-  );
+  showNcToast(context, message: message, duration: const Duration(seconds: 4));
 }
 
 /// Диалог создания колоды вручную; возвращает созданную колоду.
@@ -103,14 +99,14 @@ Future<bool> deleteDeckWithConfirmation(
   }
 }
 
-/// Снекбар после архивации с действием «Отменить» (восстанавливает колоду).
+/// Тост после архивации с действием «Отменить» (восстанавливает колоду).
 void showArchivedUndoSnackbar(
   BuildContext context,
   WidgetRef ref, {
   required String deckId,
 }) {
   final AppLocalizations l10n = AppLocalizations.of(context);
-  M3ESnackbar.show(
+  showNcToast(
     context,
     message: l10n.deckArchivedMessage,
     actionLabel: l10n.undo,

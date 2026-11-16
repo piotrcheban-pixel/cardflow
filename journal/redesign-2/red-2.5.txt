@@ -1,0 +1,89 @@
+00:00 +0: loading C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/components/nc_overlays_test.dart
+test/widget/design/components/nc_overlays_test.dart:312:13: Error: Method not found: 'NcTappable'.
+            NcTappable(
+            ^^^^^^^^^^
+00:00 +0 -1: loading C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/components/nc_overlays_test.dart [E]
+  Failed to load "C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/components/nc_overlays_test.dart":
+  Compilation failed for testPath=C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/components/nc_overlays_test.dart: test/widget/design/components/nc_overlays_test.dart:312:13: Error: Method not found: 'NcTappable'.
+              NcTappable(
+              ^^^^^^^^^^
+  .
+  Error: The Dart compiler exited unexpectedly.
+  package:flutter_tools/src/base/common.dart 34:3  throwToolExit
+  package:flutter_tools/src/compile.dart 1024:11   DefaultResidentCompiler._compile.<fn>
+  dart:async/zone_root.dart 48:47                  _rootRunUnary
+  dart:async/zone.dart 816:35                      _CustomZone.runUnary
+  dart:async/future_impl.dart 948:45               Future._propagateToListeners.handleValueCallback
+  dart:async/future_impl.dart 977:13               Future._propagateToListeners
+  dart:async/future_impl.dart 862:9                Future._propagateToListeners
+  dart:async/future_impl.dart 720:5                Future._completeWithValue
+  dart:async/future_impl.dart 804:7                Future._asyncCompleteWithValue.<fn>
+  dart:async/zone_root.dart 35:13                  _rootRun
+  dart:async/zone.dart 810:35                      _CustomZone.run
+  dart:async/zone.dart 702:7                       _CustomZone.runGuarded
+  dart:async/zone.dart 743:23                      _CustomZone.bindCallbackGuarded.<fn>
+  dart:async/schedule_microtask.dart 40:35         _microtaskLoop
+  dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
+  dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
+  dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
+  
+00:00 +0 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/toast_wiring_test.dart: архив колоды показывает NcToast с «Отменить»
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following TestFailure was thrown running a test:
+Expected: exactly one matching candidate
+  Actual: _TypeWidgetFinder:<Found 0 widgets with type "NcToast": []>
+   Which: means none were found but one was expected
+Тост приложения — NcToast, а не M3ESnackbar
+
+When the exception was thrown, this was the stack:
+#4      main.<anonymous closure> (file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/toast_wiring_test.dart:42:5)
+<asynchronous suspension>
+#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+This was caught by the test expectation on the following line:
+  file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/toast_wiring_test.dart line 42
+The test description was:
+  архив колоды показывает NcToast с «Отменить»
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:01 +0 -2: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/toast_wiring_test.dart: архив колоды показывает NcToast с «Отменить» [E]
+  Test failed. See exception logs above.
+  The test description was: архив колоды показывает NcToast с «Отменить»
+  
+00:01 +0 -2: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/toast_wiring_test.dart: ошибка экспорта показывает NcToast
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following TestFailure was thrown running a test:
+Expected: exactly one matching candidate
+  Actual: _TypeWidgetFinder:<Found 0 widgets with type "NcToast": []>
+   Which: means none were found but one was expected
+
+When the exception was thrown, this was the stack:
+#4      main.<anonymous closure> (file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/toast_wiring_test.dart:69:5)
+<asynchronous suspension>
+#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+This was caught by the test expectation on the following line:
+  file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/toast_wiring_test.dart line 69
+The test description was:
+  ошибка экспорта показывает NcToast
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:01 +0 -3: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/toast_wiring_test.dart: ошибка экспорта показывает NcToast [E]
+  Test failed. See exception logs above.
+  The test description was: ошибка экспорта показывает NcToast
+  
+00:01 +0 -3: Some tests failed.
+
+Failing tests:
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/components/nc_overlays_test.dart: loading C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/components/nc_overlays_test.dart
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/toast_wiring_test.dart: архив колоды показывает NcToast с «Отменить»
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/toast_wiring_test.dart: ошибка экспорта показывает NcToast
+
