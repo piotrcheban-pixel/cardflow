@@ -533,3 +533,5 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   `journal/iteration-7.17/screenshots/` (Тест с формулами в вопросе и четырёх вариантах, Пары,
   Ввод, Верно/Неверно; KaTeX-шрифты в харнессе грузятся вручную — L91); первый полный прогон упал
   на живом Wikimedia-тесте (сеть, повторный зелёный — L92). Ограничения: L89–L92.
+  **Push итерации 7.17:** `4dfe10c..b199dbc`; CI run
+  [`43935245725`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43935245725) — **9/9 job success**.

@@ -230,6 +230,12 @@ passed + 8 skipped** (baseline 1742 + 8; первый прогон дал 1771 +
 строят вопрос» заменён осознанно (ADR-034). L87/L88 не менялись. Схема БД и
 `format_version` не менялись.
 
+## Итерация 7.17 — CI
+
+Push `4dfe10c..b199dbc`; CI run
+[`43935245725`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43935245725)
+— **9/9 job success** (format+analyze, test ×3, build desktop ×3, mobile 2).
+
 ## Итерация 7.16 — итог (ADR-033)
 
 **Гейты 7.16:** `test --no-pub --coverage --exclude-tags golden` → **1742
