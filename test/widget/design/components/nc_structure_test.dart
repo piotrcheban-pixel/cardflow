@@ -197,7 +197,7 @@ void main() {
       expectGlassBudget(tester, maxGroups: 1);
       expect(
         tester.getSize(find.byType(NcTopBar)).height,
-        NcTopBar.compactHeight,
+        closeTo(NcTopBar.compactHeight, 0.01),
         reason: 'Large title схлопывается в titleM (§8)',
       );
     });

@@ -1,4 +1,12 @@
+import 'dart:ui' show lerpDouble;
+
 import 'package:material_ui/material_ui.dart';
+
+import 'internal/nc_spring_builder.dart';
+import '../motion_scope.dart';
+import '../nc_theme.dart';
+import '../tokens/nc_spacing.dart';
+import 'nc_glass.dart';
 
 /// Прозрачная панель в покое; при прокрутке > 8 px — `glass.thin` + hairline
 /// снизу (effects-пружина). Large title (`displayL`) схлопывается в `titleM`
@@ -80,5 +88,107 @@ class _NcTopBarState extends State<NcTopBar> {
   }
 
   @override
-  Widget build(BuildContext context) => const SizedBox.shrink();
+  Widget build(BuildContext context) {
+    final NcTheme theme = NcTheme.of(context);
+    final bool hasLargeTitle = widget.largeTitle != null;
+    final bool scrolled = _scrolled || !hasLargeTitle;
+    final String? largeTitle = widget.largeTitle;
+    final String? title = widget.title ?? largeTitle;
+
+    return NcSpringBuilder(
+      value: scrolled ? 1 : 0,
+      spring: NcMotion.of(context).effectsSpring(),
+      builder: (BuildContext context, double progress) {
+        final double t = progress.clamp(0.0, 1.0);
+        final double height = hasLargeTitle
+            ? lerpDouble(NcTopBar.largeHeight, NcTopBar.compactHeight, t)!
+            : NcTopBar.compactHeight;
+        final Widget row = Row(
+          children: <Widget>[
+            if (widget.leading != null)
+              Padding(
+                padding: const EdgeInsets.only(left: NcSpace.s4),
+                child: widget.leading,
+              )
+            else
+              const SizedBox(width: NcSpace.s20),
+            Expanded(
+              child: title == null
+                  ? const SizedBox.shrink()
+                  : Opacity(
+                      opacity: hasLargeTitle ? t : 1,
+                      child: Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: hasLargeTitle
+                            ? TextAlign.center
+                            : TextAlign.start,
+                        style: theme.typography.titleM.copyWith(
+                          color: theme.colors.textPrimary,
+                        ),
+                      ),
+                    ),
+            ),
+            ...widget.actions,
+            const SizedBox(width: NcSpace.s16),
+          ],
+        );
+        return SizedBox(
+          height: height,
+          child: Stack(
+            children: <Widget>[
+              if (t > 0)
+                Positioned.fill(
+                  child: Opacity(
+                    opacity: t,
+                    child: NcGlass(
+                      tier: NcGlassTier.thin,
+                      radius: 0,
+                      showNoise: false,
+                      showRimLight: false,
+                      child: Align(
+                        alignment: Alignment.bottomCenter,
+                        child: SizedBox(
+                          height: 1,
+                          width: double.infinity,
+                          child: ColoredBox(color: theme.colors.hairline),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                height: NcTopBar.compactHeight,
+                child: row,
+              ),
+              if (hasLargeTitle)
+                Positioned(
+                  left: NcSpace.s20,
+                  right: NcSpace.s20,
+                  bottom: NcSpace.s12,
+                  child: Opacity(
+                    opacity: 1 - t,
+                    child: Transform.translate(
+                      offset: Offset(0, -12 * t),
+                      child: Text(
+                        largeTitle!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.typography.displayL.copyWith(
+                          color: theme.colors.textPrimary,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
 }
