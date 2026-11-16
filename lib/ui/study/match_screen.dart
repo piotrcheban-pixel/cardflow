@@ -9,6 +9,7 @@ import 'package:material_ui/material_ui.dart' hide Card;
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/study/match_game.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
+import 'package:cardflow/ui/cards/content/card_text.dart';
 import 'package:cardflow/ui/review/review_chrome.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
 
@@ -319,8 +320,8 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                                   ? theme.colorScheme.errorContainer
                                   : null,
                             ),
-                            child: Text(
-                              tile.text,
+                            child: CardText(
+                              source: tile.text,
                               maxLines: 4,
                               overflow: TextOverflow.ellipsis,
                               textAlign: TextAlign.center,

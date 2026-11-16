@@ -11,6 +11,7 @@ import 'package:cardflow/domain/study/study_mode.dart';
 import 'package:cardflow/domain/study/true_false_question.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/cards/content/card_content_view.dart';
+import 'package:cardflow/ui/cards/content/card_text.dart';
 import 'package:cardflow/ui/decks/deck_actions.dart';
 import 'package:cardflow/ui/review/review_chrome.dart';
 import 'package:cardflow/ui/review/session_media.dart';
@@ -308,6 +309,7 @@ class _TrueFalseScreenState extends ConsumerState<TrueFalseScreen> {
                       card: card,
                       side: card.front,
                       revealed: false,
+                      showAllFormulas: true,
                       faceKey: const ValueKey<String>('tf-question-face'),
                       mediaBytes: _media.bytes,
                       mediaMetadata: _media.metadata,
@@ -320,9 +322,9 @@ class _TrueFalseScreenState extends ConsumerState<TrueFalseScreen> {
                       color: theme.colorScheme.surfaceContainerHighest,
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    child: Text(
-                      l10n.trueFalseStatement(question.shownAnswer),
+                    child: CardText(
                       key: const ValueKey<String>('tf-statement'),
+                      source: l10n.trueFalseStatement(question.shownAnswer),
                       textAlign: TextAlign.center,
                       style: theme.textTheme.titleMedium,
                     ),
@@ -414,8 +416,9 @@ class _TrueFalseFeedback extends StatelessWidget {
           ),
           if (!correct || !question.isTrue) ...<Widget>[
             const SizedBox(height: 6),
-            Text(
-              l10n.trueFalseExplanation(question.card.back),
+            CardText(
+              key: const ValueKey<String>('tf-explanation'),
+              source: l10n.trueFalseExplanation(question.card.back),
               style: theme.textTheme.bodyMedium?.copyWith(color: foreground),
             ),
           ],

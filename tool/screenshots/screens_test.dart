@@ -53,6 +53,67 @@ Future<void> _loadFonts() async {
     );
     await iconLoader.load();
   }
+  await _loadKatexFonts();
+}
+
+/// Шрифты KaTeX из `flutter_math_fork`.
+///
+/// `flutter_test` не загружает шрифты пакетов сам: без этого формулы в
+/// скриншотах рисуются квадратами Ahem. Семейства объявлены в pubspec
+/// пакета (`KaTeX_Main`, `KaTeX_Math`, `KaTeX_Size1..4`, …).
+Future<void> _loadKatexFonts() async {
+  final String? localAppData = Platform.environment['LOCALAPPDATA'];
+  final String? pubCache = Platform.environment['PUB_CACHE'];
+  final Directory hosted = Directory(
+    '${pubCache ?? '$localAppData\\Pub\\Cache'}\\hosted\\pub.dev',
+  );
+  if (!hosted.existsSync()) return;
+  final Directory? package = hosted
+      .listSync()
+      .whereType<Directory>()
+      .where(
+        (Directory entry) => entry.path
+            .split(Platform.pathSeparator)
+            .last
+            .startsWith('flutter_math_fork-'),
+      )
+      .firstOrNull;
+  if (package == null) return;
+  final Directory fonts = Directory('${package.path}\\lib\\katex_fonts\\fonts');
+  if (!fonts.existsSync()) return;
+
+  final Map<String, File> preferred = <String, File>{};
+  for (final FileSystemEntity entry in fonts.listSync()) {
+    if (entry is! File || !entry.path.endsWith('.ttf')) continue;
+    final String name = entry.path.split(Platform.pathSeparator).last;
+    final String family = name.substring(0, name.indexOf('-'));
+    final bool isItalic = name.contains('Italic');
+    final bool isRegular = name.contains('Regular');
+    final int rank = isRegular ? 0 : (isItalic ? 1 : 2);
+    final File? current = preferred[family];
+    if (current == null) {
+      preferred[family] = entry;
+      continue;
+    }
+    final String currentName = current.path.split(Platform.pathSeparator).last;
+    final int currentRank = currentName.contains('Regular')
+        ? 0
+        : (currentName.contains('Italic') ? 1 : 2);
+    if (rank < currentRank) preferred[family] = entry;
+  }
+
+  for (final MapEntry<String, File> entry in preferred.entries) {
+    // Семейство в рендере — с префиксом пакета (см. make_symbol.dart).
+    final FontLoader loader = FontLoader(
+      'packages/flutter_math_fork/${entry.key}',
+    );
+    loader.addFont(
+      Future<ByteData>.value(
+        ByteData.sublistView(await entry.value.readAsBytes()),
+      ),
+    );
+    await loader.load();
+  }
 }
 
 List<Card> _cards() => <Card>[
@@ -106,6 +167,86 @@ List<Card> _cards() => <Card>[
   ),
 ];
 
+/// Колода с формулами для скриншотов 7.17 (LaTeX в новых режимах).
+List<Card> _latexCards() => <Card>[
+  makeCard(
+    id: 'latex-1',
+    deckId: 'deck-1',
+    front: r'Формула энергии покоя $E=mc^2$?',
+    back: r'$E = mc^2$',
+    createdAt: _now,
+    updatedAt: _now,
+  ),
+  makeCard(
+    id: 'latex-2',
+    deckId: 'deck-1',
+    front: r'Формула силы $F$?',
+    back: r'$F = ma$',
+    createdAt: _now,
+    updatedAt: _now,
+  ),
+  makeCard(
+    id: 'latex-3',
+    deckId: 'deck-1',
+    front: r'Формула мощности $P$?',
+    back: r'$P = UI$',
+    createdAt: _now,
+    updatedAt: _now,
+  ),
+  makeCard(
+    id: 'latex-4',
+    deckId: 'deck-1',
+    front: r'Закон Ома $I$?',
+    back: r'$I = U/R$',
+    createdAt: _now,
+    updatedAt: _now,
+  ),
+  makeCard(
+    id: 'latex-5',
+    deckId: 'deck-1',
+    front: r'Теплота $Q$ при нагреве?',
+    back: r'$Q = cm\Delta t$',
+    createdAt: _now,
+    updatedAt: _now,
+  ),
+  makeCard(
+    id: 'latex-6',
+    deckId: 'deck-1',
+    front: r'Период колебаний $T$?',
+    back: r'$T = 2\pi\sqrt{l/g}$',
+    createdAt: _now,
+    updatedAt: _now,
+  ),
+];
+
+/// Колода для «Ввода ответа»: формула в вопросе, печатаемый ответ.
+List<Card> _latexTypingCards() => <Card>[
+  makeCard(
+    id: 'latex-typing-1',
+    deckId: 'deck-1',
+    front: r'Что означает формула $E=mc^2$?',
+    back: 'Энергия покоя',
+    createdAt: _now,
+    updatedAt: _now,
+  ),
+  makeCard(
+    id: 'latex-typing-2',
+    deckId: 'deck-1',
+    front: r'Что связывает $F=ma$?',
+    back: 'Сила и ускорение',
+    createdAt: _now,
+    updatedAt: _now,
+  ),
+  makeCard(
+    id: 'latex-typing-3',
+    deckId: 'deck-1',
+    front: r'Что такое $P=UI$?',
+    back: 'Мощность тока',
+    createdAt: _now,
+    updatedAt: _now,
+  ),
+];
+
 ThemeData _theme(Brightness brightness) {
   return ThemeData(
     colorScheme: ColorScheme.fromSeed(
@@ -117,12 +258,13 @@ ThemeData _theme(Brightness brightness) {
   );
 }
 
-Widget _app(Widget home, Brightness brightness) {
+Widget _app(Widget home, Brightness brightness, {List<Card>? cards}) {
+  final List<Card> deck = cards ?? _cards();
   return ProviderScope(
     overrides: decksOverrides(
       deckRepository: FakeDeckRepository(),
-      cardRepository: FakeCardRepository(cards: _cards()),
-      reviewRepository: FakeReviewRepository()..previousCard = _cards().first,
+      cardRepository: FakeCardRepository(cards: deck),
+      reviewRepository: FakeReviewRepository()..previousCard = deck.first,
       matchBestStore: FakeMatchBestStore(
         bestByDeck: <String, int>{'deck-1': 42000},
       ),
@@ -202,6 +344,62 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 200));
     await _capture(tester, 'true-false-dark');
+  });
+
+  testWidgets('latex test light', (WidgetTester tester) async {
+    await phone(tester);
+    await tester.pumpWidget(
+      _app(
+        const MultipleChoiceScreen(deckId: 'deck-1'),
+        Brightness.light,
+        cards: _latexCards(),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+    await _capture(tester, 'latex-test-light');
+  });
+
+  testWidgets('latex match light', (WidgetTester tester) async {
+    await phone(tester);
+    await tester.pumpWidget(
+      _app(
+        const MatchScreen(deckId: 'deck-1'),
+        Brightness.light,
+        cards: _latexCards(),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+    await _capture(tester, 'latex-match-light');
+  });
+
+  testWidgets('latex typing dark', (WidgetTester tester) async {
+    await phone(tester);
+    await tester.pumpWidget(
+      _app(
+        const TypingScreen(deckId: 'deck-1'),
+        Brightness.dark,
+        cards: _latexTypingCards(),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+    await _capture(tester, 'latex-typing-dark');
+  });
+
+  testWidgets('latex true false dark', (WidgetTester tester) async {
+    await phone(tester);
+    await tester.pumpWidget(
+      _app(
+        const TrueFalseScreen(deckId: 'deck-1'),
+        Brightness.dark,
+        cards: _latexCards(),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+    await _capture(tester, 'latex-true-false-dark');
   });
 
   testWidgets('card photo light', (WidgetTester tester) async {

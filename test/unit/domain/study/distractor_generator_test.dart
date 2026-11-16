@@ -113,7 +113,49 @@ void main() {
     }
   });
 
-  test('формулы и длинные ответы — вопрос не строится', () {
+  // 7.17, ADR-034: «Тест» — выбор варианта, а не ввод, поэтому формульный
+  // ответ — полноценный вариант (LaTeX рендерится в кнопках).
+  test('формульные ответы дают вопрос, если их хватает на дистракторы', () {
+    final cards = deck(
+      answers: const <String>[
+        r'$x_0 = a$',
+        r'$x_1 = b$',
+        r'$x_2 = c$',
+        r'$x_3 = d$',
+      ],
+    );
+    final set = generator.buildQuestion(cards.first, cards)!;
+    expect(set.options, hasLength(4));
+    expect(set.options[set.correctIndex], r'$x_0 = a$');
+    expect(
+      set.options.every(
+        (String answer) =>
+            AnswerTypes.classifyAnswer('?', answer) == AnswerType.formula,
+      ),
+      isTrue,
+      reason: 'формулы не смешиваются с текстовыми ответами',
+    );
+  });
+
+  test('длинные ответы (long_text) — вопрос не строится', () {
+    final long = Card(
+      id: 'l',
+      deckId: 'd',
+      front: 'Вопрос?',
+      back: 'Очень длинный ответ, который не помещается в кнопку варианта и потому не годится для Теста.',
+      cardType: CardType.basic,
+      state: CardState.newCard,
+      createdAt: DateTime.utc(2026),
+      updatedAt: DateTime.utc(2026),
+    );
+    expect(
+      generator.buildQuestion(long, <Card>[long, ...deck()]),
+      isNull,
+      reason: 'длинный ответ не вариант Теста (L87: остаётся пропуск)',
+    );
+  });
+
+  test('формуле без других формул в колоде не хватает дистракторов', () {
     final formula = Card(
       id: 'f',
       deckId: 'd',

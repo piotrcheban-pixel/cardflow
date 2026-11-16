@@ -38,6 +38,50 @@ void main() {
     );
   });
 
+  // 7.17, ADR-034: `\(…\)`/`\[…\]` — те же разделители, что у `LatexMarkup`;
+  // раньше такой ответ считался обычным текстом и попадал в «Ввод ответа».
+  test(r'\(…\) и \[…\] — тоже formula', () {
+    expect(
+      AnswerTypes.classify(_card(front: 'Вопрос', back: r'\(x^2 + y^2\)')),
+      AnswerType.formula,
+    );
+    expect(
+      AnswerTypes.classify(_card(front: 'Вопрос', back: r'\[a + b\]')),
+      AnswerType.formula,
+    );
+  });
+
+  test('формула годится для выбора в «Тесте», но не для ввода', () {
+    final card = _card(front: 'Формула?', back: r'$E=mc^2$');
+    expect(AnswerTypes.isChoice(card), isTrue);
+    expect(AnswerTypes.isTypable(card), isFalse);
+  });
+
+  test('длинная формула (> 120 символов) не показывается вариантом', () {
+    final String longFormula = '\$${'a' * 119}\$';
+    expect(longFormula.length, greaterThan(kMaxChoiceAnswerLength));
+    final card = _card(front: 'Вопрос', back: longFormula);
+    expect(AnswerTypes.classify(card), AnswerType.formula);
+    expect(AnswerTypes.isChoice(card), isFalse);
+  });
+
+  test('cloze и длинный текст не годятся для выбора', () {
+    expect(
+      AnswerTypes.isChoice(
+        _card(
+          front: 'Столица — {{c1::Париж}}',
+          back: '',
+          cardType: CardType.cloze,
+        ),
+      ),
+      isFalse,
+    );
+    expect(
+      AnswerTypes.isChoice(_card(front: 'Вопрос', back: 'а' * 61)),
+      isFalse,
+    );
+  });
+
   test('длинный/многострочный ответ — long_text', () {
     expect(
       AnswerTypes.classify(_card(front: 'Вопрос', back: 'а' * 61)),

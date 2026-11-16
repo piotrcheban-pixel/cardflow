@@ -106,3 +106,10 @@ class LatexMarkup {
     segments.add(LatexSegment(LatexSegmentKind.text, value));
   }
 }
+
+/// Текст без LaTeX-разметки: разделители убираются, выражения остаются.
+///
+/// Нужен для семантики (скринридер не должен читать `$…$`) и для поиска по
+/// вариантам ответа. Незакрытый разделитель возвращает исходную строку.
+String plainTextOfLatex(String source) =>
+    LatexMarkup.parse(source).segments.map((LatexSegment s) => s.value).join();

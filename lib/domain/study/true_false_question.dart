@@ -62,9 +62,10 @@ String _alternativeAnswer(Card card, List<Card> deck, {required int seed}) {
     final String answer = other.back.trim();
     if (answer.isEmpty) continue;
     if (answer == correct) continue;
-    if (!AnswerTypes.isTypable(other)) {
-      // Для «Верно/Неверно» длинные ответы тоже допустимы, но дистрактор
-      // должен быть правдоподобным: берём только короткие/числа.
+    if (!AnswerTypes.isChoice(other)) {
+      // Для «Верно/Неверно» подходят те же ответы, что и для вариантов
+      // «Теста» (7.17, ADR-034): формула в утверждении правдоподобна, если
+      // ответы колоды — формулы, и не выдаёт себя форматом.
       continue;
     }
     candidates.add(answer);

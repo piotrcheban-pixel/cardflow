@@ -38,6 +38,10 @@ class DistractorGenerator {
   ///
   /// [seed] фиксирует перемешивание (в тестах), [aiDistractors] — ответ
   /// batch-запроса к ИИ для колод с малым числом подходящих ответов.
+  ///
+  /// Формульные ответы допускаются (7.17, ADR-034): в «Тесте» ответ выбирают,
+  /// а не печатают, поэтому LaTeX-ответ — полноценный вариант. Длинные ответы
+  /// (`long_text`) по-прежнему не годятся для кнопок.
   DistractorSet? buildQuestion(
     Card card,
     List<Card> deck, {
@@ -45,7 +49,7 @@ class DistractorGenerator {
     List<String> aiDistractors = const <String>[],
   }) {
     final AnswerType type = AnswerTypes.classify(card);
-    if (!type.isTypable) return null;
+    if (!AnswerTypes.isChoice(card)) return null;
     final String correct = card.back.trim();
     if (correct.isEmpty) return null;
 
@@ -83,6 +87,7 @@ class DistractorGenerator {
       if (AnswerTypes.classify(other) != type) continue;
       final String answer = other.back.trim();
       if (answer.isEmpty) continue;
+      if (answer.length > kMaxChoiceAnswerLength) continue;
       final String normalized = normalizeAnswer(answer);
       if (!seen.add(normalized)) continue;
       if (!_compatible(answer, correct, type)) continue;

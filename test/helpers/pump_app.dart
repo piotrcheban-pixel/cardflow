@@ -283,6 +283,24 @@ AppLocalizations l10nOf(WidgetTester tester) {
   return AppLocalizations.of(tester.element(find.byType(Scaffold).first));
 }
 
+/// Весь видимый текст под [root] (включая `Text.rich`).
+///
+/// Нужен там, где текст карточки рендерит `CardText`/`InlineLatexText` (7.17):
+/// у такого дерева нет одного `Text.data`, а формулы приходят `Math`-виджетами.
+String plainTextUnder(WidgetTester tester, Finder root) {
+  final StringBuffer buffer = StringBuffer();
+  final Finder matching = find.descendant(
+    of: root,
+    matching: find.byType(Text),
+    matchRoot: true,
+  );
+  for (final Element element in matching.evaluate()) {
+    final Text text = element.widget as Text;
+    buffer.write(text.data ?? text.textSpan?.toPlainText() ?? '');
+  }
+  return buffer.toString();
+}
+
 /// Маршрут просит игнорировать дневные лимиты (`?limits=ignore`, ADR-028).
 bool _ignoresDailyLimits(GoRouterState state) =>
     state.uri.queryParameters[AppRoutes.dailyLimitsQuery] ==

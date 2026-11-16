@@ -606,6 +606,60 @@ void main() {
       expect(find.text(l10n.studyModeTrueFalseNotEnough), findsOneWidget);
     });
 
+    // 7.17, ADR-034: «Тест» — выбор варианта, поэтому формульные ответы
+    // доступны, а «Ввод ответа» — нет (формулу нельзя напечатать).
+    testWidgets('лист режимов: формулы доступны Тесту, но не Вводу ответа', (
+      WidgetTester tester,
+    ) async {
+      final FakeDeckRepository repository = FakeDeckRepository(
+        summaries: <DeckSummary>[
+          makeSummary(
+            id: 'deck-1',
+            name: 'Формулы',
+            totalCards: 4,
+            newCards: 4,
+          ),
+        ],
+      );
+      final FakeCardRepository cards = FakeCardRepository(
+        cards: <Card>[
+          for (var index = 0; index < 4; index++)
+            makeCard(
+              id: 'formula-$index',
+              deckId: 'deck-1',
+              front: 'Формула $index?',
+              back: <String>[
+                r'$x_0 = a$',
+                r'$x_1 = b$',
+                r'$x_2 = c$',
+                r'$x_3 = d$',
+              ][index],
+            ),
+        ],
+      );
+      await pumpDeck(tester, repository: repository, cards: cards);
+      await tester.pumpAndSettle();
+      final AppLocalizations l10n = l10nOf(tester);
+
+      await tester.tap(find.text(l10n.reviewStartSession));
+      await tester.pumpAndSettle();
+      expect(
+        find.text(
+          '${l10n.studyModeTestSubtitle} · ${l10n.studyModeAvailableCount(4)}',
+        ),
+        findsOneWidget,
+      );
+      final ListTile testTile = tester.widget<ListTile>(
+        find.byKey(const ValueKey<String>('review-mode-test')),
+      );
+      final ListTile typingTile = tester.widget<ListTile>(
+        find.byKey(const ValueKey<String>('review-mode-typing')),
+      );
+      expect(testTile.enabled, isTrue);
+      expect(typingTile.enabled, isFalse);
+      expect(find.text(l10n.studyModeNotEnough), findsOneWidget);
+    });
+
     testWidgets('лист режимов: «Ввод ответа» открывает экран ввода', (
       WidgetTester tester,
     ) async {

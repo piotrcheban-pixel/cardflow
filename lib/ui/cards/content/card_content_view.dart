@@ -20,6 +20,7 @@ class CardContentView extends StatelessWidget {
     required this.faceKey,
     this.mediaBytes = const <String, Uint8List>{},
     this.mediaMetadata = const <String, MediaMetadata>{},
+    this.showAllFormulas = false,
     super.key,
   });
 
@@ -27,6 +28,13 @@ class CardContentView extends StatelessWidget {
   final String side;
   final bool revealed;
   final ValueKey<String> faceKey;
+
+  /// Показывать все формулы сразу, без пошагового раскрытия (7.17).
+  ///
+  /// Вопрос режимов «Тест», «Ввод ответа» и «Верно/Неверно» должен быть виден
+  /// целиком: пошаговое раскрытие формул — механика «Классики». Cloze-пропуски
+  /// по-прежнему управляются [revealed].
+  final bool showAllFormulas;
   final Map<String, Uint8List> mediaBytes;
 
   /// Атрибуция и вид иллюстрации по `media.id` (7.14).
@@ -87,7 +95,9 @@ class CardContentView extends StatelessWidget {
           ),
         );
       } else {
-        content.add(LatexText(source: text, revealed: revealed));
+        content.add(
+          LatexText(source: text, revealed: revealed || showAllFormulas),
+        );
       }
     }
     if (content.isEmpty) {

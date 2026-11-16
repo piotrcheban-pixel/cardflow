@@ -12,6 +12,8 @@ import 'package:cardflow/domain/study/answer_type.dart';
 import 'package:cardflow/domain/study/study_mode.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/cards/content/card_content_view.dart';
+import 'package:cardflow/ui/cards/content/card_text.dart';
+import 'package:cardflow/ui/cards/content/latex_spans.dart';
 import 'package:cardflow/ui/decks/deck_actions.dart';
 import 'package:cardflow/ui/review/review_chrome.dart';
 import 'package:cardflow/ui/review/session_media.dart';
@@ -336,6 +338,7 @@ class _TypingScreenState extends ConsumerState<TypingScreen> {
                     card: card,
                     side: card.front,
                     revealed: false,
+                    showAllFormulas: true,
                     faceKey: const ValueKey<String>('typing-question-face'),
                     mediaBytes: _media.bytes,
                     mediaMetadata: _media.metadata,
@@ -477,15 +480,16 @@ class _TypingFeedback extends StatelessWidget {
           ),
           if (showExpected) ...<Widget>[
             const SizedBox(height: 6),
-            Text(
-              l10n.typingRightAnswer(match.expected),
+            CardText(
+              key: const ValueKey<String>('typing-expected'),
+              source: l10n.typingRightAnswer(match.expected),
               style: theme.textTheme.bodyMedium?.copyWith(color: foreground),
             ),
           ],
           if (match.result != AnswerMatchResult.exact &&
               match.diff.isNotEmpty) ...<Widget>[
             const SizedBox(height: 8),
-            _AnswerDiffView(
+            AnswerDiffView(
               diff: match.diff,
               baseStyle: theme.textTheme.bodyLarge?.copyWith(color: foreground),
             ),
@@ -497,8 +501,12 @@ class _TypingFeedback extends StatelessWidget {
 }
 
 /// Посимвольный diff: лишнее зачёркнуто, недостающее подчёркнуто.
-class _AnswerDiffView extends StatelessWidget {
-  const _AnswerDiffView({required this.diff, this.baseStyle});
+///
+/// Фрагменты идут через тот же LaTeX-рендер, что и правильный ответ (7.17):
+/// готовая формула во фрагменте показывается `Math`, а обрывок (разделитель
+/// попал внутрь фрагмента) остаётся текстом, а не падает.
+class AnswerDiffView extends StatelessWidget {
+  const AnswerDiffView({required this.diff, this.baseStyle, super.key});
 
   final List<AnswerDiffOp> diff;
   final TextStyle? baseStyle;
@@ -520,7 +528,9 @@ class _AnswerDiffView extends StatelessWidget {
           fontWeight: FontWeight.bold,
         ),
       };
-      spans.add(TextSpan(text: op.text, style: style));
+      spans.addAll(
+        latexTextSpans(context, op.text, style: style, formulaStyle: style),
+      );
     }
     return Text.rich(
       TextSpan(children: spans),

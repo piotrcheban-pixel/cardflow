@@ -7,12 +7,14 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart' hide Card;
 
 import 'package:cardflow/domain/cards/card.dart';
+import 'package:cardflow/domain/cards/latex_markup.dart';
 import 'package:cardflow/domain/scheduling/rating.dart';
 import 'package:cardflow/domain/study/answer_type.dart';
 import 'package:cardflow/domain/study/distractor_generator.dart';
 import 'package:cardflow/domain/study/study_mode.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/cards/content/card_content_view.dart';
+import 'package:cardflow/ui/cards/content/card_text.dart';
 import 'package:cardflow/ui/decks/deck_actions.dart';
 import 'package:cardflow/ui/motion.dart';
 import 'package:cardflow/ui/review/review_chrome.dart';
@@ -98,7 +100,7 @@ class _MultipleChoiceScreenState extends ConsumerState<MultipleChoiceScreen> {
       final Map<String, DistractorSet> options = <String, DistractorSet>{};
       final List<Card> queue = <Card>[];
       for (final Card card in cards) {
-        if (!AnswerTypes.isTypable(card)) continue;
+        if (!AnswerTypes.isChoice(card)) continue;
         final DistractorSet? set = generator.buildQuestion(card, cards);
         if (set == null) continue;
         options[card.id] = set;
@@ -331,6 +333,7 @@ class _MultipleChoiceScreenState extends ConsumerState<MultipleChoiceScreen> {
                 card: card,
                 side: card.front,
                 revealed: false,
+                showAllFormulas: true,
                 faceKey: const ValueKey<String>('mc-question-face'),
                 mediaBytes: _media.bytes,
                 mediaMetadata: _media.metadata,
@@ -350,7 +353,7 @@ class _MultipleChoiceScreenState extends ConsumerState<MultipleChoiceScreen> {
                     label: set.options[index],
                     semanticLabel: l10n.testOptionLabel(
                       index + 1,
-                      set.options[index],
+                      plainTextOfLatex(set.options[index]),
                     ),
                     selected: answered?.selectedIndex == index,
                     state: _optionState(answered, set, index),
@@ -468,8 +471,8 @@ class _SpringOptionButtonState extends State<_SpringOptionButton>
                 alignment: Alignment.centerLeft,
                 padding: const EdgeInsets.symmetric(horizontal: 20),
               ),
-              child: Text(
-                widget.label,
+              child: CardText(
+                source: widget.label,
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.start,

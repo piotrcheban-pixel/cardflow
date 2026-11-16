@@ -252,7 +252,8 @@ class DeckScreen extends ConsumerWidget {
       newLimit: limits?.newCards,
       reviewLimit: limits?.reviews,
     ).isNotEmpty;
-    // 7.15: сколько карточек подходит для «Теста» и «Ввода ответа».
+    // 7.15/7.17: сколько карточек подходит для «Теста» и «Ввода ответа».
+    // «Тест» — выбор варианта: формульные ответы допустимы (ADR-034).
     final int typingCount = cards
         .where((Card card) => AnswerTypes.isTypable(card))
         .length;
@@ -260,7 +261,7 @@ class DeckScreen extends ConsumerWidget {
     final int testCount = cards
         .where(
           (Card card) =>
-              AnswerTypes.isTypable(card) &&
+              AnswerTypes.isChoice(card) &&
               distractorGenerator.buildQuestion(card, cards) != null,
         )
         .length;

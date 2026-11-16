@@ -178,9 +178,10 @@ void main() {
         deck: cards(),
       );
       final l10n = l10nOf(tester);
-      final String statement = tester
-          .widget<Text>(find.byKey(const ValueKey<String>('tf-statement')))
-          .data!;
+      final String statement = plainTextUnder(
+        tester,
+        find.byKey(const ValueKey<String>('tf-statement')),
+      );
       final bool isTrue = statement == l10n.trueFalseStatement(answers.first);
       await tester.tap(
         find.byKey(ValueKey<String>(isTrue ? 'tf-true' : 'tf-false')),
@@ -204,9 +205,10 @@ void main() {
         deck: cards(),
       );
       final l10n = l10nOf(tester);
-      final String statement = tester
-          .widget<Text>(find.byKey(const ValueKey<String>('tf-statement')))
-          .data!;
+      final String statement = plainTextUnder(
+        tester,
+        find.byKey(const ValueKey<String>('tf-statement')),
+      );
       final bool isTrue = statement == l10n.trueFalseStatement(answers.first);
       await tester.tap(
         find.byKey(ValueKey<String>(isTrue ? 'tf-false' : 'tf-true')),
@@ -229,9 +231,10 @@ void main() {
         deck: cards(),
       );
       final l10n = l10nOf(tester);
-      final String statement = tester
-          .widget<Text>(find.byKey(const ValueKey<String>('tf-statement')))
-          .data!;
+      final String statement = plainTextUnder(
+        tester,
+        find.byKey(const ValueKey<String>('tf-statement')),
+      );
       final bool isTrue = statement == l10n.trueFalseStatement(answers.first);
       await tester.drag(
         find.byKey(const ValueKey<String>('tf-statement')),
@@ -252,9 +255,10 @@ void main() {
       );
       final l10n = l10nOf(tester);
       for (var attempt = 0; attempt < 6; attempt++) {
-        final String statement = tester
-            .widget<Text>(find.byKey(const ValueKey<String>('tf-statement')))
-            .data!;
+        final String statement = plainTextUnder(
+          tester,
+          find.byKey(const ValueKey<String>('tf-statement')),
+        );
         final bool isTrue =
             statement == l10n.trueFalseStatement(answers[attempt]);
         // Отвечаем неверно, чтобы проверить итог и список ошибок.

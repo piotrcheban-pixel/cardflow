@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart' hide Card;
 
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
+import 'package:cardflow/ui/cards/content/card_text.dart';
 
 /// Прогресс сессии нового режима.
 class StudyProgressBar extends StatelessWidget {
@@ -119,13 +120,14 @@ class StudyResultsView extends StatelessWidget {
                     for (final Card card in mistakes)
                       ListTile(
                         dense: true,
-                        title: Text(
-                          card.front,
+                        title: CardText(
+                          key: ValueKey<String>('study-mistake-${card.id}'),
+                          source: card.front,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        subtitle: Text(
-                          card.back,
+                        subtitle: CardText(
+                          source: card.back,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),

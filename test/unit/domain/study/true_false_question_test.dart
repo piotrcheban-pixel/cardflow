@@ -65,6 +65,28 @@ void main() {
     expect(hasTrueFalseAlternative(single.first, single), isFalse);
   });
 
+  // 7.17, ADR-034: формула — допустимый дистрактор, иначе формат утверждения
+  // выдаёт, верно оно или нет (формула/обычный ответ).
+  test('формульный ответ годится в дистракторы', () {
+    final formulaDeck = <Card>[
+      card('a', 'Вопрос 1', r'$x_1 = b$'),
+      card('b', 'Вопрос 2', r'$x_0 = a$'),
+    ];
+    expect(hasTrueFalseAlternative(formulaDeck[1], formulaDeck), isTrue);
+    for (var seed = 0; seed < 4; seed++) {
+      final TrueFalseQuestion question = buildTrueFalseQuestion(
+        card: formulaDeck[1],
+        deck: formulaDeck,
+        seed: seed,
+      )!;
+      expect(
+        question.shownAnswer,
+        contains(r'$'),
+        reason: 'утверждение в том же формате, что и ответы колоды',
+      );
+    }
+  });
+
   test('вопросы для колоды: только карточки с альтернативой', () {
     final mixed = <Card>[
       deck.first,
