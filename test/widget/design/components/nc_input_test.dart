@@ -1,5 +1,8 @@
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/design/design.dart';
+
+import 'dart:ui' show Tristate;
+
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -156,7 +159,7 @@ void main() {
             .getSemanticsData()
             .flagsCollection
             .isToggled,
-        isFalse,
+        Tristate.isFalse,
       );
       await tester.tap(find.byType(NcSwitch));
       await tester.pumpAndSettle();
@@ -167,7 +170,7 @@ void main() {
             .getSemanticsData()
             .flagsCollection
             .isToggled,
-        isTrue,
+        Tristate.isTrue,
       );
       semantics.dispose();
     });

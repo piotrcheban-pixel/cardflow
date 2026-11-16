@@ -155,6 +155,8 @@ class NcTappable extends StatefulWidget {
     required this.child,
     this.onTap,
     this.onLongPress,
+    this.onLongPressStart,
+    this.onLongPressEnd,
     this.onSecondaryTap,
     this.enabled = true,
     this.semanticLabel,
@@ -182,6 +184,12 @@ class NcTappable extends StatefulWidget {
 
   /// Долгое нажатие.
   final VoidCallback? onLongPress;
+
+  /// Начало долгого нажатия (автоповтор степпера).
+  final void Function(LongPressStartDetails)? onLongPressStart;
+
+  /// Конец долгого нажатия (остановка автоповтора).
+  final void Function(LongPressEndDetails)? onLongPressEnd;
 
   /// Правый клик (контекстное меню на ПК).
   final VoidCallback? onSecondaryTap;
@@ -246,6 +254,7 @@ class _NcTappableState extends State<NcTappable> {
       widget.enabled &&
       (widget.onTap != null ||
           widget.onLongPress != null ||
+          widget.onLongPressStart != null ||
           widget.onSecondaryTap != null);
 
   void _activate() {
@@ -326,6 +335,19 @@ class _NcTappableState extends State<NcTappable> {
         onLongPress: _interactive && widget.onLongPress != null
             ? _longPress
             : null,
+        onLongPressStart: _interactive && widget.onLongPressStart != null
+            ? (LongPressStartDetails details) {
+                _setPressed(true);
+                _fireHaptic(widget.longPressHaptic);
+                widget.onLongPressStart!(details);
+              }
+            : null,
+        onLongPressEnd: widget.onLongPressEnd == null
+            ? null
+            : (LongPressEndDetails details) {
+                _setPressed(false);
+                widget.onLongPressEnd!(details);
+              },
         onSecondaryTap: _interactive ? widget.onSecondaryTap : null,
         child: result,
       ),

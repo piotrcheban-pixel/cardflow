@@ -29,10 +29,7 @@ void main() {
           children: <Widget>[
             Text(l10n.decksTitle, style: const TextStyle(fontSize: 17)),
             const SizedBox(height: 4),
-            Text(
-              l10n.deckDueCount(12),
-              style: const TextStyle(fontSize: 13),
-            ),
+            Text(l10n.deckDueCount(12), style: const TextStyle(fontSize: 13)),
           ],
         ),
       ),
@@ -102,7 +99,11 @@ void main() {
         children: <Widget>[
           NcSpinner(semanticLabel: l10n.commonLoading),
           const SizedBox(width: 16),
-          NcSpinner(size: 32, strokeWidth: 3, semanticLabel: l10n.commonLoading),
+          NcSpinner(
+            size: 32,
+            strokeWidth: 3,
+            semanticLabel: l10n.commonLoading,
+          ),
         ],
       ),
       size: (_) => const Size(300, 120),

@@ -56,11 +56,7 @@ void main() {
             prominent: true,
             onPressed: () {},
           ),
-          NcButton(
-            label: l10n.importConfirm,
-            loading: true,
-            onPressed: () {},
-          ),
+          NcButton(label: l10n.importConfirm, loading: true, onPressed: () {}),
           NcButton(label: l10n.reviewBack),
           NcButton(
             label: l10n.deckAddCardTooltip,
