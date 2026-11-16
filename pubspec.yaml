@@ -68,6 +68,9 @@ dependencies:
   freezed_annotation: ^3.1.0
   json_annotation: ^4.12.0
   unorm_dart: ^0.3.3
+  # HCT-конверсия динамического акцента Nocturne (ADR-035 §1.4): пакет уже
+  # приходил транзитивно через material_ui, версия закреплена прямой зависимостью.
+  material_color_utilities: ^0.13.0
 
 dev_dependencies:
   flutter_test:
