@@ -71,6 +71,9 @@ dependencies:
   # HCT-конверсия динамического акцента Nocturne (ADR-035 §1.4): пакет уже
   # приходил транзитивно через material_ui, версия закреплена прямой зависимостью.
   material_color_utilities: ^0.13.0
+  # Cupertino-переходы для iOS/macOS: только они сохраняют жест «назад»
+  # (REDESIGN-SPEC §6.5, ADR-035 п. 4). Пакет уже приходил транзитивно.
+  cupertino_ui: 1.1.6
 
 dev_dependencies:
   flutter_test:

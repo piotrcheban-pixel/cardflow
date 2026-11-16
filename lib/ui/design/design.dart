@@ -6,6 +6,7 @@
 /// См. `redesign/REDESIGN-SPEC.md` и ADR-035.
 library;
 
+export 'ambient/ambient_background.dart';
 export 'font_licenses.dart';
 export 'haptics.dart';
 export 'motion_scope.dart';
@@ -16,3 +17,4 @@ export 'tokens/nc_glass.dart';
 export 'tokens/nc_radii.dart';
 export 'tokens/nc_spacing.dart';
 export 'tokens/nc_typography.dart';
+export 'transitions/nc_page_transitions.dart';

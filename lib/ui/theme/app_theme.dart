@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
 import 'package:cardflow/ui/design/nc_theme.dart';
+import 'package:cardflow/ui/design/transitions/nc_page_transitions.dart';
 import 'package:cardflow/ui/design/tokens/nc_colors.dart';
 import 'package:cardflow/ui/design/tokens/nc_depth.dart';
 import 'package:cardflow/ui/design/tokens/nc_glass.dart';
@@ -103,6 +104,8 @@ abstract final class AppTheme {
       scaffoldBackgroundColor: NcColors.transparent,
       canvasColor: NcColors.transparent,
       extensions: <ThemeExtension<dynamic>>[ncTheme],
+      // Переходы страниц Nocturne (§6.5): роутер не трогаем.
+      pageTransitionsTheme: NcPageTransitions.theme,
       appBarTheme: AppBarThemeData(
         backgroundColor: NcColors.transparent,
         surfaceTintColor: NcColors.transparent,

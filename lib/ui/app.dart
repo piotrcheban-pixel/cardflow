@@ -5,6 +5,9 @@ import 'package:material_ui/material_ui.dart';
 
 import 'package:cardflow/domain/settings/app_settings.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
+import 'package:cardflow/ui/design/ambient/ambient_background.dart';
+import 'package:cardflow/ui/design/haptics.dart';
+import 'package:cardflow/ui/design/motion_scope.dart';
 import 'package:cardflow/ui/m3e/m3e.dart';
 import 'package:cardflow/ui/router/app_router.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
@@ -81,8 +84,13 @@ class _CardFlowAppState extends ConsumerState<CardFlowApp> {
   /// но не должна сбрасывать навигацию (ADR-019).
   late final GoRouter _router = widget.router ?? createAppRouter();
 
+  /// Единая точка тактильного отклика (REDESIGN-SPEC §7): экраны берут её
+  /// через `NcHaptics.of(context)`. Флаг `enabled` обновляется из настроек.
+  late final NcHaptics _haptics = NcHaptics();
+
   @override
   void dispose() {
+    _haptics.dispose();
     if (widget.router == null) _router.dispose();
     super.dispose();
   }
@@ -140,11 +148,34 @@ class _CardFlowAppState extends ConsumerState<CardFlowApp> {
         // (M3EResolvedTheme заменяет textTheme — ADR-019 §2).
         final M3EThemeData data = M3EThemeData.fromMaterial(Theme.of(context));
         final MediaQueryData media = MediaQuery.of(context);
+        // Настройки движения и отклика передаются сверху: дизайн-система не
+        // читает провайдеры сама (ADR-035 §7).
+        final NcMotion motion = NcMotion.resolve(
+          preference: switch (settings.motion) {
+            MotionPreference.expressive => NcMotionPreference.expressive,
+            MotionPreference.standard => NcMotionPreference.standard,
+          },
+          disableAnimations: media.disableAnimations,
+        );
+        _haptics.enabled = settings.haptics;
         return MediaQuery(
           data: media.copyWith(
             textScaler: TextScaler.linear(settings.textScale),
           ),
-          child: M3ETheme(data: data, child: child ?? const SizedBox.shrink()),
+          child: NcMotionScope(
+            motion: motion,
+            child: NcHapticsScope(
+              haptics: _haptics,
+              // Фон Aurora под всем приложением; `Scaffold` прозрачен через
+              // тему (REDESIGN-SPEC §4.5, шаг 1.6).
+              child: NcAmbientBackground(
+                child: M3ETheme(
+                  data: data,
+                  child: child ?? const SizedBox.shrink(),
+                ),
+              ),
+            ),
+          ),
         );
       },
     );
