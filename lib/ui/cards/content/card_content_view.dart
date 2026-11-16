@@ -3,7 +3,10 @@ import 'dart:typed_data';
 import 'package:material_ui/material_ui.dart' hide Card;
 
 import 'package:cardflow/domain/cards/card.dart';
+import 'package:cardflow/domain/cards/media_metadata.dart';
+import 'package:cardflow/domain/generation/card_image_kind.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
+import 'package:cardflow/ui/cards/content/card_image_view.dart';
 import 'package:cardflow/ui/cards/content/cloze_text.dart';
 import 'package:cardflow/ui/cards/content/latex_text.dart';
 import 'package:cardflow/ui/cards/content/occlusion_image_view.dart';
@@ -16,6 +19,7 @@ class CardContentView extends StatelessWidget {
     required this.revealed,
     required this.faceKey,
     this.mediaBytes = const <String, Uint8List>{},
+    this.mediaMetadata = const <String, MediaMetadata>{},
     super.key,
   });
 
@@ -25,6 +29,9 @@ class CardContentView extends StatelessWidget {
   final ValueKey<String> faceKey;
   final Map<String, Uint8List> mediaBytes;
 
+  /// Атрибуция и вид иллюстрации по `media.id` (7.14).
+  final Map<String, MediaMetadata> mediaMetadata;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -33,6 +40,7 @@ class CardContentView extends StatelessWidget {
         : theme.textTheme.headlineMedium;
     final imageId = card.mediaIds.isEmpty ? null : card.mediaIds.first;
     final image = imageId == null ? null : mediaBytes[imageId];
+    final metadata = imageId == null ? null : mediaMetadata[imageId];
     final occlusionJson = card.occlusionJson;
 
     final content = <Widget>[];
@@ -56,20 +64,13 @@ class CardContentView extends StatelessWidget {
       }
       if (content.isNotEmpty) content.add(const SizedBox(height: 12));
     } else if (image != null) {
-      // Обычная карточка с иллюстрацией из поиска (итерация 7.9).
+      // Иллюстрация карточки (7.9/7.14): 16:9 (схема 4:3), ограничение высоты,
+      // тап — полноэкранный просмотр с зумом и атрибуцией.
       content.add(
-        ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 640, maxHeight: 240),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: Image.memory(
-              image,
-              key: const ValueKey<String>('card-content-image'),
-              fit: BoxFit.contain,
-              errorBuilder: (BuildContext context, Object error, _) =>
-                  const SizedBox.shrink(),
-            ),
-          ),
+        CardImageView(
+          bytes: image,
+          kind: metadata?.kind ?? GeneratedCardImageKind.photo,
+          metadata: metadata,
         ),
       );
       content.add(const SizedBox(height: 12));

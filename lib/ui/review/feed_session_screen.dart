@@ -19,6 +19,7 @@ import 'package:cardflow/ui/review/feed_card_view.dart';
 import 'package:cardflow/ui/review/feed_progress_bar.dart';
 import 'package:cardflow/ui/review/feed_session_engine.dart';
 import 'package:cardflow/ui/review/review_chrome.dart';
+import 'package:cardflow/ui/review/session_media.dart';
 import 'package:cardflow/ui/review/review_session_engine.dart';
 import 'package:cardflow/ui/router/app_router.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
@@ -80,7 +81,7 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
   bool _limitReached = false;
   bool _ignoreLimits = false;
   int _resetToken = 0;
-  Map<String, Uint8List> _mediaBytes = const <String, Uint8List>{};
+  SessionMedia _media = SessionMedia.empty;
 
   bool get _hasSource => widget.plan != null || widget.deckId != null;
 
@@ -144,10 +145,7 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
       final Deck? deck = deckIds.length == 1
           ? await ref.read(deckRepositoryProvider).deckById(deckIds.single)
           : null;
-      final mediaIds = <String>{for (final card in cards) ...card.mediaIds};
-      final mediaBytes = mediaIds.isEmpty
-          ? const <String, Uint8List>{}
-          : await ref.read(cardMediaRepositoryProvider).readMedia(mediaIds);
+      final SessionMedia media = await loadSessionMedia(ref, cards);
       AppSettings settings;
       try {
         settings = await ref.read(appSettingsProvider.future);
@@ -193,7 +191,7 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
         _deck = deck;
         _deckCount = deckIds.length;
         _engine = engine;
-        _mediaBytes = mediaBytes;
+        _media = media;
         _limitReached = limitReached;
         _loading = false;
         _autoAdvancePaused = false;
@@ -510,7 +508,8 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
                   front: item.card.front,
                   back: item.card.back,
                   card: item.card,
-                  mediaBytes: _mediaBytes,
+                  mediaBytes: _media.bytes,
+                  mediaMetadata: _media.metadata,
                   revealed: item.revealed,
                   rated: item.rated,
                   rating: item.rating,

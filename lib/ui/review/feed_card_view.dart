@@ -5,6 +5,7 @@ import 'package:flutter/physics.dart';
 import 'package:material_ui/material_ui.dart' hide Card;
 
 import 'package:cardflow/domain/cards/card.dart';
+import 'package:cardflow/domain/cards/media_metadata.dart';
 import 'package:cardflow/domain/scheduling/rating.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/cards/content/card_content_view.dart';
@@ -31,6 +32,7 @@ class FeedCardView extends StatefulWidget {
     required this.onRate,
     this.card,
     this.mediaBytes = const <String, Uint8List>{},
+    this.mediaMetadata = const <String, MediaMetadata>{},
     this.spring,
     super.key,
   });
@@ -67,6 +69,9 @@ class FeedCardView extends StatefulWidget {
 
   /// Байты изображений по `media.id`.
   final Map<String, Uint8List> mediaBytes;
+
+  /// Атрибуция и вид иллюстраций по `media.id` (7.14).
+  final Map<String, MediaMetadata> mediaMetadata;
 
   /// Пружина переворота/возврата карточки (A6.6, ADR-019 §2).
   final SpringDescription? spring;
@@ -217,6 +222,7 @@ class _FeedCardViewState extends State<FeedCardView>
                                 revealed: widget.revealed,
                                 card: widget.card,
                                 mediaBytes: widget.mediaBytes,
+                                mediaMetadata: widget.mediaMetadata,
                               ),
                             ),
                             if (widget.rated)
@@ -268,6 +274,7 @@ class _FlipFace extends StatelessWidget {
     required this.revealed,
     required this.card,
     required this.mediaBytes,
+    required this.mediaMetadata,
   });
 
   final Animation<double> controller;
@@ -276,6 +283,7 @@ class _FlipFace extends StatelessWidget {
   final bool revealed;
   final Card? card;
   final Map<String, Uint8List> mediaBytes;
+  final Map<String, MediaMetadata> mediaMetadata;
 
   @override
   Widget build(BuildContext context) {
@@ -318,6 +326,7 @@ class _FlipFace extends StatelessWidget {
                         revealed: showBack,
                         faceKey: const ValueKey<String>('feed-card-face'),
                         mediaBytes: mediaBytes,
+                        mediaMetadata: mediaMetadata,
                       ),
               ),
             ),

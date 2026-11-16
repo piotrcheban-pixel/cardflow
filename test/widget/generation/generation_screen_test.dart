@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'package:cardflow/api/images/placeholder_image_generator.dart';
 import 'package:cardflow/api/parsers/document_parser.dart';
 import 'package:cardflow/api/parsers/file_parsing_service.dart';
 import 'package:cardflow/api/parsers/pdf_scan_renderer.dart';
@@ -208,6 +209,53 @@ void main() {
       find.byKey(const ValueKey<String>('generation-start')),
     );
     expect(start.onPressed, isNotNull);
+  });
+
+  // Итерация 7.14: колода видна сразу, картинки догружаются, UI обновляется.
+  testWidgets('живые карточки и картинки во время генерации', (tester) async {
+    final placeholder = const PlaceholderImageGenerator().generate(
+      seed: 'live-card',
+    );
+    final GeneratedCard card = GeneratedCard(
+      front: 'Какой тип моста состоит из треугольных ячеек?',
+      back: 'Ферменный мост.',
+      cardType: CardType.basic,
+      image: placeholder,
+    );
+    runner.pending = Completer<GenerationRunResult>();
+    runner.result = resultWith(<GeneratedCard>[card]);
+    await pumpScreen(tester);
+    await attachTextFile(tester);
+
+    await tester.tap(find.byKey(const ValueKey<String>('generation-start')));
+    await tester.pump();
+
+    final l10n = l10nOf(tester);
+    runner.lastProgress!(
+      GenerationProgress(
+        phase: GenerationProgressPhase.receiving,
+        chunkIndex: 1,
+        chunkCount: 1,
+        cards: <GeneratedCard>[card],
+        imagesPending: true,
+      ),
+    );
+    await tester.pump();
+
+    expect(
+      find.byKey(const ValueKey<String>('generation-live-cards')),
+      findsOneWidget,
+    );
+    expect(find.text(l10n.generationLiveCardsTitle(1)), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey<String>('generation-live-pending')),
+      findsOneWidget,
+      reason: 'показываем, что картинки ещё догружаются',
+    );
+    expect(find.byKey(const ValueKey<String>('card-image')), findsOneWidget);
+
+    runner.pending!.complete(runner.result!);
+    await tester.pumpAndSettle();
   });
 
   testWidgets('файл можно убрать', (tester) async {

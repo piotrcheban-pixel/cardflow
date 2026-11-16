@@ -6,10 +6,14 @@ import 'package:material_ui/material_ui.dart' hide Card;
 
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/cards/card_draft.dart';
+import 'package:cardflow/domain/cards/card_image_refresh_result.dart';
+import 'package:cardflow/domain/cards/media_metadata.dart';
 import 'package:cardflow/domain/cards/card_media.dart';
 import 'package:cardflow/domain/cards/card_repository.dart';
 import 'package:cardflow/domain/cards/occlusion.dart';
+import 'package:cardflow/domain/generation/card_image_kind.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
+import 'package:cardflow/ui/cards/content/card_image_view.dart';
 import 'package:cardflow/ui/cards/occlusion_mask_editor.dart';
 import 'package:cardflow/ui/decks/deck_actions.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
@@ -66,6 +70,7 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
   bool _imageLoading = false;
   CardImageUpload? _imageUpload;
   Uint8List? _imageBytes;
+  MediaMetadata? _imageMetadata;
   bool _imageRemoved = false;
   OcclusionDocument? _occlusion;
   bool _useOcclusion = false;
@@ -117,14 +122,21 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
       _tags.text = card.tags.join(', ');
       _sourceExcerpt.text = card.sourceExcerpt ?? '';
       Uint8List? imageBytes;
+      MediaMetadata? imageMetadata;
       if (card.mediaIds.isNotEmpty) {
         try {
+          final primary = card.mediaIds.first;
           final bytes = await ref.read(cardMediaRepositoryProvider).readMedia(
-            <String>[card.mediaIds.first],
+            <String>[primary],
           );
-          imageBytes = bytes[card.mediaIds.first];
+          imageBytes = bytes[primary];
+          final metadata = await ref
+              .read(cardMediaRepositoryProvider)
+              .readMetadata(<String>[primary]);
+          imageMetadata = metadata[primary];
         } on Object {
           imageBytes = null;
+          imageMetadata = null;
         }
       }
       if (!mounted) return;
@@ -132,6 +144,7 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
         _card = card;
         _cardType = card.cardType;
         _imageBytes = imageBytes;
+        _imageMetadata = imageMetadata;
         _occlusion = OcclusionDocument.tryParse(card.occlusionJson);
         // Старая occlusion-карточка открывается с включёнными масками; обычная
         // карточка с иллюстрацией — с выключенными (ADR-028).
@@ -157,6 +170,7 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
       setState(() {
         _imageUpload = upload;
         _imageBytes = upload.bytes;
+        _imageMetadata = null;
         _imageRemoved = false;
         // Новая картинка под включённые маски — чистый холст для разметки.
         if (_useOcclusion) _occlusion = const OcclusionDocument();
@@ -174,9 +188,61 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
     setState(() {
       _imageUpload = null;
       _imageBytes = null;
+      _imageMetadata = null;
       _imageRemoved = true;
       _clearOcclusionError();
     });
+  }
+
+  /// Ищет картинку заново по сохранённому запросу модели (7.14).
+  Future<void> _refreshImage() async {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final Card? card = _card;
+    if (card == null || card.mediaIds.isEmpty) return;
+    setState(() => _imageLoading = true);
+    try {
+      final CardImageRefreshResult result = await ref
+          .read(cardImageRefresherProvider)
+          .refreshMedia(card.mediaIds.first);
+      if (!mounted) return;
+      switch (result) {
+        case CardImageRefreshResult.updated:
+          await _reloadImage();
+          if (mounted) showAppMessage(context, l10n.cardImageRetrySuccess);
+        case CardImageRefreshResult.notFound:
+          showAppMessage(context, l10n.cardImageRetryNotFound);
+        case CardImageRefreshResult.noQuery:
+          showAppMessage(context, l10n.cardImageRetryNoQuery);
+        case CardImageRefreshResult.missing:
+          showAppMessage(context, l10n.genericError);
+      }
+    } on Object {
+      if (mounted) showAppMessage(context, l10n.cardImageRetryError);
+    } finally {
+      if (mounted) setState(() => _imageLoading = false);
+    }
+  }
+
+  /// Перечитывает байты и метаданные основного изображения после обновления.
+  Future<void> _reloadImage() async {
+    final Card? card = _card;
+    if (card == null || card.mediaIds.isEmpty) return;
+    final primary = card.mediaIds.first;
+    try {
+      final bytes = await ref.read(cardMediaRepositoryProvider).readMedia(
+        <String>[primary],
+      );
+      final metadata = await ref.read(cardMediaRepositoryProvider).readMetadata(
+        <String>[primary],
+      );
+      if (!mounted) return;
+      setState(() {
+        _imageBytes = bytes[primary];
+        _imageMetadata = metadata[primary];
+      });
+    } on Object {
+      // Байты не прочитались — оставляем прежнее изображение.
+    }
   }
 
   /// Включает/выключает маски Image Occlusion (только `basic`).
@@ -434,15 +500,13 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
         ],
         const SizedBox(height: 8),
         if (_imageBytes != null) ...<Widget>[
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: Image.memory(
-              _imageBytes!,
-              key: const ValueKey<String>('card-form-image-preview'),
-              height: 180,
-              fit: BoxFit.contain,
-              errorBuilder: (BuildContext context, Object error, _) =>
-                  const SizedBox.shrink(),
+          KeyedSubtree(
+            key: const ValueKey<String>('card-form-image-preview'),
+            child: CardImageView(
+              bytes: _imageBytes!,
+              kind: _imageMetadata?.kind ?? GeneratedCardImageKind.photo,
+              metadata: _imageMetadata,
+              maxHeight: 200,
             ),
           ),
           const SizedBox(height: 8),
@@ -461,6 +525,13 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
                     : l10n.cardFormChangeImage,
               ),
             ),
+            if (_isEditing && _imageBytes != null)
+              OutlinedButton.icon(
+                key: const ValueKey<String>('card-form-refresh-image'),
+                onPressed: _imageLoading || _saving ? null : _refreshImage,
+                icon: const Icon(Icons.travel_explore),
+                label: Text(l10n.cardImageRetryAction),
+              ),
             if (_imageBytes != null || _imageUpload != null)
               TextButton.icon(
                 key: const ValueKey<String>('card-form-remove-image'),

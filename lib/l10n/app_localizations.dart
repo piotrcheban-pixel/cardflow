@@ -2871,6 +2871,84 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Не удалось открыть ссылку'**
   String get settingsAboutLinkError;
+
+  /// Подпись изображения карточки для screen reader.
+  ///
+  /// In ru, this message translates to:
+  /// **'Изображение карточки'**
+  String get cardImageSemantics;
+
+  /// Подпись заглушки изображения карточки для screen reader.
+  ///
+  /// In ru, this message translates to:
+  /// **'Временная картинка карточки'**
+  String get cardImagePlaceholderSemantics;
+
+  /// Заголовок полноэкранного просмотра картинки.
+  ///
+  /// In ru, this message translates to:
+  /// **'Изображение'**
+  String get cardImageFullscreenTitle;
+
+  /// Кнопка закрытия полноэкранного просмотра картинки.
+  ///
+  /// In ru, this message translates to:
+  /// **'Закрыть'**
+  String get cardImageFullscreenClose;
+
+  /// Атрибуция изображения: автор и лицензия.
+  ///
+  /// In ru, this message translates to:
+  /// **'Источник: {attribution}'**
+  String cardImageAttribution(String attribution);
+
+  /// Ссылка на источник изображения.
+  ///
+  /// In ru, this message translates to:
+  /// **'Ссылка: {url}'**
+  String cardImageSourceUrl(String url);
+
+  /// Действие повторного поиска картинки для карточки.
+  ///
+  /// In ru, this message translates to:
+  /// **'Найти картинку заново'**
+  String get cardImageRetryAction;
+
+  /// Повторный поиск картинки удался.
+  ///
+  /// In ru, this message translates to:
+  /// **'Картинка обновлена'**
+  String get cardImageRetrySuccess;
+
+  /// Повторный поиск картинки не дал результата.
+  ///
+  /// In ru, this message translates to:
+  /// **'Картинку не нашли — осталась прежняя'**
+  String get cardImageRetryNotFound;
+
+  /// Повторный поиск невозможен: запрос модели не сохранён.
+  ///
+  /// In ru, this message translates to:
+  /// **'Нет сохранённого запроса для поиска'**
+  String get cardImageRetryNoQuery;
+
+  /// Ошибка повторного поиска картинки.
+  ///
+  /// In ru, this message translates to:
+  /// **'Не удалось обновить картинку'**
+  String get cardImageRetryError;
+
+  /// Заголовок списка карточек, появляющихся во время генерации.
+  ///
+  /// In ru, this message translates to:
+  /// **'Карточки готовы: {count}'**
+  String generationLiveCardsTitle(int count);
+
+  /// Поиск картинок продолжается во время генерации.
+  ///
+  /// In ru, this message translates to:
+  /// **'Догружаем картинки…'**
+  String get generationLiveImagesPending;
 }
 
 class _AppLocalizationsDelegate

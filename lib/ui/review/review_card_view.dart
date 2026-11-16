@@ -5,6 +5,7 @@ import 'package:flutter/physics.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'package:cardflow/domain/cards/card.dart' as domain;
+import 'package:cardflow/domain/cards/media_metadata.dart';
 import 'package:cardflow/ui/cards/content/card_content_view.dart';
 import 'package:cardflow/ui/motion.dart';
 
@@ -23,6 +24,7 @@ class ReviewCardView extends StatefulWidget {
     required this.onTap,
     this.card,
     this.mediaBytes = const <String, Uint8List>{},
+    this.mediaMetadata = const <String, MediaMetadata>{},
     this.spring,
     super.key,
   });
@@ -44,6 +46,9 @@ class ReviewCardView extends StatefulWidget {
 
   /// Байты изображений по `media.id`.
   final Map<String, Uint8List> mediaBytes;
+
+  /// Атрибуция и вид иллюстраций по `media.id` (7.14).
+  final Map<String, MediaMetadata> mediaMetadata;
 
   /// Пружина переворота (A6.6: «Выразительная»/«Стандартная», ADR-019 §2).
   final SpringDescription? spring;
@@ -113,6 +118,7 @@ class _ReviewCardViewState extends State<ReviewCardView>
                       revealed: showBack,
                       faceKey: const ValueKey<String>('review-card-face'),
                       mediaBytes: widget.mediaBytes,
+                      mediaMetadata: widget.mediaMetadata,
                     ),
             ),
           ),

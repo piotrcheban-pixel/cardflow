@@ -2164,5 +2164,72 @@
   "settingsAboutLinkError": "Не удалось открыть ссылку",
   "@settingsAboutLinkError": {
     "description": "Ошибка открытия внешней ссылки."
+  },
+  "cardImageSemantics": "Изображение карточки",
+  "@cardImageSemantics": {
+    "description": "Подпись изображения карточки для screen reader."
+  },
+  "cardImagePlaceholderSemantics": "Временная картинка карточки",
+  "@cardImagePlaceholderSemantics": {
+    "description": "Подпись заглушки изображения карточки для screen reader."
+  },
+  "cardImageFullscreenTitle": "Изображение",
+  "@cardImageFullscreenTitle": {
+    "description": "Заголовок полноэкранного просмотра картинки."
+  },
+  "cardImageFullscreenClose": "Закрыть",
+  "@cardImageFullscreenClose": {
+    "description": "Кнопка закрытия полноэкранного просмотра картинки."
+  },
+  "cardImageAttribution": "Источник: {attribution}",
+  "@cardImageAttribution": {
+    "description": "Атрибуция изображения: автор и лицензия.",
+    "placeholders": {
+      "attribution": {
+        "type": "String"
+      }
+    }
+  },
+  "cardImageSourceUrl": "Ссылка: {url}",
+  "@cardImageSourceUrl": {
+    "description": "Ссылка на источник изображения.",
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "cardImageRetryAction": "Найти картинку заново",
+  "@cardImageRetryAction": {
+    "description": "Действие повторного поиска картинки для карточки."
+  },
+  "cardImageRetrySuccess": "Картинка обновлена",
+  "@cardImageRetrySuccess": {
+    "description": "Повторный поиск картинки удался."
+  },
+  "cardImageRetryNotFound": "Картинку не нашли — осталась прежняя",
+  "@cardImageRetryNotFound": {
+    "description": "Повторный поиск картинки не дал результата."
+  },
+  "cardImageRetryNoQuery": "Нет сохранённого запроса для поиска",
+  "@cardImageRetryNoQuery": {
+    "description": "Повторный поиск невозможен: запрос модели не сохранён."
+  },
+  "cardImageRetryError": "Не удалось обновить картинку",
+  "@cardImageRetryError": {
+    "description": "Ошибка повторного поиска картинки."
+  },
+  "generationLiveCardsTitle": "Карточки готовы: {count}",
+  "@generationLiveCardsTitle": {
+    "description": "Заголовок списка карточек, появляющихся во время генерации.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "generationLiveImagesPending": "Догружаем картинки…",
+  "@generationLiveImagesPending": {
+    "description": "Поиск картинок продолжается во время генерации."
   }
 }

@@ -1737,4 +1737,49 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get settingsAboutLinkError => 'Не удалось открыть ссылку';
+
+  @override
+  String get cardImageSemantics => 'Изображение карточки';
+
+  @override
+  String get cardImagePlaceholderSemantics => 'Временная картинка карточки';
+
+  @override
+  String get cardImageFullscreenTitle => 'Изображение';
+
+  @override
+  String get cardImageFullscreenClose => 'Закрыть';
+
+  @override
+  String cardImageAttribution(String attribution) {
+    return 'Источник: $attribution';
+  }
+
+  @override
+  String cardImageSourceUrl(String url) {
+    return 'Ссылка: $url';
+  }
+
+  @override
+  String get cardImageRetryAction => 'Найти картинку заново';
+
+  @override
+  String get cardImageRetrySuccess => 'Картинка обновлена';
+
+  @override
+  String get cardImageRetryNotFound => 'Картинку не нашли — осталась прежняя';
+
+  @override
+  String get cardImageRetryNoQuery => 'Нет сохранённого запроса для поиска';
+
+  @override
+  String get cardImageRetryError => 'Не удалось обновить картинку';
+
+  @override
+  String generationLiveCardsTitle(int count) {
+    return 'Карточки готовы: $count';
+  }
+
+  @override
+  String get generationLiveImagesPending => 'Догружаем картинки…';
 }

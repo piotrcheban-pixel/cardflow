@@ -209,7 +209,7 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.byKey(const ValueKey('card-content-image')), findsOneWidget);
+    expect(find.byKey(const ValueKey('card-image')), findsOneWidget);
     expect(find.text('Вопрос'), findsOneWidget);
   });
 
@@ -217,6 +217,6 @@ void main() {
     await pumpClassic(tester, card());
     await tester.pump();
 
-    expect(find.byKey(const ValueKey('card-content-image')), findsNothing);
+    expect(find.byKey(const ValueKey('card-image')), findsNothing);
   });
 }

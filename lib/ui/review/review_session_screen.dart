@@ -16,6 +16,7 @@ import 'package:cardflow/ui/decks/deck_actions.dart';
 import 'package:cardflow/ui/motion.dart';
 import 'package:cardflow/ui/review/review_card_view.dart';
 import 'package:cardflow/ui/review/review_chrome.dart';
+import 'package:cardflow/ui/review/session_media.dart';
 import 'package:cardflow/ui/review/review_session_engine.dart';
 import 'package:cardflow/ui/review/review_toolbar.dart';
 import 'package:cardflow/ui/router/app_router.dart';
@@ -67,7 +68,7 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
   bool _limitReached = false;
   bool _ignoreLimits = false;
   bool _completionHapticPlayed = false;
-  Map<String, Uint8List> _mediaBytes = const <String, Uint8List>{};
+  SessionMedia _media = SessionMedia.empty;
 
   bool get _hasSource => widget.plan != null || widget.deckId != null;
 
@@ -109,10 +110,7 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
       final List<Card> cards = plan != null
           ? plan.cards
           : await ref.read(cardRepositoryProvider).cardsByDeck(widget.deckId!);
-      final mediaIds = <String>{for (final card in cards) ...card.mediaIds};
-      final mediaBytes = mediaIds.isEmpty
-          ? const <String, Uint8List>{}
-          : await ref.read(cardMediaRepositoryProvider).readMedia(mediaIds);
+      final SessionMedia media = await loadSessionMedia(ref, cards);
       // Дневные лимиты A6.6 — остаток на локальный календарный день по
       // `review_logs`, а не свежий лимит на каждую сессию (ADR-019 §8, L45).
       // Расчёт тот же, что использует экран колоды (итерация 7.11): иначе
@@ -156,7 +154,7 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
       engine.start();
       setState(() {
         _engine = engine;
-        _mediaBytes = mediaBytes;
+        _media = media;
         _limitReached = limitReached;
         _loading = false;
       });
@@ -387,7 +385,8 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
                   front: state.current!.card.front,
                   back: state.current!.card.back,
                   card: state.current!.card,
-                  mediaBytes: _mediaBytes,
+                  mediaBytes: _media.bytes,
+                  mediaMetadata: _media.metadata,
                   revealed: state.revealed,
                   spring: settings.motion == MotionPreference.standard
                       ? AppMotion.standardSpring()

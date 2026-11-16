@@ -13,6 +13,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:cardflow/domain/cards/card.dart' show CardType;
 import 'package:cardflow/domain/cards/card_draft.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
+import 'package:cardflow/domain/cards/media_metadata.dart';
 import 'package:cardflow/domain/generation/generated_card_image.dart';
 import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/generation/generation_card_store.dart';
@@ -22,6 +23,7 @@ import 'package:cardflow/domain/generation/generation_run.dart';
 import 'package:cardflow/domain/generation/document_gateway.dart'
     show PickedDocument;
 import 'package:cardflow/l10n/app_localizations.dart';
+import 'package:cardflow/ui/cards/content/card_image_view.dart';
 import 'package:cardflow/ui/decks/deck_actions.dart' show showAppMessage;
 import 'package:cardflow/ui/generation/generation_error_message.dart';
 import 'package:cardflow/ui/generation/generation_failure_message.dart';
@@ -596,15 +598,22 @@ class _PreviewCardTile extends StatelessWidget {
             ),
             if (image != null) ...<Widget>[
               const SizedBox(height: 8),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Image.memory(
-                  image.bytes,
-                  key: ValueKey<String>('generation-preview-image-$index'),
-                  height: 120,
-                  fit: BoxFit.contain,
-                  errorBuilder: (BuildContext context, Object error, _) =>
-                      const SizedBox.shrink(),
+              KeyedSubtree(
+                key: ValueKey<String>('generation-preview-image-$index'),
+                child: CardImageView(
+                  bytes: image.bytes,
+                  kind: image.kind,
+                  maxHeight: 160,
+                  metadata: MediaMetadata(
+                    provider: image.provider,
+                    sourceUrl: image.sourceUrl,
+                    author: image.author,
+                    license: image.license,
+                    isPlaceholder: image.isPlaceholder,
+                    query: image.query,
+                    fallbackQuery: image.fallbackQuery,
+                    kind: image.kind,
+                  ),
                 ),
               ),
             ],

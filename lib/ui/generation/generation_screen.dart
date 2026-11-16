@@ -23,6 +23,7 @@ import 'package:cardflow/domain/generation/api_key_store.dart';
 import 'package:cardflow/domain/generation/document_gateway.dart';
 import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/generation/deck_name.dart';
+import 'package:cardflow/domain/generation/generated_card.dart';
 import 'package:cardflow/domain/generation/generation_card_store.dart';
 import 'package:cardflow/domain/generation/generation_chunker.dart'
     show kImageTokenEstimate;
@@ -36,6 +37,7 @@ import 'package:cardflow/domain/text/document_format.dart';
 import 'package:cardflow/domain/text/parsed_document.dart';
 import 'package:cardflow/domain/text/parser_exception.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
+import 'package:cardflow/ui/cards/content/card_image_view.dart';
 import 'package:cardflow/ui/decks/deck_actions.dart' show showAppMessage;
 import 'package:cardflow/ui/settings/provider_labels.dart';
 import 'package:cardflow/ui/generation/generation_error_message.dart';
@@ -219,7 +221,7 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
           _parsedDocuments.map((ParsedDocument document) => document.text),
         ) +
         _attachments.length * kImageTokenEstimate +
-        _estimator.estimate(systemPromptGenRuV5) +
+        _estimator.estimate(systemPromptGenRuV6) +
         kPromptWrapperTokenReserve +
         (wishes.isEmpty ? 0 : _estimator.estimate(wishes));
   }
@@ -629,7 +631,7 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
             ? const Center(child: CircularProgressIndicator())
             : _configError
             ? _buildConfigError(context, l10n)
-            : _buildForm(context, l10n, targetDeck),
+            : _buildBody(context, l10n, targetDeck),
         bottomNavigationBar: _loading || _configError
             ? null
             : SafeArea(
@@ -720,6 +722,30 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
           ),
           child: Text(l10n.generationStart),
         ),
+      ],
+    );
+  }
+
+  /// Тело экрана: во время генерации над формой появляется живой список
+  /// карточек (7.14) — колода видна сразу, картинки догружаются на месте.
+  Widget _buildBody(
+    BuildContext context,
+    AppLocalizations l10n,
+    Deck? targetDeck,
+  ) {
+    final Widget form = _buildForm(context, l10n, targetDeck);
+    final List<GeneratedCard> liveCards =
+        _progress?.cards ?? const <GeneratedCard>[];
+    if (!_generating || liveCards.isEmpty) return form;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        _LiveCardsStrip(
+          cards: liveCards,
+          imagesPending: _progress?.imagesPending ?? false,
+        ),
+        const Divider(height: 1),
+        Expanded(child: form),
       ],
     );
   }
@@ -1095,6 +1121,102 @@ class _ProgressView extends StatelessWidget {
         const SizedBox(height: 8),
         Text(text, textAlign: TextAlign.center),
       ],
+    );
+  }
+}
+
+/// Живой список принятых карточек во время генерации (7.14).
+///
+/// Показывает карточки сразу после ответа модели; у карточек без картинки —
+/// скелетон, который заменяется изображением, как только его нашли/нарисовали.
+class _LiveCardsStrip extends StatelessWidget {
+  const _LiveCardsStrip({required this.cards, required this.imagesPending});
+
+  final List<GeneratedCard> cards;
+  final bool imagesPending;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final ThemeData theme = Theme.of(context);
+    return SizedBox(
+      height: 216,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            child: Row(
+              children: <Widget>[
+                Expanded(
+                  child: Text(
+                    l10n.generationLiveCardsTitle(cards.length),
+                    key: const ValueKey<String>('generation-live-title'),
+                    style: theme.textTheme.titleSmall,
+                  ),
+                ),
+                if (imagesPending)
+                  Text(
+                    l10n.generationLiveImagesPending,
+                    key: const ValueKey<String>('generation-live-pending'),
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: ListView.separated(
+              key: const ValueKey<String>('generation-live-cards'),
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              itemCount: cards.length,
+              separatorBuilder: (BuildContext context, int index) =>
+                  const SizedBox(width: 8),
+              itemBuilder: (BuildContext context, int index) {
+                final GeneratedCard card = cards[index];
+                final image = card.image;
+                return SizedBox(
+                  width: 190,
+                  child: Card(
+                    clipBehavior: Clip.antiAlias,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: <Widget>[
+                        SizedBox(
+                          height: 96,
+                          child: image == null
+                              ? Center(
+                                  child: Icon(
+                                    Icons.image_outlined,
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                )
+                              : CardImageView(
+                                  bytes: image.bytes,
+                                  kind: image.kind,
+                                  maxHeight: 96,
+                                ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: Text(
+                            card.front,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodySmall,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

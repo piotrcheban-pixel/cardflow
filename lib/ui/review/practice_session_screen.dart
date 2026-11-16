@@ -17,6 +17,7 @@ import 'package:cardflow/ui/review/review_chrome.dart';
 import 'package:cardflow/ui/review/review_session_engine.dart'
     show ReviewHaptic, reviewHapticFor;
 import 'package:cardflow/ui/review/review_toolbar.dart';
+import 'package:cardflow/ui/review/session_media.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
 
 /// Экран режима «Тренировка» (ADR-025, итерация 7.11).
@@ -41,7 +42,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
   bool _loading = true;
   bool _loadFailed = false;
   bool _completionHapticPlayed = false;
-  Map<String, Uint8List> _mediaBytes = const <String, Uint8List>{};
+  SessionMedia _media = SessionMedia.empty;
 
   /// Haptics включены в настройках (A6.6, ADR-019 §2).
   bool get _hapticsEnabled => ref.read(effectiveAppSettingsProvider).haptics;
@@ -68,12 +69,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
       final List<Card> cards = await ref
           .read(cardRepositoryProvider)
           .cardsByDeck(widget.deckId);
-      final Set<String> mediaIds = <String>{
-        for (final Card card in cards) ...card.mediaIds,
-      };
-      final Map<String, Uint8List> mediaBytes = mediaIds.isEmpty
-          ? const <String, Uint8List>{}
-          : await ref.read(cardMediaRepositoryProvider).readMedia(mediaIds);
+      final SessionMedia media = await loadSessionMedia(ref, cards);
       if (!mounted) return;
       final PracticeSessionEngine engine = PracticeSessionEngine(
         cards: cards,
@@ -83,7 +79,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
       engine.start();
       setState(() {
         _engine = engine;
-        _mediaBytes = mediaBytes;
+        _media = media;
         _loading = false;
       });
     } catch (_) {
@@ -286,7 +282,8 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
                   front: state.current!.front,
                   back: state.current!.back,
                   card: state.current!,
-                  mediaBytes: _mediaBytes,
+                  mediaBytes: _media.bytes,
+                  mediaMetadata: _media.metadata,
                   revealed: state.revealed,
                   spring: settings.motion == MotionPreference.standard
                       ? AppMotion.standardSpring()
