@@ -1,4 +1,5 @@
 import 'package:cardflow/domain/cards/card.dart';
+import 'package:cardflow/domain/generation/card_image_kind.dart';
 import 'package:cardflow/domain/generation/generated_card_image.dart';
 
 /// Пометки качества сгенерированной карточки (SPEC A8.4).
@@ -80,6 +81,8 @@ class GeneratedCard {
     this.sourceFile,
     this.issues = const <CardIssueCode>[],
     this.imageQuery,
+    this.imageFallbackQuery,
+    this.imageKind = GeneratedCardImageKind.photo,
     this.imageId,
     this.image,
     this.isOcclusion = false,
@@ -110,8 +113,15 @@ class GeneratedCard {
   /// Машинные пометки качества (A8.4).
   final List<CardIssueCode> issues;
 
-  /// Краткий поисковый запрос на английском (итерация 7.9, ADR-023).
+  /// Краткий поисковый запрос на английском (итерация 7.9, ADR-023;
+  /// схема `image.query` в `gen-ru-v6`, итерация 7.14).
   final String? imageQuery;
+
+  /// Более общий запасной запрос модели (`image.fallback_query`, 7.14).
+  final String? imageFallbackQuery;
+
+  /// Вид иллюстрации (`image.kind`, 7.14): фото, схема или метафора.
+  final GeneratedCardImageKind imageKind;
 
   /// Идентификатор изображения из `<images>` прикреплённых файлов (fix-gen).
   ///
@@ -144,6 +154,8 @@ class GeneratedCard {
     String? sourceFile,
     List<CardIssueCode>? issues,
     String? imageQuery,
+    String? imageFallbackQuery,
+    GeneratedCardImageKind? imageKind,
     String? imageId,
     GeneratedCardImage? image,
     bool? isOcclusion,
@@ -159,6 +171,8 @@ class GeneratedCard {
       sourceFile: sourceFile ?? this.sourceFile,
       issues: issues ?? this.issues,
       imageQuery: imageQuery ?? this.imageQuery,
+      imageFallbackQuery: imageFallbackQuery ?? this.imageFallbackQuery,
+      imageKind: imageKind ?? this.imageKind,
       imageId: imageId ?? this.imageId,
       image: image ?? this.image,
       isOcclusion: isOcclusion ?? this.isOcclusion,
@@ -178,6 +192,8 @@ class GeneratedCard {
       sourceFile: sourceFile,
       issues: issues,
       imageQuery: null,
+      imageFallbackQuery: null,
+      imageKind: imageKind,
       imageId: null,
       image: image,
       isOcclusion: isOcclusion,
@@ -198,6 +214,8 @@ class GeneratedCard {
         other.sourceFile == sourceFile &&
         _listEquals(other.issues, issues) &&
         other.imageQuery == imageQuery &&
+        other.imageFallbackQuery == imageFallbackQuery &&
+        other.imageKind == imageKind &&
         other.imageId == imageId &&
         identical(other.image, image) &&
         other.isOcclusion == isOcclusion &&
@@ -215,6 +233,8 @@ class GeneratedCard {
     sourceFile,
     Object.hashAll(issues),
     imageQuery,
+    imageFallbackQuery,
+    imageKind,
     imageId,
     identityHashCode(image),
     isOcclusion,

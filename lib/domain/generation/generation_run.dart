@@ -63,6 +63,8 @@ class GenerationProgress {
     required this.phase,
     this.chunkIndex,
     this.chunkCount,
+    this.cards = const <GeneratedCard>[],
+    this.imagesPending = false,
   });
 
   /// Фаза.
@@ -73,6 +75,13 @@ class GenerationProgress {
 
   /// Всего фрагментов.
   final int? chunkCount;
+
+  /// Принятые карточки прямо сейчас (7.14): UI показывает их, не дожидаясь
+  /// окончания поиска картинок. Снимок неизменяемый.
+  final List<GeneratedCard> cards;
+
+  /// Картинки текущих карточек ещё догружаются.
+  final bool imagesPending;
 }
 
 /// Колбэк прогресса.

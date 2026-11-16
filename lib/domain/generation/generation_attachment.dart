@@ -18,6 +18,10 @@ enum AttachmentMediaType {
   /// PNG-изображение.
   png('image/png'),
 
+  /// WebP-изображение (иллюстрации карточек с 7.14; во вложениях не
+  /// используется, но поиск картинок принимает этот формат).
+  webp('image/webp'),
+
   /// PDF, отправляемый как документ/скан (только PDF-vision протоколы).
   pdf('application/pdf');
 
@@ -26,7 +30,7 @@ enum AttachmentMediaType {
   /// MIME-тип для части запроса провайдера.
   final String mimeType;
 
-  /// true для изображений (JPG/PNG).
+  /// true для изображений (JPG/PNG/WebP).
   bool get isImage => this != pdf;
 }
 
@@ -103,6 +107,12 @@ bool hasValidAttachmentSignature(
       0xFF,
       0xD8,
       0xFF,
+    ]),
+    AttachmentMediaType.webp => _startsWith(bytes, const <int>[
+      0x52,
+      0x49,
+      0x46,
+      0x46,
     ]),
     AttachmentMediaType.pdf => _startsWith(bytes, const <int>[
       0x25,

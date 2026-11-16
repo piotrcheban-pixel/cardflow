@@ -2,10 +2,18 @@
 ///
 /// Единая для всех провайдеров; проекции под возможности провайдера —
 /// `provider_schema.dart`. Документация — `docs/api-schema.md`.
+///
+/// Итерация 7.14 (`gen-ru-v6`): у карточки появился обязательный объект
+/// `image` (`query`, `fallback_query`, `kind`). Строгая схема провайдера
+/// требует его; локальная проверка (`localCardItemSchema`) принимает и v6, и
+/// ответ v5 с `image_query`, чтобы старые модели/провайдеры не теряли карточки.
 library;
 
 /// Имя схемы для `response_format.json_schema.name` (OpenAI).
 const String cardsResponseSchemaName = 'cards_response';
+
+/// Виды иллюстрации схемы `gen-ru-v6`.
+const List<String> kImageKinds = <String>['photo', 'diagram', 'illustration'];
 
 /// Каноническая схема A8.4 (валидируется `json_schema`).
 ///
@@ -42,8 +50,15 @@ const Map<String, Object?> canonicalCardsResponseSchema = <String, Object?>{
           'image_id': <String, Object?>{
             'type': <String>['string', 'null'],
           },
-          'image_query': <String, Object?>{
-            'type': <String>['string', 'null'],
+          'image': <String, Object?>{
+            'type': 'object',
+            'properties': <String, Object?>{
+              'query': <String, Object?>{'type': 'string'},
+              'fallback_query': <String, Object?>{'type': 'string'},
+              'kind': <String, Object?>{'type': 'string', 'enum': kImageKinds},
+            },
+            'required': <String>['query', 'fallback_query', 'kind'],
+            'additionalProperties': false,
           },
         },
         'required': <String>[
@@ -55,7 +70,7 @@ const Map<String, Object?> canonicalCardsResponseSchema = <String, Object?>{
           'source_excerpt',
           'source_file',
           'image_id',
-          'image_query',
+          'image',
         ],
         'additionalProperties': false,
       },
@@ -74,6 +89,46 @@ Map<String, Object?> canonicalCardItemSchema() {
       canonicalCardsResponseSchema['properties']! as Map<String, Object?>;
   final items = cards['cards']! as Map<String, Object?>;
   return _copyMap(items['items']! as Map<String, Object?>);
+}
+
+/// Локальная терпимая схема карточки: v6 (`image`) и v5 (`image_query`).
+///
+/// Обязательны только структурные поля (`front`, `back`, `card_type`);
+/// остальные проверяет контентный валидатор, а недостающее поле картинки не
+/// отбрасывает карточку. Лишние ключи по-прежнему запрещены.
+Map<String, Object?> localCardItemSchema() {
+  return <String, Object?>{
+    'type': 'object',
+    'properties': <String, Object?>{
+      'front': <String, Object?>{'type': 'string'},
+      'back': <String, Object?>{'type': 'string'},
+      'hint': <String, Object?>{
+        'type': <String>['string', 'null'],
+      },
+      'tags': <String, Object?>{
+        'type': 'array',
+        'items': <String, Object?>{'type': 'string'},
+      },
+      'card_type': <String, Object?>{'type': 'string'},
+      'source_excerpt': <String, Object?>{
+        'type': <String>['string', 'null'],
+      },
+      'source_file': <String, Object?>{
+        'type': <String>['string', 'null'],
+      },
+      'image_id': <String, Object?>{
+        'type': <String>['string', 'null'],
+      },
+      'image_query': <String, Object?>{
+        'type': <String>['string', 'null'],
+      },
+      'image': <String, Object?>{
+        'type': <String>['object', 'null'],
+      },
+    },
+    'required': <String>['front', 'back', 'card_type'],
+    'additionalProperties': false,
+  };
 }
 
 /// Возвращает независимую копию канонической схемы.

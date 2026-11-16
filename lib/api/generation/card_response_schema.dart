@@ -28,10 +28,11 @@ class CardPayloadValidation {
 ///
 /// Типы `json_schema` наружу не утекают: сервис получает список описаний ошибок.
 class CardResponseSchema {
-  /// Создаёт валидатор; схема по умолчанию — каноническая A8.4.
+  /// Создаёт валидатор; схема по умолчанию — каноническая A8.4, поштучная —
+  /// терпимая локальная (принимает `gen-ru-v6` и ответ v5 с `image_query`).
   CardResponseSchema({JsonSchema? schema, JsonSchema? cardSchema})
     : schema = schema ?? JsonSchema.create(canonicalCardsResponseSchema),
-      cardSchema = cardSchema ?? JsonSchema.create(canonicalCardItemSchema());
+      cardSchema = cardSchema ?? JsonSchema.create(localCardItemSchema());
 
   /// Обёрнутая JSON-схема (каноническая A8.4 по умолчанию).
   final JsonSchema schema;

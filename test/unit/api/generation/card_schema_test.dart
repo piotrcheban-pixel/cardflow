@@ -28,7 +28,11 @@ void main() {
     'source_excerpt': 'FSRS — алгоритм интервального повторения.',
     'source_file': 'лекция.docx',
     'image_id': null,
-    'image_query': null,
+    'image': <String, Object?>{
+      'query': 'fsrs algorithm memory',
+      'fallback_query': 'fsrs memory',
+      'kind': 'diagram',
+    },
   };
 
   Map<String, Object?> validResponse() => <String, Object?>{
@@ -57,7 +61,7 @@ void main() {
         'source_excerpt',
         'source_file',
         'image_id',
-        'image_query',
+        'image',
       });
       expect(
         cardItem()['required'],
@@ -76,10 +80,10 @@ void main() {
         (cardProperties()['back']! as Map<String, Object?>)['type'],
         'string',
       );
-      expect(
-        (cardProperties()['image_query']! as Map<String, Object?>)['type'],
-        <String>['string', 'null'],
-      );
+      final image = cardProperties()['image']! as Map<String, Object?>;
+      expect(image['type'], 'object');
+      expect(image['required'], <String>['query', 'fallback_query', 'kind']);
+      expect(image['additionalProperties'], isFalse);
     });
 
     test('nullable-поля — union с null (строгий режим OpenAI)', () {
@@ -88,7 +92,6 @@ void main() {
         'source_excerpt',
         'source_file',
         'image_id',
-        'image_query',
       ]) {
         expect(
           (cardProperties()[field]! as Map<String, Object?>)['type'],
@@ -165,14 +168,33 @@ void main() {
         ..['hint'] = null
         ..['source_excerpt'] = null
         ..['source_file'] = null
-        ..['image_id'] = null
-        ..['image_query'] = null;
+        ..['image_id'] = null;
       expect(
         schema.isValid(<String, Object?>{
           'cards': <Object?>[card],
         }),
         isTrue,
       );
+    });
+
+    test('локальная схема принимает ответ v5 с image_query', () {
+      final legacy = <String, Object?>{
+        'front': 'Вопрос',
+        'back': 'Ответ',
+        'hint': null,
+        'tags': <Object?>['тег'],
+        'card_type': 'basic',
+        'source_excerpt': null,
+        'source_file': null,
+        'image_id': null,
+        'image_query': 'truss bridge',
+      };
+      final validation = CardResponseSchema().splitValid(<String, Object?>{
+        'cards': <Object?>[legacy],
+      });
+      expect(validation.rootInvalid, isFalse);
+      expect(validation.cards, hasLength(1));
+      expect(validation.rejectedCards, 0);
     });
 
     test('не объект/не карточки — невалидно', () {
@@ -248,7 +270,7 @@ void main() {
         'source_excerpt',
         'source_file',
         'image_id',
-        'image_query',
+        'image',
       ]);
       final naming = properties['card_type']! as Map<String, Object?>;
       expect(naming['enum'], <String>[
@@ -257,9 +279,10 @@ void main() {
         'cloze',
         'occlusion',
       ]);
-      final query = properties['image_query']! as Map<String, Object?>;
-      expect(query['type'], 'STRING');
-      expect(query['nullable'], isTrue);
+      final image = properties['image']! as Map<String, Object?>;
+      expect(image['type'], 'OBJECT');
+      expect(image['nullable'], isNull);
+      expect(image['required'], <String>['query', 'fallback_query', 'kind']);
       expect(
         properties['tags']! as Map<String, Object?>,
         containsPair('items', isA<Map<String, Object?>>()),

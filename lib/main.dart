@@ -40,17 +40,30 @@ Future<void> main() async {
     return;
   }
 
+  final ProviderContainer container = ProviderContainer(
+    overrides: <Override>[
+      appDatabaseProvider.overrideWithValue(database),
+      mediaStoreProvider.overrideWithValue(mediaStore),
+    ],
+  );
+
   unawaited(
     MediaGarbageCollector(database, mediaStore).collect().catchError((_) => 0),
   );
 
   runApp(
-    ProviderScope(
-      overrides: <Override>[
-        appDatabaseProvider.overrideWithValue(database),
-        mediaStoreProvider.overrideWithValue(mediaStore),
-      ],
-      child: const CardFlowApp(),
-    ),
+    UncontrolledProviderScope(container: container, child: const CardFlowApp()),
   );
+
+  // Фоновый ретрай заглушек при следующем запуске с сетью (7.14, шаг 3):
+  // после первого кадра, чтобы старт UI не ждал сеть. Ошибки глушим — это
+  // необязательное улучшение, карточки с заглушками остаются рабочими.
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    unawaited(
+      container
+          .read(cardImageRefresherProvider)
+          .retryPlaceholders()
+          .catchError((_) => 0),
+    );
+  });
 }

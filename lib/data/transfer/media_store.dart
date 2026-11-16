@@ -1,7 +1,10 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:path/path.dart' as p;
+
+import 'package:cardflow/domain/cards/media_metadata.dart';
 
 /// Хранилище медиафайлов приложения (каталог `media/`).
 ///
@@ -12,12 +15,18 @@ import 'package:path/path.dart' as p;
 ///
 /// Запись атомарна: байты пишутся во временный файл в том же каталоге и затем
 /// переименовываются на место, поэтому при сбое не остаётся частичного файла.
+///
+/// С 7.14 рядом с файлом может лежать побочный JSON `<путь>.meta.json`
+/// с атрибуцией и флагом заглушки (`MediaMetadata`); он не считается медиа.
 class MediaStore {
   /// Создаёт хранилище с корневым каталогом.
   MediaStore(this.rootDirectory);
 
   /// Корневой каталог медиа (создаётся при записи).
   final Directory rootDirectory;
+
+  /// Суффикс побочного файла метаданных.
+  static const String metadataSuffix = '.meta.json';
 
   static final RegExp _windowsDrive = RegExp(r'^[A-Za-z]:');
   static int _tempSequence = 0;
@@ -61,7 +70,8 @@ class MediaStore {
       followLinks: false,
     )) {
       if (entity is! File ||
-          p.basename(entity.path).startsWith(_tempPrefix())) {
+          p.basename(entity.path).startsWith(_tempPrefix()) ||
+          entity.path.endsWith(metadataSuffix)) {
         continue;
       }
       paths.add(
@@ -72,11 +82,60 @@ class MediaStore {
     return List<String>.unmodifiable(paths);
   }
 
+  /// Перечисляет относительные пути побочных файлов метаданных (`…meta.json`).
+  Future<List<String>> listMetadata() async {
+    final mediaDirectory = Directory(p.join(rootDirectory.path, 'media'));
+    if (!await mediaDirectory.exists()) return <String>[];
+    final paths = <String>[];
+    await for (final entity in mediaDirectory.list(
+      recursive: true,
+      followLinks: false,
+    )) {
+      if (entity is File && entity.path.endsWith(metadataSuffix)) {
+        paths.add(
+          p
+              .relative(entity.path, from: rootDirectory.path)
+              .replaceAll('\\', '/'),
+        );
+      }
+    }
+    paths.sort();
+    return List<String>.unmodifiable(paths);
+  }
+
+  /// Записывает метаданные медиа рядом с файлом (`<путь>.meta.json`).
+  Future<void> writeMetadata({
+    required String relativePath,
+    required MediaMetadata metadata,
+  }) async {
+    final file = _fileFor('$relativePath$metadataSuffix');
+    await file.parent.create(recursive: true);
+    await file.writeAsString(jsonEncode(metadata.toJson()), flush: true);
+  }
+
+  /// Читает метаданные медиа; `null` — файла нет/JSON битый/версия новее.
+  Future<MediaMetadata?> readMetadata(String relativePath) async {
+    final file = _fileFor('$relativePath$metadataSuffix');
+    if (!await file.exists()) return null;
+    try {
+      final Object? json = jsonDecode(await file.readAsString());
+      return MediaMetadata.fromJson(json);
+    } on Object {
+      return null;
+    }
+  }
+
   /// Удаляет медиа по относительному пути (нет файла — не ошибка).
+  ///
+  /// Побочный файл метаданных удаляется вместе с медиа.
   Future<void> deleteMedia(String relativePath) async {
     final file = _fileFor(relativePath);
     if (await file.exists()) {
       await file.delete();
+    }
+    final metadata = _fileFor('$relativePath$metadataSuffix');
+    if (await metadata.exists()) {
+      await metadata.delete();
     }
   }
 

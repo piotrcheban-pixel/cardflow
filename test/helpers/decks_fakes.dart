@@ -7,6 +7,7 @@ import 'package:cardflow/domain/cards/card_media.dart';
 import 'package:cardflow/domain/cards/card_media_repository.dart';
 import 'package:cardflow/domain/cards/card_repository.dart';
 import 'package:cardflow/domain/cards/content_hash.dart';
+import 'package:cardflow/domain/cards/media_metadata.dart';
 import 'package:cardflow/domain/decks/deck.dart';
 import 'package:cardflow/domain/decks/deck_query.dart';
 import 'package:cardflow/domain/decks/deck_repository.dart';
@@ -606,15 +607,29 @@ class FakeFileGateway implements FileGateway {
 
 /// Фейковое чтение медиа: только заданные id.
 class FakeCardMediaRepository implements CardMediaRepository {
-  FakeCardMediaRepository({this.bytesById = const <String, Uint8List>{}});
+  FakeCardMediaRepository({
+    this.bytesById = const <String, Uint8List>{},
+    this.metadataById = const <String, MediaMetadata>{},
+  });
 
   final Map<String, Uint8List> bytesById;
+  final Map<String, MediaMetadata> metadataById;
 
   @override
   Future<Map<String, Uint8List>> readMedia(Iterable<String> mediaIds) async {
     return <String, Uint8List>{
       for (final id in mediaIds)
         if (bytesById[id] != null) id: bytesById[id]!,
+    };
+  }
+
+  @override
+  Future<Map<String, MediaMetadata>> readMetadata(
+    Iterable<String> mediaIds,
+  ) async {
+    return <String, MediaMetadata>{
+      for (final id in mediaIds)
+        if (metadataById[id] != null) id: metadataById[id]!,
     };
   }
 }

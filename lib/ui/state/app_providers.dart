@@ -9,16 +9,17 @@ import 'package:cardflow/api/generation/generation_pipeline.dart';
 import 'package:cardflow/api/http/generation_http_client.dart';
 import 'package:cardflow/api/http/redacting_log_interceptor.dart';
 import 'package:cardflow/api/http/retry_policy.dart';
-import 'package:cardflow/api/images/composite_card_image_finder.dart';
+import 'package:cardflow/api/images/image_api_keys.dart';
+import 'package:cardflow/api/images/image_providers.dart';
 import 'package:cardflow/api/images/image_search_service.dart';
-import 'package:cardflow/api/images/wikimedia_image_search_service.dart';
-import 'package:cardflow/api/images/wikipedia_image_search_service.dart';
+import 'package:cardflow/api/images/placeholder_image_generator.dart';
 import 'package:cardflow/api/providers/anthropic_adapter.dart';
 import 'package:cardflow/api/providers/gemini_adapter.dart';
 import 'package:cardflow/api/providers/openai_adapter.dart';
 import 'package:cardflow/api/providers/openai_compatible_adapter.dart';
 import 'package:cardflow/api/providers/generation_provider_adapter.dart';
 import 'package:cardflow/api/parsers/file_parsing_service.dart';
+import 'package:cardflow/data/cards/card_image_refresher.dart';
 import 'package:cardflow/data/cards/drift_card_media_repository.dart';
 import 'package:cardflow/data/cards/drift_card_repository.dart';
 import 'package:cardflow/data/cards/file_picker_image_gateway.dart';
@@ -395,22 +396,45 @@ final generationCardStoreProvider = Provider<GenerationCardStore>((ref) {
   );
 });
 
-/// Поиск иллюстраций по `image_query` (ADR-023, ADR-027, ADR-028).
+/// Поиск иллюстраций: цепочка провайдеров (ADR-023, ADR-027, ADR-028, 7.14).
 ///
-/// Порядок источников: Wikimedia Commons (быстро по конкретным запросам) →
-/// Wikipedia pageimages (понимает русские словоформы: статья, а не имя файла) →
-/// Openverse (CC-резерв). Бюджет поиска ограничивает пайплайн: недоступный
-/// источник не задерживает импорт карточек.
+/// Порядок: Wikimedia Commons (быстро по конкретным запросам) → Wikipedia
+/// pageimages (понимает русские словоформы: статья, а не имя файла) →
+/// Openverse (CC-резерв) → Pixabay/Pexels, только если ключ задан в
+/// `--dart-define`/окружении. Без ключа провайдера в цепочке нет. Бюджет
+/// времени ограничивает пайплайн: недоступный источник не задерживает импорт.
 final cardImageFinderProvider = Provider<CardImageFinder>((ref) {
   final Dio dio = ref.watch(generationDioProvider);
   final GenerationDiagnostics diagnostics = ref.watch(
     generationDiagnosticsProvider,
   );
-  return CompositeCardImageFinder(<CardImageFinder>[
-    WikimediaImageSearchService(dio: dio, diagnostics: diagnostics),
-    WikipediaImageSearchService(dio: dio, diagnostics: diagnostics),
-    ImageSearchService(dio: dio, diagnostics: diagnostics),
-  ]);
+  final String? pixabayKey = pixabayApiKeyFromEnvironment();
+  final String? pexelsKey = pexelsApiKeyFromEnvironment();
+  return ImageSearchService(
+    dio: dio,
+    diagnostics: diagnostics,
+    providers: buildImageProviders(
+      dio: dio,
+      pixabayApiKey: pixabayKey,
+      pexelsApiKey: pexelsKey,
+    ),
+  );
+});
+
+/// Генератор детерминированных заглушек карточек (7.14, шаг 3).
+final placeholderImageGeneratorProvider = Provider<PlaceholderImageGenerator>((
+  ref,
+) {
+  return const PlaceholderImageGenerator();
+});
+
+/// Повторный поиск картинки карточки (7.14: «Найти картинку заново»).
+final cardImageRefresherProvider = Provider<CardImageRefresher>((ref) {
+  return CardImageRefresher(
+    database: ref.watch(appDatabaseProvider),
+    mediaStore: ref.watch(mediaStoreProvider),
+    imageFinder: ref.watch(cardImageFinderProvider),
+  );
 });
 
 /// Пайплайн генерации: чанкинг, вызовы, прогресс/отмена, дедупликация.
@@ -420,6 +444,7 @@ final generationRunnerProvider = Provider<GenerationRunner>((ref) {
     jobRepository: ref.watch(generationJobRepositoryProvider),
     cardStore: ref.watch(generationCardStoreProvider),
     imageFinder: ref.watch(cardImageFinderProvider),
+    placeholderGenerator: ref.watch(placeholderImageGeneratorProvider),
     diagnostics: ref.watch(generationDiagnosticsProvider),
   );
 });

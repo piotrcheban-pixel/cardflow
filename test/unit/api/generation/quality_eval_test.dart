@@ -115,11 +115,11 @@ void main() {
 
     final cards = evaluate(raw, source: source, imageIds: <String>{'img1'});
     expect(cards, hasLength(3));
-    // image_id приоритетнее image_query: поиск не нужен.
+    // 7.14: image_id в приоритете, а image остаётся запасным вариантом.
     expect(cards[0].imageId, 'img1');
     expect(cards[0].imageQuery, isNull);
     expect(cards[1].imageId, 'img1');
-    expect(cards[1].imageQuery, isNull);
+    expect(cards[1].imageQuery, 'physics free body diagram inclined plane');
     // Заголовок вместо вопроса — мягкая пометка.
     expect(cards[2].issues, contains(CardIssueCode.frontLooksLikeHeading));
   });

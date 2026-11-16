@@ -11,6 +11,7 @@ import 'package:cardflow/api/providers/generation_provider_adapter.dart';
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/generation/api_key_store.dart';
 import 'package:cardflow/domain/generation/card_image_finder.dart';
+import 'package:cardflow/domain/generation/card_image_kind.dart';
 import 'package:cardflow/domain/generation/document_gateway.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
 import 'package:cardflow/domain/generation/generated_card_image.dart';
@@ -350,6 +351,8 @@ GeneratedCard makeGeneratedCard({
   String? sourceExcerpt,
   List<CardIssueCode> issues = const <CardIssueCode>[],
   String? imageQuery,
+  String? imageFallbackQuery,
+  GeneratedCardImageKind imageKind = GeneratedCardImageKind.photo,
   GeneratedCardImage? image,
   bool isOcclusion = false,
   String? occlusionJson,
@@ -362,6 +365,8 @@ GeneratedCard makeGeneratedCard({
     sourceExcerpt: sourceExcerpt,
     issues: issues,
     imageQuery: imageQuery,
+    imageFallbackQuery: imageFallbackQuery,
+    imageKind: imageKind,
     image: image,
     isOcclusion: isOcclusion,
     occlusionJson: occlusionJson,
@@ -380,14 +385,51 @@ class FakeCardImageFinder implements CardImageFinder {
   /// Все запросы в порядке вызовов.
   final List<String> queries = <String>[];
 
+  /// Полные аргументы вызовов (запасной запрос, вид, исключённые URL).
+  final List<
+    ({
+      String query,
+      String? fallbackQuery,
+      GeneratedCardImageKind kind,
+      Set<String>? excludedSourceUrls,
+    })
+  >
+  calls =
+      <
+        ({
+          String query,
+          String? fallbackQuery,
+          GeneratedCardImageKind kind,
+          Set<String>? excludedSourceUrls,
+        })
+      >[];
+
   /// Если задано — `findImage` бросает это исключение.
   Object? error;
 
   @override
-  Future<GeneratedCardImage?> findImage(String query) async {
+  Future<GeneratedCardImage?> findImage(
+    String query, {
+    String? fallbackQuery,
+    GeneratedCardImageKind kind = GeneratedCardImageKind.photo,
+    Set<String>? excludedSourceUrls,
+  }) async {
     queries.add(query);
+    calls.add((
+      query: query,
+      fallbackQuery: fallbackQuery,
+      kind: kind,
+      excludedSourceUrls: excludedSourceUrls,
+    ));
     if (error != null) throw error!;
-    return byQuery[query];
+    final GeneratedCardImage? direct = byQuery[query];
+    if (direct != null) return direct;
+    final String? fallback = fallbackQuery;
+    if (fallback != null) {
+      final GeneratedCardImage? alternative = byQuery[fallback];
+      if (alternative != null) return alternative;
+    }
+    return null;
   }
 }
 
@@ -396,12 +438,23 @@ GeneratedCardImage makeCardImage({
   String query = 'photosynthesis diagram',
   List<int> bytes = const <int>[0xFF, 0xD8, 0xFF, 1, 2, 3],
   AttachmentMediaType mediaType = AttachmentMediaType.jpeg,
+  GeneratedCardImageKind kind = GeneratedCardImageKind.photo,
+  String provider = 'wikimedia',
+  String? sourceUrl = 'https://example.test/image.jpg',
+  String? author,
+  String? license,
+  bool isPlaceholder = false,
 }) {
   return GeneratedCardImage(
     bytes: Uint8List.fromList(bytes),
     mediaType: mediaType,
     query: query,
-    sourceUrl: 'https://example.test/image.jpg',
+    kind: kind,
+    provider: provider,
+    sourceUrl: sourceUrl,
+    author: author,
+    license: license,
+    isPlaceholder: isPlaceholder,
   );
 }
 

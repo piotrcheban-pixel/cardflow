@@ -103,18 +103,18 @@ void main() {
     expect(issues, isNot(contains(CardIssueCode.backOnlyNotation)));
   });
 
-  test('image_query для абстрактного понятия обнуляется с пометкой', () {
+  test('image_query абстрактного понятия сохраняется (7.14)', () {
     final parsed = validator.validateResponse(<String, Object?>{
       'cards': <Object?>[
         card(
           front: 'При каком условии две силы уравновешены?',
           back: 'Аксиома о равновесии двух сил',
-          imageQuery: 'ball physics',
+          imageQuery: 'balance scale equilibrium',
         ),
       ],
     }, sourceText: source).single;
-    expect(parsed.imageQuery, isNull);
-    expect(parsed.issues, contains(CardIssueCode.abstractImageQuery));
+    expect(parsed.imageQuery, 'balance scale equilibrium');
+    expect(parsed.issues, isNot(contains(CardIssueCode.abstractImageQuery)));
   });
 
   test('Unicode-индексы и греческие буквы вне формул — пометка', () {

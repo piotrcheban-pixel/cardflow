@@ -7,9 +7,12 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cardflow/api/generation/generation_diagnostics.dart';
 import 'package:cardflow/api/images/composite_card_image_finder.dart';
-import 'package:cardflow/api/images/wikimedia_image_search_service.dart';
-import 'package:cardflow/api/images/wikipedia_image_search_service.dart';
+import 'package:cardflow/api/images/image_provider.dart';
+import 'package:cardflow/api/images/image_search_service.dart';
+import 'package:cardflow/api/images/wikimedia_image_provider.dart';
+import 'package:cardflow/api/images/wikipedia_image_provider.dart';
 import 'package:cardflow/domain/generation/card_image_finder.dart';
+import 'package:cardflow/domain/generation/card_image_kind.dart';
 import 'package:cardflow/domain/generation/generation_attachment.dart';
 
 void main() {
@@ -19,15 +22,19 @@ void main() {
       final Dio dio = Dio();
       addTearDown(() => dio.close(force: true));
       final List<String> diagnostics = <String>[];
-      final service = WikimediaImageSearchService(
+      final service = ImageSearchService(
         dio: dio,
+        providers: <ImageProvider>[WikimediaImageProvider(dio: dio)],
         diagnostics: GenerationDiagnostics(
           enabled: true,
           sink: diagnostics.add,
         ),
       );
 
-      final image = await service.findImage('Московский Кремль');
+      final image = await service.findImage(
+        'Московский Кремль',
+        kind: GeneratedCardImageKind.photo,
+      );
 
       expect(
         image,
@@ -46,7 +53,7 @@ void main() {
         'LIVE Wikimedia OK: ${image.mediaType.name}, '
         'bytes=${image.bytes.length}, attribution=${image.attribution}',
       );
-      expect(diagnostics.single, contains('Wikimedia Commons'));
+      expect(diagnostics.join('\n'), contains('wikimedia'));
     },
     timeout: const Timeout(Duration(minutes: 2)),
     tags: <String>['live'],
@@ -60,8 +67,9 @@ void main() {
       final Dio dio = Dio();
       addTearDown(() => dio.close(force: true));
       final List<String> diagnostics = <String>[];
-      final service = WikipediaImageSearchService(
+      final service = ImageSearchService(
         dio: dio,
+        providers: <ImageProvider>[WikipediaImageProvider(dio: dio)],
         diagnostics: GenerationDiagnostics(
           enabled: true,
           sink: diagnostics.add,
@@ -82,7 +90,7 @@ void main() {
         'LIVE Wikipedia OK: ${image.mediaType.name}, '
         'bytes=${image.bytes.length}, attribution=${image.attribution}',
       );
-      expect(diagnostics.single, contains('Wikipedia (ru)'));
+      expect(diagnostics.join('\n'), contains('wikipedia'));
     },
     timeout: const Timeout(Duration(minutes: 2)),
     tags: <String>['live'],
@@ -99,8 +107,16 @@ void main() {
         sink: diagnostics.add,
       );
       final finder = CompositeCardImageFinder(<CardImageFinder>[
-        WikimediaImageSearchService(dio: dio, diagnostics: diag),
-        WikipediaImageSearchService(dio: dio, diagnostics: diag),
+        ImageSearchService(
+          dio: dio,
+          providers: <ImageProvider>[WikimediaImageProvider(dio: dio)],
+          diagnostics: diag,
+        ),
+        ImageSearchService(
+          dio: dio,
+          providers: <ImageProvider>[WikipediaImageProvider(dio: dio)],
+          diagnostics: diag,
+        ),
       ]);
 
       final image = await finder.findImage('спайность минерала');

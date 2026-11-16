@@ -7,9 +7,11 @@
 /// (fix-gen, Д6): остальные карточки сохраняются.
 library;
 
+import 'package:cardflow/api/generation/image_query_normalizer.dart';
 import 'package:cardflow/api/generation/latex_checker.dart';
 import 'package:cardflow/api/generation/latex_escape_repair.dart';
 import 'package:cardflow/domain/cards/card.dart';
+import 'package:cardflow/domain/generation/card_image_kind.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
 import 'package:cardflow/domain/generation/generation_failure_reason.dart';
@@ -46,8 +48,6 @@ class CardContentValidator {
   static final RegExp _subscripts = RegExp('[₀-₉₊₋₌₍₎ₐₑₒₓₔₕₖₗₘₙₚₛₜⁿᵢ]');
   static final RegExp _superscripts = RegExp('[⁰-⁹⁺⁻⁼⁽⁾ⁿⁱ]');
   static final RegExp _greek = RegExp('[Ͱ-Ͽἀ-῿]');
-  static final RegExp _cyrillic = RegExp('[А-Яа-яЁё]');
-  static final RegExp _latinOnly = RegExp(r"^[A-Za-z0-9\s\-_.()/,:+&'%]+$");
 
   /// Вопросительные слова, с которых начинается настоящий вопрос.
   ///
@@ -59,14 +59,6 @@ class CardContentValidator {
     r'кого|кому|сколько|насколько|является\s+ли|можно\s+ли|верно\s+ли|'
     r'какую|какой\s+вид|what|how|why|when|where|which|who)'
     r'(?=\s|$|[,.!?;:…])',
-    caseSensitive: false,
-    unicode: true,
-  );
-
-  /// Абстрактные понятия, для которых иллюстрация не ищется (A8.1, правило 7).
-  static final RegExp _abstractConcept = RegExp(
-    r'аксиом|закон[а-я]*|теорем|формул|определен|свойств|принцип|'
-    r'классификац|правил[оа]|поняти|термин|алгоритм|метод[а-я]*',
     caseSensitive: false,
     unicode: true,
   );
@@ -101,12 +93,6 @@ class CardContentValidator {
 
   /// Мягкий предел длины `back` (A8.1, правило 3).
   static const int softBackLength = 200;
-
-  /// Максимальная длина поискового запроса (итерация 7.9).
-  static const int maxImageQueryLength = 200;
-
-  /// Максимум слов в `image_query` (A8.1, правило 7).
-  static const int maxImageQueryWords = 7;
 
   /// Валидирует декодированный ответ модели (уже прошедший проверку схемы).
   ///
@@ -252,8 +238,9 @@ class CardContentValidator {
     final hint = raw['hint'];
     final sourceFile = raw['source_file'];
     final imageSelection = _imageSelectionOf(
-      raw['image_id'],
-      raw['image_query'],
+      rawId: raw['image_id'],
+      rawImage: raw['image'],
+      rawLegacyQuery: raw['image_query'],
       front: front,
       back: back,
       imageIds: imageIds,
@@ -273,15 +260,29 @@ class CardContentValidator {
           : null,
       issues: List<CardIssueCode>.unmodifiable(issues),
       imageQuery: imageSelection.query,
+      imageFallbackQuery: imageSelection.fallbackQuery,
+      imageKind: imageSelection.kind,
       imageId: imageSelection.id,
       isOcclusion: isOcclusion,
     );
   }
 
-  /// Проверяет `image_id`/`image_query` (fix-gen, Д2/Д3, A8.1 правило 7).
-  ({String? id, String? query}) _imageSelectionOf(
-    Object? rawId,
-    Object? rawQuery, {
+  /// Проверяет `image_id` и `image` (`gen-ru-v6`) или `image_query` (`gen-ru-v5`).
+  ///
+  /// Правило «абстрактным понятиям картинка не нужна» удалено в 7.14: запрос
+  /// нормализуется (`image_query_normalizer.dart`), а не обнуляется, — картинка
+  /// нужна каждой карточке. Испорченный запрос не роняет карточку: поиск
+  /// просто не выполнится, и пайплайн поставит заглушку.
+  ({
+    String? id,
+    String? query,
+    String? fallbackQuery,
+    GeneratedCardImageKind kind,
+  })
+  _imageSelectionOf({
+    required Object? rawId,
+    required Object? rawImage,
+    required Object? rawLegacyQuery,
     required String front,
     required String back,
     required Set<String> imageIds,
@@ -296,33 +297,20 @@ class CardContentValidator {
         issues.add(CardIssueCode.imageIdUnknown);
       }
     }
-    String? query;
-    if (rawQuery is String && rawQuery.trim().isNotEmpty) {
-      final candidate = _collapseSpaces(rawQuery);
-      if (id != null) {
-        // Приоритет 1: изображение из файла — поиск не нужен.
-        issues.add(CardIssueCode.imageQueryAdjusted);
-      } else if (!_latinOnly.hasMatch(candidate) ||
-          _cyrillic.hasMatch(candidate)) {
-        issues.add(CardIssueCode.imageQueryAdjusted);
-      } else if (candidate.split(' ').where((w) => w.isNotEmpty).length >
-          maxImageQueryWords) {
-        issues.add(CardIssueCode.imageQueryAdjusted);
-      } else if (_isAbstractCard(front, back)) {
-        // Абстрактные понятия: лучше без картинки, чем шар для аксиомы (Д2).
-        issues.add(CardIssueCode.abstractImageQuery);
-      } else if (candidate.length > maxImageQueryLength) {
-        issues.add(CardIssueCode.imageQueryAdjusted);
-      } else {
-        query = candidate;
-      }
-    }
-    return (id: id, query: query);
+    final NormalizedImageSpec spec = normalizeImageSpec(
+      image: rawImage,
+      legacyQuery: rawLegacyQuery,
+      front: front,
+      back: back,
+    );
+    if (spec.adjusted) issues.add(CardIssueCode.imageQueryAdjusted);
+    return (
+      id: id,
+      query: spec.query,
+      fallbackQuery: spec.fallbackQuery,
+      kind: spec.kind,
+    );
   }
-
-  /// Карточка об абстрактном понятии (аксиома/закон/теорема/формула/…).
-  static bool _isAbstractCard(String front, String back) =>
-      _abstractConcept.hasMatch(front) || _abstractConcept.hasMatch(back);
 
   /// Пометки форматирования: Unicode-математика и Markdown (A8.1, правило 4).
   void _markFormattingIssues(

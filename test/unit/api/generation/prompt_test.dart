@@ -10,8 +10,8 @@ import 'package:cardflow/api/prompts/system_prompt.dart';
 /// (SPEC A8.1, A8.5), проверка LaTeX (SPEC A8.4). fix-gen.
 void main() {
   group('системный промпт gen-ru-v5', () {
-    test('версия gen-ru-v5, текст не пустой и без подстановок Dart', () {
-      expect(systemPromptVersion, 'gen-ru-v5');
+    test('v5 сохранён: текст не пустой и без подстановок Dart', () {
+      expect(systemPromptVersion, 'gen-ru-v6');
       expect(systemPromptGenRuV5.trim(), isNotEmpty);
       expect(systemPromptGenRuV5, isNot(contains(r'${')));
     });
@@ -66,6 +66,59 @@ void main() {
         systemPromptGenRuV5,
         contains('каждый обратный слэш LaTeX в строке JSON удваивается'),
       );
+    });
+  });
+
+  group('системный промпт gen-ru-v6 (7.14)', () {
+    test('константа совпадает с docs/prompts/gen-ru-v6.txt байт в байт', () {
+      final File file = File('docs/prompts/gen-ru-v6.txt');
+      expect(file.existsSync(), isTrue, reason: 'Копия промпта потеряна');
+      expect(
+        systemPromptGenRuV6,
+        file.readAsStringSync(),
+        reason: 'Промпт в коде должен быть дословной копией файла',
+      );
+    });
+
+    test('требует объект image у каждой карточки и виды kind', () {
+      for (final fragment in <String>[
+        '"image": {',
+        '"query": "string на английском, 3–7 слов"',
+        '"fallback_query": "string на английском, 2–4 слова"',
+        '"kind": "photo" | "diagram" | "illustration"',
+        'Изображение обязательно у каждой карточки',
+        'mitochondria electron microscope',
+        'free body diagram inclined plane',
+        'photosynthesis process diagram',
+        'lever torque diagram',
+        'hourglass time concept',
+        'balance scale equilibrium',
+        'одинаковые query у разных карточек одной колоды',
+      ]) {
+        expect(
+          systemPromptGenRuV6,
+          contains(fragment),
+          reason: 'В промпте v6 нет фрагмента: $fragment',
+        );
+      }
+    });
+
+    test('правило «абстрактным понятиям картинка не нужна» удалено', () {
+      expect(systemPromptGenRuV6, isNot(contains('Для абстрактных понятий')));
+      expect(
+        systemPromptGenRuV6,
+        isNot(contains('image_query ОБЯЗАН быть null')),
+      );
+      expect(systemPromptGenRuV6, contains('Не оставляй image пустым'));
+    });
+
+    test('v6 не содержит устаревшего image_query в схеме вывода', () {
+      expect(systemPromptGenRuV6, isNot(contains(r'"image_query": "string')));
+      expect(systemPromptGenRuV6, contains('ровно девять ключей'));
+    });
+
+    test('требует удвоения обратных слэшей LaTeX в JSON (v6)', () {
+      expect(systemPromptGenRuV6, contains(r'Пиши "$\\frac{a}{b}$"'));
     });
   });
 

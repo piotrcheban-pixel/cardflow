@@ -50,6 +50,16 @@ class MediaGarbageCollector {
       await mediaStore.deleteMedia(path);
       deleted++;
     }
+    // Побочные метаданные без живого медиафайла: удаляем вместе с базой.
+    for (final path in await mediaStore.listMetadata()) {
+      final String mediaPath = path.substring(
+        0,
+        path.length - MediaStore.metadataSuffix.length,
+      );
+      if (retainedPaths.contains(mediaPath)) continue;
+      await mediaStore.deleteMedia(mediaPath);
+      deleted++;
+    }
     return deleted;
   }
 }

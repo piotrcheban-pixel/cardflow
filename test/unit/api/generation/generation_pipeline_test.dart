@@ -6,10 +6,12 @@ import 'package:cardflow/api/generation/generation_cancellation.dart';
 import 'package:cardflow/api/generation/generation_diagnostics.dart';
 import 'package:cardflow/api/generation/generation_pipeline.dart';
 import 'package:cardflow/api/generation/system_prompt.dart';
+import 'package:cardflow/api/images/placeholder_image_generator.dart';
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/cards/content_hash.dart';
 import 'package:cardflow/domain/cards/occlusion.dart';
 import 'package:cardflow/domain/generation/card_image_finder.dart';
+import 'package:cardflow/domain/generation/card_image_kind.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
 import 'package:cardflow/domain/generation/generated_card_image.dart';
 import 'package:cardflow/domain/generation/generation_attachment.dart';
@@ -89,13 +91,14 @@ void main() {
     List<ParsedDocument> documents, {
     String? targetDeckId,
     List<GenerationAttachment> images = const <GenerationAttachment>[],
+    String? wishes = 'Покороче',
   }) {
     return GenerationRunRequest(
       documents: documents,
       images: images,
       account: testProviderAccount(presetId: 'openai', modelId: 'gpt-4o'),
       deckName: 'Новая колода',
-      wishes: 'Покороче',
+      wishes: wishes,
       targetDeckId: targetDeckId,
     );
   }
@@ -107,6 +110,7 @@ void main() {
   GenerationPipeline pipelineWith(
     List<GenerationChunk> chunks, {
     FakeCardImageFinder? imageFinder,
+    PlaceholderImageGenerator? placeholderGenerator,
   }) {
     caller = FakeGenerationCaller();
     jobs = FakeGenerationJobRepository();
@@ -119,6 +123,7 @@ void main() {
       now: () => DateTime.utc(2026, 11, 14, 10),
       jobIdFactory: () => 'job-1',
       imageFinder: imageFinder,
+      placeholderGenerator: placeholderGenerator,
     );
   }
 
@@ -553,11 +558,21 @@ void main() {
       expect(sending[0].chunkIndex, 1);
       expect(sending[0].chunkCount, 2);
       expect(sending[1].chunkIndex, 2);
+      final receiving = progress
+          .where((item) => item.phase == GenerationProgressPhase.receiving)
+          .toList();
+      // 7.14: на каждый фрагмент — событие с принятыми карточками сразу после
+      // ответа модели и ещё одно после привязки картинок.
+      expect(receiving, hasLength(4));
+      expect(receiving.map((item) => item.chunkIndex).toSet(), <int>{1, 2});
       expect(
-        progress.where(
-          (item) => item.phase == GenerationProgressPhase.receiving,
-        ),
-        hasLength(2),
+        receiving.every((item) => item.cards.isNotEmpty),
+        isTrue,
+        reason: 'UI получает карточки, не дожидаясь картинок',
+      );
+      expect(
+        receiving.map((item) => item.imagesPending),
+        containsAll(<bool>[true, false]),
       );
     },
   );
@@ -856,10 +871,13 @@ void main() {
     Future<GenerationRunResult> runWithCards(
       List<GeneratedCard> cards, {
       FakeCardImageFinder? finder,
+      PlaceholderImageGenerator? placeholderGenerator,
     }) async {
-      final pipeline = pipelineWith(<GenerationChunk>[
-        chunkOf(1, 'материал'),
-      ], imageFinder: finder);
+      final pipeline = pipelineWith(
+        <GenerationChunk>[chunkOf(1, 'материал')],
+        imageFinder: finder,
+        placeholderGenerator: placeholderGenerator,
+      );
       caller.onGenerate = (GenerationRequest request, int call) async =>
           resultWith(cards);
       return pipeline.run(
@@ -935,22 +953,112 @@ void main() {
       expect(result.cards.single.image, isNull);
     });
 
-    test('одинаковый запрос ищется один раз (кэш запуска)', () async {
+    test(
+      'одинаковый запрос: один поиск, но URL не дублируется в колоде',
+      () async {
+        final finder = FakeCardImageFinder(
+          byQuery: <String, GeneratedCardImage?>{'eiffel tower': image},
+        );
+        final cards = <GeneratedCard>[
+          makeGeneratedCard(front: 'Первый', imageQuery: 'eiffel tower'),
+          makeGeneratedCard(front: 'Второй', imageQuery: 'eiffel tower'),
+        ];
+
+        final result = await runWithCards(cards, finder: finder);
+
+        expect(finder.queries, <String>['eiffel tower']);
+        expect(result.cards.first.image, same(image));
+        expect(
+          result.cards.last.image,
+          isNull,
+          reason: 'без заглушки дубль URL не привязывается',
+        );
+        expect(result.cards.last.issues, contains(CardIssueCode.imageNotFound));
+      },
+    );
+
+    test('запасной запрос и вид картинки передаются в поиск', () async {
       final finder = FakeCardImageFinder(
-        byQuery: <String, GeneratedCardImage?>{'eiffel tower': image},
+        byQuery: <String, GeneratedCardImage?>{'force diagram': image},
       );
-      final cards = <GeneratedCard>[
-        makeGeneratedCard(front: 'Первый', imageQuery: 'eiffel tower'),
-        makeGeneratedCard(front: 'Второй', imageQuery: 'eiffel tower'),
-      ];
+      final card = makeGeneratedCard(
+        imageQuery: 'inclined plane forces diagram',
+        imageFallbackQuery: 'force diagram',
+        imageKind: GeneratedCardImageKind.diagram,
+      );
 
-      final result = await runWithCards(cards, finder: finder);
+      final result = await runWithCards(<GeneratedCard>[card], finder: finder);
 
-      expect(finder.queries, <String>['eiffel tower']);
+      expect(finder.calls.single.query, 'inclined plane forces diagram');
+      expect(finder.calls.single.fallbackQuery, 'force diagram');
+      expect(finder.calls.single.kind, GeneratedCardImageKind.diagram);
+      expect(result.cards.single.image, same(image));
+      expect(finder.queries, <String>['inclined plane forces diagram']);
+    });
+
+    test('не найдено → детерминированная заглушка с флагом', () async {
+      const generator = PlaceholderImageGenerator();
+      final finder = FakeCardImageFinder();
+      final card = makeGeneratedCard(
+        imageQuery: 'missing picture',
+        imageKind: GeneratedCardImageKind.illustration,
+      );
+
+      final result = await runWithCards(
+        <GeneratedCard>[card],
+        finder: finder,
+        placeholderGenerator: generator,
+      );
+
+      final GeneratedCardImage? placeholder = result.cards.single.image;
+      expect(placeholder, isNotNull);
+      expect(placeholder!.isPlaceholder, isTrue);
+      expect(placeholder.provider, 'placeholder');
+      expect(placeholder.kind, GeneratedCardImageKind.illustration);
+      expect(result.cards.single.issues, contains(CardIssueCode.imageNotFound));
       expect(
-        result.cards.every((card) => identical(card.image, image)),
-        isTrue,
+        placeholder.bytes,
+        generator
+            .generate(
+              seed: contentHashOf(front: card.front, back: card.back),
+              kind: card.imageKind,
+              query: card.imageQuery,
+            )
+            .bytes,
+        reason: 'одна карточка — всегда одна и та же заглушка',
       );
+    });
+
+    test('карточка без поля image тоже получает заглушку', () async {
+      const generator = PlaceholderImageGenerator();
+      final card = makeGeneratedCard();
+
+      final result = await runWithCards(<GeneratedCard>[
+        card,
+      ], placeholderGenerator: generator);
+
+      expect(result.cards.single.image, isNotNull);
+      expect(result.cards.single.image!.isPlaceholder, isTrue);
+      // Без поиска пометки imageNotFound нет: запроса не было.
+      expect(
+        result.cards.single.issues,
+        isNot(contains(CardIssueCode.imageNotFound)),
+      );
+    });
+
+    test('пожелание «без картинок» отключает и заглушку', () async {
+      const generator = PlaceholderImageGenerator();
+      final pipeline = pipelineWith(<GenerationChunk>[
+        chunkOf(1, 'материал'),
+      ], placeholderGenerator: generator);
+      caller.onGenerate = (GenerationRequest request, int call) async =>
+          resultWith(<GeneratedCard>[makeGeneratedCard()]);
+      final result = await pipeline.run(
+        requestWith(<ParsedDocument>[
+          docOf('a.txt', <String>['материал']),
+        ], wishes: 'без картинок'),
+      );
+      expect(result.cards.single.image, isNull);
     });
 
     test('без finder occlusion понижается, генерация не падает', () async {
@@ -1132,7 +1240,12 @@ class _SlowImageFinder implements CardImageFinder {
   final List<String> queries = <String>[];
 
   @override
-  Future<GeneratedCardImage?> findImage(String query) async {
+  Future<GeneratedCardImage?> findImage(
+    String query, {
+    String? fallbackQuery,
+    GeneratedCardImageKind kind = GeneratedCardImageKind.photo,
+    Set<String>? excludedSourceUrls,
+  }) async {
     queries.add(query);
     onSearch();
     return null;

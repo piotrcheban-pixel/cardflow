@@ -12,9 +12,11 @@ import 'package:cardflow/api/generation/system_prompt.dart';
 import 'package:cardflow/api/http/generation_http_client.dart';
 import 'package:cardflow/api/http/retry_policy.dart';
 import 'package:cardflow/api/images/composite_card_image_finder.dart';
+import 'package:cardflow/api/images/image_provider.dart';
 import 'package:cardflow/api/images/image_search_service.dart';
-import 'package:cardflow/api/images/wikimedia_image_search_service.dart';
-import 'package:cardflow/api/images/wikipedia_image_search_service.dart';
+import 'package:cardflow/api/images/openverse_image_provider.dart';
+import 'package:cardflow/api/images/wikimedia_image_provider.dart';
+import 'package:cardflow/api/images/wikipedia_image_provider.dart';
 import 'package:cardflow/api/parsers/docx_parser.dart';
 import 'package:cardflow/api/parsers/pdf_scan_renderer.dart';
 import 'package:cardflow/api/providers/openai_compatible_adapter.dart';
@@ -308,9 +310,21 @@ void main() {
         cardStore: FakeGenerationCardStore(),
         chunker: const GenerationChunker(),
         imageFinder: CompositeCardImageFinder(<CardImageFinder>[
-          WikimediaImageSearchService(dio: dio, diagnostics: diag),
-          WikipediaImageSearchService(dio: dio, diagnostics: diag),
-          ImageSearchService(dio: dio, diagnostics: diag),
+          ImageSearchService(
+            dio: dio,
+            providers: <ImageProvider>[WikimediaImageProvider(dio: dio)],
+            diagnostics: diag,
+          ),
+          ImageSearchService(
+            dio: dio,
+            providers: <ImageProvider>[WikipediaImageProvider(dio: dio)],
+            diagnostics: diag,
+          ),
+          ImageSearchService(
+            dio: dio,
+            providers: <ImageProvider>[OpenverseImageProvider(dio: dio)],
+            diagnostics: diag,
+          ),
         ]),
         imageSearchBudget: const Duration(seconds: 90),
         diagnostics: diag,
@@ -520,7 +534,7 @@ void main() {
           'issues=${card.issues.map((issue) => issue.name).toList()}',
         );
       }
-      expect(result.promptVersion, 'gen-ru-v5');
+      expect(result.promptVersion, 'gen-ru-v6');
     },
     skip: apiKey == null
         ? 'Нет DEEPSEEK_API_KEY — live-тест пропущен (L30)'

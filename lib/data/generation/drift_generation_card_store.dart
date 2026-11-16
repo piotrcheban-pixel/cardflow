@@ -12,6 +12,7 @@ import 'package:cardflow/data/transfer/media_store.dart';
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/cards/card_scheduling.dart';
 import 'package:cardflow/domain/cards/content_hash.dart';
+import 'package:cardflow/domain/cards/media_metadata.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
 import 'package:cardflow/domain/generation/generated_card_image.dart';
 import 'package:cardflow/domain/generation/generation_card_store.dart';
@@ -144,6 +145,9 @@ class DriftGenerationCardStore implements GenerationCardStore {
   }
 
   /// Пишет иллюстрацию в `MediaStore` и готовит строку `media`.
+  ///
+  /// С 7.14 рядом с файлом пишутся метаданные атрибуции и флаг заглушки
+  /// (`<путь>.meta.json`): провайдер, ссылка, автор, лицензия, запрос модели.
   Future<_PreparedImage?> _writeImage(
     GeneratedCardImage? image,
     List<String> writtenPaths,
@@ -157,6 +161,19 @@ class DriftGenerationCardStore implements GenerationCardStore {
     final String path = 'media/$id.${image.fileExtension}';
     await store.writeMedia(relativePath: path, bytes: image.bytes);
     writtenPaths.add(path);
+    await store.writeMetadata(
+      relativePath: path,
+      metadata: MediaMetadata(
+        provider: image.provider,
+        sourceUrl: image.sourceUrl,
+        author: image.author,
+        license: image.license,
+        isPlaceholder: image.isPlaceholder,
+        query: image.query.trim().isEmpty ? null : image.query.trim(),
+        fallbackQuery: image.fallbackQuery,
+        kind: image.kind,
+      ),
+    );
     return _PreparedImage(
       id: id,
       path: path,

@@ -2,249 +2,437 @@ import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image/image.dart' as img;
 
-import 'package:cardflow/api/generation/generation_diagnostics.dart';
+import 'package:cardflow/api/images/image_provider.dart';
+import 'package:cardflow/api/images/image_providers.dart';
 import 'package:cardflow/api/images/image_search_service.dart';
+import 'package:cardflow/domain/generation/card_image_kind.dart';
 import 'package:cardflow/domain/generation/generation_attachment.dart';
 
 import '../../../helpers/fake_http_adapter.dart';
 
-/// Итерация 7.9: поиск картинок в Openverse без ключа (ADR-023).
+/// Цепочка провайдеров картинок (7.14): приоритет, фильтры, ретраи, кэш.
 void main() {
-  final Uint8List jpeg = Uint8List.fromList(<int>[
-    0xFF,
-    0xD8,
-    0xFF,
-    0xE0,
-    0x00,
-    0x10,
-    0x4A,
-    0x46,
-    0x49,
-    0x46,
-  ]);
-  final Uint8List png = Uint8List.fromList(<int>[
-    0x89,
-    0x50,
-    0x4E,
-    0x47,
-    0x0D,
-    0x0A,
-    0x1A,
-    0x0A,
-    0,
-    0,
-  ]);
+  final Uint8List png800x450 = _png(800, 450);
+  final Uint8List png300x200 = _png(300, 200);
+  final Uint8List png1200x300 = _png(1200, 300);
 
-  Map<String, Object?> searchPayload({int count = 1}) => <String, Object?>{
-    'result_count': count,
-    'results': <Object?>[
-      for (var index = 0; index < count; index++)
-        <String, Object?>{
-          'id': 'image-$index',
-          'title': 'Diagram $index',
-          'url': 'https://example.test/original-$index.jpg',
-          'thumbnail':
-              'https://api.openverse.org/v1/images/image-$index/thumb/',
-          'license': 'by-sa',
-          'license_version': '2.0',
-          'license_url': 'https://creativecommons.org/licenses/by-sa/2.0/',
-          'creator': 'Allen Gathman',
-          'foreign_landing_url': 'https://example.test/landing-$index',
-          'attribution':
-              '"Diagram $index" by Allen Gathman is licensed under CC BY-SA 2.0.',
-        },
-    ],
-  };
+  ImageCandidate candidate(String provider, String url) =>
+      ImageCandidate(provider: provider, url: url);
 
-  ImageSearchService serviceWith(
-    FakeHttpAdapter adapter, {
-    int? maxImageBytes,
-    GenerationDiagnostics? diagnostics,
+  /// Dio, отдающий заданные байты по URL.
+  Dio dioWithImages(
+    Map<String, Uint8List> byUrl, {
+    void Function()? onRequest,
+    void Function()? onDone,
+    Duration? delay,
   }) {
-    return ImageSearchService(
-      dio: dioWithAdapter(adapter),
-      maxImageBytes: maxImageBytes ?? 5 * 1024 * 1024,
-      diagnostics: diagnostics,
+    return dioWithAdapter(
+      FakeHttpAdapter((RequestOptions options) async {
+        onRequest?.call();
+        if (delay != null) await Future<void>.delayed(delay);
+        onDone?.call();
+        final Uint8List? bytes = byUrl[options.uri.toString()];
+        if (bytes == null) return bytesResponse(<int>[1, 2, 3]);
+        return bytesResponse(bytes, contentType: 'image/png');
+      }),
     );
   }
 
-  test('ищет по query и скачивает thumbnail как картинку', () async {
-    final adapter = FakeHttpAdapter((RequestOptions options) {
-      if (options.uri.path.endsWith('/v1/images/')) {
-        return jsonResponse(searchPayload());
-      }
-      if (options.uri.path.endsWith('/thumb/')) {
-        return bytesResponse(jpeg);
-      }
-      return bytesResponse(<int>[1, 2, 3], contentType: 'text/plain');
+  test('приоритет провайдеров: первый с картинкой выигрывает', () async {
+    final first = _FakeProvider('one', <ImageCandidate>[
+      candidate('one', 'https://img.test/one.png'),
+    ]);
+    final second = _FakeProvider('two', <ImageCandidate>[
+      candidate('two', 'https://img.test/two.png'),
+    ]);
+    final service = ImageSearchService(
+      dio: dioWithImages(<String, Uint8List>{
+        'https://img.test/one.png': png800x450,
+        'https://img.test/two.png': png800x450,
+      }),
+      providers: <ImageProvider>[first, second],
+    );
+
+    final image = await service.findImage('truss bridge');
+
+    expect(image, isNotNull);
+    expect(image!.provider, 'one');
+    expect(second.searches, isEmpty);
+  });
+
+  test('пустая выдача провайдера → следующий', () async {
+    final empty = _FakeProvider('empty', const <ImageCandidate>[]);
+    final second = _FakeProvider('two', <ImageCandidate>[
+      candidate('two', 'https://img.test/two.png'),
+    ]);
+    final service = ImageSearchService(
+      dio: dioWithImages(<String, Uint8List>{
+        'https://img.test/two.png': png800x450,
+      }),
+      providers: <ImageProvider>[empty, second],
+    );
+
+    final image = await service.findImage('truss bridge');
+    expect(image!.provider, 'two');
+    expect(empty.searches, <String>['truss bridge']);
+  });
+
+  test('таймаут провайдера → следующий', () async {
+    final slow = _FakeProvider('slow', <ImageCandidate>[
+      candidate('slow', 'https://img.test/slow.png'),
+    ], delay: const Duration(milliseconds: 300));
+    final fast = _FakeProvider('fast', <ImageCandidate>[
+      candidate('fast', 'https://img.test/fast.png'),
+    ]);
+    final service = ImageSearchService(
+      dio: dioWithImages(<String, Uint8List>{
+        'https://img.test/fast.png': png800x450,
+      }),
+      providers: <ImageProvider>[slow, fast],
+      providerTimeout: const Duration(milliseconds: 40),
+    );
+
+    final image = await service.findImage('scheme');
+    expect(image!.provider, 'fast');
+  });
+
+  test('запасной запрос пробуется, если основной пуст', () async {
+    final provider = _FakeProvider(
+      'p',
+      const <ImageCandidate>[],
+      byQuery: <String, List<ImageCandidate>>{
+        'force diagram': <ImageCandidate>[
+          candidate('p', 'https://img.test/force.png'),
+        ],
+      },
+    );
+    final service = ImageSearchService(
+      dio: dioWithImages(<String, Uint8List>{
+        'https://img.test/force.png': png800x450,
+      }),
+      providers: <ImageProvider>[provider],
+    );
+
+    final image = await service.findImage(
+      'inclined plane forces diagram',
+      fallbackQuery: 'force diagram',
+    );
+    expect(image, isNotNull);
+    expect(provider.searches, <String>[
+      'inclined plane forces diagram',
+      'force diagram',
+    ]);
+    expect(image!.query, 'force diagram');
+  });
+
+  test('фильтр размера и пропорций: мелкое и вытянутое пропускаются', () async {
+    final provider = _FakeProvider('p', <ImageCandidate>[
+      candidate('p', 'https://img.test/small.png'),
+      candidate('p', 'https://img.test/wide.png'),
+      candidate('p', 'https://img.test/ok.png'),
+    ]);
+    final dio = dioWithImages(<String, Uint8List>{
+      'https://img.test/small.png': png300x200,
+      'https://img.test/wide.png': png1200x300,
+      'https://img.test/ok.png': png800x450,
     });
-    final service = serviceWith(adapter);
+    final service = ImageSearchService(
+      dio: dio,
+      providers: <ImageProvider>[provider],
+    );
 
-    final result = await service.findImage('  photosynthesis diagram  ');
+    final image = await service.findImage('x');
+    expect(image!.sourceUrl, 'https://img.test/ok.png');
+    expect((dio.httpClientAdapter as FakeHttpAdapter).requests, hasLength(3));
+  });
 
-    expect(result, isNotNull);
-    expect(result!.bytes, jpeg);
-    expect(result.mediaType, AttachmentMediaType.jpeg);
-    expect(result.query, 'photosynthesis diagram');
-    expect(result.sourceUrl, contains('/thumb/'));
-    expect(result.attribution, contains('CC BY-SA'));
+  test('формат: не JPEG/PNG/WebP пропускается', () async {
+    final provider = _FakeProvider('p', <ImageCandidate>[
+      candidate('p', 'https://img.test/svg'),
+    ]);
+    final service = ImageSearchService(
+      dio: dioWithImages(<String, Uint8List>{
+        'https://img.test/svg': Uint8List.fromList(
+          '<svg xmlns="…"></svg>'.codeUnits,
+        ),
+      }),
+      providers: <ImageProvider>[provider],
+    );
+    expect(await service.findImage('x'), isNull);
+  });
 
-    expect(adapter.requests, hasLength(2));
-    final search = adapter.requests.first;
-    expect(search.uri.host, 'api.openverse.org');
-    expect(search.uri.queryParameters['q'], 'photosynthesis diagram');
-    expect(search.uri.queryParameters['page_size'], '5');
-    expect(search.uri.queryParameters['license'], 'cc0,pdm,by,by-sa');
+  test('WebP принимается (VP8X)', () async {
+    final provider = _FakeProvider('p', <ImageCandidate>[
+      candidate('p', 'https://img.test/pic.webp'),
+    ]);
+    final service = ImageSearchService(
+      dio: dioWithImages(<String, Uint8List>{
+        'https://img.test/pic.webp': _webp(800, 450),
+      }),
+      providers: <ImageProvider>[provider],
+    );
+    final image = await service.findImage('x');
+    expect(image!.mediaType, AttachmentMediaType.webp);
+  });
+
+  test('429: один ретрай с backoff, затем следующий провайдер', () async {
+    final flaky = _FakeProvider(
+      'flaky',
+      const <ImageCandidate>[],
+      error: _httpError(429),
+    );
+    final good = _FakeProvider('good', <ImageCandidate>[
+      candidate('good', 'https://img.test/good.png'),
+    ]);
+    final sleeps = <Duration>[];
+    final service = ImageSearchService(
+      dio: dioWithImages(<String, Uint8List>{
+        'https://img.test/good.png': png800x450,
+      }),
+      providers: <ImageProvider>[flaky, good],
+      sleep: (Duration duration) async => sleeps.add(duration),
+    );
+
+    final image = await service.findImage('x');
+    expect(image!.provider, 'good');
+    expect(flaky.searches, hasLength(2), reason: 'исходный + один ретрай');
+    expect(sleeps, hasLength(1));
+    expect(sleeps.single, const Duration(milliseconds: 300));
+  });
+
+  test('5xx после ретрая не ломает цепочку', () async {
+    final broken = _FakeProvider(
+      'broken',
+      const <ImageCandidate>[],
+      error: _httpError(500),
+    );
+    final service = ImageSearchService(
+      dio: dioWithImages(const <String, Uint8List>{}),
+      providers: <ImageProvider>[broken],
+      sleep: (Duration _) async {},
+    );
+    expect(await service.findImage('x'), isNull);
+    expect(broken.searches, hasLength(2));
+  });
+
+  test('404 не ретраится', () async {
+    final broken = _FakeProvider(
+      'broken',
+      const <ImageCandidate>[],
+      error: _httpError(404),
+    );
+    final service = ImageSearchService(
+      dio: dioWithImages(const <String, Uint8List>{}),
+      providers: <ImageProvider>[broken],
+    );
+    expect(await service.findImage('x'), isNull);
+    expect(broken.searches, hasLength(1));
+  });
+
+  test('дубль URL: занятая картинка не возвращается повторно', () async {
+    final provider = _FakeProvider('p', <ImageCandidate>[
+      candidate('p', 'https://img.test/same.png'),
+      candidate('p', 'https://img.test/other.png'),
+    ]);
+    final service = ImageSearchService(
+      dio: dioWithImages(<String, Uint8List>{
+        'https://img.test/same.png': png800x450,
+        'https://img.test/other.png': png800x450,
+      }),
+      providers: <ImageProvider>[provider],
+    );
+    final used = <String>{'https://img.test/same.png'};
+
+    final image = await service.findImage('x', excludedSourceUrls: used);
+    expect(image!.sourceUrl, 'https://img.test/other.png');
+    // Набор занятых URL ведёт пайплайн: цепочка его только читает.
+    expect(used, <String>{'https://img.test/same.png'});
+  });
+
+  test('метаданные источника сохраняются', () async {
+    final provider = _FakeProvider('wikimedia', <ImageCandidate>[
+      ImageCandidate(
+        provider: 'wikimedia',
+        url: 'https://img.test/a.png',
+        author: 'Иван Петров',
+        license: 'CC BY-SA 4.0',
+        attribution: 'File:A · Иван Петров · CC BY-SA 4.0',
+      ),
+    ]);
+    final service = ImageSearchService(
+      dio: dioWithImages(<String, Uint8List>{
+        'https://img.test/a.png': png800x450,
+      }),
+      providers: <ImageProvider>[provider],
+    );
+
+    final image = await service.findImage(
+      'x',
+      kind: GeneratedCardImageKind.diagram,
+    );
+    expect(image!.provider, 'wikimedia');
+    expect(image.author, 'Иван Петров');
+    expect(image.license, 'CC BY-SA 4.0');
+    expect(image.sourceUrl, 'https://img.test/a.png');
+    expect(image.kind, GeneratedCardImageKind.diagram);
+    expect(image.fallbackQuery, isNull);
+  });
+
+  test('кэш: повторный запрос не ходит в сеть и в провайдеры', () async {
+    final provider = _FakeProvider('p', <ImageCandidate>[
+      candidate('p', 'https://img.test/cache.png'),
+    ]);
+    final dio = dioWithImages(<String, Uint8List>{
+      'https://img.test/cache.png': png800x450,
+    });
+    final service = ImageSearchService(
+      dio: dio,
+      providers: <ImageProvider>[provider],
+    );
+
+    final first = await service.findImage('cache me');
+    final second = await service.findImage('cache me');
+    expect(identical(first, second), isTrue);
+    expect(provider.searches, hasLength(1));
+    expect((dio.httpClientAdapter as FakeHttpAdapter).requests, hasLength(1));
+  });
+
+  test('не больше 4 одновременных скачиваний', () async {
+    var active = 0;
+    var maxActive = 0;
+    final provider = _FakeProvider(
+      'p',
+      const <ImageCandidate>[],
+      candidateForQuery: (String query) => <ImageCandidate>[
+        candidate('p', 'https://img.test/$query.png'),
+      ],
+    );
+    final dio = dioWithImages(
+      <String, Uint8List>{
+        for (var i = 0; i < 6; i++) 'https://img.test/q$i.png': png800x450,
+      },
+      delay: const Duration(milliseconds: 25),
+      onRequest: () {
+        active++;
+        if (active > maxActive) maxActive = active;
+      },
+      onDone: () => active--,
+    );
+    final service = ImageSearchService(
+      dio: dio,
+      providers: <ImageProvider>[provider],
+    );
+
+    await Future.wait(<Future<void>>[
+      for (var i = 0; i < 6; i++)
+        service.findImage('q$i', kind: GeneratedCardImageKind.photo),
+    ]);
+
+    expect(maxActive, lessThanOrEqualTo(4));
+    expect(maxActive, greaterThan(1), reason: 'загрузки идут параллельно');
+  });
+
+  test('провайдеры без ключа не попадают в цепочку', () {
+    final dio = Dio();
+    addTearDown(() => dio.close(force: true));
+    final withoutKeys = buildImageProviders(dio: dio);
     expect(
-      search.headers['User-Agent'],
-      'CardFlow/1.0',
-      reason: 'Openverse просит User-Agent для анонимных запросов',
-    );
-  });
-
-  test('пустой query → null без сетевых запросов', () async {
-    final adapter = FakeHttpAdapter((_) => jsonResponse(searchPayload()));
-    final service = serviceWith(adapter);
-
-    expect(await service.findImage('   '), isNull);
-    expect(adapter.requests, isEmpty);
-  });
-
-  test('PNG определяется по сигнатуре', () async {
-    final adapter = FakeHttpAdapter((RequestOptions options) {
-      if (options.uri.path.endsWith('/v1/images/')) {
-        return jsonResponse(searchPayload());
-      }
-      return bytesResponse(png, contentType: 'image/png');
-    });
-    final result = await serviceWith(adapter).findImage('scheme');
-
-    expect(result!.mediaType, AttachmentMediaType.png);
-    expect(result.mimeType, 'image/png');
-  });
-
-  test('первый результат не скачался — пробует следующий', () async {
-    var downloads = 0;
-    final adapter = FakeHttpAdapter((RequestOptions options) {
-      if (options.uri.path.endsWith('/v1/images/')) {
-        return jsonResponse(searchPayload(count: 2));
-      }
-      downloads++;
-      if (downloads == 1) {
-        return bytesResponse(<int>[1, 2, 3], contentType: 'text/plain');
-      }
-      return bytesResponse(jpeg);
-    });
-
-    final result = await serviceWith(adapter).findImage('eiffel tower');
-
-    expect(result, isNotNull);
-    expect(downloads, 2);
-    expect(result!.sourceUrl, contains('image-1'));
-  });
-
-  test('нет результатов → null', () async {
-    final adapter = FakeHttpAdapter(
-      (_) => jsonResponse(<String, Object?>{'results': <Object?>[]}),
-    );
-    expect(await serviceWith(adapter).findImage('ничего'), isNull);
-  });
-
-  test('картинка больше лимита пропускается', () async {
-    final adapter = FakeHttpAdapter((RequestOptions options) {
-      if (options.uri.path.endsWith('/v1/images/')) {
-        return jsonResponse(searchPayload());
-      }
-      return bytesResponse(<int>[...jpeg, ...List<int>.filled(100, 0)]);
-    });
-
-    expect(
-      await serviceWith(adapter, maxImageBytes: 20).findImage('big image'),
-      isNull,
-    );
-  });
-
-  test('ошибка сети → null, без исключения', () async {
-    final adapter = FakeHttpAdapter(
-      (RequestOptions options) =>
-          throw dioException(options, DioExceptionType.connectionError),
-    );
-    expect(await serviceWith(adapter).findImage('offline'), isNull);
-  });
-
-  test('битый JSON поиска → null', () async {
-    final adapter = FakeHttpAdapter(
-      (_) => textResponse('<html>Service Unavailable</html>'),
-    );
-    expect(await serviceWith(adapter).findImage('broken'), isNull);
-  });
-
-  // Итерация 7.10, ADR-024: поиск картинок виден в debug-диагностике —
-  // без этого «картинок нет» не отличить от «скачать не удалось».
-  test('успешный поиск пишется в диагностику', () async {
-    final List<String> messages = <String>[];
-    final adapter = FakeHttpAdapter((RequestOptions options) {
-      if (options.uri.path.endsWith('/v1/images/')) {
-        return jsonResponse(searchPayload());
-      }
-      return bytesResponse(jpeg);
-    });
-    final service = serviceWith(
-      adapter,
-      diagnostics: GenerationDiagnostics(enabled: true, sink: messages.add),
+      <String>[for (final provider in withoutKeys) provider.name],
+      <String>['wikimedia', 'wikipedia', 'openverse'],
     );
 
-    await service.findImage('eiffel tower');
-
-    expect(messages, hasLength(1));
-    expect(messages.single, contains('eiffel tower'));
-    expect(messages.single, contains('скачано'));
-    expect(messages.single, contains('jpeg'));
-  });
-
-  test('ошибка сети и пустая выдача пишутся в диагностику', () async {
-    final List<String> messages = <String>[];
-    final diagnostics = GenerationDiagnostics(
-      enabled: true,
-      sink: messages.add,
-    );
-    final offline = FakeHttpAdapter(
-      (RequestOptions options) =>
-          throw dioException(options, DioExceptionType.connectionError),
+    final withKeys = buildImageProviders(
+      dio: dio,
+      pixabayApiKey: 'pix-key',
+      pexelsApiKey: 'pex-key',
     );
     expect(
-      await serviceWith(offline, diagnostics: diagnostics).findImage('offline'),
-      isNull,
+      <String>[for (final provider in withKeys) provider.name],
+      <String>['wikimedia', 'wikipedia', 'openverse', 'pixabay', 'pexels'],
     );
-
-    final empty = FakeHttpAdapter(
-      (_) => jsonResponse(<String, Object?>{'results': <Object?>[]}),
-    );
-    expect(
-      await serviceWith(empty, diagnostics: diagnostics).findImage('нет'),
-      isNull,
-    );
-
-    expect(messages, hasLength(2));
-    expect(messages.first, contains('ошибка запроса'));
-    expect(messages.last, contains('нет подходящей картинки'));
   });
 
-  test('диагностика выключена — поиск ничего не пишет', () async {
-    final List<String> messages = <String>[];
-    final adapter = FakeHttpAdapter((RequestOptions options) {
-      if (options.uri.path.endsWith('/v1/images/')) {
-        return jsonResponse(searchPayload());
-      }
-      return bytesResponse(jpeg);
-    });
-    final service = serviceWith(
-      adapter,
-      diagnostics: GenerationDiagnostics(enabled: false, sink: messages.add),
-    );
-
-    await service.findImage('eiffel tower');
-    expect(messages, isEmpty);
+  test('Pixabay/Pexels пропускаются, если ключ пустой', () {
+    final dio = Dio();
+    addTearDown(() => dio.close(force: true));
+    final providers = buildImageProviders(dio: dio, pixabayApiKey: '  ');
+    expect(<String>[
+      for (final provider in providers) provider.name,
+    ], isNot(contains('pixabay')));
   });
+}
+
+Uint8List _png(int width, int height) {
+  return Uint8List.fromList(
+    img.encodePng(img.Image(width: width, height: height)),
+  );
+}
+
+/// Минимальный WebP VP8X с canvas-размерами.
+Uint8List _webp(int width, int height) {
+  final bytes = Uint8List(40);
+  void writeAscii(int offset, String value) {
+    for (var i = 0; i < value.length; i++) {
+      bytes[offset + i] = value.codeUnitAt(i);
+    }
+  }
+
+  writeAscii(0, 'RIFF');
+  writeAscii(8, 'WEBP');
+  writeAscii(12, 'VP8X');
+  // Размер чанка (10 байт) little-endian.
+  bytes[16] = 0x0A;
+  // Canvas width-1 и height-1, 24 бита little-endian, начиная с 24.
+  final int w = width - 1;
+  final int h = height - 1;
+  bytes[24] = w & 0xFF;
+  bytes[25] = (w >> 8) & 0xFF;
+  bytes[26] = (w >> 16) & 0xFF;
+  bytes[27] = h & 0xFF;
+  bytes[28] = (h >> 8) & 0xFF;
+  bytes[29] = (h >> 16) & 0xFF;
+  return bytes;
+}
+
+DioException _httpError(int statusCode) {
+  final RequestOptions options = RequestOptions(path: '/search');
+  return DioException(
+    requestOptions: options,
+    type: DioExceptionType.badResponse,
+    response: Response<void>(requestOptions: options, statusCode: statusCode),
+  );
+}
+
+/// Провайдер-фейк: ответы по запросу, задержка, ошибка и журнал вызовов.
+class _FakeProvider implements ImageProvider {
+  _FakeProvider(
+    this.name,
+    this.candidates, {
+    this.byQuery = const <String, List<ImageCandidate>>{},
+    this.candidateForQuery,
+    this.delay,
+    this.error,
+  });
+
+  @override
+  final String name;
+
+  final List<ImageCandidate> candidates;
+  final Map<String, List<ImageCandidate>> byQuery;
+  final List<ImageCandidate> Function(String query)? candidateForQuery;
+  final Duration? delay;
+  final Object? error;
+  final List<String> searches = <String>[];
+
+  @override
+  Future<List<ImageCandidate>> search(ImageProviderQuery query) async {
+    searches.add(query.query);
+    if (delay != null) await Future<void>.delayed(delay!);
+    if (error != null) throw error!;
+    if (candidateForQuery != null) return candidateForQuery!(query.query);
+    final List<ImageCandidate>? specific = byQuery[query.query];
+    return specific ?? candidates;
+  }
 }

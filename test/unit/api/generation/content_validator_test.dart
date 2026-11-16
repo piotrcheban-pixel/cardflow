@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cardflow/api/generation/card_content_validator.dart';
 import 'package:cardflow/domain/cards/card.dart';
+import 'package:cardflow/domain/generation/card_image_kind.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
 
@@ -22,6 +23,7 @@ void main() {
     String? sourceFile,
     String? imageId,
     String? imageQuery,
+    Map<String, Object?>? image,
   }) => <String, Object?>{
     'front': front,
     'back': back,
@@ -31,7 +33,17 @@ void main() {
     'source_excerpt': sourceExcerpt,
     'source_file': sourceFile,
     'image_id': imageId,
-    'image_query': imageQuery,
+    if (image != null) 'image': image else 'image_query': imageQuery,
+  };
+
+  Map<String, Object?> imageSpec({
+    String query = 'truss bridge structure engineering',
+    String fallbackQuery = 'truss bridge',
+    String kind = 'photo',
+  }) => <String, Object?>{
+    'query': query,
+    'fallback_query': fallbackQuery,
+    'kind': kind,
   };
 
   List<GeneratedCard> validate(
@@ -191,65 +203,81 @@ void main() {
     },
   );
 
-  test(
-    'image_query: пустой/null → null, не латиница/длиннее 7 слов → null',
-    () {
-      expect(
-        validate(<Map<String, Object?>>[card()]).single.imageQuery,
-        isNull,
-      );
-      expect(
-        validate(<Map<String, Object?>>[card(imageQuery: '   ')])
-            .single
-            .imageQuery,
-        isNull,
-      );
-      // Слишком длинный запрос (fix-gen): не обрезается, а обнуляется.
-      final long = 'a' * (CardContentValidator.maxImageQueryLength + 20);
-      final parsed = validate(<Map<String, Object?>>[card(imageQuery: long)])
-          .single;
-      expect(parsed.imageQuery, isNull);
-      expect(parsed.issues, contains(CardIssueCode.imageQueryAdjusted));
-      // Кириллица в запросе: только латиница.
-      final cyrillic = validate(<Map<String, Object?>>[
-        card(imageQuery: 'схема фермы'),
-      ]).single;
-      expect(cyrillic.imageQuery, isNull);
-      // Больше 7 слов.
-      final tooManyWords = validate(<Map<String, Object?>>[
-        card(imageQuery: 'one two three four five six seven eight'),
-      ]).single;
-      expect(tooManyWords.imageQuery, isNull);
-    },
-  );
+  test('image (v6): объект разбирается, kind и fallback сохраняются', () {
+    final parsed = validate(<Map<String, Object?>>[
+      card(image: imageSpec(kind: 'diagram')),
+    ]).single;
+    expect(parsed.imageQuery, 'truss bridge structure engineering');
+    expect(parsed.imageFallbackQuery, 'truss bridge');
+    expect(parsed.imageKind, GeneratedCardImageKind.diagram);
+    expect(parsed.issues, isNot(contains(CardIssueCode.imageQueryAdjusted)));
+  });
 
-  test('image_query для абстрактного понятия обнуляется (Д2)', () {
+  test('image_query (v5) остаётся совместимым: запрос берётся как есть', () {
+    final parsed = validate(<Map<String, Object?>>[
+      card(imageQuery: '  photosynthesis diagram  '),
+    ]).single;
+    expect(parsed.imageQuery, 'photosynthesis diagram');
+    expect(parsed.imageKind, GeneratedCardImageKind.diagram);
+  });
+
+  test('нормализация: > 7 слов режется, кириллица/мусор вычищаются', () {
+    final tooMany = validate(<Map<String, Object?>>[
+      card(imageQuery: 'one two three four five six seven eight nine'),
+    ]).single;
+    expect(tooMany.imageQuery, 'one two three four five six seven');
+    expect(tooMany.issues, contains(CardIssueCode.imageQueryAdjusted));
+
+    final mixed = validate(<Map<String, Object?>>[
+      card(imageQuery: 'photo of mitochondria cell 3.jpg'),
+    ]).single;
+    expect(mixed.imageQuery, 'mitochondria cell');
+    expect(mixed.imageKind, GeneratedCardImageKind.photo);
+
+    final cyrillic = validate(<Map<String, Object?>>[
+      card(imageQuery: 'схема фермы'),
+    ]).single;
+    expect(cyrillic.imageQuery, isNull);
+    expect(cyrillic.issues, contains(CardIssueCode.imageQueryAdjusted));
+
+    expect(
+      validate(<Map<String, Object?>>[card(imageQuery: '   ')])
+          .single
+          .imageQuery,
+      isNull,
+    );
+  });
+
+  test('абстрактному понятию запрос больше не обнуляется (7.14)', () {
     final parsed = validate(<Map<String, Object?>>[
       card(
         front: 'При каком условии две силы уравновешивают друг друга?',
         back: 'Аксиома о равновесии двух сил',
-        imageQuery: 'ball physics',
+        imageQuery: 'balance scale equilibrium',
       ),
     ]).single;
-    expect(parsed.imageQuery, isNull);
-    expect(parsed.issues, contains(CardIssueCode.abstractImageQuery));
+    expect(parsed.imageQuery, 'balance scale equilibrium');
+    expect(parsed.imageKind, GeneratedCardImageKind.illustration);
+    expect(parsed.issues, isNot(contains(CardIssueCode.abstractImageQuery)));
   });
 
-  test('image_id из каталога: неизвестный обнуляется, при известном '
-      'image_query игнорируется (Д3)', () {
-    final known = validate(
-      <Map<String, Object?>>[card(imageId: 'img1', imageQuery: 'truss bridge')],
-      imageIds: <String>{'img1'},
-    ).single;
-    expect(known.imageId, 'img1');
-    expect(known.imageQuery, isNull);
-    expect(known.issues, contains(CardIssueCode.imageQueryAdjusted));
+  test(
+    'image_id из каталога: неизвестный обнуляется, image остаётся запасным',
+    () {
+      final known = validate(
+        <Map<String, Object?>>[card(imageId: 'img1', image: imageSpec())],
+        imageIds: <String>{'img1'},
+      ).single;
+      expect(known.imageId, 'img1');
+      expect(known.imageQuery, 'truss bridge structure engineering');
+      expect(known.issues, isNot(contains(CardIssueCode.imageQueryAdjusted)));
 
-    final unknown = validate(<Map<String, Object?>>[card(imageId: 'img9')])
-        .single;
-    expect(unknown.imageId, isNull);
-    expect(unknown.issues, contains(CardIssueCode.imageIdUnknown));
-  });
+      final unknown = validate(<Map<String, Object?>>[card(imageId: 'img9')])
+          .single;
+      expect(unknown.imageId, isNull);
+      expect(unknown.issues, contains(CardIssueCode.imageIdUnknown));
+    },
+  );
 
   test('неизвестный card_type отбрасывается сам, остальные карточки живы', () {
     final outcome = validator.validateResponseWithRejects(<String, Object?>{
