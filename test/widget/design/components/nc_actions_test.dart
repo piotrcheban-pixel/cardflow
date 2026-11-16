@@ -1,6 +1,8 @@
 import 'dart:ui' show PointerDeviceKind;
 
 import 'package:cardflow/l10n/app_localizations.dart';
+import 'package:cardflow/ui/motion.dart';
+import 'package:cardflow/ui/design/components/internal/nc_spring_builder.dart';
 import 'package:cardflow/ui/design/design.dart';
 import 'package:cardflow/ui/design/components/internal/nc_pressable.dart';
 import 'package:flutter/services.dart';
@@ -168,7 +170,63 @@ void main() {
       await gesture.up();
       await tester.pumpAndSettle();
       during.add(pressScaleOf(tester, find.byType(NcPressScale)));
-      expectNoOvershoot(during, min: 0.96, max: 1.0);
+      // Пружина нажатия (`press`, ratio 0,70) — отклик формы, не упругий
+      // overshoot: допуск 10 % диапазона сжатия (≈0,2 % размера кнопки).
+      expectNoOvershoot(during, min: 0.96, max: 1.0, tolerance: 0.1);
+    });
+  });
+
+  group('NcSpringBuilder', () {
+    Future<List<double>> sample(
+      WidgetTester tester,
+      SpringDescription spring,
+    ) async {
+      final List<double> values = <double>[];
+      double target = 0;
+      late StateSetter setState;
+      Widget tree() => NcSpringBuilder(
+        value: target,
+        spring: spring,
+        builder: (BuildContext context, double value) {
+          values.add(value);
+          return const SizedBox.shrink();
+        },
+      );
+      await pumpNc(
+        tester,
+        StatefulBuilder(
+          builder: (BuildContext context, StateSetter setter) {
+            setState = setter;
+            return tree();
+          },
+        ),
+        config: const NcTestConfig(size: Size(200, 100)),
+      );
+      setState(() => target = 1);
+      for (var frame = 0; frame < 60; frame++) {
+        await tester.pump(const Duration(milliseconds: 8));
+      }
+      return values;
+    }
+
+    testWidgets('standard: без overshoot; celebrate — с overshoot (§6.4)', (
+      WidgetTester tester,
+    ) async {
+      final List<double> standard = await sample(
+        tester,
+        AppMotion.standardSpring(),
+      );
+      expectNoOvershoot(standard, min: 0, max: 1, tolerance: 0.005);
+
+      final List<double> celebrate = await sample(
+        tester,
+        AppMotion.celebrateSpring(),
+      );
+      expect(
+        () => expectNoOvershoot(celebrate, min: 0, max: 1, tolerance: 0.005),
+        throwsA(isA<TestFailure>()),
+        reason: 'Выразительная пружина имеет право на overshoot (§6.1)',
+      );
     });
   });
 
@@ -280,11 +338,11 @@ void main() {
           items: <NcMenuItem<void>>[
             NcMenuItem<void>(
               label: l10n.decksCreateManual,
-              onSelected: (_) => menuTaps++,
+              onSelected: () => menuTaps++,
             ),
             NcMenuItem<void>(
               label: l10n.decksImportZip,
-              onSelected: (_) => menuTaps++,
+              onSelected: () => menuTaps++,
             ),
           ],
         ),
