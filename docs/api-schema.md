@@ -1,10 +1,10 @@
 # API-схема генерации CardFlow
 
-**Версия:** 5.0 (2026-11-15; промпт `gen-ru-v5`, поле `image_id` и приоритет
-изображений из прикреплённых файлов, поштучная проверка схемы, причины сбоя
-фрагментов; ADR-029, ADR-030) ·
+**Версия:** 6.0 (2026-11-16; промпт `gen-ru-v6`, обязательный объект `image`
+(`query`/`fallback_query`/`kind`) у каждой карточки, `image_query` — только
+legacy v5; ADR-031) ·
 **Связано:** SPEC A8.1, A8.2, A8.4, A8.5, A8.6; ADR-011; ADR-012; ADR-013; ADR-021;
-ADR-022; ADR-023; ADR-024; ADR-029; ADR-030
+ADR-022; ADR-023; ADR-024; ADR-029; ADR-030; ADR-031
 **Источник правды в коде:** `lib/api/generation/card_json_schema.dart` (канон), `provider_schema.dart`
 (проекции), `card_response_schema.dart` (валидатор), `cards_json_extractor.dart` (разбор текста ответа),
 `latex_escape_repair.dart` (восстановление LaTeX), `lib/domain/generation/` (коды ошибок и причин).
@@ -34,9 +34,18 @@ ADR-022; ADR-023; ADR-024; ADR-029; ADR-030
           "source_excerpt": { "type": ["string", "null"] },
           "source_file": { "type": ["string", "null"] },
           "image_id": { "type": ["string", "null"] },
-          "image_query": { "type": ["string", "null"] }
+          "image": {
+            "type": "object",
+            "properties": {
+              "query": { "type": "string" },
+              "fallback_query": { "type": "string" },
+              "kind": { "type": "string", "enum": ["photo", "diagram", "illustration"] }
+            },
+            "required": ["query", "fallback_query", "kind"],
+            "additionalProperties": false
+          }
         },
-        "required": ["front", "back", "hint", "tags", "card_type", "source_excerpt", "source_file", "image_id", "image_query"],
+        "required": ["front", "back", "hint", "tags", "card_type", "source_excerpt", "source_file", "image_id", "image"],
         "additionalProperties": false
       }
     }
@@ -48,15 +57,24 @@ ADR-022; ADR-023; ADR-024; ADR-029; ADR-030
 
 `image_id` — идентификатор изображения из каталога `<images>` прикреплённых файлов
 (`img1`, `img2`, …; формат строки каталога — `id | файл | подпись | окружающий текст`).
-Правила локального валидатора (ADR-029):
+
+`image` — **обязательный** объект у каждой карточки (`gen-ru-v6`, ADR-031):
+`query` — 3–7 английских слов, `fallback_query` — более общий запрос 2–4 слова,
+`kind` — `photo` (конкретный объект), `diagram` (закон/процесс/структура/формула),
+`illustration` (визуальная метафора абстракции). Правила локального валидатора:
 
 - `image_id` вне каталога фрагмента → `null` + пометка `imageIdUnknown`;
-- если `image_id` задан, `image_query` игнорируется (картинка из файла приоритетна);
-- `image_query` — только латиница, 3–7 слов, ≤ 200 символов; иначе `null` +
-  `imageQueryAdjusted`;
-- `image_query` для абстрактного понятия (аксиома, закон, теорема, формула,
-  определение, свойство, принцип, классификация, правило, термин, алгоритм) →
-  `null` + `abstractImageQuery` (Д2: лучше без картинки, чем с неподходящей);
+- если `image_id` задан, картинка берётся из файла, но `image` сохраняется как
+  запасной вариант (поиск по нему нужен для «Найти картинку заново»);
+- `query`/`fallback_query` нормализуются (`image_query_normalizer.dart`):
+  убираются слова `image/picture/photo of`, имена файлов, LaTeX, не-латиница;
+  запрос длиннее 7 слов обрезается; пустой собирается из `fallback_query`;
+  запрос из одного слова дополняется контекстом вида. Любая правка —
+  пометка `imageQueryAdjusted`; карточка **не отбрасывается**;
+- правило «абстрактным понятиям картинка не нужна» удалено в 7.14: у каждой
+  карточки есть картинка (настоящая или детерминированная заглушка);
+- ответ `gen-ru-v5` с `image_query` (строкой или `null`) по-прежнему принимается:
+  локальная поштучная схема (`localCardItemSchema`) терпима к обеим формам;
 - `tags` — 1–3, строчные, без `#` и пустых.
 
 `card_type: "occlusion"` — **только wire-значение ответа модели**. В приложении такая

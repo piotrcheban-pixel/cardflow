@@ -1,0 +1,330 @@
+{
+  "prompt": "gen-ru-v6",
+  "model": "deepseek-chat",
+  "decks": [
+    {
+      "topic": "Статика",
+      "total": 18,
+      "real": 18,
+      "realShare": 100.0,
+      "placeholders": 0,
+      "placeholderShare": 0.0,
+      "missing": 0,
+      "averageSearchMs": 3451.7,
+      "runSeconds": 72,
+      "providers": {
+        "wikipedia": 14,
+        "wikimedia": 4
+      },
+      "tokens": 6860,
+      "cards": [
+        {
+          "front": "Что изучает раздел теоретической механики «статика»?",
+          "query": "static equilibrium physics diagram",
+          "kind": "diagram",
+          "provider": "wikipedia",
+          "status": "настоящая",
+          "imagePath": "journal/iteration-7.14/images/statics\\01.png"
+        },
+        {
+          "front": "Какое тело называют абсолютно твёрдым?",
+          "query": "rigid body deformation diagram",
+          "kind": "diagram",
+          "provider": "wikipedia",
+          "status": "настоящая",
+          "imagePath": "journal/iteration-7.14/images/statics\\02.png"
+        },
+        {
+          "front": "При каком условии две силы, приложенные к абсолютно твёрдому телу, уравновешивают друг друга?",
+          "query": "two forces equilibrium diagram",
+          "kind": "diagram",
+          "provider": "wikipedia",
+          "status": "настоящая",
+          "imagePath": "journal/iteration-7.14/images/statics\\03.png"
+        },
+        {
+          "front": "Что можно сделать с механическим состоянием абсолютно твёрдого тела, не нарушая его, при добавлении или отбрасывании уравновешенной системы сил?",
+          "query": "balanced forces cancellation diagram",
+          "kind": "diagram",
+          "provider": "wikipedia",
+          "status": "настоящая",
+          "imagePath": "journal/iteration-7.14/images/statics\\04.png"
+        },
+        {
+          "front": "В какой точке можно переносить точку приложения силы, действующей на абсолютно твёрдое тело, без изменения его состояния?",
+          "query": "force line action diagram",
+          "kind": "diagram",
+          "provider": "wikimedia",
+          "status": "настоящая",
+          "imagePath": "journal/iteration-7.14/images/statics\\05.jpg"
+        },
+        {
+          "front": "Как формулируется принцип действия и противодействия для двух тел?",
+          "query": "action reaction forces diagram",
+          "kind": "diagram",
+          "provider": "wikipedia",
+          "status": "настоящая",
+          "imagePath": "journal/iteration-7.14/images/statics\\06.png"
+        },
+        {
+          "front": "При каком условии тело, не являющееся абсолютно твёрдым, находится в равновесии под действием сил?",
+          "query": "deformable body equilibrium diagram",
+          "kind": "diagram",
+          "provider": "wikipedia",
+          "status": "настоящая",
+          "imagePath": "journal/iteration-7.14/images/statics\\07.png"
+        },
+        {
+          "front": "Что называют связью в механике?",
+          "query": "support constraints mechanics diagram",
+          "kind": "diagram",
+          "provider": "wikipedia",
+          "status": "настоящая",
+          "imagePath": "journal/iteration-7.14/images/statics\\08.png"
+        },
+        {
+          "front": "Как называется сила, с которой связь действует на тело?",
+          "query": "reaction force",
+          "kind": "diagram",
+          "provider": "wikimedia",
+          "status": "настоящая",
+          "imagePath": "journal/iteration-7.14/images/statics\\09.jpg"
+        },
+        {
+          "front": "Как направлена реакция гладкой поверхности, на которую опирается тело?",
+          "query": "normal reaction smooth surface diagram",
+          "kind": "diagram",
+          "provider": "wikipedia",
+          "status": "настоящая",
+          "imagePath": "journal/iteration-7.14/images/statics\\10.jpg"
+        },
+        {
+          "front": "Вдоль чего направлена реакция нерастяжимой гибкой нити?",
+          "query": "tension string",
+          "kind": "diagram",
+          "provider": "wikimedia",
+          "status": "настоящая",
+          "imagePath": "journal/iteration-7.14/images/statics\\11.jpg"
+        },
+        {
+          "front": "Сколько составляющих реакции имеет шарнирно-неподвижная опора плоской балки и как они направлены?",
+          "query": "pinned support",
+          "kind": "diagram",
+          "provider": "wikipedia",
+          "status": "настоящая",
+          "imagePath": "journal/iteration-7.14/images/statics\\12.jpg"
+        },
+        {
+          "front": "Как направлена реакция шарнирно-подвижной (катковой) опоры плоской балки?",
+          "query": "roller support reaction beam diagram",
+          "kind": "diagram",
+          "provider": "wikipedia",
+          "status": "настоящая",
+          "imagePath": "journal/iteration-7.14/images/statics\\13.jpg"
+        },
+        {
+          "front": "Какие две векторные величины входят в условия равновесия произвольной пространственной системы сил?",
+          "query": "force resultant",
+          "kind": "diagram",
+          "provider": "wikipedia",
+          "status": "настоящая",
+          "imagePath": "journal/iteration-7.14/images/statics\\14.jpg"
+        },
+        {
+          "front": "Сколько независимых уравнений равновесия имеет произвольная плоская система сил?",
+          "query": "planar equilibrium equations diagram",
+          "kind": "diagram",
+          "provider": "wikipedia",
+          "status": "настоящая",
+          "imagePath": "journal/iteration-7.14/images/statics\\15.png"
+        },
+        {
+          "front": "Чему равна сумма моментов сил, приложенных к телу в равновесии, относительно любой точки?",
+          "query": "torque moment",
+          "kind": "diagram",
+          "provider": "wikipedia",
+          "status": "настоящая",
+          "imagePath": "journal/iteration-7.14/images/statics\\16.jpg"
+        },
+        {
+          "front": "Чем заменяют распределённую по длине нагрузку постоянной интенсивности $q$ при составлении уравнений равновесия?",
+          "query": "distributed load equivalent point force diagram",
+          "kind": "diagram",
+          "provider": "wikipedia",
+          "status": "настоящая",
+          "imagePath": "journal/iteration-7.14/images/statics\\17.png"
+        },
+        {
+          "front": "Назовите условие, которому должны удовлетворять число стержней $s$ и число узлов $n$ плоской фермы для её геометрической неизменяемости без лишних связей.",
+          "query": "truss structure",
+          "kind": "diagram",
+          "provider": "wikimedia",
+          "status": "настоящая",
+          "imagePath": "journal/iteration-7.14/images/statics\\18.jpg"
+        }
+      ]
+    },
+    {
+      "topic": "Биология",
+      "total": 18,
+      "real": 18,
+      "realShare": 100.0,
+      "placeholders": 0,
+      "placeholderShare": 0.0,
+      "missing": 0,
+      "averageSearchMs": 1931.4,
+      "runSeconds": 43,
+      "providers": {
+        "wikipedia": 10,
+        "wikimedia": 8
+      },
+      "tokens": 6658,
+      "cards": [
+        {
+          "front": "Какая органелла клетки считается основной энергетической станцией и синтезирует АТФ при аэробном дыхании?",
+          "query": "mitochondria electron microscope structure",
+          "kind": "photo",
+          "provider": "wikipedia",
+          "status": "настоящая",
+          "imagePath": "journal/iteration-7.14/images/biology\\01.jpg"
+        },
+        {
+          "front": "Какая органелла содержит хлорофилл и обеспечивает фотосинтез у растений?",
+          "query": "chloroplast structure diagram plant cell",
+          "kind": "photo",
+          "provider": "wikimedia",
+          "status": "настоящая",
+          "imagePath": "journal/iteration-7.14/images/biology\\02.png"
+        },
+        {
+          "front": "Какой органоид отвечает за синтез белков в клетке?",
+          "query": "ribosome protein synthesis diagram",
+          "kind": "diagram",
+          "provider": "wikimedia",
+          "status": "настоящая",
+          "imagePath": "journal/iteration-7.14/images/biology\\03.png"
+        },
+        {
+          "front": "Какая органелла выполняет функцию внутриклеточного переваривания и содержит гидролитические ферменты?",
+          "query": "lysosome cell organelle diagram",
+          "kind": "diagram",
+          "provider": "wikipedia",
+          "status": "настоящая",
+          "imagePath": "journal/iteration-7.14/images/biology\\04.png"
+        },
+        {
+          "front": "Какая структура клетки регулирует обмен веществ между клеткой и внешней средой?",
+          "query": "cell membrane phospholipid bilayer diagram",
+          "kind": "diagram",
+          "provider": "wikipedia",
+          "status": "настоящая",
+          "imagePath": "journal/iteration-7.14/images/biology\\05.png"
+        },
+        {
+          "front": "Какой органоид называют аппаратом Гольджи по имени описавшего его учёного?",
+          "query": "golgi apparatus cell diagram",
+          "kind": "diagram",
+          "provider": "wikipedia",
+          "status": "настоящая",
+          "imagePath": "journal/iteration-7.14/images/biology\\06.png"
+        },
+        {
+          "front": "Какой тип деления клетки обеспечивает образование гамет с гаплоидным набором хромосом?",
+          "query": "meiosis stages diagram chromosomes",
+          "kind": "diagram",
+          "provider": "wikimedia",
+          "status": "настоящая",
+          "imagePath": "journal/iteration-7.14/images/biology\\07.jpg"
+        },
+        {
+          "front": "Сколько хромосом содержит соматическая клетка человека?",
+          "query": "human karyotype chromosomes diagram",
+          "kind": "diagram",
+          "provider": "wikimedia",
+          "status": "настоящая",
+          "imagePath": "journal/iteration-7.14/images/biology\\08.png"
+        },
+        {
+          "front": "Как называется процесс синтеза молекулы иРНК на матрице ДНК?",
+          "query": "transcription dna rna diagram",
+          "kind": "diagram",
+          "provider": "wikimedia",
+          "status": "настоящая",
+          "imagePath": "journal/iteration-7.14/images/biology\\09.png"
+        },
+        {
+          "front": "Как называется процесс синтеза белка на матрице иРНК в рибосоме?",
+          "query": "translation ribosome protein synthesis diagram",
+          "kind": "diagram",
+          "provider": "wikipedia",
+          "status": "настоящая",
+          "imagePath": "journal/iteration-7.14/images/biology\\10.png"
+        },
+        {
+          "front": "Сколько нуклеотидов кодирует одну аминокислоту в генетическом коде?",
+          "query": "codon genetic code chart diagram",
+          "kind": "diagram",
+          "provider": "wikipedia",
+          "status": "настоящая",
+          "imagePath": "journal/iteration-7.14/images/biology\\11.png"
+        },
+        {
+          "front": "Как называют организмы, синтезирующие органические вещества из неорганических за счёт энергии света?",
+          "query": "photosynthesis light energy process diagram",
+          "kind": "diagram",
+          "provider": "wikipedia",
+          "status": "настоящая",
+          "imagePath": "journal/iteration-7.14/images/biology\\12.png"
+        },
+        {
+          "front": "Какой газ выделяется в атмосферу в результате фотосинтеза?",
+          "query": "photosynthesis oxygen release diagram",
+          "kind": "diagram",
+          "provider": "wikimedia",
+          "status": "настоящая",
+          "imagePath": "journal/iteration-7.14/images/biology\\13.png"
+        },
+        {
+          "front": "Как называется взаимовыгодное сосуществование организмов разных видов?",
+          "query": "mutualism symbiosis organisms illustration",
+          "kind": "illustration",
+          "provider": "wikimedia",
+          "status": "настоящая",
+          "imagePath": "journal/iteration-7.14/images/biology\\14.jpg"
+        },
+        {
+          "front": "Как в экологии называют цепь передачи вещества и энергии от продуцентов к консументам и редуцентам?",
+          "query": "food chain trophic levels diagram",
+          "kind": "diagram",
+          "provider": "wikipedia",
+          "status": "настоящая",
+          "imagePath": "journal/iteration-7.14/images/biology\\15.jpg"
+        },
+        {
+          "front": "Как называют организмы, разлагающие отмершие остатки и возвращающие вещества в круговорот?",
+          "query": "decomposers fungi bacteria illustration",
+          "kind": "photo",
+          "provider": "wikipedia",
+          "status": "настоящая",
+          "imagePath": "journal/iteration-7.14/images/biology\\16.jpg"
+        },
+        {
+          "front": "При каком условии проявляется признак, контролируемый рецессивным аллелем?",
+          "query": "dominant recessive allele inheritance diagram",
+          "kind": "diagram",
+          "provider": "wikipedia",
+          "status": "настоящая",
+          "imagePath": "journal/iteration-7.14/images/biology\\17.png"
+        },
+        {
+          "front": "Какой учёный сформулировал основные законы наследственности на основе опытов с горохом?",
+          "query": "gregor mendel pea experiments illustration",
+          "kind": "photo",
+          "provider": "wikimedia",
+          "status": "настоящая",
+          "imagePath": "journal/iteration-7.14/images/biology\\18.jpg"
+        }
+      ]
+    }
+  ]
+}

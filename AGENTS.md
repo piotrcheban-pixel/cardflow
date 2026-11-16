@@ -448,3 +448,27 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   импорта в `media`). Ограничения: L76–L80. **Push итерации fix-gen:** `c95e5a9..08b42d8`;
   CI run [`43764143830`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43764143830) —
   **9/9 job success**.
+
+- **Картинки у всех карточек проверены локально (итерация 7.14, 2026-11-16, ADR-031):**
+  старт: `git status --porcelain` → пусто, `HEAD = origin/main = cc88e0c` (в STATE fix-gen было
+  `08b42d8` — исправлено); baseline **1597 passed + 7 skipped**, `analyze` 0, `format` 378/0.
+  Промпт `gen-ru-v6` (v5 сохранён): у каждой карточки обязательный объект
+  `image {query, fallback_query, kind}`; локальная терпимая схема принимает и v5 `image_query`.
+  Цепочка `ImageSearchService` + `ImageProvider` (Wikimedia Commons → Wikipedia → Openverse →
+  Pixabay/Pexels по ключу): таймаут провайдера 6 с, бюджет карточки 20 с, фильтры JPEG/PNG/WebP,
+  короткая сторона ≥ 400 px, пропорции ≤ 3:1, кэш, дедуп URL, ретрай 429/5xx, ≤ 4 загрузки.
+  Заглушки детерминированы от хэша содержимого (8 палитр), метаданные атрибуции — в
+  `<путь>.meta.json` (схема БД не менялась), «Найти картинку заново» + фоновый ретрай.
+  UI: `CardImageView` 16:9/4:3, fade-in, скелетон, полноэкранный зум с атрибуцией; карточки
+  появляются до догрузки картинок (`GenerationProgress.cards`). Гейты:
+  `fvm flutter test --no-pub --coverage --exclude-tags golden` → **1660 passed + 8 skipped**;
+  покрытие рукописного кода **92.0 % (12159/13218)**; `analyze` 0; `format` 0 changed;
+  `fvm flutter build windows --release --no-pub` → `cardflow.exe`; Windows-смоук и живые
+  прогоны — ниже. **Живые колоды (`deepseek-chat`, настоящая сеть):** «Статика» 18 карточек —
+  **18/18 настоящих картинок (100 %)**, wikipedia 14/wikimedia 4, среднее 3,5 с;
+  «Биология» 18 — **18/18 (100 %)**, wikipedia 10/wikimedia 8, среднее 1,9 с; заглушек 0.
+  **Ручная уместность 10 случайных:** «Биология» **8/10** (цель достигнута), «Статика»
+  **1/10** (цель ≥ 7/10 не достигнута). Одна итерация правки промпта (канонические якоря схем)
+  не исправила полнотекстовый матчинг Commons/Wikipedia — ограничение L84 (рекомендация:
+  семантическая проверка релевантности/курируемые схемы). Отчёт:
+  `journal/iteration-7.14/{live-metrics.md,relevance.md}`. Ограничения: L81–L86.
