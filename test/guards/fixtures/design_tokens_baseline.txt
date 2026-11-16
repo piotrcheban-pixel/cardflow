@@ -27,4 +27,3 @@ lib/ui/study/typing_screen.dart	Color(0xFFFFEBEE)
 lib/ui/study/typing_screen.dart	Color(0xFFFFF8E1)
 lib/ui/study/typing_screen.dart	Colors.orange
 lib/ui/study/typing_screen.dart	Colors.red
-lib/ui/theme/app_theme.dart	Color(0xFF4F6BED)

@@ -58,6 +58,17 @@ class NcColors {
     required this.auroraAurum,
     required this.auroraIris,
     required this.auroraGlacier,
+    required this.primaryContainer,
+    required this.onPrimaryContainer,
+    required this.secondaryContainer,
+    required this.onSecondaryContainer,
+    required this.tertiaryContainer,
+    required this.onTertiaryContainer,
+    required this.errorContainer,
+    required this.onErrorContainer,
+    required this.inverseSurface,
+    required this.onInverseSurface,
+    required this.inversePrimary,
   });
 
   /// Прозрачный цвет (без литералов в виджетах).
@@ -141,6 +152,19 @@ class NcColors {
       auroraAurum: aurum.withValues(alpha: 0.09),
       auroraIris: _irisDark.withValues(alpha: 0.08),
       auroraGlacier: _glacierDark.withValues(alpha: 0.05),
+      primaryContainer: dynamic
+          ? Color.alphaBlend(aurum.withValues(alpha: 0.14), _ink2Dark)
+          : _primaryContainerDark,
+      onPrimaryContainer: _onPrimaryContainerDark,
+      secondaryContainer: _secondaryContainerDark,
+      onSecondaryContainer: _onSecondaryContainerDark,
+      tertiaryContainer: _tertiaryContainerDark,
+      onTertiaryContainer: _onTertiaryContainerDark,
+      errorContainer: _errorContainerDark,
+      onErrorContainer: _onErrorContainerDark,
+      inverseSurface: _inverseSurfaceDark,
+      onInverseSurface: _onInverseSurfaceDark,
+      inversePrimary: _inversePrimaryDark,
     );
   }
 
@@ -202,6 +226,19 @@ class NcColors {
       auroraAurum: aurum.withValues(alpha: 0.09),
       auroraIris: _irisLight.withValues(alpha: 0.08),
       auroraGlacier: _glacierLight.withValues(alpha: 0.05),
+      primaryContainer: dynamic
+          ? Color.alphaBlend(aurum.withValues(alpha: 0.14), _ink2Light)
+          : _primaryContainerLight,
+      onPrimaryContainer: _onPrimaryContainerLight,
+      secondaryContainer: _secondaryContainerLight,
+      onSecondaryContainer: _onSecondaryContainerLight,
+      tertiaryContainer: _tertiaryContainerLight,
+      onTertiaryContainer: _onTertiaryContainerLight,
+      errorContainer: _errorContainerLight,
+      onErrorContainer: _onErrorContainerLight,
+      inverseSurface: _inverseSurfaceLight,
+      onInverseSurface: _onInverseSurfaceLight,
+      inversePrimary: _inversePrimaryLight,
     );
   }
 
@@ -328,6 +365,39 @@ class NcColors {
   /// Пятно Aurora: glacier 5 %.
   final Color auroraGlacier;
 
+  /// `ColorScheme.primaryContainer` — фон контейнера главного действия.
+  final Color primaryContainer;
+
+  /// Текст на `primaryContainer`.
+  final Color onPrimaryContainer;
+
+  /// `ColorScheme.secondaryContainer` — фон «нейросетевых» контейнеров.
+  final Color secondaryContainer;
+
+  /// Текст на `secondaryContainer`.
+  final Color onSecondaryContainer;
+
+  /// `ColorScheme.tertiaryContainer` — фон успешных контейнеров.
+  final Color tertiaryContainer;
+
+  /// Текст на `tertiaryContainer`.
+  final Color onTertiaryContainer;
+
+  /// `ColorScheme.errorContainer` — фон контейнера ошибки.
+  final Color errorContainer;
+
+  /// Текст на `errorContainer`.
+  final Color onErrorContainer;
+
+  /// `ColorScheme.inverseSurface` — поверхность в противоположной теме.
+  final Color inverseSurface;
+
+  /// Текст на `inverseSurface`.
+  final Color onInverseSurface;
+
+  /// `ColorScheme.inversePrimary` — акцент на `inverseSurface`.
+  final Color inversePrimary;
+
   /// Основной акцент экрана (сейчас — Aurum; dynamic color меняет его).
   Color get accent => aurum;
 
@@ -374,6 +444,17 @@ class NcColors {
     auroraAurum,
     auroraIris,
     auroraGlacier,
+    primaryContainer,
+    onPrimaryContainer,
+    secondaryContainer,
+    onSecondaryContainer,
+    tertiaryContainer,
+    onTertiaryContainer,
+    errorContainer,
+    onErrorContainer,
+    inverseSurface,
+    onInverseSurface,
+    inversePrimary,
   ];
 
   @override
@@ -390,6 +471,73 @@ class NcColors {
 
   @override
   int get hashCode => Object.hashAll(_fields);
+
+  /// Плавный переход между палитрами для `ThemeData.lerp` (AnimatedTheme).
+  ///
+  /// Яркость переключается дискретно на середине; `heat` интерполируется
+  /// поэлементно.
+  static NcColors lerp(NcColors a, NcColors b, double t) {
+    Color l(Color x, Color y) => Color.lerp(x, y, t)!;
+    List<Color> lerpHeat(List<Color> x, List<Color> y) {
+      final int length = x.length < y.length ? x.length : y.length;
+      return <Color>[for (var i = 0; i < length; i++) l(x[i], y[i])];
+    }
+
+    return NcColors(
+      brightness: t < 0.5 ? a.brightness : b.brightness,
+      ink0: l(a.ink0, b.ink0),
+      ink1: l(a.ink1, b.ink1),
+      ink2: l(a.ink2, b.ink2),
+      ink3: l(a.ink3, b.ink3),
+      ink4: l(a.ink4, b.ink4),
+      ink5: l(a.ink5, b.ink5),
+      hairline: l(a.hairline, b.hairline),
+      hairlineStrong: l(a.hairlineStrong, b.hairlineStrong),
+      rimLight: l(a.rimLight, b.rimLight),
+      scrim: l(a.scrim, b.scrim),
+      textPrimary: l(a.textPrimary, b.textPrimary),
+      textSecondary: l(a.textSecondary, b.textSecondary),
+      textTertiary: l(a.textTertiary, b.textTertiary),
+      textDisabled: l(a.textDisabled, b.textDisabled),
+      textOnAccent: l(a.textOnAccent, b.textOnAccent),
+      aurum: l(a.aurum, b.aurum),
+      aurumBright: l(a.aurumBright, b.aurumBright),
+      aurumDeep: l(a.aurumDeep, b.aurumDeep),
+      aurumSoft: l(a.aurumSoft, b.aurumSoft),
+      aurumGlow: l(a.aurumGlow, b.aurumGlow),
+      iris: l(a.iris, b.iris),
+      irisDeep: l(a.irisDeep, b.irisDeep),
+      irisSoft: l(a.irisSoft, b.irisSoft),
+      irisGlow: l(a.irisGlow, b.irisGlow),
+      ember: l(a.ember, b.ember),
+      emberSoft: l(a.emberSoft, b.emberSoft),
+      onEmber: l(a.onEmber, b.onEmber),
+      amber: l(a.amber, b.amber),
+      amberSoft: l(a.amberSoft, b.amberSoft),
+      onAmber: l(a.onAmber, b.onAmber),
+      jade: l(a.jade, b.jade),
+      jadeSoft: l(a.jadeSoft, b.jadeSoft),
+      onJade: l(a.onJade, b.onJade),
+      glacier: l(a.glacier, b.glacier),
+      glacierSoft: l(a.glacierSoft, b.glacierSoft),
+      onGlacier: l(a.onGlacier, b.onGlacier),
+      heat: lerpHeat(a.heat, b.heat),
+      auroraAurum: l(a.auroraAurum, b.auroraAurum),
+      auroraIris: l(a.auroraIris, b.auroraIris),
+      auroraGlacier: l(a.auroraGlacier, b.auroraGlacier),
+      primaryContainer: l(a.primaryContainer, b.primaryContainer),
+      onPrimaryContainer: l(a.onPrimaryContainer, b.onPrimaryContainer),
+      secondaryContainer: l(a.secondaryContainer, b.secondaryContainer),
+      onSecondaryContainer: l(a.onSecondaryContainer, b.onSecondaryContainer),
+      tertiaryContainer: l(a.tertiaryContainer, b.tertiaryContainer),
+      onTertiaryContainer: l(a.onTertiaryContainer, b.onTertiaryContainer),
+      errorContainer: l(a.errorContainer, b.errorContainer),
+      onErrorContainer: l(a.onErrorContainer, b.onErrorContainer),
+      inverseSurface: l(a.inverseSurface, b.inverseSurface),
+      onInverseSurface: l(a.onInverseSurface, b.onInverseSurface),
+      inversePrimary: l(a.inversePrimary, b.inversePrimary),
+    );
+  }
 
   // --- Сырые значения палитры (единственное место в lib/ui/) --------------
 
@@ -427,6 +575,17 @@ class NcColors {
     Color(0xFF9C7E48),
     Color(0xFFE4C88F),
   ];
+  static const Color _primaryContainerDark = Color(0xFF2A2519);
+  static const Color _onPrimaryContainerDark = Color(0xFFF3DDB0);
+  static const Color _secondaryContainerDark = Color(0xFF221D3D);
+  static const Color _onSecondaryContainerDark = Color(0xFFD9D2FF);
+  static const Color _tertiaryContainerDark = Color(0xFF12291F);
+  static const Color _onTertiaryContainerDark = Color(0xFFB5EFD3);
+  static const Color _errorContainerDark = Color(0xFF2E1611);
+  static const Color _onErrorContainerDark = Color(0xFFFFD3C9);
+  static const Color _inverseSurfaceDark = Color(0xFFF2EEE7);
+  static const Color _onInverseSurfaceDark = Color(0xFF0C0E13);
+  static const Color _inversePrimaryDark = Color(0xFFB8955A);
 
   static const Color _ink0Light = Color(0xFFF5F2EC);
   static const Color _ink1Light = Color(0xFFFAF8F4);
@@ -461,6 +620,17 @@ class NcColors {
     Color(0xFFA5854A),
     Color(0xFF886529),
   ];
+  static const Color _primaryContainerLight = Color(0xFFEFE3CB);
+  static const Color _onPrimaryContainerLight = Color(0xFF3A2C10);
+  static const Color _secondaryContainerLight = Color(0xFFE4E0FF);
+  static const Color _onSecondaryContainerLight = Color(0xFF241A66);
+  static const Color _tertiaryContainerLight = Color(0xFFD6F2E4);
+  static const Color _onTertiaryContainerLight = Color(0xFF0B3A26);
+  static const Color _errorContainerLight = Color(0xFFFBE0DA);
+  static const Color _onErrorContainerLight = Color(0xFF4A1108);
+  static const Color _inverseSurfaceLight = Color(0xFF16151A);
+  static const Color _onInverseSurfaceLight = Color(0xFFF5F2EC);
+  static const Color _inversePrimaryLight = Color(0xFFA67C33);
 
   /// Акцент из системного `primary` (REDESIGN-SPEC §1.4).
   static Color _dynamicAccent(Color source, {required double tone}) {

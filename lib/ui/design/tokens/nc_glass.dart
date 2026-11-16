@@ -48,6 +48,19 @@ class NcGlassMaterial {
     outer: ui.ColorFilter.matrix(NcGlassMaterials.saturationMatrix(saturation)),
     inner: ui.ImageFilter.blur(sigmaX: blurSigma, sigmaY: blurSigma),
   );
+
+  /// Плавный переход материала (sigma, цвет тинта, насыщенность, блик).
+  static NcGlassMaterial lerp(NcGlassMaterial a, NcGlassMaterial b, double t) =>
+      NcGlassMaterial(
+        blurSigma: a.blurSigma + (b.blurSigma - a.blurSigma) * t,
+        tint: Color.lerp(a.tint, b.tint, t)!,
+        saturation: a.saturation + (b.saturation - a.saturation) * t,
+        borderColor: Color.lerp(a.borderColor, b.borderColor, t)!,
+        noiseOpacity: a.noiseOpacity + (b.noiseOpacity - a.noiseOpacity) * t,
+        rimLightOpacity:
+            a.rimLightOpacity + (b.rimLightOpacity - a.rimLightOpacity) * t,
+        isSolid: t < 0.5 ? a.isSolid : b.isSolid,
+      );
 }
 
 /// Набор материалов стекла для одной темы.
@@ -115,6 +128,24 @@ class NcGlassMaterials {
     rimLightOpacity: 0.06,
     isSolid: true,
   );
+
+  /// Плавный переход материалов между темами (`ThemeData.lerp`).
+  static NcGlassMaterials lerp(
+    NcGlassMaterials a,
+    NcGlassMaterials b,
+    double t,
+  ) => NcGlassMaterials(
+    thin: NcGlassMaterial.lerp(a.thin, b.thin, t),
+    regular: NcGlassMaterial.lerp(a.regular, b.regular, t),
+    thick: NcGlassMaterial.lerp(a.thick, b.thick, t),
+  );
+
+  /// Плавный переход одного материала.
+  static NcGlassMaterial materialLerp(
+    NcGlassMaterial a,
+    NcGlassMaterial b,
+    double t,
+  ) => NcGlassMaterial.lerp(a, b, t);
 
   /// Матрица насыщенности 4×5 для `ColorFilter.matrix`.
   static List<double> saturationMatrix(double saturation) {
