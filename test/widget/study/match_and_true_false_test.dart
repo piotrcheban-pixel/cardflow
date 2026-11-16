@@ -4,7 +4,6 @@ import 'package:material_ui/material_ui.dart' hide Card;
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/scheduling/rating.dart';
 import 'package:cardflow/ui/study/match_screen.dart';
-import 'package:cardflow/ui/study/true_false_screen.dart';
 
 import '../../helpers/decks_fakes.dart';
 import '../../helpers/pump_app.dart';

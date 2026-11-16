@@ -1,45 +1,44 @@
 // Скриншоты для отчёта итераций 7.14/7.15/7.16.
 //
-// Запуск вручную (не часть `flutter test`, каталог `tool/` не сканируется):
-//   fvm flutter test tool/screenshots/screenshots_test.dart --no-pub
+// Запуск вручную (golden, не часть CI):
+//   fvm flutter test tool/screenshots/screenshots_test.dart --no-pub --update-goldens
 // Требуется Windows-шрифт Segoe UI (кириллица) и живые картинки из
 // `journal/iteration-7.14/images/` (gitignored, сняты в 7.14).
-import 'dart:io';
-import 'dart:typed_data';
-import 'dart:ui' as ui;
+// ignore_for_file: avoid_print
+@Tags(<String>['golden'])
+library;
 
-import 'package:flutter/rendering.dart';
+import 'dart:io';
+
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart' hide Card;
-import 'package:go_router/go_router.dart';
 
 import 'package:cardflow/api/images/placeholder_image_generator.dart';
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/cards/media_metadata.dart';
 import 'package:cardflow/domain/generation/card_image_kind.dart';
 import 'package:cardflow/domain/generation/generated_card_image.dart';
-import 'package:cardflow/domain/scheduling/rating.dart';
-import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/cards/content/card_content_view.dart';
 
 import '../../test/helpers/decks_fakes.dart';
 import '../../test/helpers/pump_app.dart';
 import '../../test/helpers/review_fakes.dart';
 
-const String _outDir = 'journal/iteration-7.14/screenshots';
 const String _fontDir = r'C:\Windows\Fonts';
 final DateTime _now = DateTime.utc(2026, 11, 16, 12);
 
 Future<void> _loadFonts() async {
-  final FontLoader loader = FontLoader('Roboto');
-  for (final String file in <String>['segoeui.ttf', 'segoeuib.ttf']) {
-    final File font = File('$_fontDir\\$file');
-    if (!font.existsSync()) continue;
-    final Uint8List bytes = await font.readAsBytes();
-    loader.addFont(Future<ByteData>.value(ByteData.sublistView(bytes)));
+  for (final String family in <String>['Roboto', 'Ahem']) {
+    final FontLoader loader = FontLoader(family);
+    for (final String file in <String>['segoeui.ttf', 'segoeuib.ttf']) {
+      final File font = File('$_fontDir\\$file');
+      if (!font.existsSync()) continue;
+      final Uint8List bytes = await font.readAsBytes();
+      loader.addFont(Future<ByteData>.value(ByteData.sublistView(bytes)));
+    }
+    await loader.load();
   }
-  await loader.load();
 }
 
 List<Card> _cards() => <Card>[
@@ -103,19 +102,10 @@ Future<Uint8List?> _read(String path) async {
 }
 
 Future<void> _capture(WidgetTester tester, String name) async {
-  await tester.pump();
-  final RenderRepaintBoundary boundary = tester
-      .renderObject<RenderRepaintBoundary>(
-        find.byKey(const ValueKey<String>('screenshot-boundary')),
-      );
-  final ui.Image? image = await tester.runAsync(
-    () => boundary.toImage(pixelRatio: 2),
+  await expectLater(
+    find.byType(MaterialApp),
+    matchesGoldenFile('goldens/$name.png'),
   );
-  if (image == null) return;
-  final ByteData? data = await image.toByteData(format: ui.ImageByteFormat.png);
-  if (data == null) return;
-  Directory(_outDir).createSync(recursive: true);
-  File('$_outDir/$name.png').writeAsBytesSync(data.buffer.asUint8List());
 }
 
 Widget _cardHarness({
@@ -167,22 +157,17 @@ void main() {
     await _loadFonts();
   });
 
-  testWidgets('карточки: фото, схема, заглушка (светлая/тёмная)', (
-    WidgetTester tester,
-  ) async {
+  Future<void> setPhone(WidgetTester tester) async {
     tester.view.physicalSize = const Size(1080, 1920);
     tester.view.devicePixelRatio = 2;
     addTearDown(tester.view.reset);
+  }
 
+  testWidgets('card photo light', (WidgetTester tester) async {
+    await setPhone(tester);
     final Uint8List? photo = await _read(
       'journal/iteration-7.14/images/biology/06.jpg',
     );
-    final Uint8List? diagram = await _read(
-      'journal/iteration-7.14/images/biology/03.png',
-    );
-    final GeneratedCardImage placeholder = const PlaceholderImageGenerator()
-        .generate(seed: 'photo-light', kind: GeneratedCardImageKind.photo);
-
     await tester.pumpWidget(
       _cardHarness(
         card: _cards()[0],
@@ -198,7 +183,13 @@ void main() {
     );
     await tester.pump(const Duration(milliseconds: 300));
     await _capture(tester, 'card-photo-light');
+  });
 
+  testWidgets('card diagram dark', (WidgetTester tester) async {
+    await setPhone(tester);
+    final Uint8List? diagram = await _read(
+      'journal/iteration-7.14/images/biology/03.png',
+    );
     await tester.pumpWidget(
       _cardHarness(
         card: _cards()[1],
@@ -214,7 +205,12 @@ void main() {
     );
     await tester.pump(const Duration(milliseconds: 300));
     await _capture(tester, 'card-diagram-dark');
+  });
 
+  testWidgets('card placeholder light', (WidgetTester tester) async {
+    await setPhone(tester);
+    final GeneratedCardImage placeholder = const PlaceholderImageGenerator()
+        .generate(seed: 'photo-light', kind: GeneratedCardImageKind.photo);
     await tester.pumpWidget(
       _cardHarness(
         card: _cards()[2],
@@ -237,9 +233,7 @@ void main() {
     required String location,
     required Brightness brightness,
   }) async {
-    tester.view.physicalSize = const Size(1080, 1920);
-    tester.view.devicePixelRatio = 2;
-    addTearDown(tester.view.reset);
+    await setPhone(tester);
     tester.platformDispatcher.platformBrightnessTestValue = brightness;
     addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
 
@@ -263,14 +257,16 @@ void main() {
     await tester.pump(const Duration(milliseconds: 150));
   }
 
-  testWidgets('Тест: светлая и тёмная тема', (WidgetTester tester) async {
+  testWidgets('test light', (WidgetTester tester) async {
     await pumpMode(
       tester,
       location: '/decks/deck-1/test',
       brightness: Brightness.light,
     );
     await _capture(tester, 'test-light');
+  });
 
+  testWidgets('test dark', (WidgetTester tester) async {
     await pumpMode(
       tester,
       location: '/decks/deck-1/test',
@@ -279,7 +275,7 @@ void main() {
     await _capture(tester, 'test-dark');
   });
 
-  testWidgets('Ввод ответа: светлая тема', (WidgetTester tester) async {
+  testWidgets('typing light', (WidgetTester tester) async {
     await pumpMode(
       tester,
       location: '/decks/deck-1/typing',
@@ -288,7 +284,7 @@ void main() {
     await _capture(tester, 'typing-light');
   });
 
-  testWidgets('Подбор пар: светлая тема', (WidgetTester tester) async {
+  testWidgets('match light', (WidgetTester tester) async {
     await pumpMode(
       tester,
       location: '/decks/deck-1/match',
@@ -297,7 +293,7 @@ void main() {
     await _capture(tester, 'match-light');
   });
 
-  testWidgets('Верно/Неверно: тёмная тема', (WidgetTester tester) async {
+  testWidgets('true false dark', (WidgetTester tester) async {
     await pumpMode(
       tester,
       location: '/decks/deck-1/true-false',
