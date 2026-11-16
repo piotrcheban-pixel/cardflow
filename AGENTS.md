@@ -463,8 +463,10 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   появляются до догрузки картинок (`GenerationProgress.cards`). Гейты:
   `fvm flutter test --no-pub --coverage --exclude-tags golden` → **1660 passed + 8 skipped**;
   покрытие рукописного кода **92.0 % (12159/13218)**; `analyze` 0; `format` 0 changed;
-  `fvm flutter build windows --release --no-pub` → `cardflow.exe`; Windows-смоук и живые
-  прогоны — ниже. **Живые колоды (`deepseek-chat`, настоящая сеть):** «Статика» 18 карточек —
+  `fvm flutter build windows --release --no-pub` → `cardflow.exe` (84,4 с); Windows-смоук
+  `integration_test/session_smoke_windows_test.dart -d windows --no-pub` → **All tests passed!**
+  (9 с; debug-сборка 28,6 с) — форма+картинка, лимит, сессия, генерация с настоящей картинкой.
+  **Живые колоды (`deepseek-chat`, настоящая сеть):** «Статика» 18 карточек —
   **18/18 настоящих картинок (100 %)**, wikipedia 14/wikimedia 4, среднее 3,5 с;
   «Биология» 18 — **18/18 (100 %)**, wikipedia 10/wikimedia 8, среднее 1,9 с; заглушек 0.
   **Ручная уместность 10 случайных:** «Биология» **8/10** (цель достигнута), «Статика»

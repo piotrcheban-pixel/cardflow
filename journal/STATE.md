@@ -51,8 +51,10 @@ scope (значение не выводилось); `PIXABAY_API_KEY`/`PEXELS_AP
 
 **Гейты 7.14:** `test --no-pub --coverage --exclude-tags golden` → **1660
 passed + 8 skipped** · покрытие рукописного кода **92.0 % (12159/13218)** ·
-`analyze` **0** · `format` **0 changed** · `build windows --release --no-pub` —
-зелёный · Windows-смоук — см. блок проверки ниже.
+`analyze` **0** · `format` **0 changed** · `build windows --release --no-pub` →
+`cardflow.exe` (84,4 с) · Windows-смоук
+`integration_test/session_smoke_windows_test.dart -d windows --no-pub` →
+**All tests passed!** (9 с) — форма+картинка, лимит, сессия, генерация с картинкой.
 
 **Сделано:**
 - Промпт `gen-ru-v6` (сырой литерал + `docs/prompts/gen-ru-v6.txt`, тест

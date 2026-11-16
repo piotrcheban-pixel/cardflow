@@ -22,6 +22,7 @@ import 'package:integration_test/integration_test.dart';
 import 'package:material_ui/material_ui.dart' hide Card;
 import 'package:path/path.dart' as p;
 
+import 'package:cardflow/api/images/placeholder_image_generator.dart';
 import 'package:cardflow/data/db/app_database.dart';
 import 'package:cardflow/data/db/database_opener.dart';
 import 'package:cardflow/data/db/epoch.dart';
@@ -63,6 +64,11 @@ void main() {
         'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk'
         '+A8AAQUBAScY42YAAAAASUVORK5CYII=',
       );
+      // 7.14: цепочка картинок отбрасывает изображения < 400 px по короткой
+      // стороне, поэтому «настоящая» найденная картинка — валидный PNG 800×450.
+      final Uint8List foundPng = const PlaceholderImageGenerator()
+          .generate(seed: 'smoke-found-image')
+          .bytes;
       final DateTime now = DateTime.now();
       final int epochNow = toEpochMs(now.toUtc());
 
@@ -148,7 +154,7 @@ void main() {
           });
         }
         if (options.uri.host == 'example.test') {
-          return bytesResponse(png, contentType: 'image/png');
+          return bytesResponse(foundPng, contentType: 'image/png');
         }
         return jsonResponse(<String, Object?>{
           'choices': <Object?>[
@@ -166,7 +172,11 @@ void main() {
                       'source_excerpt': null,
                       'source_file': null,
                       'image_id': null,
-                      'image_query': 'Moscow Kremlin',
+                      'image': <String, Object?>{
+                        'query': 'Moscow Kremlin photo',
+                        'fallback_query': 'Moscow Kremlin',
+                        'kind': 'photo',
+                      },
                     },
                     <String, Object?>{
                       'front': 'В каком году основан Кремль?',
@@ -177,7 +187,11 @@ void main() {
                       'source_excerpt': null,
                       'source_file': null,
                       'image_id': null,
-                      'image_query': null,
+                      'image': <String, Object?>{
+                        'query': 'Kremlin tower architecture photo',
+                        'fallback_query': 'Kremlin tower',
+                        'kind': 'photo',
+                      },
                     },
                   ],
                 }),
@@ -285,7 +299,7 @@ void main() {
       expect(find.byType(ReviewSessionScreen), findsOneWidget);
       expect(find.text('Что это?'), findsOneWidget);
       expect(
-        find.byKey(const ValueKey<String>('card-content-image')),
+        find.byKey(const ValueKey<String>('card-image')),
         findsOneWidget,
         reason: 'иллюстрация Basic-карточки отрисована',
       );
@@ -336,7 +350,12 @@ void main() {
           );
       expect(generated.cards, hasLength(2));
       expect(generated.cards.first.image, isNotNull);
-      expect(generated.cards.first.image!.bytes, png);
+      expect(generated.cards.first.image!.isPlaceholder, isFalse);
+      expect(generated.cards.first.image!.provider, 'wikimedia');
+      expect(generated.cards.first.image!.bytes, foundPng);
+      // Вторая карточка ищет «Kremlin tower» — тот же fake-ответ Commons;
+      // картинка тоже настоящая.
+      expect(generated.cards[1].image, isNotNull);
 
       await tester.pumpWidget(
         appWithHome(
