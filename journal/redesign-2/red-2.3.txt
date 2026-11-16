@@ -1,0 +1,558 @@
+00:00 +0: loading C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/components/nc_input_test.dart
+00:00 +0: NcTextField ввод вызывает onChanged, метка и helper из ARB
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following TestFailure was thrown running a test:
+Expected: exactly one matching candidate
+  Actual: _TextWidgetFinder:<Found 0 widgets with text "Название колоды": []>
+   Which: means none were found but one was expected
+
+When the exception was thrown, this was the stack:
+#4      main.<anonymous closure>.<anonymous closure> (file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/components/nc_input_test.dart:32:7)
+<asynchronous suspension>
+#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+This was caught by the test expectation on the following line:
+  file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/components/nc_input_test.dart line 32
+The test description was:
+  ввод вызывает onChanged, метка и helper из ARB
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:00 +0 -1: NcTextField ввод вызывает onChanged, метка и helper из ARB [E]
+  Test failed. See exception logs above.
+  The test description was: ввод вызывает onChanged, метка и helper из ARB
+  
+00:00 +0 -1: NcTextField ошибка показывается текстом ember и рамкой
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following TestFailure was thrown running a test:
+Expected: exactly one matching candidate
+  Actual: _TextWidgetFinder:<Found 0 widgets with text "Введите название колоды": []>
+   Which: means none were found but one was expected
+
+When the exception was thrown, this was the stack:
+#4      main.<anonymous closure>.<anonymous closure> (file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/components/nc_input_test.dart:51:7)
+<asynchronous suspension>
+#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+This was caught by the test expectation on the following line:
+  file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/components/nc_input_test.dart line 51
+The test description was:
+  ошибка показывается текстом ember и рамкой
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:00 +0 -2: NcTextField ошибка показывается текстом ember и рамкой [E]
+  Test failed. See exception logs above.
+  The test description was: ошибка показывается текстом ember и рамкой
+  
+00:00 +0 -2: NcTextField счётчик символов виден при maxLength, multiline на auto
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following TestFailure was thrown running a test:
+Expected: exactly one matching candidate
+  Actual: _TextWidgetFinder:<Found 0 widgets with text "0/50": []>
+   Which: means none were found but one was expected
+
+When the exception was thrown, this was the stack:
+#4      main.<anonymous closure>.<anonymous closure> (file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/components/nc_input_test.dart:67:7)
+<asynchronous suspension>
+#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+This was caught by the test expectation on the following line:
+  file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/components/nc_input_test.dart line 67
+The test description was:
+  счётчик символов виден при maxLength, multiline на auto
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:00 +0 -3: NcTextField счётчик символов виден при maxLength, multiline на auto [E]
+  Test failed. See exception logs above.
+  The test description was: счётчик символов виден при maxLength, multiline на auto
+  
+00:00 +0 -3: NcTextField disabled: поле не принимает ввод
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following StateError was thrown running a test:
+Bad state: No element
+
+When the exception was thrown, this was the stack:
+#0      Iterable.single (dart:core/iterable.dart:694:25)
+#1      WidgetController.widget (package:flutter_test/src/controller.dart:828:30)
+#2      main.<anonymous closure>.<anonymous closure> (file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/components/nc_input_test.dart:82:38)
+<asynchronous suspension>
+#3      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#4      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+The test description was:
+  disabled: поле не принимает ввод
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:00 +0 -4: NcTextField disabled: поле не принимает ввод [E]
+  Test failed. See exception logs above.
+  The test description was: disabled: поле не принимает ввод
+  
+00:00 +0 -4: NcTextField textScale 2,0 без overflow
+00:00 +1 -4: NcSearchField поиск: ввод и очистка обнуляют запрос
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following TestFailure was thrown running a test:
+Expected: exactly one matching candidate
+  Actual: _TextWidgetFinder:<Found 0 widgets with text "Поиск колод": []>
+   Which: means none were found but one was expected
+
+When the exception was thrown, this was the stack:
+#4      main.<anonymous closure>.<anonymous closure> (file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/components/nc_input_test.dart:117:7)
+<asynchronous suspension>
+#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+This was caught by the test expectation on the following line:
+  file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/components/nc_input_test.dart line 117
+The test description was:
+  поиск: ввод и очистка обнуляют запрос
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:00 +1 -5: NcSearchField поиск: ввод и очистка обнуляют запрос [E]
+  Test failed. See exception logs above.
+  The test description was: поиск: ввод и очистка обнуляют запрос
+  
+00:00 +1 -5: NcSearchField textScale 2,0 без overflow
+00:00 +2 -5: NcSwitch тап переключает значение и семантику toggled
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following TestFailure was thrown running a test:
+Expected: false
+  Actual: Tristate:<Tristate.none>
+
+When the exception was thrown, this was the stack:
+#4      main.<anonymous closure>.<anonymous closure> (file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/components/nc_input_test.dart:153:7)
+<asynchronous suspension>
+#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+This was caught by the test expectation on the following line:
+  file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/components/nc_input_test.dart line 153
+The test description was:
+  тап переключает значение и семантику toggled
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:00 +2 -6: NcSwitch тап переключает значение и семантику toggled [E]
+  Test failed. See exception logs above.
+  The test description was: тап переключает значение и семантику toggled
+  
+00:00 +2 -6: NcSwitch клавиатура: Space переключает
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following TestFailure was thrown running a test:
+Expected: true
+  Actual: <false>
+
+When the exception was thrown, this was the stack:
+#4      main.<anonymous closure>.<anonymous closure> (file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/components/nc_input_test.dart:194:7)
+<asynchronous suspension>
+#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+This was caught by the test expectation on the following line:
+  file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/components/nc_input_test.dart line 194
+The test description was:
+  клавиатура: Space переключает
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:00 +2 -7: NcSwitch клавиатура: Space переключает [E]
+  Test failed. See exception logs above.
+  The test description was: клавиатура: Space переключает
+  
+00:00 +2 -7: NcSwitch disabled: тап не переключает
+00:00 +3 -7: NcSegmented тап выбирает сегмент; семантика выбранного
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following assertion was thrown running a test:
+The finder "Found 0 widgets with text "Лента": []" (used in a call to "tap()") could not find any
+matching widgets.
+
+When the exception was thrown, this was the stack:
+#0      WidgetController._getElementPoint (package:flutter_test/src/controller.dart:2095:7)
+#1      WidgetController.getCenter (package:flutter_test/src/controller.dart:1947:12)
+#2      WidgetController.tap (package:flutter_test/src/controller.dart:1080:7)
+#3      main.<anonymous closure>.<anonymous closure> (file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/components/nc_input_test.dart:233:20)
+<asynchronous suspension>
+#4      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#5      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+The test description was:
+  тап выбирает сегмент; семантика выбранного
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:00 +3 -8: NcSegmented тап выбирает сегмент; семантика выбранного [E]
+  Test failed. See exception logs above.
+  The test description was: тап выбирает сегмент; семантика выбранного
+  
+00:00 +3 -8: NcSegmented недоступный сегмент не выбирается
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following assertion was thrown running a test:
+The finder "Found 0 widgets with text "Лента": []" (used in a call to "tap()") could not find any
+matching widgets.
+
+When the exception was thrown, this was the stack:
+#0      WidgetController._getElementPoint (package:flutter_test/src/controller.dart:2095:7)
+#1      WidgetController.getCenter (package:flutter_test/src/controller.dart:1947:12)
+#2      WidgetController.tap (package:flutter_test/src/controller.dart:1080:7)
+#3      main.<anonymous closure>.<anonymous closure> (file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/components/nc_input_test.dart:264:20)
+<asynchronous suspension>
+#4      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#5      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+The test description was:
+  недоступный сегмент не выбирается
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:00 +3 -9: NcSegmented недоступный сегмент не выбирается [E]
+  Test failed. See exception logs above.
+  The test description was: недоступный сегмент не выбирается
+  
+00:00 +3 -9: NcSegmented клавиатура: фокус + Enter выбирает сегмент
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following TestFailure was thrown running a test:
+Expected: 'feed'
+  Actual: 'classic'
+   Which: is different.
+          Expected: feed
+            Actual: classic
+                    ^
+           Differ at offset 0
+
+When the exception was thrown, this was the stack:
+#4      main.<anonymous closure>.<anonymous closure> (file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/components/nc_input_test.dart:298:7)
+<asynchronous suspension>
+#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+This was caught by the test expectation on the following line:
+  file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/components/nc_input_test.dart line 298
+The test description was:
+  клавиатура: фокус + Enter выбирает сегмент
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:00 +3 -10: NcSegmented клавиатура: фокус + Enter выбирает сегмент [E]
+  Test failed. See exception logs above.
+  The test description was: клавиатура: фокус + Enter выбирает сегмент
+  
+00:00 +3 -10: NcSegmented textScale 2,0 без overflow (горизонтальная прокрутка)
+00:00 +4 -10: NcSlider клавиатура меняет значение
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following TestFailure was thrown running a test:
+Expected: a value greater than <50>
+  Actual: <50.0>
+   Which: is not a value greater than <50>
+
+When the exception was thrown, this was the stack:
+#4      main.<anonymous closure>.<anonymous closure> (file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/components/nc_input_test.dart:345:7)
+<asynchronous suspension>
+#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+This was caught by the test expectation on the following line:
+  file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/components/nc_input_test.dart line 345
+The test description was:
+  клавиатура меняет значение
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:00 +4 -11: NcSlider клавиатура меняет значение [E]
+  Test failed. See exception logs above.
+  The test description was: клавиатура меняет значение
+  
+00:00 +4 -11: NcSlider перетаскивание меняет значение
+
+Warning: A call to drag() with finder "Found 1 widget with type "NcSlider": [
+  NcSlider,
+]" derived an Offset (Offset(210.0, 120.0)) that would not hit test on the specified widget.
+Maybe the widget is actually off-screen, or another widget is obscuring it, or the widget cannot receive pointer events.
+The finder corresponds to this RenderBox: RenderConstrainedBox#044eb relayoutBoundary=up2
+The hit test result at that offset is: HitTestResult(_RenderInkFeatures#dc1dc@Offset(210.0, 120.0), RenderPhysicalModel#1f2d4@Offset(210.0, 120.0), RenderSemanticsAnnotations#7560b@Offset(210.0, 120.0), RenderRepaintBoundary#19d48@Offset(210.0, 120.0), RenderIgnorePointer#461b6@Offset(210.0, 120.0), RenderStack#5e5b2@Offset(210.0, 120.0), RenderAnimatedOpacity#92f52@Offset(210.0, 120.0), RenderRepaintBoundary#416a9@Offset(210.0, 120.0), RenderSemanticsAnnotations#b6df6@Offset(210.0, 120.0), RenderOffstage#255a3@Offset(210.0, 120.0), RenderSemanticsAnnotations#ca653@Offset(210.0, 120.0), _RenderTheater#cb6be@Offset(210.0, 120.0), RenderAbsorbPointer#dcc32@Offset(210.0, 120.0), RenderPointerListener#e7235@Offset(210.0, 120.0), RenderSemanticsAnnotations#6b3f0@Offset(210.0, 120.0), RenderSemanticsAnnotations#c44b8@Offset(210.0, 120.0), RenderSemanticsAnnotations#9051f@Offset(210.0, 120.0), RenderSemanticsAnnotations#deb77@Offset(210.0, 120.0), RenderTapRegionSurface#75af6@Offset(210.0, 120.0), RenderSemanticsAnnotations#b6745@Offset(210.0, 120.0), RenderSemanticsAnnotations#592d1@Offset(210.0, 120.0), HitTestEntry<HitTestTarget>#59338(_ReusableRenderView#c4bdc), HitTestEntry<HitTestTarget>#a4cda(<AutomatedTestWidgetsFlutterBinding>))
+#0      WidgetController._getElementPoint (package:flutter_test/src/controller.dart:2165:25)
+#1      WidgetController.getCenter (package:flutter_test/src/controller.dart:1947:12)
+#2      WidgetController.drag (package:flutter_test/src/controller.dart:1604:7)
+#3      main.<anonymous closure>.<anonymous closure> (file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/components/nc_input_test.dart:362:20)
+<asynchronous suspension>
+#4      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#5      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+#6      StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:42)
+<asynchronous suspension>
+To silence this warning, pass "warnIfMissed: false" to "drag()".
+To make this warning fatal, set WidgetController.hitTestWarningShouldBeFatal to true.
+
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following TestFailure was thrown running a test:
+Expected: a value greater than <0>
+  Actual: <0.0>
+   Which: is not a value greater than <0>
+
+When the exception was thrown, this was the stack:
+#4      main.<anonymous closure>.<anonymous closure> (file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/components/nc_input_test.dart:364:7)
+<asynchronous suspension>
+#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+This was caught by the test expectation on the following line:
+  file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/components/nc_input_test.dart line 364
+The test description was:
+  перетаскивание меняет значение
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:01 +4 -12: NcSlider перетаскивание меняет значение [E]
+  Test failed. See exception logs above.
+  The test description was: перетаскивание меняет значение
+  
+00:01 +4 -12: NcSlider textScale 2,0 без overflow
+00:01 +5 -12: NcStepper плюс и минус вызывают действия; ключи сохранены
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following TestFailure was thrown running a test:
+Expected: exactly one matching candidate
+  Actual: _KeyWidgetFinder:<Found 0 widgets with key [<'settings-new-limit-value'>]: []>
+   Which: means none were found but one was expected
+
+When the exception was thrown, this was the stack:
+#4      main.<anonymous closure>.<anonymous closure> (file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/components/nc_input_test.dart:396:7)
+<asynchronous suspension>
+#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+This was caught by the test expectation on the following line:
+  file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/components/nc_input_test.dart line 396
+The test description was:
+  плюс и минус вызывают действия; ключи сохранены
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:01 +5 -13: NcStepper плюс и минус вызывают действия; ключи сохранены [E]
+  Test failed. See exception logs above.
+  The test description was: плюс и минус вызывают действия; ключи сохранены
+  
+00:01 +5 -13: NcStepper долгое нажатие — автоповтор
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following assertion was thrown running a test:
+The finder "Found 0 widgets with key [<'plus'>]: []" (used in a call to "getCenter()") could not
+find any matching widgets.
+
+When the exception was thrown, this was the stack:
+#0      WidgetController._getElementPoint (package:flutter_test/src/controller.dart:2095:7)
+#1      WidgetController.getCenter (package:flutter_test/src/controller.dart:1947:12)
+#2      main.<anonymous closure>.<anonymous closure> (file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/components/nc_input_test.dart:429:16)
+<asynchronous suspension>
+#3      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#4      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+The test description was:
+  долгое нажатие — автоповтор
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:01 +5 -14: NcStepper долгое нажатие — автоповтор [E]
+  Test failed. See exception logs above.
+  The test description was: долгое нажатие — автоповтор
+  
+00:01 +5 -14: NcStepper disabled: кнопки неактивны
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following assertion was thrown running a test:
+The finder "Found 0 widgets with key [<'plus'>]: []" (used in a call to "tap()") could not find any
+matching widgets.
+
+When the exception was thrown, this was the stack:
+#0      WidgetController._getElementPoint (package:flutter_test/src/controller.dart:2095:7)
+#1      WidgetController.getCenter (package:flutter_test/src/controller.dart:1947:12)
+#2      WidgetController.tap (package:flutter_test/src/controller.dart:1080:7)
+#3      main.<anonymous closure>.<anonymous closure> (file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/components/nc_input_test.dart:452:20)
+<asynchronous suspension>
+#4      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#5      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+The test description was:
+  disabled: кнопки неактивны
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:01 +5 -15: NcStepper disabled: кнопки неактивны [E]
+  Test failed. See exception logs above.
+  The test description was: disabled: кнопки неактивны
+  
+00:01 +5 -15: NcStepper textScale 2,0 без overflow
+00:01 +6 -15: NcChip фильтр переключается тапом
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following assertion was thrown running a test:
+The finder "Found 0 widgets with text "Все": []" (used in a call to "tap()") could not find any
+matching widgets.
+
+When the exception was thrown, this was the stack:
+#0      WidgetController._getElementPoint (package:flutter_test/src/controller.dart:2095:7)
+#1      WidgetController.getCenter (package:flutter_test/src/controller.dart:1947:12)
+#2      WidgetController.tap (package:flutter_test/src/controller.dart:1080:7)
+#3      main.<anonymous closure>.<anonymous closure> (file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/components/nc_input_test.dart:484:20)
+<asynchronous suspension>
+#4      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#5      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+The test description was:
+  фильтр переключается тапом
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:01 +6 -16: NcChip фильтр переключается тапом [E]
+  Test failed. See exception logs above.
+  The test description was: фильтр переключается тапом
+  
+00:01 +6 -16: NcChip тег удаляется крестиком
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following assertion was thrown running a test:
+The finder "Found 0 widgets with widget matching predicate: []" (used in a call to "tap()") could
+not find any matching widgets.
+
+When the exception was thrown, this was the stack:
+#0      WidgetController._getElementPoint (package:flutter_test/src/controller.dart:2095:7)
+#1      WidgetController.getCenter (package:flutter_test/src/controller.dart:1947:12)
+#2      WidgetController.tap (package:flutter_test/src/controller.dart:1080:7)
+#3      main.<anonymous closure>.<anonymous closure> (file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/components/nc_input_test.dart:508:20)
+<asynchronous suspension>
+#4      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#5      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+The test description was:
+  тег удаляется крестиком
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:01 +6 -17: NcChip тег удаляется крестиком [E]
+  Test failed. See exception logs above.
+  The test description was: тег удаляется крестиком
+  
+00:01 +6 -17: NcChip статус показывает точку семантики
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following TestFailure was thrown running a test:
+Expected: exactly one matching candidate
+  Actual: _TextWidgetFinder:<Found 0 widgets with text "Сессия завершена": []>
+   Which: means none were found but one was expected
+
+When the exception was thrown, this was the stack:
+#4      main.<anonymous closure>.<anonymous closure> (file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/components/nc_input_test.dart:521:7)
+<asynchronous suspension>
+#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+This was caught by the test expectation on the following line:
+  file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/components/nc_input_test.dart line 521
+The test description was:
+  статус показывает точку семантики
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:01 +6 -18: NcChip статус показывает точку семантики [E]
+  Test failed. See exception logs above.
+  The test description was: статус показывает точку семантики
+  
+00:01 +6 -18: NcChip textScale 2,0 без overflow
+00:01 +7 -18: NcDropdown открывает меню и возвращает выбранное значение
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following TestFailure was thrown running a test:
+Expected: exactly one matching candidate
+  Actual: _TextWidgetFinder:<Found 0 widgets with text "Модель A": []>
+   Which: means none were found but one was expected
+
+When the exception was thrown, this was the stack:
+#4      main.<anonymous closure>.<anonymous closure> (file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/components/nc_input_test.dart:568:7)
+<asynchronous suspension>
+#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+This was caught by the test expectation on the following line:
+  file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/components/nc_input_test.dart line 568
+The test description was:
+  открывает меню и возвращает выбранное значение
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:01 +7 -19: NcDropdown открывает меню и возвращает выбранное значение [E]
+  Test failed. See exception logs above.
+  The test description was: открывает меню и возвращает выбранное значение
+  
+00:01 +7 -19: NcDropdown disabled: меню не открывается
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following assertion was thrown running a test:
+The finder "Found 0 widgets with key [<'provider-model'>]: []" (used in a call to "tap()") could not
+find any matching widgets.
+
+When the exception was thrown, this was the stack:
+#0      WidgetController._getElementPoint (package:flutter_test/src/controller.dart:2095:7)
+#1      WidgetController.getCenter (package:flutter_test/src/controller.dart:1947:12)
+#2      WidgetController.tap (package:flutter_test/src/controller.dart:1080:7)
+#3      main.<anonymous closure>.<anonymous closure> (file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/components/nc_input_test.dart:593:20)
+<asynchronous suspension>
+#4      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#5      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+The test description was:
+  disabled: меню не открывается
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:01 +7 -20: NcDropdown disabled: меню не открывается [E]
+  Test failed. See exception logs above.
+  The test description was: disabled: меню не открывается
+  
+00:01 +7 -20: NcDropdown textScale 2,0 без overflow
+00:01 +8 -20: Some tests failed.
+
+Failing tests:
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/components/nc_input_test.dart: NcChip статус показывает точку семантики
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/components/nc_input_test.dart: NcChip тег удаляется крестиком
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/components/nc_input_test.dart: NcChip фильтр переключается тапом
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/components/nc_input_test.dart: NcDropdown disabled: меню не открывается
+  ... and 16 more
+
