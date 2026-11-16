@@ -101,10 +101,28 @@ flutter:
 
   # Шрифт для дислексии (SPEC A6.6, ADR-019 §6): SIL OFL 1.1,
   # assets/fonts/OFL.txt. Включается переключателем в настройках.
+  #
+  # Шрифты Nocturne (REDESIGN-SPEC §2.1, ADR-035): переменные файлы, SIL OFL 1.1,
+  # лицензии — assets/fonts/LICENSES/ (регистрируются в LicenseRegistry).
+  # Стандартные веса задаются FontWeight (в Flutter проецируется в ось wght),
+  # нестандартные — FontVariation; оптический размер Literata — FontVariation.
   fonts:
     - family: OpenDyslexic
       fonts:
         - asset: assets/fonts/OpenDyslexic-Regular.otf
+    - family: Onest
+      fonts:
+        - asset: assets/fonts/Onest/Onest-Variable.ttf
+    - family: Literata
+      fonts:
+        - asset: assets/fonts/Literata/Literata-Variable.ttf
+    - family: JetBrainsMono
+      fonts:
+        - asset: assets/fonts/JetBrainsMono/JetBrainsMono-Variable.ttf
+
+  assets:
+    - assets/fonts/LICENSES/
+    - assets/textures/
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
