@@ -1,14 +1,52 @@
 # STATE — текущее состояние CardFlow
 
-**Дата:** 2026-11-16 · **Этап:** итерация **fix-gen** «Исправление генерации»
-(Д1–Д6, ADR-029/ADR-030) — завершена; **push выполнен, CI 9/9 job success**
-(`08b42d8` → run [`43764143830`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43764143830)) · **Режим:** ИТЕРАЦИИ
-**Факты (сверено командами в этой сессии):** на старте `git status --porcelain`
-→ пусто, `HEAD = origin/main = c95e5a9` (`docs: record green CI for image ux
-iteration`) — в STATE 7.12 был записан `c6dd64e`, после него был docs-коммит,
-исправлено. Baseline — **1512 passed + 5 skipped** (7.12).
+**Дата:** 2026-11-16 · **Этап:** итерация **7.14** «Картинка у каждой карточки»
+(в работе) · **Режим:** ИТЕРАЦИИ (7.14 → 7.15 → 7.16).
+
+**Факты старта 7.14 (сверено командами):** `git status --porcelain` → пусто,
+`HEAD = origin/main = cc88e0c` (`docs: record green CI for generation fix
+iteration`) — в STATE fix-gen записан `08b42d8`, после него был docs-коммит,
+исправлено. Baseline — **1597 passed + 7 skipped** (`flutter test --no-pub
+--exclude-tags golden`), `analyze` **0**, `format` **378 / 0**.
 Flutter 3.47.9 / Dart 3.13.7 (FVM); Windows 11; Android SDK/JDK/Xcode нет (L2).
-Прогоны — только с `--no-pub` (L64).
+Прогоны — только с `--no-pub` (L64). Ключ DeepSeek — present в Windows User
+scope (значение не выводилось); `PIXABAY_API_KEY`/`PEXELS_API_KEY` — absent.
+
+## Сверка STATE с кодом (7.14, старт)
+
+Проверено по файлам, расхождения исправлены:
+
+- **Режимы:** реально четыре — `classic`, `feed`, `practice`, `constructor`
+  (`_SessionModeAction` в `lib/ui/decks/deck_screen.dart`; маршруты
+  `/decks/:deckId/{study,feed,practice}` и `/constructor`). В истории STATE
+  конструктор упоминался только в итерации 6 — здесь зафиксировано явно.
+- **Промпты генерации:** `gen-ru-v5` — сырой литерал
+  `lib/api/prompts/system_prompt.dart` (`systemPromptVersion = 'gen-ru-v5'`),
+  дословная копия `docs/prompts/gen-ru-v5.txt`; механизм версии — константы +
+  `CardGenerationService.promptVersion`. Подтверждено.
+- **ImageSearchService:** в коде это **Openverse**
+  (`lib/api/images/image_search_service.dart`), а цепочка —
+  `CompositeCardImageFinder` (Commons → Wikipedia → Openverse). В задании
+  7.14 «ImageSearchService» назван цепочкой: переименование/реструктуризация —
+  в 7.14.
+- **MediaStore:** `lib/data/transfer/media_store.dart` — только байты по
+  относительному пути; **метаданных провайдера/лицензии/isPlaceholder нет**,
+  `media` (`id, card_id, path, mime_type, size`) их не хранит, атрибуция
+  живёт в памяти `GeneratedCardImage` до импорта. Для 7.14 нужен побочный
+  JSON-метафайл (без изменения схемы БД).
+- **FSRS:** `FsrsScheduler` (`lib/domain/scheduling/scheduler.dart`), маппер
+  `fsrs_mapper.dart`, начальное состояние `CardSchedulingMapper.initialScheduling`.
+  Подтверждено.
+- **Лист режимов:** `showModalBottomSheet` в `_startSession`
+  (`lib/ui/decks/deck_screen.dart`), ключи `review-mode-*`. Подтверждено.
+- **ARB:** один файл `lib/l10n/app_ru.arb`; `supportedLocales` — только `ru`,
+  `app_en.arb` нет. Требование задания «ARB (ru, en)» конфликтует с жёстким
+  правилом AGENTS/SPEC (локаль только `ru`) и guard-тестом `ru_strings_test`:
+  новые строки добавляются в `app_ru.arb`; английская локаль не вводится
+  (отдельное продуктовое решение, не самовольное изменение).
+- **Правило «абстрактные понятия без картинки»** всё ещё в валидаторе
+  (`_isAbstractCard` + `CardIssueCode.abstractImageQuery`) — удаляется в 7.14
+  вместе с промптом v6, как требует задание.
 
 **Гейты fix-gen:** `fvm flutter test --no-pub --coverage --exclude-tags golden`
 → **1597 passed + 7 skipped** · покрытие рукописного кода **92.3 % (10814/11720)**
