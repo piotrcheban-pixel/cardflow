@@ -503,5 +503,6 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   покрытие рукописного кода **91.7 % (13521/14743)**; `analyze` 0; `format` 0 changed;
   `fvm flutter build windows --release --no-pub` → `cardflow.exe` (52,4 с);
   CI run [`43913907014`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43913907014) — 9/9
-  (первый прогон `43909148956` упал на analyze из-за импортов test/tool, фикс `ed83795`).
+  (первый прогон `43909148956` упал на analyze из-за импортов test/tool, фикс `ed83795`);
+  финальный run [`43915833682`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43915833682) — 9/9.
   Скриншоты — `journal/iteration-7.15/screenshots/`. Ограничения: L87/L88.

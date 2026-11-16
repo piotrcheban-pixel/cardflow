@@ -210,8 +210,10 @@ passed + 8 skipped** · покрытие рук��писного кода **9
 **упал только на `format + analyze`** (неиспользуемые импорты в новом
 test/tool), все test/build job'ы зелёные. Фикс `ed83795` → CI run
 [`43913907014`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43913907014)
-— **9/9 job success**. Push 7.16: `df0e873..3aac099` (включая скриншоты
-`3aac099`); финальный docs-прогон — в истории Actions.
+— **9/9 job success**. Push 7.16: `ed83795..b58895a` (фикс analyze, скриншоты `3aac099`,
+STATE/AGENTS `b58895a`); финальный CI run
+[`43915833682`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43915833682)
+— **9/9 job success**.
 
 ## Итерация fix-gen — итог (архив, v5)
 
