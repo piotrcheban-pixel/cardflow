@@ -39,7 +39,7 @@ void main() {
     test(
       'rating по оценке: Again — heavy, Hard/Good — light, Easy — select',
       () async {
-        final NcHaptics haptics = NcHaptics(clock: _StepClock());
+        final NcHaptics haptics = NcHaptics(clock: _StepClock().call);
         haptics.rating(NcHapticKind.heavyImpact);
         await Future<void>.delayed(Duration.zero);
         expect(vibrations, <String>['HapticFeedbackType.heavyImpact']);
@@ -50,7 +50,7 @@ void main() {
       'error — heavyImpact, menu — mediumImpact, threshold — light',
       () async {
         final _StepClock clock = _StepClock();
-        final NcHaptics haptics = NcHaptics(clock: clock);
+        final NcHaptics haptics = NcHaptics(clock: clock.call);
         haptics.error();
         clock.advance(const Duration(milliseconds: 50));
         haptics.menu();
@@ -69,7 +69,7 @@ void main() {
   group('NcHaptics: ограничение частоты 40 мс', () {
     test('второй вызов в пределах 40 мс не вибрирует', () async {
       final _StepClock clock = _StepClock();
-      final NcHaptics haptics = NcHaptics(clock: clock);
+      final NcHaptics haptics = NcHaptics(clock: clock.call);
       // Разные события: одинаковые гасятся окном повтора (§7).
       haptics.selectionClick();
       clock.advance(const Duration(milliseconds: 20));
@@ -82,7 +82,7 @@ void main() {
 
     test('одинаковое событие гасится в окне повтора', () async {
       final _StepClock clock = _StepClock();
-      final NcHaptics haptics = NcHaptics(clock: clock);
+      final NcHaptics haptics = NcHaptics(clock: clock.call);
       haptics.lightImpact();
       clock.advance(const Duration(milliseconds: 60));
       haptics.lightImpact();
@@ -97,7 +97,7 @@ void main() {
 
     test('разные события в пределах 40 мс — только первое', () async {
       final _StepClock clock = _StepClock();
-      final NcHaptics haptics = NcHaptics(clock: clock);
+      final NcHaptics haptics = NcHaptics(clock: clock.call);
       haptics.lightImpact();
       clock.advance(const Duration(milliseconds: 5));
       haptics.mediumImpact();
@@ -116,7 +116,7 @@ void main() {
     });
 
     test('выключение на лету', () async {
-      final NcHaptics haptics = NcHaptics(clock: _StepClock());
+      final NcHaptics haptics = NcHaptics(clock: _StepClock().call);
       haptics.enabled = false;
       haptics.flip();
       await Future<void>.delayed(Duration.zero);
@@ -125,7 +125,7 @@ void main() {
 
     testWidgets('success: mediumImpact → 110 мс → lightImpact', (tester) async {
       final _StepClock clock = _StepClock();
-      final NcHaptics haptics = NcHaptics(clock: clock);
+      final NcHaptics haptics = NcHaptics(clock: clock.call);
       haptics.success();
       await tester.pump();
       expect(vibrations, <String>['HapticFeedbackType.mediumImpact']);

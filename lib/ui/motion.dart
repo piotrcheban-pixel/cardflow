@@ -1,5 +1,4 @@
 import 'package:flutter/animation.dart';
-import 'package:flutter/physics.dart';
 
 /// Токены движения CardFlow: M3 Expressive (SPEC A4.4) и Nocturne
 /// (REDESIGN-SPEC §6, ADR-035).

@@ -3,8 +3,6 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
-import '../motion.dart';
-
 /// Виды тактильного отклика (REDESIGN-SPEC §7).
 ///
 /// Таблица оценок FSRS → вид отклика живёт в экранах (этап 4): дизайн-система
