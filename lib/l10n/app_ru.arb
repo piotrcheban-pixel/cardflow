@@ -2528,5 +2528,13 @@
   "trueFalseEmptyMessage": "Нужны карточки с ответом и хотя бы один другой ответ в колоде.",
   "@trueFalseEmptyMessage": {
     "description": "Пояснение пустого состояния."
+  },
+  "commonLoading": "Загрузка",
+  "@commonLoading": {
+    "description": "Семантика ожидания: спиннер, скелетон, проверка ключа."
+  },
+  "commonClose": "Закрыть",
+  "@commonClose": {
+    "description": "Закрыть лист, диалог, меню, полноэкранный просмотр."
   }
 }

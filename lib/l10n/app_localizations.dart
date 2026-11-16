@@ -3291,6 +3291,18 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Нужны карточки с ответом и хотя бы один другой ответ в колоде.'**
   String get trueFalseEmptyMessage;
+
+  /// Семантика ожидания: спиннер, скелетон, проверка ключа.
+  ///
+  /// In ru, this message translates to:
+  /// **'Загрузка'**
+  String get commonLoading;
+
+  /// Закрыть лист, диалог, меню, полноэкранный просмотр.
+  ///
+  /// In ru, this message translates to:
+  /// **'Закрыть'**
+  String get commonClose;
 }
 
 class _AppLocalizationsDelegate

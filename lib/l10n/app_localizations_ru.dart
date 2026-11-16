@@ -1983,4 +1983,10 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get trueFalseEmptyMessage =>
       'Нужны карточки с ответом и хотя бы один другой ответ в колоде.';
+
+  @override
+  String get commonLoading => 'Загрузка';
+
+  @override
+  String get commonClose => 'Закрыть';
 }
