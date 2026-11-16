@@ -13,8 +13,9 @@ import 'nc_harness.dart';
 /// подкладываются явно (AGENTS.md: golden с кириллицей), иначе CI-машина
 /// рисует текст системным шрифтом и снимок нестабилен.
 
-/// Каталог эталонов.
-const String ncGoldenFolder = 'test/golden/goldens';
+/// Каталог эталонов (путь относительно `test/golden/<файл>_test.dart`:
+/// `matchesGoldenFile` разрешает относительный путь от каталога теста).
+const String ncGoldenFolder = 'goldens';
 
 /// Один вариант golden-снимка.
 @immutable
@@ -63,22 +64,14 @@ const List<NcGoldenVariant> ncGoldenVariants = <NcGoldenVariant>[
     brightness: Brightness.light,
     highContrast: true,
   ),
-  NcGoldenVariant(
-    id: 'dark_ts2',
-    brightness: Brightness.dark,
-    textScale: 2,
-  ),
+  NcGoldenVariant(id: 'dark_ts2', brightness: Brightness.dark, textScale: 2),
   NcGoldenVariant(
     id: 'dark_hc_ts2',
     brightness: Brightness.dark,
     highContrast: true,
     textScale: 2,
   ),
-  NcGoldenVariant(
-    id: 'light_ts2',
-    brightness: Brightness.light,
-    textScale: 2,
-  ),
+  NcGoldenVariant(id: 'light_ts2', brightness: Brightness.light, textScale: 2),
   NcGoldenVariant(
     id: 'light_hc_ts2',
     brightness: Brightness.light,

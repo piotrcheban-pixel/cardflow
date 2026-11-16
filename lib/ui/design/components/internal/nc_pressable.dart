@@ -1,5 +1,7 @@
+import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../../motion.dart';
 import '../../haptics.dart';
 import '../../motion_scope.dart';
 import '../../nc_theme.dart';
@@ -17,7 +19,7 @@ class NcPressScale extends StatefulWidget {
     required this.pressed,
     required this.child,
     this.enabled = true,
-    this.scale = 0.96,
+    this.scale = AppMotion.pressScale,
   });
 
   /// Нажато ли сейчас.
@@ -162,7 +164,7 @@ class NcTappable extends StatefulWidget {
     this.haptic = NcHapticKind.selectionClick,
     this.longPressHaptic = NcHapticKind.mediumImpact,
     this.scaleOnPress = true,
-    this.pressedScale = 0.96,
+    this.pressedScale = AppMotion.pressScale,
     this.focusRadius = NcRadii.pill,
     this.focusNode,
     this.autofocus = false,

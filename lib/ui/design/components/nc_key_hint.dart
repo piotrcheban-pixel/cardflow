@@ -1,5 +1,8 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../nc_theme.dart';
+import '../tokens/nc_radii.dart';
+
 /// Подсказка клавиши: `1`, `Space`, `Enter` (REDESIGN-SPEC §8, §10).
 ///
 /// Рамка `hairlineStrong`, `r.xs`, `monoM` `textTertiary`. Показывается только
@@ -16,5 +19,27 @@ class NcKeyHint extends StatelessWidget {
   final bool compact;
 
   @override
-  Widget build(BuildContext context) => const SizedBox.shrink();
+  Widget build(BuildContext context) {
+    final NcTheme theme = NcTheme.of(context);
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: compact ? 4 : 6, vertical: 1),
+      decoration: ShapeDecoration(
+        shape: RoundedSuperellipseBorder(
+          borderRadius: BorderRadius.circular(NcRadii.xs),
+          side: BorderSide(color: theme.colors.hairlineStrong),
+        ),
+      ),
+      child: Text(
+        label,
+        maxLines: 1,
+        softWrap: false,
+        overflow: TextOverflow.visible,
+        style: theme.typography.monoM.copyWith(
+          color: theme.colors.textTertiary,
+          fontSize: compact ? 10 : null,
+          height: 1.2,
+        ),
+      ),
+    );
+  }
 }

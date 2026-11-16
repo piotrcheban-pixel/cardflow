@@ -1,3 +1,4 @@
+import 'package:flutter/physics.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../motion_scope.dart';
@@ -60,10 +61,9 @@ class _NcSpringBuilderState extends State<NcSpringBuilder>
   }
 
   @override
-  Widget build(BuildContext context) =>
-      AnimatedBuilder(
-        animation: _controller,
-        builder: (BuildContext context, Widget? child) =>
-            widget.builder(context, _controller.value),
-      );
+  Widget build(BuildContext context) => AnimatedBuilder(
+    animation: _controller,
+    builder: (BuildContext context, Widget? child) =>
+        widget.builder(context, _controller.value),
+  );
 }

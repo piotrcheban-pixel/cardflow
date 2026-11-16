@@ -37,17 +37,18 @@ class _NcScrollCollapseScopeState extends State<NcScrollCollapseScope> {
   }
 
   @override
-  Widget build(BuildContext context) => NotificationListener<ScrollNotification>(
-    onNotification: _onNotification,
-    child: _NcScrollCollapseState(collapsed: _collapsed, child: widget.child),
-  );
+  Widget build(BuildContext context) =>
+      NotificationListener<ScrollNotification>(
+        onNotification: _onNotification,
+        child: _NcScrollCollapseState(
+          collapsed: _collapsed,
+          child: widget.child,
+        ),
+      );
 }
 
 class _NcScrollCollapseState extends InheritedWidget {
-  const _NcScrollCollapseState({
-    required this.collapsed,
-    required super.child,
-  });
+  const _NcScrollCollapseState({required this.collapsed, required super.child});
 
   final bool collapsed;
 

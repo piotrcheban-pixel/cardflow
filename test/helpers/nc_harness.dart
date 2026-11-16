@@ -40,9 +40,8 @@ class NcHapticRecorder {
 
   /// Подменяет обработчик канала на время теста.
   void install() {
-    _messenger = TestDefaultBinaryMessengerBinding
-        .instance
-        .defaultBinaryMessenger;
+    _messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
     _messenger!.setMockMethodCallHandler(SystemChannels.platform, (
       MethodCall call,
     ) async {
@@ -147,18 +146,17 @@ Widget ncApp({
             disableAnimations: config.reduceMotion,
           ),
           child: MediaQuery(
-            data: MediaQuery.of(context).copyWith(
-              textScaler: TextScaler.linear(config.textScale),
-            ),
+            data: MediaQuery.of(context)
+                .copyWith(textScaler: TextScaler.linear(config.textScale)),
             child: appChild!,
           ),
         ),
       );
     },
     home: Builder(
-      builder: (BuildContext context) => ColoredBox(
-        color: NcTheme.of(context).colors.ink0,
-        child: Center(child: child),
+      builder: (BuildContext context) => Scaffold(
+        backgroundColor: NcTheme.of(context).colors.ink0,
+        body: Center(child: child),
       ),
     ),
   );
@@ -176,22 +174,29 @@ Future<void> pumpNc(
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
-  await tester.pumpWidget(ncApp(child: child, config: config, haptics: haptics));
+  await tester.pumpWidget(
+    ncApp(child: child, config: config, haptics: haptics),
+  );
   if (settle) await tester.pumpAndSettle();
 }
 
 /// Монтирует компонент при `textScale` 2,0 и проверяет отсутствие overflow.
+///
+/// [settle] = false — для компонентов с повторяющейся анимацией
+/// (`NcSkeleton`, `NcSpinner`): `pumpAndSettle` там не завершается (§6.4).
 Future<void> pumpNcAtTextScale2(
   WidgetTester tester,
   Widget child, {
   NcTestConfig config = const NcTestConfig(),
+  bool settle = true,
 }) async {
   await pumpNc(
     tester,
     child,
-    config: config.copyWith(textScale: 2, size: config.size),
-    settle: true,
+    config: config.copyWith(textScale: 2),
+    settle: settle,
   );
+  if (!settle) await tester.pump(const Duration(milliseconds: 200));
   expect(
     tester.takeException(),
     isNull,

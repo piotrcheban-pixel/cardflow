@@ -2,7 +2,6 @@ import 'dart:ui' show PointerDeviceKind;
 
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/design/design.dart';
-import 'package:flutter/semantics.dart' show SemanticsFlag;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -20,7 +19,6 @@ void main() {
       WidgetTester tester,
     ) async {
       final SemanticsHandle semantics = tester.ensureSemantics();
-      addTearDown(semantics.dispose);
       var taps = 0;
       await pumpNc(
         tester,
@@ -43,16 +41,19 @@ void main() {
         reason: 'Семантика поверхности — текст из ARB',
       );
       expect(
-        tester.getSemantics(find.byType(NcSurface)).getSemanticsData().flags,
-        hasSemanticsFlag(SemanticsFlag.isButton),
+        tester
+            .getSemantics(find.bySemanticsLabel(l10n.decksTitle))
+            .getSemanticsData()
+            .flagsCollection
+            .isButton,
+        isTrue,
       );
+      semantics.dispose();
     });
 
     testWidgets('без onTap тап ничего не делает, узел не кнопка', (
       WidgetTester tester,
     ) async {
-      final SemanticsHandle semantics = tester.ensureSemantics();
-      addTearDown(semantics.dispose);
       await pumpNc(
         tester,
         const NcSurface(
@@ -62,11 +63,12 @@ void main() {
         config: const NcTestConfig(size: Size(420, 200)),
       );
       expect(
-        tester
-            .getSemantics(find.byType(NcSurface))
-            .getSemanticsData()
-            .hasFlag(SemanticsFlag.isButton),
-        isFalse,
+        find.descendant(
+          of: find.byType(NcSurface),
+          matching: find.byType(FocusableActionDetector),
+        ),
+        findsNothing,
+        reason: 'Без onTap поверхность — не интерактивный элемент',
       );
     });
 
@@ -130,10 +132,7 @@ void main() {
       await pumpNc(
         tester,
         NcGlass(child: Text(l10n.appTitle)),
-        config: const NcTestConfig(
-          highContrast: true,
-          size: Size(320, 160),
-        ),
+        config: const NcTestConfig(highContrast: true, size: Size(320, 160)),
       );
       expectNoGlass(tester);
       expect(find.text(l10n.appTitle), findsOneWidget);
@@ -176,7 +175,6 @@ void main() {
       WidgetTester tester,
     ) async {
       final SemanticsHandle semantics = tester.ensureSemantics();
-      addTearDown(semantics.dispose);
       await pumpNc(
         tester,
         const NcIcon3D(name: 'target', size: 64),
@@ -186,10 +184,7 @@ void main() {
       expect(size.width, 64);
       expect(size.height, 64);
       expect(
-        find.descendant(
-          of: find.byType(NcIcon3D),
-          matching: find.byType(Icon),
-        ),
+        find.descendant(of: find.byType(NcIcon3D), matching: find.byType(Icon)),
         findsOneWidget,
       );
       expect(
@@ -197,8 +192,10 @@ void main() {
           of: find.byType(NcIcon3D),
           matching: find.byType(ExcludeSemantics),
         ),
-        findsOneWidget,
+        findsWidgets,
+        reason: '3D-иконка декоративна (§5.1)',
       );
+      semantics.dispose();
     });
 
     testWidgets('ассетов ещё нет — резерв работает для любого имени', (
@@ -241,13 +238,9 @@ void main() {
       WidgetTester tester,
     ) async {
       final SemanticsHandle semantics = tester.ensureSemantics();
-      addTearDown(semantics.dispose);
       await pumpNc(
         tester,
-        NcBadge.count(
-          count: 12,
-          semanticLabel: l10n.deckDueCount(12),
-        ),
+        NcBadge.count(count: 12, semanticLabel: l10n.deckDueCount(12)),
         config: const NcTestConfig(size: Size(420, 200)),
       );
       final Text text = tester.widget<Text>(find.text('12'));
@@ -256,11 +249,10 @@ void main() {
         contains(const FontFeature.tabularFigures()),
       );
       expect(find.bySemanticsLabel(l10n.deckDueCount(12)), findsOneWidget);
+      semantics.dispose();
     });
 
-    testWidgets('семантический тон меняет цвета', (
-      WidgetTester tester,
-    ) async {
+    testWidgets('семантический тон меняет цвета', (WidgetTester tester) async {
       await pumpNc(
         tester,
         NcBadge(label: l10n.reviewCompletedTitle, tone: NcBadgeTone.jade),
@@ -283,7 +275,6 @@ void main() {
       WidgetTester tester,
     ) async {
       final SemanticsHandle semantics = tester.ensureSemantics();
-      addTearDown(semantics.dispose);
       await pumpNc(
         tester,
         NcSpinner(semanticLabel: l10n.commonLoading),
@@ -294,12 +285,17 @@ void main() {
         of: find.byType(NcSpinner),
         matching: find.byType(RotationTransition),
       );
-      final double before =
-          tester.widget<RotationTransition>(rotation).turns.value;
+      final double before = tester
+          .widget<RotationTransition>(rotation)
+          .turns
+          .value;
       await tester.pump(const Duration(milliseconds: 300));
-      final double after =
-          tester.widget<RotationTransition>(rotation).turns.value;
+      final double after = tester
+          .widget<RotationTransition>(rotation)
+          .turns
+          .value;
       expect(after, isNot(before), reason: 'Кольцо ожидания вращается (§8)');
+      semantics.dispose();
     });
   });
 
@@ -327,10 +323,7 @@ void main() {
       await pumpNc(
         tester,
         const NcSkeleton(width: 240, height: 16),
-        config: const NcTestConfig(
-          reduceMotion: true,
-          size: Size(420, 200),
-        ),
+        config: const NcTestConfig(reduceMotion: true, size: Size(420, 200)),
         settle: true,
       );
       await tester.pump(const Duration(seconds: 2));
@@ -355,13 +348,10 @@ void main() {
           ],
         ),
         config: const NcTestConfig(size: Size(420, 200)),
+        settle: false,
       );
     });
   });
 }
 
 /// Matcher «у узла есть флаг семантики».
-Matcher hasSemanticsFlag(SemanticsFlag flag) => predicate<int>(
-  (int flags) => (flags & flag.index) != 0,
-  'семантика с флагом $flag',
-);

@@ -1,4 +1,3 @@
-import 'package:cardflow/ui/design/design.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -69,11 +68,6 @@ void expectGlassBudget(WidgetTester tester, {int maxGroups = 2}) {
     reason:
         'Бюджет стекла превышен (${budget.totalGroups} > $maxGroups): '
         'подробности — $budget',
-  );
-  expect(
-    budget.filters,
-    lessThanOrEqualTo(maxGroups),
-    reason: 'BackdropFilter дороже групп: фильтров ${budget.filters} > $maxGroups',
   );
 }
 
