@@ -32,6 +32,7 @@ const List<String> migratedFiles = <String>[
   'lib/ui/shell/app_shell.dart',
   'lib/ui/decks/decks_screen.dart',
   'lib/ui/decks/deck_actions.dart',
+  'lib/ui/decks/deck_screen.dart',
 ];
 
 /// Убирает комментарии, чтобы упоминание виджета в документации не считалось

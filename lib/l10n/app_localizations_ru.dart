@@ -335,6 +335,14 @@ class AppLocalizationsRu extends AppLocalizations {
   String get reviewSessionModeTitle => 'Выберите режим';
 
   @override
+  String get reviewModeSheetTitle => 'Режим сессии';
+
+  @override
+  String deckCardsSection(Object count) {
+    return 'КАРТОЧКИ · $count';
+  }
+
+  @override
   String get reviewStartSession => 'Начать сессию';
 
   @override

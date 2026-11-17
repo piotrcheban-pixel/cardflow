@@ -4,6 +4,7 @@ library;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'package:cardflow/ui/decks/deck_screen.dart';
 import 'package:cardflow/ui/decks/decks_screen.dart';
 
 import '../helpers/nc_golden.dart';
@@ -18,23 +19,31 @@ import '../helpers/redesign_screen_fixtures.dart';
 void main() {
   setUpAll(loadNcFonts);
 
-  for (final Brightness brightness in Brightness.values) {
-    final String themeName = brightness == Brightness.dark ? 'dark' : 'light';
+  final Map<String, Widget Function()> screens = <String, Widget Function()>{
+    'decks': DecksScreen.new,
+    'deck': () => const DeckScreen(deckId: 'deck-bio'),
+  };
 
-    testWidgets('decks $themeName', (WidgetTester tester) async {
-      await pumpNcScreen(
-        tester,
-        home: const DecksScreen(),
-        overrides: ncStage3Overrides(),
-        config: NcScreenConfig(
-          brightness: brightness,
-          size: const Size(390, 844),
-        ),
-      );
-      await expectLater(
-        find.byType(MaterialApp),
-        matchesGoldenFile('goldens/screens/decks_$themeName.png'),
-      );
-    });
+  for (final MapEntry<String, Widget Function()> screen in screens.entries) {
+    for (final Brightness brightness in Brightness.values) {
+      final String themeName = brightness == Brightness.dark ? 'dark' : 'light';
+      testWidgets('${screen.key} $themeName', (WidgetTester tester) async {
+        await pumpNcScreen(
+          tester,
+          home: screen.value(),
+          overrides: ncStage3Overrides(),
+          config: NcScreenConfig(
+            brightness: brightness,
+            size: const Size(390, 844),
+          ),
+        );
+        await expectLater(
+          find.byType(MaterialApp),
+          matchesGoldenFile(
+            'goldens/screens/${screen.key}_$themeName.png',
+          ),
+        );
+      });
+    }
   }
 }

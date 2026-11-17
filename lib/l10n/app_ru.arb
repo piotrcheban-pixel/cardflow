@@ -404,6 +404,14 @@
   "@reviewSessionModeTitle": {
     "description": "Заголовок bottom sheet выбора режима сессии (SPEC A6.3)."
   },
+  "reviewModeSheetTitle": "Режим сессии",
+  "@reviewModeSheetTitle": {
+    "description": "Заголовок листа режимов сессии на экране колоды (REDESIGN-SPEC §9.3)."
+  },
+  "deckCardsSection": "КАРТОЧКИ · {count}",
+  "@deckCardsSection": {
+    "description": "Заголовок секции карточек колоды: надпись и число карточек."
+  },
   "reviewStartSession": "Начать сессию",
   "@reviewStartSession": {
     "description": "Большая карточка запуска сессии на экране колоды (SPEC A6.3)."

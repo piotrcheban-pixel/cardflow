@@ -95,12 +95,22 @@ void main() {
       expect(find.text('¿Cómo estás?'), findsOneWidget);
       expect(find.text('Глагол ser'), findsOneWidget);
       expect(
-        find.text(l10n.cardTagsLine('#приветствие')),
+        find.byWidgetPredicate(
+          (Widget widget) =>
+              widget is Semantics &&
+              widget.properties.label == l10n.cardStateReview,
+        ),
         findsOneWidget,
-        reason: 'Теги карточки показываются строкой из ARB',
+        reason: 'Точка состояния несёт семантику существующей строки ARB',
       );
-      expect(find.text(l10n.cardStateReview), findsOneWidget);
-      expect(find.text(l10n.cardStateNew), findsOneWidget);
+      expect(
+        find.byWidgetPredicate(
+          (Widget widget) =>
+              widget is Semantics &&
+              widget.properties.label == l10n.cardStateNew,
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('пустой список карточек: сообщение из ARB', (
@@ -328,7 +338,7 @@ void main() {
 
       await tester.tap(find.text(l10n.reviewStartSession));
       await tester.pumpAndSettle();
-      expect(find.text(l10n.reviewSessionModeTitle), findsOneWidget);
+      expect(find.text(l10n.reviewModeSheetTitle), findsOneWidget);
       expect(find.text(l10n.reviewModeClassic), findsOneWidget);
 
       await tester.tap(find.text(l10n.reviewModeClassic));

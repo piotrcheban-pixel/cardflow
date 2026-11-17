@@ -598,6 +598,18 @@ abstract class AppLocalizations {
   /// **'Выберите режим'**
   String get reviewSessionModeTitle;
 
+  /// Заголовок листа режимов сессии на экране колоды (REDESIGN-SPEC §9.3).
+  ///
+  /// In ru, this message translates to:
+  /// **'Режим сессии'**
+  String get reviewModeSheetTitle;
+
+  /// Заголовок секции карточек колоды: надпись и число карточек.
+  ///
+  /// In ru, this message translates to:
+  /// **'КАРТОЧКИ · {count}'**
+  String deckCardsSection(Object count);
+
   /// Большая карточка запуска сессии на экране колоды (SPEC A6.3).
   ///
   /// In ru, this message translates to:
