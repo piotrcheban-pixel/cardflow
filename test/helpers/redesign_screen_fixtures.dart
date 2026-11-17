@@ -6,6 +6,7 @@ import 'package:cardflow/domain/cards/card_media.dart';
 import 'package:cardflow/domain/cards/card_repository.dart';
 import 'package:cardflow/domain/decks/deck_summary.dart';
 import 'package:cardflow/domain/settings/app_settings.dart';
+import 'package:cardflow/domain/settings/app_settings_store.dart';
 import 'package:cardflow/domain/statistics/statistics.dart';
 import 'package:cardflow/ui/cards/card_form_screen.dart';
 import 'package:cardflow/ui/decks/deck_screen.dart';
@@ -185,6 +186,7 @@ List<Override> ncStage3Overrides({
   CardImageGateway? imageGateway,
   StatisticsSnapshot? statistics,
   AppSettings? settings,
+  AppSettingsStore? appSettingsStore,
 }) => decksOverrides(
   deckRepository: FakeDeckRepository(
     summaries: summaries ?? ncStage3DeckSummaries(),
@@ -196,9 +198,9 @@ List<Override> ncStage3Overrides({
     snapshot: statistics ?? ncStage3Statistics(),
     tokens: 12400,
   ),
-  appSettingsStore: FakeAppSettingsStore(
-    settings: settings ?? AppSettings.defaults,
-  ),
+  appSettingsStore:
+      appSettingsStore ??
+      FakeAppSettingsStore(settings: settings ?? AppSettings.defaults),
   providerAccountsStore: FakeProviderAccountsStore(),
 );
 

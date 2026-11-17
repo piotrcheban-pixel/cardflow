@@ -38,6 +38,7 @@ const List<String> migratedFiles = <String>[
   'lib/ui/session/session_constructor_screen.dart',
   'lib/ui/statistics/statistics_screen.dart',
   'lib/ui/statistics/statistics_charts.dart',
+  'lib/ui/settings/settings_screen.dart',
   'lib/ui/cards/content/card_content_view.dart',
   'lib/ui/cards/content/card_image_view.dart',
   'lib/ui/cards/content/card_text.dart',

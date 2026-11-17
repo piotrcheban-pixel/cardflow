@@ -2476,6 +2476,12 @@ abstract class AppLocalizations {
   /// **'Размер шрифта'**
   String get settingsTextScaleTitle;
 
+  /// Живой пример размера текста в настройках (REDESIGN-SPEC §9.16).
+  ///
+  /// In ru, this message translates to:
+  /// **'Аа — пример текста'**
+  String get settingsTextScalePreview;
+
   /// Размер шрифта в процентах.
   ///
   /// In ru, this message translates to:

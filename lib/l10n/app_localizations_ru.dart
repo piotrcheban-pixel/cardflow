@@ -1518,6 +1518,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsTextScaleTitle => 'Размер шрифта';
 
   @override
+  String get settingsTextScalePreview => 'Аа — пример текста';
+
+  @override
   String settingsTextScaleValue(int percent) {
     return '$percent%';
   }
