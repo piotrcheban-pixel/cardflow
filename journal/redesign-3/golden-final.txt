@@ -1,0 +1,364 @@
+00:00 +0: loading C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart
+00:00 +0: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: (setUpAll)
+00:00 +0: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: dark
+00:02 +1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: dark
+00:02 +2: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: dark
+00:02 +3: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: dark
+00:02 +4: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: dark
+00:02 +5: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: dark
+00:03 +6: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: dark
+00:03 +7: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: dark
+00:03 +8: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: dark
+00:03 +9: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: dark
+00:03 +10: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: dark
+00:03 +11: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: dark
+00:03 +12: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: dark
+00:03 +13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: dark
+00:03 +14: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: dark
+00:03 +15: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: dark
+00:03 +16: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: dark
+00:03 +17: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: dark
+00:03 +18: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: dark
+00:03 +19: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: dark
+00:03 +20: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: dark
+00:03 +21: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: dark
+00:03 +22: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: dark
+00:03 +23: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: dark
+00:03 +24: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: dark
+00:03 +25: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: dark
+00:03 +26: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: dark
+00:03 +27: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_actions_golden_test.dart: 2.2 действия button button dark_hc_ts2
+00:03 +28: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_actions_golden_test.dart: 2.2 действия button button dark_hc_ts2
+00:03 +29: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_actions_golden_test.dart: 2.2 действия button button dark_hc_ts2
+00:03 +30: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_actions_golden_test.dart: 2.2 действия button button dark_hc_ts2
+00:03 +31: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_actions_golden_test.dart: 2.2 действия button button dark_hc_ts2
+00:03 +32: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_actions_golden_test.dart: 2.2 действия button button dark_hc_ts2
+00:03 +33: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_actions_golden_test.dart: 2.2 действия button button dark_hc_ts2
+00:03 +34: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_actions_golden_test.dart: 2.2 действия button button dark_hc_ts2
+00:03 +35: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: light
+00:03 +36: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: light
+00:03 +37: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: light
+00:03 +38: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: light
+00:03 +39: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: light
+00:03 +40: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: light
+00:03 +41: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: light
+00:03 +42: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: light
+00:03 +43: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: light
+00:03 +44: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: light
+00:03 +45: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: light
+00:04 +46: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: light
+00:04 +47: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: light
+00:04 +48: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: light
+00:04 +49: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: light
+00:04 +50: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: light
+00:04 +51: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: light
+00:04 +52: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: light
+00:04 +53: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: light
+00:04 +54: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: light
+00:04 +55: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: light
+00:04 +56: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: light
+00:04 +57: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: light
+00:04 +58: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: light
+00:04 +59: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: light
+00:04 +60: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: light
+00:04 +61: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: light
+00:04 +62: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: light
+00:04 +63: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: light
+00:04 +64: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: light
+00:04 +65: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: light
+00:04 +66: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: light
+00:04 +67: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: light
+00:04 +68: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: light
+00:04 +69: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: light
+00:04 +70: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: light
+00:04 +71: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: light
+00:04 +72: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: light
+00:04 +73: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: light
+00:04 +74: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: light
+00:04 +75: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: light
+00:04 +76: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/components_catalog_test.dart: каталог компонентов: light
+00:04 +77: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_input_golden_test.dart: 2.3 ввод search_field search_field light_hc_ts2
+00:04 +78: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_input_golden_test.dart: 2.3 ввод search_field search_field light_hc_ts2
+00:04 +79: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_input_golden_test.dart: 2.3 ввод search_field search_field light_hc_ts2
+00:04 +80: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_input_golden_test.dart: 2.3 ввод search_field search_field light_hc_ts2
+00:04 +81: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_nav_golden_test.dart: nav_sidebar nav_sidebar light_hc
+00:04 +82: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_actions_golden_test.dart: 2.2 действия icon_button icon_button dark_ts2
+00:04 +83: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_actions_golden_test.dart: 2.2 действия icon_button icon_button dark_ts2
+00:04 +84: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_actions_golden_test.dart: 2.2 действия icon_button icon_button dark_ts2
+00:04 +85: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_overlays_golden_test.dart: 2.5 оверлеи sheet sheet light_ts2
+00:04 +86: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_overlays_golden_test.dart: 2.5 оверлеи sheet sheet light_ts2
+00:04 +87: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_primitives_golden_test.dart: 2.1 примитивы icon3d icon3d light_hc
+00:04 +88: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_input_golden_test.dart: 2.3 ввод switch switch dark_hc
+00:04 +89: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_actions_golden_test.dart: 2.2 действия icon_button icon_button dark_hc_ts2
+00:04 +90: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_nav_golden_test.dart: nav_sidebar nav_sidebar dark_hc_ts2
+00:04 +91: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_nav_golden_test.dart: nav_sidebar nav_sidebar dark_hc_ts2
+00:04 +92: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_primitives_golden_test.dart: 2.1 примитивы icon3d icon3d dark_ts2
+00:04 +93: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_input_golden_test.dart: 2.3 ввод switch switch light
+00:04 +94: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_actions_golden_test.dart: 2.2 действия icon_button icon_button light_ts2
+00:04 +95: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_actions_golden_test.dart: 2.2 действия icon_button icon_button light_ts2
+00:04 +96: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_actions_golden_test.dart: 2.2 действия icon_button icon_button light_ts2
+00:04 +97: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_overlays_golden_test.dart: 2.5 оверлеи dialog dialog dark
+00:04 +98: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_overlays_golden_test.dart: 2.5 оверлеи dialog dialog dark
+00:04 +99: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_primitives_golden_test.dart: 2.1 примитивы icon3d icon3d light_ts2
+00:04 +100: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_nav_golden_test.dart: nav_sidebar nav_sidebar light_hc_ts2
+00:05 +101: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_nav_golden_test.dart: nav_sidebar nav_sidebar light_hc_ts2
+00:05 +102: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_actions_golden_test.dart: 2.2 действия icon_button icon_button light_hc_ts2
+00:05 +103: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_overlays_golden_test.dart: 2.5 оверлеи dialog dialog dark_hc
+00:05 +104: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_primitives_golden_test.dart: 2.1 примитивы icon3d icon3d light_hc_ts2
+00:05 +105: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_input_golden_test.dart: 2.3 ввод switch switch dark_hc_ts2
+00:05 +106: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_actions_golden_test.dart: 2.2 действия split_button split_button dark
+00:05 +107: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_overlays_golden_test.dart: 2.5 оверлеи dialog dialog light
+00:05 +108: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_primitives_golden_test.dart: 2.1 примитивы key_hint key_hint dark
+00:05 +109: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_input_golden_test.dart: 2.3 ввод switch switch light_ts2
+00:05 +110: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_input_golden_test.dart: 2.3 ввод switch switch light_ts2
+00:05 +111: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_overlays_golden_test.dart: 2.5 оверлеи dialog dialog light_hc
+00:05 +112: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_primitives_golden_test.dart: 2.1 примитивы key_hint key_hint dark_hc
+00:05 +113: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_actions_golden_test.dart: 2.2 действия split_button split_button light
+00:05 +114: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_input_golden_test.dart: 2.3 ввод switch switch light_hc_ts2
+00:05 +115: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_overlays_golden_test.dart: 2.5 оверлеи dialog dialog dark_ts2
+00:05 +116: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_overlays_golden_test.dart: 2.5 оверлеи dialog dialog dark_ts2
+00:05 +117: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_overlays_golden_test.dart: 2.5 оверлеи dialog dialog dark_ts2
+00:05 +118: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_input_golden_test.dart: 2.3 ввод segmented segmented dark
+00:05 +119: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_input_golden_test.dart: 2.3 ввод segmented segmented dark
+00:05 +120: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_input_golden_test.dart: 2.3 ввод segmented segmented dark
+00:05 +121: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_overlays_golden_test.dart: 2.5 оверлеи dialog dialog dark_hc_ts2
+00:05 +122: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_overlays_golden_test.dart: 2.5 оверлеи dialog dialog dark_hc_ts2
+00:05 +123: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_actions_golden_test.dart: 2.2 действия split_button split_button dark_hc_ts2
+00:05 +124: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_actions_golden_test.dart: 2.2 действия split_button split_button dark_hc_ts2
+00:05 +125: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_primitives_golden_test.dart: 2.1 примитивы key_hint key_hint dark_hc_ts2
+00:05 +126: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_overlays_golden_test.dart: 2.5 оверлеи dialog dialog light_ts2
+00:05 +127: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_input_golden_test.dart: 2.3 ввод segmented segmented light
+00:05 +128: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_input_golden_test.dart: 2.3 ввод segmented segmented light
+00:05 +129: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_input_golden_test.dart: 2.3 ввод segmented segmented light
+00:05 +130: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_overlays_golden_test.dart: 2.5 оверлеи dialog dialog light_hc_ts2
+00:05 +131: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_overlays_golden_test.dart: 2.5 оверлеи dialog dialog light_hc_ts2
+00:05 +132: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_input_golden_test.dart: 2.3 ввод segmented segmented light_hc
+00:05 +133: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_actions_golden_test.dart: 2.2 действия split_button split_button light_hc_ts2
+00:05 +134: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_primitives_golden_test.dart: 2.1 примитивы badge badge dark
+00:05 +135: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_overlays_golden_test.dart: 2.5 оверлеи toast toast dark
+00:05 +136: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_overlays_golden_test.dart: 2.5 оверлеи toast toast dark
+00:05 +137: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_overlays_golden_test.dart: 2.5 оверлеи toast toast dark
+00:05 +138: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_primitives_golden_test.dart: 2.1 примитивы badge badge dark_hc
+00:05 +139: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_input_golden_test.dart: 2.3 ввод segmented segmented dark_hc_ts2
+00:05 +140: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_actions_golden_test.dart: 2.2 действия fab fab dark_hc
+00:05 +141: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_overlays_golden_test.dart: 2.5 оверлеи toast toast dark_hc
+00:05 +142: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_primitives_golden_test.dart: 2.1 примитивы badge badge light
+00:05 +143: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_input_golden_test.dart: 2.3 ввод segmented segmented light_ts2
+00:05 +144: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_input_golden_test.dart: 2.3 ввод segmented segmented light_ts2
+00:05 +145: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_overlays_golden_test.dart: 2.5 оверлеи toast toast light
+00:05 +146: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_primitives_golden_test.dart: 2.1 примитивы badge badge light_hc
+00:05 +147: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_actions_golden_test.dart: 2.2 действия fab fab light_hc
+00:05 +148: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_input_golden_test.dart: 2.3 ввод segmented segmented light_hc_ts2
+00:05 +149: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_progress_golden_test.dart: (setUpAll)
+00:05 +149: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_overlays_golden_test.dart: 2.5 оверлеи toast toast light_hc
+00:05 +150: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_overlays_golden_test.dart: 2.5 оверлеи toast toast light_hc
+00:05 +151: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_actions_golden_test.dart: 2.2 действия fab fab dark_ts2
+00:05 +152: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_input_golden_test.dart: 2.3 ввод slider slider dark
+00:05 +153: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_input_golden_test.dart: 2.3 ввод slider slider dark
+00:05 +154: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_input_golden_test.dart: 2.3 ввод slider slider dark
+00:05 +155: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_input_golden_test.dart: 2.3 ввод slider slider dark
+00:05 +156: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_progress_golden_test.dart: 2.6 прогресс progress_line progress_line dark
+00:05 +157: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_progress_golden_test.dart: 2.6 прогресс progress_line progress_line dark
+00:05 +158: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_progress_golden_test.dart: 2.6 прогресс progress_line progress_line dark
+00:05 +159: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_progress_golden_test.dart: 2.6 прогресс progress_line progress_line dark
+00:06 +160: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_progress_golden_test.dart: 2.6 прогресс progress_line progress_line dark
+00:06 +161: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_progress_golden_test.dart: 2.6 прогресс progress_line progress_line dark
+00:06 +162: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_progress_golden_test.dart: 2.6 прогресс progress_line progress_line dark
+00:06 +163: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_progress_golden_test.dart: 2.6 прогресс progress_line progress_line dark
+00:06 +164: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_progress_golden_test.dart: 2.6 прогресс progress_line progress_line dark
+00:06 +165: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_progress_golden_test.dart: 2.6 прогресс progress_line progress_line dark
+00:06 +166: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_progress_golden_test.dart: 2.6 прогресс progress_line progress_line dark
+00:06 +167: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_progress_golden_test.dart: 2.6 прогресс progress_line progress_line dark
+00:06 +168: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_progress_golden_test.dart: 2.6 прогресс progress_line progress_line dark
+00:06 +169: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_progress_golden_test.dart: 2.6 прогресс progress_line progress_line dark
+00:06 +170: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_progress_golden_test.dart: 2.6 прогресс progress_line progress_line dark
+00:06 +171: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_progress_golden_test.dart: 2.6 прогресс progress_line progress_line dark
+00:06 +172: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_progress_golden_test.dart: 2.6 прогресс progress_line progress_line dark
+00:06 +173: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_progress_golden_test.dart: 2.6 прогресс progress_line progress_line dark
+00:06 +174: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_progress_golden_test.dart: 2.6 прогресс progress_line progress_line dark
+00:06 +175: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_progress_golden_test.dart: 2.6 прогресс progress_line progress_line dark
+00:06 +176: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_progress_golden_test.dart: 2.6 прогресс progress_line progress_line dark
+00:06 +177: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_progress_golden_test.dart: 2.6 прогресс progress_line progress_line dark
+00:06 +178: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_progress_golden_test.dart: 2.6 прогресс progress_line progress_line dark
+00:06 +179: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_progress_golden_test.dart: 2.6 прогресс progress_line progress_line dark
+00:06 +180: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_progress_golden_test.dart: 2.6 прогресс progress_line progress_line dark
+00:06 +181: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_progress_golden_test.dart: 2.6 прогресс progress_line progress_line dark
+00:06 +182: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_progress_golden_test.dart: 2.6 прогресс progress_line progress_line dark
+00:06 +183: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_progress_golden_test.dart: 2.6 прогресс progress_line progress_line dark
+00:06 +184: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_progress_golden_test.dart: 2.6 прогресс progress_line progress_line dark
+00:06 +185: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_session_golden_test.dart: 2.7 сессия monolith monolith dark
+00:06 +186: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_session_golden_test.dart: 2.7 сессия monolith monolith dark
+00:06 +187: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_session_golden_test.dart: 2.7 сессия monolith monolith dark
+00:06 +188: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_session_golden_test.dart: 2.7 сессия monolith monolith dark
+00:06 +189: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_session_golden_test.dart: 2.7 сессия monolith monolith dark
+00:06 +190: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_session_golden_test.dart: 2.7 сессия monolith monolith dark
+00:06 +191: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_session_golden_test.dart: 2.7 сессия monolith monolith dark
+00:06 +192: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_session_golden_test.dart: 2.7 сессия monolith monolith dark
+00:06 +193: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_session_golden_test.dart: 2.7 сессия monolith monolith dark
+00:06 +194: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_session_golden_test.dart: 2.7 сессия monolith monolith dark
+00:06 +195: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_session_golden_test.dart: 2.7 сессия monolith monolith dark
+00:06 +196: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_session_golden_test.dart: 2.7 сессия monolith monolith dark
+00:06 +197: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_session_golden_test.dart: 2.7 сессия monolith monolith dark
+00:07 +198: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_session_golden_test.dart: 2.7 сессия monolith monolith dark
+00:07 +199: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_session_golden_test.dart: 2.7 сессия monolith monolith dark
+00:07 +200: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_session_golden_test.dart: 2.7 сессия monolith monolith dark
+00:07 +201: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_session_golden_test.dart: 2.7 сессия monolith monolith dark
+00:07 +202: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_session_golden_test.dart: 2.7 сессия monolith monolith dark
+00:07 +203: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_session_golden_test.dart: 2.7 сессия monolith monolith dark
+00:07 +204: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_session_golden_test.dart: 2.7 сессия monolith monolith dark
+00:07 +205: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_progress_golden_test.dart: 2.6 прогресс progress_line progress_line light_hc_ts2
+00:07 +206: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_input_golden_test.dart: 2.3 ввод chip chip light_hc
+00:07 +207: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_session_golden_test.dart: 2.7 сессия monolith monolith dark_hc
+00:07 +208: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: (setUpAll)
+00:07 +209: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: (setUpAll)
+00:07 +209: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_input_golden_test.dart: 2.3 ввод chip chip dark_ts2
+00:07 +210: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_input_golden_test.dart: 2.3 ввод chip chip dark_ts2
+00:07 +211: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_progress_golden_test.dart: 2.6 прогресс segmented_progress segmented_progress dark_hc
+00:07 +212: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура list_row list_row dark
+00:07 +213: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура list_row list_row dark
+00:07 +214: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура list_row list_row dark
+00:07 +215: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура list_row list_row dark
+00:07 +216: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура list_row list_row dark
+00:07 +217: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура list_row list_row dark
+00:07 +218: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура list_row list_row dark
+00:07 +219: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура list_row list_row dark
+00:07 +220: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура list_row list_row dark
+00:07 +221: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура list_row list_row dark
+00:07 +222: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура list_row list_row dark
+00:07 +223: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура list_row list_row dark
+00:07 +224: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура list_row list_row dark
+00:07 +225: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура list_row list_row dark
+00:07 +226: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура list_row list_row dark
+00:07 +227: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура list_row list_row dark
+00:07 +228: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура list_row list_row dark
+00:07 +229: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура list_row list_row dark
+00:07 +230: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура list_row list_row dark
+00:07 +231: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура list_row list_row dark
+00:07 +232: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура list_row list_row dark
+00:08 +233: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура list_row list_row dark
+00:08 +234: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура list_row list_row dark
+00:08 +235: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура list_row list_row dark
+00:08 +236: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура list_row list_row dark
+00:08 +237: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура list_row list_row dark
+00:08 +238: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура list_row list_row dark
+00:08 +239: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура list_row list_row dark
+00:08 +240: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура list_row list_row dark
+00:08 +241: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура list_row list_row dark
+00:08 +242: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура list_row list_row dark
+00:08 +243: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура list_row list_row dark
+00:08 +244: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура list_row list_row dark
+00:08 +245: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура list_row list_row dark
+00:08 +246: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура list_row list_row dark
+00:08 +247: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура list_row list_row dark
+00:08 +248: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура list_row list_row dark
+00:08 +249: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: decks dark
+00:08 +250: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: decks dark
+00:08 +251: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: decks dark
+00:08 +252: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: decks dark
+00:08 +253: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: decks dark
+00:08 +254: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: decks dark
+00:08 +255: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: decks dark
+00:08 +256: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: decks dark
+00:08 +257: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: decks dark
+00:08 +258: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: decks dark
+00:08 +259: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: decks dark
+00:08 +260: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: decks dark
+00:08 +261: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: decks dark
+00:08 +262: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: decks dark
+00:08 +263: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: decks dark
+00:08 +264: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: decks dark
+00:08 +265: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: decks dark
+00:08 +266: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: decks dark
+00:08 +267: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: decks dark
+00:09 +268: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: decks dark
+00:09 +269: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: decks dark
+00:09 +270: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: decks dark
+00:09 +271: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: decks dark
+00:09 +272: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: decks dark
+00:09 +273: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: decks dark
+00:09 +274: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: decks dark
+00:09 +275: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: decks dark
+00:09 +276: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: decks dark
+00:09 +277: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: decks dark
+00:09 +278: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: decks dark
+00:09 +279: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: decks dark
+00:09 +280: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: decks dark
+00:09 +281: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: decks dark
+00:09 +282: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: decks dark
+00:09 +283: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: decks dark
+00:09 +284: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: decks dark
+00:09 +285: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_session_golden_test.dart: 2.7 сессия rating_dock rating_dock light
+00:09 +286: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура card_tile card_tile dark
+00:09 +287: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: decks light
+00:09 +288: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: decks light
+00:09 +289: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: decks light
+00:09 +290: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: decks light
+00:10 +291: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: decks light
+00:10 +292: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_session_golden_test.dart: 2.7 сессия rating_dock rating_dock dark_hc_ts2
+00:10 +293: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура card_tile card_tile light_hc
+00:10 +294: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: deck dark
+00:10 +295: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: deck dark
+00:10 +296: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: deck dark
+00:10 +297: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: deck dark
+00:10 +298: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: deck dark
+00:10 +299: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: deck dark
+00:10 +300: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: deck dark
+00:10 +301: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: deck dark
+00:10 +302: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура top_bar top_bar dark_hc
+00:10 +303: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: deck light
+00:10 +304: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: deck light
+00:10 +305: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: deck light
+00:10 +306: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: deck light
+00:10 +307: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура top_bar top_bar dark_hc_ts2
+00:10 +308: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: card-form dark
+00:11 +309: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: card-form dark
+00:11 +310: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: card-form dark
+00:11 +311: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: card-form dark
+00:11 +312: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: card-form dark
+00:11 +313: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: card-form dark
+00:11 +314: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: card-form dark
+00:11 +315: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: card-form dark
+00:11 +316: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура empty_state empty_state dark_hc_ts2
+00:11 +317: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: card-form light
+00:11 +318: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: card-form light
+00:11 +319: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: card-form light
+00:11 +320: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: card-form light
+00:11 +321: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура error_state error_state dark_hc
+00:11 +322: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: constructor dark
+00:12 +323: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: constructor dark
+00:12 +324: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: constructor dark
+00:12 +325: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: constructor dark
+00:12 +326: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: constructor dark
+00:12 +327: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура error_state error_state light_ts2
+00:12 +328: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: constructor light
+00:12 +329: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: constructor light
+00:12 +330: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: statistics dark
+00:12 +331: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: statistics light
+00:13 +332: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: settings dark
+00:13 +333: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: settings light
+00:13 +334: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: providers dark
+00:13 +335: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: providers light
+00:14 +336: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/redesign_screens_golden_test.dart: (tearDownAll)
+00:14 +336: loading C:/Users/piotr/OneDrive/Desktop/CardFlow/test/live/images_v6_live_test.dart
+Warning: A tag was used that wasn't specified in dart_test.yaml.
+  live was used in the test "живые колоды «Статика» и «Биология»: картинки, провайдеры, время"
+
+00:14 +336: loading C:/Users/piotr/OneDrive/Desktop/CardFlow/test/live/openai_compatible_deepseek_live_test.dart
+Warning: A tag was used that wasn't specified in dart_test.yaml.
+  live was used in:
+    the test "реальный вызов DeepSeek через OpenAI-compatible: один запрос, карточки по канонической схеме A8.4"
+    the test "живой DeepSeek отклоняет strict response_format → fallback с max_tokens (ADR-021)"
+    the test "живой DeepSeek: prompt-only без файлов и image_query (gen-ru-v4)"
+    the test "живой DeepSeek → image_query → реальный поиск → карточки с картинками"
+    the test "живой DeepSeek: страницы PDF-скана как image parts (7.11)"
+    the test "живой DeepSeek: тема «Статика: аксиомы, связи, плоские фермы», 20 карточек, доля пометок качества"
+    the test "живой DeepSeek: DOCX с формулами и рисунком → image_id из файла"
+
+00:14 +336: loading C:/Users/piotr/OneDrive/Desktop/CardFlow/test/live/wikimedia_images_live_test.dart
+Warning: A tag was used that wasn't specified in dart_test.yaml.
+  live was used in:
+    the test "живой Wikimedia Commons: русский image_query → JPEG/PNG"
+    the test "живой Wikipedia: русский запрос → превью статьи"
+    the test "живая цепочка источников: «спайность минерала» → картинка"
+
+01:53 +336: All tests passed!

@@ -26,8 +26,8 @@ Android SDK/JDK/Xcode) — локально `test/analyze/format/golden`, `build
 | 3.5 | Конструктор `session/session_constructor_screen.dart` | `a463fae` | `94e74ff` | `constructor-*` (6) |
 | 3.6 | Статистика `statistics/statistics_screen.dart`, `statistics_charts.dart` | `0f8d86a` | `df12936` | `statistics-*` (6) |
 | 3.7 | Настройки `settings/settings_screen.dart` | `4e93db2` | `5d7fb08` | `settings-*` (6) |
-| 3.8 | Провайдеры `settings/generation_settings_screen.dart`, `provider_account_dialogs.dart`, `provider_labels.dart` | `d0ad17e`? | — | `providers-*` (6) |
-| 3.9 | Verify | — | — | — |
+| 3.8 | Провайдеры `settings/generation_settings_screen.dart`, `provider_account_dialogs.dart`, `provider_labels.dart` | `c7000cd` | `214bba5` | `providers-*` (6) |
+| 3.9 | Verify | — | `этот коммит` | 48 PNG |
 
 ### 3.1 Оболочка — обработчики (до правки → после)
 
@@ -221,9 +221,31 @@ large title. Интеграционный тест применения наст
 Заполняется по шагам ниже (перед правкой экрана): что вызывается по каждой
 кнопке — после правки вызывается то же и с теми же аргументами.
 
-## Гейты (итог)
+## Гейты (итог, шаг 3.9)
 
-Заполняется в шаге 3.9.
+- Полный прогон: **2121 passed + 8 skipped** (`--coverage --exclude-tags
+  golden`); покрытие рукописного кода **93,1 % (16799/18043)**.
+- Golden: **336 passed**; analyzer **0**; формат **541 / 0 changed**.
+- Windows: `build windows --release` → `cardflow.exe` (67,2 с);
+  `integration_test/session_smoke_windows_test.dart -d windows` →
+  **All tests passed!** (39 с; смоук переведён на фиксированные кадры —
+  бесконечный дрейф Aurora в реальном процессе).
+- Ключи UI: **238**; guard миграции — 13 файлов этапа; Красная зона:
+  `git diff --stat 4b4cc21..HEAD -- <19 файлов>` **пусто**.
+- Скриншоты: **48 PNG** (8 экранов × 2 темы × 3 ширины), golden экранов 16.
+- Подробности — `journal/redesign-3/verify.md`; ограничения L104–L110.
+
+## Итог этапа
+
+Экраны 3.1–3.8 переведены на `Nc*`-компоненты (оболочка с доком/рейлом/
+сайдбаром, «Мои колоды», экран колоды с Hero, форма карточки и стили
+контента §9.20, конструктор, статистика на токенах, настройки с
+`NcSection`/`NcSlider`/`NcStepper`, провайдеры с `NcDropdown` и проверкой
+ключа бейджем). Логика заморожена: обработчики и провайдеры вызываются теми
+же методами; ключи §9 сохранены, добавлены только новые (`shell-nav-*`,
+`constructor-limit-minus/plus`, `provider-check-result-*`). Hero колоды
+работает (widget-тест + смоук); интеграционный тест применения настроек
+(тема, контраст, дислексия, масштаб, движение, отклик) зелёный.
 
 
 

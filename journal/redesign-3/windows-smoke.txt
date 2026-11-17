@@ -1,0 +1,14 @@
+00:00 +0: loading C:/Users/piotr/OneDrive/Desktop/CardFlow/integration_test/session_smoke_windows_test.dart
+Building Windows application...                                    29,5s
+√ Built build\windows\x64\runner\Debug\cardflow.exe
+00:00 +0: Windows 7.12: картинка Basic без масок, лимит, генерация с картинками
+Генерация: ответ модели: {"cards":[{"front":"Что это?","back":"Московский Кремль.","hint":null,"tags":["история"],"card_type":"basic","source_excerpt":null,"source_file":null,"image_id":null,"image":{"query":"Moscow Kremlin photo","fallback_query":"Moscow Kremlin","kind":"photo"}},{"front":"В каком году основан Кремль?","back":"В 1156 году.","hint":null,"tags":["история"],"card_type":"basic","source_excerpt":null,"source_file":null,"image_id":null,"image":{"query":"Kremlin tower architecture photo","fallback_query":"Kremlin tower","kind":"photo"}}]}
+Генерация: картинка по запросу "moscow kremlin": wikimedia: скачано 20589 Б, png, 800x450
+Генерация: картинка по запросу "kremlin tower architecture": wikimedia: нет подходящей картинки среди 1 кандидатов
+Генерация: картинка по запросу "kremlin tower architecture": wikipedia: нет подходящей картинки среди 0 кандидатов
+Генерация: картинка по запросу "kremlin tower architecture": openverse: нет подходящей картинки среди 0 кандидатов
+Генерация: картинка по запросу "kremlin tower": wikimedia: нет подходящей картинки среди 1 кандидатов
+Генерация: картинка по запросу "kremlin tower": wikipedia: нет подходящей картинки среди 0 кандидатов
+Генерация: картинка по запросу "kremlin tower": openverse: нет подходящей картинки среди 0 кандидатов
+00:38 +1: (tearDownAll)
+00:39 +1: All tests passed!
