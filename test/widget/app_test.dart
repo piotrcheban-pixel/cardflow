@@ -164,7 +164,11 @@ void main() {
       final Finder generationLink = find.byKey(
         const ValueKey<String>('settings-open-generation'),
       );
-      await tester.ensureVisible(generationLink);
+      await tester.scrollUntilVisible(
+        generationLink,
+        260,
+        scrollable: find.byType(Scrollable).first,
+      );
       await tester.pumpAndSettle();
       await tester.tap(generationLink);
       await tester.pumpAndSettle();

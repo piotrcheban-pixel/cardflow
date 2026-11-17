@@ -13,6 +13,7 @@ import 'package:cardflow/api/providers/openai_compatible_adapter.dart';
 import 'package:cardflow/domain/generation/provider_account.dart';
 import 'package:cardflow/domain/settings/app_settings.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
+import 'package:cardflow/ui/design/design.dart';
 import 'package:cardflow/ui/settings/settings_screen.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
 
@@ -134,8 +135,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text(l10n.settingsSaveError), findsOneWidget);
-    final SwitchListTile tile = tester.widget<SwitchListTile>(
-      find.byKey(const ValueKey<String>('settings-dynamic-color')),
+    final NcSwitch tile = tester.widget<NcSwitch>(
+      find.descendant(
+        of: find.byKey(const ValueKey<String>('settings-dynamic-color')),
+        matching: find.byType(NcSwitch),
+      ),
     );
     expect(tile.value, isFalse);
     expect(settings.settings.dynamicColor, isFalse);
@@ -186,7 +190,7 @@ void main() {
       contains(const Duration(minutes: 5)),
     );
 
-    final InputChip added = tester.widget<InputChip>(
+    final NcChip added = tester.widget<NcChip>(
       find.byKey(const ValueKey<String>('learning-step-5')),
     );
     added.onDeleted!();
