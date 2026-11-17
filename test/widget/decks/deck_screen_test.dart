@@ -443,15 +443,15 @@ void main() {
 
       expect(find.byType(SessionConstructorScreen), findsOneWidget);
       expect(find.text(l10n.constructorTitle), findsOneWidget);
-      expect(
-        tester
-            .widget<FilterChip>(
-              find.byKey(const ValueKey<String>('constructor-deck-deck-1')),
-            )
-            .selected,
-        isTrue,
-        reason: 'колода с экрана колоды предвыбрана',
+      final Finder deckPick = find.descendant(
+        of: find.byKey(const ValueKey<String>('constructor-deck-deck-1')),
+        matching: find.byType(Semantics),
       );
+      final bool preselected = deckPick.evaluate().any(
+        (Element element) =>
+            (element.widget as Semantics).properties.selected == true,
+      );
+      expect(preselected, isTrue, reason: 'колода с экрана колоды предвыбрана');
     });
 
     // Итерация 7.11 (owner-note): тренировка доступна из листа режимов и не
