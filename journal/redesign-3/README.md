@@ -22,8 +22,8 @@ Android SDK/JDK/Xcode) — локально `test/analyze/format/golden`, `build
 | 3.1 | Оболочка `shell/app_shell.dart`, `design/components/nc_nav.dart` | `aaa3ec1`, `e3d4acb` | `9672704` | `shell-*` (6) |
 | 3.2 | «Мои колоды» `decks/decks_screen.dart`, `decks/deck_actions.dart` | `e4fc69e` | `266ca6a` | `decks-*` (6) |
 | 3.3 | Экран колоды `decks/deck_screen.dart` | `b335ac2` | `eabf8f6` | `deck-*` (6) |
-| 3.4 | Форма карточки `cards/card_form_screen.dart`, `cards/occlusion_mask_editor.dart`, стили `cards/content/*` | `38511f6` | — | `card-form-*` (6) |
-| 3.5 | Конструктор `session/session_constructor_screen.dart` | — | — | — |
+| 3.4 | Форма карточки `cards/card_form_screen.dart`, `cards/occlusion_mask_editor.dart`, стили `cards/content/*` | `38511f6` | `e6d8514` | `card-form-*` (6) |
+| 3.5 | Конструктор `session/session_constructor_screen.dart` | `a463fae` | — | `constructor-*` (6) |
 | 3.6 | Статистика `statistics/statistics_screen.dart`, `statistics_charts.dart` | — | — | — |
 | 3.7 | Настройки `settings/settings_screen.dart` | — | — | — |
 | 3.8 | Провайдеры `settings/generation_settings_screen.dart`, `provider_account_dialogs.dart`, `provider_labels.dart` | — | — | — |
@@ -123,6 +123,24 @@ textScale > 1,3 стат-пилюли показывают только числ
 на 240 мс; скелетон картинки статичен (повторяющийся shimmer заблокировал бы
 `pumpAndSettle` в тестах картинки).
 
+### 3.5 Конструктор — обработчики (до правки → после)
+
+| Действие | До | После |
+|---|---|---|
+| Колода | `FilterChip` → `_toggleDeck` | мини-плитка `NcSurface` + `Semantics(selected)` (ключ `constructor-deck-*`) → тот же `_toggleDeck` |
+| Теги/тип/состояние | `FilterChip` → `_toggleTag/_toggleType/_toggleState` | `NcChip.filter` с теми же ключами → те же тумблеры |
+| Режим | `SegmentedButton` (ключ `constructor-mode`) | `NcSegmented` с тем же ключом → `setState(_mode)` |
+| Вид лимита | `ChoiceChip` → `_setLimitKind` | `NcSegmented` с сегментами-ключами `constructor-limit-cards/minutes` → тот же `_setLimitKind` |
+| Значение лимита | `DropdownButton` (ключ `constructor-limit-value`) | `NcStepper` (ключ значения сохранён; новые ключи `constructor-limit-minus/plus`) → новые `_stepLimit(-1/1)` по прежним дискретным значениям 10/20/50/100 и 5/10/15/30 |
+| Порядок | `SwitchListTile` (ключи `constructor-shuffle/interleave/warmup`) | `NcListRow` + `NcSwitch` с теми же ключами → те же `setState` |
+| Пресет | `ListTile`/`IconButton` → `_applyPreset/_deletePreset` | `NcListRow` + `NcIconButton` с теми же ключами → те же методы |
+| Имя пресета | `AlertDialog` + `TextField` | `NcDialog` + `NcTextField` (ключи `constructor-preset-name/submit`) → тот же `savePreset` |
+| Низ | `TextButton` + `FilledButton` | стеклянная панель `NcGlass` с `NcButton.secondary/primary` (ключи `constructor-available/save-preset/start`) и mono-счётчиком «Подходит» |
+
+Отступления: аватар колоды 40 px вместо 32 — `NcIcon3D` запрещает
+размер < 40 (§5.1); лимит меняется дискретным степпером по прежним наборам
+значений (dropdown упразднён, чтобы сохранить совместимость пресетов).
+
 ## Тестовая инфраструктура этапа
 
 - `test/helpers/nc_screen_harness.dart` — производственная обвязка экрана:
@@ -146,4 +164,5 @@ textScale > 1,3 стат-пилюли показывают только числ
 ## Гейты (итог)
 
 Заполняется в шаге 3.9.
+
 

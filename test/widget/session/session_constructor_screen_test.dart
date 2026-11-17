@@ -142,7 +142,11 @@ void main() {
       of: find.byKey(ValueKey<String>(key)),
       matching: find.byType(Semantics),
     );
-    return tester.widget<Semantics>(semantics).properties.selected ?? false;
+    for (final Element element in semantics.evaluate()) {
+      final bool? selected = (element.widget as Semantics).properties.selected;
+      if (selected != null) return selected;
+    }
+    return false;
   }
 
   Future<void> scrollTo(WidgetTester tester, Finder finder) async {

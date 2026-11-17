@@ -24,7 +24,9 @@ constructor-available
 constructor-deck-*
 constructor-interleave
 constructor-limit-cards
+constructor-limit-minus
 constructor-limit-minutes
+constructor-limit-plus
 constructor-limit-value
 constructor-mode
 constructor-preset-*
