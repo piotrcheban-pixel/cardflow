@@ -41,14 +41,6 @@ import '../test/helpers/fake_http_adapter.dart';
 import '../test/helpers/generation_fakes.dart';
 import '../test/helpers/pump_app.dart';
 
-/// Реальный процесс: фон Aurora дрейфует бесконечно, поэтому
-/// `pumpAndSettle` здесь не завершается. Ждём фиксированные кадры.
-Future<void> settle(WidgetTester tester) async {
-  for (var index = 0; index < 8; index++) {
-    await tester.pump(const Duration(milliseconds: 250));
-  }
-}
-
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
@@ -235,19 +227,33 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(overrides: overrides, child: const CardFlowApp()),
       );
-      await settle(tester);
+      await tester.pumpAndSettle();
       final AppLocalizations l10n = l10nOf(tester);
 
-      await tester.ensureVisible(find.text('Мои карточки'));
-      await settle(tester);
-      await tester.tap(find.text('Мои карточки'));
-      await settle(tester);
-      await tester.ensureVisible(
-        find.byKey(const ValueKey<String>('deck-add-card')),
+      // 0. «Создать колоду» на боевой оболочке (`StatefulShellRoute`):
+      // диалог открывается и закрывается, экран ветки остаётся на месте.
+      // Регрессия Nocturne выталкивала из ветки экран вместо маршрута диалога
+      // (белый экран, `has popped the last page`) — ADR-036.
+      await tester.tap(find.text(l10n.decksCreateDeckFab));
+      await tester.pumpAndSettle();
+      expect(
+        find.text(l10n.deckCreateDialogTitle),
+        findsOneWidget,
+        reason: 'диалог создания колоды открывается',
       );
-      await settle(tester);
+      await tester.tap(find.text(l10n.cancel));
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.deckCreateDialogTitle), findsNothing);
+      expect(
+        find.text(l10n.decksTitle),
+        findsOneWidget,
+        reason: 'закрытие диалога не выталкивает экран из ветки',
+      );
+
+      await tester.tap(find.text('Мои карточки'));
+      await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey<String>('deck-add-card')));
-      await settle(tester);
+      await tester.pumpAndSettle();
       await tester.enterText(
         find.byKey(const ValueKey<String>('card-form-front')),
         'Что это?',
@@ -262,7 +268,7 @@ void main() {
       await tester.tap(
         find.byKey(const ValueKey<String>('card-form-pick-image')),
       );
-      await settle(tester);
+      await tester.pumpAndSettle();
       expect(
         find.byKey(const ValueKey<String>('card-form-image-preview')),
         findsOneWidget,
@@ -277,7 +283,7 @@ void main() {
         find.byKey(const ValueKey<String>('card-form-save')),
       );
       await tester.tap(find.byKey(const ValueKey<String>('card-form-save')));
-      await settle(tester);
+      await tester.pumpAndSettle();
 
       final List<CardRow> todayCards = await (database.select(
         database.cards,
@@ -302,9 +308,9 @@ void main() {
       // 2. Дневной лимит исчерпан, но карточка создана сегодня — сессия
       //    открывается без предупреждения, картинка видна.
       await tester.tap(find.text(l10n.reviewStartSession));
-      await settle(tester);
+      await tester.pumpAndSettle();
       await tester.tap(find.text(l10n.reviewModeClassic));
-      await settle(tester);
+      await tester.pumpAndSettle();
       expect(
         find.text(l10n.reviewDailyLimitTitle),
         findsNothing,
@@ -318,28 +324,28 @@ void main() {
         reason: 'иллюстрация Basic-карточки отрисована',
       );
       await tester.tap(find.byKey(const ValueKey<String>('review-close')));
-      await settle(tester);
+      await tester.pumpAndSettle();
       await tester.tap(
         find.byKey(const ValueKey<String>('review-exit-confirm')),
       );
-      await settle(tester);
+      await tester.pumpAndSettle();
 
       // 3. Старая карточка: дневной лимит действует — предупреждение и
       //    «Продолжить без лимита». Назад к списку колод — стрелка AppBar
       //    (`pageBack` ищет английский tooltip, а локаль только ru).
-      await tester.tap(find.byIcon(Icons.arrow_back_rounded));
-      await settle(tester);
+      await tester.tap(find.byIcon(Icons.arrow_back));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Старая колода'));
-      await settle(tester);
+      await tester.pumpAndSettle();
       await tester.tap(find.text(l10n.reviewStartSession));
-      await settle(tester);
+      await tester.pumpAndSettle();
       await tester.tap(find.text(l10n.reviewModeClassic));
-      await settle(tester);
+      await tester.pumpAndSettle();
       expect(find.text(l10n.reviewDailyLimitTitle), findsOneWidget);
       await tester.tap(
         find.byKey(const ValueKey<String>('review-limit-continue')),
       );
-      await settle(tester);
+      await tester.pumpAndSettle();
       expect(find.byType(ReviewSessionScreen), findsOneWidget);
       expect(find.text('Вчерашняя карточка'), findsOneWidget);
 
@@ -388,7 +394,7 @@ void main() {
           ),
         ),
       );
-      await settle(tester);
+      await tester.pumpAndSettle();
       expect(
         find.byKey(const ValueKey<String>('generation-preview-image-0')),
         findsOneWidget,
@@ -399,7 +405,7 @@ void main() {
       await tester.tap(
         find.byKey(const ValueKey<String>('generation-preview-import-all')),
       );
-      await settle(tester);
+      await tester.pumpAndSettle();
 
       final List<DeckRow> generatedDecks = await (database.select(
         database.decks,
