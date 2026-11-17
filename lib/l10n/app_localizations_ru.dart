@@ -1673,6 +1673,12 @@ class AppLocalizationsRu extends AppLocalizations {
   String get providersVisionSupported => 'Принимает изображения';
 
   @override
+  String get providersVisionShort => 'Изображения';
+
+  @override
+  String get providersVisionNotSupportedShort => 'Без изображений';
+
+  @override
   String get providersVisionNotSupported => 'Только текст';
 
   @override
@@ -1714,6 +1720,18 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get providersCheck => 'Проверить подключение';
+
+  @override
+  String get providersCheckWorks => 'Работает';
+
+  @override
+  String get providersCheckFailed => 'Ошибка';
+
+  @override
+  String get providersKeyShow => 'Показать ключ';
+
+  @override
+  String get providersKeyHide => 'Скрыть ключ';
 
   @override
   String get providersCheckValid => 'Подключение работает';

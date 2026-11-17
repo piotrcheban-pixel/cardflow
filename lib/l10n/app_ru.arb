@@ -2079,7 +2079,15 @@
   "@providersVisionSupported": {
     "description": "Подпись модели/аккаунта с поддержкой Vision (итерация 7.8)."
   },
-  "providersVisionNotSupported": "Только текст",
+
+  "providersVisionShort": "Изображения",
+  "@providersVisionShort": {
+    "description": "Короткий бейдж Vision для узкой карточки провайдера."
+  },
+  "providersVisionNotSupportedShort": "Без изображений",
+  "@providersVisionNotSupportedShort": {
+    "description": "Короткий бейдж «без Vision» для узкой карточки."
+  },  "providersVisionNotSupported": "Только текст",
   "@providersVisionNotSupported": {
     "description": "Подпись модели/аккаунта без Vision (итерация 7.8)."
   },
@@ -2132,7 +2140,23 @@
   "@providersCheck": {
     "description": "Кнопка проверки подключения."
   },
-  "providersCheckValid": "Подключение работает",
+
+  "providersCheckWorks": "Работает",
+  "@providersCheckWorks": {
+    "description": "Результат проверки ключа: успех (REDESIGN-SPEC §9.17)."
+  },
+  "providersCheckFailed": "Ошибка",
+  "@providersCheckFailed": {
+    "description": "Результат проверки ключа: ошибка (REDESIGN-SPEC §9.17)."
+  },
+  "providersKeyShow": "Показать ключ",
+  "@providersKeyShow": {
+    "description": "Кнопка-глаз поля ключа: показать введённое значение."
+  },
+  "providersKeyHide": "Скрыть ключ",
+  "@providersKeyHide": {
+    "description": "Кнопка-глаз поля ключа: скрыть значение."
+  },  "providersCheckValid": "Подключение работает",
   "@providersCheckValid": {
     "description": "Успешная проверка подключения."
   },

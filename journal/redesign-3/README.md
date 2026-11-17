@@ -25,8 +25,8 @@ Android SDK/JDK/Xcode) — локально `test/analyze/format/golden`, `build
 | 3.4 | Форма карточки `cards/card_form_screen.dart`, `cards/occlusion_mask_editor.dart`, стили `cards/content/*` | `38511f6` | `e6d8514` | `card-form-*` (6) |
 | 3.5 | Конструктор `session/session_constructor_screen.dart` | `a463fae` | `94e74ff` | `constructor-*` (6) |
 | 3.6 | Статистика `statistics/statistics_screen.dart`, `statistics_charts.dart` | `0f8d86a` | `df12936` | `statistics-*` (6) |
-| 3.7 | Настройки `settings/settings_screen.dart` | `4e93db2` | — | `settings-*` (6) |
-| 3.8 | Провайдеры `settings/generation_settings_screen.dart`, `provider_account_dialogs.dart`, `provider_labels.dart` | — | — | — |
+| 3.7 | Настройки `settings/settings_screen.dart` | `4e93db2` | `5d7fb08` | `settings-*` (6) |
+| 3.8 | Провайдеры `settings/generation_settings_screen.dart`, `provider_account_dialogs.dart`, `provider_labels.dart` | `d0ad17e`? | — | `providers-*` (6) |
 | 3.9 | Verify | — | — | — |
 
 ### 3.1 Оболочка — обработчики (до правки → после)
@@ -183,6 +183,23 @@ textScale > 1,3 стат-пилюли показывают только числ
 large title. Интеграционный тест применения настроек расширен повышенным
 контрастом (`NcTheme.highContrast` и выключенное стекло) к теме, дислексии,
 масштабу текста, движению и отклику.
+
+### 3.8 Провайдеры — обработчики (до правки → после)
+
+| Действие | До | После |
+|---|---|---|
+| Добавить | ключ `providers-add` → `showModalBottomSheet` с двумя строками (`providers-add-preset/custom`) | `NcIconButton` с тем же ключом → `NcSheet` с теми же ключами строк |
+| Каталог/свой | диалоги `AlertDialog` + `DropdownButtonFormField` | диалог `Dialog` с `NcSurface` 560 (до 90 % высоты), `NcDropdown`, `NcTextField`, `NcSwitch`; ключи `provider-preset-select/model-select/base-url/name/protocol-select/model/key/save/cancel` сохранены |
+| Проверка | `TextButton` + снекбар | `NcButton.secondary s` (loading — `NcSpinner` внутри) + бейдж результата `provider-check-result-<id>` и снекбар; логика `ApiKeyVerifier` прежняя |
+| Активный/изменить/удалить | `TextButton` в `Wrap` | `NcButton.secondary/ghost s` в `Wrap` с теми же ключами; при textScale > 1,3 — иконочные `NcIconButton` |
+| Карточка | `Card` + `Column` | `NcSurface` (ключ `provider-card-<id>`) с глифом протокола в круге `irisSoft`, бейджами «Основной`/`Vision` (ключи сохранены), статусом ключа и рядом действий |
+| Удаление | `AlertDialog` | `NcDialog` с ключами `provider-delete-confirm/cancel` |
+
+Ключ API: поле `provider-key` всегда `obscureText` (глаз — `NcIconButton`
+без отображения значения), после сохранения остаётся пустым; значения нигде
+не печатаются. `NcBadge` получил `Flexible`-подпись (иначе длинный бейдж
+переполнялся при textScale 2,0 — общая доработка дизайн-системы).
+`provider_labels` — иконки протоколов остались единственной точкой правки.
 
 ## Тестовая инфраструктура этапа
 

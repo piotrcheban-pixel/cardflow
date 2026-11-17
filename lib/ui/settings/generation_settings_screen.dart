@@ -1,14 +1,17 @@
-/// Экран «Провайдеры»: единый список аккаунтов генерации (ADR-020).
+/// Экран «Провайдеры»: единый список аккаунтов генерации (ADR-020;
+/// REDESIGN-SPEC §9.17).
 ///
-/// Переписан в итерации 7.5 по замечанию владельца: вместо отдельных полей
-/// OpenAI/Gemini/Anthropic и «OpenAI-совместимого сервера» — карточки
-/// провайдеров и кнопка «+ Добавить провайдера» с двумя путями (каталог или
-/// пользовательская модель API). Ключ API пишется только в `ApiKeyStore`
-/// (secure storage, SPEC 3.4) и отдельно от настроек: сохраняется по одному
-/// нажатию, без обязательного адреса/модели. После записи ключ читается
-/// обратно — «Сохранено» показывается только если хранилище действительно
-/// вернуло значение (диагностика D3).
+/// Карточки провайдеров — `NcSurface` с монохромным глифом протокола в круге
+/// `irisSoft`, бейджами «Активен»/«Vision» и рядом действий `Wrap`; проверка
+/// ключа показывает `NcSpinner` и бейдж результата. Ключ API пишется только в
+/// `ApiKeyStore` (secure storage, SPEC 3.4) и отдельно от настроек:
+/// сохраняется по одному нажатию, без обязательного адреса/модели. После
+/// записи ключ читается обратно — «Сохранено» показывается только если
+/// хранилище действительно вернуло значение (диагностика D3). Значение ключа
+/// нигде не отображается.
 library;
+
+import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
@@ -18,6 +21,7 @@ import 'package:cardflow/domain/generation/api_key_store.dart';
 import 'package:cardflow/domain/generation/provider_account.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/decks/deck_actions.dart' show showAppMessage;
+import 'package:cardflow/ui/design/design.dart';
 import 'package:cardflow/ui/settings/provider_account_dialogs.dart';
 import 'package:cardflow/ui/settings/provider_labels.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
@@ -37,6 +41,8 @@ class _GenerationSettingsScreenState
   ProviderAccounts _accounts = ProviderAccounts.empty;
   Map<String, bool> _keyConfigured = <String, bool>{};
   final Set<String> _checking = <String>{};
+  final Map<String, ApiKeyCheckStatus> _checkResults =
+      <String, ApiKeyCheckStatus>{};
   bool _loading = true;
   bool _loadFailed = false;
 
@@ -102,33 +108,33 @@ class _GenerationSettingsScreenState
   /// Меню «+ Добавить провайдера»: каталог или пользовательская модель.
   Future<void> _openAddMenu() async {
     final AppLocalizations l10n = AppLocalizations.of(context);
-    final _AddProviderChoice? choice =
-        await showModalBottomSheet<_AddProviderChoice>(
-          context: context,
-          builder: (BuildContext context) => SafeArea(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                ListTile(
-                  key: const ValueKey<String>('providers-add-preset'),
-                  leading: const Icon(Icons.storefront_outlined),
-                  title: Text(l10n.providersAddPreset),
-                  subtitle: Text(l10n.providersAddPresetSubtitle),
-                  onTap: () =>
-                      Navigator.of(context).pop(_AddProviderChoice.preset),
-                ),
-                ListTile(
-                  key: const ValueKey<String>('providers-add-custom'),
-                  leading: const Icon(Icons.tune_outlined),
-                  title: Text(l10n.providersAddCustom),
-                  subtitle: Text(l10n.providersAddCustomSubtitle),
-                  onTap: () =>
-                      Navigator.of(context).pop(_AddProviderChoice.custom),
-                ),
-              ],
-            ),
+    final _AddProviderChoice? choice = await showNcSheet<_AddProviderChoice>(
+      context,
+      title: l10n.providersAdd,
+      closeTooltip: l10n.commonClose,
+      builder: (BuildContext sheetContext) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          NcListRow(
+            key: const ValueKey<String>('providers-add-preset'),
+            leading: const Icon(Icons.storefront_outlined),
+            title: Text(l10n.providersAddPreset),
+            subtitle: Text(l10n.providersAddPresetSubtitle),
+            onTap: () =>
+                Navigator.of(sheetContext).pop(_AddProviderChoice.preset),
           ),
-        );
+          NcListRow(
+            key: const ValueKey<String>('providers-add-custom'),
+            leading: const Icon(Icons.tune_outlined),
+            title: Text(l10n.providersAddCustom),
+            subtitle: Text(l10n.providersAddCustomSubtitle),
+            showDivider: false,
+            onTap: () =>
+                Navigator.of(sheetContext).pop(_AddProviderChoice.custom),
+          ),
+        ],
+      ),
+    );
     if (!mounted || choice == null) return;
     switch (choice) {
       case _AddProviderChoice.preset:
@@ -212,24 +218,25 @@ class _GenerationSettingsScreenState
 
   Future<void> _delete(ProviderAccount account) async {
     final AppLocalizations l10n = AppLocalizations.of(context);
-    final bool? confirmed = await showDialog<bool>(
-      context: context,
-      builder: (BuildContext context) => AlertDialog(
-        title: Text(l10n.providersDeleteTitle),
-        content: Text(l10n.providersDeleteBody),
-        actions: <Widget>[
-          TextButton(
-            key: const ValueKey<String>('provider-delete-cancel'),
-            onPressed: () => Navigator.of(context).pop(false),
-            child: Text(l10n.cancel),
-          ),
-          FilledButton(
-            key: const ValueKey<String>('provider-delete-confirm'),
-            onPressed: () => Navigator.of(context).pop(true),
-            child: Text(l10n.providersDelete),
-          ),
-        ],
-      ),
+    final bool? confirmed = await showNcDialog<bool>(
+      context,
+      title: l10n.providersDeleteTitle,
+      message: l10n.providersDeleteBody,
+      icon3dName: 'shield_error',
+      actions: <Widget>[
+        NcButton(
+          key: const ValueKey<String>('provider-delete-cancel'),
+          label: l10n.cancel,
+          variant: NcButtonVariant.ghost,
+          onPressed: () => Navigator.of(context).pop(false),
+        ),
+        NcButton(
+          key: const ValueKey<String>('provider-delete-confirm'),
+          label: l10n.providersDelete,
+          variant: NcButtonVariant.destructive,
+          onPressed: () => Navigator.of(context).pop(true),
+        ),
+      ],
     );
     if (confirmed != true || !mounted) return;
     try {
@@ -240,6 +247,7 @@ class _GenerationSettingsScreenState
       setState(() {
         _accounts = updated;
         _keyConfigured = <String, bool>{..._keyConfigured}..remove(account.id);
+        _checkResults.remove(account.id);
       });
       showAppMessage(context, l10n.providersDeleted);
     } on Object {
@@ -273,6 +281,7 @@ class _GenerationSettingsScreenState
           .read(apiKeyVerifierProvider)
           .check(account);
       if (!mounted) return;
+      setState(() => _checkResults[account.id] = result.status);
       showAppMessage(context, _statusMessage(l10n, result.status));
     } on Object {
       if (!mounted) return;
@@ -298,62 +307,74 @@ class _GenerationSettingsScreenState
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
-    return Scaffold(
-      appBar: AppBar(title: Text(l10n.providersTitle)),
-      body: _buildBody(l10n),
-      bottomNavigationBar: _loading || _loadFailed
-          ? null
-          : SafeArea(
-              minimum: const EdgeInsets.all(16),
-              child: FilledButton.icon(
-                key: const ValueKey<String>('providers-add'),
-                onPressed: _openAddMenu,
-                icon: const Icon(Icons.add),
-                label: Text(l10n.providersAdd),
+    return NcGlassGroup(
+      child: Scaffold(
+        body: SafeArea(
+          bottom: false,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              NcTopBar(
+                title: l10n.providersTitle,
+                largeTitle: l10n.providersTitle,
+                actions: <Widget>[
+                  NcIconButton(
+                    key: const ValueKey<String>('providers-add'),
+                    icon: Icons.add_rounded,
+                    tooltip: l10n.providersAdd,
+                    onPressed: _openAddMenu,
+                  ),
+                ],
               ),
-            ),
+              Expanded(child: _buildBody(l10n)),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
   Widget _buildBody(AppLocalizations l10n) {
     if (_loading) {
-      return const Center(child: CircularProgressIndicator());
+      return ListView(
+        padding: const EdgeInsets.all(16),
+        children: const <Widget>[
+          NcSkeleton(height: 28, radius: NcRadii.s),
+          SizedBox(height: 16),
+          NcSkeleton(height: 160, radius: NcRadii.l),
+          SizedBox(height: 12),
+          NcSkeleton(height: 160, radius: NcRadii.l),
+        ],
+      );
     }
     if (_loadFailed) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Icon(
-                Icons.error_outline,
-                size: 48,
-                color: Theme.of(context).colorScheme.error,
-              ),
-              const SizedBox(height: 12),
-              Text(l10n.settingsLoadError, textAlign: TextAlign.center),
-              const SizedBox(height: 12),
-              TextButton(onPressed: _retryLoad, child: Text(l10n.retry)),
-            ],
-          ),
-        ),
+      return NcErrorState(
+        message: l10n.settingsLoadError,
+        retryLabel: l10n.retry,
+        onRetry: _retryLoad,
       );
     }
 
-    final ThemeData theme = Theme.of(context);
+    final NcTheme theme = NcTheme.of(context);
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
       children: <Widget>[
         Text(
           l10n.providersDescription,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
+          style: theme.typography.bodyS.copyWith(
+            color: theme.colors.textSecondary,
           ),
         ),
         const SizedBox(height: 12),
         if (_accounts.isEmpty)
-          _EmptyProviders(l10n: l10n)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            child: NcEmptyState(
+              iconName: 'key',
+              title: l10n.providersEmptyTitle,
+              message: l10n.providersEmptyDescription,
+            ),
+          )
         else
           for (final ProviderAccount account in _accounts.accounts)
             Padding(
@@ -363,6 +384,7 @@ class _GenerationSettingsScreenState
                 active: _accounts.active?.id == account.id,
                 keyConfigured: _keyConfigured[account.id] ?? false,
                 checking: _checking.contains(account.id),
+                checkStatus: _checkResults[account.id],
                 onCheck: () => _check(account),
                 onEdit: () => _edit(account),
                 onDelete: () => _delete(account),
@@ -383,44 +405,6 @@ enum _AddProviderChoice {
   custom,
 }
 
-/// Пустой список провайдеров.
-class _EmptyProviders extends StatelessWidget {
-  const _EmptyProviders({required this.l10n});
-
-  final AppLocalizations l10n;
-
-  @override
-  Widget build(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 32),
-      child: Column(
-        children: <Widget>[
-          Icon(
-            Icons.key_off_outlined,
-            size: 48,
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-          const SizedBox(height: 12),
-          Text(
-            l10n.providersEmptyTitle,
-            style: theme.textTheme.titleMedium,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            l10n.providersEmptyDescription,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 /// Карточка одного провайдера со статусом ключа и действиями.
 class _ProviderCard extends StatelessWidget {
   const _ProviderCard({
@@ -428,6 +412,7 @@ class _ProviderCard extends StatelessWidget {
     required this.active,
     required this.keyConfigured,
     required this.checking,
+    required this.checkStatus,
     required this.onCheck,
     required this.onEdit,
     required this.onDelete,
@@ -438,6 +423,7 @@ class _ProviderCard extends StatelessWidget {
   final bool active;
   final bool keyConfigured;
   final bool checking;
+  final ApiKeyCheckStatus? checkStatus;
   final VoidCallback onCheck;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
@@ -446,116 +432,227 @@ class _ProviderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
-    final ThemeData theme = Theme.of(context);
+    final NcTheme theme = NcTheme.of(context);
+    final bool narrow = MediaQuery.textScalerOf(context).scale(1) > 1.3;
     final String keyStatus = account.requiresApiKey
         ? (keyConfigured ? l10n.settingsKeyConfigured : l10n.settingsKeyMissing)
         : l10n.providersKeyNotRequired;
-    return Card(
+    return NcSurface(
       key: ValueKey<String>('provider-card-${account.id}'),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Row(
-              children: <Widget>[
-                Icon(providerProtocolIcon(account.protocol)),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Text(
-                        providerAccountLabel(l10n, account),
-                        style: theme.textTheme.titleMedium,
-                      ),
-                      Text(
-                        providerSummary(l10n, account),
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                      Text(
-                        account.baseUrl,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
+      radius: NcRadii.l,
+      level: 1,
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Container(
+                width: 40,
+                height: 40,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: theme.colors.irisSoft,
+                  shape: BoxShape.circle,
                 ),
-                if (active)
-                  Chip(
-                    key: ValueKey<String>('provider-active-${account.id}'),
-                    label: Text(l10n.providersActive),
-                    visualDensity: VisualDensity.compact,
-                  ),
+                child: Icon(
+                  providerProtocolIcon(account.protocol),
+                  size: 20,
+                  color: theme.colors.iris,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      providerAccountLabel(l10n, account),
+                      style: theme.typography.titleM.copyWith(
+                        color: theme.colors.textPrimary,
+                      ),
+                    ),
+                    Text(
+                      providerSummary(l10n, account),
+                      style: theme.typography.monoM.copyWith(
+                        color: theme.colors.textSecondary,
+                      ),
+                    ),
+                    Text(
+                      account.baseUrl,
+                      style: theme.typography.bodyS.copyWith(
+                        color: theme.colors.textTertiary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (!narrow) ...<Widget>[
+                const SizedBox(width: 8),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: <Widget>[
+                    if (active)
+                      NcBadge(
+                        key: ValueKey<String>('provider-active-${account.id}'),
+                        label: l10n.providersActive,
+                        tone: NcBadgeTone.jade,
+                      ),
+                    const SizedBox(height: 4),
+                    if (account.supportsVision)
+                      NcBadge(
+                        key: ValueKey<String>('provider-vision-${account.id}'),
+                        label: l10n.providersVisionSupported,
+                        tone: NcBadgeTone.iris,
+                      )
+                    else
+                      Text(
+                        l10n.providersVisionNotSupported,
+                        key: ValueKey<String>('provider-vision-${account.id}'),
+                        style: theme.typography.labelM.copyWith(
+                          color: theme.colors.textTertiary,
+                        ),
+                      ),
+                  ],
+                ),
               ],
-            ),
-            if (!account.isConfigured)
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Text(
-                  l10n.providersIncompleteHint,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.error,
-                  ),
-                ),
-              ),
+            ],
+          ),
+          if (narrow) ...<Widget>[
             const SizedBox(height: 8),
-            Text(
-              keyStatus,
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: keyConfigured || !account.requiresApiKey
-                    ? theme.colorScheme.primary
-                    : theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-            Text(
-              account.supportsVision
-                  ? l10n.providersVisionSupported
-                  : l10n.providersVisionNotSupported,
-              key: ValueKey<String>('provider-vision-${account.id}'),
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 4),
             Wrap(
-              spacing: 4,
-              runSpacing: 4,
+              spacing: 8,
+              runSpacing: 8,
               children: <Widget>[
-                TextButton(
-                  key: ValueKey<String>('provider-check-${account.id}'),
-                  onPressed: checking ? null : onCheck,
-                  child: checking
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : Text(l10n.providersCheck),
-                ),
-                if (!active)
-                  TextButton(
-                    key: ValueKey<String>('provider-activate-${account.id}'),
-                    onPressed: onActivate,
-                    child: Text(l10n.providersMakeActive),
+                if (active)
+                  NcBadge(
+                    key: ValueKey<String>('provider-active-${account.id}'),
+                    label: l10n.providersActive,
+                    tone: NcBadgeTone.jade,
                   ),
-                TextButton(
-                  key: ValueKey<String>('provider-edit-${account.id}'),
-                  onPressed: onEdit,
-                  child: Text(l10n.providersEdit),
-                ),
-                TextButton(
-                  key: ValueKey<String>('provider-delete-${account.id}'),
-                  onPressed: onDelete,
-                  child: Text(l10n.providersDelete),
+                NcBadge(
+                  key: ValueKey<String>('provider-vision-${account.id}'),
+                  label: account.supportsVision
+                      ? l10n.providersVisionShort
+                      : l10n.providersVisionNotSupportedShort,
+                  tone: account.supportsVision
+                      ? NcBadgeTone.iris
+                      : NcBadgeTone.neutral,
                 ),
               ],
             ),
           ],
-        ),
+          if (!account.isConfigured)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(
+                l10n.providersIncompleteHint,
+                style: theme.typography.bodyS.copyWith(
+                  color: theme.colors.ember,
+                ),
+              ),
+            ),
+          const SizedBox(height: 8),
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: Text(
+                  keyStatus,
+                  style: theme.typography.labelM.copyWith(
+                    color: keyConfigured || !account.requiresApiKey
+                        ? theme.colors.jade
+                        : theme.colors.textSecondary,
+                  ),
+                ),
+              ),
+              if (checkStatus != null)
+                NcBadge(
+                  key: ValueKey<String>('provider-check-result-${account.id}'),
+                  label: checkStatus == ApiKeyCheckStatus.valid
+                      ? l10n.providersCheckWorks
+                      : l10n.providersCheckFailed,
+                  tone: checkStatus == ApiKeyCheckStatus.valid
+                      ? NcBadgeTone.jade
+                      : NcBadgeTone.ember,
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: narrow
+                ? <Widget>[
+                    NcIconButton(
+                      key: ValueKey<String>('provider-check-${account.id}'),
+                      icon: Icons.wifi_tethering,
+                      tooltip: l10n.providersCheck,
+                      variant: NcIconButtonVariant.tonal,
+                      size: 36,
+                      onPressed: checking ? null : onCheck,
+                    ),
+                    if (!active)
+                      NcIconButton(
+                        key: ValueKey<String>(
+                          'provider-activate-${account.id}',
+                        ),
+                        icon: Icons.star_outline_rounded,
+                        tooltip: l10n.providersMakeActive,
+                        size: 36,
+                        onPressed: onActivate,
+                      ),
+                    NcIconButton(
+                      key: ValueKey<String>('provider-edit-${account.id}'),
+                      icon: Icons.edit_outlined,
+                      tooltip: l10n.providersEdit,
+                      size: 36,
+                      onPressed: onEdit,
+                    ),
+                    NcIconButton(
+                      key: ValueKey<String>('provider-delete-${account.id}'),
+                      icon: Icons.delete_outline,
+                      tooltip: l10n.providersDelete,
+                      size: 36,
+                      onPressed: onDelete,
+                    ),
+                  ]
+                : <Widget>[
+                    NcButton(
+                      key: ValueKey<String>('provider-check-${account.id}'),
+                      label: l10n.providersCheck,
+                      variant: NcButtonVariant.secondary,
+                      size: NcButtonSize.s,
+                      loading: checking,
+                      onPressed: checking ? null : onCheck,
+                    ),
+                    if (!active)
+                      NcButton(
+                        key: ValueKey<String>(
+                          'provider-activate-${account.id}',
+                        ),
+                        label: l10n.providersMakeActive,
+                        variant: NcButtonVariant.ghost,
+                        size: NcButtonSize.s,
+                        onPressed: onActivate,
+                      ),
+                    NcButton(
+                      key: ValueKey<String>('provider-edit-${account.id}'),
+                      label: l10n.providersEdit,
+                      variant: NcButtonVariant.ghost,
+                      size: NcButtonSize.s,
+                      onPressed: onEdit,
+                    ),
+                    NcButton(
+                      key: ValueKey<String>('provider-delete-${account.id}'),
+                      label: l10n.providersDelete,
+                      variant: NcButtonVariant.ghost,
+                      size: NcButtonSize.s,
+                      onPressed: onDelete,
+                    ),
+                  ],
+          ),
+        ],
       ),
     );
   }

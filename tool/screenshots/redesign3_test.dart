@@ -35,6 +35,7 @@ import 'package:cardflow/ui/settings/settings_screen.dart';
 import 'package:cardflow/ui/statistics/statistics_screen.dart';
 import 'package:cardflow/ui/m3e/m3e.dart';
 import 'package:cardflow/ui/theme/app_theme.dart';
+import 'package:cardflow/domain/generation/provider_account.dart';
 import 'package:cardflow/domain/settings/app_settings.dart';
 
 import '../../test/helpers/decks_fakes.dart';
@@ -190,7 +191,10 @@ List<Override> _overrides({AppSettings? settings}) => decksOverrides(
   appSettingsStore: FakeAppSettingsStore(
     settings: settings ?? AppSettings.defaults,
   ),
-  providerAccountsStore: FakeProviderAccountsStore(),
+  providerAccountsStore: FakeProviderAccountsStore(
+    ProviderAccounts.empty.withAccount(testProviderAccount()),
+  ),
+  apiKeyStore: FakeApiKeyStore(<String, String>{'deepseek': 'secret'}),
 );
 
 /// Обвязка как в корне приложения: тема Nocturne + движение/отклик + Aurora.

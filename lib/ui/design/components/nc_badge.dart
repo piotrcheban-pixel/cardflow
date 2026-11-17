@@ -81,7 +81,7 @@ class NcBadge extends StatelessWidget {
       label,
       maxLines: 1,
       softWrap: false,
-      overflow: TextOverflow.visible,
+      overflow: TextOverflow.ellipsis,
       style: theme.typography.labelM.copyWith(
         color: foreground,
         fontFeatures: const <FontFeature>[FontFeature.tabularFigures()],
@@ -95,15 +95,22 @@ class NcBadge extends StatelessWidget {
           borderRadius: BorderRadius.circular(NcRadii.xs),
         ),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          if (icon != null) ...<Widget>[
-            Icon(icon, size: 13, color: foreground),
-            const SizedBox(width: 4),
-          ],
-          text,
-        ],
+      child: LayoutBuilder(
+        builder: (BuildContext context, BoxConstraints constraints) {
+          final Widget label = constraints.hasBoundedWidth
+              ? Flexible(child: text)
+              : text;
+          return Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              if (icon != null) ...<Widget>[
+                Icon(icon, size: 13, color: foreground),
+                const SizedBox(width: 4),
+              ],
+              label,
+            ],
+          );
+        },
       ),
     );
     if (semanticLabel == null) return content;

@@ -142,6 +142,7 @@ provider-base-url
 provider-cancel
 provider-card-*
 provider-check-*
+provider-check-result-*
 provider-delete-*
 provider-delete-cancel
 provider-delete-confirm

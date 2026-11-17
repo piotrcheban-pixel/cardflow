@@ -2758,6 +2758,18 @@ abstract class AppLocalizations {
   /// **'Принимает изображения'**
   String get providersVisionSupported;
 
+  /// Короткий бейдж Vision для узкой карточки провайдера.
+  ///
+  /// In ru, this message translates to:
+  /// **'Изображения'**
+  String get providersVisionShort;
+
+  /// Короткий бейдж «без Vision» для узкой карточки.
+  ///
+  /// In ru, this message translates to:
+  /// **'Без изображений'**
+  String get providersVisionNotSupportedShort;
+
   /// Подпись модели/аккаунта без Vision (итерация 7.8).
   ///
   /// In ru, this message translates to:
@@ -2829,6 +2841,30 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Проверить подключение'**
   String get providersCheck;
+
+  /// Результат проверки ключа: успех (REDESIGN-SPEC §9.17).
+  ///
+  /// In ru, this message translates to:
+  /// **'Работает'**
+  String get providersCheckWorks;
+
+  /// Результат проверки ключа: ошибка (REDESIGN-SPEC §9.17).
+  ///
+  /// In ru, this message translates to:
+  /// **'Ошибка'**
+  String get providersCheckFailed;
+
+  /// Кнопка-глаз поля ключа: показать введённое значение.
+  ///
+  /// In ru, this message translates to:
+  /// **'Показать ключ'**
+  String get providersKeyShow;
+
+  /// Кнопка-глаз поля ключа: скрыть значение.
+  ///
+  /// In ru, this message translates to:
+  /// **'Скрыть ключ'**
+  String get providersKeyHide;
 
   /// Успешная проверка подключения.
   ///
