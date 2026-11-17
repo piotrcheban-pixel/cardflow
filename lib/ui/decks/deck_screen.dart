@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart' hide Card;
 
 import 'package:cardflow/domain/cards/card.dart';
+import 'package:cardflow/domain/cards/latex_markup.dart';
 import 'package:cardflow/domain/decks/deck.dart';
 import 'package:cardflow/domain/decks/deck_summary.dart';
 import 'package:cardflow/domain/review/daily_limits.dart';
@@ -12,8 +13,10 @@ import 'package:cardflow/domain/study/distractor_generator.dart';
 import 'package:cardflow/domain/study/true_false_question.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/cards/card_form_screen.dart';
+import 'package:cardflow/ui/cards/content/card_text.dart';
 import 'package:cardflow/ui/decks/deck_actions.dart';
-import 'package:cardflow/ui/m3e/m3e.dart';
+import 'package:cardflow/ui/decks/deck_gem.dart';
+import 'package:cardflow/ui/design/design.dart';
 import 'package:cardflow/ui/router/app_router.dart';
 import 'package:cardflow/ui/state/decks_ui_providers.dart';
 import 'package:cardflow/ui/state/review_limits.dart';
@@ -36,13 +39,14 @@ enum _SessionModeAction {
 /// Решение в предупреждении об исчерпанном дневном лимите (ADR-028).
 enum _LimitChoice { continueWithoutLimits, practice }
 
-/// Экран «Колода» (SPEC A6.3).
+/// Экран «Колода» (SPEC A6.3, REDESIGN-SPEC §9.3).
 ///
-/// Заголовок с именем, счётчики (к повторению/новые/в процессе), карточка
-/// «Начать сессию» (bottom sheet режима: классика или лента), список карточек
-/// с переходом в редактирование, FAB «Добавить», меню переименовать/экспорт/
-/// удалить, экспорт/импорт и состояния «не найдена»/ошибка.
-class DeckScreen extends ConsumerWidget {
+/// Шапка-hero с аватаром/названием (Hero из списка колод) и тремя
+/// стат-пилюлями, Hero-CTA «Начать сессию», лист режимов сеткой плиток,
+/// секция карточек `NcListRow` с `CardText`, парящий тулбар
+/// «Добавить»/«Сгенерировать», диалог лимита, состояния empty/error/not found.
+/// Обработчики и провайдеры — прежние.
+class DeckScreen extends ConsumerStatefulWidget {
   /// Создаёт экран колоды [deckId].
   const DeckScreen({required this.deckId, super.key});
 
@@ -50,148 +54,245 @@ class DeckScreen extends ConsumerWidget {
   final String deckId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DeckScreen> createState() => _DeckScreenState();
+}
+
+class _DeckScreenState extends ConsumerState<DeckScreen> {
+  final ScrollController _scrollController = ScrollController();
+  final GlobalKey _menuAnchor = GlobalKey();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
-    final AsyncValue<Deck?> deckAsync = ref.watch(deckProvider(deckId));
+    final AsyncValue<Deck?> deckAsync = ref.watch(deckProvider(widget.deckId));
     final AsyncValue<List<Card>> cardsAsync = ref.watch(
-      deckCardsProvider(deckId),
+      deckCardsProvider(widget.deckId),
     );
     final AsyncValue<DeckSummary?> summaryAsync = ref.watch(
-      deckSummaryProvider(deckId),
+      deckSummaryProvider(widget.deckId),
     );
 
     final Deck? deck = deckAsync.value;
     final bool hasError =
         deckAsync.hasError || cardsAsync.hasError || summaryAsync.hasError;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: deck == null ? null : Text(deck.name),
-        actions: deck == null
-            ? null
-            : <Widget>[
-                IconButton(
-                  key: const ValueKey<String>('deck-generate-action'),
-                  tooltip: l10n.deckGenerateTooltip,
-                  icon: const Icon(Icons.auto_awesome_outlined),
-                  onPressed: () =>
-                      context.push(AppRoutes.deckGenerationPath(deck.id)),
-                ),
-                PopupMenuButton<_DeckMenuAction>(
-                  key: const ValueKey<String>('deck-overflow-menu'),
-                  tooltip: l10n.decksMenuTooltip,
-                  icon: const Icon(Icons.more_vert),
-                  onSelected: (_DeckMenuAction action) =>
-                      _handleMenuAction(context, ref, deck, action),
-                  itemBuilder: (BuildContext context) =>
-                      <PopupMenuEntry<_DeckMenuAction>>[
-                        PopupMenuItem<_DeckMenuAction>(
-                          value: _DeckMenuAction.generate,
-                          child: Text(l10n.deckGenerateTooltip),
-                        ),
-                        PopupMenuItem<_DeckMenuAction>(
-                          value: _DeckMenuAction.rename,
-                          child: Text(l10n.deckRename),
-                        ),
-                        PopupMenuItem<_DeckMenuAction>(
-                          value: _DeckMenuAction.export,
-                          child: Text(l10n.deckExport),
-                        ),
-                        PopupMenuItem<_DeckMenuAction>(
-                          value: _DeckMenuAction.delete,
-                          child: Text(l10n.delete),
-                        ),
-                      ],
-                ),
-              ],
+    final Widget topBar = NcTopBar(
+      title: deck?.name,
+      scrollController: _scrollController,
+      leading: NcIconButton(
+        icon: Icons.arrow_back_rounded,
+        tooltip: l10n.reviewBack,
+        variant: NcIconButtonVariant.glass,
+        onPressed: () {
+          if (context.canPop()) context.pop();
+        },
       ),
-      floatingActionButton: deck == null
-          ? null
-          : FloatingActionButton.small(
-              key: const ValueKey<String>('deck-add-card'),
-              tooltip: l10n.deckAddCardTooltip,
-              onPressed: () => _openCardForm(context, deckId: deckId),
-              child: const Icon(Icons.add),
-            ),
-      body: _buildBody(
-        context,
-        ref,
-        l10n,
-        deckAsync,
-        cardsAsync,
-        summaryAsync,
-        hasError,
+      actions: deck == null
+          ? const <Widget>[]
+          : <Widget>[
+              Builder(
+                builder: (BuildContext context) => KeyedSubtree(
+                  key: _menuAnchor,
+                  child: NcIconButton(
+                    key: const ValueKey<String>('deck-overflow-menu'),
+                    icon: Icons.more_vert,
+                    tooltip: l10n.decksMenuTooltip,
+                    onPressed: () => _openOverflowMenu(context, l10n, deck),
+                  ),
+                ),
+              ),
+            ],
+    );
+
+    if (hasError) {
+      return Scaffold(
+        body: SafeArea(
+          child: Column(
+            children: <Widget>[
+              topBar,
+              Expanded(
+                child: NcErrorState(
+                  message: l10n.deckErrorTitle,
+                  retryLabel: l10n.retry,
+                  onRetry: () {
+                    ref.invalidate(deckProvider(widget.deckId));
+                    ref.invalidate(deckCardsProvider(widget.deckId));
+                    ref.invalidate(deckSummaryProvider(widget.deckId));
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    if (deckAsync.isLoading && !deckAsync.hasValue) {
+      return Scaffold(
+        body: SafeArea(
+          child: Column(
+            children: <Widget>[
+              topBar,
+              const Expanded(child: _DeckSkeleton()),
+            ],
+          ),
+        ),
+      );
+    }
+    if (deck == null) {
+      return Scaffold(
+        body: SafeArea(
+          child: Column(
+            children: <Widget>[
+              topBar,
+              Expanded(child: Center(child: Text(l10n.deckNotFound))),
+            ],
+          ),
+        ),
+      );
+    }
+    if (cardsAsync.isLoading && !cardsAsync.hasValue) {
+      return Scaffold(
+        body: SafeArea(
+          child: Column(
+            children: <Widget>[
+              topBar,
+              const Expanded(child: _DeckSkeleton()),
+            ],
+          ),
+        ),
+      );
+    }
+    final DeckSummary? summary = summaryAsync.asData?.value;
+    final List<Card> cards = cardsAsync.value ?? const <Card>[];
+    final double safeBottom = MediaQuery.paddingOf(context).bottom;
+
+    return Scaffold(
+      body: NcGlassGroup(
+        child: SafeArea(
+          bottom: false,
+          child: Stack(
+            children: <Widget>[
+              Column(
+                children: <Widget>[
+                  topBar,
+                  Expanded(
+                    child: ListView(
+                      controller: _scrollController,
+                      padding: EdgeInsets.fromLTRB(0, 0, 0, 120 + safeBottom),
+                      children: <Widget>[
+                        _DeckHero(
+                          deck: deck,
+                          summary: summary,
+                          onStartSession: () => _startSession(
+                            context,
+                            ref,
+                            deckId: widget.deckId,
+                            cards: cards,
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+                          child: Text(
+                            l10n.deckCardsSection(cards.length),
+                            style: NcTheme.of(context).typography.overline
+                                .copyWith(
+                                  color: NcTheme.of(context)
+                                      .colors
+                                      .textTertiary,
+                                ),
+                          ),
+                        ),
+                        if (cards.isEmpty)
+                          Padding(
+                            padding: const EdgeInsets.all(24),
+                            child: _DeckCardsEmpty(
+                              onAdd: () =>
+                                  _openCardForm(context, deckId: widget.deckId),
+                              onGenerate: () => context.push(
+                                AppRoutes.deckGenerationPath(deck.id),
+                              ),
+                            ),
+                          )
+                        else
+                          NcSection(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            children: <Widget>[
+                              for (final Card card in cards)
+                                _DeckCardRow(
+                                  card: card,
+                                  onTap: () => _openCardForm(
+                                    context,
+                                    deckId: widget.deckId,
+                                    cardId: card.id,
+                                  ),
+                                ),
+                            ],
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              PositionedDirectional(
+                start: 0,
+                end: 0,
+                bottom: 16 + safeBottom,
+                child: Center(
+                  child: _DeckToolbar(
+                    onAdd: () => _openCardForm(context, deckId: widget.deckId),
+                    onGenerate: () =>
+                        context.push(AppRoutes.deckGenerationPath(deck.id)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
 
-  Widget _buildBody(
+  Future<void> _openOverflowMenu(
     BuildContext context,
-    WidgetRef ref,
     AppLocalizations l10n,
-    AsyncValue<Deck?> deckAsync,
-    AsyncValue<List<Card>> cardsAsync,
-    AsyncValue<DeckSummary?> summaryAsync,
-    bool hasError,
-  ) {
-    if (hasError) {
-      return _DeckErrorState(
-        message: l10n.deckErrorTitle,
-        onRetry: () {
-          ref.invalidate(deckProvider(deckId));
-          ref.invalidate(deckCardsProvider(deckId));
-          ref.invalidate(deckSummaryProvider(deckId));
-        },
-      );
-    }
-    if (deckAsync.isLoading && !deckAsync.hasValue) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    final Deck? deck = deckAsync.value;
-    if (deck == null) {
-      return Center(child: Text(l10n.deckNotFound));
-    }
-    if (cardsAsync.isLoading && !cardsAsync.hasValue) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    final DeckSummary? summary = summaryAsync.asData?.value;
-    final List<Card> cards = cardsAsync.value ?? const <Card>[];
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        _DeckCounters(summary: summary),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-          child: M3ECard(
-            key: const ValueKey<String>('deck-start-session'),
-            headline: l10n.reviewStartSession,
-            semanticLabel: l10n.reviewStartSession,
-            onPressed: () =>
-                _startSession(context, ref, deckId: deckId, cards: cards),
-          ),
+    Deck deck,
+  ) async {
+    final _DeckMenuAction? action = await showNcMenu<_DeckMenuAction>(
+      context: context,
+      anchorKey: _menuAnchor,
+      items: <NcMenuItem<_DeckMenuAction>>[
+        NcMenuItem<_DeckMenuAction>(
+          value: _DeckMenuAction.generate,
+          label: l10n.deckGenerateTooltip,
+          icon: Icons.auto_awesome,
         ),
-        const Divider(height: 1),
-        Expanded(
-          child: cards.isEmpty
-              ? _DeckCardsEmpty()
-              : ListView.separated(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  itemCount: cards.length,
-                  separatorBuilder: (BuildContext context, int index) =>
-                      const Divider(height: 1, indent: 16, endIndent: 16),
-                  itemBuilder: (BuildContext context, int index) =>
-                      _DeckCardTile(
-                        card: cards[index],
-                        onTap: () => _openCardForm(
-                          context,
-                          deckId: deckId,
-                          cardId: cards[index].id,
-                        ),
-                      ),
-                ),
+        NcMenuItem<_DeckMenuAction>(
+          value: _DeckMenuAction.rename,
+          label: l10n.deckRename,
+          icon: Icons.edit_outlined,
+        ),
+        NcMenuItem<_DeckMenuAction>(
+          value: _DeckMenuAction.export,
+          label: l10n.deckExport,
+          icon: Icons.ios_share,
+        ),
+        NcMenuItem<_DeckMenuAction>(
+          value: _DeckMenuAction.delete,
+          label: l10n.delete,
+          icon: Icons.delete_outline,
+          destructive: true,
+          dividerBefore: true,
         ),
       ],
     );
+    if (action == null || !context.mounted) return;
+    await _handleMenuAction(context, ref, deck, action);
   }
 
   /// Открывает форму создания/редактирования и показывает итог снекбаром.
@@ -276,119 +377,21 @@ class DeckScreen extends ConsumerWidget {
     final int trueFalseCount = cards
         .where((Card card) => hasTrueFalseAlternative(card, cards))
         .length;
-    final _SessionModeAction?
-    selected = await showModalBottomSheet<_SessionModeAction>(
-      context: context,
-      showDragHandle: true,
-      isScrollControlled: true,
+    final _SessionModeAction? selected = await showNcSheet<_SessionModeAction>(
+      context,
+      title: l10n.reviewModeSheetTitle,
+      closeTooltip: l10n.commonClose,
       builder: (BuildContext sheetContext) {
         void choose(_SessionModeAction action) {
           Navigator.of(sheetContext).pop(action);
         }
 
-        return SafeArea(
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
-                  child: Align(
-                    alignment: AlignmentDirectional.centerStart,
-                    child: Text(
-                      l10n.reviewSessionModeTitle,
-                      style: Theme.of(sheetContext).textTheme.titleLarge,
-                    ),
-                  ),
-                ),
-                ListTile(
-                  key: const ValueKey<String>('review-mode-classic'),
-                  leading: const Icon(Icons.style_outlined),
-                  title: Text(l10n.reviewModeClassic),
-                  onTap: () => choose(_SessionModeAction.classic),
-                ),
-                ListTile(
-                  key: const ValueKey<String>('review-mode-feed'),
-                  leading: const Icon(Icons.view_agenda_outlined),
-                  title: Text(l10n.reviewModeFeed),
-                  onTap: () => choose(_SessionModeAction.feed),
-                ),
-                ListTile(
-                  key: const ValueKey<String>('review-mode-practice'),
-                  leading: const Icon(Icons.sports_esports_outlined),
-                  title: Text(l10n.reviewModePractice),
-                  subtitle: Text(l10n.practiceSubtitle),
-                  onTap: () => choose(_SessionModeAction.practice),
-                ),
-                ListTile(
-                  key: const ValueKey<String>('review-mode-test'),
-                  enabled: testCount > 0,
-                  leading: const Icon(Icons.quiz_outlined),
-                  title: Text(l10n.reviewModeTest),
-                  subtitle: Text(
-                    testCount > 0
-                        ? '${l10n.studyModeTestSubtitle} · '
-                              '${l10n.studyModeAvailableCount(testCount)}'
-                        : l10n.studyModeNotEnough,
-                  ),
-                  onTap: testCount > 0
-                      ? () => choose(_SessionModeAction.test)
-                      : null,
-                ),
-                ListTile(
-                  key: const ValueKey<String>('review-mode-typing'),
-                  enabled: typingCount > 0,
-                  leading: const Icon(Icons.keyboard_outlined),
-                  title: Text(l10n.reviewModeTyping),
-                  subtitle: Text(
-                    typingCount > 0
-                        ? '${l10n.studyModeTypingSubtitle} · '
-                              '${l10n.studyModeAvailableCount(typingCount)}'
-                        : l10n.studyModeNotEnough,
-                  ),
-                  onTap: typingCount > 0
-                      ? () => choose(_SessionModeAction.typing)
-                      : null,
-                ),
-                ListTile(
-                  key: const ValueKey<String>('review-mode-match'),
-                  enabled: matchableCount >= 6,
-                  leading: const Icon(Icons.grid_view_outlined),
-                  title: Text(l10n.reviewModeMatch),
-                  subtitle: Text(
-                    matchableCount >= 6
-                        ? '${l10n.studyModeMatchSubtitle} · '
-                              '${l10n.studyModeAvailableCount(matchableCount)}'
-                        : l10n.studyModeMatchNotEnough,
-                  ),
-                  onTap: matchableCount >= 6
-                      ? () => choose(_SessionModeAction.match)
-                      : null,
-                ),
-                ListTile(
-                  key: const ValueKey<String>('review-mode-true-false'),
-                  enabled: trueFalseCount > 0,
-                  leading: const Icon(Icons.check_circle_outline),
-                  title: Text(l10n.reviewModeTrueFalse),
-                  subtitle: Text(
-                    trueFalseCount > 0
-                        ? '${l10n.studyModeTrueFalseSubtitle} · '
-                              '${l10n.studyModeAvailableCount(trueFalseCount)}'
-                        : l10n.studyModeTrueFalseNotEnough,
-                  ),
-                  onTap: trueFalseCount > 0
-                      ? () => choose(_SessionModeAction.trueFalse)
-                      : null,
-                ),
-                ListTile(
-                  key: const ValueKey<String>('review-mode-constructor'),
-                  leading: const Icon(Icons.tune),
-                  title: Text(l10n.constructorAction),
-                  onTap: () => choose(_SessionModeAction.constructor),
-                ),
-              ],
-            ),
-          ),
+        return _SessionModeGrid(
+          testCount: testCount,
+          typingCount: typingCount,
+          matchableCount: matchableCount,
+          trueFalseCount: trueFalseCount,
+          onChoose: choose,
         );
       },
     );
@@ -448,32 +451,31 @@ class DeckScreen extends ConsumerWidget {
       showAppMessage(context, l10n.reviewStartEmptyMessage);
       return;
     }
-    final _LimitChoice? choice = await showDialog<_LimitChoice>(
-      context: context,
-      builder: (BuildContext dialogContext) => AlertDialog(
-        title: Text(l10n.reviewDailyLimitTitle),
-        content: Text(l10n.reviewDailyLimitContinueMessage),
-        actions: <Widget>[
-          TextButton(
-            key: const ValueKey<String>('review-limit-cancel'),
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: Text(l10n.cancel),
-          ),
-          TextButton(
-            key: const ValueKey<String>('review-limit-practice'),
-            onPressed: () =>
-                Navigator.of(dialogContext).pop(_LimitChoice.practice),
-            child: Text(l10n.practiceStartAction),
-          ),
-          FilledButton(
-            key: const ValueKey<String>('review-limit-continue'),
-            onPressed: () =>
-                Navigator.of(dialogContext)
-                    .pop(_LimitChoice.continueWithoutLimits),
-            child: Text(l10n.reviewDailyLimitContinueAction),
-          ),
-        ],
-      ),
+    final _LimitChoice? choice = await showNcDialog<_LimitChoice>(
+      context,
+      title: l10n.reviewDailyLimitTitle,
+      message: l10n.reviewDailyLimitContinueMessage,
+      icon3dName: 'hourglass_time',
+      actions: <Widget>[
+        NcButton(
+          key: const ValueKey<String>('review-limit-cancel'),
+          label: l10n.cancel,
+          variant: NcButtonVariant.ghost,
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        NcButton(
+          key: const ValueKey<String>('review-limit-practice'),
+          label: l10n.practiceStartAction,
+          variant: NcButtonVariant.secondary,
+          onPressed: () => Navigator.of(context).pop(_LimitChoice.practice),
+        ),
+        NcButton(
+          key: const ValueKey<String>('review-limit-continue'),
+          label: l10n.reviewDailyLimitContinueAction,
+          onPressed: () =>
+              Navigator.of(context).pop(_LimitChoice.continueWithoutLimits),
+        ),
+      ],
     );
     if (choice == null || !context.mounted) return;
     if (choice == _LimitChoice.practice) {
@@ -513,32 +515,80 @@ class DeckScreen extends ConsumerWidget {
   }
 }
 
-/// Счётчики шапки экрана колоды: к повторению / новые / в процессе.
-class _DeckCounters extends StatelessWidget {
-  const _DeckCounters({required this.summary});
+/// Шапка-hero: 3D-аватар 88, название `headline`, три стат-пилюли.
+class _DeckHero extends StatelessWidget {
+  const _DeckHero({
+    required this.deck,
+    required this.summary,
+    required this.onStartSession,
+  });
 
+  final Deck deck;
   final DeckSummary? summary;
+  final VoidCallback onStartSession;
 
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
+    final NcTheme theme = NcTheme.of(context);
     final int due = summary?.dueCards ?? 0;
     final int newCards = summary?.newCards ?? 0;
     final int inProgress = summary?.inProgressCards ?? 0;
+    final bool narrowBadges = MediaQuery.textScalerOf(context).scale(1) > 1.3;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-      child: Wrap(
-        spacing: 16,
-        runSpacing: 4,
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+      child: Column(
         children: <Widget>[
-          _CounterLabel(icon: Icons.schedule, label: l10n.deckDueCount(due)),
-          _CounterLabel(
-            icon: Icons.fiber_new,
-            label: l10n.deckNewCount(newCards),
+          Hero(
+            tag: 'deck-avatar-${deck.id}',
+            child: NcIcon3D(
+              name: deckGemName(deck.id),
+              size: 88,
+              showShadow: false,
+            ),
           ),
-          _CounterLabel(
-            icon: Icons.autorenew,
-            label: l10n.deckInProgressCount(inProgress),
+          const SizedBox(height: NcSpace.s12),
+          Hero(
+            tag: 'deck-title-${deck.id}',
+            child: Text(
+              deck.name,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: theme.typography.headline.copyWith(
+                color: theme.colors.textPrimary,
+              ),
+            ),
+          ),
+          const SizedBox(height: NcSpace.s12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            alignment: WrapAlignment.center,
+            children: <Widget>[
+              NcBadge(
+                label: narrowBadges ? '$due' : l10n.deckDueCount(due),
+                semanticLabel: l10n.deckDueCount(due),
+                tone: NcBadgeTone.accent,
+              ),
+              NcBadge(
+                label: narrowBadges ? '$newCards' : l10n.deckNewCount(newCards),
+                semanticLabel: l10n.deckNewCount(newCards),
+                tone: NcBadgeTone.glacier,
+              ),
+              NcBadge(
+                label: narrowBadges
+                    ? '$inProgress'
+                    : l10n.deckInProgressCount(inProgress),
+                semanticLabel: l10n.deckInProgressCount(inProgress),
+                tone: NcBadgeTone.neutral,
+              ),
+            ],
+          ),
+          const SizedBox(height: NcSpace.s16),
+          _StartSessionCard(
+            subtitle: l10n.deckDueCount(due),
+            onTap: onStartSession,
           ),
         ],
       ),
@@ -546,56 +596,277 @@ class _DeckCounters extends StatelessWidget {
   }
 }
 
-class _CounterLabel extends StatelessWidget {
-  const _CounterLabel({required this.icon, required this.label});
+/// Hero-CTA «Начать сессию»: единственный glow на экране (§9.3).
+class _StartSessionCard extends StatelessWidget {
+  const _StartSessionCard({required this.subtitle, required this.onTap});
 
-  final IconData icon;
-  final String label;
+  final String subtitle;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        Icon(icon, size: 16, color: theme.colorScheme.onSurfaceVariant),
-        const SizedBox(width: 4),
-        Text(
-          label,
-          style: theme.textTheme.labelMedium?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final NcTheme theme = NcTheme.of(context);
+    final double scale = MediaQuery.textScalerOf(context)
+        .scale(1)
+        .clamp(1.0, 1.8);
+    return NcSurface(
+      key: const ValueKey<String>('deck-start-session'),
+      radius: NcRadii.xxl,
+      level: 2,
+      height: 120 * scale,
+      padding: EdgeInsets.zero,
+      semanticLabel: l10n.reviewStartSession,
+      onTap: onTap,
+      child: Stack(
+        fit: StackFit.expand,
+        children: <Widget>[
+          DecoratedBox(
+            decoration: ShapeDecoration(
+              gradient: LinearGradient(
+                begin: AlignmentDirectional.topStart,
+                end: AlignmentDirectional.bottomEnd,
+                colors: <Color>[
+                  theme.colors.ink3,
+                  theme.colors.aurumSoft.withValues(alpha: 0.35),
+                ],
+              ),
+              shadows: theme.depth.glow(theme.colors.aurum),
+              shape: RoundedSuperellipseBorder(
+                borderRadius: BorderRadius.circular(NcRadii.xxl),
+              ),
+            ),
           ),
-        ),
-      ],
+          Padding(
+            padding: const EdgeInsetsDirectional.fromSTEB(24, 20, 16, 20),
+            child: Row(
+              children: <Widget>[
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: <Widget>[
+                      Text(
+                        l10n.reviewStartSession,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.typography.titleL.copyWith(
+                          color: theme.colors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: NcSpace.s4),
+                      Text(
+                        subtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.typography.bodyM.copyWith(
+                          color: theme.colors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const NcIcon3D(
+                  name: 'mode_classic',
+                  size: 72,
+                  showShadow: false,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
-/// Пустое состояние списка карточек колоды.
-class _DeckCardsEmpty extends StatelessWidget {
+/// Лист режимов: сетка 2 × 4 на телефоне, 4 × 2 на ПК.
+class _SessionModeGrid extends StatelessWidget {
+  const _SessionModeGrid({
+    required this.testCount,
+    required this.typingCount,
+    required this.matchableCount,
+    required this.trueFalseCount,
+    required this.onChoose,
+  });
+
+  final int testCount;
+  final int typingCount;
+  final int matchableCount;
+  final int trueFalseCount;
+  final ValueChanged<_SessionModeAction> onChoose;
+
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
-    final ThemeData theme = Theme.of(context);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
+    final double width = MediaQuery.sizeOf(context).width;
+    final int columns = width >= 1024 ? 4 : 2;
+    final double scale = MediaQuery.textScalerOf(context)
+        .scale(1)
+        .clamp(1.0, 1.8);
+    final List<_ModeSpec> modes = <_ModeSpec>[
+      _ModeSpec(
+        action: _SessionModeAction.classic,
+        key: const ValueKey<String>('review-mode-classic'),
+        icon: 'mode_classic',
+        title: l10n.reviewModeClassic,
+        subtitle: null,
+        enabled: true,
+      ),
+      _ModeSpec(
+        action: _SessionModeAction.feed,
+        key: const ValueKey<String>('review-mode-feed'),
+        icon: 'mode_feed',
+        title: l10n.reviewModeFeed,
+        subtitle: null,
+        enabled: true,
+      ),
+      _ModeSpec(
+        action: _SessionModeAction.test,
+        key: const ValueKey<String>('review-mode-test'),
+        icon: 'mode_test',
+        title: l10n.reviewModeTest,
+        subtitle: testCount > 0
+            ? '${l10n.studyModeTestSubtitle} · '
+                  '${l10n.studyModeAvailableCount(testCount)}'
+            : l10n.studyModeNotEnough,
+        enabled: testCount > 0,
+      ),
+      _ModeSpec(
+        action: _SessionModeAction.typing,
+        key: const ValueKey<String>('review-mode-typing'),
+        icon: 'mode_typing',
+        title: l10n.reviewModeTyping,
+        subtitle: typingCount > 0
+            ? '${l10n.studyModeTypingSubtitle} · '
+                  '${l10n.studyModeAvailableCount(typingCount)}'
+            : l10n.studyModeNotEnough,
+        enabled: typingCount > 0,
+      ),
+      _ModeSpec(
+        action: _SessionModeAction.match,
+        key: const ValueKey<String>('review-mode-match'),
+        icon: 'mode_match',
+        title: l10n.reviewModeMatch,
+        subtitle: matchableCount >= 6
+            ? '${l10n.studyModeMatchSubtitle} · '
+                  '${l10n.studyModeAvailableCount(matchableCount)}'
+            : l10n.studyModeMatchNotEnough,
+        enabled: matchableCount >= 6,
+      ),
+      _ModeSpec(
+        action: _SessionModeAction.trueFalse,
+        key: const ValueKey<String>('review-mode-true-false'),
+        icon: 'mode_true_false',
+        title: l10n.reviewModeTrueFalse,
+        subtitle: trueFalseCount > 0
+            ? '${l10n.studyModeTrueFalseSubtitle} · '
+                  '${l10n.studyModeAvailableCount(trueFalseCount)}'
+            : l10n.studyModeTrueFalseNotEnough,
+        enabled: trueFalseCount > 0,
+      ),
+      _ModeSpec(
+        action: _SessionModeAction.practice,
+        key: const ValueKey<String>('review-mode-practice'),
+        icon: 'mode_practice',
+        title: l10n.reviewModePractice,
+        subtitle: l10n.practiceSubtitle,
+        enabled: true,
+      ),
+      _ModeSpec(
+        action: _SessionModeAction.constructor,
+        key: const ValueKey<String>('review-mode-constructor'),
+        icon: 'mode_constructor',
+        title: l10n.constructorAction,
+        subtitle: null,
+        enabled: true,
+      ),
+    ];
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: columns,
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
+        mainAxisExtent: 132 * scale,
+      ),
+      itemCount: modes.length,
+      itemBuilder: (BuildContext context, int index) =>
+          _ModeTile(spec: modes[index], onTap: onChoose, columns: columns),
+    );
+  }
+}
+
+/// Описание плитки режима.
+class _ModeSpec {
+  const _ModeSpec({
+    required this.action,
+    required this.key,
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.enabled,
+  });
+
+  final _SessionModeAction action;
+  final Key key;
+  final String icon;
+  final String title;
+  final String? subtitle;
+  final bool enabled;
+}
+
+class _ModeTile extends StatelessWidget {
+  const _ModeTile({
+    required this.spec,
+    required this.onTap,
+    required this.columns,
+  });
+
+  final _ModeSpec spec;
+  final ValueChanged<_SessionModeAction> onTap;
+  final int columns;
+
+  @override
+  Widget build(BuildContext context) {
+    final NcTheme theme = NcTheme.of(context);
+    final String? subtitle = spec.subtitle;
+    return Opacity(
+      opacity: spec.enabled ? 1 : 0.4,
+      child: NcSurface(
+        key: spec.key,
+        radius: NcRadii.l,
+        level: 1,
+        padding: const EdgeInsets.all(NcSpace.s8),
+        semanticLabel: spec.title,
+        onTap: spec.enabled ? () => onTap(spec.action) : null,
         child: Column(
-          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Icon(
-              Icons.notes_outlined,
-              size: 48,
-              color: theme.colorScheme.onSurfaceVariant,
+            Center(
+              child: NcIcon3D(name: spec.icon, size: 56, showShadow: false),
             ),
-            const SizedBox(height: 12),
+            const Spacer(),
             Text(
-              l10n.deckCardsEmpty,
-              style: theme.textTheme.titleMedium,
-              textAlign: TextAlign.center,
+              spec.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.typography.titleS.copyWith(
+                color: spec.enabled
+                    ? theme.colors.textPrimary
+                    : theme.colors.textDisabled,
+              ),
             ),
-            const SizedBox(height: 8),
-            Text(l10n.deckCardsEmptyHint, textAlign: TextAlign.center),
+            if (subtitle != null)
+              Text(
+                subtitle,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: theme.typography.bodyS.copyWith(
+                  color: theme.colors.textSecondary,
+                ),
+              ),
           ],
         ),
       ),
@@ -603,9 +874,39 @@ class _DeckCardsEmpty extends StatelessWidget {
   }
 }
 
-/// Одна карточка в списке колоды: front, теги, состояние; тап — редактирование.
-class _DeckCardTile extends StatelessWidget {
-  const _DeckCardTile({required this.card, required this.onTap});
+/// Пустое состояние карточек колоды.
+class _DeckCardsEmpty extends StatelessWidget {
+  const _DeckCardsEmpty({required this.onAdd, required this.onGenerate});
+
+  final VoidCallback onAdd;
+  final VoidCallback onGenerate;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    return NcEmptyState(
+      iconName: 'empty_cards',
+      title: l10n.deckCardsEmpty,
+      message: l10n.deckCardsEmptyHint,
+      primaryAction: NcButton(
+        label: l10n.deckAddCardTooltip,
+        icon: Icons.add_rounded,
+        onPressed: onAdd,
+      ),
+      secondaryAction: NcButton(
+        label: l10n.decksCreateGenerate,
+        variant: NcButtonVariant.ai,
+        icon: Icons.auto_awesome,
+        onPressed: onGenerate,
+      ),
+    );
+  }
+}
+
+/// Одна карточка в списке колоды: глиф типа, лицевая сторона через `CardText`,
+/// ответ `textSecondary`, точка состояния и миниатюра.
+class _DeckCardRow extends StatelessWidget {
+  const _DeckCardRow({required this.card, required this.onTap});
 
   final Card card;
   final VoidCallback onTap;
@@ -613,62 +914,174 @@ class _DeckCardTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
-    final ThemeData theme = Theme.of(context);
-    final String tags = card.tags.map((String tag) => '#$tag').join(', ');
-    return ListTile(
-      onTap: onTap,
-      title: Text(card.front),
-      subtitle: card.tags.isEmpty
-          ? null
-          : Text(
-              l10n.cardTagsLine(tags),
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-      trailing: Text(
-        _cardStateLabel(l10n, card.state),
-        style: theme.textTheme.labelSmall?.copyWith(
-          color: theme.colorScheme.onSurfaceVariant,
-        ),
-      ),
-    );
-  }
-
-  String _cardStateLabel(AppLocalizations l10n, CardState state) {
-    return switch (state) {
+    final NcTheme theme = NcTheme.of(context);
+    final String stateLabel = switch (card.state) {
       CardState.newCard => l10n.cardStateNew,
       CardState.learning => l10n.cardStateLearning,
       CardState.review => l10n.cardStateReview,
       CardState.relearning => l10n.cardStateRelearning,
     };
+    final Color stateColor = card.suspended
+        ? theme.colors.textDisabled
+        : switch (card.state) {
+            CardState.newCard => theme.colors.glacier,
+            CardState.learning => theme.colors.amber,
+            CardState.review => theme.colors.jade,
+            CardState.relearning => theme.colors.amber,
+          };
+    return NcListRow(
+      onTap: onTap,
+      semanticLabel: card.front,
+      leading: Container(
+        width: 28,
+        height: 28,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: theme.colors.ink4,
+          shape: BoxShape.circle,
+        ),
+        child: _CardTypeGlyph(card: card),
+      ),
+      title: CardText(
+        source: card.front,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+        style: theme.typography.titleS.copyWith(
+          color: theme.colors.textPrimary,
+        ),
+      ),
+      subtitle: CardText(
+        source: card.back,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: theme.typography.bodyS.copyWith(
+          color: theme.colors.textSecondary,
+        ),
+      ),
+      trailing: Semantics(
+        label: stateLabel,
+        child: Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(color: stateColor, shape: BoxShape.circle),
+        ),
+      ),
+    );
   }
 }
 
-/// Состояние ошибки загрузки экрана колоды.
-class _DeckErrorState extends StatelessWidget {
-  const _DeckErrorState({required this.message, required this.onRetry});
+/// Глиф типа карточки: Basic — две полоски, Cloze — `[…]`, LaTeX — `∑`,
+/// Occlusion — рамка с маской.
+const String _clozeGlyph = '[…]';
+const String _latexGlyph = '∑';
 
-  final String message;
-  final VoidCallback onRetry;
+class _CardTypeGlyph extends StatelessWidget {
+  const _CardTypeGlyph({required this.card});
+
+  final Card card;
+
+  @override
+  Widget build(BuildContext context) {
+    final NcTheme theme = NcTheme.of(context);
+    final Color color = theme.colors.textSecondary;
+    if (card.cardType == CardType.cloze) {
+      return Text(
+        _clozeGlyph,
+        style: theme.typography.monoM.copyWith(color: color, fontSize: 10),
+      );
+    }
+    if (card.occlusionJson != null) {
+      return Icon(Icons.crop_free, size: 14, color: color);
+    }
+    if (LatexMarkup.parse(card.front).hasFormulas ||
+        LatexMarkup.parse(card.back).hasFormulas) {
+      return Text(
+        _latexGlyph,
+        style: theme.typography.monoM.copyWith(color: color, fontSize: 14),
+      );
+    }
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        Container(width: 12, height: 2, color: color),
+        const SizedBox(height: 3),
+        Container(width: 8, height: 2, color: color),
+      ],
+    );
+  }
+}
+
+/// Парящий тулбар колоды: «Добавить» (primary-круг 48) и «Сгенерировать».
+class _DeckToolbar extends StatelessWidget {
+  const _DeckToolbar({required this.onAdd, required this.onGenerate});
+
+  final VoidCallback onAdd;
+  final VoidCallback onGenerate;
 
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
-    final ThemeData theme = Theme.of(context);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Icon(Icons.error_outline, size: 48, color: theme.colorScheme.error),
-            const SizedBox(height: 12),
-            Text(message, textAlign: TextAlign.center),
-            const SizedBox(height: 12),
-            TextButton(onPressed: onRetry, child: Text(l10n.retry)),
+    final NcTheme theme = NcTheme.of(context);
+    return NcGlass(
+      tier: NcGlassTier.regular,
+      radius: NcRadii.pill,
+      grouped: true,
+      showNoise: false,
+      padding: const EdgeInsets.all(6),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          NcSurface(
+            key: const ValueKey<String>('deck-add-card'),
+            width: 48,
+            height: 48,
+            radius: NcRadii.pill,
+            level: 0,
+            border: false,
+            hoverLift: false,
+            padding: EdgeInsets.zero,
+            color: theme.colors.aurum,
+            semanticLabel: l10n.deckAddCardTooltip,
+            onTap: onAdd,
+            child: Icon(Icons.add_rounded, color: theme.colors.textOnAccent),
+          ),
+          const SizedBox(width: 8),
+          NcIconButton(
+            key: const ValueKey<String>('deck-generate-action'),
+            icon: Icons.auto_awesome,
+            tooltip: l10n.deckGenerateTooltip,
+            iconColor: theme.colors.iris,
+            onPressed: onGenerate,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Загрузка экрана колоды: skeleton-строки.
+class _DeckSkeleton extends StatelessWidget {
+  const _DeckSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          const Center(child: NcSkeleton(width: 88, height: 88)),
+          const SizedBox(height: 16),
+          const Center(child: NcSkeleton(width: 180, height: 28)),
+          const SizedBox(height: 24),
+          const NcSkeleton(height: 120, radius: NcRadii.xxl),
+          const SizedBox(height: 24),
+          for (var index = 0; index < 4; index++) ...<Widget>[
+            const NcSkeleton(height: 64, radius: NcRadii.l),
+            if (index < 3) const SizedBox(height: 10),
           ],
-        ),
+        ],
       ),
     );
   }

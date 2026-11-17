@@ -145,6 +145,7 @@ class _NcTopBarState extends State<NcTopBar> {
                     child: NcGlass(
                       tier: NcGlassTier.thin,
                       radius: 0,
+                      grouped: true,
                       showNoise: false,
                       showRimLight: false,
                       child: Align(

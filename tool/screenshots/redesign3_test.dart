@@ -39,6 +39,7 @@ import 'package:cardflow/domain/settings/app_settings.dart';
 
 import '../../test/helpers/decks_fakes.dart';
 import '../../test/helpers/generation_fakes.dart';
+import '../../test/helpers/katex_fonts.dart';
 import '../../test/helpers/pump_app.dart';
 import '../../test/helpers/settings_fakes.dart';
 
@@ -71,6 +72,7 @@ Future<void> _loadFonts() async {
     );
     await iconLoader.load();
   }
+  await loadKatexFonts();
 }
 
 List<DeckSummary> _decks() => <DeckSummary>[

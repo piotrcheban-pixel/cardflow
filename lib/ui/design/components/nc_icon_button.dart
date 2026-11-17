@@ -106,6 +106,7 @@ class _NcIconButtonState extends State<NcIconButton> {
       button = NcGlass(
         tier: NcGlassTier.thin,
         radius: widget.size / 2,
+        grouped: true,
         width: widget.size,
         height: widget.size,
         child: button,

@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'nc_harness.dart';
+import 'katex_fonts.dart';
 
 /// Golden-тесты компонентов Nocturne (тег `golden`, REDESIGN-SPEC §8).
 ///
@@ -105,6 +106,7 @@ Future<void> loadNcFonts() async {
     );
     await iconLoader.load();
   }
+  await loadKatexFonts();
 }
 
 /// Ищет `materialicons-regular.otf` в кэше Flutter (несколько кандидатов).

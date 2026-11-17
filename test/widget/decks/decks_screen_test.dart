@@ -157,7 +157,6 @@ void main() {
 
       await pumpDecks(tester, repository: repository);
       await tester.pumpAndSettle();
-      final AppLocalizations l10n = l10nOf(tester);
 
       await tester.tap(
         find.byKey(const ValueKey<String>('decks-search-toggle')),

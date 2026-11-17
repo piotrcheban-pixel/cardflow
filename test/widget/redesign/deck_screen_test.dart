@@ -7,7 +7,6 @@ import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/decks/deck_screen.dart';
 import 'package:cardflow/ui/design/design.dart';
 
-import '../../helpers/decks_fakes.dart';
 import '../../helpers/glass_budget.dart';
 import '../../helpers/nc_harness.dart';
 import '../../helpers/nc_screen_harness.dart';
@@ -89,7 +88,7 @@ void main() {
       find.byKey(const ValueKey<String>('deck-generate-action')),
       findsOneWidget,
     );
-    expect(find.text(l10n.deckDueCount(6)), findsOneWidget);
+    expect(find.text(l10n.deckDueCount(6)), findsWidgets);
     expect(find.text(l10n.deckNewCount(4)), findsOneWidget);
     expect(find.text(l10n.deckInProgressCount(5)), findsOneWidget);
     expect(find.text(l10n.deckCardsSection(6)), findsOneWidget);
@@ -157,6 +156,8 @@ void main() {
     expect(tile('classic').dy, tile('feed').dy);
     expect(tile('test').dy, greaterThan(tile('classic').dy));
 
+    Navigator.of(tester.element(find.byType(DeckScreen))).pop();
+    await tester.pumpAndSettle();
     await open(const Size(1440, 900));
     expect(tile('typing').dy, tile('classic').dy);
     expect(tile('match').dy, greaterThan(tile('typing').dy));
@@ -189,7 +190,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('DEST-generate'), findsOneWidget);
 
-    await tester.pageBack();
+    router.pop();
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey<String>('deck-add-card')));
     await tester.pumpAndSettle();

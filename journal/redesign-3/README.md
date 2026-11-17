@@ -20,8 +20,8 @@ Android SDK/JDK/Xcode) — локально `test/analyze/format/golden`, `build
 | Шаг | Экран / файлы | Red | Green | Скриншоты |
 |---|---|---|---|---|
 | 3.1 | Оболочка `shell/app_shell.dart`, `design/components/nc_nav.dart` | `aaa3ec1`, `e3d4acb` | `9672704` | `shell-*` (6) |
-| 3.2 | «Мои колоды» `decks/decks_screen.dart`, `decks/deck_actions.dart` | `f27c07d` | — | `decks-*` (6) |
-| 3.3 | Экран колоды `decks/deck_screen.dart` | — | — | — |
+| 3.2 | «Мои колоды» `decks/decks_screen.dart`, `decks/deck_actions.dart` | `e4fc69e` | `266ca6a` | `decks-*` (6) |
+| 3.3 | Экран колоды `decks/deck_screen.dart` | `b335ac2` | — | `deck-*` (6) |
 | 3.4 | Форма карточки `cards/card_form_screen.dart`, `cards/occlusion_mask_editor.dart`, стили `cards/content/*` | — | — | — |
 | 3.5 | Конструктор `session/session_constructor_screen.dart` | — | — | — |
 | 3.6 | Статистика `statistics/statistics_screen.dart`, `statistics_charts.dart` | — | — | — |
@@ -68,6 +68,29 @@ Android SDK/JDK/Xcode) — локально `test/analyze/format/golden`, `build
 вмещают 2 строки `titleM` + `bodyS` при padding 14; отклонение 4 px
 зафиксировано), 168 px на 2–3 колонках. Общий `NcSplitButton` получил
 `Flexible` для подписи (иначе 2,2 px overflow при textScale 2,0).
+
+### 3.3 Экран колоды — обработчики (до правки → после)
+
+| Действие | До | После |
+|---|---|---|
+| Назад | `AppBar` (авто) → `Navigator.pop` | `NcIconButton.glass` → `context.canPop()` → `context.pop()` |
+| Меню ⋯ | `PopupMenuButton.onSelected` → `_handleMenuAction` | `showNcMenu` с той же ветвью `_handleMenuAction` (generate/rename/export/delete) |
+| «Начать сессию» | `M3ECard.onPressed` → `_startSession` | `NcSurface.onTap` (✋ selectionClick `NcTappable`) → тот же `_startSession` |
+| Лист режимов | `showModalBottomSheet` + `ListTile` → `_SessionModeAction` | `showNcSheet` + сетка плиток (ключи `review-mode-*`) → тот же enum и те же переходы |
+| Лимит дня | `AlertDialog` + кнопки → `_LimitChoice` | `NcDialog` (`hourglass_time`) + ключи `review-limit-*`, тот же `_LimitChoice` |
+| Карточка | `ListTile` → `_openCardForm(cardId)` | `NcListRow` + `CardText` + точка состояния → тот же вызов |
+| Добавить | `FloatingActionButton.small` → `_openCardForm` | `NcSurface`-круг 48 в парящем стеклянном тулбаре → тот же вызов |
+| Сгенерировать | `IconButton.deck-generate-action` → `context.push(deckGenerationPath)` | тот же ключ в тулбаре → тот же push |
+| Пусто | текст + подсказка | `NcEmptyState` (`empty_cards`) с «Добавить карточку»/«Сгенерировать» |
+| Ошибка / не найдено | `Column` + `TextButton` | `NcErrorState` / текст `deckNotFound` |
+
+Отступления: миниатюра карточки 36 × 36 не показана — экран не грузит байты
+`media` (это добавило бы новый запрос, а этап меняет только оформление); при
+textScale > 1,3 стат-пилюли показывают только число с прежней семантикой
+(`deckDueCount` и т. п.), иначе `NcBadge` переполнялся; CTA растёт вместе с
+масштабом текста (120 × clamp(scale, 1, 1,8)). `NcTopBar` и стеклянный
+`NcIconButton` теперь `grouped: true`: экран обёрнут `NcGlassGroup`, поэтому
+шапка + тулбар = одна группа стекла (бюджет §4.4).
 
 ## Тестовая инфраструктура этапа
 

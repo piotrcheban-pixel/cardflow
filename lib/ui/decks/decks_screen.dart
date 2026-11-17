@@ -6,6 +6,7 @@ import 'package:cardflow/domain/decks/deck_query.dart';
 import 'package:cardflow/domain/decks/deck_summary.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/decks/deck_actions.dart';
+import 'package:cardflow/ui/decks/deck_gem.dart';
 import 'package:cardflow/ui/design/design.dart';
 import 'package:cardflow/ui/motion.dart';
 import 'package:cardflow/ui/router/app_router.dart';
@@ -699,14 +700,4 @@ class _DecksEmptyState extends StatelessWidget {
       ),
     );
   }
-}
-
-/// Имя 3D-аватара колоды: `deck_gem_1..8` по стабильному хешу id (§5.4).
-String deckGemName(String deckId) {
-  var hash = 0x811C9DC5;
-  for (final int unit in deckId.codeUnits) {
-    hash ^= unit;
-    hash = (hash * 0x01000193) & 0xFFFFFFFF;
-  }
-  return 'deck_gem_${hash % 8 + 1}';
 }
