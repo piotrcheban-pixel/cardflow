@@ -79,12 +79,7 @@ void main() {
     await tester.pumpAndSettle();
     final l10n = l10nOf(tester);
 
-    await tester.tap(
-      find.descendant(
-        of: find.byKey(const ValueKey<String>('decks-create-split')),
-        matching: find.byIcon(M3EIcons.keyboard_arrow_down),
-      ),
-    );
+    await tester.tap(find.byTooltip(l10n.decksCreateMenuTooltip));
     await tester.pumpAndSettle();
     expect(
       find.byKey(const ValueKey<String>('decks-create-generate')),
