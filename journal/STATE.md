@@ -67,6 +67,16 @@ live + 3 новых); покрытие рукописного кода **92.5 % 
 направления не переписываются. Новые ограничения — L111–L114 (L-seкция
 `KNOWN_LIMITATIONS.md`).
 
+**Коммиты итерации (5):** `ac3f109` — удаление Nocturne и возврат экранов
+(+511 файлов удалено), `6de6eca` — Indigo-сид темы, `493f732` — тест диалога
+«Создать колоду» на production-проводке, `500c9aa` — шаг диалога в Windows-смоуке,
+`ae9227a` — ADR-036/STATE/journal/limitations.
+
+**Push/CI:** `8e9db8a..ae9227a` (44 коммита: этапы 1–3 Nocturne + cleanup-1);
+CI run [`44184233645`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/44184233645)
+— **9/9 job success** (`format + analyze`, `test` × 3 ОС, `build` desktop × 3 +
+Android + iOS).
+
 ## Редизайн «Nocturne» — этап 2 «Компоненты» (2026-11-17, ADR-035) — ОТМЕНЁН
 
 **Факты старта:** `git status --porcelain` → пусто, `HEAD = origin/main =

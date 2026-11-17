@@ -123,4 +123,23 @@ ADR-035 проставлен статус «отменён».
 
 ## Ограничения
 
-См. `journal/KNOWN_LIMITATIONS.md` (новая секция итерации cleanup-1).
+См. `journal/KNOWN_LIMITATIONS.md` (новая секция итерации cleanup-1, L111–L114).
+
+## Гейты и выкладка
+
+| Гейт | Результат |
+|---|---|
+| `fvm flutter test --no-pub --coverage --exclude-tags golden` | **1775 passed + 8 skipped** |
+| покрытие `tool/coverage_check.dart --min=80` | **92.5 % (12948/13996)** |
+| `fvm flutter analyze --no-pub` | **No issues found!** |
+| `fvm dart format --set-exit-if-changed lib test integration_test tool` | **438 / 0 changed** |
+| `fvm flutter build windows --release --no-pub` | `cardflow.exe` (65,2 с) |
+| `integration_test/session_smoke_windows_test.dart -d windows --no-pub` | **All tests passed!** (10 с) |
+
+**Коммиты (5):** `ac3f109` удаление Nocturne + возврат экранов, `6de6eca`
+Indigo-сид, `493f732` тест диалога на production-проводке, `500c9aa` шаг
+диалога в Windows-смоуке, `ae9227a` ADR-036/STATE/journal/limitations.
+
+**Push:** `8e9db8a..ae9227a` (44 коммита). **CI:**
+[`44184233645`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/44184233645)
+— **9/9 job success**.
