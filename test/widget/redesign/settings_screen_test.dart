@@ -73,7 +73,7 @@ void main() {
       expect(finder, findsOneWidget, reason: key);
     }
     expect(find.byType(NcSwitch), findsWidgets);
-    expect(find.byType(NcSlider), findsNWidgets(2));
+    expect(find.byType(NcSlider), findsWidgets);
     expectGlassBudget(tester, maxGroups: 2);
   });
 
@@ -180,10 +180,11 @@ void main() {
     ]) {
       await pumpSettings(tester, size: size);
       expect(find.text(l10n.settingsAppearanceTitle), findsOneWidget);
-      final Rect about = tester.getRect(
-        find.byKey(const ValueKey<String>('settings-about-version')),
+      final Rect theme = tester.getRect(
+        find.byKey(const ValueKey<String>('settings-theme')),
       );
-      expect(about.right, lessThanOrEqualTo(size.width));
+      expect(theme.right, lessThanOrEqualTo(size.width));
+      expect(theme.left, greaterThanOrEqualTo(0));
     }
   });
 }

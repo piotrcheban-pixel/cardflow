@@ -24,8 +24,8 @@ Android SDK/JDK/Xcode) — локально `test/analyze/format/golden`, `build
 | 3.3 | Экран колоды `decks/deck_screen.dart` | `b335ac2` | `eabf8f6` | `deck-*` (6) |
 | 3.4 | Форма карточки `cards/card_form_screen.dart`, `cards/occlusion_mask_editor.dart`, стили `cards/content/*` | `38511f6` | `e6d8514` | `card-form-*` (6) |
 | 3.5 | Конструктор `session/session_constructor_screen.dart` | `a463fae` | `94e74ff` | `constructor-*` (6) |
-| 3.6 | Статистика `statistics/statistics_screen.dart`, `statistics_charts.dart` | `0f8d86a` | — | `statistics-*` (6) |
-| 3.7 | Настройки `settings/settings_screen.dart` | — | — | — |
+| 3.6 | Статистика `statistics/statistics_screen.dart`, `statistics_charts.dart` | `0f8d86a` | `df12936` | `statistics-*` (6) |
+| 3.7 | Настройки `settings/settings_screen.dart` | `4e93db2` | — | `settings-*` (6) |
 | 3.8 | Провайдеры `settings/generation_settings_screen.dart`, `provider_account_dialogs.dart`, `provider_labels.dart` | — | — | — |
 | 3.9 | Verify | — | — | — |
 
@@ -163,6 +163,27 @@ textScale > 1,3 стат-пилюли показывают только числ
 (`NcButton.secondary s` в подписи строки, чтобы бейдж не переполнялся на
 телефоне).
 
+### 3.7 Настройки — обработчики (до правки → после)
+
+| Действие | До | После |
+|---|---|---|
+| Тема | `SegmentedButton` (ключ `settings-theme`) → `_update(copyWith(theme))` | `NcSegmented` с тем же ключом и точками-превью → тот же `_update` |
+| Dynamic color / дислексия | `SwitchListTile` → `_update` | `NcListRow` + `NcSwitch` с теми же ключами → тот же `_update` |
+| Анимация | `SegmentedButton` (ключ `settings-motion`) | `NcSegmented`, ключ тот же |
+| Размер текста | `Slider` (ключ `settings-text-scale`) → сохранение по `onChangeEnd` | `NcSlider` + mono-значение и живой пример «Аа — пример текста»; сохранение по `onChanged` |
+| Удержание | `_PercentSlider` (ключ `settings-retention`) | `NcSlider` + `monoL`-значение, ключ тот же |
+| Шаги обучения | `InputChip`/`ActionChip` (ключи `learning-step-*`) | `NcChip.tag` с удалением (то же поведение при >1 шаге) и `NcButton.ghost s` добавления; ключи те же |
+| Дневные лимиты | `Row` + `IconButton` (ключи `settings-<id>-minus/plus/value`) | `NcStepper` с теми же тремя ключами → те же `copyWith` |
+| Доступность | `SwitchListTile` (ключи `settings-haptics/high-contrast`) | `NcListRow` + `NcSwitch`, ключи те же |
+| API | строки провайдеров, `TextButton.icon` (ключ `settings-open-generation`) | `NcSection`: `NcListRow` сводки, бейдж «Активен», строка перехода с шевроном (ключ тот же), токены (ключ `settings-weekly-tokens`) |
+| О приложении | `ListTile` (ключи `settings-about-*`) | `NcListRow` с теми же ключами и переходами (`showLicensePage`, политика) |
+| Диалог шага | `AlertDialog` + `TextField` | `NcDialog` + `NcTextField` (ключи `learning-step-input/save`) |
+
+Секции — `NcSection` (inset grouped) с `overline`-заголовками; `NcTopBar` с
+large title. Интеграционный тест применения настроек расширен повышенным
+контрастом (`NcTheme.highContrast` и выключенное стекло) к теме, дислексии,
+масштабу текста, движению и отклику.
+
 ## Тестовая инфраструктура этапа
 
 - `test/helpers/nc_screen_harness.dart` — производственная обвязка экрана:
@@ -186,6 +207,7 @@ textScale > 1,3 стат-пилюли показывают только числ
 ## Гейты (итог)
 
 Заполняется в шаге 3.9.
+
 
 
 
