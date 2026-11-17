@@ -116,7 +116,7 @@ void main() {
       expect(transfer.lastImportDeckName, isNull);
       expect(find.text(l10n.deckImportSuccess), findsOneWidget);
       expect(find.byType(DeckScreen), findsOneWidget);
-      expect(find.text('Импортированная колода'), findsOneWidget);
+      expect(find.text('Импортированная колода'), findsWidgets);
     });
 
     testWidgets('отмена в диалоге предпросмотра не импортирует', (

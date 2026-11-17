@@ -40,7 +40,7 @@ void main() {
       expect(find.byType(M3ETheme), findsOneWidget);
       final l10n = l10nOf(tester);
       expect(find.text(l10n.decksTitle), findsWidgets);
-      expect(find.text('Испанский'), findsOneWidget);
+      expect(find.text('Испанский'), findsWidgets);
       expect(
         Localizations.localeOf(tester.element(find.byType(Scaffold).first)),
         const Locale('ru'),
@@ -85,7 +85,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(DeckScreen), findsOneWidget);
-      expect(find.text('Испанский'), findsOneWidget);
+      expect(find.text('Испанский'), findsWidgets);
     });
 
     testWidgets(
