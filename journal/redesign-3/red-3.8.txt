@@ -1,0 +1,417 @@
+00:00 +0: loading C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/redesign/generation_settings_screen_test.dart
+test/widget/redesign/generation_settings_screen_test.dart:41:12: Error: Method not found: 'decksOverrides'.
+    return decksOverrides(
+           ^^^^^^^^^^^^^^
+00:00 +0 -1: loading C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/redesign/generation_settings_screen_test.dart [E]
+  Failed to load "C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/redesign/generation_settings_screen_test.dart":
+  Compilation failed for testPath=C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/redesign/generation_settings_screen_test.dart: test/widget/redesign/generation_settings_screen_test.dart:41:12: Error: Method not found: 'decksOverrides'.
+      return decksOverrides(
+             ^^^^^^^^^^^^^^
+  .
+  Error: The Dart compiler exited unexpectedly.
+  package:flutter_tools/src/base/common.dart 34:3  throwToolExit
+  package:flutter_tools/src/compile.dart 1024:11   DefaultResidentCompiler._compile.<fn>
+  dart:async/zone_root.dart 48:47                  _rootRunUnary
+  dart:async/zone.dart 816:35                      _CustomZone.runUnary
+  dart:async/future_impl.dart 948:45               Future._propagateToListeners.handleValueCallback
+  dart:async/future_impl.dart 977:13               Future._propagateToListeners
+  dart:async/future_impl.dart 862:9                Future._propagateToListeners
+  dart:async/future_impl.dart 720:5                Future._completeWithValue
+  dart:async/future_impl.dart 804:7                Future._asyncCompleteWithValue.<fn>
+  dart:async/zone_root.dart 35:13                  _rootRun
+  dart:async/zone.dart 810:35                      _CustomZone.run
+  dart:async/zone.dart 702:7                       _CustomZone.runGuarded
+  dart:async/zone.dart 743:23                      _CustomZone.bindCallbackGuarded.<fn>
+  dart:async/schedule_microtask.dart 40:35         _microtaskLoop
+  dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
+  dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
+  dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
+  
+00:00 +0 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/guards/legacy_material_guard_test.dart: guard миграции: экраны этапа 3 без legacy-Material lib/ui/shell/app_shell.dart без AppBar/ListTile/FilledButton/M3E-виджетов
+00:00 +1 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/guards/legacy_material_guard_test.dart: guard миграции: экраны этапа 3 без legacy-Material lib/ui/decks/decks_screen.dart без AppBar/ListTile/FilledButton/M3E-виджетов
+00:00 +2 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/guards/legacy_material_guard_test.dart: guard миграции: экраны этапа 3 без legacy-Material lib/ui/decks/deck_actions.dart без AppBar/ListTile/FilledButton/M3E-виджетов
+00:00 +3 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/guards/legacy_material_guard_test.dart: guard миграции: экраны этапа 3 без legacy-Material lib/ui/decks/deck_screen.dart без AppBar/ListTile/FilledButton/M3E-виджетов
+00:00 +4 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/guards/legacy_material_guard_test.dart: guard миграции: экраны этапа 3 без legacy-Material lib/ui/cards/card_form_screen.dart без AppBar/ListTile/FilledButton/M3E-виджетов
+00:00 +5 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/guards/legacy_material_guard_test.dart: guard миграции: экраны этапа 3 без legacy-Material lib/ui/cards/occlusion_mask_editor.dart без AppBar/ListTile/FilledButton/M3E-виджетов
+00:00 +6 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/guards/legacy_material_guard_test.dart: guard миграции: экраны этапа 3 без legacy-Material lib/ui/session/session_constructor_screen.dart без AppBar/ListTile/FilledButton/M3E-виджетов
+00:00 +7 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/guards/legacy_material_guard_test.dart: guard миграции: экраны этапа 3 без legacy-Material lib/ui/statistics/statistics_screen.dart без AppBar/ListTile/FilledButton/M3E-виджетов
+00:00 +8 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/guards/legacy_material_guard_test.dart: guard миграции: экраны этапа 3 без legacy-Material lib/ui/statistics/statistics_charts.dart без AppBar/ListTile/FilledButton/M3E-виджетов
+00:00 +9 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/guards/legacy_material_guard_test.dart: guard миграции: экраны этапа 3 без legacy-Material lib/ui/settings/settings_screen.dart без AppBar/ListTile/FilledButton/M3E-виджетов
+00:00 +10 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/guards/legacy_material_guard_test.dart: guard миграции: экраны этапа 3 без legacy-Material lib/ui/settings/generation_settings_screen.dart без AppBar/ListTile/FilledButton/M3E-виджетов
+00:00 +11 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/guards/legacy_material_guard_test.dart: guard миграции: экраны этапа 3 без legacy-Material lib/ui/settings/provider_account_dialogs.dart без AppBar/ListTile/FilledButton/M3E-виджетов
+00:00 +12 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/guards/legacy_material_guard_test.dart: guard миграции: экраны этапа 3 без legacy-Material lib/ui/settings/provider_labels.dart без AppBar/ListTile/FilledButton/M3E-виджетов
+00:00 +13 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/guards/legacy_material_guard_test.dart: guard миграции: экраны этапа 3 без legacy-Material lib/ui/cards/content/card_content_view.dart без AppBar/ListTile/FilledButton/M3E-виджетов
+00:00 +14 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/guards/legacy_material_guard_test.dart: guard миграции: экраны этапа 3 без legacy-Material lib/ui/cards/content/card_image_view.dart без AppBar/ListTile/FilledButton/M3E-виджетов
+00:00 +15 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/guards/legacy_material_guard_test.dart: guard миграции: экраны этапа 3 без legacy-Material lib/ui/cards/content/card_text.dart без AppBar/ListTile/FilledButton/M3E-виджетов
+00:00 +16 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/guards/legacy_material_guard_test.dart: guard миграции: экраны этапа 3 без legacy-Material lib/ui/cards/content/cloze_text.dart без AppBar/ListTile/FilledButton/M3E-виджетов
+00:00 +17 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/guards/legacy_material_guard_test.dart: guard миграции: экраны этапа 3 без legacy-Material lib/ui/cards/content/inline_latex_text.dart без AppBar/ListTile/FilledButton/M3E-виджетов
+00:00 +18 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/guards/legacy_material_guard_test.dart: guard миграции: экраны этапа 3 без legacy-Material lib/ui/cards/content/latex_text.dart без AppBar/ListTile/FilledButton/M3E-виджетов
+00:00 +19 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/guards/legacy_material_guard_test.dart: guard миграции: экраны этапа 3 без legacy-Material lib/ui/cards/content/occlusion_image_view.dart без AppBar/ListTile/FilledButton/M3E-виджетов
+00:00 +20 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/guards/legacy_material_guard_test.dart: guard миграции: самопроверка ловит legacy-виджеты
+00:00 +21 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/guards/legacy_material_guard_test.dart: guard миграции: самопроверка не путает Nc-компоненты с запрещёнными
+00:00 +22 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/guards/legacy_material_guard_test.dart: guard миграции: самопроверка комментарии не считаются использованием
+00:00 +23 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/settings/generation_settings_screen_test.dart: loading: индикатор загрузки, затем пустое состояние
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following TestFailure was thrown running a test:
+Expected: exactly one matching candidate
+  Actual: _TypeWidgetFinder:<Found 0 widgets with type "CircularProgressIndicator": []>
+   Which: means none were found but one was expected
+
+When the exception was thrown, this was the stack:
+#4      main.<anonymous closure> (file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/settings/generation_settings_screen_test.dart:178:5)
+<asynchronous suspension>
+#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+This was caught by the test expectation on the following line:
+  file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/settings/generation_settings_screen_test.dart line 178
+The test description was:
+  loading: индикатор загрузки, затем пустое состояние
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:01 +23 -2: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/settings/generation_settings_screen_test.dart: loading: индикатор загрузки, затем пустое состояние [E]
+  Test failed. See exception logs above.
+  The test description was: loading: индикатор загрузки, затем пустое состояние
+  
+00:01 +23 -2: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/settings/generation_settings_screen_test.dart: ошибка загрузки: сообщение из ARB и повтор
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following assertion was thrown running a test:
+The finder "Found 0 widgets with type "TextButton" that are ancestors of widgets with text
+"Повторить": []" (used in a call to "tap()") could not find any matching widgets.
+
+When the exception was thrown, this was the stack:
+#0      WidgetController._getElementPoint (package:flutter_test/src/controller.dart:2095:7)
+#1      WidgetController.getCenter (package:flutter_test/src/controller.dart:1947:12)
+#2      WidgetController.tap (package:flutter_test/src/controller.dart:1080:7)
+#3      main.<anonymous closure> (file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/settings/generation_settings_screen_test.dart:207:18)
+<asynchronous suspension>
+#4      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#5      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+The test description was:
+  ошибка загрузки: сообщение из ARB и повтор
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:01 +23 -3: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/settings/generation_settings_screen_test.dart: ошибка загрузки: сообщение из ARB и повтор [E]
+  Test failed. See exception logs above.
+  The test description was: ошибка загрузки: сообщение из ARB и повтор
+  
+00:01 +23 -3: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/settings/generation_settings_screen_test.dart: добавление DeepSeek из каталога: ключ сохраняется без ввода адреса
+00:02 +24 -3: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/settings/generation_settings_screen_test.dart: каталог: выбор другого поставщика и модели
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following StateError was thrown running a test:
+Bad state: No element
+
+When the exception was thrown, this was the stack:
+#0      Iterable.first (dart:core/iterable.dart:663:7)
+#1      _FirstFinderMixin.filter (package:flutter_test/src/finders.dart:1383:28)
+#3      _AncestorFinderMixin.allCandidates (package:flutter_test/src/finders.dart:1857:49)
+#4      FinderBase.evaluate (package:flutter_test/src/finders.dart:1030:76)
+#5      WidgetController.widgetList (package:flutter_test/src/controller.dart:848:19)
+#6      WidgetController._maybeViewOf (package:flutter_test/src/controller.dart:795:34)
+#7      WidgetController.tap (package:flutter_test/src/controller.dart:1078:31)
+#8      main.<anonymous closure> (file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/settings/generation_settings_screen_test.dart:261:18)
+<asynchronous suspension>
+#9      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#10     TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided 2 frames from dart:async-patch and package:stack_trace)
+
+The test description was:
+  каталог: выбор другого поставщика и модели
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:02 +24 -4: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/settings/generation_settings_screen_test.dart: каталог: выбор другого поставщика и модели [E]
+  Test failed. See exception logs above.
+  The test description was: каталог: выбор другого поставщика и модели
+  
+00:02 +24 -4: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/settings/generation_settings_screen_test.dart: каталог: без ключа у облачного провайдера — ошибка, без записи
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following TestFailure was thrown running a test:
+Expected: exactly one matching candidate
+  Actual: _TypeWidgetFinder:<Found 0 widgets with type "AlertDialog": []>
+   Which: means none were found but one was expected
+
+When the exception was thrown, this was the stack:
+#4      main.<anonymous closure> (file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/settings/generation_settings_screen_test.dart:300:7)
+<asynchronous suspension>
+#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+This was caught by the test expectation on the following line:
+  file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/settings/generation_settings_screen_test.dart line 300
+The test description was:
+  каталог: без ключа у облачного провайдера — ошибка, без записи
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:02 +24 -5: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/settings/generation_settings_screen_test.dart: каталог: без ключа у облачного провайдера — ошибка, без записи [E]
+  Test failed. See exception logs above.
+  The test description was: каталог: без ключа у облачного провайдера — ошибка, без записи
+  
+00:02 +24 -5: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/settings/generation_settings_screen_test.dart: каталог: локальному серверу ключ не нужен
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following StateError was thrown running a test:
+Bad state: No element
+
+When the exception was thrown, this was the stack:
+#0      Iterable.first (dart:core/iterable.dart:663:7)
+#1      _FirstFinderMixin.filter (package:flutter_test/src/finders.dart:1383:28)
+#3      _AncestorFinderMixin.allCandidates (package:flutter_test/src/finders.dart:1857:49)
+#4      FinderBase.evaluate (package:flutter_test/src/finders.dart:1030:76)
+#5      WidgetController.widgetList (package:flutter_test/src/controller.dart:848:19)
+#6      WidgetController._maybeViewOf (package:flutter_test/src/controller.dart:795:34)
+#7      WidgetController.tap (package:flutter_test/src/controller.dart:1078:31)
+#8      main.<anonymous closure> (file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/settings/generation_settings_screen_test.dart:310:18)
+<asynchronous suspension>
+#9      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#10     TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided 2 frames from dart:async-patch and package:stack_trace)
+
+The test description was:
+  каталог: локальному серверу ключ не нужен
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:02 +24 -6: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/settings/generation_settings_screen_test.dart: каталог: локальному серверу ключ не нужен [E]
+  Test failed. See exception logs above.
+  The test description was: каталог: локальному серверу ключ не нужен
+  
+00:02 +24 -6: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/settings/generation_settings_screen_test.dart: пользовательская модель API: поля и сохранение
+
+Warning: A call to tap() with finder "Found 1 widget with key [<'provider-save'>]: [
+  NcButton-[<'provider-save'>](dependencies: [InheritedCupertinoTheme, _InheritedTheme, _LocalizationsScope-[GlobalKey#97430]], state: _NcButtonState#a7e03),
+]" derived an Offset (Offset(568.4, 650.0)) that would not hit test on the specified widget.
+Maybe the widget is actually off-screen, or another widget is obscuring it, or the widget cannot receive pointer events.
+Indeed, Offset(568.4, 650.0) is outside the bounds of the root of the render tree, Size(800.0, 600.0).
+The finder corresponds to this RenderBox: RenderMouseRegion#8dd80 relayoutBoundary=up22
+The hit test result at that offset is: HitTestResult(HitTestEntry<HitTestTarget>#e65e0(_ReusableRenderView#f08a9), HitTestEntry<HitTestTarget>#fb87b(<AutomatedTestWidgetsFlutterBinding>))
+#0      WidgetController._getElementPoint (package:flutter_test/src/controller.dart:2165:25)
+#1      WidgetController.getCenter (package:flutter_test/src/controller.dart:1947:12)
+#2      WidgetController.tap (package:flutter_test/src/controller.dart:1080:7)
+#3      main.tapSave (file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/settings/generation_settings_screen_test.dart:155:18)
+#4      main.<anonymous closure> (file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/settings/generation_settings_screen_test.dart:358:11)
+<asynchronous suspension>
+#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+#7      StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:42)
+<asynchronous suspension>
+To silence this warning, pass "warnIfMissed: false" to "tap()".
+To make this warning fatal, set WidgetController.hitTestWarningShouldBeFatal to true.
+
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following StateError was thrown running a test:
+Bad state: No element
+
+When the exception was thrown, this was the stack:
+#0      _Array.single (dart:core-patch/array.dart:62:22)
+#1      main.<anonymous closure> (file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/settings/generation_settings_screen_test.dart:360:59)
+<asynchronous suspension>
+#2      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#3      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+The test description was:
+  пользовательская модель API: поля и сохранение
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:02 +24 -7: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/settings/generation_settings_screen_test.dart: пользовательская модель API: поля и сохранение [E]
+  Test failed. See exception logs above.
+  The test description was: пользовательская модель API: поля и сохранение
+  
+00:02 +24 -7: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/settings/generation_settings_screen_test.dart: пользовательская модель: пустые поля — ошибки, без записи
+
+Warning: A call to tap() with finder "Found 1 widget with key [<'provider-save'>]: [
+  NcButton-[<'provider-save'>](dependencies: [InheritedCupertinoTheme, _InheritedTheme, _LocalizationsScope-[GlobalKey#b1c2a]], state: _NcButtonState#23d15),
+]" derived an Offset (Offset(568.4, 650.0)) that would not hit test on the specified widget.
+Maybe the widget is actually off-screen, or another widget is obscuring it, or the widget cannot receive pointer events.
+Indeed, Offset(568.4, 650.0) is outside the bounds of the root of the render tree, Size(800.0, 600.0).
+The finder corresponds to this RenderBox: RenderMouseRegion#f152a relayoutBoundary=up22
+The hit test result at that offset is: HitTestResult(HitTestEntry<HitTestTarget>#6f215(_ReusableRenderView#f08a9), HitTestEntry<HitTestTarget>#4c799(<AutomatedTestWidgetsFlutterBinding>))
+#0      WidgetController._getElementPoint (package:flutter_test/src/controller.dart:2165:25)
+#1      WidgetController.getCenter (package:flutter_test/src/controller.dart:1947:12)
+#2      WidgetController.tap (package:flutter_test/src/controller.dart:1080:7)
+#3      main.tapSave (file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/settings/generation_settings_screen_test.dart:155:18)
+#4      main.<anonymous closure> (file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/settings/generation_settings_screen_test.dart:381:11)
+<asynchronous suspension>
+#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+#7      StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:42)
+<asynchronous suspension>
+To silence this warning, pass "warnIfMissed: false" to "tap()".
+To make this warning fatal, set WidgetController.hitTestWarningShouldBeFatal to true.
+
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following TestFailure was thrown running a test:
+Expected: exactly one matching candidate
+  Actual: _TextWidgetFinder:<Found 0 widgets with text "Укажите название": []>
+   Which: means none were found but one was expected
+
+When the exception was thrown, this was the stack:
+#4      main.<anonymous closure> (file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/settings/generation_settings_screen_test.dart:383:5)
+<asynchronous suspension>
+#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+This was caught by the test expectation on the following line:
+  file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/settings/generation_settings_screen_test.dart line 383
+The test description was:
+  пользовательская модель: пустые поля — ошибки, без записи
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:03 +24 -8: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/settings/generation_settings_screen_test.dart: пользовательская модель: пустые поля — ошибки, без записи [E]
+  Test failed. See exception logs above.
+  The test description was: пользовательская модель: пустые поля — ошибки, без записи
+  
+00:03 +24 -8: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/settings/generation_settings_screen_test.dart: пользовательская модель: переключатель изображений сохраняется
+
+Warning: A call to tap() with finder "Found 1 widget with key [<'provider-save'>]: [
+  NcButton-[<'provider-save'>](dependencies: [InheritedCupertinoTheme, _InheritedTheme, _LocalizationsScope-[GlobalKey#39454]], state: _NcButtonState#76690),
+]" derived an Offset (Offset(568.4, 650.0)) that would not hit test on the specified widget.
+Maybe the widget is actually off-screen, or another widget is obscuring it, or the widget cannot receive pointer events.
+Indeed, Offset(568.4, 650.0) is outside the bounds of the root of the render tree, Size(800.0, 600.0).
+The finder corresponds to this RenderBox: RenderMouseRegion#50872 relayoutBoundary=up22
+The hit test result at that offset is: HitTestResult(HitTestEntry<HitTestTarget>#9321f(_ReusableRenderView#f08a9), HitTestEntry<HitTestTarget>#2abb6(<AutomatedTestWidgetsFlutterBinding>))
+#0      WidgetController._getElementPoint (package:flutter_test/src/controller.dart:2165:25)
+#1      WidgetController.getCenter (package:flutter_test/src/controller.dart:1947:12)
+#2      WidgetController.tap (package:flutter_test/src/controller.dart:1080:7)
+#3      main.tapSave (file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/settings/generation_settings_screen_test.dart:155:18)
+#4      main.<anonymous closure> (file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/settings/generation_settings_screen_test.dart:410:13)
+<asynchronous suspension>
+#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+#7      StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:42)
+<asynchronous suspension>
+To silence this warning, pass "warnIfMissed: false" to "tap()".
+To make this warning fatal, set WidgetController.hitTestWarningShouldBeFatal to true.
+
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following StateError was thrown running a test:
+Bad state: No element
+
+When the exception was thrown, this was the stack:
+#0      _Array.single (dart:core-patch/array.dart:62:22)
+#1      main.<anonymous closure> (file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/settings/generation_settings_screen_test.dart:412:38)
+<asynchronous suspension>
+#2      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#3      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+The test description was:
+  пользовательская модель: переключатель изображений сохраняется
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:03 +24 -9: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/settings/generation_settings_screen_test.dart: пользовательская модель: переключатель изображений сохраняется [E]
+  Test failed. See exception logs above.
+  The test description was: пользовательская модель: переключатель изображений сохраняется
+  
+00:03 +24 -9: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/settings/generation_settings_screen_test.dart: пользовательская модель: Vision выводится из имени flash
+
+Warning: A call to tap() with finder "Found 1 widget with key [<'provider-save'>]: [
+  NcButton-[<'provider-save'>](dependencies: [InheritedCupertinoTheme, _InheritedTheme, _LocalizationsScope-[GlobalKey#7a4a1]], state: _NcButtonState#19c3d),
+]" derived an Offset (Offset(568.4, 650.0)) that would not hit test on the specified widget.
+Maybe the widget is actually off-screen, or another widget is obscuring it, or the widget cannot receive pointer events.
+Indeed, Offset(568.4, 650.0) is outside the bounds of the root of the render tree, Size(800.0, 600.0).
+The finder corresponds to this RenderBox: RenderMouseRegion#48bb4 relayoutBoundary=up22
+The hit test result at that offset is: HitTestResult(HitTestEntry<HitTestTarget>#a9045(_ReusableRenderView#f08a9), HitTestEntry<HitTestTarget>#7f902(<AutomatedTestWidgetsFlutterBinding>))
+#0      WidgetController._getElementPoint (package:flutter_test/src/controller.dart:2165:25)
+#1      WidgetController.getCenter (package:flutter_test/src/controller.dart:1947:12)
+#2      WidgetController.tap (package:flutter_test/src/controller.dart:1080:7)
+#3      main.tapSave (file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/settings/generation_settings_screen_test.dart:155:18)
+#4      main.<anonymous closure> (file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/settings/generation_settings_screen_test.dart:435:11)
+<asynchronous suspension>
+#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+#7      StackZoneSpecification._registerCallback.<anonymous closure> (package:stack_trace/src/stack_zone_specification.dart:114:42)
+<asynchronous suspension>
+To silence this warning, pass "warnIfMissed: false" to "tap()".
+To make this warning fatal, set WidgetController.hitTestWarningShouldBeFatal to true.
+
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following StateError was thrown running a test:
+Bad state: No element
+
+When the exception was thrown, this was the stack:
+#0      _Array.single (dart:core-patch/array.dart:62:22)
+#1      main.<anonymous closure> (file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/settings/generation_settings_screen_test.dart:437:36)
+<asynchronous suspension>
+#2      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#3      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+The test description was:
+  пользовательская модель: Vision выводится из имени flash
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:03 +24 -10: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/settings/generation_settings_screen_test.dart: пользовательская модель: Vision выводится из имени flash [E]
+  Test failed. See exception logs above.
+  The test description was: пользовательская модель: Vision выводится из имени flash
+  
+00:03 +24 -10: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/settings/generation_settings_screen_test.dart: изменение: новая модель, ключ не трогаем пустым полем
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following StateError was thrown running a test:
+Bad state: No element
+
+When the exception was thrown, this was the stack:
+#0      Iterable.last (dart:core/iterable.dart:679:7)
+#1      _LastFinderMixin.filter (package:flutter_test/src/finders.dart:1410:28)
+#3      _AncestorFinderMixin.allCandidates (package:flutter_test/src/finders.dart:1857:49)
+#4      FinderBase.evaluate (package:flutter_test/src/finders.dart:1030:76)
+#5      WidgetController.widgetList (package:flutter_test/src/controller.dart:848:19)
+#6      WidgetController._maybeViewOf (package:flutter_test/src/controller.dart:795:34)
+#7      WidgetController.tap (package:flutter_test/src/controller.dart:1078:31)
+#8      main.<anonymous closure> (file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/settings/generation_settings_screen_test.dart:456:18)
+<asynchronous suspension>
+#9      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#10     TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided 2 frames from dart:async-patch and package:stack_trace)
+
+The test description was:
+  изменение: новая модель, ключ не трогаем пустым полем
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:03 +24 -11: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/settings/generation_settings_screen_test.dart: изменение: новая модель, ключ не трогаем пустым полем [E]
+  Test failed. See exception logs above.
+  The test description was: изменение: новая модель, ключ не трогаем пустым полем
+  
+00:03 +24 -11: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/settings/generation_settings_screen_test.dart: проверка подключения: успех и ошибка ключа
+00:03 +25 -11: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/settings/generation_settings_screen_test.dart: удаление: подтверждение удаляет аккаунт и ключ
+00:04 +26 -11: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/settings/generation_settings_screen_test.dart: выбор основного провайдера сохраняется
+00:04 +27 -11: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/settings/generation_settings_screen_test.dart: ключ не подтверждён хранилищем: ошибка, аккаунт не сохранён
+00:04 +28 -11: Some tests failed.
+
+Failing tests:
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/redesign/generation_settings_screen_test.dart: loading C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/redesign/generation_settings_screen_test.dart
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/settings/generation_settings_screen_test.dart: loading: индикатор загрузки, затем пустое состояние
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/settings/generation_settings_screen_test.dart: изменение: новая модель, ключ не трогаем пустым полем
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/settings/generation_settings_screen_test.dart: каталог: без ключа у облачного провайдера — ошибка, без записи
+  ... and 7 more

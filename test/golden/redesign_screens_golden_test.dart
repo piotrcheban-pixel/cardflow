@@ -8,6 +8,7 @@ import 'package:cardflow/ui/decks/deck_screen.dart';
 import 'package:cardflow/ui/cards/card_form_screen.dart';
 import 'package:cardflow/ui/decks/decks_screen.dart';
 import 'package:cardflow/ui/session/session_constructor_screen.dart';
+import 'package:cardflow/ui/settings/generation_settings_screen.dart';
 import 'package:cardflow/ui/settings/settings_screen.dart';
 import 'package:cardflow/ui/statistics/statistics_screen.dart';
 
@@ -30,6 +31,7 @@ void main() {
     'constructor': SessionConstructorScreen.new,
     'statistics': StatisticsScreen.new,
     'settings': SettingsScreen.new,
+    'providers': GenerationSettingsScreen.new,
   };
 
   for (final MapEntry<String, Widget Function()> screen in screens.entries) {
