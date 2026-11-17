@@ -1,12 +1,73 @@
 # STATE — текущее состояние CardFlow
 
-**Дата:** 2026-11-17 · **Этап:** редизайн **«Nocturne», этап 3 «Каталог»**
-(журнал `journal/redesign-3/`) — завершён; дальше по плану — этап 4 «Сессия».
-Этап 1 (фундамент) и этап 2 (компоненты) приняты. Продуктовые итерации 7.x
-остаются зелёными.
+**Дата:** 2026-11-18 · **Итерация:** `cleanup-1` «Зачистка и подготовка»
+(журнал `journal/cleanup-1/`, ADR-036) — завершена.
+Редизайн «Nocturne» (этапы 1–3) **отменён и удалён**: визуальный слой снова
+стандартный Material 3 с акцентом Indigo `#4F46E5`. Продуктовые итерации 7.x
+зелёные; схема БД и `format_version` не менялись.
 **Режим:** ИТЕРАЦИИ.
 
-## Редизайн «Nocturne» — этап 2 «Компоненты» (2026-11-17, ADR-035)
+**Следующий шаг:** новая вёрстка экранов по макетам Google Stitch (владелец,
+2026-11-18) — в этой итерации макеты **не применялись** (L113).
+
+## Итерация cleanup-1 — отказ от «Nocturne» и фикс «Создать колоду» (2026-11-18, ADR-036)
+
+**Факты старта:** `git status --porcelain` → пусто, `HEAD = 4ca8e00`
+(этап 3 Nocturne, 43 коммита впереди `origin/main = 8e9db8a`); baseline
+**2121 passed + 8 skipped**. Прогоны — только с `--no-pub` (L64).
+
+**Решение владельца:** дизайн-система провалилась (скорость и стабильность);
+полное удаление наследия, чистый Material 3, Indigo `#4F46E5`. ADR-035 →
+**отменён** ADR-036.
+
+**Критический баг «Создать колоду» (белый экран) — найдена корневая причина:**
+`showNcDialog` собирал `actions` диалога во внешнем `BuildContext` экрана, а
+`DecksScreen` живёт в ветке `StatefulShellRoute` со **своим навигатором**.
+`Navigator.of(context).pop()` выталкивал из ветки **экран** вместо маршрута
+диалога: `You have popped the last page off of the stack`
+(`go_router/src/delegate.dart:178`), белый экран, незавершённый фьючер
+`showDialog`, `!debugLocked` на финализации. Воспроизведено на
+production-проводке (`CardFlowApp` + `createAppRouter`) — 0 виджетов
+`DecksScreen` после закрытия диалога. Исправление: диалог снова
+самодостаточный `_DeckNameDialog`, закрывающий себя из собственного `context`;
+проверены все 12 мест `showDialog`. Ограждение —
+`test/widget/decks/create_deck_dialog_test.dart` (3 случая: открыть/закрыть,
+создать, пустое имя).
+
+**Удалено (511 файлов, −28 059 строк):** `lib/ui/design/**` (56 файлов:
+`NcAmbientBackground` + Aurora, `NcGlass`/`NcGlassGroup` и все
+`BackdropFilter`, 37 компонентов с `rim light` и градиентами, токены
+`nc_colors/typography/spacing/radii/depth`, `nc_theme`, `motion_scope`,
+`haptics`, Nocturne-переходы), `test/golden/**` (346 PNG), `tool/screenshots/**`
++ `tool/extract_ui_keys.dart` (51), Nocturne-тесты (43), 7 ассетов шрифтов и
+зерна, пакет `redesign/`. Восстановлено из `7458346` 46 файлов: экраны этапа 3,
+оболочка, тема, `app.dart`, `main.dart`, ARB (88 Nocturne-строк), `pubspec.yaml`
+(+`material_color_utilities`, `cupertino_ui` — удалены), `.gitignore`, `docs`.
+Ни одна строка `lib/{domain,data,api}` не изменилась.
+
+**Что стало вместо:** `AppTheme` — `ColorScheme.fromSeed` +
+`ThemeData(useMaterial3: true)`, акцент Indigo `#4F46E5`; экраны — простые
+Material/M3E-виджеты; фон статичен (кадры только по событиям).
+
+**Гейты итерации:** `fvm flutter test --no-pub --coverage --exclude-tags golden`
+→ **1775 passed + 8 skipped** (`All tests passed!`; 1771 baseline + 1 сетевой
+live + 3 новых); покрытие рукописного кода **92.5 % (12948/13996)**
+(`AppTheme` 100 %); `fvm flutter analyze --no-pub` → **No issues found!**;
+`fvm dart format --set-exit-if-changed lib test integration_test tool` →
+**438 файлов / 0 changed**; `fvm flutter build windows --release --no-pub` →
+`cardflow.exe` (65,2 с). **Windows-смоук на реальном процессе**
+(`integration_test/session_smoke_windows_test.dart -d windows --no-pub`) →
+**All tests passed!** (10 с; debug-сборка 30,4 с) — в смоук добавлен шаг 0:
+«Создать колоду» на боевой оболочке открывает и закрывает диалог, экран ветки
+остаётся; дальше прежний сквозной сценарий (картинка Basic, дневной лимит,
+генерация с настоящим Wikimedia) зелёный.
+
+**Историческое наследие:** журналы `journal/redesign-1..3/` (146 файлов,
+29,3 МБ) и ADR-035 сохранены со статусом «отменён» — причины закрытого
+направления не переписываются. Новые ограничения — L111–L114 (L-seкция
+`KNOWN_LIMITATIONS.md`).
+
+## Редизайн «Nocturne» — этап 2 «Компоненты» (2026-11-17, ADR-035) — ОТМЕНЁН
 
 **Факты старта:** `git status --porcelain` → пусто, `HEAD = origin/main =
 8e9db8a` (`docs: confirm 9/9 CI for docs commit 734c120`). Baseline этапа 1 —
