@@ -7,9 +7,9 @@ import 'package:material_ui/material_ui.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/design/design.dart';
 import 'package:cardflow/ui/m3e/m3e.dart';
+import 'package:cardflow/ui/shell/app_shell.dart';
 import 'package:cardflow/ui/theme/app_theme.dart';
 
-import 'nc_harness.dart';
 import 'pump_app.dart';
 
 /// Стенд экрана Nocturne для тестов этапа 3 (REDESIGN-SPEC §9).
@@ -92,13 +92,37 @@ Widget ncScreenApp({
       : AppTheme.light(highContrast: config.highContrast);
   final NcHaptics actualHaptics =
       haptics ?? NcHaptics(enabled: config.hapticsEnabled);
-  final Widget child = router == null
+  Widget wrap(BuildContext context, Widget? child) {
+    final M3EThemeData data = M3EThemeData.fromMaterial(Theme.of(context));
+    return NcMotionScope(
+      motion: NcMotion.resolve(
+        preference: config.motion,
+        disableAnimations: config.reduceMotion,
+      ),
+      child: NcHapticsScope(
+        haptics: actualHaptics,
+        child: NcAmbientBackground(
+          child: M3ETheme(
+            data: data,
+            child: MediaQuery(
+              data: MediaQuery.of(context)
+                  .copyWith(textScaler: TextScaler.linear(config.textScale)),
+              child: child ?? const SizedBox.shrink(),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  final Widget app = router == null
       ? MaterialApp(
           debugShowCheckedModeBanner: false,
           locale: const Locale('ru'),
           supportedLocales: AppLocalizations.supportedLocales,
           localizationsDelegates: ruLocalizationDelegates,
           theme: theme,
+          builder: wrap,
           home: home,
         )
       : MaterialApp.router(
@@ -107,35 +131,41 @@ Widget ncScreenApp({
           supportedLocales: AppLocalizations.supportedLocales,
           localizationsDelegates: ruLocalizationDelegates,
           theme: theme,
+          builder: wrap,
           routerConfig: router,
         );
-  return ProviderScope(
-    overrides: overrides,
-    child: Builder(
-      builder: (BuildContext context) {
-        final M3EThemeData data = M3EThemeData.fromMaterial(Theme.of(context));
-        return NcMotionScope(
-          motion: NcMotion.resolve(
-            preference: config.motion,
-            disableAnimations: config.reduceMotion,
+  return ProviderScope(overrides: overrides, child: app);
+}
+
+/// Минимальный роутер для проверки **одной оболочки**: три ветки
+/// `StatefulShellRoute` с пустым содержимым. Нужен там, где экран ветки ещё
+/// Material (его overflow не относится к оболочке) — например, textScale 2,0
+/// на этапе 3.1.
+GoRouter shellOnlyRouter({Widget? screen}) {
+  Widget branch(BuildContext context, GoRouterState state) =>
+      screen ?? const SizedBox.expand();
+  return GoRouter(
+    initialLocation: '/',
+    routes: <RouteBase>[
+      StatefulShellRoute.indexedStack(
+        builder: (
+          BuildContext context,
+          GoRouterState state,
+          StatefulNavigationShell navigationShell,
+        ) => AppShell(navigationShell: navigationShell),
+        branches: <StatefulShellBranch>[
+          StatefulShellBranch(
+            routes: <RouteBase>[GoRoute(path: '/', builder: branch)],
           ),
-          child: NcHapticsScope(
-            haptics: actualHaptics,
-            child: NcAmbientBackground(
-              child: M3ETheme(
-                data: data,
-                child: MediaQuery(
-                  data: MediaQuery.of(
-                    context,
-                  ).copyWith(textScaler: TextScaler.linear(config.textScale)),
-                  child: child,
-                ),
-              ),
-            ),
+          StatefulShellBranch(
+            routes: <RouteBase>[GoRoute(path: '/statistics', builder: branch)],
           ),
-        );
-      },
-    ),
+          StatefulShellBranch(
+            routes: <RouteBase>[GoRoute(path: '/settings', builder: branch)],
+          ),
+        ],
+      ),
+    ],
   );
 }
 

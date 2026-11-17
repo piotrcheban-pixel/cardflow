@@ -112,6 +112,8 @@ match-tile-*
 match-timer
 mc-question-*
 mc-question-face
+nc-nav-capsule
+nc-nav-logo
 nc-progress-fill
 nc-segmented-progress-pulse
 occlusion-cover-*
@@ -189,6 +191,9 @@ settings-review-limit
 settings-text-scale
 settings-theme
 settings-weekly-tokens
+shell-nav-decks
+shell-nav-settings
+shell-nav-statistics
 statistics-forecast
 statistics-forecast-bar-*
 statistics-heatmap

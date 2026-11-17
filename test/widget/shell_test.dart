@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
@@ -8,7 +9,6 @@ import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/app.dart';
 import 'package:cardflow/ui/decks/decks_screen.dart';
 import 'package:cardflow/ui/design/design.dart';
-import 'package:cardflow/ui/router/app_router.dart';
 import 'package:cardflow/ui/settings/settings_screen.dart';
 import 'package:cardflow/ui/statistics/statistics_screen.dart';
 
@@ -79,15 +79,17 @@ void main() {
     await tester.pumpAndSettle();
 
     // Подпись видна только у активного пункта.
-    expect(find.text(l10n.navDecks), findsOneWidget);
-    expect(find.text(l10n.navStatistics), findsNothing);
+    Finder dockText(String label) =>
+        find.descendant(of: find.byType(NcNavDock), matching: find.text(label));
+    expect(dockText(l10n.navDecks), findsOneWidget);
+    expect(dockText(l10n.navStatistics), findsNothing);
 
     await tester.tap(navKey('statistics'));
     await tester.pumpAndSettle();
     expect(find.byType(StatisticsScreen), findsOneWidget);
     expect(tester.widget<NcNavDock>(find.byType(NcNavDock)).selectedIndex, 1);
-    expect(find.text(l10n.navStatistics), findsOneWidget);
-    expect(find.text(l10n.navDecks), findsNothing);
+    expect(dockText(l10n.navStatistics), findsOneWidget);
+    expect(dockText(l10n.navDecks), findsNothing);
 
     await tester.tap(navKey('settings'));
     await tester.pumpAndSettle();
@@ -147,7 +149,8 @@ void main() {
   testWidgets('textScale 2,0 на телефоне 360 × 740 без overflow', (
     WidgetTester tester,
   ) async {
-    final GoRouter router = createAppRouter();
+    // Пустые ветки: проверяется оболочка, а не Material-экраны этапа 3.2.
+    final GoRouter router = shellOnlyRouter();
     addTearDown(router.dispose);
     await pumpNcScreenAtTextScale2(
       tester,
