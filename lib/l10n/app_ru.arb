@@ -653,7 +653,23 @@
   "@cardFormTypeLabel": {
     "description": "Подпись выбора типа карточки."
   },
-  "cardTypeBasic": "Обычная",
+
+  "cardFormSyntaxHint": "Синтаксис: {cloze} — пропуск, {latex} — формула",
+  "@cardFormSyntaxHint": {
+    "description": "Подсказка синтаксиса под переключателем типа карточки (REDESIGN-SPEC §9.4)."
+  },
+  "cardFormPreview": "Предпросмотр",
+  "@cardFormPreview": {
+    "description": "Заголовок сворачиваемого предпросмотра поля карточки."
+  },
+  "cardFormPreviewToggle": "Свернуть или развернуть предпросмотр",
+  "@cardFormPreviewToggle": {
+    "description": "Подпись кнопки-глаза предпросмотра."
+  },
+  "cardFormTagsPreview": "Теги",
+  "@cardFormTagsPreview": {
+    "description": "Заголовок визуального ряда тегов под полем."
+  },  "cardTypeBasic": "Обычная",
   "@cardTypeBasic": {
     "description": "Тип карточки basic."
   },

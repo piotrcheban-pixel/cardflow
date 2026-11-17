@@ -1,0 +1,163 @@
+00:00 +0: loading C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/redesign/card_form_screen_test.dart
+00:00 +0: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/guards/legacy_material_guard_test.dart: guard миграции: экраны этапа 3 без legacy-Material lib/ui/shell/app_shell.dart без AppBar/ListTile/FilledButton/M3E-виджетов
+00:00 +1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/guards/legacy_material_guard_test.dart: guard миграции: экраны этапа 3 без legacy-Material lib/ui/decks/decks_screen.dart без AppBar/ListTile/FilledButton/M3E-виджетов
+00:00 +2: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/guards/legacy_material_guard_test.dart: guard миграции: экраны этапа 3 без legacy-Material lib/ui/decks/deck_actions.dart без AppBar/ListTile/FilledButton/M3E-виджетов
+00:00 +3: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/guards/legacy_material_guard_test.dart: guard миграции: экраны этапа 3 без legacy-Material lib/ui/decks/deck_screen.dart без AppBar/ListTile/FilledButton/M3E-виджетов
+00:00 +4: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/guards/legacy_material_guard_test.dart: guard миграции: экраны этапа 3 без legacy-Material lib/ui/cards/card_form_screen.dart без AppBar/ListTile/FilledButton/M3E-виджетов
+00:00 +4 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/guards/legacy_material_guard_test.dart: guard миграции: экраны этапа 3 без legacy-Material lib/ui/cards/card_form_screen.dart без AppBar/ListTile/FilledButton/M3E-виджетов [E]
+  Expected: empty
+    Actual: ['AppBar', 'CircularProgressIndicator', 'FilledButton', 'SwitchListTile']
+  В lib/ui/cards/card_form_screen.dart остались Material-виджеты [AppBar, CircularProgressIndicator, FilledButton, SwitchListTile] — REDESIGN-SPEC §9 требует Nc*-компоненты (REDESIGN-PLAN, этап 3).
+  
+  package:matcher                                     expect
+  package:flutter_test/src/widget_tester.dart 473:18  expect
+  test\guards\legacy_material_guard_test.dart 62:9    main.<fn>.<fn>
+  
+00:00 +4 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/guards/legacy_material_guard_test.dart: guard миграции: экраны этапа 3 без legacy-Material lib/ui/cards/occlusion_mask_editor.dart без AppBar/ListTile/FilledButton/M3E-виджетов
+00:00 +5 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/guards/legacy_material_guard_test.dart: guard миграции: самопроверка ловит legacy-виджеты
+00:00 +6 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/guards/legacy_material_guard_test.dart: guard миграции: самопроверка не путает Nc-компоненты с запрещёнными
+00:00 +7 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/redesign/card_form_screen_test.dart: ключи §9.4 новой карточки: поля, тип, сохранение
+00:00 +8 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/redesign/card_form_screen_test.dart: ключи §9.4 новой карточки: поля, тип, сохранение
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following TestFailure was thrown running a test:
+Expected: exactly one matching candidate
+  Actual: _TypeWidgetFinder:<Found 0 widgets with type "NcSegmented<CardType>": []>
+   Which: means none were found but one was expected
+
+When the exception was thrown, this was the stack:
+#4      main.<anonymous closure> (file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/redesign/card_form_screen_test.dart:65:5)
+<asynchronous suspension>
+#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+This was caught by the test expectation on the following line:
+  file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/redesign/card_form_screen_test.dart line 65
+The test description was:
+  ключи §9.4 новой карточки: поля, тип, сохранение
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:01 +8 -2: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/redesign/card_form_screen_test.dart: ключи §9.4 новой карточки: поля, тип, сохранение [E]
+  Test failed. See exception logs above.
+  The test description was: ключи §9.4 новой карточки: поля, тип, сохранение
+  
+00:01 +8 -2: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/redesign/card_form_screen_test.dart: подсказка синтаксиса и предпросмотр LaTeX
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following TestFailure was thrown running a test:
+Expected: exactly one matching candidate
+  Actual: _TextWidgetFinder:<Found 0 widgets with text "Синтаксис: {{c1::…}} — пропуск, $…$ —
+формула": []>
+   Which: means none were found but one was expected
+
+When the exception was thrown, this was the stack:
+#4      main.<anonymous closure> (file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/redesign/card_form_screen_test.dart:80:5)
+<asynchronous suspension>
+#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+This was caught by the test expectation on the following line:
+  file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/redesign/card_form_screen_test.dart line 80
+The test description was:
+  подсказка синтаксиса и предпросмотр LaTeX
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:01 +8 -3: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/redesign/card_form_screen_test.dart: подсказка синтаксиса и предпросмотр LaTeX [E]
+  Test failed. See exception logs above.
+  The test description was: подсказка синтаксиса и предпросмотр LaTeX
+  
+00:01 +8 -3: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/redesign/card_form_screen_test.dart: теги превращаются в NcChip.tag только визуально
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following TestFailure was thrown running a test:
+Expected: exactly 2 matching candidates
+  Actual: _DescendantWidgetFinder:<Found 0 widgets with type "NcChip" descending from widgets with
+key [<'card-form-tags-preview'>]: []>
+   Which: means none were found but some were expected
+
+When the exception was thrown, this was the stack:
+#4      main.<anonymous closure> (file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/redesign/card_form_screen_test.dart:111:5)
+<asynchronous suspension>
+#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+This was caught by the test expectation on the following line:
+  file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/redesign/card_form_screen_test.dart line 111
+The test description was:
+  теги превращаются в NcChip.tag только визуально
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:01 +8 -4: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/redesign/card_form_screen_test.dart: теги превращаются в NcChip.tag только визуально [E]
+  Test failed. See exception logs above.
+  The test description was: теги превращаются в NcChip.tag только визуально
+  
+00:01 +8 -4: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/redesign/card_form_screen_test.dart: медиа: ключи изображения и переключатель масок
+00:02 +9 -4: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/redesign/card_form_screen_test.dart: удаление: NcDialog с ключами подтверждения и отмены
+00:02 +10 -4: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/redesign/card_form_screen_test.dart: бюджет стекла ≤ 2, textScale 2,0 без overflow
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following TestFailure was thrown running a test:
+Expected: at least one matching candidate
+  Actual: _TypeWidgetFinder:<Found 0 widgets with type "BackdropFilter": []>
+   Which: means none were found but some were expected
+
+When the exception was thrown, this was the stack:
+#4      main.<anonymous closure> (file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/redesign/card_form_screen_test.dart:192:5)
+<asynchronous suspension>
+#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+This was caught by the test expectation on the following line:
+  file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/redesign/card_form_screen_test.dart line 192
+The test description was:
+  бюджет стекла ≤ 2, textScale 2,0 без overflow
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:02 +10 -5: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/redesign/card_form_screen_test.dart: бюджет стекла ≤ 2, textScale 2,0 без overflow [E]
+  Test failed. See exception logs above.
+  The test description was: бюджет стекла ≤ 2, textScale 2,0 без overflow
+  
+00:02 +10 -5: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/redesign/card_form_screen_test.dart: textScale 2,0 на телефоне 360 × 740 без overflow
+00:02 +11 -5: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/redesign/card_form_screen_test.dart: ширины: колонка max 680 на ПК и узкая на телефоне
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following TestFailure was thrown running a test:
+Expected: a value less than or equal to <680>
+  Actual: <1408.0>
+   Which: is not a value less than or equal to <680>
+
+When the exception was thrown, this was the stack:
+#4      main.<anonymous closure> (file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/redesign/card_form_screen_test.dart:213:5)
+<asynchronous suspension>
+#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+This was caught by the test expectation on the following line:
+  file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/redesign/card_form_screen_test.dart line 213
+The test description was:
+  ширины: колонка max 680 на ПК и узкая на телефоне
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:02 +11 -6: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/redesign/card_form_screen_test.dart: ширины: колонка max 680 на ПК и узкая на телефоне [E]
+  Test failed. See exception logs above.
+  The test description was: ширины: колонка max 680 на ПК и узкая на телефоне
+  
+00:02 +11 -6: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/redesign/card_form_screen_test.dart: сохранение возвращает результат прежним путём
+00:03 +12 -6: Some tests failed.
+
+Failing tests:
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/guards/legacy_material_guard_test.dart: guard миграции: экраны этапа 3 без legacy-Material lib/ui/cards/card_form_screen.dart без AppBar/ListTile/FilledButton/M3E-виджетов
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/redesign/card_form_screen_test.dart: бюджет стекла ≤ 2, textScale 2,0 без overflow
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/redesign/card_form_screen_test.dart: ключи §9.4 новой карточки: поля, тип, сохранение
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/redesign/card_form_screen_test.dart: подсказка синтаксиса и предпросмотр LaTeX
+  ... and 2 more

@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'package:cardflow/ui/decks/deck_screen.dart';
+import 'package:cardflow/ui/cards/card_form_screen.dart';
 import 'package:cardflow/ui/decks/decks_screen.dart';
 
 import '../helpers/nc_golden.dart';
@@ -22,6 +23,7 @@ void main() {
   final Map<String, Widget Function()> screens = <String, Widget Function()>{
     'decks': DecksScreen.new,
     'deck': () => const DeckScreen(deckId: 'deck-bio'),
+    'card-form': () => const CardFormScreen(deckId: 'deck-bio'),
   };
 
   for (final MapEntry<String, Widget Function()> screen in screens.entries) {
@@ -39,9 +41,7 @@ void main() {
         );
         await expectLater(
           find.byType(MaterialApp),
-          matchesGoldenFile(
-            'goldens/screens/${screen.key}_$themeName.png',
-          ),
+          matchesGoldenFile('goldens/screens/${screen.key}_$themeName.png'),
         );
       });
     }

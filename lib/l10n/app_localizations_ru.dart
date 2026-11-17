@@ -523,6 +523,20 @@ class AppLocalizationsRu extends AppLocalizations {
   String get cardFormTypeLabel => 'Тип карточки';
 
   @override
+  String cardFormSyntaxHint(Object cloze, Object latex) {
+    return 'Синтаксис: $cloze — пропуск, $latex — формула';
+  }
+
+  @override
+  String get cardFormPreview => 'Предпросмотр';
+
+  @override
+  String get cardFormPreviewToggle => 'Свернуть или развернуть предпросмотр';
+
+  @override
+  String get cardFormTagsPreview => 'Теги';
+
+  @override
   String get cardTypeBasic => 'Обычная';
 
   @override

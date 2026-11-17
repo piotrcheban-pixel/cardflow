@@ -2,6 +2,8 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:material_ui/material_ui.dart' hide Card;
 
 import 'package:cardflow/domain/cards/card.dart';
+import 'package:cardflow/domain/cards/card_media.dart';
+import 'package:cardflow/domain/cards/card_repository.dart';
 import 'package:cardflow/domain/decks/deck_summary.dart';
 import 'package:cardflow/domain/settings/app_settings.dart';
 import 'package:cardflow/domain/statistics/statistics.dart';
@@ -171,13 +173,17 @@ StatisticsSnapshot ncStage3Statistics() {
 List<Override> ncStage3Overrides({
   List<DeckSummary>? summaries,
   List<Card>? cards,
+  CardRepository? cardRepository,
+  CardImageGateway? imageGateway,
   StatisticsSnapshot? statistics,
   AppSettings? settings,
 }) => decksOverrides(
   deckRepository: FakeDeckRepository(
     summaries: summaries ?? ncStage3DeckSummaries(),
   ),
-  cardRepository: FakeCardRepository(cards: cards ?? ncStage3Cards()),
+  cardRepository:
+      cardRepository ?? FakeCardRepository(cards: cards ?? ncStage3Cards()),
+  imageGateway: imageGateway,
   statisticsRepository: FakeStatisticsRepository(
     snapshot: statistics ?? ncStage3Statistics(),
     tokens: 12400,

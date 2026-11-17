@@ -910,6 +910,30 @@ abstract class AppLocalizations {
   /// **'Тип карточки'**
   String get cardFormTypeLabel;
 
+  /// Подсказка синтаксиса под переключателем типа карточки (REDESIGN-SPEC §9.4).
+  ///
+  /// In ru, this message translates to:
+  /// **'Синтаксис: {cloze} — пропуск, {latex} — формула'**
+  String cardFormSyntaxHint(Object cloze, Object latex);
+
+  /// Заголовок сворачиваемого предпросмотра поля карточки.
+  ///
+  /// In ru, this message translates to:
+  /// **'Предпросмотр'**
+  String get cardFormPreview;
+
+  /// Подпись кнопки-глаза предпросмотра.
+  ///
+  /// In ru, this message translates to:
+  /// **'Свернуть или развернуть предпросмотр'**
+  String get cardFormPreviewToggle;
+
+  /// Заголовок визуального ряда тегов под полем.
+  ///
+  /// In ru, this message translates to:
+  /// **'Теги'**
+  String get cardFormTagsPreview;
+
   /// Тип карточки basic.
   ///
   /// In ru, this message translates to:
