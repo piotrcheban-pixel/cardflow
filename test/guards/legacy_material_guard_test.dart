@@ -35,6 +35,7 @@ const List<String> migratedFiles = <String>[
   'lib/ui/decks/deck_screen.dart',
   'lib/ui/cards/card_form_screen.dart',
   'lib/ui/cards/occlusion_mask_editor.dart',
+  'lib/ui/session/session_constructor_screen.dart',
   'lib/ui/cards/content/card_content_view.dart',
   'lib/ui/cards/content/card_image_view.dart',
   'lib/ui/cards/content/card_text.dart',

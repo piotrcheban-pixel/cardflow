@@ -11,6 +11,7 @@ import 'package:cardflow/domain/session/session_config.dart';
 import 'package:cardflow/domain/session/session_plan.dart';
 import 'package:cardflow/domain/session/session_preset.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
+import 'package:cardflow/ui/design/design.dart';
 import 'package:cardflow/ui/session/session_constructor_screen.dart';
 
 import '../../helpers/decks_fakes.dart';
@@ -134,7 +135,15 @@ void main() {
   }
 
   bool chipSelected(WidgetTester tester, String key) =>
-      tester.widget<FilterChip>(find.byKey(ValueKey<String>(key))).selected;
+      tester.widget<NcChip>(find.byKey(ValueKey<String>(key))).selected;
+
+  bool deckSelected(WidgetTester tester, String key) {
+    final Finder semantics = find.descendant(
+      of: find.byKey(ValueKey<String>(key)),
+      matching: find.byType(Semantics),
+    );
+    return tester.widget<Semantics>(semantics).properties.selected ?? false;
+  }
 
   Future<void> scrollTo(WidgetTester tester, Finder finder) async {
     await tester.scrollUntilVisible(
@@ -147,7 +156,7 @@ void main() {
 
   bool startEnabled(WidgetTester tester) =>
       tester
-          .widget<FilledButton>(
+          .widget<NcButton>(
             find.byKey(const ValueKey<String>('constructor-start')),
           )
           .onPressed !=
@@ -168,11 +177,11 @@ void main() {
       expect(find.text('Испанский'), findsOneWidget);
       expect(find.text('Биология'), findsOneWidget);
       expect(
-        chipSelected(tester, 'constructor-deck-deck-1'),
+        deckSelected(tester, 'constructor-deck-deck-1'),
         isTrue,
         reason: 'колода с экрана колоды предвыбрана',
       );
-      expect(chipSelected(tester, 'constructor-deck-deck-2'), isFalse);
+      expect(deckSelected(tester, 'constructor-deck-deck-2'), isFalse);
       expect(find.text(l10n.constructorAvailableCount(2)), findsOneWidget);
       expect(startEnabled(tester), isTrue);
       expect(leeches.requestedDecks.single.toSet(), <String>{
@@ -366,12 +375,13 @@ void main() {
       find.byKey(const ValueKey<String>('constructor-limit-minutes')),
     );
     await tester.pumpAndSettle();
-    await tester.tap(
-      find.byKey(const ValueKey<String>('constructor-limit-value')),
-    );
-    await tester.pumpAndSettle();
-    await tester.tap(find.text(l10n.constructorLimitMinutesValue(5)).last);
-    await tester.pumpAndSettle();
+    for (var index = 0; index < 2; index++) {
+      await tester.tap(
+        find.byKey(const ValueKey<String>('constructor-limit-minus')),
+      );
+      await tester.pumpAndSettle();
+    }
+    expect(find.text(l10n.constructorLimitMinutesValue(5)), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey<String>('constructor-start')));
     await tester.pumpAndSettle();
