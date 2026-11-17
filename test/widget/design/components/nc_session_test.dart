@@ -11,16 +11,6 @@ import '../../../helpers/nc_harness.dart';
 void main() {
   final AppLocalizations l10n = ncL10n;
 
-  NcRatingSpec spec(String label, String interval, Color color, int index) =>
-      NcRatingSpec(
-        label: label,
-        interval: interval,
-        color: color,
-        key: ValueKey<String>('review-rating-$index'),
-        onPressed: () {},
-        keyHint: '${index + 1}',
-      );
-
   group('NcMonolith', () {
     testWidgets('слоты метаданных, лица и бейджей; тап и семантика', (
       WidgetTester tester,
