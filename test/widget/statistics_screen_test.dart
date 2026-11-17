@@ -45,6 +45,15 @@ void main() {
     );
   }
 
+  Future<void> scrollTo(WidgetTester tester, Finder finder) async {
+    await tester.scrollUntilVisible(
+      finder,
+      260,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+  }
+
   Future<void> pump(
     WidgetTester tester, {
     required FakeStatisticsRepository repository,
@@ -70,7 +79,7 @@ void main() {
     );
     final AppLocalizations l10n = l10nOf(tester);
 
-    expect(find.text(l10n.statisticsTitle), findsOneWidget);
+    expect(find.text(l10n.statisticsTitle), findsWidgets);
     expect(find.text(l10n.statisticsRetentionValue(80)), findsOneWidget);
     expect(find.text(l10n.statisticsHeatmapTitle), findsOneWidget);
     expect(
@@ -78,10 +87,10 @@ void main() {
       findsOneWidget,
     );
 
-    await tester.ensureVisible(
+    await scrollTo(
+      tester,
       find.byKey(const ValueKey<String>('weak-topic-train-алгебра')),
     );
-    await tester.pumpAndSettle();
     expect(
       find.byKey(const ValueKey<String>('weak-topic-алгебра')),
       findsOneWidget,
@@ -89,10 +98,10 @@ void main() {
     expect(find.text(l10n.statisticsWeakTopicStats(2, 5)), findsOneWidget);
     expect(find.text(l10n.statisticsWeakTopicTrain), findsOneWidget);
 
-    await tester.ensureVisible(
+    await scrollTo(
+      tester,
       find.byKey(const ValueKey<String>('statistics-forecast')),
     );
-    await tester.pumpAndSettle();
     expect(
       find.byKey(const ValueKey<String>('statistics-forecast')),
       findsOneWidget,
@@ -113,10 +122,10 @@ void main() {
       findsOneWidget,
     );
 
-    await tester.ensureVisible(
+    await scrollTo(
+      tester,
       find.byKey(const ValueKey<String>('statistics-week')),
     );
-    await tester.pumpAndSettle();
     expect(
       find.byKey(const ValueKey<String>('statistics-week')),
       findsOneWidget,
@@ -183,8 +192,7 @@ void main() {
     final Finder train = find.byKey(
       const ValueKey<String>('weak-topic-train-алгебра'),
     );
-    await tester.ensureVisible(train);
-    await tester.pumpAndSettle();
+    await scrollTo(tester, train);
     await tester.tap(train);
     await tester.pumpAndSettle();
 

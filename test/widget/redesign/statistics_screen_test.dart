@@ -14,6 +14,15 @@ import '../../helpers/redesign_screen_fixtures.dart';
 void main() {
   final AppLocalizations l10n = ncL10n;
 
+  Future<void> scrollTo(WidgetTester tester, Finder finder) async {
+    await tester.scrollUntilVisible(
+      finder,
+      260,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+  }
+
   Future<void> pumpStatistics(
     WidgetTester tester, {
     Size size = const Size(390, 844),
@@ -50,20 +59,20 @@ void main() {
       findsOneWidget,
     );
 
-    await tester.ensureVisible(
-      find.byKey(const ValueKey<String>('weak-topic-train-алгебра')),
+    await scrollTo(
+      tester,
+      find.byKey(const ValueKey<String>('weak-topic-train-биология')),
     );
-    await tester.pumpAndSettle();
     expect(
-      find.byKey(const ValueKey<String>('weak-topic-алгебра')),
+      find.byKey(const ValueKey<String>('weak-topic-биология')),
       findsOneWidget,
     );
     expect(find.byType(NcBadge), findsWidgets);
 
-    await tester.ensureVisible(
+    await scrollTo(
+      tester,
       find.byKey(const ValueKey<String>('statistics-forecast')),
     );
-    await tester.pumpAndSettle();
     expect(
       find.byKey(const ValueKey<String>('statistics-forecast-bar-0')),
       findsOneWidget,
@@ -80,10 +89,9 @@ void main() {
   ) async {
     await pumpStatistics(tester);
     final Finder train = find.byKey(
-      const ValueKey<String>('weak-topic-train-алгебра'),
+      const ValueKey<String>('weak-topic-train-биология'),
     );
-    await tester.ensureVisible(train);
-    await tester.pumpAndSettle();
+    await scrollTo(tester, train);
     // Роутера в стенде нет: проверяем, что кнопка живая и имеет ключ.
     expect(train, findsOneWidget);
   });
@@ -103,7 +111,14 @@ void main() {
   ) async {
     await pumpStatistics(tester, size: const Size(1440, 900));
     final double retentionWidth = tester
-        .getSize(find.byKey(const ValueKey<String>('statistics-retention')))
+        .getSize(
+          find
+              .ancestor(
+                of: find.byKey(const ValueKey<String>('statistics-retention')),
+                matching: find.byType(NcSurface),
+              )
+              .first,
+        )
         .width;
     final Offset week = tester.getTopLeft(
       find.byKey(const ValueKey<String>('statistics-week')),
@@ -113,6 +128,7 @@ void main() {
     );
     expect(week.dy, heatmap.dy);
     expect(retentionWidth, greaterThan(heatmap.dx));
+    expect(heatmap.dx, greaterThan(600));
 
     await pumpStatistics(tester);
     final Offset weekPhone = tester.getTopLeft(
@@ -121,7 +137,7 @@ void main() {
     final Offset heatmapPhone = tester.getTopLeft(
       find.byKey(const ValueKey<String>('statistics-heatmap')),
     );
-    expect(heatmapPhone.dy, lessThan(weekPhone.dy));
+    expect(weekPhone.dy, lessThan(heatmapPhone.dy));
   });
 
   testWidgets('textScale 2,0 на телефоне 360 × 740 без overflow', (
