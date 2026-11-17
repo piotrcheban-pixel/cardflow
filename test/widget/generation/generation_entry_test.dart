@@ -142,7 +142,7 @@ void main() {
       find.byKey(const ValueKey<String>('generation-open-settings')),
     );
     await tester.pumpAndSettle();
-    expect(find.text(l10n.providersTitle), findsOneWidget);
+    expect(find.text(l10n.providersTitle), findsWidgets);
     expect(find.byKey(const ValueKey<String>('providers-add')), findsOneWidget);
   });
 

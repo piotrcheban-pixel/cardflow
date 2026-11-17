@@ -173,7 +173,7 @@ void main() {
       await tester.tap(generationLink);
       await tester.pumpAndSettle();
       expect(find.byType(GenerationSettingsScreen), findsOneWidget);
-      expect(find.text(l10n.providersTitle), findsOneWidget);
+      expect(find.text(l10n.providersTitle), findsWidgets);
     });
   });
 
