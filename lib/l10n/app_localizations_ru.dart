@@ -69,6 +69,11 @@ class AppLocalizationsRu extends AppLocalizations {
   String get decksNoResults => 'Ничего не найдено';
 
   @override
+  String decksSummary(Object decks, Object due) {
+    return 'К повторению: $due · колод: $decks';
+  }
+
+  @override
   String get decksErrorTitle => 'Не удалось загрузить колоды';
 
   @override

@@ -15,6 +15,7 @@ class NcSearchField extends StatefulWidget {
     this.onSubmitted,
     this.autofocus = false,
     this.clearTooltip,
+    this.clearKey,
     this.semanticLabel,
     this.focusNode,
     this.enabled = true,
@@ -37,6 +38,9 @@ class NcSearchField extends StatefulWidget {
 
   /// Подпись кнопки очистки (ARB).
   final String? clearTooltip;
+
+  /// Ключ кнопки очистки (контракт экрана).
+  final Key? clearKey;
 
   /// Текст семантики поля.
   final String? semanticLabel;
@@ -128,6 +132,7 @@ class _NcSearchFieldState extends State<NcSearchField> {
         ),
         if (hasText && widget.clearTooltip != null)
           NcIconButton(
+            key: widget.clearKey,
             icon: Icons.close_rounded,
             tooltip: widget.clearTooltip!,
             size: 32,

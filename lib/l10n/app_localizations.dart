@@ -208,6 +208,12 @@ abstract class AppLocalizations {
   /// **'Ничего не найдено'**
   String get decksNoResults;
 
+  /// Сводная строка в шапке «Мои колоды»: карточек к повторению и число колод.
+  ///
+  /// In ru, this message translates to:
+  /// **'К повторению: {due} · колод: {decks}'**
+  String decksSummary(Object decks, Object due);
+
   /// Состояние ошибки загрузки списка колод (без сырых исключений).
   ///
   /// In ru, this message translates to:
