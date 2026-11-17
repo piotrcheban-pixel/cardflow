@@ -23,8 +23,8 @@ Android SDK/JDK/Xcode) — локально `test/analyze/format/golden`, `build
 | 3.2 | «Мои колоды» `decks/decks_screen.dart`, `decks/deck_actions.dart` | `e4fc69e` | `266ca6a` | `decks-*` (6) |
 | 3.3 | Экран колоды `decks/deck_screen.dart` | `b335ac2` | `eabf8f6` | `deck-*` (6) |
 | 3.4 | Форма карточки `cards/card_form_screen.dart`, `cards/occlusion_mask_editor.dart`, стили `cards/content/*` | `38511f6` | `e6d8514` | `card-form-*` (6) |
-| 3.5 | Конструктор `session/session_constructor_screen.dart` | `a463fae` | — | `constructor-*` (6) |
-| 3.6 | Статистика `statistics/statistics_screen.dart`, `statistics_charts.dart` | — | — | — |
+| 3.5 | Конструктор `session/session_constructor_screen.dart` | `a463fae` | `94e74ff` | `constructor-*` (6) |
+| 3.6 | Статистика `statistics/statistics_screen.dart`, `statistics_charts.dart` | `0f8d86a` | — | `statistics-*` (6) |
 | 3.7 | Настройки `settings/settings_screen.dart` | — | — | — |
 | 3.8 | Провайдеры `settings/generation_settings_screen.dart`, `provider_account_dialogs.dart`, `provider_labels.dart` | — | — | — |
 | 3.9 | Verify | — | — | — |
@@ -141,6 +141,28 @@ textScale > 1,3 стат-пилюли показывают только числ
 размер < 40 (§5.1); лимит меняется дискретным степпером по прежним наборам
 значений (dropdown упразднён, чтобы сохранить совместимость пресетов).
 
+### 3.6 Статистика — обработчики (до правки → после)
+
+| Действие | До | После |
+|---|---|---|
+| «Тренировать» слабой темы | `FilledButton.tonal` (ключ `weak-topic-train-<tag>`) → `context.push('/constructor?tag=…')` | `NcButton.secondary s` с тем же ключом → тот же `context.push` и `Uri.encodeQueryComponent` |
+| Повтор после ошибки | `TextButton` → `ref.invalidate(statisticsProvider)` | `NcErrorState` → тот же `invalidate` |
+
+Данные и ключи не менялись: `statistics-retention`, `statistics-week`,
+`statistics-heatmap`, `statistics-forecast`, `statistics-forecast-bar-<i>`,
+`weak-topic-<tag>`, `weak-topic-train-<tag>`; семантические строки и подписи
+месяцев — прежние (`heatmapMonthLabels` сохранён статическим на виджете).
+
+Графики: `StatisticsWaveform` — капсулы с градиентом `aurumDeep→aurum`,
+последний столбик с точкой-glow, рост от нуля; пунктирная линия без данных.
+`StatisticsHeatmap` — шкала `NcColors.heat0–4`, ячейки 10 px с зазором 3,
+горизонтальная прокрутка с автопереходом к сегодня, короткие подписи месяцев.
+Прогноз — `monoM` над столбиком, сегодня Aurum, остальные `ink5` с верхней
+гранью Aurum, нулевой день — точка. Слабые темы — `NcSection` со строками:
+тег, `NcBadge.ember` доли ошибок, `NcProgressLine` и «Тренировать»
+(`NcButton.secondary s` в подписи строки, чтобы бейдж не переполнялся на
+телефоне).
+
 ## Тестовая инфраструктура этапа
 
 - `test/helpers/nc_screen_harness.dart` — производственная обвязка экрана:
@@ -164,5 +186,6 @@ textScale > 1,3 стат-пилюли показывают только числ
 ## Гейты (итог)
 
 Заполняется в шаге 3.9.
+
 
 
