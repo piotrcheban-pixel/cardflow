@@ -7,6 +7,7 @@ import 'package:cardflow/api/parsers/file_parsing_service.dart';
 import 'package:cardflow/domain/decks/deck_summary.dart';
 import 'package:cardflow/domain/generation/provider_account.dart';
 import 'package:cardflow/ui/generation/generation_screen.dart';
+import 'package:cardflow/ui/m3e/m3e.dart';
 import 'package:cardflow/ui/settings/generation_settings_screen.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
 
@@ -78,7 +79,12 @@ void main() {
     await tester.pumpAndSettle();
     final l10n = l10nOf(tester);
 
-    await tester.tap(find.byTooltip(l10n.decksCreateMenuTooltip));
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const ValueKey<String>('decks-create-split')),
+        matching: find.byIcon(M3EIcons.keyboard_arrow_down),
+      ),
+    );
     await tester.pumpAndSettle();
     expect(
       find.byKey(const ValueKey<String>('decks-create-generate')),
@@ -142,7 +148,7 @@ void main() {
       find.byKey(const ValueKey<String>('generation-open-settings')),
     );
     await tester.pumpAndSettle();
-    expect(find.text(l10n.providersTitle), findsWidgets);
+    expect(find.text(l10n.providersTitle), findsOneWidget);
     expect(find.byKey(const ValueKey<String>('providers-add')), findsOneWidget);
   });
 

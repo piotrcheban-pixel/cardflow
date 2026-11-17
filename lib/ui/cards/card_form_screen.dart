@@ -1,5 +1,4 @@
 import 'dart:typed_data';
-import 'dart:ui' show PathMetric;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -15,17 +14,9 @@ import 'package:cardflow/domain/cards/occlusion.dart';
 import 'package:cardflow/domain/generation/card_image_kind.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/cards/content/card_image_view.dart';
-import 'package:cardflow/ui/cards/content/card_text.dart';
 import 'package:cardflow/ui/cards/occlusion_mask_editor.dart';
 import 'package:cardflow/ui/decks/deck_actions.dart';
-import 'package:cardflow/ui/design/design.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
-
-/// Пример cloze-разметки для подсказки синтаксиса.
-const String _clozeExample = '{{c1::…}}';
-
-/// Пример LaTeX-разметки для подсказки синтаксиса.
-const String _latexExample = r'$…$';
 
 /// Результат работы формы карточки (для сообщений на экране колоды).
 enum CardFormResult {
@@ -39,14 +30,12 @@ enum CardFormResult {
   deleted,
 }
 
-/// Экран создания/редактирования карточки (SPEC A6.3, ADR-009;
-/// REDESIGN-SPEC §9.4).
+/// Экран создания/редактирования карточки (SPEC A6.3, ADR-009).
 ///
 /// Поля: front (обязателен, ≤500), back (обязателен, ≤2000), hint, теги (≤3),
 /// тип (`basic`/`basic_reversed`/`cloze`, при редактировании неизменяем),
 /// `source_excerpt` для кнопки «Почему?», изображение и (необязательно) маски
-/// Image Occlusion. Оформление — `NcTopBar`/`NcSegmented`/`NcTextField`/
-/// `NcDialog`/`NcGlass`; обработчики, валидация и результат — прежние.
+/// Image Occlusion.
 ///
 /// ADR-028 (итерация 7.12): изображение можно привязать к карточке **любого**
 /// типа; это обычная иллюстрация. Маски occlusion — отдельный переключатель
@@ -86,8 +75,6 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
   OcclusionDocument? _occlusion;
   bool _useOcclusion = false;
   CardType _cardType = CardType.basic;
-  bool _frontPreview = false;
-  bool _backPreview = false;
   Map<CardDraftField, CardValidationError> _errors =
       const <CardDraftField, CardValidationError>{};
 
@@ -337,25 +324,24 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
   Future<void> _confirmDelete() async {
     final AppLocalizations l10n = AppLocalizations.of(context);
     final bool confirmed =
-        (await showNcDialog<bool>(
-          context,
-          title: l10n.cardDeleteDialogTitle,
-          message: l10n.cardDeleteDialogMessage,
-          icon3dName: 'shield_error',
-          actions: <Widget>[
-            NcButton(
-              key: const ValueKey<String>('card-delete-cancel'),
-              label: l10n.cancel,
-              variant: NcButtonVariant.ghost,
-              onPressed: () => Navigator.of(context).pop(false),
-            ),
-            NcButton(
-              key: const ValueKey<String>('card-delete-confirm'),
-              label: l10n.delete,
-              variant: NcButtonVariant.destructive,
-              onPressed: () => Navigator.of(context).pop(true),
-            ),
-          ],
+        (await showDialog<bool>(
+          context: context,
+          builder: (BuildContext dialogContext) => AlertDialog(
+            title: Text(l10n.cardDeleteDialogTitle),
+            content: Text(l10n.cardDeleteDialogMessage),
+            actions: <Widget>[
+              TextButton(
+                key: const ValueKey<String>('card-delete-cancel'),
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                child: Text(l10n.cancel),
+              ),
+              FilledButton(
+                key: const ValueKey<String>('card-delete-confirm'),
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+                child: Text(l10n.delete),
+              ),
+            ],
+          ),
         )) ??
         false;
     if (!confirmed || !mounted) return;
@@ -372,170 +358,116 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
-    final bool showSaveBar =
-        !(_loading || _loadFailed || (_isEditing && _card == null));
-    return NcGlassGroup(
-      child: Scaffold(
-        body: SafeArea(
-          bottom: false,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              NcTopBar(
-                title: _isEditing
-                    ? l10n.cardFormTitleEdit
-                    : l10n.cardFormTitleNew,
-                leading: NcIconButton(
-                  icon: Icons.arrow_back_rounded,
-                  tooltip: l10n.reviewBack,
-                  variant: NcIconButtonVariant.glass,
-                  onPressed: () {
-                    if (context.canPop()) context.pop();
-                  },
-                ),
-                actions: _isEditing && _card != null
-                    ? <Widget>[
-                        NcIconButton(
-                          key: const ValueKey<String>('card-form-delete'),
-                          icon: Icons.delete_outline,
-                          tooltip: l10n.cardDeleteTooltip,
-                          iconColor: NcTheme.of(context).colors.ember,
-                          onPressed: _saving ? null : _confirmDelete,
-                        ),
-                      ]
-                    : const <Widget>[],
-              ),
-              Expanded(child: _buildBody(context, l10n)),
-            ],
-          ),
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          _isEditing ? l10n.cardFormTitleEdit : l10n.cardFormTitleNew,
         ),
-        bottomNavigationBar: showSaveBar ? _buildSaveBar(l10n) : null,
+        actions: _isEditing && _card != null
+            ? <Widget>[
+                IconButton(
+                  key: const ValueKey<String>('card-form-delete'),
+                  tooltip: l10n.cardDeleteTooltip,
+                  icon: const Icon(Icons.delete_outline),
+                  onPressed: _saving ? null : _confirmDelete,
+                ),
+              ]
+            : null,
       ),
-    );
-  }
-
-  Widget _buildSaveBar(AppLocalizations l10n) {
-    return NcGlass(
-      tier: NcGlassTier.regular,
-      radius: 0,
-      grouped: true,
-      showNoise: false,
-      padding: EdgeInsets.fromLTRB(
-        16,
-        10,
-        16,
-        10 + MediaQuery.paddingOf(context).bottom,
-      ),
-      child: LayoutBuilder(
-        builder: (BuildContext context, BoxConstraints constraints) {
-          final Widget button = NcButton(
-            key: const ValueKey<String>('card-form-save'),
-            label: l10n.save,
-            size: NcButtonSize.l,
-            loading: _saving,
-            expand: constraints.maxWidth < 600,
-            onPressed: _saving ? null : _save,
-          );
-          if (constraints.maxWidth < 600) return button;
-          return Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: <Widget>[SizedBox(width: 240, child: button)],
-          );
-        },
-      ),
+      body: _buildBody(context, l10n),
+      bottomNavigationBar:
+          _loading || _loadFailed || (_isEditing && _card == null)
+          ? null
+          : SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                child: FilledButton(
+                  key: const ValueKey<String>('card-form-save'),
+                  onPressed: _saving ? null : _save,
+                  child: Text(l10n.save),
+                ),
+              ),
+            ),
     );
   }
 
   Widget _buildBody(BuildContext context, AppLocalizations l10n) {
-    if (_loading) {
-      return const Center(
-        child: SizedBox(width: 240, child: NcSkeleton(height: 120)),
-      );
-    }
+    if (_loading) return const Center(child: CircularProgressIndicator());
     if (_loadFailed || (_isEditing && _card == null)) {
-      return NcErrorState(
-        message: l10n.cardFormLoadError,
-        retryLabel: l10n.retry,
-        onRetry: _loadCard,
-      );
-    }
-    return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 680),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 112),
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              _buildTypeSection(l10n),
-              const SizedBox(height: 16),
-              _field(
-                key: const ValueKey<String>('card-form-front'),
-                controller: _front,
-                label: l10n.cardFormFrontLabel,
-                errorText: _errorText(l10n, CardDraftField.front),
-                validationField: CardDraftField.front,
-                minLines: 1,
-                maxLines: 4,
-                autofocus: true,
-              ),
-              _FieldPreview(
-                key: const ValueKey<String>('card-form-front-preview'),
-                visible: _frontPreview,
-                text: _front,
-                onToggle: () => setState(() => _frontPreview = !_frontPreview),
-                toggleTooltip: l10n.cardFormPreviewToggle,
-                title: l10n.cardFormPreview,
+              Icon(
+                Icons.error_outline,
+                size: 48,
+                color: Theme.of(context).colorScheme.error,
               ),
               const SizedBox(height: 12),
-              _field(
-                key: const ValueKey<String>('card-form-back'),
-                controller: _back,
-                label: l10n.cardFormBackLabel,
-                errorText: _errorText(l10n, CardDraftField.back),
-                validationField: CardDraftField.back,
-                minLines: 3,
-                maxLines: 6,
-              ),
-              _FieldPreview(
-                key: const ValueKey<String>('card-form-back-preview'),
-                visible: _backPreview,
-                text: _back,
-                onToggle: () => setState(() => _backPreview = !_backPreview),
-                toggleTooltip: l10n.cardFormPreviewToggle,
-                title: l10n.cardFormPreview,
-              ),
+              Text(l10n.cardFormLoadError, textAlign: TextAlign.center),
               const SizedBox(height: 12),
-              _field(
-                key: const ValueKey<String>('card-form-hint'),
-                controller: _hint,
-                label: l10n.cardFormHintLabel,
-              ),
-              const SizedBox(height: 12),
-              _field(
-                key: const ValueKey<String>('card-form-tags'),
-                controller: _tags,
-                label: l10n.cardFormTagsLabel,
-                errorText: _errorText(l10n, CardDraftField.tags),
-                validationField: CardDraftField.tags,
-                onChanged: (_) => setState(() {}),
-              ),
-              _TagsPreview(controller: _tags),
-              const SizedBox(height: 12),
-              _field(
-                key: const ValueKey<String>('card-form-source'),
-                controller: _sourceExcerpt,
-                label: l10n.cardFormSourceExcerptLabel,
-                errorText: _errorText(l10n, CardDraftField.sourceExcerpt),
-                validationField: CardDraftField.sourceExcerpt,
-                minLines: 2,
-                maxLines: 4,
-              ),
-              const SizedBox(height: 20),
-              _buildMediaSection(l10n),
+              TextButton(onPressed: _loadCard, child: Text(l10n.retry)),
             ],
           ),
         ),
+      );
+    }
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          _textField(
+            key: const ValueKey<String>('card-form-front'),
+            controller: _front,
+            label: l10n.cardFormFrontLabel,
+            errorText: _errorText(l10n, CardDraftField.front),
+            validationField: CardDraftField.front,
+            minLines: 1,
+            maxLines: 2,
+            autofocus: true,
+          ),
+          const SizedBox(height: 12),
+          _textField(
+            key: const ValueKey<String>('card-form-back'),
+            controller: _back,
+            label: l10n.cardFormBackLabel,
+            errorText: _errorText(l10n, CardDraftField.back),
+            validationField: CardDraftField.back,
+            minLines: 3,
+            maxLines: 6,
+          ),
+          const SizedBox(height: 12),
+          _textField(
+            key: const ValueKey<String>('card-form-hint'),
+            controller: _hint,
+            label: l10n.cardFormHintLabel,
+          ),
+          const SizedBox(height: 12),
+          _textField(
+            key: const ValueKey<String>('card-form-tags'),
+            controller: _tags,
+            label: l10n.cardFormTagsLabel,
+            errorText: _errorText(l10n, CardDraftField.tags),
+            validationField: CardDraftField.tags,
+          ),
+          const SizedBox(height: 12),
+          _textField(
+            key: const ValueKey<String>('card-form-source'),
+            controller: _sourceExcerpt,
+            label: l10n.cardFormSourceExcerptLabel,
+            errorText: _errorText(l10n, CardDraftField.sourceExcerpt),
+            validationField: CardDraftField.sourceExcerpt,
+            minLines: 2,
+            maxLines: 4,
+          ),
+          const SizedBox(height: 16),
+          _buildTypeSection(l10n),
+          const SizedBox(height: 20),
+          _buildMediaSection(l10n),
+        ],
       ),
     );
   }
@@ -545,7 +477,7 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
   /// Маски — необязательный переключатель у `basic`: по умолчанию картинка
   /// показывается как иллюстрация без масок.
   Widget _buildMediaSection(AppLocalizations l10n) {
-    final NcTheme theme = NcTheme.of(context);
+    final ThemeData theme = Theme.of(context);
     final bool masksAvailable = _cardType == CardType.basic;
     final bool masksEnabled = masksAvailable && _useOcclusion;
     final String? error = masksEnabled || _useOcclusion
@@ -554,27 +486,19 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        Text(
-          l10n.cardFormImageSection,
-          style: theme.typography.titleS.copyWith(
-            color: theme.colors.textPrimary,
-          ),
-        ),
+        Text(l10n.cardFormImageSection, style: theme.textTheme.titleMedium),
         const SizedBox(height: 4),
         Text(
           l10n.cardFormImageHint,
-          style: theme.typography.bodyS.copyWith(
-            color: theme.colors.textSecondary,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
           ),
         ),
         if (error != null) ...<Widget>[
           const SizedBox(height: 8),
-          Text(
-            error,
-            style: theme.typography.bodyS.copyWith(color: theme.colors.ember),
-          ),
+          Text(error, style: TextStyle(color: theme.colorScheme.error)),
         ],
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
         if (_imageBytes != null) ...<Widget>[
           KeyedSubtree(
             key: const ValueKey<String>('card-form-image-preview'),
@@ -586,65 +510,53 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
             ),
           ),
           const SizedBox(height: 8),
-        ] else
-          _ImageDropZone(onPick: _imageLoading || _saving ? null : _pickImage),
-        const SizedBox(height: 8),
+        ],
         Wrap(
           spacing: 8,
           runSpacing: 8,
           children: <Widget>[
-            NcButton(
+            OutlinedButton.icon(
               key: const ValueKey<String>('card-form-pick-image'),
-              label: _imageBytes == null
-                  ? l10n.cardFormPickImage
-                  : l10n.cardFormChangeImage,
-              variant: NcButtonVariant.secondary,
-              size: NcButtonSize.s,
-              icon: Icons.add_photo_alternate_outlined,
               onPressed: _imageLoading || _saving ? null : _pickImage,
+              icon: const Icon(Icons.add_photo_alternate_outlined),
+              label: Text(
+                _imageBytes == null
+                    ? l10n.cardFormPickImage
+                    : l10n.cardFormChangeImage,
+              ),
             ),
             if (_isEditing && _imageBytes != null)
-              NcButton(
+              OutlinedButton.icon(
                 key: const ValueKey<String>('card-form-refresh-image'),
-                label: l10n.cardImageRetryAction,
-                variant: NcButtonVariant.secondary,
-                size: NcButtonSize.s,
-                icon: Icons.travel_explore,
                 onPressed: _imageLoading || _saving ? null : _refreshImage,
+                icon: const Icon(Icons.travel_explore),
+                label: Text(l10n.cardImageRetryAction),
               ),
             if (_imageBytes != null || _imageUpload != null)
-              NcButton(
+              TextButton.icon(
                 key: const ValueKey<String>('card-form-remove-image'),
-                label: l10n.cardFormRemoveImage,
-                variant: NcButtonVariant.ghost,
-                size: NcButtonSize.s,
-                icon: Icons.delete_outline,
                 onPressed: _imageLoading || _saving ? null : _removeImage,
+                icon: const Icon(Icons.delete_outline),
+                label: Text(l10n.cardFormRemoveImage),
               ),
           ],
         ),
         if (masksAvailable) ...<Widget>[
           const SizedBox(height: 8),
-          NcListRow(
+          SwitchListTile(
             key: const ValueKey<String>('card-form-occlusion-toggle'),
+            contentPadding: EdgeInsets.zero,
             title: Text(l10n.cardFormOcclusionToggle),
             subtitle: Text(l10n.cardFormOcclusionToggleHint),
-            showDivider: false,
-            trailing: NcSwitch(
-              value: _useOcclusion,
-              onChanged: _saving ? null : _toggleOcclusion,
-              semanticLabel: l10n.cardFormOcclusionToggle,
-            ),
-            onTap: _saving ? null : () => _toggleOcclusion(!_useOcclusion),
+            value: _useOcclusion,
+            onChanged: _saving ? null : _toggleOcclusion,
           ),
         ],
         if (masksEnabled) ...<Widget>[
           const SizedBox(height: 8),
           Text(
             l10n.cardFormOcclusionSection,
-            style: theme.typography.titleS.copyWith(
-              color: theme.colors.textPrimary,
-            ),
+            style: theme.textTheme.titleSmall,
           ),
           const SizedBox(height: 8),
           if (_imageBytes != null && _occlusion != null)
@@ -664,79 +576,52 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
   }
 
   Widget _buildTypeSection(AppLocalizations l10n) {
-    final NcTheme theme = NcTheme.of(context);
     if (_isEditing) {
       final String typeLabel = switch (_cardType) {
         CardType.basic => l10n.cardTypeBasic,
         CardType.basicReversed => l10n.cardTypeBasicReversed,
         CardType.cloze => l10n.cardTypeCloze,
       };
-      return NcSection(
-        title: l10n.cardFormTypeLabel,
-        children: <Widget>[
-          NcListRow(
-            title: Text(typeLabel),
-            subtitle: Text(l10n.cardFormTypeImmutable),
-            showDivider: false,
-          ),
-        ],
+      return InputDecorator(
+        decoration: InputDecoration(
+          labelText: l10n.cardFormTypeLabel,
+          helperText: l10n.cardFormTypeImmutable,
+          border: const OutlineInputBorder(),
+        ),
+        child: Text(typeLabel),
       );
     }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Text(
-          l10n.cardFormTypeLabel,
-          style: theme.typography.labelM.copyWith(
-            color: theme.colors.textSecondary,
-          ),
-        ),
+        Text(l10n.cardFormTypeLabel),
         const SizedBox(height: 8),
-        NcSegmented<CardType>(
-          value: _cardType,
-          onChanged: (CardType type) => setState(() => _cardType = type),
-          segments: <NcSegment<CardType>>[
-            NcSegment<CardType>(
+        SegmentedButton<CardType>(
+          segments: <ButtonSegment<CardType>>[
+            ButtonSegment<CardType>(
               value: CardType.basic,
-              label: l10n.cardTypeBasic,
+              label: Text(l10n.cardTypeBasic),
             ),
-            NcSegment<CardType>(
+            ButtonSegment<CardType>(
               value: CardType.basicReversed,
-              label: l10n.cardTypeBasicReversed,
+              label: Text(l10n.cardTypeBasicReversed),
             ),
-            NcSegment<CardType>(
+            ButtonSegment<CardType>(
               value: CardType.cloze,
-              label: l10n.cardTypeCloze,
+              label: Text(l10n.cardTypeCloze),
             ),
           ],
-        ),
-        const SizedBox(height: 8),
-        Text(
-          l10n.cardFormSyntaxHint,
-          style: theme.typography.bodyS.copyWith(
-            color: theme.colors.textSecondary,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Wrap(
-          spacing: 8,
-          children: <Widget>[
-            Text(
-              _clozeExample,
-              style: theme.typography.monoM.copyWith(color: theme.colors.aurum),
-            ),
-            Text(
-              _latexExample,
-              style: theme.typography.monoM.copyWith(color: theme.colors.aurum),
-            ),
-          ],
+          selected: <CardType>{_cardType},
+          onSelectionChanged: (Set<CardType> selection) {
+            setState(() => _cardType = selection.first);
+          },
         ),
         if (_cardType == CardType.basicReversed) ...<Widget>[
           const SizedBox(height: 8),
           Text(
             l10n.cardFormReversedHint,
-            style: theme.typography.bodyS.copyWith(
-              color: theme.colors.textSecondary,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
           ),
         ],
@@ -744,7 +629,7 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
     );
   }
 
-  Widget _field({
+  Widget _textField({
     required Key key,
     required TextEditingController controller,
     required String label,
@@ -753,23 +638,22 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
     int minLines = 1,
     int maxLines = 1,
     bool autofocus = false,
-    ValueChanged<String>? onChanged,
   }) {
-    return NcTextField(
+    return TextField(
       key: key,
       controller: controller,
-      label: label,
-      errorText: errorText,
-      multiline: maxLines != 1,
-      maxLines: maxLines,
       autofocus: autofocus,
+      minLines: minLines,
+      maxLines: maxLines,
+      onChanged: (_) => _clearError(validationField),
       textInputAction: maxLines == 1
           ? TextInputAction.next
           : TextInputAction.newline,
-      onChanged: (String value) {
-        _clearError(validationField);
-        onChanged?.call(value);
-      },
+      decoration: InputDecoration(
+        labelText: label,
+        errorText: errorText,
+        border: const OutlineInputBorder(),
+      ),
     );
   }
 
@@ -804,179 +688,4 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
       null => null,
     };
   }
-}
-
-/// Сворачиваемый предпросмотр поля: `CardText` на мини-монолите.
-class _FieldPreview extends StatelessWidget {
-  const _FieldPreview({
-    super.key,
-    required this.visible,
-    required this.text,
-    required this.onToggle,
-    required this.toggleTooltip,
-    required this.title,
-  });
-
-  final bool visible;
-  final TextEditingController text;
-  final VoidCallback onToggle;
-  final String toggleTooltip;
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    final NcTheme theme = NcTheme.of(context);
-    return ValueListenableBuilder<TextEditingValue>(
-      valueListenable: text,
-      builder: (BuildContext context, TextEditingValue value, Widget? _) {
-        if (value.text.trim().isEmpty) return const SizedBox.shrink();
-        return Padding(
-          padding: const EdgeInsets.only(top: 8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              Row(
-                children: <Widget>[
-                  Expanded(
-                    child: Text(
-                      title,
-                      style: theme.typography.overline.copyWith(
-                        color: theme.colors.textTertiary,
-                      ),
-                    ),
-                  ),
-                  NcIconButton(
-                    icon: visible
-                        ? Icons.visibility_off_outlined
-                        : Icons.visibility_outlined,
-                    tooltip: toggleTooltip,
-                    size: 32,
-                    onPressed: onToggle,
-                  ),
-                ],
-              ),
-              if (visible)
-                NcSurface(
-                  tone: NcSurfaceTone.monolith,
-                  radius: NcRadii.xl,
-                  level: 2,
-                  padding: const EdgeInsets.all(16),
-                  child: CardText(
-                    source: value.text,
-                    style: theme.typography.answer.copyWith(
-                      color: theme.colors.textPrimary,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}
-
-/// Визуальный ряд тегов под полем (значение поля не меняется).
-class _TagsPreview extends StatelessWidget {
-  const _TagsPreview({required this.controller});
-
-  final TextEditingController controller;
-
-  @override
-  Widget build(BuildContext context) {
-    return ValueListenableBuilder<TextEditingValue>(
-      valueListenable: controller,
-      builder: (BuildContext context, TextEditingValue value, Widget? _) {
-        final List<String> tags = CardDraft.parseTags(value.text);
-        if (tags.isEmpty) return const SizedBox.shrink();
-        return Padding(
-          padding: const EdgeInsets.only(top: 8),
-          child: Wrap(
-            key: const ValueKey<String>('card-form-tags-preview'),
-            spacing: 8,
-            runSpacing: 8,
-            children: <Widget>[
-              for (final String tag in tags) NcChip.tag(label: tag),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}
-
-/// Пунктирная зона выбора изображения (пустое состояние секции).
-class _ImageDropZone extends StatelessWidget {
-  const _ImageDropZone({required this.onPick});
-
-  final VoidCallback? onPick;
-
-  @override
-  Widget build(BuildContext context) {
-    final AppLocalizations l10n = AppLocalizations.of(context);
-    final NcTheme theme = NcTheme.of(context);
-    return GestureDetector(
-      onTap: onPick,
-      child: SizedBox(
-        height: 140,
-        child: CustomPaint(
-          painter: _DashedBorderPainter(
-            color: theme.colors.hairlineStrong,
-            radius: NcRadii.l,
-          ),
-          child: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                Icon(
-                  Icons.add_photo_alternate_outlined,
-                  size: 28,
-                  color: theme.colors.textTertiary,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  l10n.cardFormPickImage,
-                  style: theme.typography.bodyS.copyWith(
-                    color: theme.colors.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Пунктирная рамка зоны изображения (не стекло, §4.3).
-class _DashedBorderPainter extends CustomPainter {
-  const _DashedBorderPainter({required this.color, required this.radius});
-
-  final Color color;
-  final double radius;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final Path path = Path()
-      ..addRRect(
-        RRect.fromRectAndRadius(Offset.zero & size, Radius.circular(radius)),
-      );
-    final Paint paint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5
-      ..color = color;
-    for (final PathMetric metric in path.computeMetrics()) {
-      var distance = 0.0;
-      while (distance < metric.length) {
-        final double next = (distance + 6).clamp(0, metric.length);
-        canvas.drawPath(metric.extractPath(distance, next), paint);
-        distance += 12;
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(_DashedBorderPainter oldDelegate) =>
-      oldDelegate.color != color || oldDelegate.radius != radius;
 }

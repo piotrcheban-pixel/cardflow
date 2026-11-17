@@ -3,7 +3,7 @@ import 'package:cardflow/domain/decks/deck_summary.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/decks/deck_screen.dart';
 import 'package:cardflow/ui/decks/decks_screen.dart';
-import 'package:cardflow/ui/design/design.dart';
+import 'package:cardflow/ui/m3e/m3e.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart' hide Card;
 
@@ -51,8 +51,8 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
 
       final AppLocalizations l10n = l10nOf(tester);
-      expect(find.byType(NcSkeleton), findsNWidgets(4));
-      expect(find.text(l10n.decksTitle), findsWidgets);
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(find.text(l10n.decksTitle), findsOneWidget);
       expect(find.text(l10n.decksErrorTitle), findsNothing);
       expect(find.text(l10n.decksEmptyTitle), findsNothing);
     });
@@ -69,7 +69,7 @@ void main() {
       expect(find.text(l10n.decksEmptyTitle), findsOneWidget);
       expect(find.text(l10n.decksEmptyMessage), findsOneWidget);
       expect(
-        find.widgetWithText(NcButton, l10n.decksCreateButton),
+        find.widgetWithText(FilledButton, l10n.decksCreateButton),
         findsOneWidget,
       );
       expect(find.text(l10n.decksCreateDeckFab), findsOneWidget);
@@ -95,13 +95,13 @@ void main() {
           reason: 'Сырой текст исключения не должен показываться пользователю',
         );
         expect(
-          find.text(l10n.retry),
+          find.widgetWithText(TextButton, l10n.retry),
           findsOneWidget,
           reason: 'Должна быть кнопка «Повторить»',
         );
 
         repository.failSummaries = false;
-        await tester.tap(find.text(l10n.retry));
+        await tester.tap(find.widgetWithText(TextButton, l10n.retry));
         await tester.pumpAndSettle();
 
         expect(find.text('Испанский'), findsOneWidget);
@@ -109,7 +109,7 @@ void main() {
       },
     );
 
-    testWidgets('success: плитки колод с счётчиками (NcCardTile)', (
+    testWidgets('success: карточки колод с счётчиками (M3ECard)', (
       WidgetTester tester,
     ) async {
       final FakeDeckRepository repository = FakeDeckRepository(
@@ -130,7 +130,7 @@ void main() {
       await tester.pumpAndSettle();
 
       final AppLocalizations l10n = l10nOf(tester);
-      expect(find.byType(NcCardTile), findsNWidgets(2));
+      expect(find.byType(M3ECard), findsNWidgets(2));
       expect(find.text('Испанский'), findsOneWidget);
       expect(find.text('История'), findsOneWidget);
       expect(find.text(l10n.deckCardCount(12)), findsOneWidget);
@@ -157,10 +157,9 @@ void main() {
 
       await pumpDecks(tester, repository: repository);
       await tester.pumpAndSettle();
+      final AppLocalizations l10n = l10nOf(tester);
 
-      await tester.tap(
-        find.byKey(const ValueKey<String>('decks-search-toggle')),
-      );
+      await tester.tap(find.byTooltip(l10n.decksSearchTooltip));
       await tester.pumpAndSettle();
       expect(find.byType(TextField), findsOneWidget);
 
@@ -170,9 +169,7 @@ void main() {
       expect(find.text('Ёжики'), findsOneWidget);
       expect(find.text('История'), findsNothing);
 
-      await tester.tap(
-        find.byKey(const ValueKey<String>('decks-search-clear')),
-      );
+      await tester.tap(find.byTooltip(l10n.decksSearchClearTooltip));
       await tester.pumpAndSettle();
       expect(find.text('История'), findsOneWidget);
       expect(find.text('Ёжики'), findsOneWidget);
@@ -240,14 +237,10 @@ void main() {
       final AppLocalizations l10n = l10nOf(tester);
 
       expect(find.text(l10n.deckFilterAll), findsOneWidget);
-      await tester.tap(
-        find.byKey(const ValueKey<String>('decks-filter-toggle')),
-      );
+      await tester.tap(find.byTooltip(l10n.decksFilterTooltip));
       await tester.pumpAndSettle();
       expect(find.text(l10n.deckFilterAll), findsNothing);
-      await tester.tap(
-        find.byKey(const ValueKey<String>('decks-filter-toggle')),
-      );
+      await tester.tap(find.byTooltip(l10n.decksFilterTooltip));
       await tester.pumpAndSettle();
       expect(find.text(l10n.deckFilterAll), findsOneWidget);
     });

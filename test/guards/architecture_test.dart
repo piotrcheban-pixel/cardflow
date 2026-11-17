@@ -7,25 +7,9 @@ import 'guard_utils.dart';
 /// Архитектурные guard-правила из AGENTS.md и ADR-001:
 /// 1) `package:flutter/material.dart` в `lib/` запрещён — Material-база только `material_ui`;
 /// 2) `material_3_expressive` импортируется только через `lib/ui/m3e/`;
-/// 3) `lib/domain/` не зависит от Flutter/Material/UI-пакетов;
-/// 4) `lib/ui/design/` (дизайн-система Nocturne) не зависит от слоёв
-///    состояния, роутера, домена, данных и API (ADR-035, REDESIGN-PLAN 1.1).
+/// 3) `lib/domain/` не зависит от Flutter/Material/UI-пакетов.
 const String frameworkMaterialImport = 'package:flutter/material.dart';
 const String m3ePackagePrefix = 'package:material_3_expressive/';
-
-/// Что дизайн-система не имеет права импортировать (кроме Flutter/Material).
-const List<String> designForbiddenPrefixes = <String>[
-  'package:cardflow/ui/state/',
-  'package:cardflow/ui/router/',
-  'package:cardflow/domain/',
-  'package:cardflow/data/',
-  'package:cardflow/api/',
-  'package:flutter_riverpod/',
-  'package:go_router/',
-];
-
-/// Префикс каталога дизайн-системы.
-const String designPathPrefix = 'lib/ui/design/';
 
 const List<String> domainForbiddenPrefixes = <String>[
   'package:flutter/',
@@ -64,16 +48,6 @@ List<String> architectureViolations(String relativePath, String dartSource) {
     for (final import in imports) {
       if (domainForbiddenPrefixes.any(import.startsWith)) {
         violations.add('$path: domain не должен импортировать $import');
-      }
-    }
-  }
-  if (path.startsWith(designPathPrefix)) {
-    for (final import in imports) {
-      if (designForbiddenPrefixes.any(import.startsWith)) {
-        violations.add(
-          '$path: дизайн-система не должна импортировать $import '
-          '(ADR-035: значения передаются сверху InheritedWidget)',
-        );
       }
     }
   }
@@ -154,50 +128,6 @@ void main() {
         architectureViolations(
           'lib/ui/app.dart',
           "import 'package:material_ui/material_ui.dart';",
-        ),
-        isEmpty,
-      );
-    });
-
-    test('ловит импорт слоёв состояния/домена в дизайн-системе', () {
-      for (final String forbidden in designForbiddenPrefixes) {
-        expect(
-          architectureViolations(
-            'lib/ui/design/nc_theme.dart',
-            "import '${forbidden}app_providers.dart';",
-          ),
-          isNotEmpty,
-          reason: 'Дизайн-система не должна импортировать $forbidden',
-        );
-      }
-    });
-
-    test(
-      'ловит Riverpod и роутер в дизайн-системе (компонент их не знает)',
-      () {
-        expect(
-          architectureViolations(
-            'lib/ui/design/components/nc_button.dart',
-            "import 'package:flutter_riverpod/flutter_riverpod.dart';",
-          ),
-          isNotEmpty,
-        );
-        expect(
-          architectureViolations(
-            'lib/ui/design/components/nc_button.dart',
-            "import 'package:go_router/go_router.dart';",
-          ),
-          isNotEmpty,
-        );
-      },
-    );
-
-    test('дизайн-система может импортировать Flutter и токены', () {
-      expect(
-        architectureViolations(
-          'lib/ui/design/ambient/ambient_background.dart',
-          "import 'package:material_ui/material_ui.dart';\n"
-              "import 'package:cardflow/ui/design/tokens/nc_colors.dart';",
         ),
         isEmpty,
       );

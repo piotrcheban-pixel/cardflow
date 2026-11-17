@@ -4,7 +4,7 @@ import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/l10n/app_localizations_ru.dart';
 import 'package:cardflow/ui/decks/deck_screen.dart';
 import 'package:cardflow/ui/decks/decks_screen.dart';
-import 'package:cardflow/ui/design/design.dart';
+import 'package:cardflow/ui/m3e/m3e.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -37,7 +37,12 @@ void main() {
   }
 
   Future<void> openCreateMenu(WidgetTester tester) async {
-    await tester.tap(find.byTooltip(l10nOf(tester).decksCreateMenuTooltip));
+    await tester.tap(
+      find.descendant(
+        of: find.byKey(const ValueKey<String>('decks-create-split')),
+        matching: find.byIcon(M3EIcons.keyboard_arrow_down),
+      ),
+    );
     await tester.pumpAndSettle();
   }
 
@@ -78,7 +83,7 @@ void main() {
 
       expect(gateway.pickImportCalls, 1);
       expect(transfer.previewCalls, 0);
-      expect(find.byType(NcDialog), findsNothing);
+      expect(find.byType(AlertDialog), findsNothing);
       expect(find.byType(DecksScreen), findsOneWidget);
     });
 
@@ -116,7 +121,7 @@ void main() {
       expect(transfer.lastImportDeckName, isNull);
       expect(find.text(l10n.deckImportSuccess), findsOneWidget);
       expect(find.byType(DeckScreen), findsOneWidget);
-      expect(find.text('Импортированная колода'), findsWidgets);
+      expect(find.text('Импортированная колода'), findsOneWidget);
     });
 
     testWidgets('отмена в диалоге предпросмотра не импортирует', (
@@ -186,7 +191,7 @@ void main() {
             reason: 'Неверное сообщение для кода ${entry.key.name}',
           );
           expect(find.textContaining('сырой стектрейс'), findsNothing);
-          expect(find.byType(NcDialog), findsNothing);
+          expect(find.byType(AlertDialog), findsNothing);
         }
       },
     );

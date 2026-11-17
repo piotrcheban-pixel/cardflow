@@ -68,7 +68,7 @@ void main() {
     await tester.tap(find.text(l10n.reviewStartSession));
     await tester.pumpAndSettle();
 
-    expect(find.text(l10n.reviewModeSheetTitle), findsOneWidget);
+    expect(find.text(l10n.reviewSessionModeTitle), findsOneWidget);
     expect(find.text(l10n.reviewModeClassic), findsOneWidget);
     expect(find.text(l10n.reviewModeFeed), findsOneWidget);
 

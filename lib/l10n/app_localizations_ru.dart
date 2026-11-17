@@ -69,14 +69,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get decksNoResults => 'Ничего не найдено';
 
   @override
-  String decksSummary(Object decks, Object due) {
-    return 'К повторению: $due · колод: $decks';
-  }
-
-  @override
-  String get decksNoResultsHint => 'Попробуйте изменить запрос или фильтр.';
-
-  @override
   String get decksErrorTitle => 'Не удалось загрузить колоды';
 
   @override
@@ -335,14 +327,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get reviewSessionModeTitle => 'Выберите режим';
 
   @override
-  String get reviewModeSheetTitle => 'Режим сессии';
-
-  @override
-  String deckCardsSection(Object count) {
-    return 'КАРТОЧКИ · $count';
-  }
-
-  @override
   String get reviewStartSession => 'Начать сессию';
 
   @override
@@ -521,18 +505,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get cardFormTypeLabel => 'Тип карточки';
-
-  @override
-  String get cardFormSyntaxHint => 'Синтаксис: пропуск и формула';
-
-  @override
-  String get cardFormPreview => 'Предпросмотр';
-
-  @override
-  String get cardFormPreviewToggle => 'Свернуть или развернуть предпросмотр';
-
-  @override
-  String get cardFormTagsPreview => 'Теги';
 
   @override
   String get cardTypeBasic => 'Обычная';
@@ -1400,15 +1372,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get statisticsRetentionNoData => 'Нет повторений за 30 дней';
 
   @override
-  String get statisticsRetentionCaption => 'за 30 дней';
-
-  @override
-  String get statisticsHeatmapLess => 'меньше';
-
-  @override
-  String get statisticsHeatmapMore => 'больше';
-
-  @override
   String get statisticsHeatmapTitle => 'Календарь повторений';
 
   @override
@@ -1516,9 +1479,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get settingsTextScaleTitle => 'Размер шрифта';
-
-  @override
-  String get settingsTextScalePreview => 'Аа — пример текста';
 
   @override
   String settingsTextScaleValue(int percent) {
@@ -1673,12 +1633,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get providersVisionSupported => 'Принимает изображения';
 
   @override
-  String get providersVisionShort => 'Изображения';
-
-  @override
-  String get providersVisionNotSupportedShort => 'Без изображений';
-
-  @override
   String get providersVisionNotSupported => 'Только текст';
 
   @override
@@ -1720,18 +1674,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get providersCheck => 'Проверить подключение';
-
-  @override
-  String get providersCheckWorks => 'Работает';
-
-  @override
-  String get providersCheckFailed => 'Ошибка';
-
-  @override
-  String get providersKeyShow => 'Показать ключ';
-
-  @override
-  String get providersKeyHide => 'Скрыть ключ';
 
   @override
   String get providersCheckValid => 'Подключение работает';
@@ -2041,10 +1983,4 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get trueFalseEmptyMessage =>
       'Нужны карточки с ответом и хотя бы один другой ответ в колоде.';
-
-  @override
-  String get commonLoading => 'Загрузка';
-
-  @override
-  String get commonClose => 'Закрыть';
 }

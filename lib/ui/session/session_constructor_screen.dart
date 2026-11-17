@@ -13,19 +13,14 @@ import 'package:cardflow/domain/session/session_plan.dart';
 import 'package:cardflow/domain/session/session_preset.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/decks/deck_actions.dart';
-import 'package:cardflow/ui/decks/deck_gem.dart';
-import 'package:cardflow/ui/design/design.dart';
 import 'package:cardflow/ui/router/app_router.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
 
-/// Экран «Конструктор сессии» (SPEC A6.7, A7.19–A7.20, ADR-018;
-/// REDESIGN-SPEC §9.14).
+/// Экран «Конструктор сессии» (SPEC A6.7, A7.19–A7.20, ADR-018).
 ///
 /// Колоды → фильтры (теги/тип/состояние) → режим → лимит → перемешивание /
 /// интерливинг / разминка → пресет → старт. Собранная очередь уходит в
-/// проверенные движки классики и ленты через `SessionPlan`. Оформление —
-/// пронумерованные `NcSection`, `NcChip.filter`, `NcSegmented`, `NcStepper`,
-/// стеклянная нижняя панель; обработчики и провайдеры прежние.
+/// проверенные движки классики и ленты через `SessionPlan`.
 class SessionConstructorScreen extends ConsumerStatefulWidget {
   /// Создаёт экран конструктора.
   const SessionConstructorScreen({
@@ -255,28 +250,6 @@ class _SessionConstructorScreenState
     });
   }
 
-  /// Следующее/предыдущее дискретное значение лимита (степпер §9.14).
-  void _stepLimit(int direction) {
-    final List<int> values = _limitKind == SessionLimitKind.cards
-        ? SessionConstructorScreen.cardLimitValues
-        : SessionConstructorScreen.minuteLimitValues;
-    final int current = _limitKind == SessionLimitKind.cards
-        ? _cardsLimit
-        : _minutesLimit;
-    final int index = values.indexOf(current);
-    final int nextIndex = index < 0
-        ? 0
-        : (index + direction).clamp(0, values.length - 1);
-    final int next = values[nextIndex];
-    setState(() {
-      if (_limitKind == SessionLimitKind.cards) {
-        _cardsLimit = next;
-      } else {
-        _minutesLimit = next;
-      }
-    });
-  }
-
   Future<void> _start() async {
     if (_starting) return;
     final SessionPlan plan = SessionBuilder.plan(
@@ -301,7 +274,10 @@ class _SessionConstructorScreenState
 
   Future<void> _savePreset() async {
     final AppLocalizations l10n = AppLocalizations.of(context);
-    final String? name = await _showPresetNameDialog(context);
+    final String? name = await showDialog<String>(
+      context: context,
+      builder: (BuildContext dialogContext) => const _PresetNameDialog(),
+    );
     if (name == null || !mounted) return;
     try {
       final SessionPreset preset = await ref
@@ -388,292 +364,226 @@ class _SessionConstructorScreenState
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
-    return NcGlassGroup(
-      child: Scaffold(
-        body: SafeArea(
-          bottom: false,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              NcTopBar(
-                title: l10n.constructorTitle,
-                leading: NcIconButton(
-                  icon: Icons.arrow_back_rounded,
-                  tooltip: l10n.reviewBack,
-                  variant: NcIconButtonVariant.glass,
-                  onPressed: () {
-                    if (context.canPop()) context.pop();
-                  },
-                ),
-              ),
-              Expanded(child: _buildBody(l10n)),
-            ],
-          ),
-        ),
-        bottomNavigationBar: _buildBottomBar(l10n),
-      ),
+    return Scaffold(
+      appBar: AppBar(title: Text(l10n.constructorTitle)),
+      bottomNavigationBar: _buildBottomBar(l10n),
+      body: _buildBody(l10n),
     );
   }
 
   Widget _buildBody(AppLocalizations l10n) {
-    final NcTheme theme = NcTheme.of(context);
-    if (_loading) {
-      return ListView(
-        padding: const EdgeInsets.all(16),
-        children: const <Widget>[
-          NcSkeleton(height: 64, radius: NcRadii.l),
-          SizedBox(height: 12),
-          NcSkeleton(height: 120, radius: NcRadii.l),
-          SizedBox(height: 12),
-          NcSkeleton(height: 120, radius: NcRadii.l),
-        ],
-      );
-    }
+    if (_loading) return const Center(child: CircularProgressIndicator());
     if (_loadError) {
-      return NcErrorState(
+      return _ConstructorErrorState(
         message: l10n.constructorLoadError,
-        retryLabel: l10n.retry,
         onRetry: () => unawaited(_load()),
       );
     }
     if (_decks.isEmpty) {
-      return Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: NcEmptyState(
-            iconName: 'empty_decks',
-            title: l10n.constructorEmptyDecks,
-            message: l10n.constructorSelectDecksHint,
-          ),
-        ),
-      );
+      return _ConstructorEmptyState(message: l10n.constructorEmptyDecks);
     }
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
       children: <Widget>[
-        _StepSection(
-          number: 1,
+        _Section(
           title: l10n.constructorDecksSection,
           child: Wrap(
             spacing: 8,
             runSpacing: 8,
             children: <Widget>[
               for (final DeckSummary summary in _decks)
-                _DeckPick(
+                FilterChip(
                   key: ValueKey<String>('constructor-deck-${summary.deck.id}'),
-                  summary: summary,
+                  label: Text(summary.deck.name),
                   selected: _selectedDecks.contains(summary.deck.id),
-                  onTap: () => _toggleDeck(summary.deck.id),
+                  onSelected: (_) => _toggleDeck(summary.deck.id),
                 ),
             ],
           ),
         ),
-        _StepSection(
-          number: 2,
+        _Section(
           title: l10n.constructorTagsSection,
           child: _availableTags.isEmpty
               ? Text(
                   _selectedDecks.isEmpty
                       ? l10n.constructorSelectDecksHint
                       : l10n.constructorTagsEmpty,
-                  style: theme.typography.bodyS.copyWith(
-                    color: theme.colors.textSecondary,
-                  ),
                 )
               : Wrap(
                   spacing: 8,
                   runSpacing: 8,
                   children: <Widget>[
                     for (final String tag in _availableTags)
-                      NcChip.filter(
+                      FilterChip(
                         key: ValueKey<String>('constructor-tag-$tag'),
-                        label: tag,
+                        label: Text(tag),
                         selected: _selectedTags.contains(tag),
-                        onSelected: () => _toggleTag(tag),
+                        onSelected: (_) => _toggleTag(tag),
                       ),
                   ],
                 ),
         ),
-        _StepSection(
-          number: 3,
+        _Section(
           title: l10n.constructorTypesSection,
           child: Wrap(
             spacing: 8,
             runSpacing: 8,
             children: <Widget>[
               for (final CardType type in CardType.values)
-                NcChip.filter(
+                FilterChip(
                   key: ValueKey<String>('constructor-type-${type.wireName}'),
-                  label: _cardTypeLabel(l10n, type),
+                  label: Text(_cardTypeLabel(l10n, type)),
                   selected: _selectedTypes.contains(type),
-                  onSelected: () => _toggleType(type),
+                  onSelected: (_) => _toggleType(type),
                 ),
             ],
           ),
         ),
-        _StepSection(
-          number: 4,
+        _Section(
           title: l10n.constructorStatesSection,
           child: Wrap(
             spacing: 8,
             runSpacing: 8,
             children: <Widget>[
               for (final SessionStateFilter filter in SessionStateFilter.values)
-                NcChip.filter(
+                FilterChip(
                   key: ValueKey<String>('constructor-state-${filter.wireName}'),
-                  label: _stateLabel(l10n, filter),
+                  label: Text(_stateLabel(l10n, filter)),
                   selected: _selectedStates.contains(filter),
-                  onSelected: () => _toggleState(filter),
+                  onSelected: (_) => _toggleState(filter),
                 ),
             ],
           ),
         ),
-        _StepSection(
-          number: 5,
+        _Section(
           title: l10n.constructorModeSection,
-          child: NcSegmented<SessionMode>(
+          child: SegmentedButton<SessionMode>(
             key: const ValueKey<String>('constructor-mode'),
-            value: _mode,
-            onChanged: (SessionMode mode) => setState(() => _mode = mode),
-            segments: <NcSegment<SessionMode>>[
-              NcSegment<SessionMode>(
+            segments: <ButtonSegment<SessionMode>>[
+              ButtonSegment<SessionMode>(
                 value: SessionMode.classic,
-                label: l10n.reviewModeClassic,
-                leading: const Icon(Icons.style_outlined, size: 18),
+                label: Text(l10n.reviewModeClassic),
+                icon: const Icon(Icons.style_outlined),
               ),
-              NcSegment<SessionMode>(
+              ButtonSegment<SessionMode>(
                 value: SessionMode.feed,
-                label: l10n.reviewModeFeed,
-                leading: const Icon(Icons.view_agenda_outlined, size: 18),
+                label: Text(l10n.reviewModeFeed),
+                icon: const Icon(Icons.view_agenda_outlined),
               ),
             ],
+            selected: <SessionMode>{_mode},
+            onSelectionChanged: (Set<SessionMode> selection) =>
+                setState(() => _mode = selection.first),
           ),
         ),
-        _StepSection(
-          number: 6,
+        _Section(
           title: l10n.constructorLimitSection,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              NcSegmented<SessionLimitKind>(
-                value: _limitKind,
-                onChanged: _setLimitKind,
-                segments: <NcSegment<SessionLimitKind>>[
-                  NcSegment<SessionLimitKind>(
+              Wrap(
+                spacing: 8,
+                children: <Widget>[
+                  ChoiceChip(
                     key: const ValueKey<String>('constructor-limit-cards'),
-                    value: SessionLimitKind.cards,
-                    label: l10n.constructorLimitCards,
+                    label: Text(l10n.constructorLimitCards),
+                    selected: _limitKind == SessionLimitKind.cards,
+                    onSelected: (_) => _setLimitKind(SessionLimitKind.cards),
                   ),
-                  NcSegment<SessionLimitKind>(
+                  ChoiceChip(
                     key: const ValueKey<String>('constructor-limit-minutes'),
-                    value: SessionLimitKind.minutes,
-                    label: l10n.constructorLimitMinutes,
+                    label: Text(l10n.constructorLimitMinutes),
+                    selected: _limitKind == SessionLimitKind.minutes,
+                    onSelected: (_) => _setLimitKind(SessionLimitKind.minutes),
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              Row(
-                children: <Widget>[
-                  NcStepper(
-                    value: _limitKind == SessionLimitKind.cards
-                        ? _cardsLimit
-                        : _minutesLimit,
-                    minusKey: const ValueKey<String>('constructor-limit-minus'),
-                    valueKey: const ValueKey<String>('constructor-limit-value'),
-                    plusKey: const ValueKey<String>('constructor-limit-plus'),
-                    minValue: 0,
-                    maxValue: 1000,
-                    onDecrement: () => _stepLimit(-1),
-                    onIncrement: () => _stepLimit(1),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      _limitKind == SessionLimitKind.cards
-                          ? l10n.constructorLimitCardsValue(_cardsLimit)
-                          : l10n.constructorLimitMinutesValue(_minutesLimit),
-                      style: theme.typography.bodyS.copyWith(
-                        color: theme.colors.textSecondary,
+              const SizedBox(height: 8),
+              DropdownButton<int>(
+                key: const ValueKey<String>('constructor-limit-value'),
+                value: _limitKind == SessionLimitKind.cards
+                    ? _cardsLimit
+                    : _minutesLimit,
+                items: <DropdownMenuItem<int>>[
+                  for (final int value
+                      in _limitKind == SessionLimitKind.cards
+                          ? SessionConstructorScreen.cardLimitValues
+                          : SessionConstructorScreen.minuteLimitValues)
+                    DropdownMenuItem<int>(
+                      value: value,
+                      child: Text(
+                        _limitKind == SessionLimitKind.cards
+                            ? l10n.constructorLimitCardsValue(value)
+                            : l10n.constructorLimitMinutesValue(value),
                       ),
                     ),
-                  ),
                 ],
+                onChanged: (int? value) {
+                  if (value == null) return;
+                  setState(() {
+                    if (_limitKind == SessionLimitKind.cards) {
+                      _cardsLimit = value;
+                    } else {
+                      _minutesLimit = value;
+                    }
+                  });
+                },
               ),
             ],
           ),
         ),
-        _StepSection(
-          number: 7,
+        _Section(
           title: l10n.constructorOrderSection,
-          child: NcSection(
+          child: Column(
             children: <Widget>[
-              NcListRow(
+              SwitchListTile(
                 key: const ValueKey<String>('constructor-shuffle'),
+                contentPadding: EdgeInsets.zero,
+                value: _shuffle,
+                onChanged: (bool value) => setState(() => _shuffle = value),
                 title: Text(l10n.constructorShuffle),
                 subtitle: Text(l10n.constructorShuffleHint),
-                trailing: NcSwitch(
-                  value: _shuffle,
-                  onChanged: (bool value) => setState(() => _shuffle = value),
-                  semanticLabel: l10n.constructorShuffle,
-                ),
-                onTap: () => setState(() => _shuffle = !_shuffle),
               ),
-              NcListRow(
+              SwitchListTile(
                 key: const ValueKey<String>('constructor-interleave'),
+                contentPadding: EdgeInsets.zero,
+                value: _interleave,
+                onChanged: (bool value) => setState(() => _interleave = value),
                 title: Text(l10n.constructorInterleave),
                 subtitle: Text(l10n.constructorInterleaveHint),
-                trailing: NcSwitch(
-                  value: _interleave,
-                  onChanged: (bool value) =>
-                      setState(() => _interleave = value),
-                  semanticLabel: l10n.constructorInterleave,
-                ),
-                onTap: () => setState(() => _interleave = !_interleave),
               ),
-              NcListRow(
+              SwitchListTile(
                 key: const ValueKey<String>('constructor-warmup'),
+                contentPadding: EdgeInsets.zero,
+                value: _warmup,
+                onChanged: (bool value) => setState(() => _warmup = value),
                 title: Text(l10n.constructorWarmup),
                 subtitle: Text(l10n.constructorWarmupHint),
-                showDivider: false,
-                trailing: NcSwitch(
-                  value: _warmup,
-                  onChanged: (bool value) => setState(() => _warmup = value),
-                  semanticLabel: l10n.constructorWarmup,
-                ),
-                onTap: () => setState(() => _warmup = !_warmup),
               ),
             ],
           ),
         ),
-        _StepSection(
-          number: 8,
+        _Section(
           title: l10n.constructorPresetsSection,
           child: _presets.isEmpty
-              ? Text(
-                  l10n.constructorPresetsEmpty,
-                  style: theme.typography.bodyS.copyWith(
-                    color: theme.colors.textSecondary,
-                  ),
-                )
-              : NcSection(
+              ? Text(l10n.constructorPresetsEmpty)
+              : Column(
                   children: <Widget>[
-                    for (var index = 0; index < _presets.length; index++)
-                      NcListRow(
+                    for (final SessionPreset preset in _presets)
+                      ListTile(
                         key: ValueKey<String>(
-                          'constructor-preset-${_presets[index].id}',
+                          'constructor-preset-${preset.id}',
                         ),
-                        title: Text(_presets[index].name),
-                        showDivider: index < _presets.length - 1,
-                        onTap: () => unawaited(_applyPreset(_presets[index])),
-                        trailing: NcIconButton(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(preset.name),
+                        onTap: () => unawaited(_applyPreset(preset)),
+                        trailing: IconButton(
                           key: ValueKey<String>(
-                            'constructor-preset-delete-${_presets[index].id}',
+                            'constructor-preset-delete-${preset.id}',
                           ),
-                          icon: Icons.delete_outline,
                           tooltip: l10n.constructorPresetDeleteTooltip,
-                          size: 36,
-                          onPressed: () =>
-                              unawaited(_deletePreset(_presets[index])),
+                          icon: const Icon(Icons.delete_outline),
+                          onPressed: () => unawaited(_deletePreset(preset)),
                         ),
                       ),
                   ],
@@ -684,113 +594,65 @@ class _SessionConstructorScreenState
   }
 
   Widget _buildBottomBar(AppLocalizations l10n) {
-    final NcTheme theme = NcTheme.of(context);
     final int available = _available.length;
     final bool busy = _loading || _loadingDecks.isNotEmpty || _starting;
-    return NcGlass(
-      tier: NcGlassTier.regular,
-      radius: 0,
-      grouped: true,
-      showNoise: false,
-      padding: EdgeInsets.fromLTRB(
-        16,
-        10,
-        16,
-        10 + MediaQuery.paddingOf(context).bottom,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          Text(
-            l10n.constructorAvailableCount(available),
-            key: const ValueKey<String>('constructor-available'),
-            style: theme.typography.monoM.copyWith(
-              color: available == 0
-                  ? theme.colors.amber
-                  : theme.colors.textSecondary,
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            Text(
+              l10n.constructorAvailableCount(available),
+              key: const ValueKey<String>('constructor-available'),
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            alignment: WrapAlignment.spaceBetween,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            spacing: 8,
-            runSpacing: 8,
-            children: <Widget>[
-              NcButton(
-                key: const ValueKey<String>('constructor-save-preset'),
-                label: l10n.constructorSavePreset,
-                variant: NcButtonVariant.secondary,
-                onPressed: busy || _selectedDecks.isEmpty
-                    ? null
-                    : () => unawaited(_savePreset()),
-              ),
-              NcButton(
-                key: const ValueKey<String>('constructor-start'),
-                label: l10n.reviewStartSession,
-                loading: _starting,
-                onPressed: busy || available == 0
-                    ? null
-                    : () => unawaited(_start()),
-              ),
-            ],
-          ),
-        ],
+            const SizedBox(height: 8),
+            Row(
+              children: <Widget>[
+                TextButton(
+                  key: const ValueKey<String>('constructor-save-preset'),
+                  onPressed: busy || _selectedDecks.isEmpty
+                      ? null
+                      : () => unawaited(_savePreset()),
+                  child: Text(l10n.constructorSavePreset),
+                ),
+                const Spacer(),
+                FilledButton(
+                  key: const ValueKey<String>('constructor-start'),
+                  onPressed: busy || available == 0
+                      ? null
+                      : () => unawaited(_start()),
+                  child: Text(l10n.reviewStartSession),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-/// Секция формы с номером шага в золотом кружке.
-class _StepSection extends StatelessWidget {
-  const _StepSection({
-    required this.number,
-    required this.title,
-    required this.child,
-  });
+/// Блок формы с заголовком.
+class _Section extends StatelessWidget {
+  const _Section({required this.title, required this.child});
 
-  final int number;
   final String title;
   final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    final NcTheme theme = NcTheme.of(context);
-    final String numberLabel = '$number';
     return Padding(
-      padding: const EdgeInsets.only(bottom: 20),
+      padding: const EdgeInsets.only(bottom: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Row(
-            children: <Widget>[
-              Container(
-                width: 24,
-                height: 24,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: theme.colors.aurumSoft,
-                  shape: BoxShape.circle,
-                ),
-                child: Text(
-                  numberLabel,
-                  style: theme.typography.labelM.copyWith(
-                    color: theme.colors.aurum,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  title,
-                  style: theme.typography.overline.copyWith(
-                    color: theme.colors.textSecondary,
-                  ),
-                ),
-              ),
-            ],
-          ),
+          Text(title, style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
           child,
         ],
@@ -799,59 +661,58 @@ class _StepSection extends StatelessWidget {
   }
 }
 
-/// Мини-плитка колоды: аватар 32, название и галочка выбранной.
-class _DeckPick extends StatelessWidget {
-  const _DeckPick({
-    super.key,
-    required this.summary,
-    required this.selected,
-    required this.onTap,
-  });
+/// Пустое состояние конструктора (нет активных колод).
+class _ConstructorEmptyState extends StatelessWidget {
+  const _ConstructorEmptyState({required this.message});
 
-  final DeckSummary summary;
-  final bool selected;
-  final VoidCallback onTap;
+  final String message;
 
   @override
   Widget build(BuildContext context) {
-    final NcTheme theme = NcTheme.of(context);
-    return Semantics(
-      selected: selected,
-      label: summary.deck.name,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 260),
-        child: NcSurface(
-          radius: NcRadii.l,
-          color: selected ? theme.colors.aurumSoft : null,
-          border: true,
-          hoverLift: false,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          onTap: onTap,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              NcIcon3D(
-                name: deckGemName(summary.deck.id),
-                size: 40,
-                showShadow: false,
-              ),
-              const SizedBox(width: 8),
-              Flexible(
-                child: Text(
-                  summary.deck.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.typography.titleS.copyWith(
-                    color: theme.colors.textPrimary,
-                  ),
-                ),
-              ),
-              if (selected) ...<Widget>[
-                const SizedBox(width: 8),
-                Icon(Icons.check_rounded, size: 18, color: theme.colors.aurum),
-              ],
-            ],
-          ),
+    final ThemeData theme = Theme.of(context);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Icon(
+              Icons.library_books_outlined,
+              size: 48,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+            const SizedBox(height: 12),
+            Text(message, textAlign: TextAlign.center),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Ошибка загрузки конструктора с повтором.
+class _ConstructorErrorState extends StatelessWidget {
+  const _ConstructorErrorState({required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final ThemeData theme = Theme.of(context);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Icon(Icons.error_outline, size: 48, color: theme.colorScheme.error),
+            const SizedBox(height: 12),
+            Text(message, textAlign: TextAlign.center),
+            const SizedBox(height: 12),
+            TextButton(onPressed: onRetry, child: Text(l10n.retry)),
+          ],
         ),
       ),
     );
@@ -859,45 +720,14 @@ class _DeckPick extends StatelessWidget {
 }
 
 /// Диалог имени пресета; `null` — отмена.
-Future<String?> _showPresetNameDialog(BuildContext context) {
-  final AppLocalizations l10n = AppLocalizations.of(context);
-  final GlobalKey<_PresetNameFieldState> fieldKey =
-      GlobalKey<_PresetNameFieldState>();
-
-  void submit() {
-    final String? name = fieldKey.currentState?.trySubmit();
-    if (name == null) return;
-    Navigator.of(context).pop(name);
-  }
-
-  return showNcDialog<String>(
-    context,
-    title: l10n.constructorPresetDialogTitle,
-    content: _PresetNameField(key: fieldKey),
-    actions: <Widget>[
-      NcButton(
-        label: l10n.cancel,
-        variant: NcButtonVariant.ghost,
-        onPressed: () => Navigator.of(context).pop(),
-      ),
-      NcButton(
-        key: const ValueKey<String>('constructor-preset-submit'),
-        label: l10n.save,
-        onPressed: submit,
-      ),
-    ],
-  );
-}
-
-/// Поле имени пресета с валидацией (Enter = отправка).
-class _PresetNameField extends StatefulWidget {
-  const _PresetNameField({super.key});
+class _PresetNameDialog extends StatefulWidget {
+  const _PresetNameDialog();
 
   @override
-  State<_PresetNameField> createState() => _PresetNameFieldState();
+  State<_PresetNameDialog> createState() => _PresetNameDialogState();
 }
 
-class _PresetNameFieldState extends State<_PresetNameField> {
+class _PresetNameDialogState extends State<_PresetNameDialog> {
   final TextEditingController _controller = TextEditingController();
   String? _errorText;
 
@@ -907,31 +737,43 @@ class _PresetNameFieldState extends State<_PresetNameField> {
     super.dispose();
   }
 
-  /// Возвращает имя или `null`, если оно пустое.
-  String? trySubmit() {
+  void _submit() {
     final AppLocalizations l10n = AppLocalizations.of(context);
     final String name = _controller.text.trim();
     if (name.isEmpty) {
       setState(() => _errorText = l10n.constructorPresetNameEmpty);
-      return null;
+      return;
     }
-    return name;
+    Navigator.of(context).pop(name);
   }
 
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
-    return NcTextField(
-      key: const ValueKey<String>('constructor-preset-name'),
-      controller: _controller,
-      autofocus: true,
-      label: l10n.constructorPresetNameLabel,
-      errorText: _errorText,
-      textInputAction: TextInputAction.done,
-      onSubmitted: (String value) {
-        final String? name = trySubmit();
-        if (name != null) Navigator.of(context).pop(name);
-      },
+    return AlertDialog(
+      title: Text(l10n.constructorPresetDialogTitle),
+      content: TextField(
+        key: const ValueKey<String>('constructor-preset-name'),
+        controller: _controller,
+        autofocus: true,
+        textInputAction: TextInputAction.done,
+        onSubmitted: (_) => _submit(),
+        decoration: InputDecoration(
+          labelText: l10n.constructorPresetNameLabel,
+          errorText: _errorText,
+        ),
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l10n.cancel),
+        ),
+        FilledButton(
+          key: const ValueKey<String>('constructor-preset-submit'),
+          onPressed: _submit,
+          child: Text(l10n.save),
+        ),
+      ],
     );
   }
 }

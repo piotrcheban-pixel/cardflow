@@ -39,8 +39,8 @@ void main() {
 
       expect(find.byType(M3ETheme), findsOneWidget);
       final l10n = l10nOf(tester);
-      expect(find.text(l10n.decksTitle), findsWidgets);
-      expect(find.text('Испанский'), findsWidgets);
+      expect(find.text(l10n.decksTitle), findsOneWidget);
+      expect(find.text('Испанский'), findsOneWidget);
       expect(
         Localizations.localeOf(tester.element(find.byType(Scaffold).first)),
         const Locale('ru'),
@@ -85,7 +85,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(DeckScreen), findsOneWidget);
-      expect(find.text('Испанский'), findsWidgets);
+      expect(find.text('Испанский'), findsOneWidget);
     });
 
     testWidgets(
@@ -149,9 +149,7 @@ void main() {
       await tester.pumpAndSettle();
       final AppLocalizations l10n = l10nOf(tester);
 
-      await tester.tap(
-        find.byKey(const ValueKey<String>('decks-settings-action')),
-      );
+      await tester.tap(find.byTooltip(l10n.settingsOpenTooltip));
       await tester.pumpAndSettle();
 
       expect(find.byType(SettingsScreen), findsOneWidget);
@@ -164,16 +162,12 @@ void main() {
       final Finder generationLink = find.byKey(
         const ValueKey<String>('settings-open-generation'),
       );
-      await tester.scrollUntilVisible(
-        generationLink,
-        260,
-        scrollable: find.byType(Scrollable).first,
-      );
+      await tester.ensureVisible(generationLink);
       await tester.pumpAndSettle();
       await tester.tap(generationLink);
       await tester.pumpAndSettle();
       expect(find.byType(GenerationSettingsScreen), findsOneWidget);
-      expect(find.text(l10n.providersTitle), findsWidgets);
+      expect(find.text(l10n.providersTitle), findsOneWidget);
     });
   });
 

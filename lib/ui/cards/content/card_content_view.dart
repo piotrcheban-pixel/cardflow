@@ -10,7 +10,6 @@ import 'package:cardflow/ui/cards/content/card_image_view.dart';
 import 'package:cardflow/ui/cards/content/cloze_text.dart';
 import 'package:cardflow/ui/cards/content/latex_text.dart';
 import 'package:cardflow/ui/cards/content/occlusion_image_view.dart';
-import 'package:cardflow/ui/design/design.dart';
 
 /// Единый рендер карточки для классики и ленты (ADR-017).
 class CardContentView extends StatelessWidget {
@@ -43,13 +42,10 @@ class CardContentView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final NcTheme theme = NcTheme.of(context);
-    final TextStyle style = side == card.back
-        ? theme.typography.answer.copyWith(
-            color: theme.colors.textPrimary,
-            height: 1.6,
-          )
-        : theme.typography.question.copyWith(color: theme.colors.textPrimary);
+    final theme = Theme.of(context);
+    final style = side == card.back
+        ? theme.textTheme.bodyLarge?.copyWith(height: 1.6)
+        : theme.textTheme.headlineMedium;
     final imageId = card.mediaIds.isEmpty ? null : card.mediaIds.first;
     final image = imageId == null ? null : mediaBytes[imageId];
     final metadata = imageId == null ? null : mediaMetadata[imageId];
@@ -61,7 +57,7 @@ class CardContentView extends StatelessWidget {
         content.add(
           Text(
             AppLocalizations.of(context).occlusionImageUnavailable,
-            style: TextStyle(color: theme.colors.ember),
+            style: TextStyle(color: theme.colorScheme.error),
             textAlign: TextAlign.center,
           ),
         );

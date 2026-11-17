@@ -12,7 +12,6 @@ import 'data/db/app_database.dart';
 import 'data/db/database_opener.dart';
 import 'data/transfer/media_store.dart';
 import 'ui/app.dart';
-import 'ui/design/font_licenses.dart';
 import 'ui/state/app_providers.dart';
 
 /// Точка входа CardFlow.
@@ -25,10 +24,6 @@ import 'ui/state/app_providers.dart';
 /// без сырых исключений (SPEC A8.6).
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Лицензии шрифтов Nocturne (Onest/Literata/JetBrains Mono, SIL OFL 1.1) —
-  // только регистрация в LicenseRegistry, без логики (REDESIGN-SPEC §2.1).
-  registerNcFontLicenses();
 
   final AppDatabase database;
   final MediaStore mediaStore;

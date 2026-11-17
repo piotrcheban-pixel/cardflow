@@ -6,44 +6,26 @@ import 'package:cardflow/domain/decks/deck_query.dart';
 import 'package:cardflow/domain/decks/deck_summary.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/decks/deck_actions.dart';
-import 'package:cardflow/ui/decks/deck_gem.dart';
-import 'package:cardflow/ui/design/design.dart';
-import 'package:cardflow/ui/motion.dart';
+import 'package:cardflow/ui/m3e/m3e.dart';
 import 'package:cardflow/ui/router/app_router.dart';
-import 'package:cardflow/ui/shell/app_shell.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
 import 'package:cardflow/ui/state/decks_ui_providers.dart';
 
 /// Действие контекстного меню карточки колоды.
 enum _DeckMenuAction { archive, rename, export, delete }
 
-/// Экран «Колоды» (SPEC A6.2, REDESIGN-SPEC §9.2).
+/// Экран «Колоды» (SPEC A6.2).
 ///
-/// Шапка `NcTopBar` с large title и сводкой «К повторению: N · колод: M»
-/// (UI-вычисление из `deckSummariesProvider`), поиск `NcSearchField`, чипы
-/// фильтра, сетка плиток `NcCardTile` (1/2/3 колонки), бейдж «N к повторению»,
-/// архив свайпом с хаптиком на пороге и undo-тостом, контекстное меню
-/// `NcSheet`, Split-кнопка и `NcFab` создания, импорт ZIP. Обработчики и
-/// провайдеры — прежние.
-class DecksScreen extends ConsumerStatefulWidget {
+/// Поиск, чипы фильтра, карточки колод на `M3ECard`, архив свайпом или из
+/// контекстного меню (доступность, M11) с undo-снекбаром, контекстное меню
+/// (архивировать/переименовать/экспорт/удалить), Split-кнопка и Extended FAB
+/// создания, импорт ZIP. Строки — из ARB.
+class DecksScreen extends ConsumerWidget {
   /// Создаёт экран.
   const DecksScreen({super.key});
 
   @override
-  ConsumerState<DecksScreen> createState() => _DecksScreenState();
-}
-
-class _DecksScreenState extends ConsumerState<DecksScreen> {
-  final ScrollController _scrollController = ScrollController();
-
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final AppLocalizations l10n = AppLocalizations.of(context);
     final DeckQuery query = ref.watch(decksQueryProvider);
     final bool searchVisible = ref.watch(decksSearchVisibleProvider);
@@ -51,138 +33,89 @@ class _DecksScreenState extends ConsumerState<DecksScreen> {
     final AsyncValue<List<DeckSummary>> summaries = ref.watch(
       deckSummariesProvider,
     );
-    final List<DeckSummary>? decks = summaries.asData?.value;
-    final bool wide = MediaQuery.sizeOf(context).width >= 600;
-
-    final Widget createSplit = NcSplitButton(
-      key: const ValueKey<String>('decks-create-split'),
-      label: l10n.decksCreateButton,
-      icon: Icons.add_rounded,
-      menuSemanticLabel: l10n.decksCreateMenuTooltip,
-      items: <NcMenuItem<void>>[
-        NcMenuItem<void>(
-          label: l10n.decksCreateManual,
-          icon: Icons.edit_outlined,
-          onSelected: () => createDeckManually(context, ref),
-        ),
-        NcMenuItem<void>(
-          key: const ValueKey<String>('decks-create-generate'),
-          label: l10n.decksCreateGenerate,
-          icon: Icons.auto_awesome,
-          onSelected: () => context.push(AppRoutes.generationPath),
-        ),
-        NcMenuItem<void>(
-          label: l10n.decksImportZip,
-          icon: Icons.file_upload_outlined,
-          onSelected: () => importDeckZip(context, ref),
-        ),
-      ],
-      onPressed: () => createDeckManually(context, ref),
-    );
-
-    final Widget topBar = NcTopBar(
-      title: l10n.decksTitle,
-      largeTitle: l10n.decksTitle,
-      scrollController: _scrollController,
-      actions: <Widget>[
-        if (wide)
-          Padding(
-            padding: const EdgeInsetsDirectional.only(end: 4),
-            child: createSplit,
-          ),
-        NcIconButton(
-          key: const ValueKey<String>('decks-search-toggle'),
-          icon: searchVisible ? Icons.search_off : Icons.search,
-          tooltip: l10n.decksSearchTooltip,
-          onPressed: () {
-            if (searchVisible) {
-              ref.read(decksQueryProvider.notifier).clearSearch();
-              ref.read(decksSearchVisibleProvider.notifier).close();
-            } else {
-              ref.read(decksSearchVisibleProvider.notifier).toggle();
-            }
-          },
-        ),
-        _FilterAction(
-          active: query.filter != DeckFilter.all,
-          tooltip: l10n.decksFilterTooltip,
-          onPressed: () =>
-              ref.read(decksFiltersVisibleProvider.notifier).toggle(),
-        ),
-        NcIconButton(
-          key: const ValueKey<String>('decks-settings-action'),
-          icon: Icons.settings_outlined,
-          tooltip: l10n.settingsOpenTooltip,
-          onPressed: () => context.go(AppRoutes.settingsPath),
-        ),
-      ],
-    );
 
     return Scaffold(
-      body: SafeArea(
-        bottom: false,
-        child: NcScrollCollapseScope(
-          child: Stack(
-            children: <Widget>[
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: <Widget>[
-                  topBar,
-                  if (decks != null && decks.isNotEmpty) ...<Widget>[
-                    _DecksHeader(
-                      summary: l10n.decksSummary(
-                        decks.length,
-                        decks.fold<int>(
-                          0,
-                          (int total, DeckSummary item) =>
-                              total + item.dueCards,
-                        ),
-                      ),
+      appBar: AppBar(
+        title: Text(l10n.decksTitle),
+        actions: <Widget>[
+          IconButton(
+            tooltip: l10n.decksSearchTooltip,
+            icon: Icon(searchVisible ? Icons.search_off : Icons.search),
+            onPressed: () {
+              if (searchVisible) {
+                ref.read(decksQueryProvider.notifier).clearSearch();
+                ref.read(decksSearchVisibleProvider.notifier).close();
+              } else {
+                ref.read(decksSearchVisibleProvider.notifier).toggle();
+              }
+            },
+          ),
+          IconButton(
+            tooltip: l10n.decksFilterTooltip,
+            icon: const Icon(Icons.filter_list),
+            onPressed: () =>
+                ref.read(decksFiltersVisibleProvider.notifier).toggle(),
+          ),
+          IconButton(
+            tooltip: l10n.settingsOpenTooltip,
+            icon: const Icon(Icons.settings_outlined),
+            onPressed: () => context.go(AppRoutes.settingsPath),
+          ),
+        ],
+      ),
+      floatingActionButton: M3EExtendedFab(
+        label: l10n.decksCreateDeckFab,
+        icon: const Icon(Icons.add),
+        onPressed: () => createDeckManually(context, ref),
+      ),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          if (searchVisible) const _DecksSearchField(),
+          if (filtersVisible) _DeckFilterChips(selected: query.filter),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            child: Align(
+              alignment: AlignmentDirectional.centerEnd,
+              child: M3ESplitButton<String>(
+                key: const ValueKey<String>('decks-create-split'),
+                label: l10n.decksCreateButton,
+                leadingIcon: Icons.add,
+                trailingTooltip: l10n.decksCreateMenuTooltip,
+                items: <M3ESplitButtonItem<String>>[
+                  M3ESplitButtonItem<String>(
+                    value: 'manual',
+                    child: l10n.decksCreateManual,
+                  ),
+                  M3ESplitButtonItem<String>(
+                    value: 'generate',
+                    child: Text(
+                      l10n.decksCreateGenerate,
+                      key: const ValueKey<String>('decks-create-generate'),
                     ),
-                    if (!wide)
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                        child: Align(
-                          alignment: AlignmentDirectional.centerEnd,
-                          child: createSplit,
-                        ),
-                      ),
-                  ],
-                  AnimatedSize(
-                    duration: AppMotion.fast,
-                    curve: Curves.easeOutCubic,
-                    alignment: Alignment.topCenter,
-                    child: searchVisible
-                        ? Padding(
-                            padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-                            child: _DecksSearchField(),
-                          )
-                        : const SizedBox(width: double.infinity),
                   ),
-                  AnimatedSize(
-                    duration: AppMotion.fast,
-                    curve: Curves.easeOutCubic,
-                    alignment: Alignment.topCenter,
-                    child: filtersVisible
-                        ? _DeckFilterChips(selected: query.filter)
-                        : const SizedBox(width: double.infinity),
-                  ),
-                  Expanded(
-                    child: _buildContent(context, ref, l10n, query, summaries),
+                  M3ESplitButtonItem<String>(
+                    value: 'import',
+                    child: l10n.decksImportZip,
                   ),
                 ],
+                onPressed: () => createDeckManually(context, ref),
+                onSelected: (String value) async {
+                  switch (value) {
+                    case 'manual':
+                      await createDeckManually(context, ref);
+                    case 'generate':
+                      await context.push(AppRoutes.generationPath);
+                    case 'import':
+                      await importDeckZip(context, ref);
+                  }
+                },
               ),
-              PositionedDirectional(
-                end: wide ? 24 : 16,
-                bottom: wide ? 24 : NcNavDock.height + 32,
-                child: NcFab(
-                  label: l10n.decksCreateDeckFab,
-                  onPressed: () => createDeckManually(context, ref),
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
+          const SizedBox(height: 8),
+          Expanded(child: _buildContent(context, ref, l10n, query, summaries)),
+        ],
       ),
     );
   }
@@ -195,10 +128,9 @@ class _DecksScreenState extends ConsumerState<DecksScreen> {
     AsyncValue<List<DeckSummary>> summaries,
   ) {
     return summaries.when(
-      loading: () => const _DecksSkeleton(),
-      error: (Object error, StackTrace stackTrace) => NcErrorState(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (Object error, StackTrace stackTrace) => _DecksErrorState(
         message: l10n.decksErrorTitle,
-        retryLabel: l10n.retry,
         onRetry: () => ref.invalidate(deckSummariesProvider),
       ),
       data: (List<DeckSummary> deckSummaries) {
@@ -207,32 +139,37 @@ class _DecksScreenState extends ConsumerState<DecksScreen> {
               query.normalizedSearch.isNotEmpty ||
               query.filter != DeckFilter.all;
           if (filtered) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: NcEmptyState(
-                  iconName: 'style',
-                  showIcon: false,
-                  title: l10n.decksNoResults,
-                  message: l10n.decksNoResultsHint,
-                ),
-              ),
-            );
+            return Center(child: Text(l10n.decksNoResults));
           }
           return _DecksEmptyState(
             onCreate: () => createDeckManually(context, ref),
-            onGenerate: () => context.push(AppRoutes.generationPath),
           );
         }
-        return _DeckGrid(
-          decks: deckSummaries,
-          controller: _scrollController,
-          onOpen: (DeckSummary summary) =>
-              context.push('/decks/${summary.deck.id}'),
-          onMenu: (DeckSummary summary) =>
-              _showContextMenu(context, ref, summary),
-          onArchive: (DeckSummary summary) =>
-              _archiveDeck(context, ref, summary),
+        return ListView.separated(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+          itemCount: deckSummaries.length,
+          separatorBuilder: (BuildContext context, int index) =>
+              const SizedBox(height: 12),
+          itemBuilder: (BuildContext context, int index) {
+            final DeckSummary summary = deckSummaries[index];
+            return Dismissible(
+              key: ValueKey<String>('deck-card-${summary.deck.id}'),
+              direction: DismissDirection.endToStart,
+              background: _ArchiveSwipeBackground(),
+              onDismissed: (DismissDirection direction) =>
+                  _archiveDeck(context, ref, summary),
+              child: M3ECard(
+                headline: summary.deck.name,
+                subhead: l10n.deckCardCount(summary.totalCards),
+                supportingText: summary.dueCards > 0
+                    ? l10n.deckDueCount(summary.dueCards)
+                    : null,
+                semanticLabel: summary.deck.name,
+                onPressed: () => context.push('/decks/${summary.deck.id}'),
+                onLongPress: () => _showContextMenu(context, ref, summary),
+              ),
+            );
+          },
         );
       },
     );
@@ -261,36 +198,39 @@ class _DecksScreenState extends ConsumerState<DecksScreen> {
     DeckSummary summary,
   ) async {
     final AppLocalizations l10n = AppLocalizations.of(context);
-    final _DeckMenuAction? action = await showNcSheet<_DeckMenuAction>(
-      context,
-      title: summary.deck.name,
-      closeTooltip: l10n.commonClose,
-      builder: (BuildContext sheetContext) => Column(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          NcListRow(
-            title: Text(l10n.deckRename),
-            leading: const Icon(Icons.edit_outlined),
-            onTap: () => Navigator.of(sheetContext).pop(_DeckMenuAction.rename),
-          ),
-          NcListRow(
-            title: Text(l10n.deckExport),
-            leading: const Icon(Icons.ios_share),
-            onTap: () => Navigator.of(sheetContext).pop(_DeckMenuAction.export),
-          ),
-          NcListRow(
-            title: Text(l10n.deckActionArchive),
-            leading: const Icon(Icons.archive_outlined),
-            onTap: () =>
-                Navigator.of(sheetContext).pop(_DeckMenuAction.archive),
-          ),
-          NcListRow(
-            title: Text(l10n.delete),
-            leading: const Icon(Icons.delete_outline),
-            showDivider: false,
-            onTap: () => Navigator.of(sheetContext).pop(_DeckMenuAction.delete),
-          ),
-        ],
+    final _DeckMenuAction? action = await showModalBottomSheet<_DeckMenuAction>(
+      context: context,
+      showDragHandle: true,
+      builder: (BuildContext sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            ListTile(
+              leading: const Icon(Icons.edit_outlined),
+              title: Text(l10n.deckRename),
+              onTap: () =>
+                  Navigator.of(sheetContext).pop(_DeckMenuAction.rename),
+            ),
+            ListTile(
+              leading: const Icon(Icons.ios_share),
+              title: Text(l10n.deckExport),
+              onTap: () =>
+                  Navigator.of(sheetContext).pop(_DeckMenuAction.export),
+            ),
+            ListTile(
+              leading: const Icon(Icons.archive_outlined),
+              title: Text(l10n.deckActionArchive),
+              onTap: () =>
+                  Navigator.of(sheetContext).pop(_DeckMenuAction.archive),
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete_outline),
+              title: Text(l10n.delete),
+              onTap: () =>
+                  Navigator.of(sheetContext).pop(_DeckMenuAction.delete),
+            ),
+          ],
+        ),
       ),
     );
     if (action == null || !context.mounted) return;
@@ -307,274 +247,27 @@ class _DecksScreenState extends ConsumerState<DecksScreen> {
   }
 }
 
-/// Сводная строка шапки: «К повторению: N · колод: M» (UI-вычисление).
-class _DecksHeader extends StatelessWidget {
-  const _DecksHeader({required this.summary});
-
-  final String summary;
-
-  @override
-  Widget build(BuildContext context) {
-    final NcTheme theme = NcTheme.of(context);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 16, 8),
-      child: Text(
-        summary,
-        style: theme.typography.bodyM.copyWith(
-          color: theme.colors.textSecondary,
-        ),
-      ),
-    );
-  }
-}
-
-/// Иконка фильтра с точкой `aurum`, если фильтр не «Все».
-class _FilterAction extends StatelessWidget {
-  const _FilterAction({
-    required this.active,
-    required this.tooltip,
-    required this.onPressed,
-  });
-
-  final bool active;
-  final String tooltip;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final NcTheme theme = NcTheme.of(context);
-    return Stack(
-      alignment: Alignment.center,
-      children: <Widget>[
-        NcIconButton(
-          key: const ValueKey<String>('decks-filter-toggle'),
-          icon: Icons.filter_list,
-          tooltip: tooltip,
-          onPressed: onPressed,
-        ),
-        if (active)
-          PositionedDirectional(
-            top: 8,
-            end: 8,
-            child: Container(
-              width: 6,
-              height: 6,
-              decoration: BoxDecoration(
-                color: theme.colors.aurum,
-                shape: BoxShape.circle,
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-/// Сетка плиток колод: 1 колонка (< 600), 2 (600–1023), 3 (≥ 1024).
-class _DeckGrid extends StatelessWidget {
-  const _DeckGrid({
-    required this.decks,
-    required this.controller,
-    required this.onOpen,
-    required this.onMenu,
-    required this.onArchive,
-  });
-
-  final List<DeckSummary> decks;
-  final ScrollController controller;
-  final ValueChanged<DeckSummary> onOpen;
-  final ValueChanged<DeckSummary> onMenu;
-  final ValueChanged<DeckSummary> onArchive;
-
-  @override
-  Widget build(BuildContext context) {
-    final double width = MediaQuery.sizeOf(context).width;
-    final int columns = width >= AppShell.wideBreakpoint
-        ? 3
-        : width >= AppShell.railBreakpoint
-        ? 2
-        : 1;
-    final double textScale = MediaQuery.textScalerOf(context)
-        .scale(1)
-        .clamp(1.0, 1.8);
-    final double extent = (columns == 1 ? 92 : 168) * textScale;
-    return GridView.builder(
-      controller: controller,
-      padding: EdgeInsets.fromLTRB(
-        width >= AppShell.wideBreakpoint ? 24 : 16,
-        8,
-        width >= AppShell.wideBreakpoint ? 24 : 16,
-        160,
-      ),
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: columns,
-        mainAxisSpacing: 12,
-        crossAxisSpacing: 12,
-        mainAxisExtent: extent,
-      ),
-      itemCount: decks.length,
-      itemBuilder: (BuildContext context, int index) {
-        final DeckSummary summary = decks[index];
-        return NcStagger(
-          index: index,
-          child: Dismissible(
-            key: ValueKey<String>('deck-card-${summary.deck.id}'),
-            direction: DismissDirection.endToStart,
-            background: const _ArchiveSwipeBackground(),
-            onUpdate: (DismissUpdateDetails details) {
-              if (details.reached && !details.previousReached) {
-                NcHaptics.of(context).lightImpact();
-              }
-            },
-            onDismissed: (DismissDirection direction) {
-              onArchive(summary);
-            },
-            child: _DeckTile(
-              summary: summary,
-              onTap: () => onOpen(summary),
-              onMenu: () => onMenu(summary),
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-/// Плитка колоды: 3D-аватар + название + «N карточек» + бейдж/галочка.
-class _DeckTile extends StatefulWidget {
-  const _DeckTile({
-    required this.summary,
-    required this.onTap,
-    required this.onMenu,
-  });
-
-  final DeckSummary summary;
-  final VoidCallback onTap;
-  final VoidCallback onMenu;
-
-  @override
-  State<_DeckTile> createState() => _DeckTileState();
-}
-
-class _DeckTileState extends State<_DeckTile> {
-  bool _hovered = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final AppLocalizations l10n = AppLocalizations.of(context);
-    final NcTheme theme = NcTheme.of(context);
-    final DeckSummary summary = widget.summary;
-    final Widget avatar = Hero(
-      tag: 'deck-avatar-${summary.deck.id}',
-      child: NcIcon3D(
-        name: deckGemName(summary.deck.id),
-        size: 52,
-        showShadow: false,
-      ),
-    );
-    final Widget title = Hero(
-      tag: 'deck-title-${summary.deck.id}',
-      child: Text(
-        summary.deck.name,
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
-        style: theme.typography.titleM.copyWith(
-          color: theme.colors.textPrimary,
-        ),
-      ),
-    );
-    final double textScale = MediaQuery.textScalerOf(context).scale(1);
-    final Widget trailing = summary.dueCards > 0
-        ? NcBadge(
-            label: textScale > 1.3
-                ? '${summary.dueCards}'
-                : l10n.deckDueCount(summary.dueCards),
-            semanticLabel: l10n.deckDueCount(summary.dueCards),
-          )
-        : Semantics(
-            label: l10n.deckDueCount(0),
-            child: Icon(
-              Icons.check_rounded,
-              size: 18,
-              color: theme.colors.jade.withValues(alpha: 0.6),
-            ),
-          );
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: Stack(
-        children: <Widget>[
-          NcCardTile(
-            title: title,
-            subtitle: Text(
-              l10n.deckCardCount(summary.totalCards),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: theme.typography.bodyS.copyWith(
-                color: theme.colors.textSecondary,
-              ),
-            ),
-            leading: avatar,
-            trailing: trailing,
-            semanticLabel: summary.deck.name,
-            onTap: widget.onTap,
-            onLongPress: widget.onMenu,
-            onSecondaryTap: widget.onMenu,
-          ),
-          if (_hovered)
-            PositionedDirectional(
-              top: 8,
-              end: 8,
-              child: NcIconButton(
-                key: ValueKey<String>('deck-more-${summary.deck.id}'),
-                icon: Icons.more_horiz,
-                tooltip: l10n.decksMenuTooltip,
-                size: 32,
-                onPressed: widget.onMenu,
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
 /// Фон свайпа «в архив» (архив — по направлению endToStart).
 class _ArchiveSwipeBackground extends StatelessWidget {
-  const _ArchiveSwipeBackground();
-
   @override
   Widget build(BuildContext context) {
-    final NcTheme theme = NcTheme.of(context);
+    final ColorScheme scheme = Theme.of(context).colorScheme;
     return Container(
-      decoration: ShapeDecoration(
-        color: theme.colors.ink4,
-        shape: RoundedSuperellipseBorder(
-          borderRadius: BorderRadius.circular(NcRadii.l),
-        ),
+      decoration: BoxDecoration(
+        color: scheme.errorContainer,
+        borderRadius: BorderRadius.circular(28),
       ),
       alignment: AlignmentDirectional.centerEnd,
       padding: const EdgeInsetsDirectional.only(end: 24),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          Icon(Icons.archive_outlined, color: theme.colors.textSecondary),
-          const SizedBox(width: 8),
-          Text(
-            AppLocalizations.of(context).deckActionArchive,
-            style: theme.typography.labelM.copyWith(
-              color: theme.colors.textSecondary,
-            ),
-          ),
-        ],
-      ),
+      child: Icon(Icons.archive_outlined, color: scheme.onErrorContainer),
     );
   }
 }
 
 /// Поле поиска колод (открывается иконкой search).
 class _DecksSearchField extends ConsumerStatefulWidget {
+  const _DecksSearchField();
+
   @override
   ConsumerState<_DecksSearchField> createState() => _DecksSearchFieldState();
 }
@@ -591,23 +284,30 @@ class _DecksSearchFieldState extends ConsumerState<_DecksSearchField> {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
-    ref.watch(decksQueryProvider);
-    return NcSearchField(
-      key: const ValueKey<String>('decks-search-field'),
-      controller: _controller,
-      autofocus: true,
-      hint: l10n.decksSearchHint,
-      clearTooltip: l10n.decksSearchClearTooltip,
-      clearKey: const ValueKey<String>('decks-search-clear'),
-      semanticLabel: l10n.decksSearchHint,
-      onChanged: (String value) {
-        if (value.isEmpty) {
-          ref.read(decksQueryProvider.notifier).clearSearch();
-        } else {
-          ref.read(decksQueryProvider.notifier).setSearch(value);
-        }
-      },
-      focusNode: null,
+    final String search = ref.watch(decksQueryProvider).search;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      child: TextField(
+        controller: _controller,
+        autofocus: true,
+        onChanged: (String value) =>
+            ref.read(decksQueryProvider.notifier).setSearch(value),
+        decoration: InputDecoration(
+          hintText: l10n.decksSearchHint,
+          prefixIcon: const Icon(Icons.search),
+          suffixIcon: search.isEmpty
+              ? null
+              : IconButton(
+                  tooltip: l10n.decksSearchClearTooltip,
+                  icon: const Icon(Icons.close),
+                  onPressed: () {
+                    _controller.clear();
+                    ref.read(decksQueryProvider.notifier).clearSearch();
+                  },
+                ),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+        ),
+      ),
     );
   }
 }
@@ -623,17 +323,18 @@ class _DeckFilterChips extends ConsumerWidget {
     final AppLocalizations l10n = AppLocalizations.of(context);
 
     Widget chip(String label, DeckFilter filter) {
-      return NcChip.filter(
+      return M3EChip(
         label: label,
+        type: M3EChipType.filter,
         selected: selected == filter,
-        onSelected: () =>
+        onPressed: () =>
             ref.read(decksQueryProvider.notifier).setFilter(filter),
       );
     }
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
       child: Row(
         children: <Widget>[
           chip(l10n.deckFilterAll, DeckFilter.all),
@@ -649,53 +350,70 @@ class _DeckFilterChips extends ConsumerWidget {
   }
 }
 
-/// Загрузка списка: четыре skeleton-плитки (§9.2).
-class _DecksSkeleton extends StatelessWidget {
-  const _DecksSkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView(
-      physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-      children: <Widget>[
-        for (var index = 0; index < 4; index++) ...<Widget>[
-          const NcSkeleton(height: 88, radius: NcRadii.l),
-          if (index < 3) const SizedBox(height: 12),
-        ],
-      ],
-    );
-  }
-}
-
 /// Пустое состояние списка колод.
 class _DecksEmptyState extends StatelessWidget {
-  const _DecksEmptyState({required this.onCreate, required this.onGenerate});
+  const _DecksEmptyState({required this.onCreate});
 
   final VoidCallback onCreate;
-  final VoidCallback onGenerate;
 
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
+    final ThemeData theme = Theme.of(context);
     return Center(
-      child: SingleChildScrollView(
+      child: Padding(
         padding: const EdgeInsets.all(24),
-        child: NcEmptyState(
-          iconName: 'empty_decks',
-          title: l10n.decksEmptyTitle,
-          message: l10n.decksEmptyMessage,
-          primaryAction: NcButton(
-            label: l10n.decksCreateButton,
-            icon: Icons.add_rounded,
-            onPressed: onCreate,
-          ),
-          secondaryAction: NcButton(
-            label: l10n.decksCreateGenerate,
-            variant: NcButtonVariant.ai,
-            icon: Icons.auto_awesome,
-            onPressed: onGenerate,
-          ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Icon(
+              Icons.style_outlined,
+              size: 48,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              l10n.decksEmptyTitle,
+              style: theme.textTheme.titleMedium,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(l10n.decksEmptyMessage, textAlign: TextAlign.center),
+            const SizedBox(height: 16),
+            FilledButton(
+              onPressed: onCreate,
+              child: Text(l10n.decksCreateButton),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Состояние ошибки загрузки списка колод.
+class _DecksErrorState extends StatelessWidget {
+  const _DecksErrorState({required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final ThemeData theme = Theme.of(context);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Icon(Icons.error_outline, size: 48, color: theme.colorScheme.error),
+            const SizedBox(height: 12),
+            Text(message, textAlign: TextAlign.center),
+            const SizedBox(height: 12),
+            TextButton(onPressed: onRetry, child: Text(l10n.retry)),
+          ],
         ),
       ),
     );

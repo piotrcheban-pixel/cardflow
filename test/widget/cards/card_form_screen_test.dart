@@ -40,7 +40,8 @@ void main() {
   }
 
   Future<void> openCreateForm(WidgetTester tester) async {
-    await tester.tap(find.byKey(const ValueKey<String>('deck-add-card')));
+    final AppLocalizations l10n = l10nOf(tester);
+    await tester.tap(find.byTooltip(l10n.deckAddCardTooltip));
     await tester.pumpAndSettle();
   }
 

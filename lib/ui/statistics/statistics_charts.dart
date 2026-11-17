@@ -1,7 +1,7 @@
-/// Графики экрана статистики (SPEC A6.5, ADR-019 §4; REDESIGN §9.15).
+/// Графики экрана статистики (SPEC A6.5, ADR-019 §4).
 ///
-/// Без сторонних библиотек: waveform, годовая тепловая карта и прогноз
-/// рисуются `CustomPainter` на токенах `NcTheme`. Значения — данные
+/// Без сторонних библиотек: waveform, годовая тепловая карта и недельный
+/// прогресс рисуются `CustomPainter` на токенах темы. Значения — данные
 /// калькулятора, подписи дат — `MaterialLocalizations` (локаль ru).
 library;
 
@@ -10,20 +10,14 @@ import 'dart:math' as math;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:cardflow/domain/statistics/statistics.dart';
-import 'package:cardflow/ui/design/design.dart';
-import 'package:cardflow/ui/motion.dart';
 
 /// Waveform-индикатор на токенах темы (удержание/недельный прогресс).
-///
-/// Столбики-капсулы с градиентом `aurumDeep→aurum`; последний столбик ярче и
-/// с точкой-glow. Появление — рост от нуля (каскад, §9.15).
 class StatisticsWaveform extends StatelessWidget {
   /// Создаёт waveform.
   const StatisticsWaveform({
     required this.values,
     this.semanticsLabel,
     this.height = 56,
-    this.empty = false,
     super.key,
   });
 
@@ -36,30 +30,12 @@ class StatisticsWaveform extends StatelessWidget {
   /// Высота графика.
   final double height;
 
-  /// Нет данных — пунктирная линия вместо столбиков.
-  final bool empty;
-
   @override
   Widget build(BuildContext context) {
-    final NcTheme theme = NcTheme.of(context);
-    final Widget canvas = TweenAnimationBuilder<double>(
-      tween: Tween<double>(begin: 0, end: 1),
-      duration: MediaQuery.of(context).disableAnimations
-          ? Duration.zero
-          : AppMotion.base,
-      curve: AppMotion.baseCurve,
-      builder: (BuildContext context, double progress, Widget? _) =>
-          CustomPaint(
-            size: Size(double.infinity, height),
-            painter: _WaveformPainter(
-              values: values,
-              progress: progress,
-              start: theme.colors.aurumDeep,
-              end: theme.colors.aurumBright,
-              emptyColor: theme.colors.hairlineStrong,
-              empty: empty,
-            ),
-          ),
+    final Color color = Theme.of(context).colorScheme.primary;
+    final Widget canvas = CustomPaint(
+      size: Size(double.infinity, height),
+      painter: _WaveformPainter(values: values, color: color),
     );
     if (semanticsLabel == null) return canvas;
     return Semantics(label: semanticsLabel, image: true, child: canvas);
@@ -67,63 +43,23 @@ class StatisticsWaveform extends StatelessWidget {
 }
 
 class _WaveformPainter extends CustomPainter {
-  _WaveformPainter({
-    required this.values,
-    required this.progress,
-    required this.start,
-    required this.end,
-    required this.emptyColor,
-    required this.empty,
-  });
+  _WaveformPainter({required this.values, required this.color});
 
   final List<int> values;
-  final double progress;
-  final Color start;
-  final Color end;
-  final Color emptyColor;
-  final bool empty;
+  final Color color;
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (size.width <= 0 || size.height <= 0) return;
-    if (empty || values.isEmpty) {
-      final Paint dashed = Paint()
-        ..color = emptyColor
-        ..strokeWidth = 2
-        ..strokeCap = StrokeCap.round;
-      final double y = size.height / 2;
-      for (double x = 0; x < size.width; x += 10) {
-        canvas.drawLine(
-          Offset(x, y),
-          Offset(math.min(x + 5, size.width), y),
-          dashed,
-        );
-      }
-      return;
-    }
+    if (values.isEmpty || size.width <= 0 || size.height <= 0) return;
     final int maxValue = values.reduce(math.max);
     final double gap = 4;
     final double barWidth =
         (size.width - gap * (values.length - 1)) / values.length;
     if (barWidth <= 0) return;
-    final Paint paint = Paint();
+    final Paint paint = Paint()..color = color;
     for (int index = 0; index < values.length; index++) {
-      final bool last = index == values.length - 1;
       final double fraction = maxValue == 0 ? 0 : values[index] / maxValue;
-      final double barHeight = math.max(4, size.height * fraction) * progress;
-      paint.shader =
-          LinearGradient(
-            begin: Alignment.bottomCenter,
-            end: Alignment.topCenter,
-            colors: <Color>[start, last ? end : end.withValues(alpha: 0.75)],
-          ).createShader(
-            Rect.fromLTWH(
-              index * (barWidth + gap),
-              size.height - barHeight,
-              barWidth,
-              barHeight,
-            ),
-          );
+      final double barHeight = math.max(4, size.height * fraction);
       final RRect bar = RRect.fromRectAndRadius(
         Rect.fromLTWH(
           index * (barWidth + gap),
@@ -134,37 +70,16 @@ class _WaveformPainter extends CustomPainter {
         Radius.circular(barWidth / 2),
       );
       canvas.drawRRect(bar, paint);
-      if (last && barHeight > 0) {
-        final Offset dot = Offset(
-          index * (barWidth + gap) + barWidth / 2,
-          size.height - barHeight - 5,
-        );
-        canvas.drawCircle(
-          dot,
-          4,
-          Paint()
-            ..color = end.withValues(alpha: 0.35)
-            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5),
-        );
-        canvas.drawCircle(dot, 2.4, Paint()..color = end);
-      }
     }
   }
 
   @override
   bool shouldRepaint(_WaveformPainter oldDelegate) =>
-      oldDelegate.values != values ||
-      oldDelegate.progress != progress ||
-      oldDelegate.start != start ||
-      oldDelegate.end != end ||
-      oldDelegate.empty != empty;
+      oldDelegate.values != values || oldDelegate.color != color;
 }
 
-/// Годовая тепловая карта повторений (A6.5): ячейки 10–12 px, шкала `heat0–4`.
-///
-/// На телефоне карта прокручивается горизонтально и автоматически
-/// прокручена к сегодняшнему дню.
-class StatisticsHeatmap extends StatefulWidget {
+/// Годовая тепловая карта повторений (A6.5).
+class StatisticsHeatmap extends StatelessWidget {
   /// Создаёт карту.
   const StatisticsHeatmap({required this.days, super.key});
 
@@ -172,7 +87,42 @@ class StatisticsHeatmap extends StatefulWidget {
   final List<DayCount> days;
 
   @override
-  State<StatisticsHeatmap> createState() => _StatisticsHeatmapState();
+  Widget build(BuildContext context) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    final MaterialLocalizations localizations = MaterialLocalizations.of(
+      context,
+    );
+    final List<String> labels = heatmapMonthLabels(
+      days,
+      (DateTime day) => _monthName(localizations, day),
+    );
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final double width = constraints.maxWidth;
+        final double cell = width <= 0
+            ? 8
+            : ((width - 40) / 53).clamp(5.0, 11.0);
+        return CustomPaint(
+          key: const ValueKey<String>('statistics-heatmap'),
+          size: Size(width, 7 * (cell + 2) + 16),
+          painter: _HeatmapPainter(
+            days: days,
+            monthLabels: labels,
+            cell: cell,
+            emptyColor: scheme.surfaceContainerHighest,
+            color: scheme.primary,
+            labelStyle: Theme.of(context).textTheme.labelSmall
+                ?.copyWith(fontSize: 9, color: scheme.onSurfaceVariant),
+          ),
+        );
+      },
+    );
+  }
+
+  static String _monthName(MaterialLocalizations localizations, DateTime day) {
+    final String formatted = localizations.formatMonthYear(day);
+    return formatted.replaceFirst(RegExp(r'\s+\d{4}$'), '');
+  }
 
   /// Подписи месяцев по колонкам карты: только чётные месяцы.
   ///
@@ -198,105 +148,42 @@ class StatisticsHeatmap extends StatefulWidget {
   }
 }
 
-class _StatisticsHeatmapState extends State<StatisticsHeatmap> {
-  final ScrollController _controller = ScrollController();
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _jumpToToday());
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _jumpToToday() {
-    if (!mounted || !_controller.hasClients) return;
-    _controller.jumpTo(_controller.position.maxScrollExtent);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final NcTheme theme = NcTheme.of(context);
-    final MaterialLocalizations localizations = MaterialLocalizations.of(
-      context,
-    );
-    final List<String> labels = StatisticsHeatmap.heatmapMonthLabels(
-      widget.days,
-      (DateTime day) => _monthName(localizations, day),
-    );
-    const double cell = 10;
-    const double step = 13;
-    final int columns = math.max(1, (widget.days.length / 7).ceil());
-    final double width = columns * step;
-    final double height = 7 * step + 16;
-    return SingleChildScrollView(
-      controller: _controller,
-      scrollDirection: Axis.horizontal,
-      child: CustomPaint(
-        key: const ValueKey<String>('statistics-heatmap'),
-        size: Size(width, height),
-        painter: _HeatmapPainter(
-          days: widget.days,
-          monthLabels: labels,
-          cell: cell,
-          step: step,
-          heat: theme.colors.heat,
-          labelStyle: theme.typography.labelM.copyWith(
-            fontSize: 9,
-            color: theme.colors.textTertiary,
-          ),
-        ),
-      ),
-    );
-  }
-
-  static String _monthName(MaterialLocalizations localizations, DateTime day) {
-    // Локаль ru: `formatMonthYear` → «январь 2026 г.». Для колонки карты
-    // нужна короткая подпись (3 буквы), иначе метки перекрывают друг друга.
-    final String formatted = localizations.formatMonthYear(day);
-    final String month = formatted.split(' ').first;
-    return month.length <= 3 ? month : month.substring(0, 3);
-  }
-}
-
 class _HeatmapPainter extends CustomPainter {
   _HeatmapPainter({
     required this.days,
     required this.monthLabels,
     required this.cell,
-    required this.step,
-    required this.heat,
+    required this.emptyColor,
+    required this.color,
     this.labelStyle,
   });
 
   final List<DayCount> days;
   final List<String> monthLabels;
   final double cell;
-  final double step;
-  final List<Color> heat;
+  final Color emptyColor;
+  final Color color;
   final TextStyle? labelStyle;
 
   @override
   void paint(Canvas canvas, Size size) {
     if (days.isEmpty) return;
     final int maxCount = days.map((DayCount day) => day.count).reduce(math.max);
+    final double step = cell + 2;
     final Paint paint = Paint();
-    const double top = 16;
+    final double top = 14;
     for (int index = 0; index < days.length; index++) {
       final int column = index ~/ 7;
       final int row = index % 7;
       final int count = days[index].count;
-      final int level = count == 0 || maxCount == 0
-          ? 0
-          : 1 + ((count / maxCount) * 3).round().clamp(0, 3);
-      paint.color = heat[level.clamp(0, heat.length - 1)];
+      paint.color = count == 0
+          ? emptyColor
+          : color.withValues(
+              alpha: 0.25 + 0.75 * (maxCount == 0 ? 0 : count / maxCount),
+            );
       final RRect cellRect = RRect.fromRectAndRadius(
         Rect.fromLTWH(column * step, top + row * step, cell, cell),
-        const Radius.circular(3),
+        const Radius.circular(2),
       );
       canvas.drawRRect(cellRect, paint);
     }
@@ -316,6 +203,5 @@ class _HeatmapPainter extends CustomPainter {
   bool shouldRepaint(_HeatmapPainter oldDelegate) =>
       oldDelegate.days != days ||
       oldDelegate.cell != cell ||
-      oldDelegate.step != step ||
-      oldDelegate.heat != heat;
+      oldDelegate.color != color;
 }

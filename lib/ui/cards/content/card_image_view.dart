@@ -5,8 +5,6 @@ import 'package:material_ui/material_ui.dart';
 import 'package:cardflow/domain/cards/media_metadata.dart';
 import 'package:cardflow/domain/generation/card_image_kind.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
-import 'package:cardflow/ui/design/design.dart';
-import 'package:cardflow/ui/motion.dart';
 
 /// Угол скругления картинки карточки: токен формы M3 «large» (16).
 ///
@@ -56,6 +54,7 @@ class CardImageView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
+    final ThemeData theme = Theme.of(context);
     final MediaMetadata? meta = metadata;
     final bool isDiagram = kind == GeneratedCardImageKind.diagram;
     final String label =
@@ -72,11 +71,11 @@ class CardImageView extends StatelessWidget {
         child: AspectRatio(
           // Схемы — 4:3 (допустимо правилом), остальное — 16:9.
           aspectRatio: isDiagram ? 4 / 3 : 16 / 9,
-          child: ClipRSuperellipse(
-            borderRadius: BorderRadius.circular(NcRadii.m),
-            child: ColoredBox(
-              color: NcTheme.of(context).colors.ink3,
-              child: GestureDetector(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(kCardImageCornerRadius),
+            child: Material(
+              color: theme.colorScheme.surfaceContainerHighest,
+              child: InkWell(
                 onTap:
                     onTap ??
                     () => showCardImageFullscreen(
@@ -99,7 +98,7 @@ class CardImageView extends StatelessWidget {
                       ) {
                         if (wasSynchronouslyLoaded) return child;
                         return AnimatedSwitcher(
-                          duration: AppMotion.base,
+                          duration: const Duration(milliseconds: 300),
                           child: frame == null
                               ? const _ImageSkeleton()
                               : SizedBox.expand(child: child),
@@ -126,12 +125,12 @@ class _ImageSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final NcTheme theme = NcTheme.of(context);
+    final ThemeData theme = Theme.of(context);
     return Center(
       child: Icon(
         Icons.image_outlined,
         size: 40,
-        color: theme.colors.textTertiary.withValues(alpha: 0.5),
+        color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
       ),
     );
   }
@@ -150,7 +149,7 @@ Future<void> showCardImageFullscreen(
   final String? sourceUrl = meta?.sourceUrl;
   return showDialog<void>(
     context: context,
-    barrierColor: Colors.black.withValues(alpha: 0.92),
+    barrierColor: Colors.black87,
     builder: (BuildContext dialogContext) => Dialog(
       insetPadding: EdgeInsets.zero,
       backgroundColor: Colors.black,
@@ -178,12 +177,11 @@ Future<void> showCardImageFullscreen(
             Positioned(
               top: 8,
               right: 8,
-              child: NcIconButton(
+              child: IconButton.filledTonal(
                 key: const ValueKey<String>('card-image-fullscreen-close'),
-                icon: Icons.close_rounded,
                 tooltip: l10n.cardImageFullscreenClose,
-                variant: NcIconButtonVariant.glass,
                 onPressed: () => Navigator.of(dialogContext).pop(),
+                icon: const Icon(Icons.close),
               ),
             ),
             if (attribution != null || sourceUrl != null)
@@ -193,12 +191,8 @@ Future<void> showCardImageFullscreen(
                 bottom: 16,
                 child: DecoratedBox(
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: <Color>[NcColors.transparent, Colors.black87],
-                    ),
-                    borderRadius: BorderRadius.circular(NcRadii.m),
+                    color: Colors.black54,
+                    borderRadius: BorderRadius.circular(12),
                   ),
                   child: Padding(
                     padding: const EdgeInsets.all(12),

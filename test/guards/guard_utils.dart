@@ -71,32 +71,6 @@ List<File> repoFiles(
   return result;
 }
 
-/// Абсолютный путь файла репозитория по относительному пути с `/`.
-File repoFile(String relativePath) => File(
-  [projectRoot().path, ...relativePath.split('/')].join(Platform.pathSeparator),
-);
-
-/// Читает фикстуру-снимок (например `test/guards/fixtures/ui_keys.txt`).
-///
-/// Пустые строки и строки комментариев (`#…`) отбрасываются; возвращается
-/// отсортированный по файлу порядок строк без обрезки пробелов внутри строки
-/// (разделитель `\t` значим для baseline цветов).
-List<String> readFixtureLines(String relativePath) {
-  final file = repoFile(relativePath);
-  if (!file.existsSync()) {
-    throw StateError('Нет фикстуры: $relativePath');
-  }
-  return file
-      .readAsLinesSync()
-      .map((line) => line.trimRight())
-      .where((line) => line.isNotEmpty && !line.startsWith('#'))
-      .toList();
-}
-
-/// Множество строк фикстуры-снимка.
-Set<String> readFixtureSet(String relativePath) =>
-    readFixtureLines(relativePath).toSet();
-
 /// Ищет запрещённые имена пакетов в тексте `pubspec.lock` или `pubspec.yaml`.
 List<String> findForbiddenPackages(
   String source,

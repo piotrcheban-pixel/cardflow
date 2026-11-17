@@ -18,7 +18,6 @@ import 'package:cardflow/domain/generation/provider_accounts_store.dart';
 import 'package:cardflow/domain/generation/provider_protocol.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/m3e/m3e.dart';
-import 'package:cardflow/ui/design/design.dart';
 import 'package:cardflow/ui/settings/generation_settings_screen.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
 
@@ -153,13 +152,7 @@ void main() {
   }
 
   Future<void> tapSave(WidgetTester tester) async {
-    final Finder save = find.byKey(const ValueKey<String>('provider-save'));
-    final Finder dialogScroll = find
-        .descendant(of: find.byType(Dialog), matching: find.byType(Scrollable))
-        .first;
-    await tester.scrollUntilVisible(save, 200, scrollable: dialogScroll);
-    await tester.pumpAndSettle();
-    await tester.tap(save);
+    await tester.tap(find.byKey(const ValueKey<String>('provider-save')));
     await tester.pumpAndSettle();
   }
 
@@ -182,14 +175,14 @@ void main() {
       ),
     );
 
-    expect(find.byType(NcSkeleton), findsWidgets);
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
     final AppLocalizations l10n = l10nOf(tester);
-    expect(find.text(l10n.providersTitle), findsWidgets);
+    expect(find.text(l10n.providersTitle), findsOneWidget);
 
     pending.completer.complete(ProviderAccounts.empty);
     await tester.pumpAndSettle();
 
-    expect(find.byType(NcSkeleton), findsNothing);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
     expect(find.text(l10n.providersEmptyTitle), findsOneWidget);
     expect(find.text(l10n.providersEmptyDescription), findsOneWidget);
     expect(find.byKey(const ValueKey<String>('providers-add')), findsOneWidget);
@@ -211,7 +204,7 @@ void main() {
     expect(find.text(l10n.settingsLoadError), findsOneWidget);
     expect(find.textContaining('boom'), findsNothing);
 
-    await tester.tap(find.text(l10n.retry));
+    await tester.tap(find.widgetWithText(TextButton, l10n.retry));
     await tester.pumpAndSettle();
     expect(failing.readCalls, 2);
     expect(find.text(l10n.providersEmptyTitle), findsOneWidget);
@@ -265,7 +258,14 @@ void main() {
     await pumpScreen(tester);
     await openPresetDialog(tester);
 
-    await tester.tap(find.byType(NcDropdown<String>).first);
+    await tester.tap(
+      find
+          .descendant(
+            of: find.byType(AlertDialog),
+            matching: find.byType(DropdownButtonFormField<String>),
+          )
+          .first,
+    );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
     await tester.tap(find.text('OpenRouter').last);
@@ -297,10 +297,7 @@ void main() {
       expect(find.text(l10n.settingsKeyEmptyError), findsOneWidget);
       expect(store.writeCalls, 0);
       expect(keys.writeCalls, 0);
-      expect(
-        find.byKey(const ValueKey<String>('provider-save')),
-        findsOneWidget,
-      );
+      expect(find.byType(AlertDialog), findsOneWidget);
     },
   );
 
@@ -310,7 +307,14 @@ void main() {
     await pumpScreen(tester);
     await openPresetDialog(tester);
 
-    await tester.tap(find.byType(NcDropdown<String>).first);
+    await tester.tap(
+      find
+          .descendant(
+            of: find.byType(AlertDialog),
+            matching: find.byType(DropdownButtonFormField<String>),
+          )
+          .first,
+    );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
     await tester.tap(find.text('Ollama (Local)').last);
@@ -449,7 +453,14 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
-    await tester.tap(find.byType(NcDropdown<String>).last);
+    await tester.tap(
+      find
+          .descendant(
+            of: find.byType(AlertDialog),
+            matching: find.byType(DropdownButtonFormField<String>),
+          )
+          .last,
+    );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
     await tester.tap(find.text('DeepSeek Reasoner').last);

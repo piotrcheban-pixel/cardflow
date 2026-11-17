@@ -76,14 +76,6 @@
   "@decksNoResults": {
     "description": "Пустой результат поиска/фильтра по колодам."
   },
-  "decksSummary": "К повторению: {due} · колод: {decks}",
-  "@decksSummary": {
-    "description": "Сводная строка в шапке «Мои колоды»: карточек к повторению и число колод."
-  },
-  "decksNoResultsHint": "Попробуйте изменить запрос или фильтр.",
-  "@decksNoResultsHint": {
-    "description": "Подсказка в пустом результате поиска/фильтра по колодам."
-  },
   "decksErrorTitle": "Не удалось загрузить колоды",
   "@decksErrorTitle": {
     "description": "Состояние ошибки загрузки списка колод (без сырых исключений)."
@@ -404,14 +396,6 @@
   "@reviewSessionModeTitle": {
     "description": "Заголовок bottom sheet выбора режима сессии (SPEC A6.3)."
   },
-  "reviewModeSheetTitle": "Режим сессии",
-  "@reviewModeSheetTitle": {
-    "description": "Заголовок листа режимов сессии на экране колоды (REDESIGN-SPEC §9.3)."
-  },
-  "deckCardsSection": "КАРТОЧКИ · {count}",
-  "@deckCardsSection": {
-    "description": "Заголовок секции карточек колоды: надпись и число карточек."
-  },
   "reviewStartSession": "Начать сессию",
   "@reviewStartSession": {
     "description": "Большая карточка запуска сессии на экране колоды (SPEC A6.3)."
@@ -653,23 +637,7 @@
   "@cardFormTypeLabel": {
     "description": "Подпись выбора типа карточки."
   },
-
-  "cardFormSyntaxHint": "Синтаксис: пропуск и формула",
-  "@cardFormSyntaxHint": {
-    "description": "Подсказка синтаксиса под переключателем типа карточки (REDESIGN-SPEC §9.4)."
-  },
-  "cardFormPreview": "Предпросмотр",
-  "@cardFormPreview": {
-    "description": "Заголовок сворачиваемого предпросмотра поля карточки."
-  },
-  "cardFormPreviewToggle": "Свернуть или развернуть предпросмотр",
-  "@cardFormPreviewToggle": {
-    "description": "Подпись кнопки-глаза предпросмотра."
-  },
-  "cardFormTagsPreview": "Теги",
-  "@cardFormTagsPreview": {
-    "description": "Заголовок визуального ряда тегов под полем."
-  },  "cardTypeBasic": "Обычная",
+  "cardTypeBasic": "Обычная",
   "@cardTypeBasic": {
     "description": "Тип карточки basic."
   },
@@ -1712,18 +1680,6 @@
   "@statisticsRetentionNoData": {
     "description": "Удержание без данных за окно."
   },
-  "statisticsRetentionCaption": "за 30 дней",
-  "@statisticsRetentionCaption": {
-    "description": "Подпись под процентом удержания (REDESIGN-SPEC §9.15)."
-  },
-  "statisticsHeatmapLess": "меньше",
-  "@statisticsHeatmapLess": {
-    "description": "Легенда тепловой карты: меньше повторений."
-  },
-  "statisticsHeatmapMore": "больше",
-  "@statisticsHeatmapMore": {
-    "description": "Легенда тепловой карты: больше повторений."
-  },
   "statisticsHeatmapTitle": "Календарь повторений",
   "@statisticsHeatmapTitle": {
     "description": "Заголовок годовой тепловой карты."
@@ -1870,10 +1826,6 @@
   "settingsTextScaleTitle": "Размер шрифта",
   "@settingsTextScaleTitle": {
     "description": "Ползунок размера шрифта."
-  },
-  "settingsTextScalePreview": "Аа — пример текста",
-  "@settingsTextScalePreview": {
-    "description": "Живой пример размера текста в настройках (REDESIGN-SPEC §9.16)."
   },
   "settingsTextScaleValue": "{percent}%",
   "@settingsTextScaleValue": {
@@ -2079,15 +2031,7 @@
   "@providersVisionSupported": {
     "description": "Подпись модели/аккаунта с поддержкой Vision (итерация 7.8)."
   },
-
-  "providersVisionShort": "Изображения",
-  "@providersVisionShort": {
-    "description": "Короткий бейдж Vision для узкой карточки провайдера."
-  },
-  "providersVisionNotSupportedShort": "Без изображений",
-  "@providersVisionNotSupportedShort": {
-    "description": "Короткий бейдж «без Vision» для узкой карточки."
-  },  "providersVisionNotSupported": "Только текст",
+  "providersVisionNotSupported": "Только текст",
   "@providersVisionNotSupported": {
     "description": "Подпись модели/аккаунта без Vision (итерация 7.8)."
   },
@@ -2140,23 +2084,7 @@
   "@providersCheck": {
     "description": "Кнопка проверки подключения."
   },
-
-  "providersCheckWorks": "Работает",
-  "@providersCheckWorks": {
-    "description": "Результат проверки ключа: успех (REDESIGN-SPEC §9.17)."
-  },
-  "providersCheckFailed": "Ошибка",
-  "@providersCheckFailed": {
-    "description": "Результат проверки ключа: ошибка (REDESIGN-SPEC §9.17)."
-  },
-  "providersKeyShow": "Показать ключ",
-  "@providersKeyShow": {
-    "description": "Кнопка-глаз поля ключа: показать введённое значение."
-  },
-  "providersKeyHide": "Скрыть ключ",
-  "@providersKeyHide": {
-    "description": "Кнопка-глаз поля ключа: скрыть значение."
-  },  "providersCheckValid": "Подключение работает",
+  "providersCheckValid": "Подключение работает",
   "@providersCheckValid": {
     "description": "Успешная проверка подключения."
   },
@@ -2600,13 +2528,5 @@
   "trueFalseEmptyMessage": "Нужны карточки с ответом и хотя бы один другой ответ в колоде.",
   "@trueFalseEmptyMessage": {
     "description": "Пояснение пустого состояния."
-  },
-  "commonLoading": "Загрузка",
-  "@commonLoading": {
-    "description": "Семантика ожидания: спиннер, скелетон, проверка ключа."
-  },
-  "commonClose": "Закрыть",
-  "@commonClose": {
-    "description": "Закрыть лист, диалог, меню, полноэкранный просмотр."
   }
 }

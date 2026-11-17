@@ -1,7 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:material_ui/material_ui.dart';
 
-import 'package:cardflow/ui/design/tokens/nc_colors.dart';
 import 'package:cardflow/ui/theme/app_theme.dart';
 
 void main() {
@@ -35,20 +33,10 @@ void main() {
       },
     );
 
-    test('динамическая схема задаёт только акцент, поверхности брендовые', () {
-      // До редизайна Nocturne (`REDESIGN-SPEC` §1.5, ADR-035 §3) схема из
-      // `DynamicColorBuilder` подставлялась как есть. Теперь из её `primary`
-      // строится только акцент (HCT: тон 40 в светлой теме, chroma ≤ 48),
-      // поэтому проверка усилена: акцент следует за системой, а холст остаётся
-      // порцеляновым.
-      final ColorScheme dynamic = ColorScheme.fromSeed(
-        seedColor: const Color(0xFFFF4081),
-        brightness: Brightness.light,
-      );
-      final ThemeData themed = AppTheme.light(scheme: dynamic);
-      expect(themed.colorScheme.primary, isNot(NcColors.light().aurum));
-      expect(themed.colorScheme.surface, NcColors.light().ink1);
-      expect(themed.scaffoldBackgroundColor, NcColors.transparent);
+    test('динамическая схема подставляется как есть', () {
+      final scheme = AppTheme.light().colorScheme;
+      final themed = AppTheme.light(scheme: scheme);
+      expect(themed.colorScheme.primary, scheme.primary);
     });
   });
 }

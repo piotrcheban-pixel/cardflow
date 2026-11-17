@@ -7,7 +7,6 @@ import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/cards/card_form_screen.dart';
 import 'package:cardflow/ui/decks/deck_screen.dart';
 import 'package:cardflow/ui/decks/decks_screen.dart';
-import 'package:cardflow/ui/design/design.dart';
 import 'package:cardflow/ui/review/practice_session_screen.dart';
 import 'package:cardflow/ui/review/review_session_screen.dart';
 import 'package:cardflow/ui/session/session_constructor_screen.dart';
@@ -89,29 +88,19 @@ void main() {
       await tester.pumpAndSettle();
       final AppLocalizations l10n = l10nOf(tester);
 
-      expect(find.text('Испанский'), findsWidgets);
-      expect(find.text(l10n.deckDueCount(3)), findsWidgets);
+      expect(find.text('Испанский'), findsOneWidget);
+      expect(find.text(l10n.deckDueCount(3)), findsOneWidget);
       expect(find.text(l10n.deckNewCount(2)), findsOneWidget);
       expect(find.text(l10n.deckInProgressCount(1)), findsOneWidget);
       expect(find.text('¿Cómo estás?'), findsOneWidget);
       expect(find.text('Глагол ser'), findsOneWidget);
       expect(
-        find.byWidgetPredicate(
-          (Widget widget) =>
-              widget is Semantics &&
-              widget.properties.label == l10n.cardStateReview,
-        ),
+        find.text(l10n.cardTagsLine('#приветствие')),
         findsOneWidget,
-        reason: 'Точка состояния несёт семантику существующей строки ARB',
+        reason: 'Теги карточки показываются строкой из ARB',
       );
-      expect(
-        find.byWidgetPredicate(
-          (Widget widget) =>
-              widget is Semantics &&
-              widget.properties.label == l10n.cardStateNew,
-        ),
-        findsOneWidget,
-      );
+      expect(find.text(l10n.cardStateReview), findsOneWidget);
+      expect(find.text(l10n.cardStateNew), findsOneWidget);
     });
 
     testWidgets('пустой список карточек: сообщение из ARB', (
@@ -154,9 +143,9 @@ void main() {
       expect(find.textContaining('boom'), findsNothing);
 
       repository.failDeck = false;
-      await tester.tap(find.text(l10n.retry));
+      await tester.tap(find.widgetWithText(TextButton, l10n.retry));
       await tester.pumpAndSettle();
-      expect(find.text('Испанский'), findsWidgets);
+      expect(find.text('Испанский'), findsOneWidget);
     });
   });
 
@@ -185,7 +174,7 @@ void main() {
 
       expect(repository.renamedIds, <String>['deck-1']);
       expect(repository.renamedNames, <String>['Испанский 2']);
-      expect(find.text('Испанский 2'), findsWidgets);
+      expect(find.text('Испанский 2'), findsOneWidget);
     });
 
     testWidgets('удаление с подтверждением возвращает к списку колод', (
@@ -339,7 +328,7 @@ void main() {
 
       await tester.tap(find.text(l10n.reviewStartSession));
       await tester.pumpAndSettle();
-      expect(find.text(l10n.reviewModeSheetTitle), findsOneWidget);
+      expect(find.text(l10n.reviewSessionModeTitle), findsOneWidget);
       expect(find.text(l10n.reviewModeClassic), findsOneWidget);
 
       await tester.tap(find.text(l10n.reviewModeClassic));
@@ -377,7 +366,7 @@ void main() {
       await tester.pumpAndSettle();
       final AppLocalizations l10n = l10nOf(tester);
 
-      await tester.tap(find.byKey(const ValueKey<String>('deck-add-card')));
+      await tester.tap(find.byTooltip(l10n.deckAddCardTooltip));
       await tester.pumpAndSettle();
 
       expect(find.byType(CardFormScreen), findsOneWidget);
@@ -443,15 +432,15 @@ void main() {
 
       expect(find.byType(SessionConstructorScreen), findsOneWidget);
       expect(find.text(l10n.constructorTitle), findsOneWidget);
-      final Finder deckPick = find.descendant(
-        of: find.byKey(const ValueKey<String>('constructor-deck-deck-1')),
-        matching: find.byType(Semantics),
+      expect(
+        tester
+            .widget<FilterChip>(
+              find.byKey(const ValueKey<String>('constructor-deck-deck-1')),
+            )
+            .selected,
+        isTrue,
+        reason: 'колода с экрана колоды предвыбрана',
       );
-      final bool preselected = deckPick.evaluate().any(
-        (Element element) =>
-            (element.widget as Semantics).properties.selected == true,
-      );
-      expect(preselected, isTrue, reason: 'колода с экрана колоды предвыбрана');
     });
 
     // Итерация 7.11 (owner-note): тренировка доступна из листа режимов и не
@@ -501,8 +490,6 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text(l10n.reviewModePractice), findsOneWidget);
 
-      await tester.ensureVisible(find.text(l10n.reviewModePractice));
-      await tester.pumpAndSettle();
       await tester.tap(find.text(l10n.reviewModePractice));
       await tester.pumpAndSettle();
 
@@ -598,13 +585,22 @@ void main() {
 
       await tester.tap(find.text(l10n.reviewStartSession));
       await tester.pumpAndSettle();
-      NcSurface tile(String mode) => tester.widget<NcSurface>(
-        find.byKey(ValueKey<String>('review-mode-$mode')),
+      final ListTile testTile = tester.widget<ListTile>(
+        find.byKey(const ValueKey<String>('review-mode-test')),
       );
-      expect(tile('test').onTap, isNull);
-      expect(tile('typing').onTap, isNull);
-      expect(tile('match').onTap, isNull);
-      expect(tile('true-false').onTap, isNull);
+      final ListTile typingTile = tester.widget<ListTile>(
+        find.byKey(const ValueKey<String>('review-mode-typing')),
+      );
+      expect(testTile.enabled, isFalse);
+      expect(typingTile.enabled, isFalse);
+      final ListTile matchTile = tester.widget<ListTile>(
+        find.byKey(const ValueKey<String>('review-mode-match')),
+      );
+      final ListTile trueFalseTile = tester.widget<ListTile>(
+        find.byKey(const ValueKey<String>('review-mode-true-false')),
+      );
+      expect(matchTile.enabled, isFalse);
+      expect(trueFalseTile.enabled, isFalse);
       expect(find.text(l10n.studyModeNotEnough), findsNWidgets(2));
       expect(find.text(l10n.studyModeMatchNotEnough), findsOneWidget);
       expect(find.text(l10n.studyModeTrueFalseNotEnough), findsOneWidget);
@@ -653,11 +649,14 @@ void main() {
         ),
         findsOneWidget,
       );
-      NcSurface tile(String mode) => tester.widget<NcSurface>(
-        find.byKey(ValueKey<String>('review-mode-$mode')),
+      final ListTile testTile = tester.widget<ListTile>(
+        find.byKey(const ValueKey<String>('review-mode-test')),
       );
-      expect(tile('test').onTap, isNotNull);
-      expect(tile('typing').onTap, isNull);
+      final ListTile typingTile = tester.widget<ListTile>(
+        find.byKey(const ValueKey<String>('review-mode-typing')),
+      );
+      expect(testTile.enabled, isTrue);
+      expect(typingTile.enabled, isFalse);
       expect(find.text(l10n.studyModeNotEnough), findsOneWidget);
     });
 

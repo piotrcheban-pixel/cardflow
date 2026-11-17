@@ -1,11 +1,8 @@
-import 'dart:ui' as ui;
-
 import 'package:flutter_math_fork/flutter_math.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'package:cardflow/domain/cards/latex_markup.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
-import 'package:cardflow/ui/design/design.dart';
 
 /// Нативный LaTeX-рендер с последовательным раскрытием формул.
 class LatexText extends StatefulWidget {
@@ -32,7 +29,6 @@ class _LatexTextState extends State<LatexText> {
 
   @override
   Widget build(BuildContext context) {
-    final NcTheme theme = NcTheme.of(context);
     final markup = LatexMarkup.parse(widget.source);
     if (markup.hasUnclosedDelimiter) return _fallback(context);
     if (!markup.hasFormulas) {
@@ -69,22 +65,9 @@ class _LatexTextState extends State<LatexText> {
         inline.add(
           WidgetSpan(
             alignment: PlaceholderAlignment.middle,
-            child: ClipRSuperellipse(
+            child: Text(
+              AppLocalizations.of(context).clozeHiddenAnswer,
               key: ValueKey<String>('latex-hidden-$formulaIndex'),
-              borderRadius: BorderRadius.circular(NcRadii.s),
-              child: ColoredBox(
-                color: theme.colors.ink4,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 2,
-                  ),
-                  child: ImageFiltered(
-                    imageFilter: ui.ImageFilter.blur(sigmaX: 2, sigmaY: 2),
-                    child: Text(AppLocalizations.of(context).clozeHiddenAnswer),
-                  ),
-                ),
-              ),
             ),
           ),
         );
@@ -95,15 +78,9 @@ class _LatexTextState extends State<LatexText> {
         mathStyle: segment.kind == LatexSegmentKind.displayFormula
             ? MathStyle.display
             : MathStyle.text,
-        textStyle: theme.typography.bodyL.copyWith(
-          color: theme.colors.textPrimary,
-        ),
-        onErrorFallback: (error) => Text(
-          widget.source,
-          style: theme.typography.bodyL.copyWith(
-            color: theme.colors.textPrimary,
-          ),
-        ),
+        textStyle: Theme.of(context).textTheme.bodyLarge,
+        onErrorFallback: (error) =>
+            Text(widget.source, style: Theme.of(context).textTheme.bodyLarge),
       );
       if (segment.kind == LatexSegmentKind.displayFormula) {
         flushInline();
@@ -127,12 +104,10 @@ class _LatexTextState extends State<LatexText> {
       children: <Widget>[
         ...children,
         if (!widget.revealed && visibleCount < formulaCount)
-          NcButton(
+          TextButton(
             key: const ValueKey<String>('latex-next-step'),
-            label: AppLocalizations.of(context).latexNextStep,
-            variant: NcButtonVariant.ghost,
-            size: NcButtonSize.s,
             onPressed: () => setState(() => _visibleFormulas++),
+            child: Text(AppLocalizations.of(context).latexNextStep),
           ),
       ],
     );
@@ -146,24 +121,16 @@ class _LatexTextState extends State<LatexText> {
     }
   }
 
-  Widget _fallback(BuildContext context) {
-    final NcTheme theme = NcTheme.of(context);
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        NcBadge(
-          label: AppLocalizations.of(context).generationIssueLatexBroken,
-          tone: NcBadgeTone.amber,
-        ),
-        const SizedBox(height: 8),
-        Text(
-          widget.source,
-          textAlign: TextAlign.center,
-          style: theme.typography.bodyL.copyWith(
-            color: theme.colors.textPrimary,
-          ),
-        ),
-      ],
-    );
-  }
+  Widget _fallback(BuildContext context) => Column(
+    mainAxisSize: MainAxisSize.min,
+    children: <Widget>[
+      Text(widget.source, textAlign: TextAlign.center),
+      const SizedBox(height: 8),
+      Text(
+        AppLocalizations.of(context).generationIssueLatexBroken,
+        style: TextStyle(color: Theme.of(context).colorScheme.error),
+        textAlign: TextAlign.center,
+      ),
+    ],
+  );
 }
