@@ -112,6 +112,8 @@ match-tile-*
 match-timer
 mc-question-*
 mc-question-face
+nc-progress-fill
+nc-segmented-progress-pulse
 occlusion-cover-*
 occlusion-delete-*
 occlusion-editor-canvas

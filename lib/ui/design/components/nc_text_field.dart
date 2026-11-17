@@ -172,6 +172,7 @@ class _NcTextFieldState extends State<NcTextField> {
   @override
   Widget build(BuildContext context) {
     final NcTheme theme = NcTheme.of(context);
+    final String counterText = '${_controller.text.length}/${widget.maxLength}';
     final bool hasError = widget.errorText != null;
     final Color borderColor = hasError
         ? theme.colors.ember
@@ -310,7 +311,7 @@ class _NcTextFieldState extends State<NcTextField> {
           child: Align(
             alignment: Alignment.centerRight,
             child: Text(
-              '${_controller.text.length}/${widget.maxLength}',
+              counterText,
               style: theme.typography.monoM.copyWith(
                 color: hasError
                     ? theme.colors.ember

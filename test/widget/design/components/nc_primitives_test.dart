@@ -255,10 +255,15 @@ void main() {
     testWidgets('семантический тон меняет цвета', (WidgetTester tester) async {
       await pumpNc(
         tester,
-        NcBadge(label: l10n.reviewCompletedTitle, tone: NcBadgeTone.jade),
+        NcBadge(
+          label: l10n.reviewCompletedTitle,
+          tone: NcBadgeTone.jade,
+          icon: Icons.check_rounded,
+        ),
         config: const NcTestConfig(size: Size(420, 200)),
       );
       expect(find.text(l10n.reviewCompletedTitle), findsOneWidget);
+      expect(find.byIcon(Icons.check_rounded), findsOneWidget);
     });
 
     testWidgets('textScale 2,0 без overflow', (WidgetTester tester) async {

@@ -1,8 +1,3 @@
-00:00 +0: loading C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/components/nc_progress_test.dart
-00:00 +0: NcProgressLine семантика прогресса и пружина без overshoot
-══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
-The following TestFailure was thrown running a test:
-Expected: at least one matching candidate
   Actual: _ElementPredicateWidgetFinder:<Found 0 widgets with a semantics label named "Прогресс
 сессии": []>
    Which: means none were found but some were expected

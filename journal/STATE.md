@@ -1,9 +1,66 @@
 # STATE — текущее состояние CardFlow
 
-**Дата:** 2026-11-17 · **Этап:** редизайн **«Nocturne», этап 1 «Фундамент»**
-(ADR-035) — завершён; дальше по плану — этап 2 «Компоненты». Продуктовые
-итерации 7.x остаются зелёными (CI 9/9 на `7458346`).
+**Дата:** 2026-11-17 · **Этап:** редизайн **«Nocturne», этап 2 «Компоненты»**
+(ADR-035, журнал `journal/redesign-2/`) — завершён; дальше по плану — этап 3
+«Каталог». Продуктовые итерации 7.x остаются зелёными.
 **Режим:** ИТЕРАЦИИ.
+
+## Редизайн «Nocturne» — этап 2 «Компоненты» (2026-11-17, ADR-035)
+
+**Факты старта:** `git status --porcelain` → пусто, `HEAD = origin/main =
+8e9db8a` (`docs: confirm 9/9 CI for docs commit 734c120`). Baseline этапа 1 —
+1924 passed + 8 skipped. Прогоны — только с `--no-pub` (L64).
+
+**Гейты этапа 2:** `fvm flutter test --no-pub --coverage --exclude-tags golden`
+→ **2036 passed + 8 skipped** (+112 к baseline); покрытие `lib/ui/design/`
+**93,8 % (2672/2848)**, `components/` **93,1 % (2116/2272)**, рукописный код
+**92,8 % (15825/17047)**; `fvm flutter test --no-pub test/golden` →
+**298 passed** (298 PNG, 4,25 МБ); `analyze` **0**; `dart format
+--set-exit-if-changed lib test integration_test tool` → **530 / 0 changed**;
+`fvm flutter build windows --release --no-pub` → `cardflow.exe` (60,0 с).
+Красная зона и экраны: `git diff --stat 8e9db8a..HEAD` пуст (19 файлов
+Красной зоны, `*_screen.dart`, `app_shell.dart`, `review_chrome.dart`).
+
+**Сделано (шаги 2.1–2.8):** библиотека `lib/ui/design/components/` — 35
+компонентов + 6 внутренних примитивов (`NcTappable`, `NcPressScale`,
+`NcFocusRing`, `NcSpringBuilder`, `NcStagger`, `NcScrollCollapseScope`,
+`NcButtonAppearance`) по REDESIGN-SPEC §8: примитивы, действия, ввод,
+структура, оверлеи, прогресс, сессионные. Каждый компонент — на токенах
+`NcTheme.of`, пружинах `NcMotion.of` и `NcHaptics`; экспорт — `design.dart`;
+ни один не импортирует Riverpod/роутер/домен (guard расширен).
+**Глобальный переход тостов:** `showAppMessage` и `showArchivedUndoSnackbar`
+в `deck_actions.dart` показывают `NcToast` при прежних сигнатурах, текстах,
+«Отменить» и поведении undo; старые экранные тесты зелёные, добавлены два
+теста проводки (`test/widget/design/toast_wiring_test.dart`).
+**Golden-инфраструктура:** `test/helpers/nc_golden.dart` (8 вариантов:
+dark/light × обычный/high-contrast × textScale 1,0/2,0), `nc_harness.dart`,
+`glass_budget.dart`; каталог-полотно —
+`journal/redesign-2/screenshots/components-catalog-{dark,light}.png`.
+
+**Коммиты этапа (13):** red/green по группам — `9da7782`/`0446cc6` (2.1),
+`e207be2`/`60164b9` (2.2), `507a49d`/`b59b672` (2.3), `7adf028`/`6107531`
+(2.4), `82363c7` (2.5), `535ffe2`/`20dff64` (2.6), `5f33d0a`/`44e0c41` (2.7)
++ финальный verify/docs-коммит.
+
+**Отклонения/решения (ADR-035, раздел «Этап 2»):** зерно стекла — процедурный
+painter (детерминизм golden); `NcIcon3D`-резерв без `BackdropFilter` (бюджет
+§4.4); `NcToast` не перехватывает указатель и обновляет полосу шагом 200 мс
+(совместимость с `pumpAndSettle` старых тестов); AI-блик одноразовый;
+neighbor-squish — доли `flex`; `NcFlip` при `disableAnimations` — кроссфейд
+120 мс; golden сняты на Windows.
+
+**Новые ограничения:** L98 (golden на Windows, CI без тега golden),
+L99 (squish долями), L100 (NcTopBar/NcFab подключаются на этапе 3),
+L101 (3D-ассетов нет — резерв), L102 (бюджет стекла на компонентах, не на
+экранах), L103 (ступенчатая полоса тоста).
+
+**Push/CI:** коммиты этапа 2 не пушились — push и прогон 9/9 job — по команде
+владельца (AGENTS.md).
+
+**Следующий шаг:** этап 3 «Каталог» — `NcNavDock`/`NcNavRail` и перевод
+экранов вне сессии (оболочка, «Мои колоды», экран колоды, форма карточки,
+конструктор, статистика, настройки, провайдеры) с сохранением ключей §9 и
+бюджетом стекла ≤ 2 групп на экран.
 
 ## Редизайн «Nocturne» — этап 1 «Фундамент» (2026-11-17, ADR-035)
 

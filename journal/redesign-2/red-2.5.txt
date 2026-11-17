@@ -1,3 +1,4 @@
+# Красная фаза (хвост вывода с падениями; полный лог — у автора сессии)
 00:00 +0: loading C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/design/components/nc_overlays_test.dart
 test/widget/design/components/nc_overlays_test.dart:312:13: Error: Method not found: 'NcTappable'.
             NcTappable(

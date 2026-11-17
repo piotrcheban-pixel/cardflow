@@ -307,7 +307,8 @@ void main() {
       await pumpNcAtTextScale2(
         tester,
         NcErrorState(
-          message: l10n.decksErrorTitle,
+          title: l10n.decksErrorTitle,
+          message: l10n.genericError,
           retryLabel: l10n.retry,
           onRetry: () {},
         ),

@@ -1,0 +1,30 @@
+00:06 +271: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура card_tile card_tile dark_hc_ts2
+00:06 +272: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура card_tile card_tile light_ts2
+00:06 +273: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура card_tile card_tile light_hc_ts2
+00:06 +274: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура top_bar top_bar dark
+00:06 +275: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура top_bar top_bar dark_hc
+00:06 +276: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура top_bar top_bar light
+00:06 +277: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура top_bar top_bar light_hc
+00:06 +278: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура top_bar top_bar dark_ts2
+00:06 +279: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура top_bar top_bar dark_hc_ts2
+00:06 +280: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура top_bar top_bar light_ts2
+00:06 +281: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура top_bar top_bar light_hc_ts2
+00:06 +282: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура empty_state empty_state dark
+00:06 +283: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура empty_state empty_state dark_hc
+00:06 +284: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура empty_state empty_state light
+00:06 +285: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура empty_state empty_state light_hc
+00:06 +286: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура empty_state empty_state dark_ts2
+00:06 +287: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура empty_state empty_state dark_hc_ts2
+00:06 +288: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура empty_state empty_state light_ts2
+00:06 +289: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура empty_state empty_state light_hc_ts2
+00:07 +290: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура error_state error_state dark
+00:07 +291: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура error_state error_state dark_hc
+00:07 +292: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура error_state error_state light
+00:07 +293: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура error_state error_state light_hc
+00:07 +294: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура error_state error_state dark_ts2
+00:07 +295: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура error_state error_state dark_hc_ts2
+00:07 +296: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура error_state error_state light_ts2
+00:07 +297: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: 2.4 структура error_state error_state light_hc_ts2
+00:07 +298: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/golden/nc_structure_golden_test.dart: (tearDownAll)
+00:07 +298: All tests passed!
+

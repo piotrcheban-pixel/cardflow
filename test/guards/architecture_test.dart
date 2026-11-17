@@ -20,6 +20,8 @@ const List<String> designForbiddenPrefixes = <String>[
   'package:cardflow/domain/',
   'package:cardflow/data/',
   'package:cardflow/api/',
+  'package:flutter_riverpod/',
+  'package:go_router/',
 ];
 
 /// Префикс каталога дизайн-системы.
@@ -169,6 +171,26 @@ void main() {
         );
       }
     });
+
+    test(
+      'ловит Riverpod и роутер в дизайн-системе (компонент их не знает)',
+      () {
+        expect(
+          architectureViolations(
+            'lib/ui/design/components/nc_button.dart',
+            "import 'package:flutter_riverpod/flutter_riverpod.dart';",
+          ),
+          isNotEmpty,
+        );
+        expect(
+          architectureViolations(
+            'lib/ui/design/components/nc_button.dart',
+            "import 'package:go_router/go_router.dart';",
+          ),
+          isNotEmpty,
+        );
+      },
+    );
 
     test('дизайн-система может импортировать Flutter и токены', () {
       expect(

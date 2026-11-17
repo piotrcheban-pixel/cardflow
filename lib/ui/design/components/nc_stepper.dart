@@ -103,7 +103,7 @@ class _NcStepperState extends State<NcStepper> {
           width: 56,
           child: Center(
             child: Text(
-              '${widget.value}',
+              widget.value.toString(),
               key: widget.valueKey,
               style: theme.typography.monoL.copyWith(
                 color: widget.onIncrement == null && widget.onDecrement == null

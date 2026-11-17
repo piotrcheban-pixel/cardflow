@@ -221,6 +221,43 @@ void main() {
       expect(find.text('42 000'), findsOneWidget);
     });
 
+    testWidgets('обновление значения считает от текущего к новому', (
+      WidgetTester tester,
+    ) async {
+      num value = 10;
+      late StateSetter setState;
+      await pumpNc(
+        tester,
+        StatefulBuilder(
+          builder: (BuildContext context, StateSetter setter) {
+            setState = setter;
+            return NcAnimatedNumber(value: value, duration: Duration.zero);
+          },
+        ),
+        config: const NcTestConfig(size: Size(420, 200)),
+        settle: true,
+      );
+      expect(
+        find.descendant(
+          of: find.byType(NcAnimatedNumber),
+          matching: find.text('10'),
+        ),
+        findsOneWidget,
+      );
+      setState(() => value = 20);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(tester.takeException(), isNull);
+      await tester.pumpAndSettle();
+      expect(
+        find.descendant(
+          of: find.byType(NcAnimatedNumber),
+          matching: find.text('20'),
+        ),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('textScale 2,0 без overflow', (WidgetTester tester) async {
       await pumpNcAtTextScale2(
         tester,

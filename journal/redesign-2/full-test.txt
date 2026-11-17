@@ -1,0 +1,40 @@
+02:56 +1998 ~8: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/statistics_screen_test.dart: пусто: сообщение вместо блоков
+02:56 +1999 ~8: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/statistics_screen_test.dart: ошибка: сообщение и повтор запроса
+02:56 +2000 ~8: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/statistics_screen_test.dart: «Тренировать» открывает конструктор с тегом
+02:58 +2001 ~8: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/study/match_and_true_false_test.dart: Подбор пар сетка 12 плиток, таймер и лучшее время
+02:59 +2002 ~8: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/study/match_and_true_false_test.dart: Подбор пар несовпавшая пара не исчезает
+02:59 +2003 ~8: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/study/match_and_true_false_test.dart: Подбор пар все пары найдены: итог, лучшее время и «Ещё раз»
+03:00 +2004 ~8: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/study/study_modes_test.dart: Тест вопрос, четыре варианта и верный ответ в них
+03:00 +2005 ~8: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/study/study_modes_test.dart: Тест вопрос, четыре варианта и верный ответ в них
+03:00 +2006 ~8: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/study/study_modes_test.dart: Тест вопрос, четыре варианта и верный ответ в них
+03:00 +2007 ~8: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/study/study_modes_test.dart: Тест вопрос, четыре варианта и верный ответ в них
+03:00 +2008 ~8: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/study/match_and_true_false_test.dart: Верно/Неверно свайп вправо = «верно»
+03:00 +2009 ~8: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/study/study_modes_test.dart: Тест верный ответ: зелёная подсветка, Good только для due
+03:00 +2010 ~8: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/study/match_and_true_false_test.dart: Верно/Неверно итоги: точность и повтор ошибок
+03:00 +2011 ~8: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/study/match_and_true_false_test.dart: Верно/Неверно итоги: точность и повтор ошибок
+03:00 +2012 ~8: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/study/study_modes_test.dart: Тест верный ответ авто-переходит через 1,2 с
+03:00 +2013 ~8: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/study/study_modes_test.dart: Тест верный ответ авто-переходит через 1,2 с
+03:00 +2014 ~8: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/study/study_modes_test.dart: Тест клавиши 1–4 выбирают вариант, Enter ведёт дальше
+03:00 +2015 ~8: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/study/study_modes_test.dart: Тест карточка с due в будущем пишется как тренировка
+03:01 +2016 ~8: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/study/study_modes_test.dart: Тест итоги: точность, ошибки и «Повторить ошибки»
+03:01 +2017 ~8: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/study/study_modes_test.dart: Тест нет подходящих карточек — пустое состояние
+03:01 +2018 ~8: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/study/study_modes_test.dart: Ввод ответа exact: зелёное «Верно» и Good
+03:01 +2019 ~8: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/study/study_modes_test.dart: Ввод ответа almost: жёлтое «Почти!» и Hard
+03:02 +2020 ~8: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/study/study_modes_test.dart: Ввод ответа wrong: красное «Неверно», diff, ответ и «Я был прав»
+03:02 +2021 ~8: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/study/study_modes_test.dart: Ввод ответа «Я был прав» меняет Again на Good
+03:02 +2022 ~8: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/study/study_modes_test.dart: Ввод ответа «Показать ответ» = сдался: Again и правильный ответ
+03:02 +2023 ~8: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/study/study_modes_test.dart: Ввод ответа Enter отправляет ответ
+03:02 +2024 ~8: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/study/study_modes_test.dart: Ввод ответа карточки без пригодных ответов — пустое состояние
+03:02 +2025 ~8: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/study/study_modes_test.dart: Ввод ответа экран ввода — TypingScreen
+03:02 +2026 ~8: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/study/study_mode_latex_test.dart: Тест вопрос с формулой — Math, сырого $E=mc^2$ нет
+03:03 +2027 ~8: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/study/study_mode_latex_test.dart: Тест вопрос показывает все формулы сразу, без пошагового шага
+03:03 +2028 ~8: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/study/study_mode_latex_test.dart: Тест четыре варианта ответа рендерят формулы через Math
+03:03 +2029 ~8: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/study/study_mode_latex_test.dart: Тест итоги: формула во фронте и в ответе — Math
+03:04 +2030 ~8: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/study/study_mode_latex_test.dart: Ввод ответа вопрос с формулой — Math, сырого текста нет
+03:04 +2031 ~8: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/study/study_mode_latex_test.dart: Ввод ответа «Правильный ответ» рендерится единым виджетом CardText
+03:04 +2032 ~8: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/study/study_mode_latex_test.dart: Верно/Неверно утверждение с формулой — Math, без сырого текста
+03:04 +2033 ~8: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/study/study_mode_latex_test.dart: Верно/Неверно пояснение с формулой — Math
+03:04 +2034 ~8: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/study/study_mode_latex_test.dart: Верно/Неверно cloze-карточка не показывает сырое {{c1::…}}
+03:05 +2035 ~8: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/study/study_mode_latex_test.dart: Подбор пар плитки с формулами рендерятся через Math
+03:06 +2036 ~8: All tests passed!
+
