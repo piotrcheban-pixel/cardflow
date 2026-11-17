@@ -77,20 +77,21 @@ void main() {
     WidgetTester tester,
   ) async {
     await pumpForm(tester);
-    expect(
-      find.text(l10n.cardFormSyntaxHint('{{c1::…}}', r'$…$')),
-      findsOneWidget,
-    );
+    expect(find.text(l10n.cardFormSyntaxHint), findsOneWidget);
 
     await tester.enterText(
       find.byKey(const ValueKey<String>('card-form-front')),
       r'Формула $x^2 + y^2$',
     );
     await tester.pumpAndSettle();
-    expect(
-      find.byKey(const ValueKey<String>('card-form-front-preview')),
-      findsOneWidget,
+    final Finder preview = find.byKey(
+      const ValueKey<String>('card-form-front-preview'),
     );
+    expect(preview, findsOneWidget);
+    await tester.tap(
+      find.descendant(of: preview, matching: find.byType(NcIconButton)),
+    );
+    await tester.pumpAndSettle();
     expect(find.byType(Math), findsOneWidget);
   });
 
@@ -117,6 +118,10 @@ void main() {
     WidgetTester tester,
   ) async {
     await pumpForm(tester);
+    await tester.ensureVisible(
+      find.byKey(const ValueKey<String>('card-form-pick-image')),
+    );
+    await tester.pumpAndSettle();
     await tester.tap(
       find.byKey(const ValueKey<String>('card-form-pick-image')),
     );

@@ -913,8 +913,8 @@ abstract class AppLocalizations {
   /// Подсказка синтаксиса под переключателем типа карточки (REDESIGN-SPEC §9.4).
   ///
   /// In ru, this message translates to:
-  /// **'Синтаксис: {cloze} — пропуск, {latex} — формула'**
-  String cardFormSyntaxHint(Object cloze, Object latex);
+  /// **'Синтаксис: пропуск и формула'**
+  String get cardFormSyntaxHint;
 
   /// Заголовок сворачиваемого предпросмотра поля карточки.
   ///

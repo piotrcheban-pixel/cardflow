@@ -6,9 +6,14 @@ import 'package:material_ui/material_ui.dart';
 
 import 'package:cardflow/domain/cards/occlusion.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
+import 'package:cardflow/ui/design/design.dart';
 
-/// Редактор масок Image Occlusion: рисование прямоугольником/эллипсом и удаление.
+/// Редактор масок Image Occlusion (REDESIGN-SPEC §9.4): холст на `ink3`,
+/// выбор формы `NcSegmented` (прямоугольник / эллипс), готовая маска —
+/// `ink5` 92 % с номером, рисуемая — рамка `aurum` 1,5 px + заливка 18 %.
+/// Eager-распознаватель внутри прокрутки сохранён (ретроспектива 5).
 class OcclusionMaskEditor extends StatefulWidget {
+  /// Создаёт редактор.
   const OcclusionMaskEditor({
     required this.imageBytes,
     required this.document,
@@ -16,8 +21,13 @@ class OcclusionMaskEditor extends StatefulWidget {
     super.key,
   });
 
+  /// Байты изображения.
   final Uint8List imageBytes;
+
+  /// Текущие маски.
   final OcclusionDocument document;
+
+  /// Изменение документа.
   final ValueChanged<OcclusionDocument> onChanged;
 
   @override
@@ -133,155 +143,202 @@ class _OcclusionMaskEditorState extends State<OcclusionMaskEditor> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final scheme = Theme.of(context).colorScheme;
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final NcTheme theme = NcTheme.of(context);
+    final NcColors colors = theme.colors;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        SegmentedButton<OcclusionShape>(
-          segments: <ButtonSegment<OcclusionShape>>[
-            ButtonSegment<OcclusionShape>(
+        NcSegmented<OcclusionShape>(
+          value: _shape,
+          onChanged: (OcclusionShape shape) => setState(() => _shape = shape),
+          segments: <NcSegment<OcclusionShape>>[
+            NcSegment<OcclusionShape>(
               value: OcclusionShape.rectangle,
-              label: Text(l10n.occlusionRectangle),
+              label: l10n.occlusionRectangle,
             ),
-            ButtonSegment<OcclusionShape>(
+            NcSegment<OcclusionShape>(
               value: OcclusionShape.ellipse,
-              label: Text(l10n.occlusionEllipse),
+              label: l10n.occlusionEllipse,
             ),
           ],
-          selected: <OcclusionShape>{_shape},
-          onSelectionChanged: (selection) =>
-              setState(() => _shape = selection.first),
         ),
         const SizedBox(height: 8),
         Text(
           l10n.occlusionDrawHint,
-          style: TextStyle(color: scheme.onSurfaceVariant),
+          style: theme.typography.bodyS.copyWith(color: colors.textSecondary),
         ),
         const SizedBox(height: 8),
         ConstrainedBox(
           constraints: const BoxConstraints(maxHeight: 300),
           child: AspectRatio(
             aspectRatio: _aspectRatio,
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final size = Size(constraints.maxWidth, constraints.maxHeight);
-                // Eager-распознаватель забирает жест у прокрутки формы: иначе
-                // вертикальное начало рисования прокручивало бы страницу.
-                return RawGestureDetector(
-                  gestures: <Type, GestureRecognizerFactory>{
-                    EagerGestureRecognizer:
-                        GestureRecognizerFactoryWithHandlers<
-                          EagerGestureRecognizer
-                        >(EagerGestureRecognizer.new, (_) {}),
-                  },
-                  child: Listener(
-                    key: const ValueKey<String>('occlusion-editor-canvas'),
-                    behavior: HitTestBehavior.opaque,
-                    onPointerDown: (event) =>
-                        _startAt(event.localPosition, size),
-                    onPointerMove: (event) =>
-                        _updateAt(event.localPosition, size),
-                    onPointerUp: (_) => _end(size),
-                    onPointerCancel: (_) => setState(() => _draft = null),
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: <Widget>[
-                        Image.memory(
-                          widget.imageBytes,
-                          fit: BoxFit.fill,
-                          errorBuilder: (context, error, stack) => ColoredBox(
-                            color: scheme.surfaceContainerHigh,
-                            child: Center(
-                              child: Text(l10n.occlusionImageUnavailable),
+            child: ClipRSuperellipse(
+              borderRadius: BorderRadius.circular(NcRadii.l),
+              child: ColoredBox(
+                color: colors.ink3,
+                child: LayoutBuilder(
+                  builder: (BuildContext context, BoxConstraints constraints) {
+                    final Size size = Size(
+                      constraints.maxWidth,
+                      constraints.maxHeight,
+                    );
+                    // Eager-распознаватель забирает жест у прокрутки формы:
+                    // иначе вертикальное начало рисования прокручивало бы
+                    // страницу (ретроспектива 5).
+                    return RawGestureDetector(
+                      gestures: <Type, GestureRecognizerFactory>{
+                        EagerGestureRecognizer:
+                            GestureRecognizerFactoryWithHandlers<
+                              EagerGestureRecognizer
+                            >(EagerGestureRecognizer.new, (_) {}),
+                      },
+                      child: Listener(
+                        key: const ValueKey<String>('occlusion-editor-canvas'),
+                        behavior: HitTestBehavior.opaque,
+                        onPointerDown: (PointerDownEvent event) =>
+                            _startAt(event.localPosition, size),
+                        onPointerMove: (PointerMoveEvent event) =>
+                            _updateAt(event.localPosition, size),
+                        onPointerUp: (PointerUpEvent event) => _end(size),
+                        onPointerCancel: (PointerCancelEvent event) =>
+                            setState(() => _draft = null),
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: <Widget>[
+                            Image.memory(
+                              widget.imageBytes,
+                              fit: BoxFit.fill,
+                              errorBuilder:
+                                  (
+                                    BuildContext context,
+                                    Object error,
+                                    StackTrace? stack,
+                                  ) => ColoredBox(
+                                    color: colors.ink3,
+                                    child: Center(
+                                      child: Text(
+                                        l10n.occlusionImageUnavailable,
+                                      ),
+                                    ),
+                                  ),
                             ),
-                          ),
+                            for (
+                              var index = 0;
+                              index < widget.document.masks.length;
+                              index++
+                            )
+                              _MaskCover(
+                                mask: widget.document.masks[index],
+                                number: index + 1,
+                                canvasSize: size,
+                              ),
+                            if (_draft case final Rect draft)
+                              Positioned.fill(
+                                child: CustomPaint(
+                                  painter: _DraftPainter(
+                                    rect: draft,
+                                    shape: _shape,
+                                    color: colors.aurum,
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
-                        for (final mask in widget.document.masks)
-                          _outline(mask, scheme),
-                        if (_draft case final draft?)
-                          _draftOutline(draft, _shape, scheme),
-                      ],
-                    ),
-                  ),
-                );
-              },
+                      ),
+                    );
+                  },
+                ),
+              ),
             ),
           ),
         ),
         const SizedBox(height: 8),
         for (var index = 0; index < widget.document.masks.length; index++)
-          Row(
-            children: <Widget>[
-              Expanded(
-                child: Text(
-                  l10n.occlusionMaskNumber(index + 1),
-                  key: ValueKey<String>(
-                    'occlusion-editor-mask-${widget.document.masks[index].id}',
-                  ),
-                ),
+          NcListRow(
+            title: Text(
+              l10n.occlusionMaskNumber(index + 1),
+              key: ValueKey<String>(
+                'occlusion-editor-mask-${widget.document.masks[index].id}',
               ),
-              Text(
-                widget.document.masks[index].shape == OcclusionShape.ellipse
-                    ? l10n.occlusionEllipse
-                    : l10n.occlusionRectangle,
+            ),
+            subtitle: Text(
+              widget.document.masks[index].shape == OcclusionShape.ellipse
+                  ? l10n.occlusionEllipse
+                  : l10n.occlusionRectangle,
+            ),
+            showDivider: index < widget.document.masks.length - 1,
+            trailing: NcIconButton(
+              key: ValueKey<String>(
+                'occlusion-delete-${widget.document.masks[index].id}',
               ),
-              IconButton(
-                tooltip: l10n.occlusionDeleteMaskTooltip,
-                key: ValueKey<String>(
-                  'occlusion-delete-${widget.document.masks[index].id}',
-                ),
-                onPressed: () => _remove(widget.document.masks[index].id),
-                icon: const Icon(Icons.delete_outline),
-              ),
-            ],
+              icon: Icons.close_rounded,
+              tooltip: l10n.occlusionDeleteMaskTooltip,
+              size: 28,
+              iconColor: colors.ember,
+              onPressed: () => _remove(widget.document.masks[index].id),
+            ),
           ),
       ],
     );
   }
-
-  Widget _outline(OcclusionMask mask, ColorScheme scheme) => Positioned.fill(
-    child: CustomPaint(
-      painter: _MaskPainter(mask: mask, color: scheme.primary),
-    ),
-  );
-
-  Widget _draftOutline(Rect rect, OcclusionShape shape, ColorScheme scheme) =>
-      Positioned.fill(
-        child: CustomPaint(
-          painter: _RectPainter(
-            rect: rect,
-            shape: shape,
-            color: scheme.primary,
-          ),
-        ),
-      );
 }
 
-class _MaskPainter extends CustomPainter {
-  const _MaskPainter({required this.mask, required this.color});
+/// Готовая маска: `ink5` 92 %, рамка `aurumSoft` и номер.
+class _MaskCover extends StatelessWidget {
+  const _MaskCover({
+    required this.mask,
+    required this.number,
+    required this.canvasSize,
+  });
 
   final OcclusionMask mask;
-  final Color color;
+  final int number;
+  final Size canvasSize;
 
   @override
-  void paint(Canvas canvas, Size size) {
-    _paintMask(
-      canvas,
-      size,
-      Rect.fromLTWH(mask.x, mask.y, mask.width, mask.height),
-      mask.shape,
-      color,
+  Widget build(BuildContext context) {
+    final NcTheme theme = NcTheme.of(context);
+    final NcColors colors = theme.colors;
+    final Rect rect = Rect.fromLTWH(
+      mask.x * canvasSize.width,
+      mask.y * canvasSize.height,
+      mask.width * canvasSize.width,
+      mask.height * canvasSize.height,
+    );
+    final String numberText = '$number';
+    final ShapeBorder shape = mask.shape == OcclusionShape.ellipse
+        ? OvalBorder(side: BorderSide(color: colors.aurumSoft))
+        : RoundedSuperellipseBorder(
+            borderRadius: BorderRadius.circular(4),
+            side: BorderSide(color: colors.aurumSoft),
+          );
+    return Positioned.fromRect(
+      rect: rect,
+      child: Semantics(
+        label: AppLocalizations.of(context).occlusionMaskNumber(number),
+        child: DecoratedBox(
+          decoration: ShapeDecoration(
+            color: colors.ink5.withValues(alpha: 0.92),
+            shape: shape,
+          ),
+          child: Center(
+            child: Text(
+              numberText,
+              style: theme.typography.labelM.copyWith(
+                color: colors.textPrimary,
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
-
-  @override
-  bool shouldRepaint(_MaskPainter old) =>
-      old.mask != mask || old.color != color;
 }
 
-class _RectPainter extends CustomPainter {
-  const _RectPainter({
+/// Рамка рисуемой маски: `aurum` 1,5 px + заливка 18 %.
+class _DraftPainter extends CustomPainter {
+  const _DraftPainter({
     required this.rect,
     required this.shape,
     required this.color,
@@ -293,34 +350,27 @@ class _RectPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    _paintMask(canvas, size, rect, shape, color);
+    final Rect pixels = Rect.fromLTWH(
+      rect.left * size.width,
+      rect.top * size.height,
+      rect.width * size.width,
+      rect.height * size.height,
+    );
+    final Paint fill = Paint()..color = color.withValues(alpha: 0.18);
+    final Paint border = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5
+      ..color = color;
+    if (shape == OcclusionShape.ellipse) {
+      canvas.drawOval(pixels, fill);
+      canvas.drawOval(pixels, border);
+    } else {
+      canvas.drawRect(pixels, fill);
+      canvas.drawRect(pixels, border);
+    }
   }
 
   @override
-  bool shouldRepaint(_RectPainter old) =>
+  bool shouldRepaint(_DraftPainter old) =>
       old.rect != rect || old.shape != shape || old.color != color;
-}
-
-void _paintMask(
-  Canvas canvas,
-  Size size,
-  Rect normalized,
-  OcclusionShape shape,
-  Color color,
-) {
-  final rect = Rect.fromLTWH(
-    normalized.left * size.width,
-    normalized.top * size.height,
-    normalized.width * size.width,
-    normalized.height * size.height,
-  );
-  final paint = Paint()
-    ..color = color
-    ..style = PaintingStyle.stroke
-    ..strokeWidth = 2;
-  if (shape == OcclusionShape.ellipse) {
-    canvas.drawOval(rect, paint);
-  } else {
-    canvas.drawRect(rect, paint);
-  }
 }

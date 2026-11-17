@@ -21,8 +21,8 @@ Android SDK/JDK/Xcode) — локально `test/analyze/format/golden`, `build
 |---|---|---|---|---|
 | 3.1 | Оболочка `shell/app_shell.dart`, `design/components/nc_nav.dart` | `aaa3ec1`, `e3d4acb` | `9672704` | `shell-*` (6) |
 | 3.2 | «Мои колоды» `decks/decks_screen.dart`, `decks/deck_actions.dart` | `e4fc69e` | `266ca6a` | `decks-*` (6) |
-| 3.3 | Экран колоды `decks/deck_screen.dart` | `b335ac2` | — | `deck-*` (6) |
-| 3.4 | Форма карточки `cards/card_form_screen.dart`, `cards/occlusion_mask_editor.dart`, стили `cards/content/*` | — | — | — |
+| 3.3 | Экран колоды `decks/deck_screen.dart` | `b335ac2` | `eabf8f6` | `deck-*` (6) |
+| 3.4 | Форма карточки `cards/card_form_screen.dart`, `cards/occlusion_mask_editor.dart`, стили `cards/content/*` | `38511f6` | — | `card-form-*` (6) |
 | 3.5 | Конструктор `session/session_constructor_screen.dart` | — | — | — |
 | 3.6 | Статистика `statistics/statistics_screen.dart`, `statistics_charts.dart` | — | — | — |
 | 3.7 | Настройки `settings/settings_screen.dart` | — | — | — |
@@ -92,6 +92,37 @@ textScale > 1,3 стат-пилюли показывают только числ
 `NcIconButton` теперь `grouped: true`: экран обёрнут `NcGlassGroup`, поэтому
 шапка + тулбар = одна группа стекла (бюджет §4.4).
 
+### 3.4 Форма карточки — обработчики (до правки → после)
+
+| Действие | До | После |
+|---|---|---|
+| Сохранение | `FilledButton` в `bottomNavigationBar` → `_save` | `NcButton.primary l` в стеклянной панели (ключ `card-form-save`, loading) → тот же `_save` |
+| Удаление | `IconButton` → `showDialog` подтверждения → `deleteCard` | `NcIconButton` (ключ `card-form-delete`, ember) → `NcDialog` с ключами `card-delete-confirm/cancel` → тот же `deleteCard` |
+| Тип | `SegmentedButton<CardType>` → `setState(_cardType)` | `NcSegmented<CardType>` (те же три доменных типа) → тот же `setState` |
+| Поля | `TextField` с `InputDecoration` | `NcTextField` (ключи `card-form-front/back/hint/tags/source`, ошибки, автофокус) |
+| Теги | строка в поле | поле прежнее + визуальный ряд `NcChip.tag` (значение не меняется) |
+| Медиа | `OutlinedButton`/`TextButton` | `NcButton.secondary/ghost s` с теми же ключами → `_pickImage/_refreshImage/_removeImage` |
+| Маски | `SwitchListTile` → `_toggleOcclusion` | `NcListRow` + `NcSwitch` (ключ `card-form-occlusion-toggle`) → тот же `_toggleOcclusion` |
+| Редактор масок | `SegmentedButton`, холст `ClipRRect`, `IconButton` удаления | `NcSegmented`, холст `ink3 r.l` (eager-распознаватель сохранён), готовые маски `ink5 92 %` с номером, `NcIconButton ember` удаления; ключи `occlusion-editor-canvas`, `occlusion-editor-mask-*`, `occlusion-delete-*` сохранены |
+
+Стили §9.20: `CardContentView` — `NcTypography.question/answer` и токены
+цветов; `ClozeText` — pill `aurumSoft` + mono «[…]», раскрытый ответ `aurum`
+с подчёркиванием, ✋ `selectionClick`; `LatexText` — размытая плашка `ink4` с
+ключом `latex-hidden-<n>`, «Следующий шаг» — `NcButton.ghost s`, ошибка
+разметки — `NcBadge.amber`; `OcclusionImageView` — `ink5 94 %` + рамка
+`aurumSoft` + номер, кнопки ghost `s`, `occlusion-invalid` — бейдж `amber`;
+`CardImageView` — `ClipRSuperellipse r.m`, fade-in 240 мс, полноэкранный
+просмотр с `scrim`-градиентом и `NcIconButton.glass`.
+
+Отступления: третьего типа «LaTeX» в домене нет (LaTeX — разметка текста),
+типы `NcSegmented` — Обычная / Двусторонняя / С пропусками, подсказка
+синтаксиса покрывает и cloze, и формулы; предпросмотр полей по умолчанию
+свёрнут (кнопка-глаз), чтобы форма на телефоне не выталкивала секцию медиа
+за экран; раскрытие occlusion удаляет маску сразу (существующие тесты
+контента ждут исчезновения после одного `pump`), а появление — scale 0,96→1
+на 240 мс; скелетон картинки статичен (повторяющийся shimmer заблокировал бы
+`pumpAndSettle` в тестах картинки).
+
 ## Тестовая инфраструктура этапа
 
 - `test/helpers/nc_screen_harness.dart` — производственная обвязка экрана:
@@ -115,3 +146,4 @@ textScale > 1,3 стат-пилюли показывают только числ
 ## Гейты (итог)
 
 Заполняется в шаге 3.9.
+

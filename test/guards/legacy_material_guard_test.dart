@@ -35,6 +35,13 @@ const List<String> migratedFiles = <String>[
   'lib/ui/decks/deck_screen.dart',
   'lib/ui/cards/card_form_screen.dart',
   'lib/ui/cards/occlusion_mask_editor.dart',
+  'lib/ui/cards/content/card_content_view.dart',
+  'lib/ui/cards/content/card_image_view.dart',
+  'lib/ui/cards/content/card_text.dart',
+  'lib/ui/cards/content/cloze_text.dart',
+  'lib/ui/cards/content/inline_latex_text.dart',
+  'lib/ui/cards/content/latex_text.dart',
+  'lib/ui/cards/content/occlusion_image_view.dart',
 ];
 
 /// Убирает комментарии, чтобы упоминание виджета в документации не считалось

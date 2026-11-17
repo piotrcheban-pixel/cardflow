@@ -654,7 +654,7 @@
     "description": "Подпись выбора типа карточки."
   },
 
-  "cardFormSyntaxHint": "Синтаксис: {cloze} — пропуск, {latex} — формула",
+  "cardFormSyntaxHint": "Синтаксис: пропуск и формула",
   "@cardFormSyntaxHint": {
     "description": "Подсказка синтаксиса под переключателем типа карточки (REDESIGN-SPEC §9.4)."
   },

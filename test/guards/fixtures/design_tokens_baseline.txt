@@ -1,5 +1,4 @@
 lib/ui/cards/content/card_image_view.dart	Colors.black
-lib/ui/cards/content/card_image_view.dart	Colors.black54
 lib/ui/cards/content/card_image_view.dart	Colors.black87
 lib/ui/cards/content/card_image_view.dart	Colors.white
 lib/ui/cards/content/card_image_view.dart	Colors.white54

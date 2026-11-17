@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:cardflow/domain/cards/cloze_markup.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/cards/content/inline_latex_text.dart';
+import 'package:cardflow/ui/design/design.dart';
 
 /// Интерактивное раскрытие cloze-групп по одному номеру.
 ///
@@ -35,6 +36,7 @@ class _ClozeTextState extends State<ClozeText> {
     final ClozeMarkup markup = ClozeMarkup.parse(widget.source);
     if (!markup.hasGaps) return Text(widget.source);
     final AppLocalizations l10n = AppLocalizations.of(context);
+    final NcTheme theme = NcTheme.of(context);
     final spans = <InlineSpan>[];
     for (final ClozeSegment segment in markup.segments) {
       if (!segment.isGap) {
@@ -52,26 +54,42 @@ class _ClozeTextState extends State<ClozeText> {
       final Widget child = show
           ? InlineLatexText(
               source: segment.answer ?? '',
-              style: TextStyle(color: Theme.of(context).colorScheme.primary),
-            )
-          : Text(
-              l10n.clozeHiddenAnswer,
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              style: theme.typography.bodyL.copyWith(
+                color: theme.colors.aurum,
                 decoration: TextDecoration.underline,
+                decorationColor: theme.colors.aurum,
+              ),
+            )
+          : Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: ShapeDecoration(
+                color: theme.colors.aurumSoft,
+                shape: RoundedSuperellipseBorder(
+                  borderRadius: BorderRadius.circular(NcRadii.s),
+                  side: BorderSide(color: theme.colors.aurum),
+                ),
+              ),
+              child: Text(
+                l10n.clozeHiddenAnswer,
+                style: theme.typography.monoM.copyWith(
+                  color: theme.colors.aurum,
+                ),
               ),
             );
       spans.add(
         WidgetSpan(
           alignment: PlaceholderAlignment.baseline,
           baseline: TextBaseline.alphabetic,
-          child: InkWell(
+          child: GestureDetector(
             key: ValueKey<String>(
               show ? 'cloze-answer-$number' : 'cloze-gap-$number',
             ),
             onTap: widget.revealed
                 ? null
-                : () => setState(() => _revealedGroups.add(number)),
+                : () {
+                    NcHaptics.of(context).selectionClick();
+                    setState(() => _revealedGroups.add(number));
+                  },
             child: child,
           ),
         ),
