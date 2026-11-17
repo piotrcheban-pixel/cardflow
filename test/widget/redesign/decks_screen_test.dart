@@ -113,13 +113,20 @@ void main() {
     await pumpDecks(tester);
 
     // due = 6 + 3 + 0 = 9, колод = 3 (UI-вычисление из фейков).
-    expect(find.text(l10n.decksSummary(9, 3)), findsOneWidget);
+    expect(find.text(l10n.decksSummary(3, 9)), findsOneWidget);
     expect(find.text(l10n.deckDueCount(6)), findsOneWidget);
     expect(find.text(l10n.deckCardCount(18)), findsOneWidget);
     expect(find.text(l10n.deckCardCount(7)), findsOneWidget);
-    // У «Истории искусства» due = 0 — тихая галочка без текста.
+    // У «Истории искусства» due = 0 — тихая галочка без текста (галочка
+    // выбранного чипа фильтра не считается — ищем внутри плитки).
     expect(find.text(l10n.deckDueCount(0)), findsNothing);
-    expect(find.byIcon(Icons.check_rounded), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(NcCardTile),
+        matching: find.byIcon(Icons.check_rounded),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('поиск и фильтр (ключи тумблеров сохранены)', (
@@ -141,6 +148,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(NcSearchField), findsNothing);
 
+    await tester.ensureVisible(find.text(l10n.deckFilterDue));
+    await tester.pumpAndSettle();
     await tester.tap(find.text(l10n.deckFilterDue));
     await tester.pumpAndSettle();
     expect(find.text('Биология'), findsOneWidget);
@@ -178,11 +187,20 @@ void main() {
   testWidgets('бюджет стекла ≤ 2: в покое без стекла, при прокрутке 1', (
     WidgetTester tester,
   ) async {
-    await pumpDecks(tester);
+    final List<DeckSummary> many = <DeckSummary>[
+      for (var index = 0; index < 8; index++)
+        makeSummary(
+          id: 'deck-$index',
+          name: 'Колода $index',
+          totalCards: index + 1,
+          dueCards: index.isEven ? 2 : 0,
+        ),
+    ];
+    await pumpDecks(tester, summaries: many);
     expectGlassBudget(tester, maxGroups: 2);
     expect(find.byType(BackdropFilter), findsNothing);
 
-    await tester.drag(find.byType(NcCardTile).first, const Offset(0, -240));
+    await tester.drag(find.byType(NcCardTile).first, const Offset(0, -300));
     await tester.pumpAndSettle();
     expectGlassBudget(tester, maxGroups: 2);
     expect(find.byType(BackdropFilter), findsWidgets);

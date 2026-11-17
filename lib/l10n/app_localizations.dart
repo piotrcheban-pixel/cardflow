@@ -214,6 +214,12 @@ abstract class AppLocalizations {
   /// **'К повторению: {due} · колод: {decks}'**
   String decksSummary(Object decks, Object due);
 
+  /// Подсказка в пустом результате поиска/фильтра по колодам.
+  ///
+  /// In ru, this message translates to:
+  /// **'Попробуйте изменить запрос или фильтр.'**
+  String get decksNoResultsHint;
+
   /// Состояние ошибки загрузки списка колод (без сырых исключений).
   ///
   /// In ru, this message translates to:

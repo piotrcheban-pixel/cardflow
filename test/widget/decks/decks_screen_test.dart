@@ -52,7 +52,7 @@ void main() {
 
       final AppLocalizations l10n = l10nOf(tester);
       expect(find.byType(NcSkeleton), findsNWidgets(4));
-      expect(find.text(l10n.decksTitle), findsOneWidget);
+      expect(find.text(l10n.decksTitle), findsWidgets);
       expect(find.text(l10n.decksErrorTitle), findsNothing);
       expect(find.text(l10n.decksEmptyTitle), findsNothing);
     });

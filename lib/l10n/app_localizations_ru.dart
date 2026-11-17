@@ -74,6 +74,9 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String get decksNoResultsHint => 'Попробуйте изменить запрос или фильтр.';
+
+  @override
   String get decksErrorTitle => 'Не удалось загрузить колоды';
 
   @override

@@ -14,7 +14,8 @@ import 'package:cardflow/ui/state/app_providers.dart';
 ///
 /// Пользовательские тексты — только из [AppLocalizations]; ошибки архива
 /// маппятся в ARB (`archiveErrorMessage`), прочие — в общую строку. Сырые
-/// исключения наружу не выводятся.
+/// исключения наружу не выводятся. Диалоги — `NcDialog` (REDESIGN-SPEC §9.2),
+/// сигнатуры функций и типы результатов прежние.
 
 /// Показывает короткое сообщение тостом Nocturne (`NcToast`, §8).
 void showAppMessage(BuildContext context, String message) {
@@ -69,24 +70,25 @@ Future<bool> deleteDeckWithConfirmation(
 }) async {
   final AppLocalizations l10n = AppLocalizations.of(context);
   final bool confirmed =
-      (await showDialog<bool>(
-        context: context,
-        builder: (BuildContext dialogContext) => AlertDialog(
-          title: Text(l10n.deckDeleteDialogTitle),
-          content: Text(l10n.deckDeleteDialogMessage(deck.name)),
-          actions: <Widget>[
-            TextButton(
-              key: const ValueKey<String>('delete-deck-cancel'),
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: Text(l10n.cancel),
-            ),
-            FilledButton(
-              key: const ValueKey<String>('delete-deck-confirm'),
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: Text(l10n.delete),
-            ),
-          ],
-        ),
+      (await showNcDialog<bool>(
+        context,
+        title: l10n.deckDeleteDialogTitle,
+        message: l10n.deckDeleteDialogMessage(deck.name),
+        icon3dName: 'shield_error',
+        actions: <Widget>[
+          NcButton(
+            key: const ValueKey<String>('delete-deck-cancel'),
+            label: l10n.cancel,
+            variant: NcButtonVariant.ghost,
+            onPressed: () => Navigator.of(context).pop(false),
+          ),
+          NcButton(
+            key: const ValueKey<String>('delete-deck-confirm'),
+            label: l10n.delete,
+            variant: NcButtonVariant.destructive,
+            onPressed: () => Navigator.of(context).pop(true),
+          ),
+        ],
       )) ??
       false;
   if (confirmed != true || !context.mounted) return false;
@@ -186,36 +188,46 @@ Future<String?> _showDeckNameDialog(
   required String submitLabel,
   String initialName = '',
 }) {
-  return showDialog<String>(
-    context: context,
-    builder: (BuildContext dialogContext) => _DeckNameDialog(
-      title: title,
-      submitLabel: submitLabel,
-      initialName: initialName,
-    ),
+  final AppLocalizations l10n = AppLocalizations.of(context);
+  final GlobalKey<_DeckNameFieldState> fieldKey =
+      GlobalKey<_DeckNameFieldState>();
+
+  void submit() {
+    final String? name = fieldKey.currentState?.trySubmit();
+    if (name == null) return;
+    Navigator.of(context).pop(name);
+  }
+
+  return showNcDialog<String>(
+    context,
+    title: title,
+    content: _DeckNameField(key: fieldKey, initialName: initialName),
+    actions: <Widget>[
+      NcButton(
+        label: l10n.cancel,
+        variant: NcButtonVariant.ghost,
+        onPressed: () => Navigator.of(context).pop(),
+      ),
+      NcButton(
+        key: const ValueKey<String>('deck-name-submit'),
+        label: submitLabel,
+        onPressed: submit,
+      ),
+    ],
   );
 }
 
-/// Диалог имени колоды с собственным жизненным циклом контроллера.
-///
-/// Контроллер освобождается в `dispose` виджета, а не сразу после `pop`:
-/// диалог продолжает анимационно закрываться, и `TextField` ещё жив.
-class _DeckNameDialog extends StatefulWidget {
-  const _DeckNameDialog({
-    required this.title,
-    required this.submitLabel,
-    required this.initialName,
-  });
+/// Поле имени колоды с собственной валидацией (Enter = отправка).
+class _DeckNameField extends StatefulWidget {
+  const _DeckNameField({super.key, required this.initialName});
 
-  final String title;
-  final String submitLabel;
   final String initialName;
 
   @override
-  State<_DeckNameDialog> createState() => _DeckNameDialogState();
+  State<_DeckNameField> createState() => _DeckNameFieldState();
 }
 
-class _DeckNameDialogState extends State<_DeckNameDialog> {
+class _DeckNameFieldState extends State<_DeckNameField> {
   late final TextEditingController _controller = TextEditingController(
     text: widget.initialName,
   );
@@ -227,42 +239,30 @@ class _DeckNameDialogState extends State<_DeckNameDialog> {
     super.dispose();
   }
 
-  void _submit() {
+  /// Возвращает обрезанное имя или `null`, если оно пустое.
+  String? trySubmit() {
     final AppLocalizations l10n = AppLocalizations.of(context);
     final String name = _controller.text.trim();
     if (name.isEmpty) {
       setState(() => _errorText = l10n.deckNameEmptyError);
-      return;
+      return null;
     }
-    Navigator.of(context).pop(name);
+    return name;
   }
 
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
-    return AlertDialog(
-      title: Text(widget.title),
-      content: TextField(
-        controller: _controller,
-        autofocus: true,
-        textInputAction: TextInputAction.done,
-        onSubmitted: (_) => _submit(),
-        decoration: InputDecoration(
-          labelText: l10n.deckNameLabel,
-          errorText: _errorText,
-        ),
-      ),
-      actions: <Widget>[
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text(l10n.cancel),
-        ),
-        FilledButton(
-          key: const ValueKey<String>('deck-name-submit'),
-          onPressed: _submit,
-          child: Text(widget.submitLabel),
-        ),
-      ],
+    return NcTextField(
+      controller: _controller,
+      autofocus: true,
+      label: l10n.deckNameLabel,
+      errorText: _errorText,
+      textInputAction: TextInputAction.done,
+      onSubmitted: (_) {
+        final String? name = trySubmit();
+        if (name != null) Navigator.of(context).pop(name);
+      },
     );
   }
 }
@@ -273,38 +273,58 @@ Future<bool> _showImportPreviewDialog(
   ImportPreview preview,
 ) async {
   final AppLocalizations l10n = AppLocalizations.of(context);
-  final bool? confirmed = await showDialog<bool>(
-    context: context,
-    builder: (BuildContext dialogContext) => AlertDialog(
-      title: Text(l10n.importPreviewTitle),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Text(l10n.importPreviewDeckName(preview.deckName)),
-          const SizedBox(height: 8),
-          Text(l10n.importPreviewFormatVersion(preview.formatVersion)),
-          const SizedBox(height: 8),
-          Text(l10n.importPreviewCards(preview.cardsCount)),
-          const SizedBox(height: 8),
-          Text(l10n.importPreviewDuplicates(preview.duplicatesCount)),
-          const SizedBox(height: 8),
-          Text(l10n.importPreviewMedia(preview.mediaCount)),
-        ],
-      ),
-      actions: <Widget>[
-        TextButton(
-          key: const ValueKey<String>('import-cancel'),
-          onPressed: () => Navigator.of(dialogContext).pop(false),
-          child: Text(l10n.cancel),
+  final bool? confirmed = await showNcDialog<bool>(
+    context,
+    title: l10n.importPreviewTitle,
+    content: Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        _PreviewLine(text: l10n.importPreviewDeckName(preview.deckName)),
+        _PreviewLine(
+          text: l10n.importPreviewFormatVersion(preview.formatVersion),
         ),
-        FilledButton(
-          key: const ValueKey<String>('import-confirm'),
-          onPressed: () => Navigator.of(dialogContext).pop(true),
-          child: Text(l10n.importConfirm),
+        _PreviewLine(text: l10n.importPreviewCards(preview.cardsCount)),
+        _PreviewLine(
+          text: l10n.importPreviewDuplicates(preview.duplicatesCount),
         ),
+        _PreviewLine(text: l10n.importPreviewMedia(preview.mediaCount)),
       ],
     ),
+    actions: <Widget>[
+      NcButton(
+        key: const ValueKey<String>('import-cancel'),
+        label: l10n.cancel,
+        variant: NcButtonVariant.ghost,
+        onPressed: () => Navigator.of(context).pop(false),
+      ),
+      NcButton(
+        key: const ValueKey<String>('import-confirm'),
+        label: l10n.importConfirm,
+        onPressed: () => Navigator.of(context).pop(true),
+      ),
+    ],
   );
   return confirmed ?? false;
+}
+
+/// Строка сводки предпросмотра импорта.
+class _PreviewLine extends StatelessWidget {
+  const _PreviewLine({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final NcTheme theme = NcTheme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Text(
+        text,
+        style: theme.typography.bodyM.copyWith(
+          color: theme.colors.textSecondary,
+        ),
+      ),
+    );
+  }
 }

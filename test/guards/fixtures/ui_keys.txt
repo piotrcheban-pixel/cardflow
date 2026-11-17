@@ -38,11 +38,17 @@ constructor-warmup
 deck-add-card
 deck-card-*
 deck-generate-action
+deck-more-*
 deck-name-submit
 deck-overflow-menu
 deck-start-session
 decks-create-generate
 decks-create-split
+decks-filter-toggle
+decks-search-clear
+decks-search-field
+decks-search-toggle
+decks-settings-action
 delete-deck-cancel
 delete-deck-confirm
 feed-auto-advance

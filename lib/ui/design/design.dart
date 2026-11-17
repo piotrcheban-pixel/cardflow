@@ -48,6 +48,7 @@ export 'components/nc_spinner.dart';
 export 'components/nc_surface.dart';
 export 'components/internal/nc_scroll_collapse.dart'
     show NcScrollCollapse, NcScrollCollapseScope;
+export 'components/internal/nc_stagger.dart' show NcStagger;
 export 'font_licenses.dart';
 export 'haptics.dart';
 export 'motion_scope.dart';

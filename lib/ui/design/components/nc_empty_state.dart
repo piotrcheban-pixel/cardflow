@@ -17,11 +17,15 @@ class NcEmptyState extends StatelessWidget {
     this.primaryAction,
     this.secondaryAction,
     this.compact = false,
+    this.showIcon = true,
     this.semanticLabel,
   });
 
   /// Имя 3D-иконки из инвентаря §5.3.
   final String iconName;
+
+  /// Показывать ли 3D-иконку (тихие состояния — без неё, §9.2).
+  final bool showIcon;
 
   /// Заголовок (ARB).
   final String title;
@@ -48,15 +52,17 @@ class NcEmptyState extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: <Widget>[
-        NcStagger(
-          index: 0,
-          child: NcIcon3D(
-            name: iconName,
-            size: compact ? 80 : 120,
-            showShadow: false,
+        if (showIcon) ...<Widget>[
+          NcStagger(
+            index: 0,
+            child: NcIcon3D(
+              name: iconName,
+              size: compact ? 80 : 120,
+              showShadow: false,
+            ),
           ),
-        ),
-        SizedBox(height: compact ? NcSpace.s16 : NcSpace.s24),
+          SizedBox(height: compact ? NcSpace.s16 : NcSpace.s24),
+        ],
         NcStagger(
           index: 1,
           child: Text(

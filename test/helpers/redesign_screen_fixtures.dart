@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/misc.dart' show Override;
+import 'package:material_ui/material_ui.dart' hide Card;
 
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/decks/deck_summary.dart';
@@ -14,6 +15,7 @@ import 'package:cardflow/ui/statistics/statistics_screen.dart';
 
 import 'decks_fakes.dart';
 import 'generation_fakes.dart';
+import 'pump_app.dart';
 import 'settings_fakes.dart';
 
 /// Экраны этапа 3 (REDESIGN-SPEC §9.1–9.4, 9.14–9.17).

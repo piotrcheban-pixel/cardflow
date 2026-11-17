@@ -19,8 +19,8 @@ Android SDK/JDK/Xcode) — локально `test/analyze/format/golden`, `build
 
 | Шаг | Экран / файлы | Red | Green | Скриншоты |
 |---|---|---|---|---|
-| 3.1 | Оболочка `shell/app_shell.dart`, `design/components/nc_nav.dart` | `aaa3ec1`, `5f944a2` | `делается` | `shell-*` (6) |
-| 3.2 | «Мои колоды» `decks/decks_screen.dart`, `decks/deck_actions.dart` | — | — | — |
+| 3.1 | Оболочка `shell/app_shell.dart`, `design/components/nc_nav.dart` | `aaa3ec1`, `e3d4acb` | `9672704` | `shell-*` (6) |
+| 3.2 | «Мои колоды» `decks/decks_screen.dart`, `decks/deck_actions.dart` | `f27c07d` | — | `decks-*` (6) |
 | 3.3 | Экран колоды `decks/deck_screen.dart` | — | — | — |
 | 3.4 | Форма карточки `cards/card_form_screen.dart`, `cards/occlusion_mask_editor.dart`, стили `cards/content/*` | — | — | — |
 | 3.5 | Конструктор `session/session_constructor_screen.dart` | — | — | — |
@@ -42,6 +42,32 @@ Android SDK/JDK/Xcode) — локально `test/analyze/format/golden`, `build
 = 600 сохранён, добавлен `wideBreakpoint` = 1024. Подсказка «⌘K / Ctrl+K —
 быстрый переход» **не показана**: функция появляется на этапе 5, подсказка
 была бы мёртвой (§«нет мёртвых функций»).
+
+### 3.2 «Мои колоды» — обработчики (до правки → после)
+
+| Действие | До | После |
+|---|---|---|
+| Поиск | `IconButton` → `decksSearchVisibleProvider.toggle()` / `clearSearch` + `close`; `TextField.onChanged` → `setSearch`; очистка → `clearSearch` | `NcIconButton` (тот же тумблер) → `NcSearchField.onChanged` (пусто → `clearSearch`, иначе `setSearch`), кнопка очистки → тот же `clearSearch` |
+| Фильтр | `IconButton` → `decksFiltersVisibleProvider.toggle`; чипы `M3EChip` → `setFilter` | `NcIconButton` → тот же тумблер; `NcChip.filter` → `setFilter` (точка `aurum` при фильтре ≠ «Все») |
+| Настройки | `IconButton` → `context.go(settingsPath)` | `NcIconButton` (ключ `decks-settings-action`) → тот же `context.go` |
+| Создать вручную | split `onPressed` / пункт «Вручную» → `createDeckManually`; FAB → `createDeckManually` | `NcSplitButton.onPressed` / `NcMenuItem.onSelected` / `NcFab` → те же вызовы |
+| Сгенерировать | пункт меню → `context.push(AppRoutes.generationPath)` | тот же `NcMenuItem` (ключ `decks-create-generate`) |
+| Импорт | пункт меню → `importDeckZip` | тот же пункт → тот же вызов |
+| Открыть колоду | `M3ECard.onPressed` → `context.push('/decks/<id>')` | `NcCardTile.onTap` → тот же push |
+| Контекстное меню | `showModalBottomSheet` + `ListTile` → `_DeckMenuAction` | `showNcSheet` + `NcListRow` → тот же enum и ветки `_showContextMenu` |
+| Архив свайпом | `Dismissible.onDismissed` → `_archiveDeck` | тот же `_archiveDeck`; порог → `NcHaptics.lightImpact()` (✋ `lightImpact`) |
+| Удаление | `AlertDialog` → `deleteDeckWithConfirmation` | `NcDialog` + ключи `delete-deck-confirm/cancel`, тот же результат `bool` |
+| Имя колоды | `AlertDialog` + `TextField` → `_showDeckNameDialog` | `NcDialog` + `NcTextField` + ключ `deck-name-submit`, Enter = отправка |
+| Предпросмотр импорта | `AlertDialog` → `_showImportPreviewDialog` | `NcDialog` с теми же строками и ключами `import-confirm/cancel` |
+
+Сводка шапки — UI-вычисление по загруженным `deckSummariesProvider`
+(сумма `dueCards` и число колод), новой логики нет. Аватар —
+`NcIcon3D('deck_gem_<FNV-1a(id) % 8 + 1>')` в `Hero('deck-avatar-<id>')`,
+название — `Hero('deck-title-<id>')`. `Dismissible` с `deck-card-<id>`
+остаётся внешним виджетом. Плитка — 92 px на телефоне (88 в спецификации не
+вмещают 2 строки `titleM` + `bodyS` при padding 14; отклонение 4 px
+зафиксировано), 168 px на 2–3 колонках. Общий `NcSplitButton` получил
+`Flexible` для подписи (иначе 2,2 px overflow при textScale 2,0).
 
 ## Тестовая инфраструктура этапа
 

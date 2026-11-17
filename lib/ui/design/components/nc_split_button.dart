@@ -101,16 +101,18 @@ class _NcSplitButtonState extends State<NcSplitButton> {
               ),
               const SizedBox(width: 8),
             ],
-            Text(
-              widget.label,
-              maxLines: 1,
-              softWrap: false,
-              overflow: TextOverflow.ellipsis,
-              style:
-                  (widget.size == NcButtonSize.s
-                          ? theme.typography.labelM
-                          : theme.typography.labelL)
-                      .copyWith(color: appearance.foreground),
+            Flexible(
+              child: Text(
+                widget.label,
+                maxLines: 1,
+                softWrap: false,
+                overflow: TextOverflow.ellipsis,
+                style:
+                    (widget.size == NcButtonSize.s
+                            ? theme.typography.labelM
+                            : theme.typography.labelL)
+                        .copyWith(color: appearance.foreground),
+              ),
             ),
           ],
         ),
@@ -148,7 +150,11 @@ class _NcSplitButtonState extends State<NcSplitButton> {
     }
     final Widget segments = Row(
       mainAxisSize: widget.expand ? MainAxisSize.max : MainAxisSize.min,
-      children: <Widget>[main, const SizedBox(width: 2), arrow],
+      children: <Widget>[
+        Flexible(child: main),
+        const SizedBox(width: 2),
+        arrow,
+      ],
     );
     if (!widget.expand) return segments;
     return SizedBox(width: double.infinity, child: segments);
