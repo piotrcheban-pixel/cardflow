@@ -1,0 +1,147 @@
+00:00 +0: loading C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/redesign/statistics_screen_test.dart
+00:00 +0: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/guards/legacy_material_guard_test.dart: guard миграции: экраны этапа 3 без legacy-Material lib/ui/shell/app_shell.dart без AppBar/ListTile/FilledButton/M3E-виджетов
+00:00 +1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/guards/legacy_material_guard_test.dart: guard миграции: экраны этапа 3 без legacy-Material lib/ui/decks/decks_screen.dart без AppBar/ListTile/FilledButton/M3E-виджетов
+00:00 +2: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/guards/legacy_material_guard_test.dart: guard миграции: экраны этапа 3 без legacy-Material lib/ui/decks/deck_actions.dart без AppBar/ListTile/FilledButton/M3E-виджетов
+00:00 +3: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/guards/legacy_material_guard_test.dart: guard миграции: экраны этапа 3 без legacy-Material lib/ui/decks/deck_screen.dart без AppBar/ListTile/FilledButton/M3E-виджетов
+00:00 +4: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/guards/legacy_material_guard_test.dart: guard миграции: экраны этапа 3 без legacy-Material lib/ui/cards/card_form_screen.dart без AppBar/ListTile/FilledButton/M3E-виджетов
+00:00 +5: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/guards/legacy_material_guard_test.dart: guard миграции: экраны этапа 3 без legacy-Material lib/ui/cards/occlusion_mask_editor.dart без AppBar/ListTile/FilledButton/M3E-виджетов
+00:00 +6: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/guards/legacy_material_guard_test.dart: guard миграции: экраны этапа 3 без legacy-Material lib/ui/session/session_constructor_screen.dart без AppBar/ListTile/FilledButton/M3E-виджетов
+00:00 +7: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/guards/legacy_material_guard_test.dart: guard миграции: экраны этапа 3 без legacy-Material lib/ui/statistics/statistics_screen.dart без AppBar/ListTile/FilledButton/M3E-виджетов
+00:00 +7 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/guards/legacy_material_guard_test.dart: guard миграции: экраны этапа 3 без legacy-Material lib/ui/statistics/statistics_screen.dart без AppBar/ListTile/FilledButton/M3E-виджетов [E]
+  Expected: empty
+    Actual: ['AppBar', 'Card', 'CircularProgressIndicator']
+  В lib/ui/statistics/statistics_screen.dart остались Material-виджеты [AppBar, Card, CircularProgressIndicator] — REDESIGN-SPEC §9 требует Nc*-компоненты (REDESIGN-PLAN, этап 3).
+  
+  package:matcher                                     expect
+  package:flutter_test/src/widget_tester.dart 473:18  expect
+  test\guards\legacy_material_guard_test.dart 72:9    main.<fn>.<fn>
+  
+00:00 +7 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/guards/legacy_material_guard_test.dart: guard миграции: экраны этапа 3 без legacy-Material lib/ui/statistics/statistics_charts.dart без AppBar/ListTile/FilledButton/M3E-виджетов
+00:00 +8 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/guards/legacy_material_guard_test.dart: guard миграции: экраны этапа 3 без legacy-Material lib/ui/cards/content/card_content_view.dart без AppBar/ListTile/FilledButton/M3E-виджетов
+00:00 +9 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/guards/legacy_material_guard_test.dart: guard миграции: экраны этапа 3 без legacy-Material lib/ui/cards/content/card_image_view.dart без AppBar/ListTile/FilledButton/M3E-виджетов
+00:00 +10 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/guards/legacy_material_guard_test.dart: guard миграции: экраны этапа 3 без legacy-Material lib/ui/cards/content/card_text.dart без AppBar/ListTile/FilledButton/M3E-виджетов
+00:00 +11 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/guards/legacy_material_guard_test.dart: guard миграции: экраны этапа 3 без legacy-Material lib/ui/cards/content/cloze_text.dart без AppBar/ListTile/FilledButton/M3E-виджетов
+00:00 +12 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/guards/legacy_material_guard_test.dart: guard миграции: экраны этапа 3 без legacy-Material lib/ui/cards/content/inline_latex_text.dart без AppBar/ListTile/FilledButton/M3E-виджетов
+00:00 +13 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/guards/legacy_material_guard_test.dart: guard миграции: экраны этапа 3 без legacy-Material lib/ui/cards/content/latex_text.dart без AppBar/ListTile/FilledButton/M3E-виджетов
+00:00 +14 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/guards/legacy_material_guard_test.dart: guard миграции: экраны этапа 3 без legacy-Material lib/ui/cards/content/occlusion_image_view.dart без AppBar/ListTile/FilledButton/M3E-виджетов
+00:00 +15 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/guards/legacy_material_guard_test.dart: guard миграции: самопроверка ловит legacy-виджеты
+00:00 +16 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/guards/legacy_material_guard_test.dart: guard миграции: самопроверка не путает Nc-компоненты с запрещёнными
+00:00 +17 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/redesign/statistics_screen_test.dart: ключи §9.15 и новые элементы облика
+00:00 +18 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/redesign/statistics_screen_test.dart: ключи §9.15 и новые элементы облика
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following TestFailure was thrown running a test:
+Expected: exactly one matching candidate
+  Actual: _TextWidgetFinder:<Found 0 widgets with text "за 30 дней": []>
+   Which: means none were found but one was expected
+
+When the exception was thrown, this was the stack:
+#4      main.<anonymous closure> (file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/redesign/statistics_screen_test.dart:39:5)
+<asynchronous suspension>
+#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+This was caught by the test expectation on the following line:
+  file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/redesign/statistics_screen_test.dart line 39
+The test description was:
+  ключи §9.15 и новые элементы облика
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:01 +18 -2: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/statistics_screen_test.dart: данные: удержание, карта, слабые темы, прогноз, неделя
+00:01 +18 -2: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/redesign/statistics_screen_test.dart: ключи §9.15 и новые элементы облика [E]
+  Test failed. See exception logs above.
+  The test description was: ключи §9.15 и новые элементы облика
+  
+00:01 +18 -2: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/redesign/statistics_screen_test.dart: «Тренировать» — прежний переход с тегом
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following StateError was thrown running a test:
+Bad state: No element
+
+When the exception was thrown, this was the stack:
+#0      Iterable.single (dart:core/iterable.dart:694:25)
+#1      WidgetController.element (package:flutter_test/src/controller.dart:888:30)
+#2      WidgetController.ensureVisible (package:flutter_test/src/controller.dart:2389:32)
+#3      main.<anonymous closure> (file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/redesign/statistics_screen_test.dart:85:18)
+<asynchronous suspension>
+#4      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#5      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+The test description was:
+  «Тренировать» — прежний переход с тегом
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:01 +18 -3: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/statistics_screen_test.dart: данные: удержание, карта, слабые темы, прогноз, неделя
+00:01 +18 -3: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/redesign/statistics_screen_test.dart: «Тренировать» — прежний переход с тегом [E]
+  Test failed. See exception logs above.
+  The test description was: «Тренировать» — прежний переход с тегом
+  
+00:01 +19 -3: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/statistics_screen_test.dart: данные: удержание, карта, слабые темы, прогноз, неделя
+00:01 +20 -3: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/redesign/statistics_screen_test.dart: ширины: удержание на всю ширину, 2 колонки на ПК
+00:01 +21 -3: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/redesign/statistics_screen_test.dart: ширины: удержание на всю ширину, 2 колонки на ПК
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following TestFailure was thrown running a test:
+Expected: <312.0>
+  Actual: <873.0>
+
+When the exception was thrown, this was the stack:
+#4      main.<anonymous closure> (file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/redesign/statistics_screen_test.dart:114:5)
+<asynchronous suspension>
+#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+This was caught by the test expectation on the following line:
+  file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/redesign/statistics_screen_test.dart line 114
+The test description was:
+  ширины: удержание на всю ширину, 2 колонки на ПК
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:01 +21 -4: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/statistics_screen_test.dart: ошибка: сообщение и повтор запроса
+00:01 +21 -4: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/redesign/statistics_screen_test.dart: ширины: удержание на всю ширину, 2 колонки на ПК [E]
+  Test failed. See exception logs above.
+  The test description was: ширины: удержание на всю ширину, 2 колонки на ПК
+  
+00:01 +22 -4: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/redesign/statistics_screen_test.dart: textScale 2,0 на телефоне 360 × 740 без overflow
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following TestFailure was thrown running a test:
+Expected: null
+  Actual: FlutterError:<A RenderFlex overflowed by 65 pixels on the right.>
+textScale 2,0 не должен давать overflow (REDESIGN-SPEC §10)
+
+When the exception was thrown, this was the stack:
+#4      pumpNcScreenAtTextScale2 (file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/helpers/nc_screen_harness.dart:225:3)
+<asynchronous suspension>
+#5      main.<anonymous closure> (file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/redesign/statistics_screen_test.dart:130:5)
+<asynchronous suspension>
+#6      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#7      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+This was caught by the test expectation on the following line:
+  file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/helpers/nc_screen_harness.dart line 225
+The test description was:
+  textScale 2,0 на телефоне 360 × 740 без overflow
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:01 +22 -5: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/statistics_screen_test.dart: «Тренировать» открывает конструктор с тегом
+00:01 +22 -5: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/redesign/statistics_screen_test.dart: textScale 2,0 на телефоне 360 × 740 без overflow [E]
+  Test failed. See exception logs above.
+  The test description was: textScale 2,0 на телефоне 360 × 740 без overflow
+  
+00:01 +23 -5: Some tests failed.
+
+Failing tests:
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/guards/legacy_material_guard_test.dart: guard миграции: экраны этапа 3 без legacy-Material lib/ui/statistics/statistics_screen.dart без AppBar/ListTile/FilledButton/M3E-виджетов
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/redesign/statistics_screen_test.dart: textScale 2,0 на телефоне 360 × 740 без overflow
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/redesign/statistics_screen_test.dart: «Тренировать» — прежний переход с тегом
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/redesign/statistics_screen_test.dart: ключи §9.15 и новые элементы облика
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/redesign/statistics_screen_test.dart: ширины: удержание на всю ширину, 2 колонки на ПК

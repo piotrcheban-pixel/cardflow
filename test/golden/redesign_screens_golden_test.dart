@@ -8,6 +8,7 @@ import 'package:cardflow/ui/decks/deck_screen.dart';
 import 'package:cardflow/ui/cards/card_form_screen.dart';
 import 'package:cardflow/ui/decks/decks_screen.dart';
 import 'package:cardflow/ui/session/session_constructor_screen.dart';
+import 'package:cardflow/ui/statistics/statistics_screen.dart';
 
 import '../helpers/nc_golden.dart';
 import '../helpers/nc_screen_harness.dart';
@@ -26,6 +27,7 @@ void main() {
     'deck': () => const DeckScreen(deckId: 'deck-bio'),
     'card-form': () => const CardFormScreen(deckId: 'deck-bio'),
     'constructor': SessionConstructorScreen.new,
+    'statistics': StatisticsScreen.new,
   };
 
   for (final MapEntry<String, Widget Function()> screen in screens.entries) {

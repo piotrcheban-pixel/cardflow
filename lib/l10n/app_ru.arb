@@ -1712,6 +1712,18 @@
   "@statisticsRetentionNoData": {
     "description": "Удержание без данных за окно."
   },
+  "statisticsRetentionCaption": "за 30 дней",
+  "@statisticsRetentionCaption": {
+    "description": "Подпись под процентом удержания (REDESIGN-SPEC §9.15)."
+  },
+  "statisticsHeatmapLess": "меньше",
+  "@statisticsHeatmapLess": {
+    "description": "Легенда тепловой карты: меньше повторений."
+  },
+  "statisticsHeatmapMore": "больше",
+  "@statisticsHeatmapMore": {
+    "description": "Легенда тепловой карты: больше повторений."
+  },
   "statisticsHeatmapTitle": "Календарь повторений",
   "@statisticsHeatmapTitle": {
     "description": "Заголовок годовой тепловой карты."

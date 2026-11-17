@@ -140,6 +140,14 @@ List<Card> ncStage3Cards() {
   ];
 }
 
+/// Пустой снимок статистики (состояние «нет данных»).
+StatisticsSnapshot emptyStatistics() => StatisticsCalculator.build(
+  reviews: const <ReviewSample>[],
+  tagsByCard: const <String, List<String>>{},
+  dueDates: const <DateTime>[],
+  now: DateTime(2026, 11, 17, 12),
+);
+
 /// Снимок статистики с данными (удержание, карта, прогноз, слабые темы).
 StatisticsSnapshot ncStage3Statistics() {
   final DateTime now = DateTime(2026, 11, 17, 12);

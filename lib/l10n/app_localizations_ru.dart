@@ -1400,6 +1400,15 @@ class AppLocalizationsRu extends AppLocalizations {
   String get statisticsRetentionNoData => 'Нет повторений за 30 дней';
 
   @override
+  String get statisticsRetentionCaption => 'за 30 дней';
+
+  @override
+  String get statisticsHeatmapLess => 'меньше';
+
+  @override
+  String get statisticsHeatmapMore => 'больше';
+
+  @override
   String get statisticsHeatmapTitle => 'Календарь повторений';
 
   @override

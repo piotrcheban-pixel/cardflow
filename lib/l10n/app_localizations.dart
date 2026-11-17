@@ -2284,6 +2284,24 @@ abstract class AppLocalizations {
   /// **'Нет повторений за 30 дней'**
   String get statisticsRetentionNoData;
 
+  /// Подпись под процентом удержания (REDESIGN-SPEC §9.15).
+  ///
+  /// In ru, this message translates to:
+  /// **'за 30 дней'**
+  String get statisticsRetentionCaption;
+
+  /// Легенда тепловой карты: меньше повторений.
+  ///
+  /// In ru, this message translates to:
+  /// **'меньше'**
+  String get statisticsHeatmapLess;
+
+  /// Легенда тепловой карты: больше повторений.
+  ///
+  /// In ru, this message translates to:
+  /// **'больше'**
+  String get statisticsHeatmapMore;
+
   /// Заголовок годовой тепловой карты.
   ///
   /// In ru, this message translates to:
