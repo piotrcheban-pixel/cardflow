@@ -26,6 +26,7 @@ export 'components/nc_key_hint.dart';
 export 'components/nc_list_row.dart';
 export 'components/nc_monolith.dart';
 export 'components/nc_menu.dart';
+export 'components/nc_nav.dart';
 export 'components/nc_search_field.dart';
 export 'components/nc_progress_line.dart';
 export 'components/nc_rating_button.dart';
