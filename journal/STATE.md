@@ -21,8 +21,8 @@
 Красная зона и экраны: `git diff --stat 8e9db8a..HEAD` пуст (19 файлов
 Красной зоны, `*_screen.dart`, `app_shell.dart`, `review_chrome.dart`).
 
-**Сделано (шаги 2.1–2.8):** библиотека `lib/ui/design/components/` — 35
-компонентов + 6 внутренних примитивов (`NcTappable`, `NcPressScale`,
+**Сделано (шаги 2.1–2.8):** библиотека `lib/ui/design/components/` — 37
+компонентов + 7 внутренних примитивов (`NcTappable`, `NcPressScale`,
 `NcFocusRing`, `NcSpringBuilder`, `NcStagger`, `NcScrollCollapseScope`,
 `NcButtonAppearance`) по REDESIGN-SPEC §8: примитивы, действия, ввод,
 структура, оверлеи, прогресс, сессионные. Каждый компонент — на токенах
