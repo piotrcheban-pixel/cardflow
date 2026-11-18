@@ -173,10 +173,13 @@ void main() {
     testWidgets('карточка с due в будущем пишется как тренировка', (
       tester,
     ) async {
-      final deck = cards(
-        state: CardState.review,
-        due: now.add(const Duration(days: 2)),
+      // Экран работает с реальными часами (`isDueForStudy` сравнивает due с
+      // `DateTime.now().toUtc()`), поэтому фиксированная дата рано или поздно
+      // оказывается в прошлом. due считаем от текущего момента.
+      final DateTime futureDue = DateTime.now().toUtc().add(
+        const Duration(days: 30),
       );
+      final deck = cards(state: CardState.review, due: futureDue);
       final state = await pumpScreen(
         tester,
         location: '/decks/deck-1/test',
