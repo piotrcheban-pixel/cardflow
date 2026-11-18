@@ -12,6 +12,99 @@
 **Следующий шаг:** новая вёрстка экранов по макетам Google Stitch (владелец,
 2026-11-18) — в этой итерации макеты **не применялись** (L113).
 
+## TASK 02B — адаптивный планировщик фрагментов (2026-11-18)
+
+**Задача:** TASK 02B — планировщик по разделам D.4–D.7 аудита: бюджет модели,
+семантическое дробление текста, изображения как единицы содержимого,
+распределение карточек без «универсального 20», отсутствие потерь и дублей.
+Интеграция `GenerationPipeline`/`CardGenerationService`/адаптеров/UI/БД **не
+выполнялась** (условие этапа), реальные API-запросы не запускались.
+
+**Факты старта:** `git status --porcelain` → `?? redesign/` (каталог владельца
+не тронут); `HEAD = a7a89a8` (`docs(journal): record TASK 01 audit and TASK 02A
+foundation`), ветка `main`; коммиты предыдущих этапов на месте: `8e90618`
+(TASK 01, аудит), `007fcc4` (TASK 02A, контракты), `a7a89a8` (журнал).
+Baseline 02A — 1899 passed + 8 skipped, `analyze` 0, `format` 459/0. Прогоны —
+только с `--no-pub` (L64).
+
+**Сделано (новые файлы + совместимое расширение старых; production-путь прежний):**
+- `lib/domain/generation/content_token_estimator.dart` — минимальный контракт
+  оценки единиц (`ContentTokenEstimator`: `version`, `charsPerToken`,
+  `estimateText`, `estimateImage`) и `ImageTokenEstimate` с источником и
+  пометкой допущения. Эвристика: текст — существующий `TokenEstimator` (2,5
+  симв./токен); изображение — `ImageTokenModel` модели, если он есть, иначе
+  размерная (750 px/токен) или байтовая (256 байт/токен) эвристика с
+  `isAssumption`; универсальных 1000 токенов и `length/3.5` нет. Заменяется
+  `GenerationEstimator` этапа G без смены контракта.
+- `lib/domain/generation/generation_chunk_planner.dart` — `GenerationChunkPlanner`,
+  `GenerationChunkPlannerConfig` (мягкая цель 6000 материала/карточку,
+  `maxChunks = 512`, глубина дробления 3, допущения лимитов изображений/тела),
+  `GenerationOverheadTokens`, `GenerationPlanCoverage`. Бюджет — по D.1 через
+  существующий `GenerationBudget` (`окно − резерв вывода − обвязка − запас
+  5 %/≥256`), отдельно `maxInputTokens`/`maxRequestBytes` (base64);
+  неизвестное окно — 6000/2048 с `BudgetSource.assumption`; при нехватке
+  бюджета план `invalid` (`contextWindowTooSmall`), а не «всё равно 2000».
+  Упаковка жадная по единицам, дробление `раздел → абзац → предложение →
+  строка → руна`, жёсткое деление не рвёт суррогатную пару; прогресс
+  гарантирован (нет зацикливания на пограничном фрагменте — бюджет дробления
+  вычитает заголовок файла, повтор без прогресса → `unitTooLarge`).
+  Изображения: части с сохранением `img:`-id и каталога документа, остальные —
+  `catalogOnly`; подгруппы по лимитам модели, orphan-изображения — отдельные
+  фрагменты; всё, что не влезло, — в `omitted` с причиной. Лимит карточек —
+  из бюджета вывода и `maxCardsPerRequest`; заказ распределяется без нулей и
+  без молчаливого среза (предупреждения `requestedAbovePlan`/
+  `cardsAboveRequested`).
+- `lib/api/generation/generation_plan_builder.dart` — `ContentInventory` из
+  `ParsedDocument`/`GenerationAttachment`/`DocumentImage`: стабильные id,
+  непрерывное покрытие текста раздела абзацами (конкатенация = текст раздела),
+  каталог документа, страницы вложений по `groupKey`, orphan-изображения;
+  фиксированная обвязка (системный промпт `gen-ru-v7`, каноническая JSON-схема,
+  обёртка через существующий `buildGenerationUserContent`), пожелания и заказ
+  карточек; строка каталога — существующий `imageCatalogLine` (без второй
+  реализации формата).
+- `lib/domain/generation/generation_plan.dart` — аддитивно: `PlannedChunk.
+  materialsText` (in-memory, в БД не пишется), `imagePartIds`/`catalogOnlyIds`
+  для проверяемого покрытия, `PlanWarningCode.omittedUnits`,
+  `PlanInvalidReason.tooManyChunks`.
+- `lib/domain/generation/generation_chunker.dart` — совместимый фасад: новые
+  поля `GenerationChunk` (`unitIds`, `splitDepth`, `imageParts`,
+  `catalogOnly`) с умолчаниями, методы `planChunks`/`chunksFromPlan`; старые
+  `chunkDocuments`/`chunkAll`/`splitInHalf` не изменили поведение
+  (`splitInHalf` очищает новые поля и увеличивает глубину).
+- Тесты (+66): `generation_chunk_planner_test` (сценарии 1–30, параметризованные
+  объёмы 1/3/12/40 абзацев × 0/1/8/20 изображений, линейность, отсутствие
+  `kMaxCardsPerChunk`/`kImageTokenEstimate`), `content_token_estimator_test`,
+  `generation_plan_builder_test`. Проверяются: покрытие (нет потерь), отсутствие
+  дублей частей/страниц, исходный порядок, сохранение `image_id` и связей
+  изображение↔раздел после дробления, 1/8/20/50/100 изображений, разные лимиты
+  моделей, payload, неизвестное окно, окна 8000/128000/200000/1M,
+  недостаточный бюджет, очень большой документ, заказ карточек,
+  совместимость старого `GenerationChunker`.
+
+**Гейты:** `fvm flutter test --no-pub --coverage --exclude-tags golden` →
+**1965 passed + 8 skipped** (`All tests passed!`; baseline 1899 + 8, +66);
+покрытие рукописного кода **92.1 % (15066/16361)**; новые файлы —
+`generation_plan_builder` **100 % (135/135)**, `content_token_estimator`
+**100 % (24/24)**, `generation_chunk_planner` **90.0 % (812/902)**,
+`generation_plan` **96.8 % (90/93)**, `generation_chunker` **95.2 % (237/249)**;
+`fvm flutter analyze --no-pub` → **No issues found!**;
+`fvm dart format --set-exit-if-changed lib test integration_test tool` →
+**465 файлов / 0 changed**.
+
+**Ограничения/долги (осознанно вне TASK 02B; L121–L127 в
+`journal/KNOWN_LIMITATIONS.md`):** планировщик не подключён к пайплайну
+(production-путь — прежний чанкер с 2000-клампом и 20 карточками); оценка
+токенов — эвристика без калибровки по `usage`; заказ из пожеланий по-прежнему
+режется парсером до 200 (политика L-24, не планировщика); второй проход D.5
+(заказ меньше числа фрагментов) не реализован — план предупреждает
+`cardsAboveRequested`; prompt-only фрагмент создаёт пайплайн (пустой
+`PlannedChunk` запрещён контрактом 02A); дедуп одинаковых байтов изображений
+остаётся в сервисе.
+
+**Следующий шаг:** TASK 02C — интеграция плана в `GenerationPipeline`
+(план → запросы, восстановление/дробление по единицам, `retryable`), затем
+оценщик G, UI/стоимость и БД K1. На TASK 02B работа остановлена.
+
 ## TASK 02A — фундамент адаптивной генерации: доменные контракты (2026-11-18)
 
 **Задача:** TASK 02A — только фундамент архитектуры из
