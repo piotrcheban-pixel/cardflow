@@ -367,6 +367,70 @@ void main() {
     }
   });
 
+  test('20/21/50/100/200/201/500/1000 карточек: заказ не режется', () {
+    final List<ParsedDocument> documents = <ParsedDocument>[
+      docOf('cards.txt', <String>['Короткий материал.']),
+    ];
+    final ModelCapabilities capabilities = caps(maxOutput: 50000, maxCards: 40);
+    for (final int requested in <int>[20, 21, 50, 100, 200, 201, 500, 1000]) {
+      final GenerationPlan plan = makePlan(
+        documents: documents,
+        capabilities: capabilities,
+        requestedCards: requested,
+      );
+      expect(plan.requestedCards, requested, reason: 'заказ $requested');
+      expect(plan.plannedCards, lessThanOrEqualTo(requested));
+      if (requested > 40) {
+        expect(
+          plan.validity.warnings,
+          contains(PlanWarningCode.requestedAbovePlan),
+          reason: 'заказ $requested не помещается в один фрагмент',
+        );
+        expect(plan.plannedCards, 40, reason: 'потолок модели, не 20/200');
+      } else {
+        expect(plan.plannedCards, requested);
+      }
+    }
+  });
+
+  test('1/8/20/50/100 изображений: учтены, без дублей и потерь', () {
+    for (final int count in <int>[1, 8, 20, 50, 100]) {
+      final List<ParsedDocument> documents = <ParsedDocument>[
+        docOf(
+          'images.txt',
+          <String>['Текст с изображениями.'],
+          images: <DocumentImage>[
+            for (var index = 0; index < count; index++)
+              imageOf(fileName: 'images.txt', index: index, sectionIndex: 0),
+          ],
+        ),
+      ];
+      final GenerationPlan plan = makePlan(
+        documents: documents,
+        capabilities: caps(vision: true, maxImages: 8),
+      );
+      final List<String> partIds = <String>[
+        for (final PlannedChunk chunk in plan.chunks) ...chunk.imagePartIds,
+      ];
+      final List<String> catalogIds = <String>[
+        for (final PlannedChunk chunk in plan.chunks) ...chunk.catalogOnlyIds,
+      ];
+      final List<String> omitted = <String>[
+        for (final OmittedUnit unit in plan.omitted) unit.unitId,
+      ];
+      expect(
+        <String>{...partIds, ...catalogIds, ...omitted},
+        hasLength(count),
+        reason: 'изображений $count: ни одно не потеряно',
+      );
+      expect(partIds.toSet(), hasLength(partIds.length));
+      for (final PlannedChunk chunk in plan.chunks) {
+        expect(chunk.imagePartIds.length, lessThanOrEqualTo(8));
+      }
+      expectCoverage(plan, documents);
+    }
+  });
+
   test('заказ выше возможностей модели: requestedAbovePlan видим', () {
     final List<ParsedDocument> documents = <ParsedDocument>[
       docOf('cards.txt', <String>['Короткий материал.']),
