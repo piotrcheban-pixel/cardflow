@@ -123,7 +123,14 @@ due считается от текущего момента (`DateTime.now().toU
 по-прежнему проверяет «будущая due → тренировка». Заодно закрыто **L92**:
 job `test` теперь `--exclude-tags golden,live` (обычный прогон офлайновый и
 детерминированный; live-проверки — по тегу), аннотация падений публикует
-строки `Failing tests`/`[E]`, guard `ci_pdfium_test` обновлён.
+строки `Failing tests`/`[E]`, guard `ci_pdfium_test` обновлён. После фикса
+(`9cf28a2`) прогон
+[`44349211802`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/44349211802):
+`format + analyze` ✅, `test` Ubuntu ✅, `test` Windows ✅, 6 сборок ✅;
+`test` macOS **отменён раннером** — «The job was not acquired by Runner of type
+hosted even after multiple attempts» (capacity constraints macOS arm64), шагов
+не было, т.е. инфраструктура, а не ошибка кода → итоговый conclusion прогона
+`failure` только из-за этого; повторный прогон — после docs-коммита.
 
 ## Итерация cleanup-1 — отказ от «Nocturne» и фикс «Создать колоду» (2026-11-18, ADR-036)
 
