@@ -352,6 +352,49 @@ class _GenerationPreviewScreenState
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
         children: <Widget>[
+          if (_result.requestedCards > 0 &&
+              _result.requestedCards > _result.achievableCards)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                l10n.generationPlanRequestedAboveAchievable(
+                  _result.requestedCards,
+                  _result.achievableCards,
+                ),
+                key: const ValueKey<String>('generation-preview-plan-warning'),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.tertiary,
+                ),
+              ),
+            ),
+          if (_result.requestedCards > 0 &&
+              _result.achievableCards > _result.requestedCards)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                l10n.generationPlanAchievableAboveRequested(
+                  _result.requestedCards,
+                  _result.achievableCards,
+                ),
+                key: const ValueKey<String>(
+                  'generation-preview-plan-above-requested',
+                ),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.tertiary,
+                ),
+              ),
+            ),
+          if (_result.plan != null && _result.plan!.hasOmittedUnits)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                l10n.generationPlanOmittedUnits(_result.plan!.omitted.length),
+                key: const ValueKey<String>('generation-preview-plan-omitted'),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.tertiary,
+                ),
+              ),
+            ),
           if (_result.cancelled)
             Padding(
               padding: const EdgeInsets.only(bottom: 8),

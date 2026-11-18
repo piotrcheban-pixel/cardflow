@@ -14,6 +14,12 @@ String generationFailureReasonMessage(
     GenerationFailureReason.refusal => l10n.generationReasonRefusal,
     GenerationFailureReason.safety => l10n.generationReasonSafety,
     GenerationFailureReason.jsonParse => l10n.generationReasonJsonParse,
+    GenerationFailureReason.contextOverflow =>
+      l10n.generationReasonContextOverflow,
+    GenerationFailureReason.payloadTooLarge =>
+      l10n.generationReasonPayloadTooLarge,
+    GenerationFailureReason.unsupportedModality =>
+      l10n.generationReasonUnsupportedModality,
     GenerationFailureReason.schemaInvalid => l10n.generationReasonSchemaInvalid,
     GenerationFailureReason.validatorRejected =>
       l10n.generationReasonValidatorRejected,

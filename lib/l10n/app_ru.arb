@@ -790,9 +790,17 @@
   "@generationErrorPdfScanVisionRequired": {
     "description": "Генерация: PDF-скан отрендерен в страницы, а у модели нет Vision (итерация 7.9)."
   },
-  "generationErrorAttachmentTooLarge": "Файл больше 10 МБ. Уменьшите файл и попробуйте снова",
+  "generationErrorAttachmentTooLarge": "Файл больше допустимого размера. Уменьшите файл и попробуйте снова",
   "@generationErrorAttachmentTooLarge": {
-    "description": "Генерация: вложение больше inline-лимита 10 МБ (итерация 7.8)."
+    "description": "Генерация: вложение больше inline-лимита (итерация 7.8; лимит может задаваться возможностями аккаунта)."
+  },
+  "generationErrorContextOverflow": "Материала слишком много для выбранной модели. Уменьшите объём или выберите модель с большим контекстом",
+  "@generationErrorContextOverflow": {
+    "description": "Генерация: план не выполняется из-за окна контекста/лимита токенов (TASK 02B-FINAL)."
+  },
+  "generationErrorPayloadTooLarge": "Запрос слишком большой для выбранной модели. Уменьшите объём материалов или изображений",
+  "@generationErrorPayloadTooLarge": {
+    "description": "Генерация: HTTP 413 или превышен лимит тела запроса (TASK 02B-FINAL)."
   },
   "generationErrorRateLimited": "Превышен лимит запросов. Повтор через {seconds, plural, one{{seconds} секунду} few{{seconds} секунды} many{{seconds} секунд} other{{seconds} секунды}}",
   "@generationErrorRateLimited": {
@@ -1301,6 +1309,51 @@
   "generationReasonUnknown": "неизвестная ошибка фрагмента",
   "@generationReasonUnknown": {
     "description": "Причина падения фрагмента: unknown."
+  },
+  "generationReasonContextOverflow": "переполнение контекста модели",
+  "@generationReasonContextOverflow": {
+    "description": "Причина падения фрагмента: context_overflow (TASK 02B-FINAL)."
+  },
+  "generationReasonPayloadTooLarge": "слишком большой размер запроса",
+  "@generationReasonPayloadTooLarge": {
+    "description": "Причина падения фрагмента: payload_too_large (TASK 02B-FINAL)."
+  },
+  "generationReasonUnsupportedModality": "модель не поддерживает тип вложения",
+  "@generationReasonUnsupportedModality": {
+    "description": "Причина падения фрагмента: unsupported_modality (TASK 02B-FINAL)."
+  },
+  "generationPlanRequestedAboveAchievable": "Запрошено {requested} карточек, план может выдать {achievable}: бюджета модели не хватает на весь заказ. Материалы не потеряны; чтобы получить больше карточек, выберите модель с большим лимитом вывода или уменьшите объём.",
+  "@generationPlanRequestedAboveAchievable": {
+    "description": "Предупреждение плана: запрошено больше карточек, чем безопасно получить (TASK 02B-FINAL).",
+    "placeholders": {
+      "requested": {
+        "type": "int"
+      },
+      "achievable": {
+        "type": "int"
+      }
+    }
+  },
+  "generationPlanAchievableAboveRequested": "Запрошено {requested} карточек, но материалы не удалось укрупнить до меньшего числа фрагментов: план может выдать до {achievable}. Уменьшите объём материалов или число карточек.",
+  "@generationPlanAchievableAboveRequested": {
+    "description": "Предупреждение плана: фрагменты не удалось объединить, сумма лимитов больше заказа (D.5, TASK 02B-FINAL).",
+    "placeholders": {
+      "requested": {
+        "type": "int"
+      },
+      "achievable": {
+        "type": "int"
+      }
+    }
+  },
+  "generationPlanOmittedUnits": "Часть материалов не вошла в план: {count} единиц. Уменьшите объём или выберите модель с большим контекстом.",
+  "@generationPlanOmittedUnits": {
+    "description": "Предупреждение плана: единицы не поместились в бюджет (TASK 02B-FINAL).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "generationDuplicatesRemoved": "{count, plural, =0{Дубликатов нет} one{{count} дубликат пропущен} few{{count} дубликата пропущено} many{{count} дубликатов пропущено} other{{count} дубликата пропущено}}",
   "@generationDuplicatesRemoved": {

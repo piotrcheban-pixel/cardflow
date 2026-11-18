@@ -639,7 +639,15 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get generationErrorAttachmentTooLarge =>
-      'Файл больше 10 МБ. Уменьшите файл и попробуйте снова';
+      'Файл больше допустимого размера. Уменьшите файл и попробуйте снова';
+
+  @override
+  String get generationErrorContextOverflow =>
+      'Материала слишком много для выбранной модели. Уменьшите объём или выберите модель с большим контекстом';
+
+  @override
+  String get generationErrorPayloadTooLarge =>
+      'Запрос слишком большой для выбранной модели. Уменьшите объём материалов или изображений';
 
   @override
   String generationErrorRateLimited(int seconds) {
@@ -1053,6 +1061,32 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get generationReasonUnknown => 'неизвестная ошибка фрагмента';
+
+  @override
+  String get generationReasonContextOverflow => 'переполнение контекста модели';
+
+  @override
+  String get generationReasonPayloadTooLarge =>
+      'слишком большой размер запроса';
+
+  @override
+  String get generationReasonUnsupportedModality =>
+      'модель не поддерживает тип вложения';
+
+  @override
+  String generationPlanRequestedAboveAchievable(int requested, int achievable) {
+    return 'Запрошено $requested карточек, план может выдать $achievable: бюджета модели не хватает на весь заказ. Материалы не потеряны; чтобы получить больше карточек, выберите модель с большим лимитом вывода или уменьшите объём.';
+  }
+
+  @override
+  String generationPlanAchievableAboveRequested(int requested, int achievable) {
+    return 'Запрошено $requested карточек, но материалы не удалось укрупнить до меньшего числа фрагментов: план может выдать до $achievable. Уменьшите объём материалов или число карточек.';
+  }
+
+  @override
+  String generationPlanOmittedUnits(int count) {
+    return 'Часть материалов не вошла в план: $count единиц. Уменьшите объём или выберите модель с большим контекстом.';
+  }
 
   @override
   String generationDuplicatesRemoved(int count) {

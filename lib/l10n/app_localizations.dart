@@ -1108,11 +1108,23 @@ abstract class AppLocalizations {
   /// **'PDF-скан без текста. Выберите модель с поддержкой изображений'**
   String get generationErrorPdfScanVisionRequired;
 
-  /// Генерация: вложение больше inline-лимита 10 МБ (итерация 7.8).
+  /// Генерация: вложение больше inline-лимита (итерация 7.8; лимит может задаваться возможностями аккаунта).
   ///
   /// In ru, this message translates to:
-  /// **'Файл больше 10 МБ. Уменьшите файл и попробуйте снова'**
+  /// **'Файл больше допустимого размера. Уменьшите файл и попробуйте снова'**
   String get generationErrorAttachmentTooLarge;
+
+  /// Генерация: план не выполняется из-за окна контекста/лимита токенов (TASK 02B-FINAL).
+  ///
+  /// In ru, this message translates to:
+  /// **'Материала слишком много для выбранной модели. Уменьшите объём или выберите модель с большим контекстом'**
+  String get generationErrorContextOverflow;
+
+  /// Генерация: HTTP 413 или превышен лимит тела запроса (TASK 02B-FINAL).
+  ///
+  /// In ru, this message translates to:
+  /// **'Запрос слишком большой для выбранной модели. Уменьшите объём материалов или изображений'**
+  String get generationErrorPayloadTooLarge;
 
   /// Генерация: HTTP 429 с Retry-After, пауза в секундах (SPEC A8.6).
   ///
@@ -1755,6 +1767,42 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'неизвестная ошибка фрагмента'**
   String get generationReasonUnknown;
+
+  /// Причина падения фрагмента: context_overflow (TASK 02B-FINAL).
+  ///
+  /// In ru, this message translates to:
+  /// **'переполнение контекста модели'**
+  String get generationReasonContextOverflow;
+
+  /// Причина падения фрагмента: payload_too_large (TASK 02B-FINAL).
+  ///
+  /// In ru, this message translates to:
+  /// **'слишком большой размер запроса'**
+  String get generationReasonPayloadTooLarge;
+
+  /// Причина падения фрагмента: unsupported_modality (TASK 02B-FINAL).
+  ///
+  /// In ru, this message translates to:
+  /// **'модель не поддерживает тип вложения'**
+  String get generationReasonUnsupportedModality;
+
+  /// Предупреждение плана: запрошено больше карточек, чем безопасно получить (TASK 02B-FINAL).
+  ///
+  /// In ru, this message translates to:
+  /// **'Запрошено {requested} карточек, план может выдать {achievable}: бюджета модели не хватает на весь заказ. Материалы не потеряны; чтобы получить больше карточек, выберите модель с большим лимитом вывода или уменьшите объём.'**
+  String generationPlanRequestedAboveAchievable(int requested, int achievable);
+
+  /// Предупреждение плана: фрагменты не удалось объединить, сумма лимитов больше заказа (D.5, TASK 02B-FINAL).
+  ///
+  /// In ru, this message translates to:
+  /// **'Запрошено {requested} карточек, но материалы не удалось укрупнить до меньшего числа фрагментов: план может выдать до {achievable}. Уменьшите объём материалов или число карточек.'**
+  String generationPlanAchievableAboveRequested(int requested, int achievable);
+
+  /// Предупреждение плана: единицы не поместились в бюджет (TASK 02B-FINAL).
+  ///
+  /// In ru, this message translates to:
+  /// **'Часть материалов не вошла в план: {count} единиц. Уменьшите объём или выберите модель с большим контекстом.'**
+  String generationPlanOmittedUnits(int count);
 
   /// Сколько дублей отсеяла дедупликация (SPEC A8.5 шаг 9).
   ///

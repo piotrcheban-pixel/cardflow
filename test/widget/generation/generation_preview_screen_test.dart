@@ -9,8 +9,10 @@ import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/cards/occlusion.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
 import 'package:cardflow/domain/generation/generation_attachment.dart';
+import 'package:cardflow/domain/generation/generation_chunker.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
 import 'package:cardflow/domain/generation/generation_job.dart';
+import 'package:cardflow/domain/generation/generation_plan.dart';
 import 'package:cardflow/domain/generation/generation_run.dart';
 import 'package:cardflow/domain/text/parsed_document.dart';
 import 'package:cardflow/ui/generation/generation_preview_screen.dart';
@@ -18,6 +20,7 @@ import 'package:cardflow/ui/state/app_providers.dart';
 
 import '../../helpers/decks_fakes.dart';
 import '../../helpers/generation_fakes.dart';
+import '../../helpers/generation_plan_fakes.dart';
 import '../../helpers/pump_app.dart';
 
 void main() {
@@ -42,6 +45,7 @@ void main() {
     List<GenerationChunkFailure>? failures,
     int duplicatesRemoved = 0,
     int tokensUsed = 42,
+    GenerationPlan? plan,
   }) {
     return GenerationRunResult(
       jobId: 'job-1',
@@ -69,6 +73,7 @@ void main() {
       duplicatesRemoved: duplicatesRemoved,
       chunkCount: 2,
       cancelled: false,
+      plan: plan,
     );
   }
 
@@ -96,6 +101,54 @@ void main() {
     );
     await tester.pumpAndSettle();
   }
+
+  testWidgets('план: заказ больше достижимого — предупреждение видно', (
+    tester,
+  ) async {
+    final GenerationPlan plan = testPlanFromChunks(<GenerationChunk>[
+      const GenerationChunk(
+        index: 1,
+        materialsText: 'материал',
+        sourceFiles: <String>['a.txt'],
+        limit: 7,
+      ),
+    ], requestedCards: 20);
+    await pumpPreview(tester, resultWith(plan: plan));
+    final l10n = l10nOf(tester);
+    expect(
+      find.byKey(const ValueKey<String>('generation-preview-plan-warning')),
+      findsOneWidget,
+    );
+    expect(
+      find.text(l10n.generationPlanRequestedAboveAchievable(20, 7)),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('план: лимиты больше заказа — предупреждение видно', (
+    tester,
+  ) async {
+    final GenerationPlan plan = testPlanFromChunks(<GenerationChunk>[
+      const GenerationChunk(
+        index: 1,
+        materialsText: 'материал',
+        sourceFiles: <String>['a.txt'],
+        limit: 3,
+      ),
+    ], requestedCards: 1);
+    await pumpPreview(tester, resultWith(plan: plan));
+    final l10n = l10nOf(tester);
+    expect(
+      find.byKey(
+        const ValueKey<String>('generation-preview-plan-above-requested'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.text(l10n.generationPlanAchievableAboveRequested(1, 3)),
+      findsOneWidget,
+    );
+  });
 
   testWidgets('рендер: карточки, выбор, дубли и токены', (tester) async {
     await pumpPreview(tester, resultWith(duplicatesRemoved: 2, tokensUsed: 42));

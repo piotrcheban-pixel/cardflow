@@ -28,6 +28,8 @@ String generationErrorCodeMessage(
       providerReason == null || providerReason.trim().isEmpty
           ? l10n.generationErrorBadRequest
           : l10n.generationErrorBadRequestReason(providerReason.trim()),
+    GenerationErrorCode.contextOverflow => l10n.generationErrorContextOverflow,
+    GenerationErrorCode.payloadTooLarge => l10n.generationErrorPayloadTooLarge,
     GenerationErrorCode.rateLimited =>
       retryAfter == null
           ? l10n.generationErrorRateLimitedNoDelay

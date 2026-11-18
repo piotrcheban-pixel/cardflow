@@ -6,6 +6,7 @@
 /// файлов и провайдера показываются кодами без сырых исключений.
 library;
 
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:desktop_drop/desktop_drop.dart';
@@ -15,29 +16,29 @@ import 'package:material_ui/material_ui.dart';
 import 'package:path/path.dart' as p;
 
 import 'package:cardflow/api/generation/generation_cancellation.dart';
-import 'package:cardflow/api/generation/generation_images.dart'
-    show kMaxVisionDocumentImages;
 import 'package:cardflow/api/generation/generation_pipeline.dart';
+import 'package:cardflow/api/generation/generation_prompt.dart';
 import 'package:cardflow/api/generation/system_prompt.dart';
 import 'package:cardflow/api/parsers/file_parsing_service.dart';
 import 'package:cardflow/api/parsers/pdf_page_classifier.dart';
 import 'package:cardflow/api/parsers/pdf_scan_pages.dart';
 import 'package:cardflow/domain/decks/deck.dart';
 import 'package:cardflow/domain/generation/api_key_store.dart';
+import 'package:cardflow/domain/generation/content_token_estimator.dart';
 import 'package:cardflow/domain/generation/document_gateway.dart';
 import 'package:cardflow/domain/generation/document_image.dart';
 import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/generation/deck_name.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
+import 'package:cardflow/domain/generation/generation_budget.dart';
 import 'package:cardflow/domain/generation/generation_card_store.dart';
-import 'package:cardflow/domain/generation/generation_chunker.dart'
-    show kImageTokenEstimate;
+import 'package:cardflow/domain/generation/generation_chunk_planner.dart'
+    show GenerationChunkPlannerConfig;
 import 'package:cardflow/domain/generation/generation_error.dart';
-import 'package:cardflow/domain/generation/generation_model.dart';
 import 'package:cardflow/domain/generation/generation_run.dart';
+import 'package:cardflow/domain/generation/model_capabilities.dart';
 import 'package:cardflow/domain/generation/provider_account.dart';
 import 'package:cardflow/domain/generation/provider_preset.dart';
-import 'package:cardflow/domain/generation/token_estimator.dart';
 import 'package:cardflow/domain/text/document_format.dart';
 import 'package:cardflow/domain/text/parsed_document.dart';
 import 'package:cardflow/domain/text/parser_exception.dart';
@@ -51,9 +52,6 @@ import 'package:cardflow/ui/generation/parser_error_message.dart';
 import 'package:cardflow/ui/router/app_router.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
 import 'package:cardflow/ui/state/decks_ui_providers.dart';
-
-/// Порог предупреждения о большом объёме материалов (SPEC A8.5 шаг 4).
-const int _largeMaterialTokenThreshold = 100000;
 
 /// Порог «PDF-скан»: меньше символов текста — отправляем страницы как PNG
 /// (итерация 7.9, ADR-023).
@@ -93,7 +91,8 @@ class GenerationScreen extends ConsumerStatefulWidget {
 }
 
 class _GenerationScreenState extends ConsumerState<GenerationScreen> {
-  final TokenEstimator _estimator = const TokenEstimator();
+  final ContentTokenEstimator _estimator =
+      const HeuristicContentTokenEstimator();
   final TextEditingController _wishesController = TextEditingController();
   final TextEditingController _deckNameController = TextEditingController();
 
@@ -230,29 +229,69 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
   bool get _anyParsing =>
       _files.any((_AttachedFile file) => file.status == _FileStatus.parsing);
 
+  /// Оценка входа до запуска (информационная, не бюджет).
+  ///
+  /// Считается тем же оценщиком единиц содержимого, что и план: текст — по
+  /// символам, изображения — по размерам/байтам, без универсальных 1000
+  /// токенов и без зашитого числа image-частей. Точный бюджет и число запросов
+  /// определяет `GenerationPlan` перед генерацией.
   int get _estimatedTokens {
     final String wishes = _wishesController.text.trim();
-    return _estimator.estimateAll(
-          _parsedDocuments.map((ParsedDocument document) => document.text),
-        ) +
-        _attachments.length * kImageTokenEstimate +
-        // Vision-части из изображений документов (ADR-037): не больше лимита.
-        (documentImagesCount > kMaxVisionDocumentImages
-                ? kMaxVisionDocumentImages
-                : documentImagesCount) *
-            kImageTokenEstimate +
-        _estimator.estimate(systemPromptGenRuV7) +
-        kPromptWrapperTokenReserve +
-        (wishes.isEmpty ? 0 : _estimator.estimate(wishes));
+    int tokens = 0;
+    for (final ParsedDocument document in _parsedDocuments) {
+      tokens += _estimator.estimateText(document.text);
+    }
+    for (final GenerationAttachment attachment in _attachments) {
+      tokens += _estimator.estimateImage(bytes: attachment.bytes.length).tokens;
+    }
+    final List<DocumentImage> documentImages = <DocumentImage>[
+      for (final ParsedDocument document in _parsedDocuments)
+        ...document.images,
+      ..._scanDocumentImages,
+    ];
+    final int maxImageParts =
+        _requestAccount?.maxImagesPerRequest ??
+        const GenerationChunkPlannerConfig().assumedMaxImagesPerChunk;
+    final int parts = math.min(documentImages.length, maxImageParts);
+    for (var index = 0; index < parts; index++) {
+      final DocumentImage image = documentImages[index];
+      tokens += _estimator
+          .estimateImage(
+            width: image.width,
+            height: image.height,
+            bytes: image.bytes.length,
+          )
+          .tokens;
+    }
+    tokens += _estimator.estimateText(systemPromptGenRuV7);
+    tokens += _estimator.estimateText(
+      buildGenerationUserContent(
+        materialsText: '',
+        wishes: wishes.isEmpty ? null : wishes,
+        limit: 1,
+        imagesCatalog: '',
+      ),
+    );
+    return tokens;
   }
 
-  /// Сколько изображений документов уйдёт модели (для оценки токенов).
-  int get documentImagesCount =>
-      _parsedDocuments.fold<int>(
-        0,
-        (int sum, ParsedDocument document) => sum + document.images.length,
-      ) +
-      _scanDocumentImages.length;
+  /// true, если ориентировочный объём материалов больше входного бюджета
+  /// выбранной модели (L-27: предупреждение связано с бюджетом, а не с
+  /// «магическим» порогом 100 000).
+  bool get _estimateExceedsInputBudget {
+    final ProviderAccount? account = _requestAccount;
+    if (account == null) return false;
+    final GenerationBudget budget = GenerationBudget.compute(
+      capabilities: resolveModelCapabilities(account),
+      limit: 1,
+      systemPromptTokens: _estimator.estimateText(systemPromptGenRuV7),
+      schemaTokens: 0,
+      wrapperTokens: 0,
+      catalogTokens: 0,
+      imageTokens: 0,
+    );
+    return budget.inputBudget > 0 && _estimatedTokens > budget.inputBudget;
+  }
 
   Future<void> _pickFiles() async {
     try {
@@ -892,7 +931,7 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
               style: theme.textTheme.bodyMedium,
             ),
           ],
-          if (estimate > _largeMaterialTokenThreshold) ...<Widget>[
+          if (_estimateExceedsInputBudget) ...<Widget>[
             const SizedBox(height: 4),
             Text(
               l10n.generationEstimateWarning,
