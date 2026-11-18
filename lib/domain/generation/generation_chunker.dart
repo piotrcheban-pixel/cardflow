@@ -2,8 +2,13 @@
 /// ADR-015). Домен не зависит от Flutter.
 library;
 
+import 'package:cardflow/domain/generation/content_unit.dart';
 import 'package:cardflow/domain/generation/document_image.dart';
 import 'package:cardflow/domain/generation/generation_attachment.dart';
+import 'package:cardflow/domain/generation/generation_budget.dart';
+import 'package:cardflow/domain/generation/generation_chunk_planner.dart';
+import 'package:cardflow/domain/generation/generation_plan.dart';
+import 'package:cardflow/domain/generation/model_capabilities.dart';
 import 'package:cardflow/domain/generation/token_estimator.dart';
 import 'package:cardflow/domain/text/parsed_document.dart';
 
@@ -27,6 +32,10 @@ class GenerationChunk {
     this.splitAttempted = false,
     this.images = const <GenerationAttachment>[],
     this.documentImages = const <DocumentImage>[],
+    this.unitIds = const <String>[],
+    this.splitDepth = 0,
+    this.imageParts = const <DocumentImage>[],
+    this.catalogOnly = const <DocumentImage>[],
   });
 
   /// Порядковый номер фрагмента (с 1) для прогресса «фрагмент K из M».
@@ -50,6 +59,24 @@ class GenerationChunk {
   /// Изображения из прикреплённых файлов этого фрагмента (fix-gen, Д3).
   final List<DocumentImage> documentImages;
 
+  /// Стабильные id единиц содержимого фрагмента (новый путь-план, TASK 02B).
+  ///
+  /// У фрагментов старого пути (`chunkDocuments`/`chunkAll`) список пуст.
+  final List<String> unitIds;
+
+  /// Глубина дробления по плану (0 — исходный фрагмент).
+  final int splitDepth;
+
+  /// Изображения, выбранные планом как image-части (новый путь).
+  ///
+  /// [documentImages] у фрагмента плана содержит и части, и строки каталога
+  /// (`catalogOnly`), чтобы модель видела `image_id` всех изображений; список
+  /// байтов, которые нужно отправить, — здесь.
+  final List<DocumentImage> imageParts;
+
+  /// Изображения, которые у плана остались только строками каталога.
+  final List<DocumentImage> catalogOnly;
+
   /// true, если фрагмент несёт вложение.
   bool get hasImages => images.isNotEmpty;
 
@@ -71,6 +98,10 @@ class GenerationChunk {
     bool? splitAttempted,
     List<GenerationAttachment>? images,
     List<DocumentImage>? documentImages,
+    List<String>? unitIds,
+    int? splitDepth,
+    List<DocumentImage>? imageParts,
+    List<DocumentImage>? catalogOnly,
   }) {
     return GenerationChunk(
       index: index ?? this.index,
@@ -80,6 +111,10 @@ class GenerationChunk {
       splitAttempted: splitAttempted ?? this.splitAttempted,
       images: images ?? this.images,
       documentImages: documentImages ?? this.documentImages,
+      unitIds: unitIds ?? this.unitIds,
+      splitDepth: splitDepth ?? this.splitDepth,
+      imageParts: imageParts ?? this.imageParts,
+      catalogOnly: catalogOnly ?? this.catalogOnly,
     );
   }
 
@@ -91,18 +126,101 @@ class GenerationChunk {
 }
 
 /// Делит текст на фрагменты, укладывающиеся в бюджет модели.
+///
+/// Старый путь (`chunkDocuments`/`chunkAll`) сохранён без изменений поведения:
+/// он используется `GenerationPipeline` до интеграции планировщика. Новый путь
+/// — [planChunks]/[chunksFromPlan] поверх `GenerationChunkPlanner` (D.4–D.7):
+/// фрагменты планируются по единицам содержимого, изображения и лимиты
+/// карточек считаются от возможностей модели.
 class GenerationChunker {
   /// Создаёт чанкер.
   const GenerationChunker({
     this.estimator = const TokenEstimator(),
     this.maxCardsPerChunk = kMaxCardsPerChunk,
+    this.planner = const GenerationChunkPlanner(),
   });
 
-  /// Оценщик токенов.
+  /// Оценщик токенов (старый путь).
   final TokenEstimator estimator;
 
-  /// Максимум карточек на фрагмент.
+  /// Максимум карточек на фрагмент (старый путь).
   final int maxCardsPerChunk;
+
+  /// Планировщик нового пути (в плане лимит карточек от бюджета вывода).
+  final GenerationChunkPlanner planner;
+
+  /// Строит план генерации по единицам содержимого (новый путь).
+  GenerationPlan planChunks(
+    ContentInventory inventory, {
+    required ModelCapabilities capabilities,
+    GenerationOverheadTokens overhead = GenerationOverheadTokens.none,
+    int? requestedCards,
+    GenerationBudgetConfig budgetConfig = const GenerationBudgetConfig(),
+  }) {
+    return planner.plan(
+      inventory: inventory,
+      capabilities: capabilities,
+      overhead: overhead,
+      requestedCards: requestedCards,
+      budgetConfig: budgetConfig,
+    );
+  }
+
+  /// Переводит фрагменты плана в старый тип [GenerationChunk].
+  ///
+  /// [GenerationChunk.documentImages] заполняется частями **и** строками
+  /// каталога (чтобы сервис собрал `<images>` без потери `image_id`), а
+  /// выбранные планом байты — в [GenerationChunk.imageParts]. Старый путь
+  /// не меняется: у его фрагментов новые поля пусты.
+  List<GenerationChunk> chunksFromPlan(GenerationPlan plan) {
+    return <GenerationChunk>[
+      for (final PlannedChunk chunk in plan.chunks)
+        GenerationChunk(
+          index: chunk.index,
+          materialsText: chunk.materialsText,
+          sourceFiles: _planSourceFiles(chunk),
+          limit: chunk.limit,
+          splitAttempted: chunk.splitDepth > 0,
+          images: chunk.attachments,
+          documentImages: List<DocumentImage>.unmodifiable(<DocumentImage>[
+            ...chunk.imageParts,
+            ...chunk.catalogOnly,
+          ]),
+          unitIds: List<String>.unmodifiable(<String>[
+            for (final UnitSpan span in chunk.units) span.unitId,
+          ]),
+          splitDepth: chunk.splitDepth,
+          imageParts: chunk.imageParts,
+          catalogOnly: chunk.catalogOnly,
+        ),
+    ];
+  }
+
+  List<String> _planSourceFiles(PlannedChunk chunk) {
+    final List<String> names = <String>[];
+    void add(String name) {
+      if (name.isEmpty || names.contains(name)) return;
+      names.add(name);
+    }
+
+    for (final UnitSpan span in chunk.units) {
+      final String id = span.unitId;
+      if (!id.startsWith('doc:')) continue;
+      final int hash = id.indexOf('#');
+      if (hash <= 4) continue;
+      add(id.substring(4, hash));
+    }
+    for (final DocumentImage image in chunk.imageParts) {
+      add(image.fileName);
+    }
+    for (final DocumentImage image in chunk.catalogOnly) {
+      add(image.fileName);
+    }
+    for (final GenerationAttachment attachment in chunk.attachments) {
+      add(attachment.fileName);
+    }
+    return List<String>.unmodifiable(names);
+  }
 
   /// Режет документы на фрагменты не больше [maxInputTokens] токенов.
   ///
@@ -338,18 +456,27 @@ class GenerationChunker {
     final String left = String.fromCharCodes(runes.sublist(0, splitAt)).trim();
     final String right = String.fromCharCodes(runes.sublist(splitAt)).trim();
     if (left.isEmpty || right.isEmpty) return null;
+    final int nextDepth = chunk.splitDepth + 1;
     return <GenerationChunk>[
       chunk.copyWith(
         index: chunk.index,
         materialsText: left,
         splitAttempted: true,
         documentImages: const <DocumentImage>[],
+        unitIds: const <String>[],
+        imageParts: const <DocumentImage>[],
+        catalogOnly: const <DocumentImage>[],
+        splitDepth: nextDepth,
       ),
       chunk.copyWith(
         index: chunk.index + 1,
         materialsText: right,
         splitAttempted: true,
         documentImages: const <DocumentImage>[],
+        unitIds: const <String>[],
+        imageParts: const <DocumentImage>[],
+        catalogOnly: const <DocumentImage>[],
+        splitDepth: nextDepth,
       ),
     ];
   }

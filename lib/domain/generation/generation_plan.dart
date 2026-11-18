@@ -115,6 +115,9 @@ enum PlanWarningCode {
 
   /// Заказ пользователя больше, чем план может выдать.
   requestedAbovePlan,
+
+  /// Часть единиц содержимого не попала в план — см. [GenerationPlan.omitted].
+  omittedUnits,
 }
 
 /// Вид валидности плана.
@@ -142,6 +145,10 @@ enum PlanInvalidReason {
 
   /// В материалах есть изображения, а у модели нет Vision.
   imagesWithoutVision,
+
+  /// План потребовал больше фрагментов, чем допускает технический предохранитель
+  /// (`GenerationChunkPlannerConfig.maxChunks`): содержимое не дробится дальше.
+  tooManyChunks,
 }
 
 /// Результат проверки плана: valid/warnings/invalid(+причина).
@@ -219,8 +226,11 @@ class PlannedChunk {
     List<UnitSpan> units = const <UnitSpan>[],
     List<DocumentImage> imageParts = const <DocumentImage>[],
     List<DocumentImage> catalogOnly = const <DocumentImage>[],
+    List<String> imagePartIds = const <String>[],
+    List<String> catalogOnlyIds = const <String>[],
     List<GenerationAttachment> attachments = const <GenerationAttachment>[],
     this.splitDepth = 0,
+    this.materialsText = '',
   }) : assert(index >= 1, 'Фрагменты нумеруются с 1'),
        assert(limit >= 1, 'Лимит карточек запланированного фрагмента ≥ 1'),
        assert(textTokens >= 0, 'Токены не могут быть отрицательными'),
@@ -237,6 +247,8 @@ class PlannedChunk {
        units = List<UnitSpan>.unmodifiable(units),
        imageParts = List<DocumentImage>.unmodifiable(imageParts),
        catalogOnly = List<DocumentImage>.unmodifiable(catalogOnly),
+       imagePartIds = List<String>.unmodifiable(imagePartIds),
+       catalogOnlyIds = List<String>.unmodifiable(catalogOnlyIds),
        attachments = List<GenerationAttachment>.unmodifiable(attachments);
 
   /// Номер фрагмента (с 1) для прогресса «фрагмент K из M».
@@ -253,6 +265,17 @@ class PlannedChunk {
 
   /// Изображения, которые остаются только в каталоге `<images>`.
   final List<DocumentImage> catalogOnly;
+
+  /// Стабильные id изображений-частей (`img:<файл>#<n>`, раздел E.1).
+  ///
+  /// Нужны для проверяемого инварианта «каждая единица учтена»
+  /// (`GenerationPlanCoverage`) и для разрешения `image_id` без повторной
+  /// сборки каталога; соответствуют [imageParts] по порядку.
+  final List<String> imagePartIds;
+
+  /// Стабильные id изображений, оставшихся только в каталоге; соответствуют
+  /// [catalogOnly] по порядку.
+  final List<String> catalogOnlyIds;
 
   /// Вложения пользователя (страницы скана/изображения).
   final List<GenerationAttachment> attachments;
@@ -271,6 +294,14 @@ class PlannedChunk {
 
   /// Глубина дробления (0 — исходный фрагмент).
   final int splitDepth;
+
+  /// Текст материалов фрагмента **в памяти** (`Файл: <имя>` + разделы, D.5).
+  ///
+  /// План не сериализуется в БД (K.2) и материалы в БД не пишутся (SPEC 3.4):
+  /// строка живёт только внутри запуска и нужна пайплайну, чтобы отправить
+  /// запрос без повторной сборки текста. У фрагмента без текста (только
+  /// изображения/вложения) — пустая строка.
+  final String materialsText;
 
   /// Суммарные токены фрагмента (текст + изображения).
   int get totalTokens => textTokens + imageTokens;
