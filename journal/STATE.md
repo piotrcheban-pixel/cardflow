@@ -95,7 +95,8 @@ TASK 02B: второй проход D.5 (укрупнение фрагменто
 `generation_pipeline` 93.1 %, `generation_chunk_planner` 90.0 %);
 `fvm flutter analyze --no-pub` → **No issues found!**;
 `fvm dart format --set-exit-if-changed lib test integration_test tool` →
-**471 файл / 0 changed**; `fvm flutter gen-l10n` — новые строки ARB.
+**471 файл / 0 changed**; `fvm flutter gen-l10n` — новые строки ARB;
+`fvm flutter build windows --release --no-pub` → **`cardflow.exe`** (62,2 с).
 
 **Остатки/известные ограничения (L128–L133):** бюджет восстановления 12
 запросов; приближённый пересчёт токенов при recovery; prompt-only большие
