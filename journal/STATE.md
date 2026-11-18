@@ -9,8 +9,9 @@
 ниже. Схема БД и `format_version` не менялись.
 **Режим:** ИТЕРАЦИИ.
 
-**Следующий шаг:** новая вёрстка экранов по макетам Google Stitch (владелец,
-2026-11-18) — в этой итерации макеты **не применялись** (L113).
+**Следующий шаг:** TASK 02C — оценщик G (калибровка по `usage`), диалог
+стоимости/подтверждения и числовое поле карточек; вёрстка по макетам Stitch —
+отдельным решением владельца (L113).
 
 ## TASK 02B-FINAL — адаптивный план в production, D.5, prompt-only, снятие лимитов (2026-11-19)
 
@@ -69,12 +70,13 @@ TASK 02B: второй проход D.5 (укрупнение фрагменто
   (`maxImagesPerRequest`, `maxImageBytes`), 8/10/24 МБ — только явные допущения
   при неизвестности; `max_tokens` из плана/аккаунта; не вошедшие изображения
   остаются в каталоге.
-- **Тесты (+33 net, старые обновлены):** `generation_plan_merge_test` (9),
+- **Тесты (+35 net, старые обновлены):** `generation_plan_merge_test` (11),
   `prompt_only_planner_test` (11), `generation_plan_splitter_test` (5),
   `test/integration/adaptive_generation_flow_test.dart` (10) — small/large/
   prompt-only/partial/retry/429/auth/overflow/invalid plan; HTTP 413/400-context (3);
   сервисные лимиты аккаунта (4); UI-предупреждения плана (2, «достижимо меньше/
-  больше запрошенного»). Обновлены устаревшие ожидания: truncated теперь
+  больше запрошенного»); заказы 20/21/50/100/200/201/500/1000 и изображения
+  1/8/20/50/100. Обновлены устаревшие ожидания: truncated теперь
   сокращает вывод/дробит по единицам; 1 карточка на 3 фрагмента больше не
   пропускает контент (D.5/L-26); распределение заказа переехало в планировщик;
   `generation_model_test` удалён вместе с удалённым старым бюджетом (его роль
@@ -85,8 +87,8 @@ TASK 02B: второй проход D.5 (укрупнение фрагменто
   `journal/KNOWN_LIMITATIONS.md` L121–L126 сняты, L127–L133 актуальны.
 
 **Гейты:** `fvm flutter test --no-pub --exclude-tags golden` →
-**1998 passed + 8 skipped** (`All tests passed!`; baseline 1965 + 8, +33 net);
-`fvm flutter test --no-pub --coverage --exclude-tags golden` → **1998 passed +
+**2000 passed + 8 skipped** (`All tests passed!`; baseline 1965 + 8, +35 net);
+`fvm flutter test --no-pub --coverage --exclude-tags golden` → **2000 passed +
 8 skipped**, покрытие рукописного кода **91.9 % (15585/16958)** (сгенерированные
 `*.g.dart`/локализации исключены; новые файлы: `generation_plan_splitter`
 92.9 %, `prompt_only_planner` 95.6 %, `generation_plan` 96.1 %,

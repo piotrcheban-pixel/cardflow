@@ -1,7 +1,8 @@
 # Адаптивная генерация карточек: аудит пайплайна и целевая архитектура
 
-**Статус:** AUDIT-ONLY. Документ фиксирует факты и проект изменений; production-код,
-лимиты, модели и схема БД этим документом **не менялись**.
+**Статус:** AUDIT + production-интеграция в TASK 02B-FINAL (2026-11-19; факты —
+раздел Q). Разделы A–P — снимок TASK 01 (`HEAD = af3172a`); production-код,
+лимиты, модели и схема БД на момент аудита **не менялись**.
 **Задача:** TASK 01 — CardFlow: generation pipeline audit & adaptive processing architecture.
 **Дата:** 2026-11-18. **База:** `main`, `HEAD = af3172a`
 (`docs(journal): table of L76 CI runs and runner capacity cancellations`),
