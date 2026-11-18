@@ -42,7 +42,9 @@
 | [file_picker](https://pub.dev/packages/file_picker) | `^13.3.3` | пикер файлов (A6.8/A8.3) | Android, iOS, Linux, macOS, Windows, Web | MIT | approved · версия ниже 12 конфликтует с `desktop_drop 0.9.x`; берём 13.3.3 + `desktop_drop 0.8.4` (см. §7) |
 | [desktop_drop](https://pub.dev/packages/desktop_drop) | **`^0.8.4`** (факт; кандидат был `^0.9.2`) | drag-n-drop на ПК (A3/A6.8) | Android, iOS, Linux, macOS, Windows, Web | Apache-2.0 | approved с ограничением: `desktop_drop >=0.9.0` требует `cross_file ^0.4.0`, а `file_picker >=12` — `cross_file ^0.3.5+4`; совместная версия невозможна. Взят 0.8.4 (`cross_file ^0.3.4+2`). `super_drag_and_drop` 0.9.1 не разрешился (старый `super_native_extensions`); его ветка 0.1.9+3 неприемлема. **Итерация 3c:** 0.8.4 используется в A6.8 (`DropTarget`), API стабилен, widget-тесты зелёные; реальный drag — L33, ограничение L8 остаётся |
 | [url_launcher](https://pub.dev/packages/url_launcher) | `^6.3.3` | «Где взять ключ», лицензии — системный браузер (A3) | Android, iOS, Linux, macOS, Windows, Web | BSD-3-Clause | approved |
-| [pdfrx](https://pub.dev/packages/pdfrx) | `^2.12.0` | текстовый слой PDF через PDFium/FFI (A8.3) | Android, iOS, Linux, macOS, Windows, Web | MIT (PDFium — BSD-3-Clause) | approved · needs-runtime-spike (Windows: Developer Mode для сборки) |
+| [pdfrx](https://pub.dev/packages/pdfrx) | `^2.12.0` | текстовый слой PDF и рендер страниц через PDFium/FFI (A8.3) | Android, iOS, Linux, macOS, Windows, Web | MIT (PDFium — BSD-3-Clause) | approved · needs-runtime-spike (Windows: Developer Mode для сборки) |
+| [pdfium_dart](https://pub.dev/packages/pdfium_dart) | `^0.4.1` (прямая; та же версия, что транзитивно даёт `pdfrx → pdfium_flutter`) | FFI-биндинги PDFium для извлечения Image/Form XObject, метаданных и координат изображений, растрирования области страницы в исходном разрешении (итерация L76, ADR-037) | Android, iOS, Linux, macOS, Windows (нативный PDFium из build-hook `chromium/8125`) | BSD-3-Clause | approved · **новый прямой пакет**; отдельного нативного стека нет — тот же `pdfium.dll`/`libpdfium.so`, что грузит `pdfrx`; FFI-вызовы только из воркер-изолята `pdfrx` (иначе VM падает) |
+| [ffi](https://pub.dev/packages/ffi) | `^2.2.0` (прямая; была транзитивной) | `calloc`/нативная память для вызовов PDFium (буфер документа, структуры `FPDF_IMAGEOBJ_METADATA`, `FS_MATRIX`) | чистый Dart + FFI | BSD-3-Clause | approved · новых транзитивных зависимостей не добавляет |
 | [go_router](https://pub.dev/packages/go_router) | `^18.1.4` | роутинг (AGENTS) | все (flutter) | BSD-3-Clause | approved · требует `material_ui ^1.0.0` |
 | [flutter_riverpod](https://pub.dev/packages/flutter_riverpod) | `^3.5.0` | управление состоянием, manual providers без кодогенерации (ADR-002) | все (flutter) | MIT | **approved** |
 | [riverpod](https://pub.dev/packages/riverpod) | `^3.5.0` (транзитивно) | `ProviderContainer`/провайдеры в чистых Dart-тестах domain | чистый Dart | MIT | approved · приходит транзитивно с `flutter_riverpod`; в pubspec не добавлялся |
@@ -309,3 +311,15 @@ Android/iOS/Linux/macOS/Windows/Web, активные релизы (2026). Па�
 PDFium, что и текстовый парсер, отдельного нативного ассета не добавлено.
 Рендер в `Isolate.run` проверен на Windows тестом
 `test/unit/api/parsers/pdf_scan_renderer_test.dart`.
+
+**Итерация L76 «PDF Visual Intelligence» (ADR-037):** прямые зависимости —
+`pdfium_dart ^0.4.1` и `ffi ^2.2.0`. Оба пакета **уже были в графе** (первый —
+через `pdfrx → pdfium_flutter`, второй — транзитивно), новых транзитивных
+зависимостей нет: `fvm flutter pub get` → `Changed 1 dependency!` (только
+объявление прямого статуса). Лицензии — BSD-3-Clause у обоих; PDFium остаётся
+прежним пином (`bblanchon/pdfium-binaries chromium/8125`, тот же build-hook),
+поэтому CI-бутстрап `PDFIUM_PATH` и guard `ci_pdfium_test` не менялись.
+`syncfusion_flutter_pdf` не добавлялся: коммерческая/community-лицензия
+Syncfusion и pub.dev license-tag `unknown` (см. §4 таблицы отклонённых).
+Извлечение изображений PDF выполняется теми же FFI-биндингами в воркер-изоляте
+`pdfrx` — отдельного нативного стека нет.

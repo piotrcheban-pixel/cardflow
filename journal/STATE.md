@@ -1,14 +1,101 @@
 # STATE — текущее состояние CardFlow
 
-**Дата:** 2026-11-18 · **Итерация:** `cleanup-1` «Зачистка и подготовка»
-(журнал `journal/cleanup-1/`, ADR-036) — завершена.
-Редизайн «Nocturne» (этапы 1–3) **отменён и удалён**: визуальный слой снова
-стандартный Material 3 с акцентом Indigo `#4F46E5`. Продуктовые итерации 7.x
-зелёные; схема БД и `format_version` не менялись.
+**Дата:** 2026-11-18 · **Итерация:** `L76` «PDF Visual Intelligence»
+(журнал `journal/iteration-l76/`, ADR-037) — завершена.
+Изображения из PDF (Image/Form XObject) извлекаются с номером страницы,
+порядком и координатами; сканы дают полный рендер + значимые области; модель
+с Vision получает **байты** изображений (image-части с подписью каталога);
+промпт — `gen-ru-v7`. Предыдущая итерация `cleanup-1` (ADR-036) — в истории
+ниже. Схема БД и `format_version` не менялись.
 **Режим:** ИТЕРАЦИИ.
 
 **Следующий шаг:** новая вёрстка экранов по макетам Google Stitch (владелец,
 2026-11-18) — в этой итерации макеты **не применялись** (L113).
+
+## Итерация L76 — PDF Visual Intelligence (2026-11-18, ADR-037)
+
+**Факты старта:** `git status --porcelain` → пусто,
+`HEAD = origin/main = 4d6b992` (`docs(cleanup): record green CI for cleanup-1`);
+baseline **1775 passed + 8 skipped**, `analyze` 0, `format` 0. Прогоны — только
+с `--no-pub` (L64).
+
+**Аудит (факты, не предположения):** `pdfrx 2.12.0`/`pdfrx_engine 0.9.1` даёт
+только текст и рендер страниц — API объектов страницы в нём нет (grep
+`FPDFPage_GetObject`/`FPDFImageObj_*`/`FPDFFormObj_*` — 0). `FPDFImageObj_GetRenderedBitmap`
+отдаёт растр **в размере на странице** (спайк: 300×200 px при выводе 150×100 pt →
+150×100). OCR-подсистемы в проекте нет. `DocumentImage` из DOCX отправлялся
+модели только строкой каталога — байты не уходили (пробел). Промпт в коде —
+`gen-ru-v6`, файла `gen-ru-v7` не было. `syncfusion_flutter_pdf` отклонён
+(коммерческая/community-лицензия Syncfusion, pub.dev `unknown`), `pdfx` не нужен.
+
+**Спайки (кодом, три гипотезы):** (1) прямые FFI-вызовы `pdfium_dart` из
+изолята после `pdfrxInitialize()` падают — `Cannot invoke native callback from a
+different isolate`; (2) в воркер-изоляте `pdfrx`
+(`PdfrxEntryFunctions.instance.compute`) извлечение работает, результат
+(`Uint8List` + метаданные) передаётся между изолятами; (3) рендер **области**
+страницы с масштабом «пиксели изображения / размер на странице» возвращает
+исходное разрешение (300×200), маски/цветовые пространства обрабатывает PDFium.
+
+**Сделано:**
+- `PdfImageExtractor` (`lib/api/parsers/pdf_image_extractor.dart`) — Image и
+  Form XObject, метаданные (`width`/`height`/bpp/colorspace), положение
+  (`FPDFPageObj_GetBounds` + матрица формы), порядок на странице, PNG в исходном
+  разрешении (резерв — растр PDFium в размере отображения); guard-лимиты
+  (≥ 32 px, ≤ 16 млн пикселей, ≤ 60 изображений, ≤ 2600 px сторона).
+- `PdfPageClassifier` — постранично `textLayer`/`scanned`/`blank` (порог 50
+  символов): смешанный PDF обрабатывается страница за страницей.
+- `PdfPageRegionDetector` — сетка «чернил», дилатация, связные компоненты,
+  склейка, отсев строк текста/тонких линий, вырезка из полного рендера без
+  масштабирования; «одна большая схема» → страница целиком.
+- `PdfScanPageExtractor`/`PdfScanDocument` — страницы скана (рендер PDFium,
+  номера страниц) + области → `DocumentImage(source: renderedPage/croppedRegion)`.
+- `PdfParser` — текст + изображения + рендеры/области; привязка к разделу
+  (`ParsedDocumentBuilder.addImageToSection`), страница сохраняется; полностью
+  сканированный PDF по-прежнему `scannedPdf` (страницы уходят image-частями).
+- `DocumentImage` расширен обратно совместимо: `source`, `rect` (доли 0..1),
+  `order`; DOCX/PPTX/ODT без изменений поведения.
+- Фильтр `PdfImageFilter` (иконки, тонкие линии, однотонные плашки; повторы по
+  SHA-256; небольшие формулы на странице с подписью рисунка сохраняются).
+- Vision: `CardGenerationService` добавляет image-части документов для моделей
+  с Vision (`selectVisionDocumentImages`: приоритет подпись → область/встроенное
+  → площадь; ≤ 8 частей и ≤ 24 МБ, дедуп по SHA-256); перед каждой частью —
+  подпись каталога (`GenerationAttachment.label`) во всех трёх протоколах,
+  поэтому `image_id` сопоставим однозначно; каталог `<images>` полный, не
+  вошедшие изображения разрешаются по `image_id` при импорте.
+- `GenerationRunRequest.documentImages` → чанкер кладёт области скана во
+  фрагмент своего файла; экран генерации разбирает скан `PdfScanPageExtractor`.
+- Промпт `gen-ru-v7` = `gen-ru-v6` дословно + блок «ИЗОБРАЖЕНИЯ ИЗ PDF И
+  СКАНОВ» (текст задания + правила каталога/частей/усечения); копия
+  `docs/prompts/gen-ru-v7.txt` (тест сверяет байты); v5/v6 сохранены.
+- `MediaStore`: парсер не пишет файлы (как DOCX), карточка при импорте пишет
+  файл и строку `media` — сквозной путь покрыт интеграционным тестом.
+
+**Гейты итерации:** `fvm flutter test --no-pub --coverage --exclude-tags golden`
+→ **1822 passed + 8 skipped** (`All tests passed!`; baseline 1775 + 47 новых);
+покрытие рукописного кода **92.5 % (13641/14746)**, новые файлы:
+`pdf_image_extractor` 87.3 %, `pdf_page_regions` 93.8 %, `pdf_parser` 91.3 %,
+`pdf_scan_pages` 100 %, `document_image` 93.4 %; `fvm flutter analyze --no-pub`
+→ **No issues found!**; `fvm dart format --set-exit-if-changed lib test
+integration_test tool` → **449 файлов / 0 changed**;
+`fvm flutter build windows --release --no-pub` → `cardflow.exe` (64,9 с).
+
+**Тесты (47 новых):** `pdf_document_images_test` (10: обычный PDF, Form
+XObject, без изображений, повторы, иконка, формула с подписью, скан →
+`scannedPdf`, смешанный PDF, битое изображение), `pdf_page_classifier_test` (6),
+`pdf_page_regions_test` (6), `pdf_scan_pages_test` (5, реальный PDFium),
+`pdf_document_images_vision_test` (6: байты в запросе + подпись, без Vision,
+лимит 8/каталог, дедуп, чужой `image_id`, страница скана),
+`document_image_test` (7), `generation_chunker` (2: области скана в свой
+фрагмент, сироты), `prompt_test` v7 (4: байты, v6 внутри, текст задания, JSON),
+`test/integration/pdf_image_flow_test.dart` (1: PDF → изображение → image-part в
+запросе → `image_id` → импорт → файл в `MediaStore` байт-в-байт).
+
+**Ограничения итерации:** L115–L120 (нет локального OCR — текст скана
+распознаёт vision-модель; геометрический детектор областей; векторные схемы на
+страницах с длинным текстом не вырезаются; координаты вложенных форм — в
+системе формы; лимиты 60/24/3 страницы/8 частей/24 МБ; отмена парсинга не
+поддерживается). L76 **снято** в объёме «встроенные изображения PDF
+извлекаются и используются».
 
 ## Итерация cleanup-1 — отказ от «Nocturne» и фикс «Создать колоду» (2026-11-18, ADR-036)
 
