@@ -190,18 +190,24 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          flutter test --exclude-tags golden --coverage 2>&1 | tee test-output.log
+          # `live` — сетевые live-тесты (Commons/Wikipedia, DeepSeek по ключу из
+          # окружения): обычный прогон должен быть офлайновым и детерминированным
+          # (L92). Live-проверки запускаются отдельно, по тегу live.
+          flutter test --exclude-tags golden,live --coverage 2>&1 | tee test-output.log
       - name: Детали падения тестов (аннотация)
         if: failure()
         shell: bash
         run: |
-          # Публикуем хвост вывода тестов как аннотацию check-run, чтобы
-          # причина падения была видна без доступа к полному логу job.
+          # Публикуем ТОЛЬКО строки падений: полный хвост лога обрезается
+          # лимитом аннотации GitHub, и причина теряется. Сначала список
+          # «Failing tests», затем строки [E] с текстом ошибки.
           if [ -f test-output.log ]; then
-            MSG=$(tail -n 120 test-output.log | sed -e 's/%/%25/g' -e 's/\r//g')
-            MSG="${MSG//$'\n'/%0A}"
-            MSG="${MSG:0:60000}"
-            echo "::error title=Детали падения тестов::$MSG"
+            DETAILS=$( { grep -n -A 40 "Failing tests:" test-output.log || true; \
+                         grep -n -B 1 -A 12 "\[E\]" test-output.log | head -n 120 || true; } \
+                       | sed -e 's/%/%25/g' -e 's/\r//g')
+            DETAILS="${DETAILS//$'\n'/%0A}"
+            DETAILS="${DETAILS:0:60000}"
+            echo "::error title=Детали падения тестов::$DETAILS"
           fi
       - name: Покрытие рукописного кода >= 80%
         if: matrix.os == 'ubuntu-latest'

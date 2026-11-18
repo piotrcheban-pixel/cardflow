@@ -142,12 +142,14 @@ void main() {
     }
   });
 
-  test('workflow: тесты исключают только golden, без фильтров pdf/--tags', () {
+  test('workflow: тесты исключают golden и live, без фильтров pdf/--tags', () {
     final String job = jobSection('test');
     expect(
       job,
-      contains('flutter test --exclude-tags golden --coverage'),
-      reason: 'команда тестов не должна меняться (H1 ревью)',
+      contains('flutter test --exclude-tags golden,live --coverage'),
+      reason:
+          'golden — эталоны снимаются отдельно; live — сетевые проверки, '
+          'обычный прогон должен быть офлайновым (L92)',
     );
     expect(job, isNot(contains('golden,pdf')));
     expect(job, isNot(contains('golden, pdf')));
