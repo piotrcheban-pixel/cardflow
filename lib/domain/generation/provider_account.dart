@@ -7,6 +7,8 @@
 library;
 
 import 'package:cardflow/domain/generation/generation_model.dart';
+import 'package:cardflow/domain/generation/generation_pricing.dart';
+import 'package:cardflow/domain/generation/model_capabilities.dart';
 import 'package:cardflow/domain/generation/provider_preset.dart';
 import 'package:cardflow/domain/generation/provider_protocol.dart';
 
@@ -17,6 +19,10 @@ const int kCustomProviderContextTokens = kCompatibleInputTokenBudget;
 /// Настроенный провайдер генерации.
 class ProviderAccount {
   /// Создаёт аккаунт.
+  ///
+  /// Поля возможностей и цен (JSON v2, раздел K.1 аудита TASK 01) необязательны
+  /// и по умолчанию неизвестны (`null`): отсутствие значения — «неизвестно»,
+  /// а не 0 и не типовое число семейства моделей.
   const ProviderAccount({
     required this.id,
     required this.label,
@@ -27,6 +33,12 @@ class ProviderAccount {
     this.contextTokens = kCustomProviderContextTokens,
     this.requiresApiKey = false,
     this.supportsVision = false,
+    this.maxOutputTokens,
+    this.maxImagesPerRequest,
+    this.maxImageBytes,
+    this.maxRequestBytes,
+    this.pricing,
+    this.capabilitiesSource = CapabilitySource.unknown,
   });
 
   /// Аккаунт из пресета каталога; [id] — id аккаунта (=== ключ secure storage).
@@ -79,6 +91,24 @@ class ProviderAccount {
   /// Принимает ли модель изображения (Vision).
   final bool supportsVision;
 
+  /// Жёсткий лимит вывода модели, токенов; `null` — неизвестно.
+  final int? maxOutputTokens;
+
+  /// Максимум image-частей в одном запросе; `null` — неизвестно.
+  final int? maxImagesPerRequest;
+
+  /// Максимум байт одного изображения; `null` — неизвестно.
+  final int? maxImageBytes;
+
+  /// Максимум байт тела запроса; `null` — неизвестно.
+  final int? maxRequestBytes;
+
+  /// Цены аккаунта; `null` — неизвестны.
+  final GenerationPricing? pricing;
+
+  /// Источник полей возможностей/цен аккаунта (JSON v2).
+  final CapabilitySource capabilitiesSource;
+
   /// Пресет каталога, если аккаунт создан из каталога.
   ProviderPreset? get preset =>
       presetId == null ? null : providerPresetById(presetId!);
@@ -89,6 +119,8 @@ class ProviderAccount {
 
   /// Копия с изменёнными полями.
   ///
+  /// `null` означает «не менять» (в том числе для новых nullable-полей
+  /// возможностей: очистка значений — отдельная операция будущего UI).
   /// [presetId] не обнуляется: `null` означает «не менять» — для
   /// пользовательского аккаунта пресета и так нет.
   ProviderAccount copyWith({
@@ -99,6 +131,12 @@ class ProviderAccount {
     int? contextTokens,
     bool? requiresApiKey,
     bool? supportsVision,
+    int? maxOutputTokens,
+    int? maxImagesPerRequest,
+    int? maxImageBytes,
+    int? maxRequestBytes,
+    GenerationPricing? pricing,
+    CapabilitySource? capabilitiesSource,
   }) {
     return ProviderAccount(
       id: id,
@@ -110,10 +148,19 @@ class ProviderAccount {
       contextTokens: contextTokens ?? this.contextTokens,
       requiresApiKey: requiresApiKey ?? this.requiresApiKey,
       supportsVision: supportsVision ?? this.supportsVision,
+      maxOutputTokens: maxOutputTokens ?? this.maxOutputTokens,
+      maxImagesPerRequest: maxImagesPerRequest ?? this.maxImagesPerRequest,
+      maxImageBytes: maxImageBytes ?? this.maxImageBytes,
+      maxRequestBytes: maxRequestBytes ?? this.maxRequestBytes,
+      pricing: pricing ?? this.pricing,
+      capabilitiesSource: capabilitiesSource ?? this.capabilitiesSource,
     );
   }
 
   /// Представление для `app_settings.value_json` (без ключа API).
+  ///
+  /// Новые поля возможностей/цен пишутся всегда (в том числе `null`) —
+  /// так форма JSON v2 однозначна; чтение v1 (без этих ключей) поддерживается.
   Map<String, Object?> toJson() => <String, Object?>{
     'id': id,
     'label': label,
@@ -124,9 +171,19 @@ class ProviderAccount {
     'context_tokens': contextTokens,
     'requires_api_key': requiresApiKey,
     'supports_vision': supportsVision,
+    'max_output_tokens': maxOutputTokens,
+    'max_images_per_request': maxImagesPerRequest,
+    'max_image_bytes': maxImageBytes,
+    'max_request_bytes': maxRequestBytes,
+    'pricing': pricing?.toJson(),
+    'capabilities_source': capabilitiesSource.wireName,
   };
 
   /// Разбирает аккаунт из JSON; `null` — запись некорректна и пропускается.
+  ///
+  /// Читает и v1 (без полей возможностей/цен), и v2 (раздел K.1 аудита):
+  /// отсутствующие, нулевые и отрицательные значения остаются неизвестными
+  /// (`null`), а не подменяются нулём.
   static ProviderAccount? fromJson(Object? json) {
     if (json is! Map) return null;
     final Object? rawId = json['id'];
@@ -165,6 +222,14 @@ class ProviderAccount {
           : kCustomProviderContextTokens,
       requiresApiKey: rawRequiresKey is bool ? rawRequiresKey : false,
       supportsVision: supportsVision,
+      maxOutputTokens: _positiveIntFromJson(json['max_output_tokens']),
+      maxImagesPerRequest: _positiveIntFromJson(json['max_images_per_request']),
+      maxImageBytes: _positiveIntFromJson(json['max_image_bytes']),
+      maxRequestBytes: _positiveIntFromJson(json['max_request_bytes']),
+      pricing: GenerationPricing.fromJson(json['pricing']),
+      capabilitiesSource: CapabilitySource.fromWire(
+        json['capabilities_source'],
+      ),
     );
   }
 
@@ -180,7 +245,13 @@ class ProviderAccount {
           other.modelId == modelId &&
           other.contextTokens == contextTokens &&
           other.requiresApiKey == requiresApiKey &&
-          other.supportsVision == supportsVision;
+          other.supportsVision == supportsVision &&
+          other.maxOutputTokens == maxOutputTokens &&
+          other.maxImagesPerRequest == maxImagesPerRequest &&
+          other.maxImageBytes == maxImageBytes &&
+          other.maxRequestBytes == maxRequestBytes &&
+          other.pricing == pricing &&
+          other.capabilitiesSource == capabilitiesSource;
 
   @override
   int get hashCode => Object.hash(
@@ -193,10 +264,23 @@ class ProviderAccount {
     contextTokens,
     requiresApiKey,
     supportsVision,
+    maxOutputTokens,
+    maxImagesPerRequest,
+    maxImageBytes,
+    maxRequestBytes,
+    pricing,
+    capabilitiesSource,
   );
 
   @override
   String toString() => 'ProviderAccount($id, ${protocol.wireName}, $modelId)';
+}
+
+/// Положительное целое из JSON; отсутствующее, нулевое и отрицательное —
+/// «неизвестно» (`null`), а не 0.
+int? _positiveIntFromJson(Object? value) {
+  if (value is num && value.isFinite && value > 0) return value.toInt();
+  return null;
 }
 
 /// Vision для старой записи без `supports_vision`: модель пресета или имя.
@@ -239,7 +323,10 @@ class ProviderAccounts {
   });
 
   /// Версия контракта JSON (`generation.providers`).
-  static const int version = 1;
+  ///
+  /// v2 добавляет nullable-поля возможностей/цен (раздел K.1 аудита TASK 01).
+  /// Чтение v1 поддерживается: отсутствующие поля остаются неизвестными.
+  static const int version = 2;
 
   /// Пустой список.
   static const ProviderAccounts empty = ProviderAccounts();

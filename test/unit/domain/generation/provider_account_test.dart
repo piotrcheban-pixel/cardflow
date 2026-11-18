@@ -1,5 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cardflow/domain/generation/generation_pricing.dart';
+import 'package:cardflow/domain/generation/model_capabilities.dart';
 import 'package:cardflow/domain/generation/provider_account.dart';
 import 'package:cardflow/domain/generation/provider_preset.dart';
 import 'package:cardflow/domain/generation/provider_protocol.dart';
@@ -171,6 +173,161 @@ void main() {
         'model': 'qwen2.5',
       });
       expect(text!.supportsVision, isFalse);
+    });
+  });
+
+  group('JSON v2: возможности и цены (TASK 02A)', () {
+    test('старая запись v1 читается: новые поля неизвестны, а не 0', () {
+      final ProviderAccount? account = ProviderAccount.fromJson(
+        <String, Object?>{
+          'id': 'legacy',
+          'label': 'Legacy',
+          'protocol': 'openai-completions',
+          'base_url': 'https://example.test',
+          'model': 'm',
+          'context_tokens': 32000,
+        },
+      );
+      expect(account, isNotNull);
+      expect(account!.contextTokens, 32000);
+      expect(account.maxOutputTokens, isNull);
+      expect(account.maxImagesPerRequest, isNull);
+      expect(account.maxImageBytes, isNull);
+      expect(account.maxRequestBytes, isNull);
+      expect(account.pricing, isNull);
+      expect(account.capabilitiesSource, CapabilitySource.unknown);
+    });
+
+    test('JSON v2 round-trip сохраняет возможности и цены', () {
+      final ProviderAccount account = deepseek().copyWith(
+        maxOutputTokens: 16384,
+        maxImagesPerRequest: 8,
+        maxImageBytes: 5 * 1024 * 1024,
+        maxRequestBytes: 25 * 1024 * 1024,
+        pricing: const GenerationPricing(
+          inputPerMillion: 0.27,
+          outputPerMillion: 1.1,
+          currency: 'USD',
+        ),
+        capabilitiesSource: CapabilitySource.user,
+      );
+      final Map<String, Object?> json = account.toJson();
+      expect(json['max_output_tokens'], 16384);
+      expect(json['max_images_per_request'], 8);
+      expect(json['max_image_bytes'], 5 * 1024 * 1024);
+      expect(json['max_request_bytes'], 25 * 1024 * 1024);
+      expect(json['capabilities_source'], 'user');
+      final Map<String, Object?> pricing =
+          json['pricing']! as Map<String, Object?>;
+      expect(pricing['input_per_mtok'], 0.27);
+      expect(ProviderAccount.fromJson(json), account);
+    });
+
+    test('нулевые и битые лимиты — неизвестны, а не 0', () {
+      final ProviderAccount? account = ProviderAccount.fromJson(
+        <String, Object?>{
+          'id': 'x',
+          'protocol': 'openai-completions',
+          'base_url': 'https://x.test',
+          'model': 'm',
+          'max_output_tokens': 0,
+          'max_images_per_request': -2,
+          'max_image_bytes': '10',
+          'max_request_bytes': null,
+          'capabilities_source': 'user',
+        },
+      );
+      expect(account, isNotNull);
+      expect(account!.maxOutputTokens, isNull);
+      expect(account.maxImagesPerRequest, isNull);
+      expect(account.maxImageBytes, isNull);
+      expect(account.maxRequestBytes, isNull);
+      expect(account.capabilitiesSource, CapabilitySource.user);
+    });
+
+    test('pricing с null внутри читается как неполный, стоимость null', () {
+      final ProviderAccount? account = ProviderAccount.fromJson(
+        <String, Object?>{
+          'id': 'x',
+          'protocol': 'openai-completions',
+          'base_url': 'https://x.test',
+          'model': 'm',
+          'pricing': <String, Object?>{
+            'input_per_mtok': 1.5,
+            'output_per_mtok': null,
+            'currency': 'USD',
+          },
+        },
+      );
+      expect(account, isNotNull);
+      expect(account!.pricing, isNotNull);
+      expect(account.pricing!.state, PricingState.incomplete);
+      expect(
+        account.pricing!.costFor(inputTokens: 1000, outputTokens: 1000),
+        isNull,
+      );
+    });
+
+    test('неизвестный capabilities_source — unknown', () {
+      final ProviderAccount? account = ProviderAccount.fromJson(
+        <String, Object?>{
+          'id': 'x',
+          'protocol': 'openai-completions',
+          'base_url': 'https://x.test',
+          'model': 'm',
+          'capabilities_source': 'magic',
+        },
+      );
+      expect(account!.capabilitiesSource, CapabilitySource.unknown);
+    });
+
+    test('copyWith меняет новые значения и не теряет остальные', () {
+      final ProviderAccount original = deepseek().copyWith(
+        maxOutputTokens: 4096,
+        pricing: const GenerationPricing(
+          inputPerMillion: 1,
+          outputPerMillion: 2,
+          currency: 'USD',
+        ),
+      );
+      final ProviderAccount updated = original.copyWith(maxOutputTokens: 8192);
+      expect(updated.maxOutputTokens, 8192);
+      expect(updated.pricing, original.pricing);
+      expect(updated.capabilitiesSource, CapabilitySource.unknown);
+      expect(updated.id, original.id);
+      expect(updated.presetId, original.presetId);
+    });
+
+    test('ProviderAccounts пишет версию 2 и читает v1', () {
+      final ProviderAccounts list = ProviderAccounts.empty.withAccount(
+        deepseek(),
+      );
+      expect(list.toJson()['version'], 2);
+      expect(ProviderAccounts.version, 2);
+
+      final ProviderAccounts legacy = ProviderAccounts.fromJson(
+        <String, Object?>{
+          'version': 1,
+          'accounts': <Object?>[
+            <String, Object?>{
+              'id': 'deepseek',
+              'label': 'DeepSeek',
+              'preset_id': 'deepseek',
+              'protocol': 'openai-completions',
+              'base_url': 'https://api.deepseek.com',
+              'model': 'deepseek-chat',
+              'context_tokens': 128000,
+              'requires_api_key': true,
+              'supports_vision': false,
+            },
+          ],
+          'active_id': 'deepseek',
+        },
+      );
+      expect(legacy.accounts, hasLength(1));
+      expect(legacy.active?.id, 'deepseek');
+      expect(legacy.active?.pricing, isNull);
+      expect(legacy.active?.maxOutputTokens, isNull);
     });
   });
 
