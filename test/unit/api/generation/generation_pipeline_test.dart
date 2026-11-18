@@ -429,19 +429,19 @@ void main() {
   });
 
   test(
-    'truncated: фрагмент делится по единицам, сумма лимитов сохраняется',
+    'truncated: сначала уменьшается лимит, затем поднимается резерв вывода',
     () async {
       final pipeline = pipelineWith(<GenerationChunk>[
         chunkOf(
           1,
           'Первая часть материала с достаточным объёмом текста.\n\n'
           'Вторая часть материала с достаточным объёмом текста.',
-          limit: 4,
+          limit: 2,
           unitIds: <String>['doc:a.txt#0#0', 'doc:a.txt#0#1'],
         ),
       ]);
       caller.onGenerate = (request, call) async {
-        if (call == 1) {
+        if (call <= 2) {
           throw const GenerationException(GenerationErrorCode.truncated);
         }
         return resultWith(<GeneratedCard>[
@@ -458,15 +458,63 @@ void main() {
       expect(caller.calls, 3);
       expect(
         caller.requests[1].materialsText,
-        isNot(caller.requests[0].materialsText),
+        caller.requests[0].materialsText,
+        reason: 'F.4: при обрезании вывод уменьшается, вход не дробится',
+      );
+      expect(caller.requests[0].limit, 2);
+      expect(caller.requests[1].limit, 1);
+      expect(
+        caller.requests[2].materialsText,
+        caller.requests[1].materialsText,
+        reason: 'вторая попытка — тот же вход, но с поднятым резервом вывода',
+      );
+      expect(caller.requests[2].limit, 1);
+      expect(
+        caller.requests[2].maxOutputTokens,
+        greaterThan(caller.requests[1].maxOutputTokens!),
+      );
+      expect(result.status, GenerationJobStatus.done);
+      expect(result.failures, isEmpty);
+      expect(result.cards, hasLength(1));
+    },
+  );
+
+  test(
+    'truncated: после лимита и резерва фрагмент дробится по единицам',
+    () async {
+      final pipeline = pipelineWith(<GenerationChunk>[
+        chunkOf(
+          1,
+          'Первая часть материала с достаточным объёмом текста.\n\n'
+          'Вторая часть материала с достаточным объёмом текста.',
+          limit: 4,
+          unitIds: <String>['doc:a.txt#0#0', 'doc:a.txt#0#1'],
+        ),
+      ]);
+      caller.onGenerate = (request, call) async {
+        if (call <= 3) {
+          throw const GenerationException(GenerationErrorCode.truncated);
+        }
+        return resultWith(<GeneratedCard>[
+          makeGeneratedCard(front: 'Вопрос $call', back: 'Ответ $call'),
+        ]);
+      };
+
+      final result = await pipeline.run(
+        requestWith(<ParsedDocument>[
+          docOf('a.txt', <String>['раз два']),
+        ]),
+      );
+
+      expect(caller.calls, 5, reason: 'лимит → резерв → две части');
+      expect(
+        caller.requests[3].materialsText + caller.requests[4].materialsText,
+        caller.requests[2].materialsText,
+        reason: 'D.6: ни один символ материалов не потерян',
       );
       expect(
-        caller.requests[1].materialsText + caller.requests[2].materialsText,
-        contains('Первая часть'),
-      );
-      expect(
-        caller.requests[1].limit + caller.requests[2].limit,
-        caller.requests[0].limit,
+        caller.requests[3].limit + caller.requests[4].limit,
+        caller.requests[2].limit,
         reason: 'D.6: сумма лимитов детей равна лимиту родителя',
       );
       expect(result.status, GenerationJobStatus.done);
@@ -489,10 +537,15 @@ void main() {
       ]),
     );
 
-    expect(caller.calls, 1);
+    expect(
+      caller.calls,
+      2,
+      reason: 'первичная попытка + поднятие резерва; дробить нечего',
+    );
     expect(result.status, GenerationJobStatus.error);
     expect(result.failures, hasLength(1));
     expect(result.failures.single.code, GenerationErrorCode.truncated);
+    expect(result.failures.single.attempts, 2);
   });
 
   test('нет материала после нарезки — noMaterials, задание error', () async {
@@ -752,7 +805,7 @@ void main() {
   );
 
   test(
-    'retryFailed: фрагмент, упавший без дробления, может быть раздроблен',
+    'retryFailed: `truncated` уменьшает лимит, затем поднимает резерв',
     () async {
       final pipeline = pipelineWith(<GenerationChunk>[
         chunkOf(
@@ -777,7 +830,7 @@ void main() {
       var retryCall = 0;
       retryCaller.onGenerate = (request, call) async {
         retryCall++;
-        if (retryCall == 1) {
+        if (retryCall <= 2) {
           throw const GenerationException(GenerationErrorCode.truncated);
         }
         return resultWith(<GeneratedCard>[
@@ -802,11 +855,66 @@ void main() {
         first,
       );
 
-      expect(retryCaller.calls, 3, reason: 'truncated → две половины');
+      expect(retryCaller.calls, 3, reason: 'лимит 6→3, затем резерв вывода');
       expect(result.failures, isEmpty);
-      expect(result.cards, hasLength(2));
+      expect(result.cards, hasLength(1));
     },
   );
+
+  test('retryFailed: после лимита и резерва фрагмент дробится', () async {
+    final pipeline = pipelineWith(<GenerationChunk>[
+      chunkOf(
+        1,
+        'Первая часть материала с достаточным объёмом текста.\n\n'
+        'Вторая часть материала с достаточным объёмом текста.',
+        limit: 6,
+        unitIds: <String>['doc:a.txt#0#0', 'doc:a.txt#0#1'],
+      ),
+    ]);
+    caller.onGenerate = (request, call) async {
+      throw const GenerationException(GenerationErrorCode.network);
+    };
+    final first = await pipeline.run(
+      requestWith(<ParsedDocument>[
+        docOf('a.txt', <String>['раз два']),
+      ]),
+    );
+
+    final retryCaller = FakeGenerationCaller();
+    var retryCall = 0;
+    retryCaller.onGenerate = (request, call) async {
+      retryCall++;
+      if (retryCall <= 3) {
+        throw const GenerationException(GenerationErrorCode.truncated);
+      }
+      return resultWith(<GeneratedCard>[
+        makeGeneratedCard(front: 'Вопрос $retryCall', back: 'Ответ $retryCall'),
+      ]);
+    };
+    final retryPipeline = GenerationPipeline(
+      caller: retryCaller,
+      jobRepository: jobs,
+      cardStore: store,
+      now: () => DateTime.utc(2026),
+      jobIdFactory: () => 'job-1',
+    );
+
+    final result = await retryPipeline.retryFailed(
+      requestWith(<ParsedDocument>[
+        docOf('a.txt', <String>['раз два']),
+      ]),
+      first,
+    );
+
+    expect(retryCaller.calls, 5, reason: 'лимит → резерв → две части');
+    expect(
+      retryCaller.requests[3].materialsText +
+          retryCaller.requests[4].materialsText,
+      retryCaller.requests[2].materialsText,
+    );
+    expect(result.failures, isEmpty);
+    expect(result.cards, hasLength(2));
+  });
 
   test('ошибка чтения хешей колоды: задание остаётся не running', () async {
     caller = FakeGenerationCaller();

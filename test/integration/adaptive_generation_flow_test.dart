@@ -127,7 +127,7 @@ void main() {
     expect(result.cards, hasLength(1));
   });
 
-  test('большой запрос: план до запросов, предупреждение без среза', () async {
+  test('большой запрос: план до запросов, заказ достигнут без среза', () async {
     final GenerationPipeline runner = pipeline();
     caller.onGenerate = (GenerationRequest request, int call) async =>
         resultWithCard(call);
@@ -146,10 +146,16 @@ void main() {
     final GenerationPlan plan = result.plan!;
     expect(plan.chunks.length, greaterThan(1));
     expect(plan.requestedCards, 150);
-    expect(plan.plannedCards, lessThanOrEqualTo(150));
+    expect(
+      plan.plannedCards,
+      150,
+      reason:
+          'материала хватает: план обязан использовать его (TASK 03, D20), '
+          'а не занижать achievableCards',
+    );
     expect(
       plan.validity.warnings,
-      contains(PlanWarningCode.requestedAbovePlan),
+      isNot(contains(PlanWarningCode.requestedAbovePlan)),
     );
     expect(caller.calls, plan.chunks.length);
     expect(
@@ -160,6 +166,28 @@ void main() {
       plan.plannedCards,
     );
     expect(result.cards, hasLength(caller.calls));
+  });
+
+  test('мало материала: заказ недостижим — предупреждение, не срез', () async {
+    final GenerationPipeline runner = pipeline();
+    caller.onGenerate = (GenerationRequest request, int call) async =>
+        resultWithCard(call);
+    final GenerationRunResult result = await runner.run(
+      requestFor(
+        documents: <ParsedDocument>[
+          docOf('small.txt', <String>['Короткий материал.']),
+        ],
+        wishes: 'Нужно 150 карточек',
+      ),
+    );
+    final GenerationPlan plan = result.plan!;
+    expect(plan.requestedCards, 150);
+    expect(plan.plannedCards, lessThan(150));
+    expect(
+      plan.validity.warnings,
+      contains(PlanWarningCode.requestedAbovePlan),
+    );
+    expect(caller.calls, plan.chunks.length);
   });
 
   test('несколько документов: порядок и заголовки файлов сохранены', () async {

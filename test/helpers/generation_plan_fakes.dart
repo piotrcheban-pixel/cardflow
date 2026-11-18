@@ -15,6 +15,7 @@ GenerationPlan testPlanFromChunks(
   int? requestedCards,
   GenerationMode mode = GenerationMode.materials,
   String? prompt,
+  List<PlannedImage> images = const <PlannedImage>[],
 }) {
   final List<PlannedChunk> planned = <PlannedChunk>[];
   for (final GenerationChunk chunk in chunks) {
@@ -120,6 +121,7 @@ GenerationPlan testPlanFromChunks(
       imageTokens: 0,
     ).trace,
     chunks: planned,
+    images: images,
     requestedCards: requestedCards ?? 0,
     mode: mode,
     promptOnlyPrompt: mode == GenerationMode.promptOnly
@@ -134,12 +136,14 @@ GenerationPlanFactory fixedPlanFactory(
   int? requestedCards,
   GenerationMode mode = GenerationMode.materials,
   String? prompt,
+  List<PlannedImage> images = const <PlannedImage>[],
 }) {
   final GenerationPlan plan = testPlanFromChunks(
     chunks,
     requestedCards: requestedCards,
     mode: mode,
     prompt: prompt,
+    images: images,
   );
   return (_, _) => plan;
 }

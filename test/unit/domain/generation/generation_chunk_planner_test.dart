@@ -938,19 +938,47 @@ void main() {
       expect(result.plan.chunks, isEmpty);
     });
 
-    test('26. заказ больше, чем позволяет бюджет вывода — предупреждение', () {
+    test(
+      '26. большого объёма хватает на весь заказ — план не занижает достижимое',
+      () {
+        final result = makePlan(
+          documents: <ParsedDocument>[
+            docOf('requested.txt', <String>[
+              for (var index = 0; index < 30; index++)
+                longParagraph(sentences: 30),
+            ]),
+          ],
+          requestedCards: 100,
+        );
+        final GenerationPlan plan = result.plan;
+        expect(plan.validity.isInvalid, isFalse);
+        expect(plan.requestedCards, 100, reason: 'заказ нельзя менять молча');
+        expect(
+          plan.plannedCards,
+          100,
+          reason:
+              'материала хватает: мягкая цель не должна скрыто занижать '
+              'achievableCards (TASK 03, D20)',
+        );
+        expect(plan.chunks.length, greaterThanOrEqualTo(15));
+        expect(
+          plan.validity.warnings,
+          isNot(contains(PlanWarningCode.requestedAbovePlan)),
+        );
+        expectPlanInvariants(result);
+      },
+    );
+
+    test('26a. реально мало материала — предупреждение о нехватке', () {
       final result = makePlan(
         documents: <ParsedDocument>[
-          docOf('requested.txt', <String>[
-            for (var index = 0; index < 30; index++)
-              longParagraph(sentences: 30),
-          ]),
+          docOf('small.txt', <String>['Короткий учебный материал.']),
         ],
         requestedCards: 100,
       );
       final GenerationPlan plan = result.plan;
       expect(plan.validity.isInvalid, isFalse);
-      expect(plan.requestedCards, 100, reason: 'заказ нельзя менять молча');
+      expect(plan.requestedCards, 100);
       expect(plan.plannedCards, lessThan(100));
       expect(
         plan.validity.warnings,

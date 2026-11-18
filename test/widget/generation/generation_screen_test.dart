@@ -878,6 +878,85 @@ void main() {
       );
     });
   });
+
+  // TASK 03, L132: числовое поле количества карточек и предпросмотр плана.
+  testWidgets('числовое поле карточек передаёт requestedCards в запрос', (
+    tester,
+  ) async {
+    runner.result = resultWith(<GeneratedCard>[
+      const GeneratedCard(
+        front: 'Вопрос',
+        back: 'Ответ',
+        cardType: CardType.basic,
+      ),
+    ]);
+    await pumpScreen(tester);
+    await attachTextFile(tester);
+    final Finder countField = find.byKey(
+      const ValueKey<String>('generation-cards-count'),
+    );
+    await tester.scrollUntilVisible(
+      countField,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.enterText(countField, '37');
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey<String>('generation-start')));
+    await tester.pumpAndSettle();
+
+    expect(runner.runCalls, 1);
+    expect(runner.lastRequest!.requestedCards, 37);
+  });
+
+  testWidgets('числовое поле: ноль — ошибка валидации, запуска нет', (
+    tester,
+  ) async {
+    await pumpScreen(tester);
+    await attachTextFile(tester);
+    final Finder countField = find.byKey(
+      const ValueKey<String>('generation-cards-count'),
+    );
+    await tester.scrollUntilVisible(
+      countField,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.enterText(countField, '0');
+    await tester.pump();
+    final l10n = l10nOf(tester);
+    expect(find.text(l10n.generationCardsCountInvalid), findsOneWidget);
+    expect(runner.runCalls, 0);
+  });
+
+  testWidgets('предпросмотр плана показывает недостижимый заказ', (
+    tester,
+  ) async {
+    await pumpScreen(tester);
+    await attachTextFile(tester);
+    final Finder countField = find.byKey(
+      const ValueKey<String>('generation-cards-count'),
+    );
+    await tester.scrollUntilVisible(
+      countField,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.enterText(countField, '1000');
+    await tester.pump();
+    final Finder preview = find.byKey(
+      const ValueKey<String>('generation-plan-preview'),
+    );
+    await tester.scrollUntilVisible(
+      preview,
+      -300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(preview, findsOneWidget);
+    expect(find.textContaining('запрошено — 1000'), findsOneWidget);
+    expect(find.textContaining('достижимо —'), findsOneWidget);
+    expect(find.textContaining('Запрошено 1000 карточек'), findsOneWidget);
+  });
 }
 
 /// Парсер PDF, который всегда сообщает «скан» (проводка UI, итерация 7.8).

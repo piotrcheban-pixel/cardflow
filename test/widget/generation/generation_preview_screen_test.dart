@@ -11,6 +11,7 @@ import 'package:cardflow/domain/generation/generated_card.dart';
 import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/generation/generation_chunker.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
+import 'package:cardflow/domain/generation/generation_failure_reason.dart';
 import 'package:cardflow/domain/generation/generation_job.dart';
 import 'package:cardflow/domain/generation/generation_plan.dart';
 import 'package:cardflow/domain/generation/generation_run.dart';
@@ -26,6 +27,15 @@ import '../../helpers/pump_app.dart';
 void main() {
   late FakeGenerationRunner runner;
   late FakeGenerationCardStore store;
+
+  GenerationChunk chunkOf(int index, String text) {
+    return GenerationChunk(
+      index: index,
+      materialsText: text,
+      sourceFiles: const <String>['a.txt'],
+      limit: 5,
+    );
+  }
 
   setUp(() {
     runner = FakeGenerationRunner();
@@ -467,6 +477,118 @@ void main() {
     expect(
       find.byKey(const ValueKey<String>('generation-preview-image-warning')),
       findsNothing,
+    );
+  });
+
+  // TASK 03, раздел 8: частичный успех и ограничения плана видны постоянно.
+  testWidgets('частичный успех — постоянный баннер, а не только SnackBar', (
+    tester,
+  ) async {
+    await pumpPreview(
+      tester,
+      resultWith(
+        failures: const <GenerationChunkFailure>[
+          GenerationChunkFailure(
+            chunkIndex: 2,
+            code: GenerationErrorCode.network,
+            materialsText: 'материал',
+            limit: 3,
+            reason: GenerationFailureReason.network,
+            retryable: true,
+          ),
+        ],
+      ),
+    );
+    final l10n = l10nOf(tester);
+    expect(
+      find.byKey(const ValueKey<String>('generation-preview-partial')),
+      findsOneWidget,
+    );
+    expect(find.textContaining('Частичный результат'), findsOneWidget);
+    expect(find.text(l10n.generationRetryFailed), findsOneWidget);
+  });
+
+  testWidgets('fatal с карточками — постоянное сообщение об остановке', (
+    tester,
+  ) async {
+    final GenerationRunResult result = GenerationRunResult(
+      jobId: 'job-1',
+      status: GenerationJobStatus.partial,
+      cards: <GeneratedCard>[
+        const GeneratedCard(
+          front: 'Вопрос',
+          back: 'Ответ',
+          cardType: CardType.basic,
+        ),
+      ],
+      failures: const <GenerationChunkFailure>[],
+      tokensUsed: 10,
+      estimatedTokens: 20,
+      duplicatesRemoved: 0,
+      chunkCount: 1,
+      cancelled: false,
+      fatalErrorCode: GenerationErrorCode.invalidApiKey,
+    );
+    await pumpPreview(tester, result);
+    expect(
+      find.byKey(const ValueKey<String>('generation-preview-fatal')),
+      findsOneWidget,
+    );
+    expect(find.textContaining('Генерация остановлена'), findsOneWidget);
+  });
+
+  testWidgets('Retry-After показывается в причине фрагмента', (tester) async {
+    await pumpPreview(
+      tester,
+      resultWith(
+        failures: const <GenerationChunkFailure>[
+          GenerationChunkFailure(
+            chunkIndex: 1,
+            code: GenerationErrorCode.rateLimited,
+            materialsText: 'материал',
+            limit: 3,
+            reason: GenerationFailureReason.httpClientError,
+            retryAfter: Duration(seconds: 30),
+          ),
+        ],
+      ),
+    );
+    expect(find.textContaining('повторите через 30 с'), findsOneWidget);
+  });
+
+  testWidgets('статус изображений: передано/только каталог/без Vision', (
+    tester,
+  ) async {
+    final GenerationPlan plan = testPlanFromChunks(
+      <GenerationChunk>[chunkOf(1, 'материал')],
+      images: const <PlannedImage>[
+        PlannedImage(
+          id: 'img:a#0',
+          fileName: 'a.docx',
+          status: ImageParticipationStatus.sentToModel,
+        ),
+        PlannedImage(
+          id: 'img:a#1',
+          fileName: 'a.docx',
+          status: ImageParticipationStatus.catalogOnly,
+        ),
+        PlannedImage(
+          id: 'img:a#2',
+          fileName: 'a.docx',
+          status: ImageParticipationStatus.unsupportedModel,
+        ),
+      ],
+    );
+    await pumpPreview(tester, resultWith(plan: plan));
+    expect(
+      find.byKey(const ValueKey<String>('generation-preview-image-summary')),
+      findsOneWidget,
+    );
+    expect(find.textContaining('передано модели — 1'), findsOneWidget);
+    expect(find.textContaining('только в каталоге — 1'), findsOneWidget);
+    expect(
+      find.textContaining('без поддержки изображений — 1'),
+      findsOneWidget,
     );
   });
 }

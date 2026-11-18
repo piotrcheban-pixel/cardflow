@@ -1113,4 +1113,218 @@ void main() {
       expect(adapter.buildArgs, isNull);
     });
   });
+
+  group('TASK 03: точные image-части, оценка и continuation', () {
+    DocumentImage imageOf(int index) {
+      return DocumentImage(
+        fileName: 'doc.txt',
+        bytes: Uint8List.fromList(
+          List<int>.generate(64, (int i) => (index * 67 + i) % 251),
+        ),
+        mediaType: AttachmentMediaType.png,
+        sectionIndex: 0,
+        caption: 'Рис. $index',
+      );
+    }
+
+    test(
+      'явные части — ровно префикс каталога, без переранжирования',
+      () async {
+        final adapter = FakeProviderAdapter(
+          cardsJson: cardsJson(<Map<String, Object?>>[validCardJson()]),
+        );
+        final service = serviceWith(
+          adapter: adapter,
+          transport: FakeGenerationTransport(
+            response: <String, Object?>{'ok': true},
+          ),
+        );
+        final List<DocumentImage> catalog = <DocumentImage>[
+          for (var index = 0; index < 4; index++) imageOf(index),
+        ];
+        final GenerationResult result = await service.generate(
+          GenerationRequest(
+            account: openAiAccount(supportsVision: true),
+            materialsText: 'Материал',
+            limit: 5,
+            documentImages: catalog,
+            documentImageParts: catalog.take(1).toList(),
+          ),
+        );
+
+        expect(adapter.buildArgs!.images, hasLength(1));
+        expect(adapter.buildArgs!.images.single.fileName, 'doc.txt');
+        expect(
+          adapter.buildArgs!.userContent,
+          contains('img4 | doc.txt'),
+          reason: 'каталог остаётся полным',
+        );
+        expect(result.sentDocumentImageIds, <String>['img1']);
+        expect(result.skippedDocumentImageIds, isEmpty);
+        expect(result.estimatedInputTokens, greaterThan(0));
+        expect(result.estimatedOutputTokens, 1234);
+        expect(result.estimatorVersion, contains('request-1'));
+      },
+    );
+
+    test('явный пустой список частей — только каталог, без байтов', () async {
+      final adapter = FakeProviderAdapter(
+        cardsJson: cardsJson(<Map<String, Object?>>[validCardJson()]),
+      );
+      final service = serviceWith(
+        adapter: adapter,
+        transport: FakeGenerationTransport(
+          response: <String, Object?>{'ok': true},
+        ),
+      );
+      final List<DocumentImage> catalog = <DocumentImage>[
+        for (var index = 0; index < 2; index++) imageOf(index),
+      ];
+      final GenerationResult result = await service.generate(
+        GenerationRequest(
+          account: openAiAccount(supportsVision: true),
+          materialsText: 'Материал',
+          limit: 5,
+          documentImages: catalog,
+          documentImageParts: const <DocumentImage>[],
+        ),
+      );
+      expect(adapter.buildArgs!.images, isEmpty);
+      expect(adapter.buildArgs!.userContent, contains('img1 | doc.txt'));
+      expect(result.sentDocumentImageIds, isEmpty);
+    });
+
+    test(
+      'одинаковые байты не отправляются дважды, id попадает в skipped',
+      () async {
+        final adapter = FakeProviderAdapter(
+          cardsJson: cardsJson(<Map<String, Object?>>[validCardJson()]),
+        );
+        final service = serviceWith(
+          adapter: adapter,
+          transport: FakeGenerationTransport(
+            response: <String, Object?>{'ok': true},
+          ),
+        );
+        final List<int> sameBytes = List<int>.generate(64, (int i) => i % 251);
+        final List<DocumentImage> catalog = <DocumentImage>[
+          DocumentImage(
+            fileName: 'doc.txt',
+            bytes: Uint8List.fromList(sameBytes),
+            mediaType: AttachmentMediaType.png,
+            sectionIndex: 0,
+          ),
+          DocumentImage(
+            fileName: 'doc.txt',
+            bytes: Uint8List.fromList(sameBytes),
+            mediaType: AttachmentMediaType.png,
+            sectionIndex: 0,
+          ),
+        ];
+        final GenerationResult result = await service.generate(
+          GenerationRequest(
+            account: openAiAccount(supportsVision: true),
+            materialsText: 'Материал',
+            limit: 5,
+            documentImages: catalog,
+            documentImageParts: catalog,
+          ),
+        );
+        expect(adapter.buildArgs!.images, hasLength(1));
+        expect(result.sentDocumentImageIds, <String>['img1']);
+        expect(result.skippedDocumentImageIds, <String>['img2']);
+      },
+    );
+
+    test('несовместимый план (части без Vision) отклоняется явно', () async {
+      final adapter = FakeProviderAdapter();
+      final service = serviceWith(
+        adapter: adapter,
+        transport: FakeGenerationTransport(response: <String, Object?>{}),
+      );
+      final List<DocumentImage> catalog = <DocumentImage>[imageOf(0)];
+      await expectLater(
+        service.generate(
+          GenerationRequest(
+            account: openAiAccount(supportsVision: false),
+            materialsText: 'Материал',
+            limit: 5,
+            documentImages: catalog,
+            documentImageParts: catalog,
+          ),
+        ),
+        throwsGeneration(GenerationErrorCode.visionUnsupported),
+      );
+      expect(adapter.buildCalls, 0);
+    });
+
+    test(
+      'continuation добавляется после пожеланий, исходный текст цел',
+      () async {
+        final adapter = FakeProviderAdapter(
+          cardsJson: cardsJson(<Map<String, Object?>>[validCardJson()]),
+        );
+        final service = serviceWith(
+          adapter: adapter,
+          transport: FakeGenerationTransport(
+            response: <String, Object?>{'ok': true},
+          ),
+        );
+        await service.generate(
+          GenerationRequest(
+            account: openAiAccount(supportsVision: false),
+            materialsText: '',
+            wishes: 'Создай 20 карточек по фотосинтезу',
+            continuation: 'Уже созданные карточки: Вопрос 1',
+            limit: 5,
+          ),
+        );
+        final String userContent = adapter.buildArgs!.userContent;
+        expect(
+          userContent,
+          contains('Создай 20 карточек по фотосинтезу'),
+          reason: 'требования пользователя не переписываются',
+        );
+        expect(userContent, contains('Уже созданные карточки: Вопрос 1'));
+        expect(
+          userContent.indexOf('Создай 20'),
+          lessThan(userContent.indexOf('Уже созданные карточки')),
+        );
+      },
+    );
+
+    test(
+      'оценка растёт от системного промпта к запросу с материалами',
+      () async {
+        final adapter = FakeProviderAdapter(
+          cardsJson: cardsJson(<Map<String, Object?>>[validCardJson()]),
+        );
+        final service = serviceWith(
+          adapter: adapter,
+          transport: FakeGenerationTransport(
+            response: <String, Object?>{'ok': true},
+          ),
+        );
+        final GenerationResult short = await service.generate(
+          GenerationRequest(
+            account: openAiAccount(supportsVision: false),
+            materialsText: 'Кратко.',
+            limit: 1,
+          ),
+        );
+        final GenerationResult long = await service.generate(
+          GenerationRequest(
+            account: openAiAccount(supportsVision: false),
+            materialsText: List<String>.filled(500, 'слово').join(' '),
+            limit: 1,
+          ),
+        );
+        expect(
+          long.estimatedInputTokens,
+          greaterThan(short.estimatedInputTokens!),
+        );
+        expect(long.estimatedOutputTokens, 1234);
+      },
+    );
+  });
 }

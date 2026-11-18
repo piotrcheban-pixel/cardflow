@@ -3,6 +3,8 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cardflow/api/generation/generation_plan_builder.dart';
+import 'package:cardflow/api/generation/generation_prompt.dart';
+import 'package:cardflow/api/generation/generation_request_estimator.dart';
 import 'package:cardflow/api/prompts/system_prompt.dart';
 import 'package:cardflow/domain/generation/content_unit.dart';
 import 'package:cardflow/domain/generation/document_image.dart';
@@ -83,6 +85,7 @@ void main() {
     int? context = 128000,
     GenerationPricing? pricing,
     ImageTokenModel? imageTokens,
+    bool supportsVision = false,
   }) {
     return ModelCapabilities(
       contextWindowTokens: context,
@@ -94,6 +97,7 @@ void main() {
           ? CapabilitySource.unknown
           : CapabilitySource.user,
       imageTokens: imageTokens,
+      supportsVision: supportsVision,
     );
   }
 
@@ -344,7 +348,10 @@ void main() {
             images: <DocumentImage>[imageOf(index: 0)],
           ),
         ],
-        capabilities: caps(imageTokens: const _FixedImageModel(500)),
+        capabilities: caps(
+          imageTokens: const _FixedImageModel(500),
+          supportsVision: true,
+        ),
       );
       expect(plan.chunks, isNotEmpty);
       final int imageTokens = plan.chunks.fold<int>(
@@ -356,6 +363,47 @@ void main() {
   });
 
   group('GenerationPlanBuilder: планирование по общему пути', () {
+    test('оценка плана и оценка собранного запроса согласованы', () {
+      const String wishes = 'Сделай 5 карточек';
+      final GenerationPlan plan = builder.build(
+        documents: <ParsedDocument>[
+          docOf('agree.txt', <String>[
+            'Первый абзац материала.',
+            'Второй абзац.',
+          ]),
+        ],
+        capabilities: caps(),
+        wishes: wishes,
+        requestedCards: 5,
+      );
+      final PlannedChunk chunk = plan.chunks.single;
+      final String userContent = buildGenerationUserContent(
+        materialsText: chunk.materialsText,
+        wishes: wishes,
+        limit: chunk.limit,
+        imagesCatalog: null,
+      );
+      final GenerationRequestEstimate requestEstimate =
+          const GenerationRequestEstimator().estimate(
+            userContent: userContent,
+            attachments: const <GenerationAttachment>[],
+            maxOutputTokens: plan.budget.outputCapTokens,
+          );
+      final int plannedInput =
+          plan.budget.systemPromptTokens +
+          plan.budget.schemaTokens +
+          plan.budget.wrapperTokens +
+          chunk.textTokens +
+          chunk.imageTokens;
+      expect(
+        requestEstimate.inputTotal.tokens,
+        closeTo(plannedInput, 100),
+        reason:
+            'планировщик и исполнитель считают одним оценщиком; разница — '
+            'обёртка/цифры <limit>, а не другая формула',
+      );
+    });
+
     test('build и plan дают одинаковый бюджет на одних входах', () {
       const GenerationOverheadTokens overhead = GenerationOverheadTokens(
         systemPromptTokens: 100,
