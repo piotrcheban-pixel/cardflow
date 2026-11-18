@@ -19,6 +19,7 @@ class GenerationRequest {
     this.wishes,
     this.images = const <GenerationAttachment>[],
     this.documentImages = const <DocumentImage>[],
+    this.maxOutputTokens,
   });
 
   /// Провайдер: протокол, адрес, модель и id ключа.
@@ -39,4 +40,11 @@ class GenerationRequest {
 
   /// Каталог изображений из документов с id (`img1…`) для `<images>` (fix-gen).
   final List<DocumentImage> documentImages;
+
+  /// Максимум токенов ответа для этого запроса (из плана, D.2).
+  ///
+  /// `null` — взять лимит аккаунта/сервиса. Планировщик ограничивает резерв
+  /// ожидаемым выводом фрагмента, поэтому `max_tokens` соответствует плану и
+  /// не резервирует всё окно маленьких моделей.
+  final int? maxOutputTokens;
 }

@@ -16,6 +16,19 @@ import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/generation/generation_budget.dart';
 import 'package:cardflow/domain/generation/generation_pricing.dart';
 
+/// Режим плана: по материалам или только по теме пользователя (ADR-024).
+enum GenerationMode {
+  /// План по документам/вложениям пользователя.
+  materials,
+
+  /// Генерация без материалов: тема и пожелания в пользовательском запросе.
+  ///
+  /// Такой план не содержит единиц содержимого и изображений: материалы
+  /// (`<materials>`) пусты, тема уходит в `<wishes>`. Пустой документ,
+  /// `TextPiece` или фиктивная `ContentUnit` для этого не создаются.
+  promptOnly,
+}
+
 /// Вид фрагмента плана.
 enum ChunkKind {
   /// Только текст.
@@ -29,6 +42,9 @@ enum ChunkKind {
 
   /// Только строки каталога `<images>` (без image-частей).
   catalog,
+
+  /// Фрагмент без материалов: модель генерирует по теме из `<wishes>`.
+  promptOnly,
 }
 
 /// Ссылка на единицу контента внутри фрагмента (ids + смещения/токены).
@@ -214,6 +230,10 @@ class PlanValidity {
 }
 
 /// Один фрагмент плана: что уйдёт в одном запросе.
+///
+/// Обычный фрагмент обязан содержать хотя бы одну единицу содержимого
+/// (D.4.9); исключение — [ChunkKind.promptOnly], где материалов нет по
+/// определению (тема передаётся в `<wishes>`).
 class PlannedChunk {
   /// Создаёт фрагмент; пустой фрагмент запрещён (D.4.9), `limit` ≥ 1 (D.7.3).
   PlannedChunk({
@@ -238,11 +258,18 @@ class PlannedChunk {
        assert(bodyBytes >= 0),
        assert(splitDepth >= 0),
        assert(
-         units.isNotEmpty ||
-             imageParts.isNotEmpty ||
-             catalogOnly.isNotEmpty ||
-             attachments.isNotEmpty,
-         'Пустой фрагмент запрещён (D.4.9)',
+         kind == ChunkKind.promptOnly
+             ? units.isEmpty &&
+                   imageParts.isEmpty &&
+                   catalogOnly.isEmpty &&
+                   attachments.isEmpty
+             : units.isNotEmpty ||
+                   imageParts.isNotEmpty ||
+                   catalogOnly.isNotEmpty ||
+                   attachments.isNotEmpty,
+         kind == ChunkKind.promptOnly
+             ? 'Фрагмент по теме не содержит единиц материалов'
+             : 'Пустой фрагмент запрещён (D.4.9)',
        ),
        units = List<UnitSpan>.unmodifiable(units),
        imageParts = List<DocumentImage>.unmodifiable(imageParts),
@@ -250,6 +277,24 @@ class PlannedChunk {
        imagePartIds = List<String>.unmodifiable(imagePartIds),
        catalogOnlyIds = List<String>.unmodifiable(catalogOnlyIds),
        attachments = List<GenerationAttachment>.unmodifiable(attachments);
+
+  /// Фрагмент «по теме»: без материалов, только `<wishes>`.
+  factory PlannedChunk.promptOnly({
+    required int index,
+    required int limit,
+    int bodyBytes = 0,
+    int splitDepth = 0,
+  }) {
+    return PlannedChunk(
+      index: index,
+      kind: ChunkKind.promptOnly,
+      textTokens: 0,
+      imageTokens: 0,
+      bodyBytes: bodyBytes,
+      limit: limit,
+      splitDepth: splitDepth,
+    );
+  }
 
   /// Номер фрагмента (с 1) для прогресса «фрагмент K из M».
   final int index;
@@ -300,8 +345,46 @@ class PlannedChunk {
   /// План не сериализуется в БД (K.2) и материалы в БД не пишутся (SPEC 3.4):
   /// строка живёт только внутри запуска и нужна пайплайну, чтобы отправить
   /// запрос без повторной сборки текста. У фрагмента без текста (только
-  /// изображения/вложения) — пустая строка.
+  /// изображения/вложения или prompt-only) — пустая строка.
   final String materialsText;
+
+  /// true, если фрагмент генерирует по теме без материалов.
+  bool get isPromptOnly => kind == ChunkKind.promptOnly;
+
+  /// Копия с изменёнными полями (восстановление: дробление, лимит вывода).
+  PlannedChunk copyWith({
+    int? index,
+    ChunkKind? kind,
+    List<UnitSpan>? units,
+    List<DocumentImage>? imageParts,
+    List<DocumentImage>? catalogOnly,
+    List<String>? imagePartIds,
+    List<String>? catalogOnlyIds,
+    List<GenerationAttachment>? attachments,
+    int? textTokens,
+    int? imageTokens,
+    int? bodyBytes,
+    int? limit,
+    int? splitDepth,
+    String? materialsText,
+  }) {
+    return PlannedChunk(
+      index: index ?? this.index,
+      kind: kind ?? this.kind,
+      units: units ?? this.units,
+      imageParts: imageParts ?? this.imageParts,
+      catalogOnly: catalogOnly ?? this.catalogOnly,
+      imagePartIds: imagePartIds ?? this.imagePartIds,
+      catalogOnlyIds: catalogOnlyIds ?? this.catalogOnlyIds,
+      attachments: attachments ?? this.attachments,
+      textTokens: textTokens ?? this.textTokens,
+      imageTokens: imageTokens ?? this.imageTokens,
+      bodyBytes: bodyBytes ?? this.bodyBytes,
+      limit: limit ?? this.limit,
+      splitDepth: splitDepth ?? this.splitDepth,
+      materialsText: materialsText ?? this.materialsText,
+    );
+  }
 
   /// Суммарные токены фрагмента (текст + изображения).
   int get totalTokens => textTokens + imageTokens;
@@ -458,8 +541,20 @@ class GenerationPlan {
     this.requestedCards = 0,
     this.retryAllowanceRequests = 0,
     List<String> unknownFields = const <String>[],
+    this.mode = GenerationMode.materials,
+    this.promptOnlyPrompt,
   }) : assert(requestedCards >= 0),
        assert(retryAllowanceRequests >= 0),
+       assert(
+         mode == GenerationMode.materials ||
+             (promptOnlyPrompt != null && promptOnlyPrompt.trim().isNotEmpty),
+         'Плану по теме нужен пользовательский запрос',
+       ),
+       assert(
+         mode == GenerationMode.promptOnly ||
+             !chunks.any((PlannedChunk chunk) => chunk.isPromptOnly),
+         'Фрагмент по теме допустим только в prompt-only плане',
+       ),
        chunks = List<PlannedChunk>.unmodifiable(chunks),
        omitted = List<OmittedUnit>.unmodifiable(omitted),
        unknownFields = List<String>.unmodifiable(unknownFields);
@@ -488,6 +583,12 @@ class GenerationPlan {
   /// Валидность плана.
   final PlanValidity validity;
 
+  /// Режим плана: материалы или генерация по теме.
+  final GenerationMode mode;
+
+  /// Пользовательский запрос (тема + пожелания) prompt-only плана.
+  final String? promptOnlyPrompt;
+
   /// Сумма лимитов карточек по фрагментам (вычисляется из [chunks]).
   int get plannedCards {
     int total = 0;
@@ -496,6 +597,13 @@ class GenerationPlan {
     }
     return total;
   }
+
+  /// Сколько карточек план реально может выдать (D.7: без молчаливого среза).
+  ///
+  /// Равно [plannedCards]; отдельное имя фиксирует контракт «заказ vs план»
+  /// для UI: пользователь видит [requestedCards] и [achievableCards], а не
+  /// подменённое число.
+  int get achievableCards => plannedCards;
 
   /// Число запросов плана (вычисляется из [chunks]).
   int get plannedRequests => chunks.length;
@@ -509,8 +617,20 @@ class GenerationPlan {
   /// true, если были отброшенные единицы (потери не скрыты).
   bool get hasOmittedUnits => omitted.isNotEmpty;
 
+  /// true, если запрошено больше карточек, чем план может выдать.
+  bool get requestedAboveAchievable =>
+      requestedCards > 0 && achievableCards < requestedCards;
+
+  /// true, если сумма лимитов превышает заказ (D.5 невозможно — предупреждение).
+  bool get achievableAboveRequested =>
+      requestedCards > 0 && achievableCards > requestedCards;
+
+  /// true, если план генерирует без материалов, по теме.
+  bool get isPromptOnly => mode == GenerationMode.promptOnly;
+
   @override
   String toString() =>
-      'GenerationPlan(chunks: ${chunks.length}, omitted: ${omitted.length}, '
-      'cards: $plannedCards/$requestedCards, ${validity.kind.name})';
+      'GenerationPlan(${mode.name}, chunks: ${chunks.length}, '
+      'omitted: ${omitted.length}, cards: $plannedCards/$requestedCards, '
+      '${validity.kind.name})';
 }

@@ -656,20 +656,8 @@ class _PlanRun {
   // -- Подготовка -----------------------------------------------------------
 
   void _prepareBudget() {
-    final bool contextKnown = capabilities.contextWindowTokens != null;
-    _outputCap =
-        capabilities.maxOutputTokens ??
-        (contextKnown
-            ? budgetConfig.defaultOutputCapTokens
-            : budgetConfig.unknownContextOutputCapTokens);
-    final int byOutput =
-        (_outputCap - budgetConfig.jsonEnvelopeTokens) ~/
-        budgetConfig.perCardOutputTokens;
-    final int cardsByOutputCap = math.max(1, byOutput);
-    final int? modelCap = capabilities.maxCardsPerRequest;
-    _cardsByOutputCap = modelCap == null
-        ? cardsByOutputCap
-        : math.min(cardsByOutputCap, modelCap);
+    _outputCap = budgetOutputCapTokens(capabilities, budgetConfig);
+    _cardsByOutputCap = budgetCardsPerRequestCap(capabilities, budgetConfig);
     final int requested = requestedCards ?? _cardsByOutputCap;
     _limitTarget = math.max(1, math.min(requested, _cardsByOutputCap));
 
@@ -1582,14 +1570,17 @@ class _PlanRun {
   }
 
   GenerationPlan _finalize() {
-    final List<_PlannedChunkData> planned = <_PlannedChunkData>[
+    final List<_PlannedChunkData> packed = <_PlannedChunkData>[
       for (var index = 0; index < _drafts.length; index++)
         _finalizeDraft(_drafts[index], index + 1),
     ];
+    // D.5: второй проход — если фрагментов больше, чем запрошено карточек,
+    // совместимые соседние фрагменты укрупняются в пределах бюджета.
+    final List<_PlannedChunkData> planned = _mergeToRequested(packed);
     final List<int> limits = _distributeLimits(planned);
     final List<PlannedChunk> chunks = <PlannedChunk>[
       for (var index = 0; index < planned.length; index++)
-        planned[index].toChunk(limit: limits[index]),
+        planned[index].toChunk(limit: limits[index], index: index + 1),
     ];
     _ensureCoverage(chunks);
     final List<String> unknown = _unknownFields();
@@ -1720,6 +1711,289 @@ class _PlanRun {
 
   int _plannedCards(List<int> limits) =>
       limits.fold<int>(0, (int total, int limit) => total + limit);
+
+  // -- D.5: второй проход (укрупнение фрагментов) ---------------------------
+
+  /// Укрупняет фрагменты до [requestedCards], пока это позволяет бюджет.
+  ///
+  /// Целевое число фрагментов — желаемое, а не абсолютное: если безопасно
+  /// объединить нельзя, возвращается меньшее (безопасное) укрупнение, и план
+  /// получает предупреждение `cardsAboveRequested`. Порядок фрагментов и
+  /// единиц сохраняется; единицы/изображения не дублируются и не теряются.
+  List<_PlannedChunkData> _mergeToRequested(List<_PlannedChunkData> packed) {
+    final int? target = requestedCards;
+    if (target == null || packed.length <= target) return packed;
+    final List<_PlannedChunkData> result = List<_PlannedChunkData>.of(packed);
+    // Сначала предпочитаем соседние фрагменты одного документа, затем любые
+    // соседние: «преимущественно одного документа или совместимых».
+    while (result.length > target) {
+      final bool shared = _mergePass(
+        result,
+        target: target,
+        sharedDocumentOnly: true,
+      );
+      if (result.length <= target) break;
+      final bool any = _mergePass(
+        result,
+        target: target,
+        sharedDocumentOnly: false,
+      );
+      if (!shared && !any) break;
+    }
+    return result;
+  }
+
+  /// Один проход слева направо; возвращает true, если что-то объединено.
+  bool _mergePass(
+    List<_PlannedChunkData> planned, {
+    required int target,
+    required bool sharedDocumentOnly,
+  }) {
+    var mergedAny = false;
+    var index = 0;
+    while (index + 1 < planned.length && planned.length > target) {
+      final _PlannedChunkData first = planned[index];
+      final _PlannedChunkData second = planned[index + 1];
+      if (sharedDocumentOnly && !_sharesDocument(first, second)) {
+        index++;
+        continue;
+      }
+      final _PlannedChunkData? merged = _mergePair(first, second);
+      if (merged == null) {
+        index++;
+        continue;
+      }
+      planned.replaceRange(index, index + 2, <_PlannedChunkData>[merged]);
+      mergedAny = true;
+      // Не сливаем всё в первый фрагмент подряд: после объединения шагаем
+      // дальше, чтобы укрупнение распределялось по документу.
+      index++;
+    }
+    return mergedAny;
+  }
+
+  /// true, если у фрагментов есть общий документ/файл.
+  bool _sharesDocument(_PlannedChunkData first, _PlannedChunkData second) {
+    final Set<String> firstFiles = _fileNamesOf(first);
+    if (firstFiles.isEmpty) return false;
+    for (final String file in _fileNamesOf(second)) {
+      if (firstFiles.contains(file)) return true;
+    }
+    return false;
+  }
+
+  /// Имена файлов/документов фрагмента (единицы, изображения, вложения).
+  Set<String> _fileNamesOf(_PlannedChunkData chunk) {
+    final Set<String> names = <String>{};
+    for (final UnitSpan span in chunk.units) {
+      final String id = span.unitId;
+      if (!id.startsWith('doc:')) continue;
+      final int hash = id.indexOf('#');
+      if (hash > 4) names.add(id.substring(4, hash));
+    }
+    for (final DocumentImage image in chunk.imageParts) {
+      names.add(image.fileName);
+    }
+    for (final DocumentImage image in chunk.catalogOnly) {
+      names.add(image.fileName);
+    }
+    for (final GenerationAttachment attachment in chunk.attachments) {
+      names.add(attachment.fileName);
+    }
+    return names;
+  }
+
+  /// Объединяет два соседних фрагмента или возвращает `null`, если нельзя.
+  ///
+  /// Повторно проверяются: бюджет входа/окно контекста (D.1), лимит image-частей
+  /// и байт изображений, лимит тела запроса, выходной резерв (D.2). Объединение
+  /// не создаёт дублей изображений/вложений и сохраняет `unitIds`/`UnitSpan`.
+  _PlannedChunkData? _mergePair(
+    _PlannedChunkData first,
+    _PlannedChunkData second,
+  ) {
+    if (first.kind == ChunkKind.promptOnly ||
+        second.kind == ChunkKind.promptOnly) {
+      return null;
+    }
+    final String firstText = first.materialsText;
+    final String secondText = second.materialsText;
+    final bool firstHasText = firstText.trim().isNotEmpty;
+    final bool secondHasText = secondText.trim().isNotEmpty;
+    final String mergedText;
+    final int shift;
+    if (firstHasText && secondHasText) {
+      mergedText = '$firstText\n\n$secondText';
+      shift = firstText.length + 2;
+    } else if (secondHasText) {
+      mergedText = secondText;
+      shift = 0;
+    } else {
+      mergedText = firstText;
+      shift = 0;
+    }
+    final List<UnitSpan> units = <UnitSpan>[
+      ...first.units,
+      for (final UnitSpan span in second.units)
+        UnitSpan(
+          unitId: span.unitId,
+          start: span.start + shift,
+          end: span.end + shift,
+          tokens: span.tokens,
+        ),
+    ];
+
+    final Map<String, _ImageEntry> entries = <String, _ImageEntry>{};
+    for (final String id in <String>[
+      ...first.imagePartIds,
+      ...first.catalogOnlyIds,
+      ...second.imagePartIds,
+      ...second.catalogOnlyIds,
+    ]) {
+      final _ImageEntry? entry = _allImageEntries[id];
+      if (entry != null) entries[id] = entry;
+    }
+    final Set<String> partIds = <String>{
+      ...first.imagePartIds,
+      ...second.imagePartIds,
+    };
+    final Set<String> catalogIds = <String>{
+      ...partIds,
+      ...first.catalogOnlyIds,
+      ...second.catalogOnlyIds,
+    };
+    final Set<String> catalogOnlyIds = <String>{
+      for (final String id in catalogIds)
+        if (!partIds.contains(id)) id,
+    };
+    final List<_ImageEntry> parts = <_ImageEntry>[
+      for (final _ImageEntry entry in entries.values)
+        if (partIds.contains(entry.id)) entry,
+    ];
+    final List<_ImageEntry> catalogOnly = <_ImageEntry>[
+      for (final _ImageEntry entry in entries.values)
+        if (catalogOnlyIds.contains(entry.id)) entry,
+    ];
+    if (parts.length > _maxImagesPerChunk) return null;
+
+    final List<GenerationAttachment> attachments = _mergeAttachments(
+      first.attachments,
+      second.attachments,
+    );
+    if (parts.length + attachments.length > _maxImagesPerChunk) return null;
+
+    var imagePartTokens = 0;
+    var imageBytes = 0;
+    for (final _ImageEntry entry in parts) {
+      final int bytes = entry.image.image.bytes.length;
+      if (bytes > _maxImageBytesPerImage) return null;
+      imagePartTokens += entry.image.tokens;
+      imageBytes += bytes;
+    }
+    var attachmentTokens = 0;
+    for (final GenerationAttachment attachment in attachments) {
+      if (attachment.bytes.length > _maxImageBytesPerImage) return null;
+      attachmentTokens += estimator
+          .estimateImage(
+            bytes: attachment.bytes.length,
+            model: capabilities.imageTokens,
+          )
+          .tokens;
+      imageBytes += attachment.bytes.length;
+    }
+    if (imageBytes > _maxImageBytesPerRequest) return null;
+
+    var catalogTokens = 0;
+    var catalogBytes = 0;
+    for (final String id in catalogIds) {
+      final _ImageEntry? entry = entries[id];
+      if (entry == null) continue;
+      catalogTokens += entry.tokens;
+      catalogBytes += entry.bytes;
+    }
+    final int pureTextTokens = estimator.estimateText(mergedText);
+    final int labelTokens = first.labelTokens + second.labelTokens;
+    final int textTokens = pureTextTokens + catalogTokens + labelTokens;
+    final int imageTokens = imagePartTokens + attachmentTokens;
+    if (textTokens + imageTokens > _contentAllowance) return null;
+
+    final int bodyBytes =
+        utf8.encode(mergedText).length +
+        catalogBytes +
+        base64EncodedByteLength(imageBytes) +
+        config.jsonBodyOverheadBytes;
+    if (bodyBytes > _payloadLimit) return null;
+
+    // Повторная проверка бюджета с каталогом/изображениями и резервом вывода:
+    // объединённый фрагмент должен помещаться в окно при самом большом
+    // возможном для него лимите карточек.
+    final GenerationBudget mergedBudget = GenerationBudget.compute(
+      capabilities: capabilities,
+      limit: _limitTarget,
+      systemPromptTokens: overhead.systemPromptTokens,
+      schemaTokens: overhead.schemaTokens,
+      wrapperTokens: overhead.wrapperTokens,
+      catalogTokens: catalogTokens,
+      imageTokens: imageTokens,
+      imagePartBytes: imageBytes,
+      config: budgetConfig,
+    );
+    if (!mergedBudget.isWorkable) return null;
+    if (mergedBudget.inputBudget < pureTextTokens + labelTokens) return null;
+
+    final bool hasText = mergedText.trim().isNotEmpty;
+    final bool hasParts = parts.isNotEmpty || attachments.isNotEmpty;
+    final ChunkKind kind = hasText && hasParts
+        ? ChunkKind.mixed
+        : hasText
+        ? ChunkKind.text
+        : hasParts
+        ? ChunkKind.images
+        : ChunkKind.catalog;
+    return _PlannedChunkData(
+      index: first.index,
+      kind: kind,
+      materialsText: mergedText,
+      units: units,
+      imageParts: <DocumentImage>[
+        for (final _ImageEntry entry in parts) entry.image.image,
+      ],
+      imagePartIds: <String>[for (final _ImageEntry entry in parts) entry.id],
+      catalogOnly: <DocumentImage>[
+        for (final _ImageEntry entry in catalogOnly) entry.image.image,
+      ],
+      catalogOnlyIds: <String>[
+        for (final _ImageEntry entry in catalogOnly) entry.id,
+      ],
+      attachments: attachments,
+      pureTextTokens: pureTextTokens,
+      catalogTokens: catalogTokens,
+      labelTokens: labelTokens,
+      imagePartTokens: imagePartTokens,
+      attachmentTokens: attachmentTokens,
+      bodyBytes: bodyBytes,
+      splitDepth: math.max(first.splitDepth, second.splitDepth),
+    );
+  }
+
+  /// Уникальные вложения двух фрагментов (страница одного файла — один раз).
+  List<GenerationAttachment> _mergeAttachments(
+    List<GenerationAttachment> first,
+    List<GenerationAttachment> second,
+  ) {
+    final List<GenerationAttachment> result = <GenerationAttachment>[];
+    final Set<String> seen = <String>{};
+    for (final GenerationAttachment attachment in <GenerationAttachment>[
+      ...first,
+      ...second,
+    ]) {
+      final String key =
+          '${attachment.fileName}\u0000${attachment.pageNumber}\u0000'
+          '${attachment.groupKey}';
+      if (seen.add(key)) result.add(attachment);
+    }
+    return List<GenerationAttachment>.unmodifiable(result);
+  }
 
   /// Распределяет потолок карточек по фрагментам (D.7) без молчаливого среза.
   List<int> _distributeLimits(List<_PlannedChunkData> planned) {
@@ -1918,8 +2192,19 @@ class _PlanRun {
             budgetConfig.jsonEnvelopeTokens,
       );
     }
+    final int requests = math.max(1, chunks.length);
+    // Обвязка отправляется в каждом запросе — она умножается на число
+    // запросов, иначе оценка входа занижает реальную стоимость (G.1/G.6).
+    final int fixedPrompt = overhead.systemPromptTokens * requests;
+    final int wrapper = overhead.wrapperTokens * requests;
+    final int schema = overhead.schemaTokens * requests;
     final int inputTotal =
-        inputTextTokens + imageTokens + catalogTokens + overhead.fixedTokens;
+        inputTextTokens +
+        imageTokens +
+        catalogTokens +
+        fixedPrompt +
+        wrapper +
+        schema;
     final int totalTokens = inputTotal + reservedOutput;
     final GenerationCost? cost = capabilities.pricing?.costFor(
       inputTokens: inputTotal,
@@ -1928,9 +2213,9 @@ class _PlanRun {
     return GenerationEstimate(
       inputTextTokens: inputTextTokens,
       imageTokens: imageTokens,
-      fixedPromptTokens: overhead.systemPromptTokens,
-      wrapperTokens: overhead.wrapperTokens,
-      schemaTokens: overhead.schemaTokens,
+      fixedPromptTokens: fixedPrompt,
+      wrapperTokens: wrapper,
+      schemaTokens: schema,
       catalogTokens: catalogTokens,
       reservedOutputTokens: reservedOutput,
       expectedOutputTokens: reservedOutput,
@@ -2024,9 +2309,9 @@ class _PlannedChunkData {
 
   int get volume => textTokens + imageTokens;
 
-  PlannedChunk toChunk({required int limit}) {
+  PlannedChunk toChunk({required int limit, int? index}) {
     return PlannedChunk(
-      index: index,
+      index: index ?? this.index,
       kind: kind,
       units: units,
       imageParts: imageParts,

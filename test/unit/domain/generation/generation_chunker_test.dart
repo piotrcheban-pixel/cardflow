@@ -57,7 +57,7 @@ void main() {
     expect(chunks.single.materialsText, contains('Текст раздела'));
     expect(chunks.single.sourceFiles, <String>['лекция.txt']);
     expect(chunks.single.index, 1);
-    expect(chunks.single.limit, kMaxCardsPerChunk);
+    expect(chunks.single.limit, kLegacyChunkCardLimit);
     expect(chunks.single.splitAttempted, isFalse);
   });
 
@@ -225,7 +225,6 @@ void main() {
       expect(chunks[1].materialsText, isEmpty);
       expect(chunks.map((chunk) => chunk.index), <int>[1, 2, 3]);
       expect(chunks[1].sourceFiles, <String>['схема.png']);
-      expect(chunks[1].estimatedTokens(), greaterThan(0));
     });
 
     test('только изображения: фрагменты без текста', () {

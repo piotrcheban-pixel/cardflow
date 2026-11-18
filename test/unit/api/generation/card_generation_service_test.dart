@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cardflow/api/generation/card_generation_service.dart';
 import 'package:cardflow/api/generation/generation_diagnostics.dart';
+import 'package:cardflow/domain/generation/document_image.dart';
 import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
 import 'package:cardflow/domain/generation/generation_provider.dart';
@@ -964,6 +965,152 @@ void main() {
 
       await service.generate(requestFor(openAiAccount()));
       expect(messages, isEmpty);
+    });
+  });
+
+  group('TASK 02B-FINAL: лимиты из возможностей аккаунта', () {
+    DocumentImage imageOf(int index) {
+      return DocumentImage(
+        fileName: 'doc.txt',
+        bytes: Uint8List.fromList(
+          List<int>.generate(64, (int i) => (index * 67 + i) % 251),
+        ),
+        mediaType: AttachmentMediaType.png,
+        sectionIndex: 0,
+        caption: 'Рис. $index',
+      );
+    }
+
+    test('модель с 20 изображениями не режется старым лимитом 8', () async {
+      final adapter = FakeProviderAdapter(
+        cardsJson: cardsJson(<Map<String, Object?>>[validCardJson()]),
+      );
+      final service = serviceWith(
+        adapter: adapter,
+        transport: FakeGenerationTransport(
+          response: <String, Object?>{'ok': true},
+        ),
+      );
+      final ProviderAccount account = openAiAccount(supportsVision: true)
+          .copyWith(maxImagesPerRequest: 20);
+
+      await service.generate(
+        GenerationRequest(
+          account: account,
+          materialsText: 'Материал',
+          limit: 5,
+          documentImages: <DocumentImage>[
+            for (var index = 0; index < 9; index++) imageOf(index),
+          ],
+        ),
+      );
+
+      expect(adapter.buildArgs!.images, hasLength(9));
+      expect(adapter.buildArgs!.userContent, contains('img9 | doc.txt'));
+    });
+
+    test(
+      'лимит изображений аккаунта соблюдается, каталог не теряется',
+      () async {
+        final adapter = FakeProviderAdapter(
+          cardsJson: cardsJson(<Map<String, Object?>>[validCardJson()]),
+        );
+        final service = serviceWith(
+          adapter: adapter,
+          transport: FakeGenerationTransport(
+            response: <String, Object?>{'ok': true},
+          ),
+        );
+        final ProviderAccount account = openAiAccount(supportsVision: true)
+            .copyWith(maxImagesPerRequest: 2);
+
+        await service.generate(
+          GenerationRequest(
+            account: account,
+            materialsText: 'Материал',
+            limit: 5,
+            documentImages: <DocumentImage>[
+              for (var index = 0; index < 5; index++) imageOf(index),
+            ],
+          ),
+        );
+
+        expect(adapter.buildArgs!.images, hasLength(2));
+        expect(
+          adapter.buildArgs!.userContent,
+          contains('img5 | doc.txt'),
+          reason: 'не вошедшие изображения остаются в каталоге',
+        );
+      },
+    );
+
+    test(
+      'request.maxOutputTokens и лимит аккаунта доходят до адаптера',
+      () async {
+        final adapter = FakeProviderAdapter(
+          cardsJson: cardsJson(<Map<String, Object?>>[validCardJson()]),
+        );
+        final service = serviceWith(
+          adapter: adapter,
+          transport: FakeGenerationTransport(
+            response: <String, Object?>{'ok': true},
+          ),
+        );
+        final ProviderAccount account = openAiAccount().copyWith(
+          maxOutputTokens: 555,
+        );
+
+        await service.generate(
+          GenerationRequest(
+            account: account,
+            materialsText: 'Материал',
+            limit: 5,
+            maxOutputTokens: 777,
+          ),
+        );
+        expect(adapter.buildArgs!.maxOutputTokens, 777);
+
+        await service.generate(
+          GenerationRequest(
+            account: account,
+            materialsText: 'Материал',
+            limit: 5,
+          ),
+        );
+        expect(adapter.buildArgs!.maxOutputTokens, 555);
+      },
+    );
+
+    test('лимит байт изображения аккаунта важнее политики 10 МБ', () async {
+      final adapter = FakeProviderAdapter(
+        cardsJson: cardsJson(<Map<String, Object?>>[validCardJson()]),
+      );
+      final service = serviceWith(
+        adapter: adapter,
+        transport: FakeGenerationTransport(
+          response: <String, Object?>{'ok': true},
+        ),
+      );
+      final ProviderAccount account = openAiAccount(supportsVision: true)
+          .copyWith(maxImageBytes: 100);
+      final GenerationAttachment attachment = GenerationAttachment(
+        fileName: 'big.png',
+        mediaType: AttachmentMediaType.png,
+        bytes: Uint8List.fromList(List<int>.filled(200, 1)),
+      );
+
+      await expectLater(
+        service.generate(
+          GenerationRequest(
+            account: account,
+            materialsText: 'Материал',
+            limit: 5,
+            images: <GenerationAttachment>[attachment],
+          ),
+        ),
+        throwsGeneration(GenerationErrorCode.attachmentTooLarge),
+      );
+      expect(adapter.buildArgs, isNull);
     });
   });
 }

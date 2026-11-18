@@ -23,7 +23,6 @@ import 'package:cardflow/api/providers/openai_compatible_adapter.dart';
 import 'package:cardflow/domain/generation/card_image_finder.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
 import 'package:cardflow/domain/generation/generation_attachment.dart';
-import 'package:cardflow/domain/generation/generation_chunker.dart';
 import 'package:cardflow/domain/generation/generation_job.dart';
 import 'package:cardflow/domain/generation/generation_provider.dart';
 import 'package:cardflow/domain/generation/generation_request.dart';
@@ -315,7 +314,6 @@ void main() {
         caller: service,
         jobRepository: FakeGenerationJobRepository(),
         cardStore: FakeGenerationCardStore(),
-        chunker: const GenerationChunker(),
         imageFinder: CompositeCardImageFinder(<CardImageFinder>[
           ImageSearchService(
             dio: dio,

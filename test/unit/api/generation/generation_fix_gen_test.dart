@@ -21,6 +21,7 @@ import 'package:cardflow/domain/text/document_format.dart';
 import 'package:cardflow/domain/text/parsed_document.dart';
 
 import '../../../helpers/generation_fakes.dart';
+import '../../../helpers/generation_plan_fakes.dart';
 
 /// Поведение пайплайна, добавленное в итерации fix-gen:
 /// изображения из документов (Д3), лимит карточек из пожеланий (A8.1),
@@ -69,7 +70,7 @@ void main() {
       caller: caller,
       jobRepository: jobs,
       cardStore: FakeGenerationCardStore(),
-      chunker: _FixedChunker(chunks),
+      planFactory: fixedPlanFactory(chunks),
       imageFinder: imageFinder,
       diagnostics: GenerationDiagnostics(enabled: true, sink: diagnostics.add),
       now: () => DateTime.utc(2026, 11, 15, 10),
@@ -172,62 +173,63 @@ void main() {
     });
   });
 
-  group('лимит карточек из пожеланий (A8.1)', () {
-    test('«20 карточек» распределяются по фрагментам, сумма = 20', () async {
-      final chunks = <GenerationChunk>[
-        GenerationChunk(
-          index: 1,
-          materialsText: 'а' * 400,
-          sourceFiles: const <String>['a.txt'],
-          limit: 20,
-        ),
-        GenerationChunk(
-          index: 2,
-          materialsText: 'б' * 100,
-          sourceFiles: const <String>['b.txt'],
-          limit: 20,
-        ),
-      ];
-      final pipeline = pipelineWith(chunks);
-      final List<int> limits = <int>[];
-      caller.onGenerate = (GenerationRequest request, int call) async {
-        limits.add(request.limit);
-        return resultWith(const <GeneratedCard>[]);
-      };
+  group('лимиты карточек из плана (D.7)', () {
+    test(
+      'лимиты плана исполняются как есть, без повторного распределения',
+      () async {
+        final chunks = <GenerationChunk>[
+          GenerationChunk(
+            index: 1,
+            materialsText: 'а' * 400,
+            sourceFiles: const <String>['a.txt'],
+            limit: 13,
+          ),
+          GenerationChunk(
+            index: 2,
+            materialsText: 'б' * 100,
+            sourceFiles: const <String>['b.txt'],
+            limit: 7,
+          ),
+        ];
+        final pipeline = pipelineWith(chunks);
+        final List<int> limits = <int>[];
+        caller.onGenerate = (GenerationRequest request, int call) async {
+          limits.add(request.limit);
+          return resultWith(const <GeneratedCard>[]);
+        };
 
-      await pipeline.run(
-        requestFor(<ParsedDocument>[
-          docOf('a.txt', <String>['а' * 400]),
-          docOf('b.txt', <String>['б' * 100]),
-        ], wishes: 'Статика: аксиомы и фермы. 20 карточек'),
-      );
+        await pipeline.run(
+          requestFor(<ParsedDocument>[
+            docOf('a.txt', <String>['а' * 400]),
+            docOf('b.txt', <String>['б' * 100]),
+          ], wishes: 'Статика: аксиомы и фермы. 20 карточек'),
+        );
 
-      expect(limits, hasLength(2));
-      expect(limits.fold<int>(0, (int sum, int value) => sum + value), 20);
-      expect(limits.first, greaterThan(limits.last));
-    });
+        expect(limits, <int>[13, 7]);
+      },
+    );
 
     test(
-      '«1 карточка» на три фрагмента — обрабатывается один фрагмент',
+      'фрагменты с лимитом 1 не пропускаются — контент не теряется',
       () async {
         final pipeline = pipelineWith(<GenerationChunk>[
           GenerationChunk(
             index: 1,
             materialsText: 'а' * 400,
             sourceFiles: const <String>['a.txt'],
-            limit: 20,
+            limit: 1,
           ),
           GenerationChunk(
             index: 2,
             materialsText: 'б' * 200,
             sourceFiles: const <String>['b.txt'],
-            limit: 20,
+            limit: 1,
           ),
           GenerationChunk(
             index: 3,
             materialsText: 'в' * 100,
             sourceFiles: const <String>['c.txt'],
-            limit: 20,
+            limit: 1,
           ),
         ]);
         final List<int> limits = <int>[];
@@ -244,7 +246,11 @@ void main() {
           ], wishes: 'Всего 1 карточка'),
         );
 
-        expect(limits, <int>[1], reason: 'больше запрошенного не генерируем');
+        expect(limits, <int>[
+          1,
+          1,
+          1,
+        ], reason: 'L-26: фрагмент не пропускается');
       },
     );
 
@@ -372,19 +378,4 @@ void main() {
       expect(result.status, GenerationJobStatus.done);
     });
   });
-}
-
-/// Чанкер, отдающий заранее заданные фрагменты.
-class _FixedChunker extends GenerationChunker {
-  _FixedChunker(this.chunks);
-
-  final List<GenerationChunk> chunks;
-
-  @override
-  List<GenerationChunk> chunkDocuments(
-    List<ParsedDocument> documents, {
-    required int maxInputTokens,
-  }) {
-    return chunks;
-  }
 }

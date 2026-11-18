@@ -26,7 +26,48 @@ const int kBudgetPerCardOutputTokens = 1024;
 const int kBudgetJsonEnvelopeTokens = 16;
 
 /// Лимит вывода по умолчанию, если возможности модели его не дают (D.2).
-const int kBudgetDefaultOutputCapTokens = 4096;
+///
+/// Значение совпадает с фактическим `max_tokens`, который отправляет
+/// `CardGenerationService` (не характеристика модели: это политика приложения).
+const int kBudgetDefaultOutputCapTokens = 8192;
+
+/// Потолок вывода модели с учётом источника (D.2).
+///
+/// Единственная точка, где решается «сколько максимум токенов ответа»:
+/// подтверждённый лимит модели, иначе консервативное значение конфигурации
+/// (8192 при известном окне, 2048 при неизвестном). Для маленьких окон
+/// (например, 8k) резерв не может занимать больше половины окна — иначе любой
+/// запрос заведомо превысил бы контекст; это не лимит модели, а совместимость
+/// резерва с окном. Планировщик материалов и prompt-only планировщик
+/// используют её, чтобы не расходиться.
+int budgetOutputCapTokens(
+  ModelCapabilities capabilities, [
+  GenerationBudgetConfig config = const GenerationBudgetConfig(),
+]) {
+  final int? modelCap = capabilities.maxOutputTokens;
+  if (modelCap != null) return modelCap;
+  final int? window = capabilities.contextWindowTokens;
+  if (window == null) return config.unknownContextOutputCapTokens;
+  final int contextBound = math.max(1, window ~/ 2);
+  return math.min(config.defaultOutputCapTokens, contextBound);
+}
+
+/// Сколько карточек максимум допускает один запрос по бюджету вывода (D.2).
+///
+/// `(outputCap − конверт) / ожидаемый вывод карточки`, не меньше 1; если
+/// модель/провайдер объявляет `maxCardsPerRequest`, берётся минимум. Это
+/// замена универсальному `kMaxCardsPerChunk = 20`.
+int budgetCardsPerRequestCap(
+  ModelCapabilities capabilities, [
+  GenerationBudgetConfig config = const GenerationBudgetConfig(),
+]) {
+  final int cap = budgetOutputCapTokens(capabilities, config);
+  final int byOutput =
+      (cap - config.jsonEnvelopeTokens) ~/ config.perCardOutputTokens;
+  final int byOutputSafe = byOutput < 1 ? 1 : byOutput;
+  final int? modelCap = capabilities.maxCardsPerRequest;
+  return modelCap == null ? byOutputSafe : math.min(byOutputSafe, modelCap);
+}
 
 /// Консервативный бюджет материалов при неизвестном окне (C.5: вход ≤ 6000).
 const int kBudgetUnknownContextInputTokens = 6000;
@@ -157,11 +198,7 @@ class GenerationBudget {
     final int? contextWindow = capabilities.contextWindowTokens;
     final bool contextKnown = contextWindow != null;
     final bool outputCapAssumed = capabilities.maxOutputTokens == null;
-    final int outputCap =
-        capabilities.maxOutputTokens ??
-        (contextKnown
-            ? config.defaultOutputCapTokens
-            : config.unknownContextOutputCapTokens);
+    final int outputCap = budgetOutputCapTokens(capabilities, config);
     final int expectedOutput = math.min(
       outputCap,
       cards * config.perCardOutputTokens + config.jsonEnvelopeTokens,

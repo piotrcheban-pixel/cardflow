@@ -816,8 +816,11 @@ void main() {
       );
       expectPlanInvariants(result);
       expect(result.plan.chunks.length, greaterThan(1));
+      final int cardsPerRequest = budgetCardsPerRequestCap(
+        caps(context: 200000),
+      );
       final int softTarget =
-          3 *
+          cardsPerRequest *
           const GenerationChunkPlannerConfig().softTargetMaterialTokensPerCard;
       for (final PlannedChunk chunk in result.plan.chunks) {
         expect(
@@ -841,10 +844,13 @@ void main() {
       expectPlanInvariants(result);
       expect(result.plan.chunks.length, greaterThan(1));
       expect(result.plan.budget.contextWindowTokens, 1048576);
+      final int softTarget =
+          budgetCardsPerRequestCap(caps(context: 1048576)) *
+          const GenerationChunkPlannerConfig().softTargetMaterialTokensPerCard;
       for (final PlannedChunk chunk in result.plan.chunks) {
         expect(
           chunk.textTokens,
-          lessThanOrEqualTo(36000),
+          lessThanOrEqualTo(softTarget + 12000),
           reason: 'мягкая цель не должна позволять гигантские фрагменты',
         );
       }
@@ -887,7 +893,10 @@ void main() {
             ]),
           ],
           planner: const GenerationChunkPlanner(
-            config: GenerationChunkPlannerConfig(maxChunks: 3),
+            config: GenerationChunkPlannerConfig(
+              maxChunks: 3,
+              softTargetMaterialTokensPerCard: 50,
+            ),
           ),
         );
         expect(result.plan.validity.isInvalid, isTrue);
@@ -950,29 +959,27 @@ void main() {
       expectPlanInvariants(result);
     });
 
-    test(
-      '26b. заказ меньше числа фрагментов — не ноль карточек на фрагмент',
-      () {
-        final result = makePlan(
-          documents: <ParsedDocument>[
-            for (var index = 0; index < 4; index++)
-              docOf('doc$index.txt', <String>[longParagraph(sentences: 800)]),
-          ],
-          requestedCards: 2,
-        );
-        final GenerationPlan plan = result.plan;
-        expect(plan.requestedCards, 2);
-        expect(plan.chunks, isNotEmpty);
-        for (final PlannedChunk chunk in plan.chunks) {
-          expect(chunk.limit, greaterThanOrEqualTo(1));
-        }
-        expect(
-          plan.validity.warnings,
-          contains(PlanWarningCode.cardsAboveRequested),
-        );
-        expectPlanInvariants(result);
-      },
-    );
+    test('26b. D.5: заказ меньше числа фрагментов — фрагменты укрупняются', () {
+      final result = makePlan(
+        documents: <ParsedDocument>[
+          for (var index = 0; index < 4; index++)
+            docOf('doc$index.txt', <String>[longParagraph(sentences: 800)]),
+        ],
+        requestedCards: 2,
+      );
+      final GenerationPlan plan = result.plan;
+      expect(plan.requestedCards, 2);
+      expect(plan.chunks.length, lessThanOrEqualTo(2));
+      for (final PlannedChunk chunk in plan.chunks) {
+        expect(chunk.limit, greaterThanOrEqualTo(1));
+      }
+      expect(
+        plan.plannedCards,
+        lessThanOrEqualTo(2),
+        reason: 'D.5: больше запрошенного не планируем',
+      );
+      expectPlanInvariants(result);
+    });
 
     test(
       '26c. распределение заказа: сумма равна заказу в пределах потолка',
@@ -1197,7 +1204,7 @@ void main() {
         expect(chunk.splitDepth, 0);
         expect(chunk.imageParts, isEmpty);
         expect(chunk.catalogOnly, isEmpty);
-        expect(chunk.limit, kMaxCardsPerChunk);
+        expect(chunk.limit, kLegacyChunkCardLimit);
       }
     });
 
@@ -1268,17 +1275,21 @@ void main() {
   // -------------------------------------------------------------------------
 
   group('Нет зависимости от фиксированных чисел', () {
-    test('планировщик не использует kMaxCardsPerChunk/kImageTokenEstimate', () {
-      final String source = File(
-        'lib/domain/generation/generation_chunk_planner.dart',
-      ).readAsStringSync();
-      expect(source, isNot(contains('kMaxCardsPerChunk')));
-      expect(source, isNot(contains('kImageTokenEstimate')));
-      expect(source, isNot(contains('* 20')));
-      final String budget = File('lib/domain/generation/generation_budget.dart')
-          .readAsStringSync();
-      expect(budget, isNot(contains('kMinInputTokenBudget')));
-    });
+    test(
+      'планировщик не использует kLegacyChunkCardLimit/kImageTokenEstimate',
+      () {
+        final String source = File(
+          'lib/domain/generation/generation_chunk_planner.dart',
+        ).readAsStringSync();
+        expect(source, isNot(contains('kLegacyChunkCardLimit')));
+        expect(source, isNot(contains('kImageTokenEstimate')));
+        expect(source, isNot(contains('* 20')));
+        final String budget = File(
+          'lib/domain/generation/generation_budget.dart',
+        ).readAsStringSync();
+        expect(budget, isNot(contains('kMinInputTokenBudget')));
+      },
+    );
   });
 }
 

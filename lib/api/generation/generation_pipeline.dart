@@ -1,6 +1,17 @@
-/// Пайплайн генерации карточек: оценка, чанкинг, последовательные вызовы,
-/// дедупликация, прогресс/отмена и `generation_jobs` (SPEC A8.5, ADR-015).
+/// Пайплайн генерации карточек: адаптивный план, последовательные вызовы,
+/// восстановление, дедупликация, прогресс/отмена и `generation_jobs`
+/// (SPEC A8.5, ADR-015, разделы D–F аудита TASK 01).
+///
+/// Порядок работы с итерации TASK 02B-FINAL:
+/// `GenerationRunRequest` → `ContentInventory`/`PromptOnlyRequest` →
+/// `GenerationPlan` (бюджет, фрагменты, изображения, лимиты карточек) →
+/// `CardGenerationService` по фрагментам плана → карточки/ошибки →
+/// предпросмотр/импорт. План строится **до** первого API-запроса; старый
+/// `GenerationChunker` в production-путь не вызывается и не переограничивает
+/// план.
 library;
+
+import 'dart:math' as math;
 
 import 'package:uuid/uuid.dart';
 
@@ -8,6 +19,7 @@ import 'package:cardflow/api/generation/generation_caller.dart';
 import 'package:cardflow/api/generation/generation_cancellation.dart';
 import 'package:cardflow/api/generation/generation_diagnostics.dart';
 import 'package:cardflow/api/generation/generation_images.dart';
+import 'package:cardflow/api/generation/generation_plan_builder.dart';
 import 'package:cardflow/api/generation/system_prompt.dart';
 import 'package:cardflow/api/images/placeholder_image_generator.dart';
 import 'package:cardflow/domain/cards/card.dart';
@@ -17,18 +29,22 @@ import 'package:cardflow/domain/generation/card_image_finder.dart';
 import 'package:cardflow/domain/generation/document_image.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
 import 'package:cardflow/domain/generation/generated_card_image.dart';
+import 'package:cardflow/domain/generation/generation_attachment.dart';
+import 'package:cardflow/domain/generation/generation_budget.dart';
 import 'package:cardflow/domain/generation/generation_card_limit.dart';
 import 'package:cardflow/domain/generation/generation_card_store.dart';
-import 'package:cardflow/domain/generation/generation_chunker.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
 import 'package:cardflow/domain/generation/generation_failure_reason.dart';
 import 'package:cardflow/domain/generation/generation_job.dart';
-import 'package:cardflow/domain/generation/generation_model.dart';
+import 'package:cardflow/domain/generation/generation_plan.dart';
+import 'package:cardflow/domain/generation/generation_plan_splitter.dart';
 import 'package:cardflow/domain/generation/generation_request.dart';
 import 'package:cardflow/domain/generation/generation_result.dart';
 import 'package:cardflow/domain/generation/generation_run.dart';
 import 'package:cardflow/domain/generation/image_query.dart';
-import 'package:cardflow/domain/generation/token_estimator.dart';
+import 'package:cardflow/domain/generation/model_capabilities.dart';
+import 'package:cardflow/domain/generation/prompt_only_planner.dart';
+import 'package:cardflow/domain/generation/prompt_only_request.dart';
 
 /// Коды ошибок, после которых повторять следующие фрагменты бессмысленно.
 const Set<GenerationErrorCode> _fatalCodes = <GenerationErrorCode>{
@@ -40,6 +56,13 @@ const Set<GenerationErrorCode> _fatalCodes = <GenerationErrorCode>{
 
 /// Код в `generation_jobs.error_code` для непредвиденного сбоя пайплайна/БД.
 const String _unexpectedErrorCode = 'unexpected';
+
+/// Строитель плана для тестов/встраивания (production использует
+/// [GenerationPlanBuilder] и [PromptOnlyPlanner]).
+typedef GenerationPlanFactory = GenerationPlan Function(
+  GenerationRunRequest request,
+  ModelCapabilities capabilities,
+);
 
 /// Оркестратор генерации (контракт для UI).
 abstract interface class GenerationRunner {
@@ -59,22 +82,25 @@ abstract interface class GenerationRunner {
   });
 }
 
-/// Оркестратор генерации.
+/// Оркестратор генерации по адаптивному плану.
 class GenerationPipeline implements GenerationRunner {
   /// Создаёт пайплайн.
   GenerationPipeline({
     required this.caller,
     required this.jobRepository,
     required this.cardStore,
-    this.estimator = const TokenEstimator(),
-    this.chunker = const GenerationChunker(),
+    this.planBuilder = const GenerationPlanBuilder(),
+    this.promptOnlyPlanner = const PromptOnlyPlanner(),
+    this.planFactory,
+    this.splitter = const GenerationPlanSplitter(),
     this.imageFinder,
     this.placeholderGenerator,
     this.imageSearchBudget = const Duration(seconds: 90),
     this.diagnostics = const GenerationDiagnostics(),
     this.now = _defaultNow,
     this.jobIdFactory = _defaultJobId,
-  });
+    this.maxRecoveryRequests = 12,
+  }) : assert(maxRecoveryRequests >= 0);
 
   /// Вызов модели на фрагмент.
   final GenerationCaller caller;
@@ -85,11 +111,17 @@ class GenerationPipeline implements GenerationRunner {
   /// Дедупликация/импорт.
   final GenerationCardStore cardStore;
 
-  /// Оценщик токенов.
-  final TokenEstimator estimator;
+  /// Сборщик плана по материалам (production-путь).
+  final GenerationPlanBuilder planBuilder;
 
-  /// Чанкер.
-  final GenerationChunker chunker;
+  /// Планировщик генерации без материалов (ADR-024).
+  final PromptOnlyPlanner promptOnlyPlanner;
+
+  /// Подмена плана (тесты/встраивание); `null` — production-путь.
+  final GenerationPlanFactory? planFactory;
+
+  /// Дробление проблемного фрагмента при восстановлении (F.3).
+  final GenerationPlanSplitter splitter;
 
   /// Поиск иллюстраций по `image` (итерации 7.9/7.14); `null` — без поиска.
   final CardImageFinder? imageFinder;
@@ -111,6 +143,10 @@ class GenerationPipeline implements GenerationRunner {
 
   /// Debug-диагностика (ADR-024).
   final GenerationDiagnostics diagnostics;
+
+  /// Технический предохранитель восстановления: сколько дополнительных
+  /// запросов (дроблений/сокращений вывода) допускается за запуск (F.2/F.3).
+  final int maxRecoveryRequests;
 
   /// Кэш картинок по запросу в рамках одного запуска/повтора.
   final Map<String, Future<GeneratedCardImage?>> _imageCache =
@@ -144,7 +180,6 @@ class GenerationPipeline implements GenerationRunner {
     _resetImageBudget();
     final String jobId = jobIdFactory();
     final DateTime createdAt = now();
-    final int systemPromptTokens = estimator.estimate(systemPromptGenRuV7);
     final GenerationJob initialJob = GenerationJob(
       id: jobId,
       status: GenerationJobStatus.running,
@@ -162,15 +197,12 @@ class GenerationPipeline implements GenerationRunner {
       onProgress?.call(
         const GenerationProgress(phase: GenerationProgressPhase.chunking),
       );
-      final int budget = inputTokenBudget(
-        contextTokens: request.account.contextTokens,
-        systemPromptTokens: systemPromptTokens,
-      );
-      final List<GenerationChunk> chunks = _withCardLimits(
-        _chunksFor(request, budget),
-        request.wishes,
-      );
-      if (chunks.isEmpty) {
+      final bool hasMaterials =
+          request.documents.isNotEmpty ||
+          request.images.isNotEmpty ||
+          request.documentImages.isNotEmpty;
+      final String? topic = _topicOf(request.wishes);
+      if (!hasMaterials && topic == null) {
         await jobRepository.save(
           initialJob.copyWith(
             status: GenerationJobStatus.error,
@@ -180,23 +212,47 @@ class GenerationPipeline implements GenerationRunner {
         throw const GenerationException(GenerationErrorCode.noMaterials);
       }
 
-      final int estimatedTokens =
-          estimator.estimateAll(<String>[
-            for (final document in request.documents) document.text,
-          ]) +
-          estimator.estimate(request.wishes ?? '') +
-          request.images.length * kImageTokenEstimate +
-          chunks.length * (systemPromptTokens + kPromptWrapperTokenReserve);
+      final ModelCapabilities capabilities = resolveModelCapabilities(
+        request.account,
+      );
+      final GenerationPlan plan = _buildPlan(
+        request,
+        capabilities,
+        hasMaterials: hasMaterials,
+        topic: topic,
+      );
+      // План проверяется до первого API-запроса (D.8): невалидный план не
+      // тратит токены и не маскируется частичным успехом.
+      if (!plan.validity.isValid) {
+        final GenerationException error = _planError(plan);
+        await jobRepository.save(
+          initialJob.copyWith(
+            status: GenerationJobStatus.error,
+            errorCode: error.code.name,
+          ),
+        );
+        throw error;
+      }
+      if (plan.chunks.isEmpty) {
+        await jobRepository.save(
+          initialJob.copyWith(
+            status: GenerationJobStatus.error,
+            errorCode: GenerationErrorCode.noMaterials.name,
+          ),
+        );
+        throw const GenerationException(GenerationErrorCode.noMaterials);
+      }
+
       final Set<String> seen = <String>{
         ...?await _existingHashes(request.targetDeckId),
       };
-
       final GenerationRunResult result = await _process(
         request: request,
         job: initialJob,
-        chunks: chunks,
+        plan: plan,
+        chunks: plan.chunks,
         seen: seen,
-        estimate: estimatedTokens,
+        estimate: plan.estimate.totalTokens,
         onProgress: onProgress,
         cancellation: cancellation,
       );
@@ -207,60 +263,65 @@ class GenerationPipeline implements GenerationRunner {
     }
   }
 
-  /// Фрагменты запуска: обычная нарезка или prompt-only фрагмент по теме.
-  ///
-  /// Если файлов нет, а пожелания задают тему, создаётся один фрагмент с пустым
-  /// `materialsText` (итерация 7.10, ADR-024): тема уходит в `<wishes>`.
-  /// Пустая нарезка при наличии файлов — прежний `noMaterials`.
-  List<GenerationChunk> _chunksFor(GenerationRunRequest request, int budget) {
-    final List<GenerationChunk> chunks = chunker.chunkAll(
-      request.documents,
-      request.images,
-      maxInputTokens: budget,
-      documentImages: request.documentImages,
-    );
-    if (chunks.isNotEmpty ||
-        request.documents.isNotEmpty ||
-        request.images.isNotEmpty ||
-        request.documentImages.isNotEmpty) {
-      return chunks;
+  /// Строит план: prompt-only по теме или по материалам (D.5/D.7).
+  GenerationPlan _buildPlan(
+    GenerationRunRequest request,
+    ModelCapabilities capabilities, {
+    required bool hasMaterials,
+    required String? topic,
+  }) {
+    final GenerationPlanFactory? factory = planFactory;
+    if (factory != null) return factory(request, capabilities);
+    final int? requested =
+        request.requestedCards ?? requestedCardCount(request.wishes);
+    if (!hasMaterials) {
+      return promptOnlyPlanner.plan(
+        request: PromptOnlyRequest(prompt: topic!, requestedCards: requested),
+        capabilities: capabilities,
+      );
     }
-    if ((request.wishes ?? '').trim().isEmpty) return chunks;
-    return <GenerationChunk>[
-      const GenerationChunk(
-        index: 1,
-        materialsText: '',
-        sourceFiles: <String>[],
-        limit: kMaxCardsPerChunk,
-      ),
-    ];
+    return planBuilder.build(
+      documents: request.documents,
+      capabilities: capabilities,
+      attachments: request.images,
+      documentImages: request.documentImages,
+      wishes: request.wishes,
+      requestedCards: requested,
+    );
   }
 
-  /// Распределяет общее число карточек из пожеланий по фрагментам (fix-gen).
-  ///
-  /// «20 карточек» в пожеланиях → каждый фрагмент получает долю,
-  /// пропорциональную объёму (сумма = 20, не больше [kMaxCardsPerChunk] на
-  /// фрагмент). Число не указано — остаются лимиты фрагментов.
-  List<GenerationChunk> _withCardLimits(
-    List<GenerationChunk> chunks,
-    String? wishes,
-  ) {
-    final int? requested = requestedCardCount(wishes);
-    if (requested == null || chunks.isEmpty) return chunks;
-    final List<int> volumes = <int>[
-      for (final GenerationChunk chunk in chunks)
-        chunk.materialsText.trim().isEmpty
-            ? 1
-            : estimator.estimate(chunk.materialsText),
-    ];
-    final List<int> limits = distributeCardLimits(
-      volumes: volumes,
-      total: requested,
-    );
-    return <GenerationChunk>[
-      for (var index = 0; index < chunks.length; index++)
-        chunks[index].copyWith(limit: limits[index]),
-    ];
+  /// Тема/пожелания для prompt-only; `null` — пусто.
+  String? _topicOf(String? wishes) {
+    final String text = wishes?.trim() ?? '';
+    return text.isEmpty ? null : text;
+  }
+
+  /// Невалидный план → доменная ошибка (ARB-сообщение в UI).
+  GenerationException _planError(GenerationPlan plan) {
+    final String details = 'plan invalid: ${plan.validity.reason?.name}';
+    return switch (plan.validity.reason) {
+      PlanInvalidReason.contextWindowTooSmall ||
+      PlanInvalidReason.unitTooLarge ||
+      PlanInvalidReason.tooManyChunks => GenerationException(
+        GenerationErrorCode.contextOverflow,
+        details: details,
+        failureReason: GenerationFailureReason.contextOverflow,
+      ),
+      PlanInvalidReason.payloadTooLarge => GenerationException(
+        GenerationErrorCode.payloadTooLarge,
+        details: details,
+        failureReason: GenerationFailureReason.payloadTooLarge,
+      ),
+      PlanInvalidReason.imagesWithoutVision => GenerationException(
+        GenerationErrorCode.visionUnsupported,
+        details: details,
+        failureReason: GenerationFailureReason.unsupportedModality,
+      ),
+      null => GenerationException(
+        GenerationErrorCode.badRequest,
+        details: details,
+      ),
+    };
   }
 
   @override
@@ -293,17 +354,9 @@ class GenerationPipeline implements GenerationRunner {
       ..._hashesOfCards(previous.cards),
       ...?await _existingHashes(request.targetDeckId),
     };
-    final List<GenerationChunk> chunks = <GenerationChunk>[
-      for (final failure in retryable)
-        GenerationChunk(
-          index: failure.chunkIndex,
-          materialsText: failure.materialsText,
-          sourceFiles: failure.sourceFiles,
-          limit: failure.limit,
-          splitAttempted: failure.splitAttempted,
-          images: failure.images,
-          documentImages: failure.documentImages,
-        ),
+    final List<PlannedChunk> chunks = <PlannedChunk>[
+      for (final GenerationChunkFailure failure in retryable)
+        failure.plannedChunk ?? _plannedFromFailure(failure),
     ];
 
     try {
@@ -313,6 +366,7 @@ class GenerationPipeline implements GenerationRunner {
           status: GenerationJobStatus.running,
           clearErrorCode: true,
         ),
+        plan: previous.plan,
         chunks: chunks,
         seen: seen,
         estimate: previous.estimatedTokens,
@@ -330,11 +384,12 @@ class GenerationPipeline implements GenerationRunner {
     }
   }
 
-  /// Общий цикл обработки фрагментов (первый запуск и повтор упавших).
+  /// Общий цикл обработки фрагментов плана (первый запуск и повтор упавших).
   Future<GenerationRunResult> _process({
     required GenerationRunRequest request,
     required GenerationJob job,
-    required List<GenerationChunk> chunks,
+    required GenerationPlan? plan,
+    required List<PlannedChunk> chunks,
     required Set<String> seen,
     required int estimate,
     required GenerationProgressCallback? onProgress,
@@ -345,13 +400,17 @@ class GenerationPipeline implements GenerationRunner {
     int initialDuplicates = 0,
     int initialRejected = 0,
   }) async {
-    final List<GenerationChunk> queue = List<GenerationChunk>.of(chunks);
+    final List<_QueueItem> queue = <_QueueItem>[
+      for (final PlannedChunk chunk in chunks) _QueueItem(chunk),
+    ];
+    _renumber(queue);
     final List<GeneratedCard> cards = List<GeneratedCard>.of(initialCards);
     final List<GenerationChunkFailure> failures = <GenerationChunkFailure>[];
     var tokensUsed = initialTokens;
     var processed = initialProcessed;
     var duplicates = initialDuplicates;
     var rejected = initialRejected;
+    var recoveryRequests = 0;
     var cancelled = false;
     GenerationException? fatal;
 
@@ -361,17 +420,12 @@ class GenerationPipeline implements GenerationRunner {
         cancelled = true;
         break;
       }
-      final GenerationChunk chunk = queue[index];
-      // Фрагмент без доли общего лимита (например, «1 карточка» на три
-      // фрагмента) моделью не обрабатывается: иначе карточек будет больше,
-      // чем просил пользователь.
-      if (chunk.limit < 1) {
-        index++;
-        continue;
-      }
-      final List<DocumentImage> documentImages = withCatalogIds(
-        chunk.documentImages,
-      );
+      final _QueueItem item = queue[index];
+      final PlannedChunk chunk = item.chunk;
+      final List<DocumentImage> documentImages = withCatalogIds(<DocumentImage>[
+        ...chunk.imageParts,
+        ...chunk.catalogOnly,
+      ]);
       onProgress?.call(
         GenerationProgress(
           phase: GenerationProgressPhase.sending,
@@ -388,8 +442,9 @@ class GenerationPipeline implements GenerationRunner {
             materialsText: chunk.materialsText,
             wishes: request.wishes,
             limit: chunk.limit,
-            images: chunk.images,
+            images: chunk.attachments,
             documentImages: documentImages,
+            maxOutputTokens: _maxOutputTokensFor(plan, chunk),
           ),
           cancelToken: cancellation?.token,
         );
@@ -403,16 +458,26 @@ class GenerationPipeline implements GenerationRunner {
           fatal = error;
           break;
         }
-        if (error.code == GenerationErrorCode.truncated &&
-            !chunk.splitAttempted) {
-          final List<GenerationChunk>? halves = chunker.splitInHalf(chunk);
-          if (halves != null) {
-            queue.replaceRange(index, index + 1, halves);
-            for (var i = 0; i < queue.length; i++) {
-              queue[i] = queue[i].copyWith(index: i + 1);
-            }
-            continue;
-          }
+        // Восстановление: дробим только проблемную часть плана. Rate limit,
+        // сеть, auth и прочие ошибки не дробят материалы (F.2).
+        final List<PlannedChunk>? replacement =
+            recoveryRequests < maxRecoveryRequests
+            ? _recoveryFor(chunk, item, error)
+            : null;
+        if (replacement != null) {
+          recoveryRequests += replacement.length;
+          queue.replaceRange(index, index + 1, <_QueueItem>[
+            for (final PlannedChunk planned in replacement)
+              _QueueItem(
+                planned,
+                attempts: item.attempts + 1,
+                limitReduced:
+                    item.limitReduced ||
+                    error.code == GenerationErrorCode.truncated,
+              ),
+          ]);
+          _renumber(queue);
+          continue;
         }
         processed++;
         failures.add(
@@ -543,6 +608,144 @@ class GenerationPipeline implements GenerationRunner {
       rejectedCards: rejected,
       fatalErrorCode: fatal?.code,
       fatalProviderReason: fatal?.providerReason,
+      plan: plan,
+    );
+  }
+
+  /// Верхняя граница ответа для фрагмента: ожидаемый вывод плана (D.2).
+  ///
+  /// Резерв не может превышать `outputCap` плана; для старых результатов без
+  /// плана — `null` (лимит аккаунта/сервиса).
+  int? _maxOutputTokensFor(GenerationPlan? plan, PlannedChunk chunk) {
+    if (plan == null || plan.budget.outputCapTokens < 1) return null;
+    final int expected =
+        chunk.limit * kBudgetPerCardOutputTokens + kBudgetJsonEnvelopeTokens;
+    return math.min(plan.budget.outputCapTokens, expected);
+  }
+
+  /// Дробление проблемного фрагмента (F.2/F.3/F.4).
+  ///
+  /// - `truncated`: сначала сокращается ожидаемый вывод (меньше карточек),
+  ///   вход не дробится без необходимости; затем — дробление по единицам.
+  /// - `contextOverflow`/`payloadTooLarge`: дробится только проблемный
+  ///   фрагмент по единицам/страницам с сохранением порядка и unitIds.
+  /// - `rateLimited`, сеть, auth, невалидный JSON — без дробления.
+  List<PlannedChunk>? _recoveryFor(
+    PlannedChunk chunk,
+    _QueueItem item,
+    GenerationException error,
+  ) {
+    switch (error.code) {
+      case GenerationErrorCode.truncated:
+        // Сначала дробим фрагмент по единицам: меньше ожидаемого вывода на
+        // запрос при сохранении суммы лимитов карточек.
+        final List<PlannedChunk>? halves = splitter.split(chunk);
+        if (halves != null) return halves;
+        // Дробить нечего — сокращаем ожидаемый вывод, не вход (F.4).
+        if (!item.limitReduced && chunk.limit > 1) {
+          return <PlannedChunk>[
+            chunk.copyWith(limit: math.max(1, chunk.limit ~/ 2)),
+          ];
+        }
+        return null;
+      case GenerationErrorCode.contextOverflow:
+      case GenerationErrorCode.payloadTooLarge:
+        return splitter.split(chunk);
+      case GenerationErrorCode.missingApiKey:
+      case GenerationErrorCode.providerNotConfigured:
+      case GenerationErrorCode.invalidApiKey:
+      case GenerationErrorCode.badRequest:
+      case GenerationErrorCode.rateLimited:
+      case GenerationErrorCode.serverUnavailable:
+      case GenerationErrorCode.timeout:
+      case GenerationErrorCode.network:
+      case GenerationErrorCode.cancelled:
+      case GenerationErrorCode.emptyResponse:
+      case GenerationErrorCode.refused:
+      case GenerationErrorCode.invalidResponse:
+      case GenerationErrorCode.noMaterials:
+      case GenerationErrorCode.visionUnsupported:
+      case GenerationErrorCode.fileWithoutTextAndVision:
+      case GenerationErrorCode.pdfScanUnsupported:
+      case GenerationErrorCode.pdfScanVisionRequired:
+      case GenerationErrorCode.attachmentTooLarge:
+        return null;
+    }
+  }
+
+  /// Перенумеровывает очередь после дробления (прогресс «фрагмент K из M»).
+  void _renumber(List<_QueueItem> queue) {
+    for (var index = 0; index < queue.length; index++) {
+      final PlannedChunk chunk = queue[index].chunk;
+      if (chunk.index != index + 1) {
+        queue[index] = queue[index].withChunk(chunk.copyWith(index: index + 1));
+      }
+    }
+  }
+
+  /// Можно ли повторять фрагмент кнопкой «Повторить неудавшиеся» (F.5).
+  ///
+  /// Детерминированные ошибки (ключ, модальность, размер вложения, отказ
+  /// модели, исчерпанные варианты дробления) не повторяются без изменений.
+  bool _isRetryable(GenerationErrorCode code) {
+    return switch (code) {
+      GenerationErrorCode.missingApiKey ||
+      GenerationErrorCode.providerNotConfigured ||
+      GenerationErrorCode.invalidApiKey ||
+      GenerationErrorCode.noMaterials ||
+      GenerationErrorCode.visionUnsupported ||
+      GenerationErrorCode.fileWithoutTextAndVision ||
+      GenerationErrorCode.pdfScanUnsupported ||
+      GenerationErrorCode.pdfScanVisionRequired ||
+      GenerationErrorCode.attachmentTooLarge ||
+      GenerationErrorCode.refused ||
+      GenerationErrorCode.contextOverflow ||
+      GenerationErrorCode.payloadTooLarge => false,
+      GenerationErrorCode.badRequest ||
+      GenerationErrorCode.rateLimited ||
+      GenerationErrorCode.serverUnavailable ||
+      GenerationErrorCode.timeout ||
+      GenerationErrorCode.network ||
+      GenerationErrorCode.cancelled ||
+      GenerationErrorCode.emptyResponse ||
+      GenerationErrorCode.truncated ||
+      GenerationErrorCode.invalidResponse => true,
+    };
+  }
+
+  /// Восстанавливает фрагмент из старого результата (без `plannedChunk`).
+  PlannedChunk _plannedFromFailure(GenerationChunkFailure failure) {
+    final String text = failure.materialsText;
+    final bool hasText = text.trim().isNotEmpty;
+    final bool hasParts =
+        failure.documentImages.isNotEmpty || failure.images.isNotEmpty;
+    final ChunkKind kind = hasText
+        ? (hasParts ? ChunkKind.mixed : ChunkKind.text)
+        : hasParts
+        ? ChunkKind.images
+        : ChunkKind.promptOnly;
+    final List<UnitSpan> units = hasText
+        ? <UnitSpan>[
+            UnitSpan(
+              unitId: 'retry:${failure.chunkIndex}',
+              start: 0,
+              end: text.length,
+              tokens: 0,
+            ),
+          ]
+        : const <UnitSpan>[];
+    return PlannedChunk(
+      index: math.max(1, failure.chunkIndex),
+      kind: kind,
+      units: units,
+      imageParts: failure.documentImages,
+      attachments: failure.images,
+      textTokens: 0,
+      imageTokens: 0,
+      bodyBytes: 0,
+      limit: math.max(1, failure.limit),
+      splitDepth: failure.splitAttempted ? 1 : 0,
+      materialsText: text,
     );
   }
 
@@ -775,7 +978,7 @@ class GenerationPipeline implements GenerationRunner {
 
   /// Описание упавшего фрагмента для повтора plus запись причины в лог.
   GenerationChunkFailure _failureOf(
-    GenerationChunk chunk,
+    PlannedChunk chunk,
     GenerationErrorCode code, {
     String? providerReason,
     GenerationFailureReason? reason,
@@ -794,13 +997,44 @@ class GenerationPipeline implements GenerationRunner {
       code: code,
       materialsText: chunk.materialsText,
       limit: chunk.limit,
-      sourceFiles: chunk.sourceFiles,
-      splitAttempted: chunk.splitAttempted,
+      sourceFiles: _sourceFilesOf(chunk),
+      splitAttempted: chunk.splitDepth > 0,
       providerReason: providerReason,
-      images: chunk.images,
-      documentImages: chunk.documentImages,
+      images: chunk.attachments,
+      documentImages: List<DocumentImage>.unmodifiable(<DocumentImage>[
+        ...chunk.imageParts,
+        ...chunk.catalogOnly,
+      ]),
       reason: effective,
+      retryable: _isRetryable(code),
+      plannedChunk: chunk,
     );
+  }
+
+  /// Имена файлов фрагмента для журнала/повтора.
+  List<String> _sourceFilesOf(PlannedChunk chunk) {
+    final List<String> names = <String>[];
+    void add(String name) {
+      if (name.isEmpty || names.contains(name)) return;
+      names.add(name);
+    }
+
+    for (final UnitSpan span in chunk.units) {
+      final String id = span.unitId;
+      if (!id.startsWith('doc:')) continue;
+      final int hash = id.indexOf('#');
+      if (hash > 4) add(id.substring(4, hash));
+    }
+    for (final DocumentImage image in chunk.imageParts) {
+      add(image.fileName);
+    }
+    for (final DocumentImage image in chunk.catalogOnly) {
+      add(image.fileName);
+    }
+    for (final GenerationAttachment attachment in chunk.attachments) {
+      add(attachment.fileName);
+    }
+    return List<String>.unmodifiable(names);
   }
 
   /// Принимает карточку, если её хеш (и обратный для reversed) новый.
@@ -816,6 +1050,22 @@ class GenerationPipeline implements GenerationRunner {
     }
     return seen.add(hash);
   }
+}
+
+/// Элемент очереди выполнения с состоянием восстановления.
+class _QueueItem {
+  _QueueItem(this.chunk, {this.attempts = 0, this.limitReduced = false});
+
+  final PlannedChunk chunk;
+
+  /// Сколько раз фрагмент уже дробился/сокращался.
+  final int attempts;
+
+  /// Ожидаемый вывод уже сокращался после `truncated`.
+  final bool limitReduced;
+
+  _QueueItem withChunk(PlannedChunk value) =>
+      _QueueItem(value, attempts: attempts, limitReduced: limitReduced);
 }
 
 /// Хеши карточек результата (для дедупликации при повторе).

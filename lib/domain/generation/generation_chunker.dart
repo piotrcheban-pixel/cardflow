@@ -1,5 +1,10 @@
-/// Нарезка материалов генерации на фрагменты по бюджету модели (SPEC A8.5 шаг 5,
-/// ADR-015). Домен не зависит от Flutter.
+/// Совместимый фасад старого чанкера (SPEC A8.5, ADR-015).
+///
+/// С итерации TASK 02B-FINAL production-путь не вызывает [chunkDocuments]/
+/// [chunkAll]: фрагменты строит `GenerationChunkPlanner` (`GenerationPlan`), а
+/// [chunksFromPlan] переводит план в старый тип. Методы оставлены для обратной
+/// совместимости и тестов; универсального лимита «20 карточек на фрагмент»
+/// здесь больше нет — лимит назначает план по бюджету вывода модели.
 library;
 
 import 'package:cardflow/domain/generation/content_unit.dart';
@@ -12,11 +17,12 @@ import 'package:cardflow/domain/generation/model_capabilities.dart';
 import 'package:cardflow/domain/generation/token_estimator.dart';
 import 'package:cardflow/domain/text/parsed_document.dart';
 
-/// Максимальное число карточек в одном запросе (`<limit>`).
-const int kMaxCardsPerChunk = 20;
-
-/// Оценка стоимости одного изображения/PDF-скана в токенах (для UI/оценки).
-const int kImageTokenEstimate = 1000;
+/// Лимит карточек старого фрагмента по умолчанию.
+///
+/// Устаревший фасад не знает бюджета модели, поэтому ставит минимально
+/// допустимый лимит 1: настоящий лимит назначает `GenerationPlan` (D.7).
+/// Значение нужно только для совместимости конструктора `GenerationChunk`.
+const int kLegacyChunkCardLimit = 1;
 
 /// Префикс строки-заголовка файла в `<materials>` (SPEC A8.1: «Файл: <имя>»).
 const String kMaterialsFileHeaderPrefix = 'Файл: ';
@@ -83,12 +89,6 @@ class GenerationChunk {
   /// true, если у фрагмента есть каталог `<images>` из документов.
   bool get hasDocumentImages => documentImages.isNotEmpty;
 
-  /// Оценка токенов фрагмента (для тестов и отладочного вывода).
-  int estimatedTokens([TokenEstimator estimator = const TokenEstimator()]) =>
-      estimator.estimate(materialsText) +
-      images.length * kImageTokenEstimate +
-      documentImages.length * kImageTokenEstimate;
-
   /// Копия с изменёнными полями.
   GenerationChunk copyWith({
     int? index,
@@ -125,26 +125,22 @@ class GenerationChunk {
       'limit: $limit, split: $splitAttempted)';
 }
 
-/// Делит текст на фрагменты, укладывающиеся в бюджет модели.
+/// Совместимый фасад чанкера (D.4–D.7).
 ///
-/// Старый путь (`chunkDocuments`/`chunkAll`) сохранён без изменений поведения:
-/// он используется `GenerationPipeline` до интеграции планировщика. Новый путь
-/// — [planChunks]/[chunksFromPlan] поверх `GenerationChunkPlanner` (D.4–D.7):
-/// фрагменты планируются по единицам содержимого, изображения и лимиты
-/// карточек считаются от возможностей модели.
+/// Production-путь больше не вызывает [chunkDocuments]/[chunkAll]: фрагменты
+/// строит `GenerationChunkPlanner` и `GenerationPlanBuilder`, а
+/// [chunksFromPlan] переводит готовый план в старый тип. Старые методы оставлены
+/// без повторного применения лимитов: у их фрагментов `limit = 1` (минимум),
+/// потому что настоящий лимит назначает план.
 class GenerationChunker {
   /// Создаёт чанкер.
   const GenerationChunker({
     this.estimator = const TokenEstimator(),
-    this.maxCardsPerChunk = kMaxCardsPerChunk,
     this.planner = const GenerationChunkPlanner(),
   });
 
-  /// Оценщик токенов (старый путь).
+  /// Оценщик токенов (совместимый путь).
   final TokenEstimator estimator;
-
-  /// Максимум карточек на фрагмент (старый путь).
-  final int maxCardsPerChunk;
 
   /// Планировщик нового пути (в плане лимит карточек от бюджета вывода).
   final GenerationChunkPlanner planner;
@@ -299,7 +295,7 @@ class GenerationChunker {
           index: i + 1,
           materialsText: _render(groups[i]),
           sourceFiles: _uniqueFiles(groups[i]),
-          limit: maxCardsPerChunk,
+          limit: kLegacyChunkCardLimit,
           documentImages: _imagesOf(groups[i], imagesBySection),
         ),
     ];
@@ -344,7 +340,7 @@ class GenerationChunker {
           index: result.length + 1,
           materialsText: '',
           sourceFiles: files,
-          limit: maxCardsPerChunk,
+          limit: kLegacyChunkCardLimit,
           images: List<GenerationAttachment>.unmodifiable(group),
           documentImages: List<DocumentImage>.unmodifiable(pageImages),
         ),
@@ -358,7 +354,7 @@ class GenerationChunker {
           index: result.length + 1,
           materialsText: '',
           sourceFiles: List<String>.unmodifiable(<String>[fileName]),
-          limit: maxCardsPerChunk,
+          limit: kLegacyChunkCardLimit,
           documentImages: List<DocumentImage>.unmodifiable(fileImages),
         ),
       );

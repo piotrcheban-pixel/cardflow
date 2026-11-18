@@ -33,15 +33,23 @@ import 'package:cardflow/domain/generation/generation_card_limit.dart';
 import 'package:cardflow/domain/generation/generation_chunk_planner.dart';
 import 'package:cardflow/domain/generation/generation_plan.dart';
 import 'package:cardflow/domain/generation/model_capabilities.dart';
+import 'package:cardflow/domain/generation/prompt_only_planner.dart';
+import 'package:cardflow/domain/generation/prompt_only_request.dart';
 import 'package:cardflow/domain/text/parsed_document.dart';
 
 /// Собирает [GenerationPlan] из разобранных документов и вложений.
 class GenerationPlanBuilder {
   /// Создаёт сборщик плана.
-  const GenerationPlanBuilder({this.planner = const GenerationChunkPlanner()});
+  const GenerationPlanBuilder({
+    this.planner = const GenerationChunkPlanner(),
+    this.promptOnlyPlanner = const PromptOnlyPlanner(),
+  });
 
   /// Планировщик (несёт общий оценщик токенов).
   final GenerationChunkPlanner planner;
+
+  /// Планировщик генерации без материалов (ADR-024).
+  final PromptOnlyPlanner promptOnlyPlanner;
 
   /// Оценщик единиц содержимого (тот же, что у планировщика).
   ContentTokenEstimator get estimator => planner.estimator;
@@ -100,14 +108,15 @@ class GenerationPlanBuilder {
     );
   }
 
-  /// Строит план генерации.
+  /// Строит план генерации по материалам.
   ///
   /// [systemPrompt] и [responseSchema] — фиксированная обвязка: системный
   /// промпт и каноническая JSON-схема ответа. Обёртка пользовательского
   /// сообщения считается существующим `buildGenerationUserContent` (без
   /// материалов и каталога), поэтому оценка совпадает с форматом запроса.
   /// [requestedCards] по умолчанию берётся из пожеланий существующим
-  /// `requestedCardCount` (потолок 200 — политика L-24, не планировщика).
+  /// `requestedCardCount` — без искусственного среза: заказ сохраняется в
+  /// плане, а расхождение с выполнимым количеством отражается предупреждением.
   GenerationPlan build({
     required List<ParsedDocument> documents,
     required ModelCapabilities capabilities,
@@ -147,6 +156,42 @@ class GenerationPlanBuilder {
       requestedCards: requestedCards ?? requestedCardCount(wishes),
       budgetConfig: budgetConfig,
       catalogLineBuilder: planner.catalogLineBuilder ?? _catalogLine,
+    );
+  }
+
+  /// Строит план генерации без материалов (prompt-only, ADR-024).
+  ///
+  /// Обёртка здесь считается **без** темы: токены пользовательского запроса
+  /// планировщик учитывает в каждом фрагменте сам, поэтому двойного счёта нет.
+  /// Пустой `ContentInventory` для обхода бюджета не используется.
+  GenerationPlan buildPromptOnly({
+    required PromptOnlyRequest request,
+    required ModelCapabilities capabilities,
+    String systemPrompt = systemPromptGenRuV7,
+    Map<String, Object?> responseSchema = canonicalCardsResponseSchema,
+    GenerationOverheadTokens? overhead,
+    GenerationBudgetConfig budgetConfig = const GenerationBudgetConfig(),
+  }) {
+    assert(!request.isEmpty, 'Prompt-only план требует непустую тему');
+    final GenerationOverheadTokens fixed =
+        overhead ??
+        GenerationOverheadTokens(
+          systemPromptTokens: estimator.estimateText(systemPrompt),
+          schemaTokens: estimator.estimateText(jsonEncode(responseSchema)),
+          wrapperTokens: estimator.estimateText(
+            buildGenerationUserContent(
+              materialsText: '',
+              wishes: null,
+              limit: 999,
+              imagesCatalog: '',
+            ),
+          ),
+        );
+    return promptOnlyPlanner.plan(
+      request: request,
+      capabilities: capabilities,
+      overhead: fixed,
+      budgetConfig: budgetConfig,
     );
   }
 

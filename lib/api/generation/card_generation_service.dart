@@ -157,6 +157,8 @@ class CardGenerationService implements GenerationCaller {
       baseUrl: baseUrl,
       userContent: userContent,
       images: visionParts,
+      maxOutputTokens:
+          request.maxOutputTokens ?? account.maxOutputTokens ?? maxOutputTokens,
       tolerantFallback: tolerantFallback,
       cancelToken: cancelToken,
     );
@@ -216,6 +218,7 @@ class CardGenerationService implements GenerationCaller {
     required String? baseUrl,
     required String userContent,
     required List<GenerationAttachment> images,
+    required int maxOutputTokens,
     required bool tolerantFallback,
     required CancelToken? cancelToken,
   }) async {
@@ -235,6 +238,7 @@ class CardGenerationService implements GenerationCaller {
           baseUrl: baseUrl,
           userContent: userContent,
           images: images,
+          maxOutputTokens: maxOutputTokens,
           strictSchema: attempt.strictSchema,
           sendMaxTokens: attempt.sendMaxTokens,
           cancelToken: cancelToken,
@@ -257,6 +261,7 @@ class CardGenerationService implements GenerationCaller {
     required String? baseUrl,
     required String userContent,
     required List<GenerationAttachment> images,
+    required int maxOutputTokens,
     required bool strictSchema,
     required bool sendMaxTokens,
     required CancelToken? cancelToken,
@@ -282,22 +287,30 @@ class CardGenerationService implements GenerationCaller {
   /// Изображения документов как image-parts запроса (ADR-037).
   ///
   /// Только для моделей с Vision: иначе каталог `<images>` остаётся текстовым
-  /// (прежнее поведение DOCX). Приоритет и лимиты — в
-  /// [selectVisionDocumentImages]: не вошедшие изображения не теряются, они
-  /// остаются в каталоге и разрешаются по `image_id` при импорте.
+  /// (прежнее поведение DOCX). Приоритет — в [selectVisionDocumentImages];
+  /// лимиты числа частей и байт берутся из возможностей аккаунта (JSON v2), а
+  /// не из универсальной константы: если модель принимает 20 изображений,
+  /// сервис не урежет их до 8. Не подтверждённый лимит модели заменяется
+  /// документированным допущением приложения. Не вошедшие изображения не
+  /// теряются: они остаются в каталоге и разрешаются по `image_id` при импорте.
   List<GenerationAttachment> _withDocumentImages(
     ProviderAccount account,
     List<GenerationAttachment> attachments,
     List<DocumentImage> images,
   ) {
     if (!account.supportsVision || images.isEmpty) return attachments;
-    final List<DocumentImage> selected = selectVisionDocumentImages(images);
+    final List<DocumentImage> selected = selectVisionDocumentImages(
+      images,
+      maxImages: account.maxImagesPerRequest ?? kMaxVisionDocumentImages,
+      maxBytes: account.maxImageBytes ?? kMaxVisionDocumentImagesBytes,
+    );
     if (selected.isEmpty) return attachments;
+    final int maxImageBytes =
+        account.maxImageBytes ?? kMaxInlineAttachmentBytes;
     return <GenerationAttachment>[
       ...attachments,
       for (final DocumentImage image in selected)
-        if (image.bytes.isNotEmpty &&
-            image.bytes.length <= kMaxInlineAttachmentBytes)
+        if (image.bytes.isNotEmpty && image.bytes.length <= maxImageBytes)
           GenerationAttachment(
             fileName: image.fileName,
             mediaType: image.mediaType,
@@ -312,11 +325,14 @@ class CardGenerationService implements GenerationCaller {
   /// Проверяет вложения до сборки запроса (итерация 7.8).
   ///
   /// Порядок важен: сначала vision модели, затем PDF-возможность протокола и
-  /// лимит; ошибка не доходит до сети и не тратит токены.
+  /// лимит; ошибка не доходит до сети и не тратит токены. Лимит байт — из
+  /// возможностей аккаунта, если он их объявляет; иначе — консервативный
+  /// inline-лимит приложения (инфраструктура, не характеристика модели).
   void _validateAttachments(
     ProviderAccount account,
     List<GenerationAttachment> images,
   ) {
+    final int maxBytes = account.maxImageBytes ?? kMaxInlineAttachmentBytes;
     for (final GenerationAttachment image in images) {
       if (!account.supportsVision) {
         throw GenerationException(
@@ -326,18 +342,21 @@ class CardGenerationService implements GenerationCaller {
               ? GenerationErrorCode.fileWithoutTextAndVision
               : GenerationErrorCode.visionUnsupported,
           details: 'Модель не поддерживает изображения',
+          failureReason: GenerationFailureReason.unsupportedModality,
         );
       }
-      if (image.bytes.length > kMaxInlineAttachmentBytes) {
-        throw const GenerationException(
+      if (image.bytes.length > maxBytes) {
+        throw GenerationException(
           GenerationErrorCode.attachmentTooLarge,
-          details: 'Вложение больше 10 МБ',
+          details: 'Вложение больше лимита $maxBytes байт',
+          failureReason: GenerationFailureReason.unsupportedModality,
         );
       }
       if (image.isPdf && !account.protocol.supportsPdfAttachments) {
         throw const GenerationException(
           GenerationErrorCode.pdfScanUnsupported,
           details: 'Протокол не принимает PDF как документ',
+          failureReason: GenerationFailureReason.unsupportedModality,
         );
       }
     }

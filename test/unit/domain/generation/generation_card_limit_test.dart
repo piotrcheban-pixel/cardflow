@@ -1,9 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cardflow/domain/generation/generation_card_limit.dart';
-import 'package:cardflow/domain/generation/generation_chunker.dart';
 
-/// Распределение общего числа карточек из пожеланий (fix-gen, A8.1).
+/// Разбор заказа карточек из пожеланий без искусственного потолка 200 (L-24).
+///
+/// Распределение заказа по фрагментам живёт в планировщике (D.5/D.7) и
+/// проверяется `generation_chunk_planner_test`, а не отдельной утилитой.
 void main() {
   test('requestedCardCount: «20 карточек», «сделай 15 карточек»', () {
     expect(requestedCardCount('Статика: аксиомы и фермы. 20 карточек'), 20);
@@ -19,44 +21,17 @@ void main() {
     expect(requestedCardCount('   '), isNull);
   });
 
-  test('requestedCardCount: абсурдно большое число ограничивается', () {
-    expect(requestedCardCount('1000 карточек'), kMaxRequestedCards);
+  test('заказ больше 200 не режется: 201, 500, 1000 сохраняются', () {
+    expect(requestedCardCount('201 карточка'), 201);
+    expect(requestedCardCount('500 карточек'), 500);
+    expect(requestedCardCount('1000 карточек'), 1000);
+    expect(requestedCardCount('10000 cards'), 10000);
   });
 
-  test(
-    'distributeCardLimits: сумма равна запрошенному, пропорции по объёму',
-    () {
-      final limits = distributeCardLimits(
-        volumes: <int>[100, 300, 100],
-        total: 20,
-      );
-      expect(limits.fold<int>(0, (int sum, int value) => sum + value), 20);
-      expect(limits[1], greaterThan(limits[0]));
-      expect(limits[2], greaterThanOrEqualTo(limits[0] - 1));
-    },
-  );
-
-  test('distributeCardLimits: один фрагмент получает всё', () {
-    expect(distributeCardLimits(volumes: <int>[500], total: 12), <int>[12]);
-  });
-
-  test('distributeCardLimits: не больше kMaxCardsPerChunk на фрагмент', () {
-    final limits = distributeCardLimits(
-      volumes: <int>[100, 100, 100],
-      total: 200,
+  test('переполнение int: заказ ограничен представлением, а не 200', () {
+    expect(
+      requestedCardCount('999999999999999999999 карточек'),
+      kMaxRepresentableRequestedCards,
     );
-    for (final int limit in limits) {
-      expect(limit, lessThanOrEqualTo(kMaxCardsPerChunk));
-    }
-  });
-
-  test('distributeCardLimits: каждый непустой фрагмент получает хотя бы 1', () {
-    final limits = distributeCardLimits(volumes: <int>[1000, 1, 1], total: 3);
-    expect(limits.every((int limit) => limit >= 1), isTrue);
-  });
-
-  test('distributeCardLimits: пустой объём и нулевой итог', () {
-    expect(distributeCardLimits(volumes: <int>[], total: 10), isEmpty);
-    expect(distributeCardLimits(volumes: <int>[10, 20], total: 0), <int>[0, 0]);
   });
 }

@@ -26,6 +26,7 @@ import 'package:cardflow/domain/text/document_format.dart';
 import 'package:cardflow/domain/text/parsed_document.dart';
 
 import '../../../helpers/generation_fakes.dart';
+import '../../../helpers/generation_plan_fakes.dart';
 
 ParsedDocument docOf(String fileName, List<String> sections) {
   final buffer = StringBuffer();
@@ -63,26 +64,18 @@ GenerationResult resultWith(
 }
 
 /// Чанкер с заранее заданными фрагментами (проверка пайплайна без нарезки).
-class FixedChunker extends GenerationChunker {
-  FixedChunker(this.chunks);
-
-  final List<GenerationChunk> chunks;
-
-  @override
-  List<GenerationChunk> chunkDocuments(
-    List<ParsedDocument> documents, {
-    required int maxInputTokens,
-  }) {
-    return chunks;
-  }
-}
-
-GenerationChunk chunkOf(int index, String text, {int limit = 10}) {
+GenerationChunk chunkOf(
+  int index,
+  String text, {
+  int limit = 10,
+  List<String> unitIds = const <String>[],
+}) {
   return GenerationChunk(
     index: index,
     materialsText: text,
     sourceFiles: const <String>['материал.txt'],
     limit: limit,
+    unitIds: unitIds,
   );
 }
 
@@ -119,7 +112,7 @@ void main() {
       caller: caller,
       jobRepository: jobs,
       cardStore: store,
-      chunker: FixedChunker(chunks),
+      planFactory: fixedPlanFactory(chunks),
       now: () => DateTime.utc(2026, 11, 14, 10),
       jobIdFactory: () => 'job-1',
       imageFinder: imageFinder,
@@ -239,7 +232,7 @@ void main() {
       caller: caller,
       jobRepository: jobs,
       cardStore: store,
-      chunker: FixedChunker(<GenerationChunk>[chunkOf(1, 'материал')]),
+      planFactory: fixedPlanFactory(<GenerationChunk>[chunkOf(1, 'материал')]),
       now: () => DateTime.utc(2026),
       jobIdFactory: () => 'job-1',
     );
@@ -278,7 +271,7 @@ void main() {
       caller: caller,
       jobRepository: jobs,
       cardStore: store,
-      chunker: FixedChunker(<GenerationChunk>[chunkOf(1, 'материал')]),
+      planFactory: fixedPlanFactory(<GenerationChunk>[chunkOf(1, 'материал')]),
       now: () => DateTime.utc(2026),
       jobIdFactory: () => 'job-1',
     );
@@ -405,9 +398,9 @@ void main() {
     },
   );
 
-  test('truncated: фрагмент делится пополам и повторяется один раз', () async {
+  test('truncated: ожидаемый вывод сокращается, вход не дробится', () async {
     final pipeline = pipelineWith(<GenerationChunk>[
-      chunkOf(1, 'Первая половина\n\nВторая половина'),
+      chunkOf(1, 'Короткий материал для карточек.'),
     ]);
     caller.onGenerate = (request, call) async {
       if (call == 1) {
@@ -422,19 +415,69 @@ void main() {
       ]),
     );
 
-    expect(caller.calls, 3);
+    expect(caller.calls, 2);
     expect(
       caller.requests[1].materialsText,
-      isNot(caller.requests[0].materialsText),
+      caller.requests[0].materialsText,
+      reason: 'F.4: при обрезании сокращаем вывод, а не материалы',
     );
+    expect(caller.requests[0].limit, 10);
+    expect(caller.requests[1].limit, 5);
     expect(result.status, GenerationJobStatus.done);
     expect(result.failures, isEmpty);
     expect(result.cards, hasLength(1));
   });
 
-  test('truncated дважды — ошибка фрагмента, без третьего вызова', () async {
+  test(
+    'truncated: фрагмент делится по единицам, сумма лимитов сохраняется',
+    () async {
+      final pipeline = pipelineWith(<GenerationChunk>[
+        chunkOf(
+          1,
+          'Первая часть материала с достаточным объёмом текста.\n\n'
+          'Вторая часть материала с достаточным объёмом текста.',
+          limit: 4,
+          unitIds: <String>['doc:a.txt#0#0', 'doc:a.txt#0#1'],
+        ),
+      ]);
+      caller.onGenerate = (request, call) async {
+        if (call == 1) {
+          throw const GenerationException(GenerationErrorCode.truncated);
+        }
+        return resultWith(<GeneratedCard>[
+          makeGeneratedCard(front: 'Вопрос $call', back: 'Ответ $call'),
+        ]);
+      };
+
+      final result = await pipeline.run(
+        requestWith(<ParsedDocument>[
+          docOf('a.txt', <String>['раз два']),
+        ]),
+      );
+
+      expect(caller.calls, 3);
+      expect(
+        caller.requests[1].materialsText,
+        isNot(caller.requests[0].materialsText),
+      );
+      expect(
+        caller.requests[1].materialsText + caller.requests[2].materialsText,
+        contains('Первая часть'),
+      );
+      expect(
+        caller.requests[1].limit + caller.requests[2].limit,
+        caller.requests[0].limit,
+        reason: 'D.6: сумма лимитов детей равна лимиту родителя',
+      );
+      expect(result.status, GenerationJobStatus.done);
+      expect(result.failures, isEmpty);
+      expect(result.cards, hasLength(2));
+    },
+  );
+
+  test('truncated без возможности деления — ошибка фрагмента', () async {
     final pipeline = pipelineWith(<GenerationChunk>[
-      chunkOf(1, 'Первая половина\n\nВторая половина'),
+      chunkOf(1, 'Короткий текст.', limit: 1),
     ]);
     caller.onGenerate = (request, call) async {
       throw const GenerationException(GenerationErrorCode.truncated);
@@ -446,12 +489,10 @@ void main() {
       ]),
     );
 
-    expect(caller.calls, 3);
+    expect(caller.calls, 1);
     expect(result.status, GenerationJobStatus.error);
-    expect(result.failures, hasLength(2));
-    for (final failure in result.failures) {
-      expect(failure.code, GenerationErrorCode.truncated);
-    }
+    expect(result.failures, hasLength(1));
+    expect(result.failures.single.code, GenerationErrorCode.truncated);
   });
 
   test('нет материала после нарезки — noMaterials, задание error', () async {
@@ -477,14 +518,21 @@ void main() {
     expect(jobs.saved.last.errorCode, 'noMaterials');
   });
 
-  // Итерация 7.10, ADR-024: без файлов генерируем по теме из пожеланий.
+  // Итерация 7.10, ADR-024 + TASK 02B-FINAL: без файлов генерируем по теме.
   test(
-    'prompt-only: нет файлов, есть пожелания — один пустой фрагмент',
+    'prompt-only: нет файлов, есть пожелания — план по теме без материалов',
     () async {
-      final pipeline = pipelineWith(const <GenerationChunk>[]);
+      final pipeline = GenerationPipeline(
+        caller: caller = FakeGenerationCaller(),
+        jobRepository: jobs = FakeGenerationJobRepository(),
+        cardStore: FakeGenerationCardStore(),
+        now: () => DateTime.utc(2026, 11, 14, 10),
+        jobIdFactory: () => 'job-1',
+      );
       caller.onGenerate = (GenerationRequest request, int call) async {
         expect(request.materialsText, isEmpty);
         expect(request.wishes, 'Фотосинтез');
+        expect(request.limit, greaterThanOrEqualTo(1));
         return resultWith(<GeneratedCard>[makeGeneratedCard()], tokens: 15);
       };
 
@@ -501,6 +549,11 @@ void main() {
       expect(result.status, GenerationJobStatus.done);
       expect(result.cards, hasLength(1));
       expect(result.tokensUsed, 15);
+      expect(result.promptOnly, isTrue);
+      expect(result.plan, isNotNull);
+      expect(result.plan!.isPromptOnly, isTrue);
+      expect(result.plan!.promptOnlyPrompt, 'Фотосинтез');
+      expect(result.plan!.chunks.single.units, isEmpty);
       expect(jobs.saved.first.files, isEmpty);
       expect(jobs.saved.last.chunkCount, 1);
       expect(jobs.saved.last.cardsCount, 1);
@@ -508,7 +561,13 @@ void main() {
   );
 
   test('prompt-only без пожеланий — noMaterials, к модели не идём', () async {
-    final pipeline = pipelineWith(const <GenerationChunk>[]);
+    final pipeline = GenerationPipeline(
+      caller: caller = FakeGenerationCaller(),
+      jobRepository: jobs = FakeGenerationJobRepository(),
+      cardStore: FakeGenerationCardStore(),
+      now: () => DateTime.utc(2026, 11, 14, 10),
+      jobIdFactory: () => 'job-1',
+    );
 
     await expectLater(
       pipeline.run(
@@ -604,7 +663,7 @@ void main() {
         caller: retryCaller,
         jobRepository: jobs,
         cardStore: store,
-        chunker: FixedChunker(<GenerationChunk>[
+        planFactory: fixedPlanFactory(<GenerationChunk>[
           chunkOf(1, 'первый'),
           chunkOf(2, 'второй'),
         ]),
@@ -647,7 +706,7 @@ void main() {
       caller: retryCaller,
       jobRepository: jobs,
       cardStore: store,
-      chunker: FixedChunker(const <GenerationChunk>[]),
+      planFactory: fixedPlanFactory(const <GenerationChunk>[]),
       now: () => DateTime.utc(2026),
       jobIdFactory: () => 'job-1',
     );
@@ -696,7 +755,13 @@ void main() {
     'retryFailed: фрагмент, упавший без дробления, может быть раздроблен',
     () async {
       final pipeline = pipelineWith(<GenerationChunk>[
-        chunkOf(1, 'Первая половина\n\nВторая половина'),
+        chunkOf(
+          1,
+          'Первая часть материала с достаточным объёмом текста.\n\n'
+          'Вторая часть материала с достаточным объёмом текста.',
+          limit: 6,
+          unitIds: <String>['doc:a.txt#0#0', 'doc:a.txt#0#1'],
+        ),
       ]);
       caller.onGenerate = (request, call) async {
         throw const GenerationException(GenerationErrorCode.network);
@@ -726,7 +791,6 @@ void main() {
         caller: retryCaller,
         jobRepository: jobs,
         cardStore: store,
-        chunker: const GenerationChunker(),
         now: () => DateTime.utc(2026),
         jobIdFactory: () => 'job-1',
       );
@@ -752,7 +816,7 @@ void main() {
       caller: caller,
       jobRepository: jobs,
       cardStore: store,
-      chunker: FixedChunker(<GenerationChunk>[chunkOf(1, 'материал')]),
+      planFactory: fixedPlanFactory(<GenerationChunk>[chunkOf(1, 'материал')]),
       now: () => DateTime.utc(2026),
       jobIdFactory: () => 'job-1',
     );
@@ -786,7 +850,6 @@ void main() {
         caller: caller,
         jobRepository: jobs,
         cardStore: store,
-        chunker: const GenerationChunker(),
         now: () => DateTime.utc(2026),
         jobIdFactory: () => 'job-1',
       );
@@ -849,7 +912,6 @@ void main() {
       caller: caller,
       jobRepository: jobs,
       cardStore: store,
-      chunker: const GenerationChunker(),
       now: () => DateTime.utc(2026),
       jobIdFactory: () => 'job-1',
     );
@@ -1086,7 +1148,9 @@ void main() {
         caller: caller = FakeGenerationCaller(),
         jobRepository: jobs = FakeGenerationJobRepository(),
         cardStore: store = FakeGenerationCardStore(),
-        chunker: FixedChunker(<GenerationChunk>[chunkOf(1, 'материал')]),
+        planFactory: fixedPlanFactory(<GenerationChunk>[
+          chunkOf(1, 'материал'),
+        ]),
         now: () => clockNow,
         jobIdFactory: () => 'job-1',
         imageFinder: finder,

@@ -9,6 +9,7 @@ import 'package:cardflow/api/http/generation_http_client.dart';
 import 'package:cardflow/api/http/retry_policy.dart';
 import 'package:cardflow/api/providers/generation_provider_adapter.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
+import 'package:cardflow/domain/generation/generation_failure_reason.dart';
 
 import '../../../helpers/fake_http_adapter.dart';
 
@@ -180,6 +181,94 @@ void main() {
               'providerReason',
               'invalid characters in content',
             ),
+      ),
+    );
+  });
+
+  test('413 → payloadTooLarge без повторов и с причиной', () async {
+    final adapter = FakeHttpAdapter(
+      (options) => jsonResponse(<String, Object?>{
+        'error': <String, Object?>{'message': 'request entity too large'},
+      }, statusCode: 413),
+    );
+    final delays = <Duration>[];
+    final client = clientWith(dioWithAdapter(adapter), delays: delays);
+
+    await expectLater(
+      client.postJson(request),
+      throwsA(
+        isA<GenerationException>()
+            .having(
+              (exception) => exception.code,
+              'code',
+              GenerationErrorCode.payloadTooLarge,
+            )
+            .having(
+              (exception) => exception.failureReason,
+              'failureReason',
+              GenerationFailureReason.payloadTooLarge,
+            )
+            .having(
+              (exception) => exception.providerReason,
+              'providerReason',
+              'request entity too large',
+            ),
+      ),
+    );
+    expect(adapter.requests, hasLength(1));
+    expect(delays, isEmpty);
+  });
+
+  test(
+    '400 с причиной «context length» → contextOverflow без повторов',
+    () async {
+      final adapter = FakeHttpAdapter(
+        (options) => jsonResponse(<String, Object?>{
+          'error': <String, Object?>{
+            'message': "This model's maximum context length is 8192 tokens",
+            'type': 'invalid_request_error',
+          },
+        }, statusCode: 400),
+      );
+      final delays = <Duration>[];
+      final client = clientWith(dioWithAdapter(adapter), delays: delays);
+
+      await expectLater(
+        client.postJson(request),
+        throwsA(
+          isA<GenerationException>()
+              .having(
+                (exception) => exception.code,
+                'code',
+                GenerationErrorCode.contextOverflow,
+              )
+              .having(
+                (exception) => exception.failureReason,
+                'failureReason',
+                GenerationFailureReason.contextOverflow,
+              ),
+        ),
+      );
+      expect(adapter.requests, hasLength(1));
+      expect(delays, isEmpty);
+    },
+  );
+
+  test('400 без признаков контекста остаётся badRequest', () async {
+    final adapter = FakeHttpAdapter(
+      (options) => jsonResponse(<String, Object?>{
+        'error': <String, Object?>{'message': 'invalid request format'},
+      }, statusCode: 400),
+    );
+    final client = clientWith(dioWithAdapter(adapter));
+    await expectLater(
+      client.postJson(request),
+      throwsA(
+        isA<GenerationException>().having(
+          (exception) => exception.code,
+          'code',
+          GenerationErrorCode.badRequest,
+        ),
       ),
     );
   });

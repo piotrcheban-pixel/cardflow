@@ -6,15 +6,19 @@
 /// Домен не зависит от Flutter, сети и БД.
 library;
 
-import 'package:cardflow/domain/generation/generation_model.dart';
 import 'package:cardflow/domain/generation/generation_pricing.dart';
 import 'package:cardflow/domain/generation/model_capabilities.dart';
 import 'package:cardflow/domain/generation/provider_preset.dart';
 import 'package:cardflow/domain/generation/provider_protocol.dart';
 
-/// Окно контекста пользовательского провайдера по умолчанию: реальное значение
-/// неизвестно, поэтому бюджет входа консервативный (ADR-013/ADR-020).
-const int kCustomProviderContextTokens = kCompatibleInputTokenBudget;
+/// Контекст пользовательского аккаунта по умолчанию — историческое поле JSON
+/// (`context_tokens`), **не** подтверждённое окно модели (L-18).
+///
+/// `resolveModelCapabilities` намеренно не использует это значение как окно:
+/// неизвестное окно остаётся неизвестным и получает консервативную стратегию
+/// планировщика. Константа сохранена для обратной совместимости старых записей
+/// и отображения в настройках.
+const int kCustomProviderContextTokens = 16000;
 
 /// Настроенный провайдер генерации.
 class ProviderAccount {

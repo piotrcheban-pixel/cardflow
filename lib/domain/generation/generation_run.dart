@@ -10,6 +10,7 @@ import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
 import 'package:cardflow/domain/generation/generation_failure_reason.dart';
 import 'package:cardflow/domain/generation/generation_job.dart';
+import 'package:cardflow/domain/generation/generation_plan.dart';
 import 'package:cardflow/domain/generation/provider_account.dart';
 import 'package:cardflow/domain/text/parsed_document.dart';
 
@@ -21,10 +22,14 @@ class GenerationRunRequest {
     required this.account,
     required this.deckName,
     this.wishes,
+    this.requestedCards,
     this.targetDeckId,
     this.images = const <GenerationAttachment>[],
     this.documentImages = const <DocumentImage>[],
-  });
+  }) : assert(
+         requestedCards == null || requestedCards > 0,
+         'Заказ карточек должен быть положительным или null',
+       );
 
   /// Разобранные документы (порядок прикрепления).
   final List<ParsedDocument> documents;
@@ -45,6 +50,10 @@ class GenerationRunRequest {
 
   /// Необязательные пожелания по содержанию.
   final String? wishes;
+
+  /// Явно заданное число карточек (например, из числового поля); `null` —
+  /// разбирается из [wishes] (`requestedCardCount`), без искусственного среза.
+  final int? requestedCards;
 
   /// Существующая колода; `null` — создать новую.
   final String? targetDeckId;
@@ -108,6 +117,7 @@ class GenerationChunkFailure {
     this.images = const <GenerationAttachment>[],
     this.documentImages = const <DocumentImage>[],
     this.reason,
+    this.plannedChunk,
   });
 
   /// Номер фрагмента (с 1).
@@ -144,6 +154,12 @@ class GenerationChunkFailure {
 
   /// Изображения из документов фрагмента (для повтора, fix-gen Д3).
   final List<DocumentImage> documentImages;
+
+  /// Фрагмент плана, который упал (для точного повтора и дробления).
+  ///
+  /// `null` — результат старого пути/теста: повтор восстанавливает фрагмент из
+  /// [materialsText]/[documentImages].
+  final PlannedChunk? plannedChunk;
 }
 
 /// Результат генерации (он же данные предпросмотра).
@@ -162,6 +178,7 @@ class GenerationRunResult {
     this.rejectedCards = 0,
     this.fatalErrorCode,
     this.fatalProviderReason,
+    this.plan,
   });
 
   /// Идентификатор задания `generation_jobs`.
@@ -201,4 +218,23 @@ class GenerationRunResult {
 
   /// Безопасная причина отказа провайдера для [fatalErrorCode].
   final String? fatalProviderReason;
+
+  /// План, по которому выполнялась генерация (D.8, in-memory).
+  ///
+  /// `null` — старый результат/тест без плана. План нужен предпросмотру:
+  /// показать заказ/достижимое число карточек, потери и предупреждения.
+  final GenerationPlan? plan;
+
+  /// Предупреждения плана (пусто, если плана нет).
+  List<PlanWarningCode> get planWarnings =>
+      plan?.validity.warnings ?? const <PlanWarningCode>[];
+
+  /// Запрошенное пользователем число карточек (0 — не задано/нет плана).
+  int get requestedCards => plan?.requestedCards ?? 0;
+
+  /// Достижимое по плану число карточек (0 — нет плана).
+  int get achievableCards => plan?.achievableCards ?? 0;
+
+  /// true, если генерация шла без материалов (prompt-only, ADR-024).
+  bool get promptOnly => plan?.isPromptOnly ?? false;
 }

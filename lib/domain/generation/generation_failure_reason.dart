@@ -22,6 +22,15 @@ enum GenerationFailureReason {
   /// Текст ответа не является валидным JSON (например, одиночные `\` LaTeX).
   jsonParse('json_parse'),
 
+  /// Переполнение контекстного окна модели.
+  contextOverflow('context_overflow'),
+
+  /// Тело запроса больше допустимого (HTTP 413 / лимит байт).
+  payloadTooLarge('payload_too_large'),
+
+  /// Модальность не поддерживается (Vision/PDF/вложение).
+  unsupportedModality('unsupported_modality'),
+
   /// JSON валиден, но не соответствует канонической схеме A8.4.
   schemaInvalid('schema_invalid'),
 
@@ -59,14 +68,16 @@ enum GenerationFailureReason {
     return switch (code) {
       GenerationErrorCode.missingApiKey ||
       GenerationErrorCode.providerNotConfigured ||
-      GenerationErrorCode.noMaterials ||
+      GenerationErrorCode.noMaterials => unknown,
       GenerationErrorCode.visionUnsupported ||
       GenerationErrorCode.fileWithoutTextAndVision ||
       GenerationErrorCode.pdfScanUnsupported ||
       GenerationErrorCode.pdfScanVisionRequired ||
-      GenerationErrorCode.attachmentTooLarge => unknown,
+      GenerationErrorCode.attachmentTooLarge => unsupportedModality,
       GenerationErrorCode.invalidApiKey ||
-      GenerationErrorCode.badRequest ||
+      GenerationErrorCode.badRequest => httpClientError,
+      GenerationErrorCode.contextOverflow => contextOverflow,
+      GenerationErrorCode.payloadTooLarge => payloadTooLarge,
       GenerationErrorCode.rateLimited => httpClientError,
       GenerationErrorCode.serverUnavailable => httpServerError,
       GenerationErrorCode.timeout || GenerationErrorCode.network => network,

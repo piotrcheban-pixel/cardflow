@@ -54,17 +54,23 @@ void main() {
         catalogTokens: 100,
       );
       expect(budget.fixedOverheadTokens, 1400);
-      expect(budget.expectedOutputTokens, 4096);
-      expect(budget.reservedOutputTokens, 4096);
+      expect(
+        budget.expectedOutputTokens,
+        5 * kBudgetPerCardOutputTokens + kBudgetJsonEnvelopeTokens,
+      );
+      expect(budget.reservedOutputTokens, budget.expectedOutputTokens);
       expect(budget.safetyMarginTokens, 6400, reason: '5 % от 128 000');
-      expect(budget.inputBudget, 116104);
+      expect(
+        budget.inputBudget,
+        128000 - budget.expectedOutputTokens - 1400 - 6400,
+      );
       expect(budget.source, BudgetSource.capabilities);
       expect(budget.hasKnownContextWindow, isTrue);
       expect(budget.isWorkable, isTrue);
       expect(budget.shortfallTokens, 0);
       expect(budget.trace.formula, GenerationBudget.formulaKnownContext);
       expect(budget.trace.contextSource, CapabilitySource.preset);
-      expect(budget.trace.outputCapTokens, 4096);
+      expect(budget.trace.outputCapTokens, kBudgetDefaultOutputCapTokens);
       expect(budget.trace.outputCapAssumed, isTrue);
       expect(budget.trace.fixedOverheadTokens, 1400);
       expect(budget.trace.systemPromptTokens, 1000);

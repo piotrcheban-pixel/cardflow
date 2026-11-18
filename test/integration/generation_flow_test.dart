@@ -420,20 +420,27 @@ void main() {
       ]),
     );
 
-    final result = await container
-        .read(generationRunnerProvider)
-        .run(
-          request(
-            includeDocument: false,
-            images: <GenerationAttachment>[image],
-            presetId: 'deepseek',
-            modelId: 'deepseek-chat',
+    // TASK 02B-FINAL: план строится до запросов; изображения без Vision —
+    // невалидный план, а не «упавший фрагмент» после сетевого вызова.
+    await expectLater(
+      container
+          .read(generationRunnerProvider)
+          .run(
+            request(
+              includeDocument: false,
+              images: <GenerationAttachment>[image],
+              presetId: 'deepseek',
+              modelId: 'deepseek-chat',
+            ),
           ),
-        );
-
-    expect(result.cards, isEmpty);
-    expect(result.failures, hasLength(1));
-    expect(result.failures.single.code, GenerationErrorCode.visionUnsupported);
+      throwsA(
+        isA<GenerationException>().having(
+          (GenerationException error) => error.code,
+          'code',
+          GenerationErrorCode.visionUnsupported,
+        ),
+      ),
+    );
     expect(httpAdapter.requests, isEmpty);
   });
 

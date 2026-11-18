@@ -10,6 +10,7 @@ import 'package:cardflow/api/generation/generation_diagnostics.dart';
 import 'package:cardflow/api/http/retry_policy.dart';
 import 'package:cardflow/api/providers/generation_provider_adapter.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
+import 'package:cardflow/domain/generation/generation_failure_reason.dart';
 
 /// Контракт отправки запроса провайдера (для тестов и 3c).
 abstract interface class GenerationTransport {
@@ -243,7 +244,7 @@ class GenerationHttpClient implements GenerationTransport {
     }
   }
 
-  /// Классификация HTTP-статуса (ADR-012 §2).
+  /// Классификация HTTP-статуса (ADR-012 §2, TASK 02B-FINAL).
   GenerationException _fromStatusCode(
     int? statusCode, {
     Duration? retryAfter,
@@ -256,6 +257,7 @@ class GenerationHttpClient implements GenerationTransport {
       return GenerationException(
         GenerationErrorCode.invalidApiKey,
         details: details,
+        failureReason: GenerationFailureReason.httpClientError,
       );
     }
     if (statusCode == 429) {
@@ -263,12 +265,33 @@ class GenerationHttpClient implements GenerationTransport {
         GenerationErrorCode.rateLimited,
         retryAfter: retryAfter,
         details: details,
+        failureReason: GenerationFailureReason.httpClientError,
       );
     }
     if (statusCode != null && statusCode >= 500 && statusCode < 600) {
       return GenerationException(
         GenerationErrorCode.serverUnavailable,
         details: details,
+        failureReason: GenerationFailureReason.httpServerError,
+      );
+    }
+    if (statusCode == 413) {
+      return GenerationException(
+        GenerationErrorCode.payloadTooLarge,
+        details: details,
+        providerReason: providerReason,
+        failureReason: GenerationFailureReason.payloadTooLarge,
+      );
+    }
+    // HTTP 400 с причиной «контекст/токены» — это переполнение окна, а не
+    // несовместимый запрос: пайплайн дробит только проблемную часть плана.
+    if (providerReason != null &&
+        _contextOverflowPattern.hasMatch(providerReason)) {
+      return GenerationException(
+        GenerationErrorCode.contextOverflow,
+        details: details,
+        providerReason: providerReason,
+        failureReason: GenerationFailureReason.contextOverflow,
       );
     }
     return GenerationException(
@@ -277,8 +300,23 @@ class GenerationHttpClient implements GenerationTransport {
       // Причина показывается пользователю только для 4xx запроса (400/404/422),
       // а не для ошибок авторизации/лимитов: там своё сообщение.
       providerReason: providerReason,
+      failureReason: GenerationFailureReason.httpClientError,
     );
   }
+
+  /// Признаки переполнения контекста в тексте ошибки провайдера.
+  ///
+  /// Русские и английские формулировки основных провайдеров; сюда не попадают
+  /// общие 400 (например, «invalid characters»), чтобы не дробить материалы
+  /// без причины.
+  static final RegExp _contextOverflowPattern = RegExp(
+    r'context (?:length|window)|context_length_exceeded|maximum context|'
+    r'too many tokens|prompt is too long|input is too long|'
+    r'request (?:is )?too large|exceeds the maximum|'
+    r'превышает.{0,40}(?:контекст|токен)|слишком длинн',
+    caseSensitive: false,
+    unicode: true,
+  );
 
   /// Короткая безопасная причина отказа из тела ответа провайдера.
   ///
