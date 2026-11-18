@@ -90,6 +90,16 @@ XObject, без изображений, повторы, иконка, форму
 `test/integration/pdf_image_flow_test.dart` (1: PDF → изображение → image-part в
 запросе → `image_id` → импорт → файл в `MediaStore` байт-в-байт).
 
+**Живая проверка (DeepSeek, `deepseek-chat`, настоящий API):** `fvm flutter test
+test/live/openai_compatible_deepseek_live_test.dart --tags live --no-pub` →
+**7 passed** с промптом `gen-ru-v7`: `cards=3, tokens=5509`; fallback
+`strict=400 → tolerant=200`; prompt-only `cards=3, image_query=3, prompt=gen-ru-v7`;
+PDF-скан страницами (`pages=3, cards=2`); статика 20 карточек (пометок 4/20,
+`rejected=0`); DOCX с рисунком (`images=1, image_id=4, with_image=4`).
+Заодно исправлена устаревшая live-проверка: она ждала в сыром ответе
+`image_query` (схема v4/v5), теперь принимает объект `image` (v6+) — тест
+остался строгим, но соответствует действующей схеме.
+
 **Ограничения итерации:** L115–L120 (нет локального OCR — текст скана
 распознаёт vision-модель; геометрический детектор областей; векторные схемы на
 страницах с длинным текстом не вырезаются; координаты вложенных форм — в

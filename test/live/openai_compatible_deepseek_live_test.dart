@@ -201,7 +201,7 @@ void main() {
   // Итерация 7.10, ADR-024: генерация по теме без файлов и проверка того, что
   // модель возвращает image_query по правилу 14 промпта `gen-ru-v4`.
   test(
-    'живой DeepSeek: prompt-only без файлов и image_query (gen-ru-v4)',
+    'живой DeepSeek: prompt-only без файлов и выбор картинки (gen-ru-v7)',
     () async {
       final List<String> diagnostics = <String>[];
       final Dio dio = Dio();
@@ -273,7 +273,14 @@ void main() {
         reason: 'промпт v5 требует image_query для конкретных объектов',
       );
       expect(diagnostics, isNotEmpty);
-      expect(diagnostics.single, contains('image_query'));
+      // С v6 модель отвечает объектом image; ответ v5 с image_query тоже
+      // допустим — live-проверка смотрит только на наличие выбора картинки.
+      expect(
+        diagnostics.single.contains('image_query') ||
+            diagnostics.single.contains('"image"'),
+        isTrue,
+        reason: 'в ответе нет ни image_query (v5), ни image (v6+)',
+      );
     },
     skip: apiKey == null
         ? 'Нет DEEPSEEK_API_KEY — live-тест пропущен (L30)'
