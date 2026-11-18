@@ -1548,3 +1548,143 @@ production-путь.
   размер/байты); калибровка по `usage` — этап G.
 - Парсерные пределы L-05…L-11, L-32/L-33 и отсутствие числового поля L-44 — вне
   объёма этого этапа; см. `journal/KNOWN_LIMITATIONS.md` L128–L133.
+
+## R. TASK 03: надёжность, калибровка и прозрачность (2026-11-19)
+
+**Статус:** выполнено по фактическому коду; схема БД и `format_version` не
+менялись. Аудит и перечень подтверждённых дефектов — `journal/task03/audit.md`.
+Ниже — что изменено относительно раздела Q и что осталось.
+
+### R.1 Единая оценка входа и калибровка
+
+- `lib/domain/generation/token_accounting.dart` — `TokenValue` с видом
+  `exact | estimate | reserve | unknown`, `TokenCalibrationSample` и
+  `TokenCalibrationReport`. Неизвестное значение — `null`, не 0; оценка никогда
+  не подписывается как факт.
+- `lib/api/generation/generation_request_estimator.dart` — оценка **фактически
+  собранного** `userContent` (материалы + пожелания + каталог + сводка
+  продолжения), системного промпта, канонической схемы и image-частей тем же
+  `ContentTokenEstimator`, что у планировщика. Сервис сохраняет
+  `estimatedInputTokens`/`estimatedOutputTokens`/`estimatorVersion` в
+  `GenerationResult`; пайплайн сравнивает их с `usage` провайдера и с оценкой
+  плана (`TokenCalibrationSample`: `plannedInput`/`requestInput`/`actual*`).
+- `GenerationRunResult.calibration` — отчёт запуска: отношения «факт/оценка»,
+  разброс, число ответов без `usage` и число упавших запросов (у них `usage`
+  нет). Debug-диагностика `GenerationDiagnostics.tokenCalibration` печатает
+  сводку и отклонения > 20 %; release — no-op.
+- Оценка остаётся консервативной эвристикой: `estimated*` — `estimate`,
+  `max_tokens` — `reserve`, `usage` — `exact`. Факт одного запроса не
+  используется как гарантия для другого; калибровка только собирает выборку.
+
+### R.2 Возможности модели и лимиты запроса
+
+- `lib/domain/generation/generation_request_limits.dart` — единый резолвер
+  лимитов (`maxImagesPerRequest`, байты изображения/запроса, тело запроса) с
+  источником каждого значения (`user`/`preset`/`unknown`). Планировщик, сервис
+  и UI используют его; расхождение «8 в плане, 8 в сервисе, 24 МБ отдельно»
+  устранено.
+- Fallback `8` image-частей и `10/24/32 МБ` остаются **конфигурационными
+  допущениями приложения** (`GenerationChunkPlannerConfig`), только когда
+  аккаунт не сообщает лимит. Они попадают в `unknownFields` плана
+  (`max_images_per_request`, `max_image_bytes`, `max_request_bytes`),
+  `GenerationRequestLimits.assumptionFields` и предупреждение плана
+  `assumedImageLimits`; за подтверждённую возможность модели не выдаются.
+- `ModelCapabilities.sources` и `GenerationPlan.capabilitySources` — карта
+  источник→значение для диагностики (`context_window`, `max_output_tokens`,
+  `image_limits`, `pricing`, `max_cards_per_request`, `tokenizer`).
+- Документные изображения при модели без поддержки изображений больше не
+  попадают в `imageParts`: план помечает их `unsupportedModel`/`catalogOnly` и
+  предупреждает `imagesWithoutVision`; байты не отправляются, `image_id` при
+  импорте разрешается из локального каталога.
+
+### R.3 Прозрачность изображений
+
+- `GenerationPlan.images` — `PlannedImage` со статусом
+  `sentToModel | catalogOnly | unsupportedModel | omittedBudget |
+  omittedPayload` и геттерами `imagesSentToModel`/`imagesCatalogOnly`/
+  `imagesUnsupported`/`imagesOmitted`.
+- Контракт запроса: `GenerationRequest.documentImageParts` — **префикс**
+  `documentImages`; сервис отправляет ровно его, не переранжируя и не урезая
+  повторно. Легаси-режим (`null`) сохраняет старый отбор
+  `selectVisionDocumentImages` для совместимости.
+- Планировщик дедуплицирует одинаковые байты image-частей (SHA-256,
+  `documentImageDigest`); второе изображение остаётся в каталоге, сервис
+  дополнительно фиксирует `skippedDocumentImageIds` для диагностики.
+- Предпросмотр показывает сводку «передано модели / только в каталоге / без
+  поддержки изображений / исключено», поэтому «осталось в каталоге» больше не
+  выглядит как «модель это видела».
+
+### R.4 Prompt-only: согласованность нескольких запросов
+
+- `lib/domain/generation/generation_continuity.dart` —
+  `GenerationContinuityState`: компактная сводка уже **принятых** карточек
+  (front/back до 140/80 символов, до 40 карточек, до 40 тегов, бюджет
+  `kPromptOnlyContinuationMaxTokens = 1200`). Сводка добавляется в `<wishes>`
+  после исходного текста пользователя; сам текст не переписывается.
+- `PromptOnlyPlanner` резервирует `continuationReserveTokens` в бюджете
+  каждого запроса после первого (`GenerationEstimate.continuationReserveTokens`)
+  и учитывает байты в проверке тела; сводка не растёт бесконечно.
+- Пайплайн ведёт состояние в рамках запуска; при повторе упавших фрагментов
+  состояние инициализируется карточками предыдущего результата. Дедупликация
+  карточек по `contentHashOf` остаётся последним барьером.
+
+### R.5 Восстановление
+
+- Порядок `truncated` приведён к F.4: (1) уменьшить ожидаемый вывод
+  (лимит вдвое), (2) поднять резерв вывода до `outputCap` без изменения входа,
+  (3) разделить вход по единицам; при `limit == 1` последняя попытка делит
+  фрагмент на две части по 1 карточке (`allowLimitOverflow`) — осознанное
+  исключение только для recovery, заказ пользователя не меняется.
+- `contextOverflow`/`payloadTooLarge` делят вход сразу; `429`, сеть,
+  auth, refusal, невалидный JSON не дробятся. `Retry-After` переносится в
+  `GenerationChunkFailure.retryAfter` и показывается в предпросмотре.
+- Бюджет восстановления — `generationRecoveryBudget`: `max(configured,
+  plannedRequests/8)`, верхняя граница 64, `0` — явное отключение. Списание
+  идёт по **дополнительным** запросам (новая попытка/дети минус заменяемый),
+  а не по числу детей. В результате — `recoveryRequestsUsed`/`recoveryBudget`/
+  `recoveryBudgetExhausted`.
+- `GenerationPlanSplitter.withContext` получает оценщик плана и
+  `capabilities.imageTokens`; при дроблении сохраняются `unitIds`, порядок,
+  image-части/каталог и их id.
+
+### R.6 Распределение карточек (D.5)
+
+- `_tuneSoftTarget` учитывает заказ: при `outputCap` карточек на запрос
+  целевое число фрагментов `ceil(requested/cap)`; мягкая цель —
+  80 % среднего объёма материала на фрагмент, но не ниже
+  `minSoftTargetMaterialTokens` (512). Это устраняет скрытое занижение
+  `achievableCards`, когда материала хватает на весь заказ.
+- D.5-укрупнение и распределение лимитов не менялись по контракту: сумма
+  лимитов ≤ заказа (или 1 на фрагмент при невозможности укрупнения),
+  `requestedCards` не подменяется, предупреждения `requestedAbovePlan`/
+  `cardsAboveRequested` показывают реальную причину.
+
+### R.7 UI и диагностика
+
+- Числовое поле «Сколько карточек» (`generation-cards-count`): валидация
+  положительного целого, технический предел `int` (не продуктовые 20/200),
+  значение уходит в `GenerationRunRequest.requestedCards`; пусто — прежний
+  разбор из пожеланий.
+- Предпросмотр плана до запуска строится **тем же** `GenerationPlanBuilder`
+  (кэш по входам): «фрагментов/запросов/запрошено/достижимо», предупреждения
+  `unknownCapabilities`, `assumedImageLimits`, `imagesWithoutVision`,
+  `catalogOnlyImages`, `omittedUnits`, `requestedAbovePlan`,
+  `cardsAboveRequested`; невалидный план блокирует запуск с причиной.
+- Предпросмотр результата: постоянные баннеры «частичный результат» и
+  «генерация остановлена» (fatal), сводка изображений, число запросов
+  восстановления; `Retry-After` — в причине фрагмента.
+
+### R.8 Что осталось (см. `journal/KNOWN_LIMITATIONS.md` L122–L136)
+
+- Точного токенизатора провайдера нет; оценка остаётся эвристикой, а
+  калибровка — статистикой, не гарантией.
+- `usage` обрезанного/невалидного ответа адаптеры не возвращают: такие
+  запросы учитываются как «без usage» и не калибруются.
+- Семантический дедуп prompt-only не реализован: сводка снижает повторы, но
+  модель может повторить факт, не попавший в компактное состояние (бюджет
+  1200 токенов).
+- Парсеры не сообщают, какие изображения отброшены фильтрами; план видит
+  только извлечённые изображения.
+- `ProviderCapabilitiesDialog` (ввод возможностей/цен в UI) не добавлен;
+  `capabilitySources` доступен в плане/диагностике.
+- Реальные пределы провайдеров и негативные live-контракты не проверялись.

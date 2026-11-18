@@ -1,17 +1,119 @@
 # STATE — текущее состояние CardFlow
 
-**Дата:** 2026-11-18 · **Итерация:** `L76` «PDF Visual Intelligence»
-(журнал `journal/iteration-l76/`, ADR-037) — завершена.
-Изображения из PDF (Image/Form XObject) извлекаются с номером страницы,
-порядком и координатами; сканы дают полный рендер + значимые области; модель
-с Vision получает **байты** изображений (image-части с подписью каталога);
-промпт — `gen-ru-v7`. Предыдущая итерация `cleanup-1` (ADR-036) — в истории
-ниже. Схема БД и `format_version` не менялись.
+**Дата:** 2026-11-19 · **Итерация:** `TASK 03` «Надёжность адаптивной
+генерации: оценка токенов, возможности модели, prompt-only, recovery,
+изображения, D.5, UI» — завершена. Предыдущая итерация `TASK 02B-FINAL` —
+в истории ниже. Схема БД и `format_version` не менялись.
 **Режим:** ИТЕРАЦИИ.
 
-**Следующий шаг:** TASK 02C — оценщик G (калибровка по `usage`), диалог
-стоимости/подтверждения и числовое поле карточек; вёрстка по макетам Stitch —
-отдельным решением владельца (L113).
+**Следующий шаг:** TASK 02C — UI возможностей/цен провайдера
+(`ProviderCapabilitiesDialog`), диалог стоимости/подтверждения; вёрстка по
+макетам Stitch — отдельным решением владельца (L113). Точный токенизатор и
+семантический дедуп prompt-only — по итогам живой эксплуатации
+(L122/L130/L136).
+
+## TASK 03 — надёжность адаптивной генерации (2026-11-19)
+
+**Задача:** после TASK 02B-FINAL провести аудит по фактическому коду и довести
+адаптивную генерацию до надёжного состояния: единая оценка токенов и
+калибровка по `usage`, честные возможности модели/fallback, согласованность
+prompt-only запросов, восстановление без потери успешного, прозрачный статус
+изображений, распределение 1…1000 карточек, UI-диагностика и числовое поле
+карточек. Без новой архитектуры и без ослабления тестов.
+
+**Факты старта:** `git status --porcelain` → `?? redesign/` (каталог владельца
+не тронут); `HEAD = e0f8e4b` (`docs(journal): note windows build gate for TASK
+02B-FINAL`), ветка `main`. Baseline — **2000 passed + 8 skipped**, `analyze` 0.
+Прогоны — только с `--no-pub` (L64). Схема БД и `format_version` не менялись.
+
+**Аудит (только по коду, `journal/task03/audit.md`):** подтверждено 27 дефектов
+D1–D27. Критичные: prompt-only план в production считался без обвязки
+(`GenerationPipeline` вызывал планировщик без `overhead`); сервис повторно
+отбирал image-части и мог разойтись с планом; документные изображения уходили
+частями без Vision; `truncated` дробил вход раньше сокращения вывода; бюджет
+восстановления считался по числу детей, а не дополнительных запросов;
+`Retry-After` терялся; не было калибровки; не было compact-состояния
+prompt-only; D.5-план занижал `achievableCards` при большом заказе; UI не
+показывал частичный успех/fatal/статус изображений и не имел поля количества.
+
+**Сделано:**
+- **Оценка и калибровка:** `TokenValue` (`exact|estimate|reserve|unknown`) и
+  `TokenCalibrationSample/Report` (`token_accounting.dart`);
+  `GenerationRequestEstimator` считает фактически собранный `userContent`
+  системный промпт, каноническую схему, каталог, image-части и continuation тем
+  же `ContentTokenEstimator`; `GenerationResult` несёт
+  `estimatedInputTokens/estimatedOutputTokens/estimatorVersion`;
+  `GenerationRunResult.calibration` + `GenerationDiagnostics.tokenCalibration`
+  (debug) сравнивают план/запрос/`usage`; отсутствие `usage` фиксируется явно.
+- **Возможности/лимиты:** `GenerationRequestLimits` +
+  `resolveGenerationRequestLimits` — единый источник лимитов image-частей/байт/
+  тела с источником `user|preset|unknown`; планировщик, сервис и UI используют
+  его. Fallback 8 частей/10/24/32 МБ остаётся явным конфигурационным
+  допущением (`assumedImageLimits`, `assumptionFields`), а не фактом модели.
+  `ModelCapabilities.sources`/`GenerationPlan.capabilitySources` — карта
+  источников для диагностики. Изображения без поддержки модели больше не
+  попадают в `imageParts` (status `unsupportedModel`, предупреждение
+  `imagesWithoutVision`).
+- **Изображения:** `GenerationPlan.images` (`PlannedImage`) со статусами
+  `sentToModel|catalogOnly|unsupportedModel|omittedBudget|omittedPayload`;
+  `GenerationRequest.documentImageParts` — префикс каталога, сервис отправляет
+  ровно его; дедуп одинаковых байтов перенесён в план
+  (`documentImageDigest`), `skippedDocumentImageIds` — в диагностику;
+  предпросмотр показывает «передано/только каталог/без поддержки/исключено».
+- **Prompt-only:** `GenerationPipeline` строит план через
+  `GenerationPlanBuilder.buildPromptOnly` (обвязка не нулевая);
+  `GenerationContinuityState` — компактная сводка принятых карточек (до 1200
+  токенов, 40 карточек/40 тегов) после исходных `<wishes>`; резерв сводки
+  учтён в `PromptOnlyPlanner` и `GenerationEstimate.continuationReserveTokens`;
+  при повторе состояние восстанавливается из успешных карточек.
+- **Восстановление:** порядок F.4 — лимит → резерв вывода → дробление;
+  `GenerationPlanSplitter.withContext` получает оценщик плана и
+  `imageTokens`; последняя попытка при `limit == 1` делит на две части
+  (`allowLimitOverflow`, заказ не меняется); бюджет — `max(configured,
+  fragments/8)` до 64, списание по дополнительным запросам, поля
+  `recoveryRequestsUsed/recoveryBudget/recoveryBudgetExhausted`;
+  `Retry-After` — в `GenerationChunkFailure.retryAfter` и в предпросмотре.
+- **Распределение:** `_tuneSoftTarget` учитывает заказ (цель
+  `ceil(requested/cap)`, 80 % среднего, не ниже 512 токенов) — план больше не
+  занижает `achievableCards`, когда материала хватает; D.5-укрупнение и
+  распределение лимитов сохранены.
+- **UI:** числовое поле `generation-cards-count` с валидацией (положительное
+  целое, технический предел `int`) и передачей в
+  `GenerationRunRequest.requestedCards`; предпросмотр плана до запуска тем же
+  builder-ом (фрагменты/запросы/запрошено/достижимо + причины ограничений),
+  невалидный план блокирует запуск; в предпросмотре результата — постоянные
+  баннеры частичного успеха/fatal, сводка изображений, число запросов
+  восстановления.
+- **Тесты:** новые файлы `token_accounting_test`, `generation_request_limits_test`,
+  `generation_continuity_test`, `generation_recovery_budget_test`,
+  `generation_request_estimator_test`, `generation_plan_images_test`,
+  `generation_distribution_test`, `generation_pipeline_reliability_test`,
+  `test/widget/generation` (поле, предпросмотр плана, баннеры). Обновлены
+  устаревшие ожидания: `truncated` теперь уменьшает лимит/резерв до дробления;
+  план большого заказа достигает заказ; изображения без Vision — каталог, а не
+  части; D.5-тест 26 проверяет реальный запас материала. Каждое изменение
+  ожидания объяснено в тесте/отчёте.
+- **Документация:** раздел R `docs/adaptive-generation-architecture.md`;
+  `docs/generation-pipeline.md` (бюджет/план/восстановление/UI);
+  `journal/KNOWN_LIMITATIONS.md` L122–L136; этот раздел; 
+  `journal/task03/audit.md`.
+
+**Гейты:** `fvm flutter test --no-pub --exclude-tags golden` →
+**2110 passed + 8 skipped** (`All tests passed!`; baseline 2000 + 8, +110 net);
+`fvm flutter test --no-pub --coverage --exclude-tags golden` → **2110 passed +
+8 skipped**, покрытие рукописного кода **92.4 % (16193/17529)**;
+`fvm flutter analyze --no-pub` → **No issues found!**;
+`fvm dart format --set-exit-if-changed lib test integration_test tool` →
+**484 файла / 0 changed**; `fvm flutter build windows --release --no-pub` →
+**`cardflow.exe`** (60,8 с).
+
+**Остатки (L122–L136):** эвристика/калибровка без токенизатора (L122),
+бюджет восстановления — предохранитель (L128), приближённый recovery-пересчёт
+(L129), prompt-only сводка без семантического дедупа (L130/L136), парсерные
+пределы (L131), возможности/цены не вводятся в UI (L133), отброшенные
+парсером изображения не отчитываются (L134), `usage` упавших/обрезанных
+ответов недоступен (L135). Реальные платные API не вызывались; `redesign/`
+не тронут.
 
 ## TASK 02B-FINAL — адаптивный план в production, D.5, prompt-only, снятие лимитов (2026-11-19)
 
