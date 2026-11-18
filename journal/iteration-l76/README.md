@@ -114,3 +114,20 @@ community-лицензия Syncfusion, pub.dev license-tag `unknown` (уже о�
 Исправление: `due` от текущего момента (+30 дней). Дополнительно закрыто L92:
 job `test` → `--exclude-tags golden,live`, диагностическая аннотация печатает
 `Failing tests`/`[E]`. Набор CI локально: **1819 passed**.
+
+## 7. CI итерации L76 (факты прогонов)
+
+| Прогон | Коммит | Итог |
+|---|---|---|
+| [`44239745936`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/44239745936) | `c21d753` | **9/9 success** (format+analyze, test × 3 ОС, build desktop × 3 + Android + iOS) |
+| [`44339797386`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/44339797386) | `481f2cb` | `failure`: 1 тест упал на Ubuntu/Windows — тест-бомба с датой (см. §6), не код L76 |
+| [`44342967940`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/44342967940) | `553a3e6` | `failure`: та же тест-бомба (проверка гипотезы L92); macOS-cancelled |
+| [`44349211802`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/44349211802) | `9cf28a2` | тесты Ubuntu/Windows и build'ы ✅; `test (macos)` cancelled раннером (0 шагов) |
+| [`44352510436`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/44352510436) | `19b2c3a` | тесты Ubuntu/Windows и build'ы ✅; оба macOS-job'а cancelled раннером (0 шагов) |
+| [`44355509340`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/44355509340) | `bdc5336` | **9/9 success** |
+| [`44358630518`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/44358630518) | `9e4bb0f` | 7/9: `build macos`/`build ios` cancelled раннером (0 шагов, «not acquired … capacity constraints macOS arm64») |
+
+Отмены macOS-job'ов — инфраструктура GitHub (job не запускался, шагов нет),
+такая же запись есть у итерации 7.16. Все исполняемые job'ы (тесты на трёх ОС,
+format+analyze, сборки Linux/Windows/Android) в этих прогонах зелёные; два
+прогона полностью 9/9.
