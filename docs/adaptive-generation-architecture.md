@@ -1390,3 +1390,160 @@ integration_test tool`, `fvm flutter build windows --release --no-pub`, Windows-
 Всё перечисленное в реализации оформляется как **nullable-возможности с источником
 и датой проверки**; до проверки действует консервативная стратегия и явные
 предупреждения.
+
+---
+
+## Q. TASK 02B-FINAL: реализованное состояние (2026-11-19)
+
+**Статус:** production-интеграция выполнена. Разделы A–P выше — исторический аудит
+TASK 01 и проектные решения; этот раздел фиксирует, что фактически сделано в
+TASK 02B-FINAL и какие ограничения остаются.
+
+### Q.1 Production-путь
+
+```
+GenerationRunRequest
+  → ContentInventory (документы/изображения/вложения)
+      или PromptOnlyRequest (нет материалов, есть тема)
+  → GenerationPlan (GenerationPlanBuilder → GenerationChunkPlanner /
+      PromptOnlyPlanner): бюджет D.1, фрагменты, изображения, лимиты карточек,
+      D.5-укрупнение, предупреждения/omitted
+  → PlannedChunk → GenerationRequest (materials, wishes, limit, image-parts,
+      catalog, maxOutputTokens из плана)
+  → CardGenerationService → адаптер провайдера → HTTP
+  → CardsJsonExtractor/схема/валидатор → GeneratedCard
+  → восстановление (split/reduce output) при context overflow/413/truncated
+  → GenerationRunResult (карточки, failures, plan, requested/achievable,
+      tokens, duplicates) → предпросмотр → импорт
+```
+
+`GenerationPipeline` больше не вызывает `GenerationChunker.chunkDocuments/
+chunkAll` и не перераспределяет лимиты: план — единственный источник фрагментов,
+лимитов и image-частей (D.4/D.7). Старый `GenerationChunker` остался
+совместимым фасадом (`chunksFromPlan`, legacy-методы) и не входит в
+production-путь.
+
+### Q.2 D.5: второй проход (укрупнение)
+
+Реализация — `GenerationChunkPlanner._mergeToRequested/_mergePass/_mergePair`
+(`lib/domain/generation/generation_chunk_planner.dart`):
+
+- если `requestedCards != null` и фрагментов больше заказа, соседние фрагменты
+  объединяются, сначала с общим документом, затем любые соседние; порядок
+  сохраняется;
+- объединение проверяет заново: `inputBudget`/окно/`maxInputTokens`/
+  `maxRequestBytes`/`pause image-частей`/байты изображений/`bodyBytes`/
+  выходной резерв (`GenerationBudget.compute` с `_limitTarget`);
+- `unitIds`/`UnitSpan` объединяются со сдвигом смещений, изображения и
+  вложения дедуплицируются по id/ключу, текст склеивается разделителем
+  (символы не теряются и не дублируются);
+- если объединить нельзя без превышения лимитов — план остаётся с безопасным
+  числом фрагментов, сохраняет `requestedCards`, выставляет
+  `cardsAboveRequested`; UI показывает «запрошено/достижимо»;
+- после укрупнения лимиты распределяются заново (`_distributeLimits`,
+  D.7): каждый фрагмент ≥ 1, сумма = `min(requested, chunks × cardsByOutput)`;
+  при заказе меньше числа фрагментов каждый получает 1 (не ноль) и
+  предупреждение о превышении заказа.
+
+### Q.3 Prompt-only план
+
+`PromptOnlyPlanner` + `PromptOnlyRequest` (`GenerationMode.promptOnly`,
+`ChunkKind.promptOnly`) строят план без материалов:
+
+- никаких пустых `ContentUnit`/`TextPiece`/`DocumentInventory`: единицы
+  содержимого пусты по контракту, `<materials>` в запросе пуст, тема уходит в
+  `<wishes>`;
+- учитываются системный промпт, схема, обёртка, токены пользовательского
+  запроса в каждом запросе, output budget, тело запроса;
+- число запросов = `ceil(requestedCards / cardsByOutputCap)`; сумма лимитов
+  равна заказу (если он выполним), при превышении `maxChunks` план невалиден
+  `tooManyChunks` (заказ не режется);
+- UI сохранён: тема/пожелания из существующего поля, точка входа — тот же
+  экран генерации; `GenerationPlan.estimate` считает обвязку на каждый запрос.
+
+### Q.4 Что снято/замещено в TASK 02B-FINAL
+
+| Что | Было | Стало |
+|---|---|---|
+| 20 карточек на фрагмент | `kMaxCardsPerChunk = 20` | удалено; `budgetCardsPerRequestCap` из output budget/`maxCardsPerRequest` |
+| заказ из пожеланий | клампинг 200 | без клампа; `BigInt` + `int.max`, невыполнимость — явно |
+| старый бюджет | `generation_model.dart`: 8192/16000/8000/2000/512 | файл удалён; `GenerationBudget.compute` (D.1) — единственный расчёт |
+| `contextTokens=16000` | окно модели | legacy-поле JSON; планировщик не считает его окном (unknown → assumption) |
+| 8 image-parts | универсальная константа | `account.maxImagesPerRequest`; 8 — только явное допущение, когда модель не сообщает лимит |
+| 24 МБ image-parts | универсальная константа | `account.maxImageBytes`/`maxRequestBytes`; допущение — только при неизвестности |
+| 1000 токенов на изображение | `kImageTokenEstimate` | удалено; `ContentTokenEstimator`/`ImageTokenEstimate` (модель или размерная/байтовая эвристика) |
+| старый чанкинг в production | `chunkAll`/`chunkDocuments`/`splitInHalf` | план — авторитет; recovery — `GenerationPlanSplitter` по единицам/страницам |
+| пропуск фрагмента `limit < 1` | молчаливый `continue` | невозможно: `PlannedChunk.limit ≥ 1`, фрагменты не пропускаются |
+| молчаливое усечение заказа | `requestedAbovePlan` без UI | предупреждение плана + строка в предпросмотре «запрошено/достижимо» |
+| UI-порог 100 000 токенов | константа | сравнение с входным бюджетом выбранной модели |
+| отключение изображений | 8 частей на любую модель | `maxImagesPerRequest` аккаунта; не вошедшие остаются в каталоге |
+
+### Q.5 Актуальная таблица 44 ограничений TASK 01
+
+Статусы: **REMOVED** — искусственное ограничение удалено; **ADAPTIVE** —
+заменено расчётом/возможностями модели и используется production-путём;
+**PROVIDER** — реальное ограничение протокола/провайдера; **INFRASTRUCTURE** —
+техническое (память/тело/транспорт); **SAFETY** — защита; **UNRESOLVED** — пока
+не устранено.
+
+| ID | Ограничение | Старое значение | Текущее поведение | Статус | Обоснование/место |
+|---|---|---|---|---|---|
+| L-01 | размер файла | 25 МБ | без изменений | INFRASTRUCTURE | `file_picker_document_gateway.dart`; политика чтения файла, не генерации |
+| L-02 | дубль лимита | 25 МБ | без изменений | INFRASTRUCTURE | `file_parsing_service.dart`; второй барьер |
+| L-03 | форматы изображений | jpg/png | без изменений | UNRESOLVED | `file_picker_document_gateway.dart`; нужен платформенный декодер/ADR |
+| L-04 | ZIP-лимиты | 10k/32/120 МБ | без изменений | SAFETY | `zip_xml.dart`; защита распаковки |
+| L-05 | страницы PDF-скана | ≤ 3 | без изменений | UNRESOLVED | `pdf_scan_renderer.dart`; парсер, не планировщик |
+| L-06 | ширина рендера | 1600 px | без изменений | UNRESOLVED | `pdf_scan_renderer.dart`; ресайз под модель — отдельный шаг |
+| L-07 | области скана | ≤ 3 страниц | без изменений | UNRESOLVED | `pdf_parser.dart` |
+| L-08 | изображения PDF | ≤ 24 | без изменений | UNRESOLVED | `pdf_parser.dart`; приоритизация/omitted — следующий шаг парсера |
+| L-09 | XObject-лимит | 60 | без изменений | INFRASTRUCTURE | `pdf_image_extractor.dart`; память |
+| L-10 | guard-фильтры PDF | 32 px/16 Мп/2600 px | без изменений | INFRASTRUCTURE | `pdf_image_extractor.dart` |
+| L-11 | области на страницу | ≤ 3 | без изменений | UNRESOLVED | `pdf_page_regions.dart` |
+| L-12 | фильтр мусора | <4 КБ/<64 px | без изменений | SAFETY | `document_images.dart` |
+| L-13 | порог «скан» | 50 символов | без изменений | SAFETY | `pdf_page_classifier.dart`; эвристика классификации |
+| L-14 | нечитаемый PDF | 5 замен/5 % | без изменений | SAFETY | `pdf_text_quality.dart` |
+| L-15 | резерв вывода | 8192 | из возможностей; 8192 — конфиг-допущение, ≤ половины окна | ADAPTIVE | `budgetOutputCapTokens`, `GenerationBudgetConfig` |
+| L-16 | клампы бюджета | 16000/8000/2000/512 | клампов нет; 512 — явный порог валидности | ADAPTIVE | `generation_budget.dart`; `generation_model.dart` удалён |
+| L-17 | формула бюджета | `context−8192−prompt−512` | D.1 с каталогом/изображениями/запасом | ADAPTIVE | `GenerationBudget.compute` |
+| L-18 | окно custom | 16000 | окно модели unknown → `BudgetSource.assumption`; поле JSON legacy | ADAPTIVE | `resolveModelCapabilities`; `provider_account.dart` |
+| L-19 | карточек на фрагмент | 20 | `budgetCardsPerRequestCap` | REMOVED | `kMaxCardsPerChunk` удалён; planner D.2 |
+| L-20 | токены изображения | 1000 | оценщик модели/размер/байты | REMOVED | `content_token_estimator.dart` |
+| L-21 | splitInHalf+картинки | запрещено | plan-splitter делит по единицам/страницам с изображениями | ADAPTIVE | `generation_plan_splitter.dart`; legacy-фасад не в production |
+| L-22 | жёсткое деление | по символам | иерархия раздел→абзац→предложение→строка→руна | ADAPTIVE | `_splitToBudget/_hardSplit` |
+| L-23 | split-once | 1 раз | splitDepth ≤ 3 + бюджет восстановления 12, `truncated` сначала сокращает вывод | ADAPTIVE | `GenerationPipeline._recoveryFor` |
+| L-24 | потолок заказа | 200 | без клампа; BigInt/int.max; `tooManyChunks`/`requestedAbovePlan` | REMOVED | `generation_card_limit.dart` |
+| L-25 | срез распределения | `maxPerChunk×chunks` | распределение без молчаливого среза; предупреждение | ADAPTIVE | `_distributeLimits` |
+| L-26 | пропуск `limit<1` | молча | невозможно; каждый фрагмент получает ≥1 | REMOVED | `PlannedChunk.limit ≥ 1`; pipeline не пропускает |
+| L-27 | UI-порог 100k | 100000 | сравнение с бюджетом модели | ADAPTIVE | `generation_screen.dart:_estimateExceedsInputBudget` |
+| L-28 | размер вложения | 10 МБ | `account.maxImageBytes` иначе inline-политика | ADAPTIVE | `CardGenerationService._validateAttachments` |
+| L-29 | image-parts | 8 | `account.maxImagesPerRequest`; 8 — допущение при неизвестности | ADAPTIVE | planner `_prepareBudget`; service `_withDocumentImages` |
+| L-30 | байты image-parts | 24 МБ | `account.maxImageBytes`/`maxRequestBytes`; допущение при неизвестности | ADAPTIVE | plan `_evaluate`; service |
+| L-31 | молчаливое усечение | break/continue | `catalogOnly`/`omitted` в плане; не вошедшие остаются в каталоге | ADAPTIVE | `_selectCatalog`, `selectVisionDocumentImages` |
+| L-32 | контекст каталога | 160 символов | без изменений | UNRESOLVED | `document_image.dart`; формат строки каталога |
+| L-33 | файл/подпись | 80 символов | без изменений | UNRESOLVED | `generation_images.dart:_clean` |
+| L-34 | UI-оценка vision | ≤ 8 | из `maxImagesPerRequest`/конфига | REMOVED | `generation_screen.dart` |
+| L-35 | vision по имени | эвристика | legacy-инференс сохранён; v2-поле `supports_vision` | UNRESOLVED | `provider_account.dart`; UI-переключатель уже есть |
+| L-36 | PDF как документ | Anthropic/Gemini | без изменений | PROVIDER | `provider_protocol.dart` |
+| L-37 | повторы транспорта | 4/1–30 c | без изменений | INFRASTRUCTURE | `retry_policy.dart` |
+| L-38 | лестница совместимости | ≤ 3 | без изменений | PROVIDER | `card_generation_service.dart` |
+| L-39 | таймауты Dio | 15/60/180 c | без изменений | INFRASTRUCTURE | `app_providers.dart` |
+| L-40 | поиск иллюстраций | 90 c | без изменений | SAFETY | `generation_pipeline.dart` |
+| L-41 | таймауты поиска | 6/20 c, 4 загрузки | без изменений | SAFETY | `image_search_service.dart` |
+| L-42 | debug-диагностика | 2000 символов | без изменений | SAFETY | `generation_diagnostics.dart` |
+| L-43 | контент-правила | 500/2000/3/200 | без изменений | SAFETY | `card_content_validator.dart` |
+| L-44 | число карточек только текстом | поля нет | `GenerationRunRequest.requestedCards` и парсер без клампа; UI-поле не добавлено (сохранён существующий UI) | UNRESOLVED | `generation_run.dart`, `generation_screen.dart` |
+
+### Q.6 Остающиеся ограничения и технические предохранители
+
+- `GenerationChunkPlannerConfig`: `maxChunks = 512`, `maxSplitDepth = 3`,
+  допущения 8 частей/10 МБ/24 МБ/32 МБ — явные поля, не «магические» числа
+  модели; попадают в `unknownFields`.
+- `GenerationPipeline.maxRecoveryRequests = 12` — предел дополнительных
+  запросов восстановления за запуск; после него фрагмент фиксируется ошибкой.
+- Легаси-фасад `GenerationChunker` (методы `chunkDocuments`/`chunkAll`/
+  `splitInHalf`) остаётся для обратной совместимости тестов/вызовов; в
+  production не используется и лимиты плана не переприменяет.
+- Оценка токенов остаётся эвристикой (2,5 симв./токен, изображения —
+  размер/байты); калибровка по `usage` — этап G.
+- Парсерные пределы L-05…L-11, L-32/L-33 и отсутствие числового поля L-44 — вне
+  объёма этого этапа; см. `journal/KNOWN_LIMITATIONS.md` L128–L133.

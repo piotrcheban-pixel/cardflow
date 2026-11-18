@@ -12,6 +12,101 @@
 **Следующий шаг:** новая вёрстка экранов по макетам Google Stitch (владелец,
 2026-11-18) — в этой итерации макеты **не применялись** (L113).
 
+## TASK 02B-FINAL — адаптивный план в production, D.5, prompt-only, снятие лимитов (2026-11-19)
+
+**Задача:** TASK 02B-FINAL — полностью закрыть три незавершённых вопроса после
+TASK 02B: второй проход D.5 (укрупнение фрагментов при заказе меньше числа
+фрагментов), production-поддержка prompt-only через новую архитектуру и снятие
+старых искусственных ограничений (20 карточек/фрагмент, кламп 200, бюджеты
+8192/16000/8000/2000/512, 8 image-частей, 1000 токенов/изображение, старый
+чанкинг), с интеграцией плана в реальный `GenerationPipeline`.
+
+**Факты старта:** `git status --porcelain` → `?? redesign/` (каталог владельца не
+тронут); `HEAD = c01b6fa` (`docs(journal): record TASK 02B adaptive planner`),
+ветка `main`; коммиты TASK 01/02A/02B на месте: `8e90618`, `007fcc4`, `a7a89a8`,
+`d7d0154`, `c01b6fa`. Baseline — **1965 passed + 8 skipped**, `analyze` 0.
+Прогоны — только с `--no-pub` (L64). Схема БД и `format_version` не менялись.
+
+**Сделано:**
+- **D.5 (второй проход):** `GenerationChunkPlanner._mergeToRequested/_mergePass/
+  _mergePair` — соседние фрагменты укрупняются (сначала с общим документом),
+  пока их число больше `requestedCards`; заново проверяются `GenerationBudget`
+  (окно/`maxInputTokens`/`maxRequestBytes`), image-лимиты и байты, `bodyBytes`,
+  выходной резерв. `UnitSpan` сдвигаются, `unitIds`/порядок сохраняются,
+  изображения/вложения дедуплицируются, текст не теряется; при невозможности —
+  безопасное число фрагментов + `cardsAboveRequested`; лимиты перераспределяются
+  (сумма ≤ заказа, каждый ≥ 1). Тесты: 5/12, 10/25, 1/6, 50/10, невозможность
+  по бюджету/изображениям/телу, порядок/покрытие/дубли, 1–100 карточек.
+- **Prompt-only:** `lib/domain/generation/prompt_only_request.dart` +
+  `prompt_only_planner.dart` (`GenerationMode.promptOnly`, `ChunkKind.promptOnly`):
+  нет фиктивных `ContentUnit`; учитываются промпт/схема/обёртка, токены темы в
+  каждом запросе, output budget, тело; число запросов =
+  `ceil(requested / cardsByOutputCap)`, сумма лимитов = заказ; превышение
+  `maxChunks` — явная невыполнимость. `GenerationPlanBuilder.buildPromptOnly`.
+- **Снятие лимитов:** `generation_model.dart` удалён (нет клампов 2000/16000/
+  8000/8192; `GenerationBudget.compute` — единственный расчёт; `512` — явный
+  порог валидности); `kMaxCardsPerChunk`, `kImageTokenEstimate`,
+  `distributeCardLimits`, `kMaxRequestedCards` удалены; `requestedCardCount`
+  без клампа (BigInt/int.max); лимит карточек — `budgetCardsPerRequestCap` из
+  output budget/`maxCardsPerRequest`; `PlannedChunk.limit ≥ 1`, фрагменты не
+  пропускаются; UI-оценка без 1000/8, предупреждение — по бюджету модели.
+- **Production-интеграция:** `GenerationPipeline` строит `GenerationPlan` до
+  первого запроса (материалы — `GenerationPlanBuilder`, тема — `PromptOnlyPlanner`),
+  валидирует его (невалидный — ошибка ARB без сети) и исполняет `PlannedChunk`
+  последовательно; `GenerationRequest.maxOutputTokens` из плана;
+  `GenerationChunkFailure.plannedChunk` для точного повтора; `retryFailed` не
+  пересобирает план и не дробит заново. `GenerationRunResult` несёт `plan`,
+  `requestedCards`/`achievableCards`/`promptOnly`; предпросмотр показывает
+  «запрошено/достижимо» и omitted.
+- **Восстановление:** `GenerationPlanSplitter` (F.3) дробит только проблемный
+  фрагмент по единицам/страницам с сохранением unitIds/порядка/лимитов;
+  `truncated` сначала дробит по единицам, если нечего — сокращает вывод (F.4);
+  `contextOverflow` (400 по тексту ошибки/невалидный план) и `payloadTooLarge`
+  (413) дробятся; `rateLimited`/сеть/auth/refusal — нет; без повторов для
+  auth/refusal/исчерпанного дробления. Бюджет восстановления 12 запросов,
+  глубина ≤ 3.
+- **Изображения:** `CardGenerationService` берёт число частей/байты из аккаунта
+  (`maxImagesPerRequest`, `maxImageBytes`), 8/10/24 МБ — только явные допущения
+  при неизвестности; `max_tokens` из плана/аккаунта; не вошедшие изображения
+  остаются в каталоге.
+- **Тесты (+33 net, старые обновлены):** `generation_plan_merge_test` (9),
+  `prompt_only_planner_test` (11), `generation_plan_splitter_test` (5),
+  `test/integration/adaptive_generation_flow_test.dart` (10) — small/large/
+  prompt-only/partial/retry/429/auth/overflow/invalid plan; HTTP 413/400-context (3);
+  сервисные лимиты аккаунта (4); UI-предупреждения плана (2, «достижимо меньше/
+  больше запрошенного»). Обновлены устаревшие ожидания: truncated теперь
+  сокращает вывод/дробит по единицам; 1 карточка на 3 фрагмента больше не
+  пропускает контент (D.5/L-26); распределение заказа переехало в планировщик;
+  `generation_model_test` удалён вместе с удалённым старым бюджетом (его роль
+  покрывает `generation_budget_test`).
+- **Документация:** раздел Q в `docs/adaptive-generation-architecture.md`
+  (production-путь, D.5, prompt-only, таблица всех 44 ограничений со статусами);
+  `docs/generation-pipeline.md` (бюджет/планирование/восстановление/ошибки);
+  `journal/KNOWN_LIMITATIONS.md` L121–L126 сняты, L127–L133 актуальны.
+
+**Гейты:** `fvm flutter test --no-pub --exclude-tags golden` →
+**1998 passed + 8 skipped** (`All tests passed!`; baseline 1965 + 8, +33 net);
+`fvm flutter test --no-pub --coverage --exclude-tags golden` → **1998 passed +
+8 skipped**, покрытие рукописного кода **91.9 % (15585/16958)** (сгенерированные
+`*.g.dart`/локализации исключены; новые файлы: `generation_plan_splitter`
+92.9 %, `prompt_only_planner` 95.6 %, `generation_plan` 96.1 %,
+`generation_pipeline` 93.1 %, `generation_chunk_planner` 90.0 %);
+`fvm flutter analyze --no-pub` → **No issues found!**;
+`fvm dart format --set-exit-if-changed lib test integration_test tool` →
+**471 файл / 0 changed**; `fvm flutter gen-l10n` — новые строки ARB.
+
+**Остатки/известные ограничения (L128–L133):** бюджет восстановления 12
+запросов; приближённый пересчёт токенов при recovery; prompt-only большие
+заказы не разделяют факты между запросами (дедуп только по контенту);
+парсерные пределы L-05…L-11/L-32/L-33; UI-поле числа карточек не добавлено
+(L-44); реальные пределы провайдеров частично неизвестны (допущения явные);
+оценка токенов — эвристика (L122). `GenerationChunker` остался совместимым
+фасадом, production его не вызывает.
+
+**Следующий шаг:** TASK 02C — оценщик G (калибровка по `usage`), диалог
+стоимости/подтверждения, числовое поле карточек и UI-возможности провайдера
+(`ProviderCapabilitiesDialog`).
+
 ## TASK 02B — адаптивный планировщик фрагментов (2026-11-18)
 
 **Задача:** TASK 02B — планировщик по разделам D.4–D.7 аудита: бюджет модели,

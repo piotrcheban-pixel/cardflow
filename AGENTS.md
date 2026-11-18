@@ -24,9 +24,11 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   канон-схема ответа и её проекции — `lib/api/generation/` (`card_json_schema.dart`, `provider_schema.dart`);
   адаптеры провайдеров — `lib/api/providers/` (OpenAI, Gemini, Anthropic и OpenAI-compatible; чистые
   `buildRequest`/`parseResponse`, без сети и UI). Пайплайн генерации — `lib/api/generation/generation_pipeline.dart`
-  (`GenerationPipeline`: оценка/чанкинг, последовательные вызовы, прогресс/отмена, split-once, дедуп,
-  `generation_jobs`, partial/retry); чистые правила — `lib/domain/generation/` (`token_estimator.dart`,
-  `generation_model.dart`, `generation_chunker.dart`, `generation_job.dart`, `generation_run.dart`).
+  (`GenerationPipeline`: `GenerationPlan` до первого запроса, последовательные вызовы по `PlannedChunk`,
+  восстановление context overflow/413/truncated, прогресс/отмена, дедуп, `generation_jobs`, partial/retry);
+  чистые правила — `lib/domain/generation/` (`generation_budget.dart`, `generation_chunk_planner.dart`,
+  `generation_plan.dart`, `prompt_only_planner.dart`, `generation_plan_splitter.dart`,
+  `content_token_estimator.dart`, `generation_job.dart`, `generation_run.dart`).
   **Провайдеры — аккаунты, а не enum** (SPEC A6.6/A6.8/A8.6, ADR-020): статический каталог
   `lib/domain/generation/provider_preset.dart` (DeepSeek, OpenAI, Anthropic, Gemini, OpenRouter,
   Moonshot, MiniMax, Groq, Ollama), `ProviderProtocol` → существующий адаптер, `ProviderAccount`
@@ -67,14 +69,17 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   отбрасывается. Изображения раздела входят в каталог `<images>` только своего фрагмента
   (`id | файл | подпись | окружающий текст`); `image_id` разрешается в байты до внешнего поиска.
   Приоритет: файл → внешний поиск по `image_query` модели; производного запроса из текста вопроса нет.
-  Общий лимит карточек из пожеланий делится по фрагментам пропорционально объёму
-  (`generation_card_limit.dart`). Предпросмотр импортирует успешные карточки при упавших
-  фрагментах, невалидные карточки пропускает, картинку можно убрать/заменить; ошибки фрагментов —
-  списком «Фрагмент K из M: причина» + «Повторить неудавшиеся».
-  **Prompt-only и диагностика (ADR-024, итерация 7.10):** файлы необязательны — без вложений, но с темой
-  в `<wishes>` пайплайн создаёт фрагмент с пустым `materialsText`, сервис шлёт пустой `<materials>`;
-  `buildGenerationUserContent` допускает пустые материалы; `noMaterials` — только когда нет ни текста,
-  ни вложений, ни пожеланий. `GenerationDiagnostics` (`lib/api/generation/generation_diagnostics.dart`,
+  Общий заказ карточек (`GenerationPlan.requestedCards`) распределяется планировщиком без клампа 200
+  и без универсального «20 на фрагмент»; лимит фрагмента — из output budget/`maxCardsPerRequest`
+  (`generation_card_limit.dart` только разбирает число). Предпросмотр импортирует успешные карточки при
+  упавших фрагментах, невалидные карточки пропускает, картинку можно убрать/заменить; ошибки фрагментов —
+  списком «Фрагмент K из M: причина» + «Повторить неудавшиеся»; при невыполнимом заказе видно
+  «запрошено/достижимо».
+  **Prompt-only и диагностика (ADR-024, TASK 02B-FINAL):** файлы необязательны — без вложений, но с темой
+  план строит `PromptOnlyPlanner` (`ChunkKind.promptOnly`, `GenerationMode.promptOnly`) без фиктивных
+  `ContentUnit`; сервис шлёт пустой `<materials>`, тема — в `<wishes>`; большие заказы делятся на
+  несколько запросов по output budget. `buildGenerationUserContent` допускает пустые материалы;
+  `noMaterials` — только когда нет ни текста, ни вложений, ни пожеланий. `GenerationDiagnostics` (`lib/api/generation/generation_diagnostics.dart`,
   `enabled = !dart.vm.product`, sink инжектируется) — debug-only тело ошибки провайдера, сырой ответ
   модели (`image_query`) и итог поиска картинки; в release — no-op, секреты редактируются.
   **Текст документов (ADR-024):** `TextSanitizer` удаляет Unicode Cc/Cf (включая C1 `U+0080–U+009F`),
