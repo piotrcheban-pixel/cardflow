@@ -131,6 +131,12 @@ job `test` теперь `--exclude-tags golden,live` (обычный прого�
 hosted even after multiple attempts» (capacity constraints macOS arm64), шагов
 не было, т.е. инфраструктура, а не ошибка кода → итоговый conclusion прогона
 `failure` только из-за этого; повторный прогон — после docs-коммита.
+Прогон [`44352510436`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/44352510436)
+(`19b2c3a`): `test` Ubuntu ✅, `test` Windows ✅, `format + analyze` ✅,
+`build` android/windows/linux/ios ✅; `test (macos)` и `build macos` снова
+**отменены раннером** — 0 шагов, «not acquired by Runner … capacity constraints
+macOS arm64» (инфраструктура GitHub; так же было в итерации 7.16). Повтор —
+после следующего push.
 
 ## Итерация cleanup-1 — отказ от «Nocturne» и фикс «Создать колоду» (2026-11-18, ADR-036)
 
