@@ -12,6 +12,162 @@
 **Следующий шаг:** новая вёрстка экранов по макетам Google Stitch (владелец,
 2026-11-18) — в этой итерации макеты **не применялись** (L113).
 
+## TASK 02A — фундамент адаптивной генерации: доменные контракты (2026-11-18)
+
+**Задача:** TASK 02A — только фундамент архитектуры из
+`docs/adaptive-generation-architecture.md` (раздел P, шаг 1): возможности
+модели, цены, бюджет, единицы содержимого, план. Планировщик, пайплайн, сервис,
+адаптеры, UI и БД не менялись.
+
+**Факты старта:** `git status --porcelain` → `M journal/STATE.md`,
+`?? docs/adaptive-generation-architecture.md`, `?? redesign/` (TASK 01 сохранён,
+каталог владельца не тронут); `HEAD = af3172a`, ветка `main`. Baseline L76 —
+1822 passed + 8 skipped (TASK 01 был AUDIT-ONLY, код не менялся).
+Прогоны — только с `--no-pub` (L64).
+
+**Сделано (домен + JSON аккаунтов; production-путь прежний):**
+- `lib/domain/generation/model_capabilities.dart` — `CapabilitySource`
+  (`verified|preset|user|inferred|unknown`), `TokenizerKind`, `ImageTokenModel`
+  (E.4), `ModelCapabilities` (nullable-значения + источники групп),
+  `resolveModelCapabilities`: аккаунт (user) → каталог пресета (preset) →
+  unknown. Окно пользовательской модели **не** подставляется из
+  `ProviderAccount.contextTokens` (16 000 — заглушка приложения, L-18),
+  `maxOutputTokens` — не 8192 сервиса, strict-схема и image-токены — `null`
+  (подтверждённых данных в репозитории нет).
+- `generation_pricing.dart` — `GenerationPricing` (nullable цены/валюта),
+  `PricingState` (`complete|incomplete|unknown`), `GenerationCost`;
+  `costFor` → `null` при неполных ценах и 0 только при явно нулевой цене;
+  JSON `input_per_mtok|output_per_mtok|currency`.
+- `generation_budget.dart` — `GenerationBudget.compute` по D.1:
+  окно − резерв вывода − фиксированная обвязка − запас (5 %, ≥ 256);
+  лимиты `maxInputTokens`/`maxRequestBytes` (base64); unknown-стратегия
+  6000/2048 с `BudgetSource.assumption`; клампинга 2000 нет —
+  `isWorkable`/`shortfallTokens`; `BudgetTrace` (формула, слагаемые,
+  источники, `unknownFields`), `GenerationBudgetConfig` (калибруемые
+  допущения, не факты модели), `base64EncodedByteLength`.
+- `content_unit.dart` — `ContentInventory`, `DocumentUnit`, `SectionUnit`,
+  `TextPiece`, `ImageRef` (обёртка над `DocumentImage`), `DocumentCatalog`,
+  `AttachmentUnit`/`PageUnit`, `OrphanImageUnit`, `PageRange`; стабильные id
+  `doc:<файл>#<раздел>#<фрагмент>`, `img:<файл>#<n>`, `att:<ключ>[#pN]`;
+  каталог документа объединяется с изображениями разделов (изображение не
+  выпадает), orphan-изображение — отдельная единица.
+- `generation_plan.dart` — `GenerationPlan`, `PlannedChunk`, `UnitSpan`,
+  `OmittedUnit`/`OmittedReason` (`budget|providerImageCap|payload|unsupported`),
+  `PlanValidity` (+ `PlanWarningCode`, `PlanInvalidReason`), `GenerationEstimate`
+  (G.6; стоимость nullable). Пустой фрагмент и `limit < 1` запрещены assert-ом;
+  `plannedCards`/`plannedRequests` вычисляются из фрагментов (без дубля полей).
+  JSON плана не пишется: `plan_json` в БД не добавляется (K.2), материалы в БД
+  запрещены (SPEC 3.4), поэтому план — in-memory.
+- `provider_account.dart` — JSON аккаунтов v2
+  (`ProviderAccounts.version = 2`): nullable `max_output_tokens`,
+  `max_images_per_request`, `max_image_bytes`, `max_request_bytes`, `pricing`,
+  `capabilities_source`; чтение v1 (поля отсутствуют → неизвестны),
+  нулевые/битые значения → `null`, неизвестные ключи игнорируются.
+
+**Решения по nullable/неизвестности:** неизвестная характеристика — `null` +
+`CapabilitySource.unknown` (никогда 0); каталог пресета — источник `preset`
+(не `verified`: подтверждённой документации в репозитории нет); пользовательские
+значения — `user` (явное значение в JSON без источника подписывается `user`
+в резолвере — одна логика, без дубля в `fromJson`); цены при неполных данных
+дают `null`/`incomplete`, не 0; бюджет при неизвестном окне — консервативное
+допущение с явной пометкой source/unknownFields.
+
+**Тесты (+77):** новые `generation_pricing_test` (12),
+`model_capabilities_test` (12), `generation_budget_test` (13),
+`content_unit_test` (16), `generation_plan_test` (17) и 7 новых в
+`provider_account_test` (v2 round-trip, legacy v1, битые/нулевые значения,
+pricing с null, copyWith): известные/неизвестные характеристики, сериализация
+и десериализация, совместимость старых JSON-конфигураций, отсутствующие
+nullable-поля, «unknown ≠ 0», пользовательские значения, валидность
+плана/бюджета, «нет потерь» в каталоге изображений.
+
+**Гейты:** `fvm flutter test --no-pub --coverage --exclude-tags golden` →
+**1899 passed + 8 skipped** (`All tests passed!`; baseline 1822 + 8, +77);
+покрытие рукописного кода **92.7 % (14055/15166)**; новые доменные файлы
+**100 %** (`model_capabilities` 48/48, `generation_pricing` 59/59,
+`generation_budget` 57/57, `content_unit` 132/132, `generation_plan` 91/91),
+`provider_account` 87.4 %; `fvm flutter analyze --no-pub` → **No issues found!**;
+`fvm dart format --set-exit-if-changed lib test integration_test tool` →
+**459 файлов / 0 changed**.
+
+**Ограничения/долги (осознанно вне TASK 02A):**
+- планировщик (`generation_chunk_planner`/`generation_plan_builder`), оценщик
+  (`generation_estimator`), пайплайн, сервис, адаптеры, UI, классификатор
+  ошибок и БД K1 — следующие шаги; старый путь генерации новые контракты ещё
+  не использует;
+- `ProviderAccount.contextTokens` пока не считается пользовательским окном
+  (UI-поля нет); после появления поля источник `user` должен включать его явно;
+- редактирование аккаунта в текущем UI создаёт аккаунт без новых полей —
+  сохранение возможностей/цен появится с `ProviderCapabilitiesDialog` (I23);
+  до этого новые поля UI не заполняет;
+- `GenerationPlan`/`ContentInventory` — in-memory: токены единиц считает
+  будущий оценщик, собственной оценки в фундаменте нет.
+
+**Следующий шаг:** TASK 02B — планировщик по D.4–D.7 и
+`generation_plan_builder`, фасад `generation_chunker`, тесты инвариантов и
+«нет потерь»; затем оценщик (G) и пайплайн (F). На TASK 02A работа остановлена.
+
+## TASK 01 — аудит пайплайна генерации и план адаптивной архитектуры (2026-11-18, AUDIT-ONLY)
+
+**Задача:** отдельный трек по запросу владельца (не итерация продукта):
+исследовать путь «контент → карточки» и подготовить план адаптивного
+токен-осознанного чанкинга, снятия искусственных лимитов, мультимодальной
+обработки, бюджетирования контекста/вывода, восстановления после переполнений,
+оценки токенов и стоимости, предупреждений перед генерацией.
+
+**Факты старта:** `git status --porcelain` → `?? redesign/` (только каталог
+владельца), `HEAD = af3172a` (`docs(journal): table of L76 CI runs and runner
+capacity cancellations`), ветка `main`; baseline из L76 — **1822 passed +
+8 skipped** (не перепроверялся: код не менялся). Расхождения со STATE, найденные
+при сверке: последний зафиксированный в L76 хеш — `bdc5336`, фактический HEAD на
+два docs-коммита новее (`9e4bb0f`, `af3172a`); `lib/ui.rar` в дереве отсутствует
+(остался только `redesign/`). Исторические записи не переписывались.
+
+**Сделано (только документы; production-код, лимиты, модели, схема БД не менялись):**
+- `docs/adaptive-generation-architecture.md` — полный аудит и проект: диаграмма
+  пайплайна, реестр **44** ограничений с классификацией A/B/C/D, архитектура
+  возможностей модели (`ModelCapabilities`, nullable + источник), адаптивный
+  планировщик (формула `effectiveInputBudget`, резерв вывода, мягкая цель,
+  инварианты, `GenerationPlan`), мультимодальные единицы контента (ассоциации
+  секция↔страница↔изображение), восстановление (категории ошибок, рекурсивное
+  дробление, отдельная стратегия для output truncation, бюджеты попыток),
+  оценщик токенов/стоимости (unknown ≠ 0), поток предупреждения о стоимости,
+  точный список изменяемых/новых файлов с критериями приёмки, изменения модели
+  данных (JSON аккаунтов v2; `generation_jobs` + 5 nullable-колонок, K1),
+  миграция/совместимость, 30 тест-кейсов по п.10 задания, производительность/память,
+  риски и порядок реализации.
+- Эта запись в STATE (по конвенции журнала). Других файлов не касались.
+
+**Ключевые дефекты, подтверждённые кодом (входят в план):**
+1. Переполнение контекста не обрабатывается: 400/413 сводятся к `badRequest`
+   (`generation_http_client.dart:194-281`), дробится только `truncated`
+   (`generation_pipeline.dart:406-416`) — большие документы на малом окне
+   гарантированно падают.
+2. Малое окно ломается формулой: `inputTokenBudget` клампится в 2000
+   (`generation_model.dart:19,38`); для `moonshot-v1-8k` (8000) 2000 + системный
+   промпт (~6566) + вывод > окна.
+3. Молчаливая потеря контента: фрагменты с `limit == 0` пропускаются
+   (`generation_pipeline.dart:368-371`), заказ карточек режется 200
+   (`generation_card_limit.dart:12,44`) и `maxPerChunk × chunks` (`:62-63`).
+4. `splitInHalf` запрещён для фрагментов с картинками и теряет каталог
+   (`generation_chunker.dart:320,341-354`).
+5. Совокупный размер запроса не ограничен: 3 страницы скана по ≤ 10 МБ + до 8
+   image-частей (≤ 24 МБ) → тело до ~54 МБ (base64 ~72 МБ) без проверки.
+6. `retryable` всегда `true` (`generation_run.dart:105`) — повтор
+   детерминированных ошибок (vision/PDF/размер).
+7. Цен и модели стоимости нет вообще; оценка токенов расходится между UI и
+   пайплайном, не включает схему, каталог `<images>`, image-части, ретраи.
+
+**Гейты:** не запускались — задача AUDIT-ONLY, `lib/`, `test/`, `pubspec.yaml`
+не изменялись; проверка свелась к чтению кода и сверке путей документа
+(144 извлечённые ссылки, несуществующих «старых» путей нет; новые пути — план
+реализации). `docs/generation-pipeline.md` устарел (≤ 4 страницы вместо 3,
+`GenerationModel.contextTokens`, Openverse как единственный поиск) — обновляется
+в итерации реализации.
+
+**Следующий шаг:** итерация реализации по разделу P документа (контракты →
+планировщик → пайплайн → сервис/адаптеры → UI → БД K1 → документация → live).
+
 ## Итерация L76 — PDF Visual Intelligence (2026-11-18, ADR-037)
 
 **Факты старта:** `git status --porcelain` → пусто,
