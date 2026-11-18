@@ -1355,6 +1355,179 @@
       }
     }
   },
+  "generationCardsCountLabel": "Сколько карточек",
+  "@generationCardsCountLabel": {
+    "description": "Числовое поле количества карточек на экране генерации (TASK 03, L132)."
+  },
+  "generationCardsCountHint": "Пусто — из пожеланий или по бюджету модели",
+  "@generationCardsCountHint": {
+    "description": "Подсказка числового поля количества карточек (TASK 03)."
+  },
+  "generationCardsCountInvalid": "Укажите целое число больше нуля",
+  "@generationCardsCountInvalid": {
+    "description": "Валидация числового поля количества карточек (TASK 03)."
+  },
+  "generationCardsCountTooLarge": "Слишком большое число",
+  "@generationCardsCountTooLarge": {
+    "description": "Валидация: количество карточек не помещается в технический предел int (TASK 03)."
+  },
+  "generationPlanPreview": "План: фрагментов — {chunks}, запросов — {requests}; запрошено — {requested}, достижимо — {achievable}",
+  "@generationPlanPreview": {
+    "description": "Предпросмотр плана до запуска: фрагменты, запросы, заказ/достижимое (TASK 03).",
+    "placeholders": {
+      "chunks": {
+        "type": "int"
+      },
+      "requests": {
+        "type": "int"
+      },
+      "requested": {
+        "type": "int"
+      },
+      "achievable": {
+        "type": "int"
+      }
+    }
+  },
+  "generationPlanPreviewAuto": "План: фрагментов — {chunks}, запросов — {requests}; будет создано до {achievable} карточек",
+  "@generationPlanPreviewAuto": {
+    "description": "Предпросмотр плана, когда число карточек не задано (берётся из бюджета модели, TASK 03).",
+    "placeholders": {
+      "chunks": {
+        "type": "int"
+      },
+      "requests": {
+        "type": "int"
+      },
+      "achievable": {
+        "type": "int"
+      }
+    }
+  },
+  "generationPlanUnknownCapabilities": "Возможности модели известны не полностью: часть лимитов — консервативные допущения приложения, а не факты провайдера.",
+  "@generationPlanUnknownCapabilities": {
+    "description": "Предупреждение плана: неизвестные возможности модели (TASK 03)."
+  },
+  "generationPlanAssumedImageLimits": "Лимит изображений модели не подтверждён — используется консервативное значение приложения.",
+  "@generationPlanAssumedImageLimits": {
+    "description": "Предупреждение плана: лимиты image-частей взяты из конфигурации (TASK 03)."
+  },
+  "generationPlanCatalogOnlyImages": "{count, plural, one{{count} изображение останется только в каталоге} few{{count} изображения останутся только в каталоге} many{{count} изображений останутся только в каталоге} other{{count} изображения останутся только в каталоге}}",
+  "@generationPlanCatalogOnlyImages": {
+    "description": "Предупреждение плана: изображения без байтов, только каталог (TASK 03).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "generationPlanNoVisionImages": "Модель не принимает изображения: {count} изображений будут только в каталоге, без передачи модели.",
+  "@generationPlanNoVisionImages": {
+    "description": "Предупреждение плана: документные изображения при модели без поддержки изображений (TASK 03).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "generationPlanInvalid": "План невыполним: {reason}",
+  "@generationPlanInvalid": {
+    "description": "Причина невыполнимости плана до запуска (TASK 03).",
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "generationPlanReasonContextWindow": "материала слишком много для бюджета модели — уменьшите объём или выберите модель с большим контекстом",
+  "@generationPlanReasonContextWindow": {
+    "description": "Причина невыполнимости плана: contextWindowTooSmall (TASK 03)."
+  },
+  "generationPlanReasonUnitTooLarge": "часть материала не помещается в бюджет модели даже после дробления",
+  "@generationPlanReasonUnitTooLarge": {
+    "description": "Причина невыполнимости плана: unitTooLarge (TASK 03)."
+  },
+  "generationPlanReasonPayloadTooLarge": "запрос больше допустимого размера — уменьшите вложения",
+  "@generationPlanReasonPayloadTooLarge": {
+    "description": "Причина невыполнимости плана: payloadTooLarge (TASK 03)."
+  },
+  "generationPlanReasonImagesWithoutVision": "приложены изображения, а выбранная модель не поддерживает изображения",
+  "@generationPlanReasonImagesWithoutVision": {
+    "description": "Причина невыполнимости плана: imagesWithoutVision (TASK 03)."
+  },
+  "generationPlanReasonTooManyChunks": "заказ слишком велик для одного запуска — уменьшите число карточек",
+  "@generationPlanReasonTooManyChunks": {
+    "description": "Причина невыполнимости плана: tooManyChunks (TASK 03)."
+  },
+  "generationPreviewPartial": "Частичный результат: обработано фрагментов — {processed}, с ошибкой — {failed}. Импортируйте полученное или повторите неудавшиеся.",
+  "@generationPreviewPartial": {
+    "description": "Баннер частичного успеха в предпросмотре (TASK 03).",
+    "placeholders": {
+      "processed": {
+        "type": "int"
+      },
+      "failed": {
+        "type": "int"
+      }
+    }
+  },
+  "generationPreviewFatal": "Генерация остановлена: {message}",
+  "@generationPreviewFatal": {
+    "description": "Постоянное сообщение о fatal-ошибке в предпросмотре (TASK 03).",
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "generationPreviewImageSummary": "Изображения: передано модели — {sent}, только в каталоге — {catalog}, без поддержки изображений — {unsupported}, исключено — {omitted}.",
+  "@generationPreviewImageSummary": {
+    "description": "Сводка участия изображений в запросе (TASK 03, требование 6).",
+    "placeholders": {
+      "sent": {
+        "type": "int"
+      },
+      "catalog": {
+        "type": "int"
+      },
+      "unsupported": {
+        "type": "int"
+      },
+      "omitted": {
+        "type": "int"
+      }
+    }
+  },
+  "generationPreviewTokenComparison": "Оценка входа: ≈{estimated} токенов · фактически: {actual}",
+  "@generationPreviewTokenComparison": {
+    "description": "Сравнение оценки и фактического usage в предпросмотре (TASK 03).",
+    "placeholders": {
+      "estimated": {
+        "type": "int"
+      },
+      "actual": {
+        "type": "int"
+      }
+    }
+  },
+  "generationPreviewRecovery": "Восстановление: {count, plural, one{дополнительный запрос — {count}} few{дополнительных запроса — {count}} many{дополнительных запросов — {count}} other{дополнительных запросов — {count}}}",
+  "@generationPreviewRecovery": {
+    "description": "Сколько дополнительных запросов потрачено на восстановление (TASK 03, L128).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "generationFailureRetryAfter": "повторите через {seconds} с",
+  "@generationFailureRetryAfter": {
+    "description": "Подсказка Retry-After к ошибке фрагмента (TASK 03, требование 5.7).",
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
   "generationDuplicatesRemoved": "{count, plural, =0{Дубликатов нет} one{{count} дубликат пропущен} few{{count} дубликата пропущено} many{{count} дубликатов пропущено} other{{count} дубликата пропущено}}",
   "@generationDuplicatesRemoved": {
     "description": "Сколько дублей отсеяла дедупликация (SPEC A8.5 шаг 9).",

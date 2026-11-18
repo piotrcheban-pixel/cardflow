@@ -6,7 +6,6 @@
 /// файлов и провайдера показываются кодами без сырых исключений.
 library;
 
-import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:desktop_drop/desktop_drop.dart';
@@ -17,26 +16,24 @@ import 'package:path/path.dart' as p;
 
 import 'package:cardflow/api/generation/generation_cancellation.dart';
 import 'package:cardflow/api/generation/generation_pipeline.dart';
-import 'package:cardflow/api/generation/generation_prompt.dart';
-import 'package:cardflow/api/generation/system_prompt.dart';
+import 'package:cardflow/api/generation/generation_plan_builder.dart';
 import 'package:cardflow/api/parsers/file_parsing_service.dart';
 import 'package:cardflow/api/parsers/pdf_page_classifier.dart';
 import 'package:cardflow/api/parsers/pdf_scan_pages.dart';
 import 'package:cardflow/domain/decks/deck.dart';
 import 'package:cardflow/domain/generation/api_key_store.dart';
-import 'package:cardflow/domain/generation/content_token_estimator.dart';
 import 'package:cardflow/domain/generation/document_gateway.dart';
 import 'package:cardflow/domain/generation/document_image.dart';
 import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/generation/deck_name.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
-import 'package:cardflow/domain/generation/generation_budget.dart';
+import 'package:cardflow/domain/generation/generation_card_limit.dart';
 import 'package:cardflow/domain/generation/generation_card_store.dart';
-import 'package:cardflow/domain/generation/generation_chunk_planner.dart'
-    show GenerationChunkPlannerConfig;
 import 'package:cardflow/domain/generation/generation_error.dart';
+import 'package:cardflow/domain/generation/generation_plan.dart';
 import 'package:cardflow/domain/generation/generation_run.dart';
 import 'package:cardflow/domain/generation/model_capabilities.dart';
+import 'package:cardflow/domain/generation/prompt_only_request.dart';
 import 'package:cardflow/domain/generation/provider_account.dart';
 import 'package:cardflow/domain/generation/provider_preset.dart';
 import 'package:cardflow/domain/text/document_format.dart';
@@ -91,10 +88,15 @@ class GenerationScreen extends ConsumerStatefulWidget {
 }
 
 class _GenerationScreenState extends ConsumerState<GenerationScreen> {
-  final ContentTokenEstimator _estimator =
-      const HeuristicContentTokenEstimator();
   final TextEditingController _wishesController = TextEditingController();
   final TextEditingController _deckNameController = TextEditingController();
+
+  /// Числовое поле количества карточек (TASK 03, L132).
+  final TextEditingController _cardCountController = TextEditingController();
+
+  /// Кэш предпросмотра плана: ключ входов и сам план (строится до запуска).
+  String? _planCacheKey;
+  GenerationPlan? _planPreview;
 
   final List<_AttachedFile> _files = <_AttachedFile>[];
 
@@ -119,12 +121,16 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
   void initState() {
     super.initState();
     _wishesController.addListener(_onWishesChanged);
+    _cardCountController.addListener(_onWishesChanged);
     _loadProviderConfig();
   }
 
   @override
   void dispose() {
     _wishesController
+      ..removeListener(_onWishesChanged)
+      ..dispose();
+    _cardCountController
       ..removeListener(_onWishesChanged)
       ..dispose();
     _deckNameController.dispose();
@@ -229,68 +235,112 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
   bool get _anyParsing =>
       _files.any((_AttachedFile file) => file.status == _FileStatus.parsing);
 
-  /// Оценка входа до запуска (информационная, не бюджет).
-  ///
-  /// Считается тем же оценщиком единиц содержимого, что и план: текст — по
-  /// символам, изображения — по размерам/байтам, без универсальных 1000
-  /// токенов и без зашитого числа image-частей. Точный бюджет и число запросов
-  /// определяет `GenerationPlan` перед генерацией.
-  int get _estimatedTokens {
-    final String wishes = _wishesController.text.trim();
-    int tokens = 0;
-    for (final ParsedDocument document in _parsedDocuments) {
-      tokens += _estimator.estimateText(document.text);
+  /// Явно заданное число карточек (TASK 03, L132); `null` — не задано.
+  int? get _requestedCards {
+    final String text = _cardCountController.text.trim();
+    if (text.isEmpty) return null;
+    final BigInt? value = BigInt.tryParse(text);
+    if (value == null || value <= BigInt.zero) return null;
+    if (value > BigInt.from(kMaxRepresentableRequestedCards)) {
+      return kMaxRepresentableRequestedCards;
     }
-    for (final GenerationAttachment attachment in _attachments) {
-      tokens += _estimator.estimateImage(bytes: attachment.bytes.length).tokens;
-    }
-    final List<DocumentImage> documentImages = <DocumentImage>[
-      for (final ParsedDocument document in _parsedDocuments)
-        ...document.images,
-      ..._scanDocumentImages,
-    ];
-    final int maxImageParts =
-        _requestAccount?.maxImagesPerRequest ??
-        const GenerationChunkPlannerConfig().assumedMaxImagesPerChunk;
-    final int parts = math.min(documentImages.length, maxImageParts);
-    for (var index = 0; index < parts; index++) {
-      final DocumentImage image = documentImages[index];
-      tokens += _estimator
-          .estimateImage(
-            width: image.width,
-            height: image.height,
-            bytes: image.bytes.length,
-          )
-          .tokens;
-    }
-    tokens += _estimator.estimateText(systemPromptGenRuV7);
-    tokens += _estimator.estimateText(
-      buildGenerationUserContent(
-        materialsText: '',
-        wishes: wishes.isEmpty ? null : wishes,
-        limit: 1,
-        imagesCatalog: '',
-      ),
-    );
-    return tokens;
+    return value.toInt();
   }
 
-  /// true, если ориентировочный объём материалов больше входного бюджета
-  /// выбранной модели (L-27: предупреждение связано с бюджетом, а не с
-  /// «магическим» порогом 100 000).
-  bool get _estimateExceedsInputBudget {
+  /// Поле количества заполнено не целым положительным числом.
+  bool get _cardCountInvalid {
+    final String text = _cardCountController.text.trim();
+    if (text.isEmpty) return false;
+    final BigInt? value = BigInt.tryParse(text);
+    return value == null || value <= BigInt.zero;
+  }
+
+  /// Число больше технического предела `int` (не продуктовый лимит карточек).
+  bool get _cardCountTooLarge {
+    final String text = _cardCountController.text.trim();
+    final BigInt? value = BigInt.tryParse(text);
+    return value != null &&
+        value > BigInt.from(kMaxRepresentableRequestedCards);
+  }
+
+  /// Предпросмотр плана до запуска: тот же `GenerationPlanBuilder`, что и в
+  /// production-пути (TASK 03, D1–D3/D20/D25). Кэшируется по входам, чтобы не
+  /// перестраивать план на каждую перерисовку.
+  GenerationPlan? get _currentPlanPreview {
     final ProviderAccount? account = _requestAccount;
-    if (account == null) return false;
-    final GenerationBudget budget = GenerationBudget.compute(
-      capabilities: resolveModelCapabilities(account),
-      limit: 1,
-      systemPromptTokens: _estimator.estimateText(systemPromptGenRuV7),
-      schemaTokens: 0,
-      wrapperTokens: 0,
-      catalogTokens: 0,
-      imageTokens: 0,
-    );
-    return budget.inputBudget > 0 && _estimatedTokens > budget.inputBudget;
+    if (account == null) return null;
+    final String wishes = _wishesController.text.trim();
+    if (!_hasContent && wishes.isEmpty) return null;
+    if (_cardCountInvalid || _cardCountTooLarge) return null;
+    final int? requested = _requestedCards;
+    final String key = _planKey(account, wishes, requested);
+    if (key == _planCacheKey) return _planPreview;
+    _planCacheKey = key;
+    try {
+      final ModelCapabilities capabilities = resolveModelCapabilities(account);
+      const GenerationPlanBuilder builder = GenerationPlanBuilder();
+      _planPreview = !_hasContent
+          ? builder.buildPromptOnly(
+              request: PromptOnlyRequest(
+                prompt: wishes,
+                requestedCards: requested,
+              ),
+              capabilities: capabilities,
+            )
+          : builder.build(
+              documents: _parsedDocuments,
+              capabilities: capabilities,
+              attachments: _attachments,
+              documentImages: _scanDocumentImages,
+              wishes: wishes.isEmpty ? null : wishes,
+              requestedCards: requested,
+            );
+    } on Object {
+      _planPreview = null;
+    }
+    return _planPreview;
+  }
+
+  /// Ключ входов предпросмотра плана (содержимое файлов и настройки).
+  String _planKey(ProviderAccount account, String wishes, int? requested) {
+    final StringBuffer buffer = StringBuffer()
+      ..write(account.id)
+      ..write('|')
+      ..write((_modelId ?? account.modelId).trim())
+      ..write('|')
+      ..write(wishes)
+      ..write('|')
+      ..write(requested ?? 'auto');
+    for (final _AttachedFile file in _files) {
+      buffer
+        ..write('|')
+        ..write(file.picked.path)
+        ..write(':')
+        ..write(file.status.index)
+        ..write(':')
+        ..write(file.document?.text.length ?? 0)
+        ..write(':')
+        ..write(file.document?.images.length ?? 0)
+        ..write(':')
+        ..write(file.attachments.length)
+        ..write(':')
+        ..write(file.documentImages.length);
+    }
+    return buffer.toString();
+  }
+
+  /// Причина невыполнимости плана для UI (только строки ARB).
+  String _planReason(AppLocalizations l10n, PlanInvalidReason reason) {
+    return switch (reason) {
+      PlanInvalidReason.contextWindowTooSmall =>
+        l10n.generationPlanReasonContextWindow,
+      PlanInvalidReason.unitTooLarge => l10n.generationPlanReasonUnitTooLarge,
+      PlanInvalidReason.payloadTooLarge =>
+        l10n.generationPlanReasonPayloadTooLarge,
+      PlanInvalidReason.imagesWithoutVision =>
+        l10n.generationPlanReasonImagesWithoutVision,
+      PlanInvalidReason.tooManyChunks => l10n.generationPlanReasonTooManyChunks,
+    };
   }
 
   Future<void> _pickFiles() async {
@@ -495,9 +545,18 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
   Future<void> _generate() async {
     final AppLocalizations l10n = AppLocalizations.of(context);
     if (_generating || _loading) return;
+    if (_cardCountTooLarge) {
+      showAppMessage(context, l10n.generationCardsCountTooLarge);
+      return;
+    }
+    if (_cardCountInvalid) {
+      showAppMessage(context, l10n.generationCardsCountInvalid);
+      return;
+    }
     final List<ParsedDocument> documents = _parsedDocuments;
     final List<GenerationAttachment> attachments = _attachments;
     final String wishes = _wishesController.text.trim();
+    final int? requestedCards = _requestedCards;
     if (_anyParsing) {
       showAppMessage(context, l10n.generationFilesParsing);
       return;
@@ -546,6 +605,17 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
     final String deckName = widget.deckId == null
         ? _resolveDeckName(l10n, documents, attachments)
         : '';
+    // Невалидный план не тратит токены: показываем причину до запуска.
+    final GenerationPlan? planPreview = _currentPlanPreview;
+    if (planPreview != null && planPreview.validity.isInvalid) {
+      showAppMessage(
+        context,
+        l10n.generationPlanInvalid(
+          _planReason(l10n, planPreview.validity.reason!),
+        ),
+      );
+      return;
+    }
     final GenerationRunRequest request = GenerationRunRequest(
       documents: documents,
       images: attachments,
@@ -553,6 +623,7 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
       account: account,
       deckName: deckName,
       wishes: wishes.isEmpty ? null : wishes,
+      requestedCards: requestedCards,
       targetDeckId: widget.deckId,
     );
 
@@ -829,8 +900,11 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
   ) {
     final ThemeData theme = Theme.of(context);
     final bool hasContent = _hasContent;
-    final bool showEstimate = hasContent || _hasWishes;
-    final int estimate = _estimatedTokens;
+    final GenerationPlan? planPreview = _currentPlanPreview;
+    // Оценка показывается только когда есть план: без провайдера/возможностей
+    // «0 токенов» вводил бы в заблуждение.
+    final bool showEstimate = (hasContent || _hasWishes) && planPreview != null;
+    final int estimate = planPreview?.estimate.totalTokens ?? 0;
     return DropTarget(
       onDragEntered: (_) => setState(() => _dragging = true),
       onDragExited: (_) => setState(() => _dragging = false),
@@ -930,15 +1004,27 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
               key: const ValueKey<String>('generation-estimate'),
               style: theme.textTheme.bodyMedium,
             ),
-          ],
-          if (_estimateExceedsInputBudget) ...<Widget>[
             const SizedBox(height: 4),
             Text(
-              l10n.generationEstimateWarning,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.tertiary,
-              ),
+              _planSummary(l10n, planPreview),
+              key: const ValueKey<String>('generation-plan-preview'),
+              style: theme.textTheme.bodySmall,
             ),
+            if (planPreview.validity.isInvalid)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  l10n.generationPlanInvalid(
+                    _planReason(l10n, planPreview.validity.reason!),
+                  ),
+                  key: const ValueKey<String>('generation-plan-invalid'),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.error,
+                  ),
+                ),
+              )
+            else
+              ..._planWarningWidgets(l10n, planPreview, theme),
           ],
           const SizedBox(height: 20),
           TextField(
@@ -950,6 +1036,23 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
             decoration: InputDecoration(
               labelText: l10n.generationWishesLabel,
               hintText: l10n.generationWishesHint,
+              border: _fieldBorder,
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            key: const ValueKey<String>('generation-cards-count'),
+            controller: _cardCountController,
+            enabled: !_generating,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(
+              labelText: l10n.generationCardsCountLabel,
+              hintText: l10n.generationCardsCountHint,
+              errorText: _cardCountTooLarge
+                  ? l10n.generationCardsCountTooLarge
+                  : _cardCountInvalid
+                  ? l10n.generationCardsCountInvalid
+                  : null,
               border: _fieldBorder,
             ),
           ),
@@ -1027,6 +1130,70 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
         ],
       ),
     );
+  }
+
+  /// Строка «запрошено/достижимо» под оценкой токенов (TASK 03).
+  String _planSummary(AppLocalizations l10n, GenerationPlan plan) {
+    if (plan.requestedCards > 0) {
+      return l10n.generationPlanPreview(
+        plan.chunks.length,
+        plan.plannedRequests,
+        plan.requestedCards,
+        plan.achievableCards,
+      );
+    }
+    return l10n.generationPlanPreviewAuto(
+      plan.chunks.length,
+      plan.plannedRequests,
+      plan.achievableCards,
+    );
+  }
+
+  /// Предупреждения плана до запуска: реальные причины ограничений.
+  List<Widget> _planWarningWidgets(
+    AppLocalizations l10n,
+    GenerationPlan plan,
+    ThemeData theme,
+  ) {
+    final List<String> messages = <String>[
+      if (plan.validity.warnings.contains(PlanWarningCode.unknownCapabilities))
+        l10n.generationPlanUnknownCapabilities,
+      if (plan.validity.warnings.contains(PlanWarningCode.assumedImageLimits))
+        l10n.generationPlanAssumedImageLimits,
+      if (plan.validity.warnings.contains(
+            PlanWarningCode.imagesWithoutVision,
+          ) &&
+          plan.imagesUnsupported > 0)
+        l10n.generationPlanNoVisionImages(plan.imagesUnsupported),
+      if (plan.validity.warnings.contains(PlanWarningCode.catalogOnlyImages) &&
+          plan.imagesCatalogOnly > 0)
+        l10n.generationPlanCatalogOnlyImages(plan.imagesCatalogOnly),
+      if (plan.validity.warnings.contains(PlanWarningCode.omittedUnits))
+        l10n.generationPlanOmittedUnits(plan.omitted.length),
+      if (plan.validity.warnings.contains(PlanWarningCode.requestedAbovePlan))
+        l10n.generationPlanRequestedAboveAchievable(
+          plan.requestedCards,
+          plan.achievableCards,
+        ),
+      if (plan.validity.warnings.contains(PlanWarningCode.cardsAboveRequested))
+        l10n.generationPlanAchievableAboveRequested(
+          plan.requestedCards,
+          plan.achievableCards,
+        ),
+    ];
+    return <Widget>[
+      for (var index = 0; index < messages.length; index++)
+        Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: Text(
+            messages[index],
+            key: ValueKey<String>('generation-plan-warning-$index'),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.tertiary,
+            ),
+          ),
+        ),
+    ];
   }
 
   static OutlineInputBorder get _fieldBorder =>

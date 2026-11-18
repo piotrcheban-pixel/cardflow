@@ -1089,6 +1089,128 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String get generationCardsCountLabel => 'Сколько карточек';
+
+  @override
+  String get generationCardsCountHint =>
+      'Пусто — из пожеланий или по бюджету модели';
+
+  @override
+  String get generationCardsCountInvalid => 'Укажите целое число больше нуля';
+
+  @override
+  String get generationCardsCountTooLarge => 'Слишком большое число';
+
+  @override
+  String generationPlanPreview(
+    int chunks,
+    int requests,
+    int requested,
+    int achievable,
+  ) {
+    return 'План: фрагментов — $chunks, запросов — $requests; запрошено — $requested, достижимо — $achievable';
+  }
+
+  @override
+  String generationPlanPreviewAuto(int chunks, int requests, int achievable) {
+    return 'План: фрагментов — $chunks, запросов — $requests; будет создано до $achievable карточек';
+  }
+
+  @override
+  String get generationPlanUnknownCapabilities =>
+      'Возможности модели известны не полностью: часть лимитов — консервативные допущения приложения, а не факты провайдера.';
+
+  @override
+  String get generationPlanAssumedImageLimits =>
+      'Лимит изображений модели не подтверждён — используется консервативное значение приложения.';
+
+  @override
+  String generationPlanCatalogOnlyImages(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count изображения останутся только в каталоге',
+      many: '$count изображений останутся только в каталоге',
+      few: '$count изображения останутся только в каталоге',
+      one: '$count изображение останется только в каталоге',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String generationPlanNoVisionImages(int count) {
+    return 'Модель не принимает изображения: $count изображений будут только в каталоге, без передачи модели.';
+  }
+
+  @override
+  String generationPlanInvalid(String reason) {
+    return 'План невыполним: $reason';
+  }
+
+  @override
+  String get generationPlanReasonContextWindow =>
+      'материала слишком много для бюджета модели — уменьшите объём или выберите модель с большим контекстом';
+
+  @override
+  String get generationPlanReasonUnitTooLarge =>
+      'часть материала не помещается в бюджет модели даже после дробления';
+
+  @override
+  String get generationPlanReasonPayloadTooLarge =>
+      'запрос больше допустимого размера — уменьшите вложения';
+
+  @override
+  String get generationPlanReasonImagesWithoutVision =>
+      'приложены изображения, а выбранная модель не поддерживает изображения';
+
+  @override
+  String get generationPlanReasonTooManyChunks =>
+      'заказ слишком велик для одного запуска — уменьшите число карточек';
+
+  @override
+  String generationPreviewPartial(int processed, int failed) {
+    return 'Частичный результат: обработано фрагментов — $processed, с ошибкой — $failed. Импортируйте полученное или повторите неудавшиеся.';
+  }
+
+  @override
+  String generationPreviewFatal(String message) {
+    return 'Генерация остановлена: $message';
+  }
+
+  @override
+  String generationPreviewImageSummary(
+    int sent,
+    int catalog,
+    int unsupported,
+    int omitted,
+  ) {
+    return 'Изображения: передано модели — $sent, только в каталоге — $catalog, без поддержки изображений — $unsupported, исключено — $omitted.';
+  }
+
+  @override
+  String generationPreviewTokenComparison(int estimated, int actual) {
+    return 'Оценка входа: ≈$estimated токенов · фактически: $actual';
+  }
+
+  @override
+  String generationPreviewRecovery(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'дополнительных запросов — $count',
+      many: 'дополнительных запросов — $count',
+      few: 'дополнительных запроса — $count',
+      one: 'дополнительный запрос — $count',
+    );
+    return 'Восстановление: $_temp0';
+  }
+
+  @override
+  String generationFailureRetryAfter(int seconds) {
+    return 'повторите через $seconds с';
+  }
+
+  @override
   String generationDuplicatesRemoved(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

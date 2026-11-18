@@ -19,6 +19,8 @@ import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/generation/generation_card_store.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
 import 'package:cardflow/domain/generation/generation_failure_reason.dart';
+import 'package:cardflow/domain/generation/generation_job.dart';
+import 'package:cardflow/domain/generation/generation_plan.dart';
 import 'package:cardflow/domain/generation/generation_run.dart';
 import 'package:cardflow/domain/generation/document_gateway.dart'
     show PickedDocument;
@@ -320,24 +322,94 @@ class _GenerationPreviewScreenState
   /// Текст ошибки фрагмента: причина из кода/внутреннего кода (fix-gen, Д6).
   ///
   /// Для HTTP 400 показывается очищенная причина провайдера (ADR-022), если
-  /// она есть: она конкретнее общей формулировки причины.
+  /// она есть: она конкретнее общей формулировки причины. `Retry-After`
+  /// добавляется, если провайдер его сообщил (TASK 03).
   String _failureMessage(
     AppLocalizations l10n,
     GenerationChunkFailure failure,
   ) {
     final String? providerReason = failure.providerReason?.trim();
+    final String base;
     if (failure.code == GenerationErrorCode.badRequest &&
         providerReason != null &&
         providerReason.isNotEmpty) {
-      return generationErrorCodeMessage(
+      base = generationErrorCodeMessage(
         l10n,
         failure.code,
         providerReason: providerReason,
       );
+    } else {
+      final GenerationFailureReason reason =
+          failure.reason ?? GenerationFailureReason.forErrorCode(failure.code);
+      base = generationFailureReasonMessage(l10n, reason);
     }
-    final GenerationFailureReason reason =
-        failure.reason ?? GenerationFailureReason.forErrorCode(failure.code);
-    return generationFailureReasonMessage(l10n, reason);
+    final int? seconds = failure.retryAfter?.inSeconds;
+    if (seconds == null || seconds <= 0) return base;
+    return '$base (${l10n.generationFailureRetryAfter(seconds)})';
+  }
+
+  /// Постоянные баннеры состояния: частичный успех, fatal, изображения,
+  /// калибровка токенов и восстановление (TASK 03, раздел 8).
+  List<Widget> _statusWidgets(AppLocalizations l10n, ThemeData theme) {
+    final List<Widget> widgets = <Widget>[];
+    void add(String text, Key key, {Color? color}) {
+      widgets.add(
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Text(
+            text,
+            key: key,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: color ?? theme.colorScheme.tertiary,
+            ),
+          ),
+        ),
+      );
+    }
+
+    final GenerationErrorCode? fatal = _result.fatalErrorCode;
+    if (fatal != null) {
+      add(
+        l10n.generationPreviewFatal(
+          generationErrorCodeMessage(
+            l10n,
+            fatal,
+            providerReason: _result.fatalProviderReason,
+          ),
+        ),
+        const ValueKey<String>('generation-preview-fatal'),
+        color: theme.colorScheme.error,
+      );
+    } else if (_result.status == GenerationJobStatus.partial) {
+      add(
+        l10n.generationPreviewPartial(
+          _result.chunkCount,
+          _result.failures.length,
+        ),
+        const ValueKey<String>('generation-preview-partial'),
+      );
+    }
+
+    final GenerationPlan? plan = _result.plan;
+    if (plan != null && plan.images.isNotEmpty) {
+      add(
+        l10n.generationPreviewImageSummary(
+          plan.imagesSentToModel,
+          plan.imagesCatalogOnly,
+          plan.imagesUnsupported,
+          plan.imagesOmitted,
+        ),
+        const ValueKey<String>('generation-preview-image-summary'),
+      );
+    }
+
+    if (_result.recoveryRequestsUsed > 0) {
+      add(
+        l10n.generationPreviewRecovery(_result.recoveryRequestsUsed),
+        const ValueKey<String>('generation-preview-recovery'),
+      );
+    }
+    return widgets;
   }
 
   @override
@@ -352,6 +424,7 @@ class _GenerationPreviewScreenState
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
         children: <Widget>[
+          ..._statusWidgets(l10n, theme),
           if (_result.requestedCards > 0 &&
               _result.requestedCards > _result.achievableCards)
             Padding(

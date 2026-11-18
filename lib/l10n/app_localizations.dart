@@ -1804,6 +1804,148 @@ abstract class AppLocalizations {
   /// **'Часть материалов не вошла в план: {count} единиц. Уменьшите объём или выберите модель с большим контекстом.'**
   String generationPlanOmittedUnits(int count);
 
+  /// Числовое поле количества карточек на экране генерации (TASK 03, L132).
+  ///
+  /// In ru, this message translates to:
+  /// **'Сколько карточек'**
+  String get generationCardsCountLabel;
+
+  /// Подсказка числового поля количества карточек (TASK 03).
+  ///
+  /// In ru, this message translates to:
+  /// **'Пусто — из пожеланий или по бюджету модели'**
+  String get generationCardsCountHint;
+
+  /// Валидация числового поля количества карточек (TASK 03).
+  ///
+  /// In ru, this message translates to:
+  /// **'Укажите целое число больше нуля'**
+  String get generationCardsCountInvalid;
+
+  /// Валидация: количество карточек не помещается в технический предел int (TASK 03).
+  ///
+  /// In ru, this message translates to:
+  /// **'Слишком большое число'**
+  String get generationCardsCountTooLarge;
+
+  /// Предпросмотр плана до запуска: фрагменты, запросы, заказ/достижимое (TASK 03).
+  ///
+  /// In ru, this message translates to:
+  /// **'План: фрагментов — {chunks}, запросов — {requests}; запрошено — {requested}, достижимо — {achievable}'**
+  String generationPlanPreview(
+    int chunks,
+    int requests,
+    int requested,
+    int achievable,
+  );
+
+  /// Предпросмотр плана, когда число карточек не задано (берётся из бюджета модели, TASK 03).
+  ///
+  /// In ru, this message translates to:
+  /// **'План: фрагментов — {chunks}, запросов — {requests}; будет создано до {achievable} карточек'**
+  String generationPlanPreviewAuto(int chunks, int requests, int achievable);
+
+  /// Предупреждение плана: неизвестные возможности модели (TASK 03).
+  ///
+  /// In ru, this message translates to:
+  /// **'Возможности модели известны не полностью: часть лимитов — консервативные допущения приложения, а не факты провайдера.'**
+  String get generationPlanUnknownCapabilities;
+
+  /// Предупреждение плана: лимиты image-частей взяты из конфигурации (TASK 03).
+  ///
+  /// In ru, this message translates to:
+  /// **'Лимит изображений модели не подтверждён — используется консервативное значение приложения.'**
+  String get generationPlanAssumedImageLimits;
+
+  /// Предупреждение плана: изображения без байтов, только каталог (TASK 03).
+  ///
+  /// In ru, this message translates to:
+  /// **'{count, plural, one{{count} изображение останется только в каталоге} few{{count} изображения останутся только в каталоге} many{{count} изображений останутся только в каталоге} other{{count} изображения останутся только в каталоге}}'**
+  String generationPlanCatalogOnlyImages(int count);
+
+  /// Предупреждение плана: документные изображения при модели без поддержки изображений (TASK 03).
+  ///
+  /// In ru, this message translates to:
+  /// **'Модель не принимает изображения: {count} изображений будут только в каталоге, без передачи модели.'**
+  String generationPlanNoVisionImages(int count);
+
+  /// Причина невыполнимости плана до запуска (TASK 03).
+  ///
+  /// In ru, this message translates to:
+  /// **'План невыполним: {reason}'**
+  String generationPlanInvalid(String reason);
+
+  /// Причина невыполнимости плана: contextWindowTooSmall (TASK 03).
+  ///
+  /// In ru, this message translates to:
+  /// **'материала слишком много для бюджета модели — уменьшите объём или выберите модель с большим контекстом'**
+  String get generationPlanReasonContextWindow;
+
+  /// Причина невыполнимости плана: unitTooLarge (TASK 03).
+  ///
+  /// In ru, this message translates to:
+  /// **'часть материала не помещается в бюджет модели даже после дробления'**
+  String get generationPlanReasonUnitTooLarge;
+
+  /// Причина невыполнимости плана: payloadTooLarge (TASK 03).
+  ///
+  /// In ru, this message translates to:
+  /// **'запрос больше допустимого размера — уменьшите вложения'**
+  String get generationPlanReasonPayloadTooLarge;
+
+  /// Причина невыполнимости плана: imagesWithoutVision (TASK 03).
+  ///
+  /// In ru, this message translates to:
+  /// **'приложены изображения, а выбранная модель не поддерживает изображения'**
+  String get generationPlanReasonImagesWithoutVision;
+
+  /// Причина невыполнимости плана: tooManyChunks (TASK 03).
+  ///
+  /// In ru, this message translates to:
+  /// **'заказ слишком велик для одного запуска — уменьшите число карточек'**
+  String get generationPlanReasonTooManyChunks;
+
+  /// Баннер частичного успеха в предпросмотре (TASK 03).
+  ///
+  /// In ru, this message translates to:
+  /// **'Частичный результат: обработано фрагментов — {processed}, с ошибкой — {failed}. Импортируйте полученное или повторите неудавшиеся.'**
+  String generationPreviewPartial(int processed, int failed);
+
+  /// Постоянное сообщение о fatal-ошибке в предпросмотре (TASK 03).
+  ///
+  /// In ru, this message translates to:
+  /// **'Генерация остановлена: {message}'**
+  String generationPreviewFatal(String message);
+
+  /// Сводка участия изображений в запросе (TASK 03, требование 6).
+  ///
+  /// In ru, this message translates to:
+  /// **'Изображения: передано модели — {sent}, только в каталоге — {catalog}, без поддержки изображений — {unsupported}, исключено — {omitted}.'**
+  String generationPreviewImageSummary(
+    int sent,
+    int catalog,
+    int unsupported,
+    int omitted,
+  );
+
+  /// Сравнение оценки и фактического usage в предпросмотре (TASK 03).
+  ///
+  /// In ru, this message translates to:
+  /// **'Оценка входа: ≈{estimated} токенов · фактически: {actual}'**
+  String generationPreviewTokenComparison(int estimated, int actual);
+
+  /// Сколько дополнительных запросов потрачено на восстановление (TASK 03, L128).
+  ///
+  /// In ru, this message translates to:
+  /// **'Восстановление: {count, plural, one{дополнительный запрос — {count}} few{дополнительных запроса — {count}} many{дополнительных запросов — {count}} other{дополнительных запросов — {count}}}'**
+  String generationPreviewRecovery(int count);
+
+  /// Подсказка Retry-After к ошибке фрагмента (TASK 03, требование 5.7).
+  ///
+  /// In ru, this message translates to:
+  /// **'повторите через {seconds} с'**
+  String generationFailureRetryAfter(int seconds);
+
   /// Сколько дублей отсеяла дедупликация (SPEC A8.5 шаг 9).
   ///
   /// In ru, this message translates to:
