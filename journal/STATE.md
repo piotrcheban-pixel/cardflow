@@ -135,8 +135,19 @@ hosted even after multiple attempts» (capacity constraints macOS arm64), шаг
 (`19b2c3a`): `test` Ubuntu ✅, `test` Windows ✅, `format + analyze` ✅,
 `build` android/windows/linux/ios ✅; `test (macos)` и `build macos` снова
 **отменены раннером** — 0 шагов, «not acquired by Runner … capacity constraints
-macOS arm64» (инфраструктура GitHub; так же было в итерации 7.16). Повтор —
-после следующего push.
+macOS arm64» (инфраструктура GitHub; так же было в итерации 7.16).
+
+**Push/CI итерации L76:** `4d6b992..bdc5336`. Финальный прогон
+[`44355509340`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/44355509340)
+(`bdc5336`) — **9/9 job success**: `format + analyze`, `test` × 3 ОС
+(Ubuntu/Windows/macOS), `build` desktop × 3 + Android + iOS. Коммиты:
+`77dca82` (извлечение PDF-изображений, vision, промпт v7, тесты),
+`c21d753` (ADR-037/parsers/dependencies/STATE/limitations), `481f2cb`
+(live-проверка схемы v6+), `553a3e6` (CI: `golden,live`, диагностика падений,
+L92), `9cf28a2` (тест-бомба с датой), `19b2c3a`/`bdc5336` (STATE: факты
+прогонов, инфраструктурные отмены macOS). Рабочее дерево: остались
+**неотслеживаемые** файлы владельца (`lib/ui.rar`, `redesign/`) — в коммиты не
+попали.
 
 ## Итерация cleanup-1 — отказ от «Nocturne» и фикс «Создать колоду» (2026-11-18, ADR-036)
 
