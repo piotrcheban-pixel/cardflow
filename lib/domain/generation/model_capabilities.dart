@@ -203,6 +203,24 @@ class ModelCapabilities {
     if (pricing == null || pricing!.state != PricingState.complete)
       unknownPricing,
   ]);
+
+  /// Источник каждого параметра возможностей (для диагностики плана).
+  ///
+  /// `unknown` означает «подтверждённого значения нет»; вызывающий код обязан
+  /// применить консервативное допущение и пометить его, а не выдавать за факт.
+  /// Карта неизменяемая; ключи стабильны.
+  Map<String, CapabilitySource> get sources =>
+      Map<String, CapabilitySource>.unmodifiable(<String, CapabilitySource>{
+        'context_window': contextSource,
+        'max_output_tokens': outputSource,
+        'image_limits': imageSource,
+        'pricing': pricingSource,
+        // Полей для этих значений в аккаунте/каталоге нет — только unknown.
+        'max_cards_per_request': CapabilitySource.unknown,
+        'tokenizer': tokenizer == TokenizerKind.unknown
+            ? CapabilitySource.unknown
+            : CapabilitySource.inferred,
+      });
 }
 
 /// Собирает возможности модели по аккаунту: аккаунт (user) → каталог (preset)
