@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cardflow/domain/generation/document_image.dart';
 import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/generation/generation_chunker.dart';
 import 'package:cardflow/domain/generation/token_estimator.dart';
@@ -271,6 +272,65 @@ void main() {
       expect(chunks[0].sourceFiles, <String>['скан.pdf']);
       expect(chunks[1].images.single.fileName, 'схема.png');
       expect(chunks.map((chunk) => chunk.index), <int>[1, 2]);
+    });
+
+    test('области страниц скана попадают во фрагмент своего файла (L76)', () {
+      GenerationAttachment page(int number) => GenerationAttachment(
+        fileName: 'скан.pdf',
+        mediaType: AttachmentMediaType.png,
+        bytes: Uint8List.fromList(<int>[0x89, 0x50, 0x4E, 0x47, number]),
+        pageNumber: number,
+        groupKey: 'скан.pdf',
+      );
+      DocumentImage region(int page, int order) => DocumentImage(
+        fileName: 'скан.pdf',
+        bytes: Uint8List.fromList(<int>[0x89, 0x50, 0x4E, 0x47, page, order]),
+        mediaType: AttachmentMediaType.png,
+        page: page,
+        order: order,
+        source: DocumentImageSource.croppedRegion,
+      );
+
+      final chunks = chunker.chunkAll(
+        <ParsedDocument>[
+          docOf('лекция.txt', <String>['Текст']),
+        ],
+        <GenerationAttachment>[page(1), image('схема.png')],
+        maxInputTokens: 1000,
+        documentImages: <DocumentImage>[region(1, 0), region(2, 1)],
+      );
+
+      expect(chunks, hasLength(3));
+      expect(chunks[1].documentImages, hasLength(2));
+      expect(
+        chunks[1].documentImages.map((DocumentImage image) => image.page),
+        <int>[1, 2],
+      );
+      expect(chunks[0].documentImages, isEmpty);
+      expect(chunks[2].documentImages, isEmpty);
+    });
+
+    test('изображения файла без вложений не теряются', () {
+      final DocumentImage orphan = DocumentImage(
+        fileName: 'пусто.pdf',
+        bytes: Uint8List.fromList(<int>[0x89, 0x50, 0x4E, 0x47, 9]),
+        mediaType: AttachmentMediaType.png,
+        page: 1,
+      );
+
+      final chunks = chunker.chunkAll(
+        <ParsedDocument>[
+          docOf('лекция.txt', <String>['Текст']),
+        ],
+        const <GenerationAttachment>[],
+        maxInputTokens: 1000,
+        documentImages: <DocumentImage>[orphan],
+      );
+
+      expect(chunks, hasLength(2));
+      expect(chunks[1].documentImages.single.fileName, 'пусто.pdf');
+      expect(chunks[1].sourceFiles, <String>['пусто.pdf']);
+      expect(chunks[1].materialsText, isEmpty);
     });
   });
 }

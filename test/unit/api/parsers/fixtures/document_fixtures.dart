@@ -879,6 +879,451 @@ Uint8List buildOdtWithImage({
   });
 }
 
+// --- PDF с растровыми изображениями (итерация L76, ADR-037) ---
+
+/// Писатель программных PDF-фикстур: объекты и бинарные потоки.
+///
+/// Нужен там, где PDF содержит настоящие Image XObject (DCTDecode/Flate):
+/// существующие `buildPdf*` собирают только текстовые страницы.
+class PdfFixtureWriter {
+  /// Создаёт писатель.
+  PdfFixtureWriter();
+
+  final List<List<int>> _objects = <List<int>>[];
+
+  /// Добавляет объект с телом [body] (ASCII/latin1); возвращает номер (с 1).
+  int addObject(String body) {
+    _objects.add(latin1.encode(body));
+    return _objects.length;
+  }
+
+  /// Добавляет поток: словарь [dictionary] (без `<<`/`>>`) и данные [data].
+  int addStream({required String dictionary, required List<int> data}) {
+    _objects.add(<int>[
+      ...latin1.encode('<< $dictionary /Length ${data.length} >>\nstream\n'),
+      ...data,
+      ...latin1.encode('\nendstream'),
+    ]);
+    return _objects.length;
+  }
+
+  /// Собирает PDF с xref и trailer; [root] — номер объекта каталога.
+  Uint8List build({required int root}) {
+    final List<int> bytes = <int>[...latin1.encode('%PDF-1.4\n')];
+    final List<int> offsets = <int>[];
+    for (var i = 0; i < _objects.length; i++) {
+      offsets.add(bytes.length);
+      bytes
+        ..addAll(latin1.encode('${i + 1} 0 obj\n'))
+        ..addAll(_objects[i])
+        ..addAll(latin1.encode('\nendobj\n'));
+    }
+    final int xrefOffset = bytes.length;
+    bytes
+      ..addAll(latin1.encode('xref\n0 ${_objects.length + 1}\n'))
+      ..addAll(latin1.encode('0000000000 65535 f \n'));
+    for (final int offset in offsets) {
+      bytes.addAll(
+        latin1.encode('${offset.toString().padLeft(10, '0')} 00000 n \n'),
+      );
+    }
+    bytes.addAll(
+      latin1.encode(
+        'trailer\n<< /Size ${_objects.length + 1} /Root $root 0 R >>\n'
+        'startxref\n$xrefOffset\n%%EOF\n',
+      ),
+    );
+    return Uint8List.fromList(bytes);
+  }
+}
+
+/// JPEG-изображение схемы: белый фон, рамка и линии (настоящий JPEG).
+Uint8List diagramJpeg({int width = 300, int height = 200}) {
+  final image.Image picture = image.Image(width: width, height: height);
+  image.fill(picture, color: image.ColorRgb8(255, 255, 255));
+  image.drawRect(
+    picture,
+    x1: 10,
+    y1: 10,
+    x2: width - 10,
+    y2: height - 10,
+    color: image.ColorRgb8(40, 70, 180),
+    thickness: 4,
+  );
+  image.drawLine(
+    picture,
+    x1: 10,
+    y1: height - 10,
+    x2: width ~/ 2,
+    y2: height ~/ 2,
+    color: image.ColorRgb8(200, 40, 40),
+    thickness: 4,
+  );
+  image.drawLine(
+    picture,
+    x1: width ~/ 2,
+    y1: height ~/ 2,
+    x2: width - 10,
+    y2: 10,
+    color: image.ColorRgb8(40, 160, 80),
+    thickness: 4,
+  );
+  return Uint8List.fromList(image.encodeJpg(picture, quality: 92));
+}
+
+/// JPEG-иконка интерфейса: 32×32, однотонная — «мусор» для фильтра.
+Uint8List iconJpeg({int width = 32, int height = 32}) {
+  final image.Image picture = image.Image(width: width, height: height);
+  image.fill(picture, color: image.ColorRgb8(255, 255, 255));
+  image.drawRect(
+    picture,
+    x1: 8,
+    y1: 8,
+    x2: width - 8,
+    y2: height - 8,
+    color: image.ColorRgb8(90, 90, 90),
+    thickness: 2,
+  );
+  return Uint8List.fromList(image.encodeJpg(picture, quality: 90));
+}
+
+/// JPEG-формула: 120×40, тёмные штрихи на белом (мелкое значимое изображение).
+Uint8List formulaJpeg({int width = 120, int height = 40}) {
+  final image.Image picture = image.Image(width: width, height: height);
+  image.fill(picture, color: image.ColorRgb8(255, 255, 255));
+  for (var x = 8; x < width - 8; x += 7) {
+    image.drawLine(
+      picture,
+      x1: x,
+      y1: 6,
+      x2: x + 3,
+      y2: height - 6,
+      color: image.ColorRgb8(15, 15, 15),
+      thickness: 2,
+    );
+  }
+  return Uint8List.fromList(image.encodeJpg(picture, quality: 92));
+}
+
+/// JPEG-«фотография»: детерминированный шум/градиент.
+Uint8List photoJpeg({int width = 240, int height = 180, int seed = 11}) {
+  final image.Image picture = image.Image(width: width, height: height);
+  var state = seed;
+  for (var y = 0; y < height; y++) {
+    for (var x = 0; x < width; x++) {
+      state = (state * 1103515245 + 12345) & 0x7FFFFFFF;
+      picture.setPixelRgb(
+        x,
+        y,
+        80 + ((state >> 5) % 120),
+        120 + ((state >> 11) % 90),
+        160 + ((state >> 17) % 80),
+      );
+    }
+  }
+  return Uint8List.fromList(image.encodeJpg(picture, quality: 88));
+}
+
+/// Растр страницы скана с одной большой схемой (без текста): область занимает
+/// почти всю страницу — выделяется как «страница целиком».
+Uint8List scannedWholeDiagramRaster({int width = 900, int height = 1200}) {
+  final image.Image page = image.Image(width: width, height: height);
+  image.fill(page, color: image.ColorRgb8(255, 255, 255));
+  final image.Color ink = image.ColorRgb8(25, 60, 160);
+  image.drawRect(
+    page,
+    x1: 60,
+    y1: 120,
+    x2: width - 60,
+    y2: height - 120,
+    color: ink,
+    thickness: 10,
+  );
+  image.drawLine(
+    page,
+    x1: 60,
+    y1: height ~/ 2,
+    x2: width - 60,
+    y2: height ~/ 2,
+    color: ink,
+    thickness: 8,
+  );
+  image.drawLine(
+    page,
+    x1: width ~/ 2,
+    y1: 120,
+    x2: width ~/ 2,
+    y2: height - 120,
+    color: ink,
+    thickness: 8,
+  );
+  return Uint8List.fromList(image.encodeJpg(page, quality: 85));
+}
+
+/// Растр страницы скана: строки текста сверху, крупная схема в центре,
+/// свободное поле снизу — для проверки OCR-подобного выделения областей.
+Uint8List scannedPageRaster({int width = 1224, int height = 1584}) {
+  final image.Image page = image.Image(width: width, height: height);
+  image.fill(page, color: image.ColorRgb8(255, 255, 255));
+  final image.Color ink = image.ColorRgb8(20, 20, 20);
+  for (var line = 0; line < 8; line++) {
+    image.drawString(
+      page,
+      'Scanned paragraph line ${line + 1}',
+      font: image.arial24,
+      x: 110,
+      y: 90 + line * 42,
+      color: ink,
+    );
+  }
+  // Схема: рамка и две диагонали — связная область с «чернилами».
+  image.drawRect(
+    page,
+    x1: 200,
+    y1: 640,
+    x2: 1000,
+    y2: 1040,
+    color: image.ColorRgb8(30, 70, 180),
+    thickness: 8,
+  );
+  image.drawLine(
+    page,
+    x1: 200,
+    y1: 840,
+    x2: 600,
+    y2: 640,
+    color: image.ColorRgb8(30, 70, 180),
+    thickness: 8,
+  );
+  image.drawLine(
+    page,
+    x1: 600,
+    y1: 640,
+    x2: 600,
+    y2: 1040,
+    color: image.ColorRgb8(30, 70, 180),
+    thickness: 8,
+  );
+  image.drawLine(
+    page,
+    x1: 600,
+    y1: 1040,
+    x2: 1000,
+    y2: 1040,
+    color: image.ColorRgb8(30, 70, 180),
+    thickness: 8,
+  );
+  return Uint8List.fromList(image.encodeJpg(page, quality: 85));
+}
+
+/// Описание страницы PDF-фикстуры.
+class PdfFixturePage {
+  /// Создаёт описание страницы.
+  const PdfFixturePage({
+    this.text,
+    this.imageJpeg,
+    this.imageWidth = 300,
+    this.imageHeight = 200,
+    this.drawRect,
+    this.wholePageImage = false,
+    this.imageInForm = false,
+  });
+
+  /// Текстовый слой страницы (`null` — страницы без текста).
+  final String? text;
+
+  /// JPEG-изображение страницы (`null` — без изображения).
+  final Uint8List? imageJpeg;
+
+  /// Ширина изображения в пикселях (метаданные XObject).
+  final int imageWidth;
+
+  /// Высота изображения в пикселях (метаданные XObject).
+  final int imageHeight;
+
+  /// Прямоугольник вывода `(x, y, ширина, высота)` в точках PDF.
+  final ({double x, double y, double width, double height})? drawRect;
+
+  /// Растянуть изображение на всю страницу (скан).
+  final bool wholePageImage;
+
+  /// Поместить изображение внутрь Form XObject (вложенный ресурс).
+  final bool imageInForm;
+
+  /// Размеры страницы в точках PDF.
+  static const double pageWidth = 612;
+
+  /// Высота страницы в точках PDF.
+  static const double pageHeight = 792;
+}
+
+/// Собирает PDF из описаний страниц (текст + Image XObject).
+Uint8List buildPdfFromFixturePages(List<PdfFixturePage> pages) {
+  final PdfFixtureWriter writer = PdfFixtureWriter();
+  final int font = writer.addObject(
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+  );
+  final List<int> pageObjects = <int>[];
+  for (final PdfFixturePage page in pages) {
+    final Uint8List? jpeg = page.imageJpeg;
+    int? image;
+    int? form;
+    if (jpeg != null) {
+      image = writer.addStream(
+        dictionary:
+            '/Type /XObject /Subtype /Image /Width ${page.imageWidth} '
+            '/Height ${page.imageHeight} /ColorSpace /DeviceRGB '
+            '/BitsPerComponent 8 /Filter /DCTDecode',
+        data: jpeg,
+      );
+      if (page.imageInForm) {
+        // Изображение внутри Form XObject: в ресурсах страницы только форма.
+        final String formContent =
+            'q ${page.imageWidth} 0 0 ${page.imageHeight} 0 0 cm /Im1 Do Q';
+        form = writer.addStream(
+          dictionary:
+              '/Type /XObject /Subtype /Form '
+              '/BBox [0 0 ${page.imageWidth} ${page.imageHeight}] '
+              '/Resources << /XObject << /Im1 $image 0 R >> >>',
+          data: latin1.encode(formContent),
+        );
+      }
+    }
+    final StringBuffer content = StringBuffer();
+    final String? text = page.text;
+    if (text != null) {
+      // Каждая строка — отдельный Tj, иначе текстовая страница выглядит как
+      // один абзац и подпись рисунка не проверяется.
+      final List<String> lines = text.split('\n');
+      content.write('BT /F1 14 Tf\n');
+      for (var line = 0; line < lines.length; line++) {
+        content.write('1 0 0 1 72 ${740 - line * 18} Tm ');
+        content.write('(${_pdfEscape(lines[line])}) Tj\n');
+      }
+      content.write('ET\n');
+    }
+    final ({double x, double y, double width, double height})? rect =
+        page.drawRect;
+    if (jpeg != null && form != null) {
+      content.write(
+        'q 1 0 0 1 ${rect?.x ?? 80} ${rect?.y ?? 380} cm /Fm1 Do Q\n',
+      );
+    } else if (jpeg != null && rect != null) {
+      content.write(
+        'q ${rect.width} 0 0 ${rect.height} ${rect.x} ${rect.y} cm /Im1 Do Q\n',
+      );
+    } else if (jpeg != null && page.wholePageImage) {
+      content.write(
+        'q ${PdfFixturePage.pageWidth} 0 0 ${PdfFixturePage.pageHeight} '
+        '0 0 cm /Im1 Do Q\n',
+      );
+    }
+    final String contentText = content.toString();
+    final int contentObject = writer.addStream(
+      dictionary: '/Length ${contentText.length}',
+      data: latin1.encode(contentText),
+    );
+    final String xObjects = form != null
+        ? '/XObject << /Fm1 $form 0 R >> '
+        : jpeg != null
+        ? '/XObject << /Im1 $image 0 R >> '
+        : '';
+    final int pageObject = writer.addObject(
+      '<< /Type /Page '
+      '/MediaBox [0 0 ${PdfFixturePage.pageWidth} ${PdfFixturePage.pageHeight}] '
+      '/Contents $contentObject 0 R '
+      '/Resources << /Font << /F1 $font 0 R >> $xObjects>> >>',
+    );
+    pageObjects.add(pageObject);
+  }
+  final String kids = pageObjects.map((int n) => '$n 0 R').join(' ');
+  final int pagesObject = writer.addObject(
+    '<< /Type /Pages /Kids [$kids] /Count ${pageObjects.length} >>',
+  );
+  final int catalog = writer.addObject(
+    '<< /Type /Catalog /Pages $pagesObject 0 R >>',
+  );
+  return writer.build(root: catalog);
+}
+
+/// PDF с текстом и одним встроенным изображением.
+Uint8List buildPdfWithEmbeddedImage({
+  required List<int> imageBytes,
+  int imageWidth = 300,
+  int imageHeight = 200,
+  String text = 'Page with a scheme',
+  bool wholePageImage = false,
+  bool imageInForm = false,
+  ({double x, double y, double width, double height})? drawRect,
+}) {
+  return buildPdfFromFixturePages(<PdfFixturePage>[
+    PdfFixturePage(
+      text: text,
+      imageJpeg: Uint8List.fromList(imageBytes),
+      imageWidth: imageWidth,
+      imageHeight: imageHeight,
+      wholePageImage: wholePageImage,
+      imageInForm: imageInForm,
+      drawRect:
+          drawRect ??
+          (wholePageImage
+              ? null
+              : (
+                  x: 80,
+                  y: 380,
+                  width: imageWidth / 2,
+                  height: imageHeight / 2,
+                )),
+    ),
+  ]);
+}
+
+/// PDF-скан: страница целиком — одно большое изображение без текстового слоя.
+Uint8List buildScannedPdf({
+  required List<int> pageImage,
+  int pixelWidth = 1224,
+  int pixelHeight = 1584,
+}) {
+  return buildPdfFromFixturePages(<PdfFixturePage>[
+    PdfFixturePage(
+      imageJpeg: Uint8List.fromList(pageImage),
+      imageWidth: pixelWidth,
+      imageHeight: pixelHeight,
+      wholePageImage: true,
+    ),
+  ]);
+}
+
+/// Смешанный PDF: текстовая страница со схемой + страница-скан без текста.
+Uint8List buildMixedPdf({
+  required List<int> textPageImage,
+  int textPagePixelWidth = 300,
+  int textPagePixelHeight = 200,
+  required List<int> scanPageImage,
+  int scanPixelWidth = 1224,
+  int scanPixelHeight = 1584,
+}) {
+  return buildPdfFromFixturePages(<PdfFixturePage>[
+    PdfFixturePage(
+      text: 'Text page with a scheme',
+      imageJpeg: Uint8List.fromList(textPageImage),
+      imageWidth: textPagePixelWidth,
+      imageHeight: textPagePixelHeight,
+      drawRect: (x: 80, y: 420, width: 300, height: 200),
+    ),
+    PdfFixturePage(
+      imageJpeg: Uint8List.fromList(scanPageImage),
+      imageWidth: scanPixelWidth,
+      imageHeight: scanPixelHeight,
+      wholePageImage: true,
+    ),
+  ]);
+}
+
+/// Экранирование строки для литерала PDF.
+String _pdfEscape(String value) =>
+    value.replaceAll(r'\', r'\\').replaceAll('(', r'\(').replaceAll(')', r'\)');
+
 /// JPEG-фикстура минимального размера: только заголовок SOF0 + паддинг.
 Uint8List jpegFixture({int width = 200, int height = 100, int size = 5000}) {
   final List<int> bytes = <int>[

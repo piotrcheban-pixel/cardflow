@@ -11,7 +11,7 @@ import 'package:cardflow/api/prompts/system_prompt.dart';
 void main() {
   group('системный промпт gen-ru-v5', () {
     test('v5 сохранён: текст не пустой и без подстановок Dart', () {
-      expect(systemPromptVersion, 'gen-ru-v6');
+      expect(systemPromptVersion, 'gen-ru-v7');
       expect(systemPromptGenRuV5.trim(), isNotEmpty);
       expect(systemPromptGenRuV5, isNot(contains(r'${')));
     });
@@ -119,6 +119,48 @@ void main() {
 
     test('требует удвоения обратных слэшей LaTeX в JSON (v6)', () {
       expect(systemPromptGenRuV6, contains(r'Пиши "$\\frac{a}{b}$"'));
+    });
+  });
+
+  group('системный промпт gen-ru-v7 (L76, ADR-037)', () {
+    test('константа совпадает с docs/prompts/gen-ru-v7.txt байт в байт', () {
+      final File file = File('docs/prompts/gen-ru-v7.txt');
+      expect(file.existsSync(), isTrue, reason: 'Копия промпта потеряна');
+      expect(
+        systemPromptGenRuV7,
+        file.readAsStringSync(),
+        reason: 'Промпт в коде должен быть дословной копией файла',
+      );
+    });
+
+    test('v7 содержит весь текст v6 без изменений', () {
+      expect(systemPromptGenRuV7, startsWith(systemPromptGenRuV6));
+    });
+
+    test('требует анализировать изображения из PDF и сканов', () {
+      for (final fragment in <String>[
+        'ИЗОБРАЖЕНИЯ ИЗ PDF И СКАНОВ',
+        'извлечённые из PDF, включая графики, схемы, диаграммы, фотографии',
+        'математические формулы и изображения из сканированных документов',
+        'При создании карточек анализируй доступные изображения вместе с текстом',
+        'обязательно используй соответствующий image_id',
+        'Не игнорируй изображения, если они содержат учебную информацию',
+        'Не создавай карточки исключительно по тексту',
+        'стр. N, область скана',
+        'Перед каждой приложенной частью изображения стоит та же строка каталога',
+      ]) {
+        expect(
+          systemPromptGenRuV7,
+          contains(fragment),
+          reason: 'В промпте v7 нет фрагмента: $fragment',
+        );
+      }
+    });
+
+    test('v7 по-прежнему требует JSON и девять ключей карточки', () {
+      expect(systemPromptGenRuV7, contains('Выведи только JSON.'));
+      expect(systemPromptGenRuV7, contains('ровно девять ключей'));
+      expect(systemPromptGenRuV7, isNot(contains(r'${')));
     });
   });
 

@@ -42,7 +42,7 @@ class CardGenerationService implements GenerationCaller {
     CardResponseSchema? responseSchema,
     CardContentValidator? contentValidator,
     this.jsonExtractor = const CardsJsonExtractor(),
-    this.systemPrompt = systemPromptGenRuV6,
+    this.systemPrompt = systemPromptGenRuV7,
     this.promptVersion = systemPromptVersion,
     this.maxOutputTokens = 8192,
     this.textSanitizer = const TextSanitizer(),
@@ -141,6 +141,14 @@ class CardGenerationService implements GenerationCaller {
           ? null
           : buildImageCatalog(documentImages),
     );
+    // Vision (ADR-037): модель должна ВИДЕТЬ изображения из документов, а не
+    // только их идентификаторы. Байты уходят отдельными частями с подписью
+    // каталога; каталог при этом остаётся полным.
+    final List<GenerationAttachment> visionParts = _withDocumentImages(
+      account,
+      request.images,
+      documentImages,
+    );
 
     final ProviderRawResponse rawResponse = await _postWithFallbacks(
       adapter: adapter,
@@ -148,7 +156,7 @@ class CardGenerationService implements GenerationCaller {
       model: model,
       baseUrl: baseUrl,
       userContent: userContent,
-      images: request.images,
+      images: visionParts,
       tolerantFallback: tolerantFallback,
       cancelToken: cancelToken,
     );
@@ -269,6 +277,36 @@ class CardGenerationService implements GenerationCaller {
       cancelToken: cancelToken,
     );
     return adapter.parseResponse(rawJson);
+  }
+
+  /// Изображения документов как image-parts запроса (ADR-037).
+  ///
+  /// Только для моделей с Vision: иначе каталог `<images>` остаётся текстовым
+  /// (прежнее поведение DOCX). Приоритет и лимиты — в
+  /// [selectVisionDocumentImages]: не вошедшие изображения не теряются, они
+  /// остаются в каталоге и разрешаются по `image_id` при импорте.
+  List<GenerationAttachment> _withDocumentImages(
+    ProviderAccount account,
+    List<GenerationAttachment> attachments,
+    List<DocumentImage> images,
+  ) {
+    if (!account.supportsVision || images.isEmpty) return attachments;
+    final List<DocumentImage> selected = selectVisionDocumentImages(images);
+    if (selected.isEmpty) return attachments;
+    return <GenerationAttachment>[
+      ...attachments,
+      for (final DocumentImage image in selected)
+        if (image.bytes.isNotEmpty &&
+            image.bytes.length <= kMaxInlineAttachmentBytes)
+          GenerationAttachment(
+            fileName: image.fileName,
+            mediaType: image.mediaType,
+            bytes: image.bytes,
+            // Подпись каталога идёт текстом перед частью: модель однозначно
+            // сопоставляет изображение с `image_id`.
+            label: imageCatalogLine(image),
+          ),
+    ];
   }
 
   /// Проверяет вложения до сборки запроса (итерация 7.8).

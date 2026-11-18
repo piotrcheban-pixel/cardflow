@@ -534,7 +534,7 @@ void main() {
           'issues=${card.issues.map((issue) => issue.name).toList()}',
         );
       }
-      expect(result.promptVersion, 'gen-ru-v6');
+      expect(result.promptVersion, 'gen-ru-v7');
     },
     skip: apiKey == null
         ? 'Нет DEEPSEEK_API_KEY — live-тест пропущен (L30)'

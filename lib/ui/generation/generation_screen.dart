@@ -15,12 +15,17 @@ import 'package:material_ui/material_ui.dart';
 import 'package:path/path.dart' as p;
 
 import 'package:cardflow/api/generation/generation_cancellation.dart';
+import 'package:cardflow/api/generation/generation_images.dart'
+    show kMaxVisionDocumentImages;
 import 'package:cardflow/api/generation/generation_pipeline.dart';
 import 'package:cardflow/api/generation/system_prompt.dart';
 import 'package:cardflow/api/parsers/file_parsing_service.dart';
+import 'package:cardflow/api/parsers/pdf_page_classifier.dart';
+import 'package:cardflow/api/parsers/pdf_scan_pages.dart';
 import 'package:cardflow/domain/decks/deck.dart';
 import 'package:cardflow/domain/generation/api_key_store.dart';
 import 'package:cardflow/domain/generation/document_gateway.dart';
+import 'package:cardflow/domain/generation/document_image.dart';
 import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/generation/deck_name.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
@@ -52,7 +57,7 @@ const int _largeMaterialTokenThreshold = 100000;
 
 /// Порог «PDF-скан»: меньше символов текста — отправляем страницы как PNG
 /// (итерация 7.9, ADR-023).
-const int kPdfScanMinTextLength = 50;
+const int kPdfScanMinTextLength = kPdfPageTextMinLength;
 
 /// Статус локального парсинга прикреплённого файла.
 enum _FileStatus { parsing, parsed, image, scanned, pdfPages, failed }
@@ -67,6 +72,11 @@ class _AttachedFile {
 
   /// Вложения файла: JPG/PNG, PDF-скан или отрендеренные страницы PDF.
   List<GenerationAttachment> attachments = const <GenerationAttachment>[];
+
+  /// Значимые области страниц скана (итерация L76, ADR-037): уходят в каталог
+  /// `<images>` и vision-частью запроса, карточка может вернуть `image_id`.
+  List<DocumentImage> documentImages = const <DocumentImage>[];
+
   ParserErrorCode? errorCode;
 }
 
@@ -204,6 +214,11 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
         ...file.attachments,
   ];
 
+  /// Значимые области страниц скана (итерация L76, ADR-037).
+  List<DocumentImage> get _scanDocumentImages => <DocumentImage>[
+    for (final _AttachedFile file in _files) ...file.documentImages,
+  ];
+
   /// Есть ли материалы для генерации (текст или вложения).
   bool get _hasContent =>
       _parsedDocuments.isNotEmpty || _attachments.isNotEmpty;
@@ -221,10 +236,23 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
           _parsedDocuments.map((ParsedDocument document) => document.text),
         ) +
         _attachments.length * kImageTokenEstimate +
-        _estimator.estimate(systemPromptGenRuV6) +
+        // Vision-части из изображений документов (ADR-037): не больше лимита.
+        (documentImagesCount > kMaxVisionDocumentImages
+                ? kMaxVisionDocumentImages
+                : documentImagesCount) *
+            kImageTokenEstimate +
+        _estimator.estimate(systemPromptGenRuV7) +
         kPromptWrapperTokenReserve +
         (wishes.isEmpty ? 0 : _estimator.estimate(wishes));
   }
+
+  /// Сколько изображений документов уйдёт модели (для оценки токенов).
+  int get documentImagesCount =>
+      _parsedDocuments.fold<int>(
+        0,
+        (int sum, ParsedDocument document) => sum + document.images.length,
+      ) +
+      _scanDocumentImages.length;
 
   Future<void> _pickFiles() async {
     try {
@@ -364,24 +392,28 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
     }
   }
 
-  /// Рендерит страницы PDF-скана в PNG; при неудаче — fallback на PDF.
+  /// Рендерит страницы PDF-скана в PNG и выделяет визуальные области.
+  ///
+  /// При неудаче — fallback на PDF-документ (ADR-022/ADR-023). Области
+  /// сохраняются как `DocumentImage` (итерация L76, ADR-037): модель видит их
+  /// как картинки и может вернуть `image_id`.
   Future<void> _attachPdfPages(_AttachedFile file, Uint8List bytes) async {
     try {
-      final List<Uint8List> pages = await ref
+      final PdfScanDocument scan = await ref
           .read(fileParsingServiceProvider)
-          .renderPdfPages(bytes, fileName: file.picked.name);
+          .extractScanPages(bytes, fileName: file.picked.name);
       if (!mounted) return;
       final List<GenerationAttachment> attachments = <GenerationAttachment>[
-        for (var index = 0; index < pages.length; index++)
+        for (final PdfScanPage page in scan.pages)
           if (hasValidAttachmentSignature(
             AttachmentMediaType.png,
-            pages[index],
+            page.pngBytes,
           ))
             GenerationAttachment(
               fileName: file.picked.name,
               mediaType: AttachmentMediaType.png,
-              bytes: pages[index],
-              pageNumber: index + 1,
+              bytes: page.pngBytes,
+              pageNumber: page.pageNumber,
               groupKey: file.picked.path,
             ),
       ];
@@ -389,9 +421,8 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
         setState(() {
           file
             ..status = _FileStatus.pdfPages
-            ..attachments = List<GenerationAttachment>.unmodifiable(
-              attachments,
-            );
+            ..attachments = List<GenerationAttachment>.unmodifiable(attachments)
+            ..documentImages = scan.documentImages();
         });
         return;
       }
@@ -402,6 +433,7 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
     setState(() {
       file
         ..status = _FileStatus.scanned
+        ..documentImages = const <DocumentImage>[]
         ..attachments = <GenerationAttachment>[
           GenerationAttachment(
             fileName: file.picked.name,
@@ -478,6 +510,7 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
     final GenerationRunRequest request = GenerationRunRequest(
       documents: documents,
       images: attachments,
+      documentImages: _scanDocumentImages,
       account: account,
       deckName: deckName,
       wishes: wishes.isEmpty ? null : wishes,

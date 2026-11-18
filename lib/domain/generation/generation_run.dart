@@ -23,6 +23,7 @@ class GenerationRunRequest {
     this.wishes,
     this.targetDeckId,
     this.images = const <GenerationAttachment>[],
+    this.documentImages = const <DocumentImage>[],
   });
 
   /// Разобранные документы (порядок прикрепления).
@@ -30,6 +31,11 @@ class GenerationRunRequest {
 
   /// Изображения и PDF-сканы (порядок прикрепления).
   final List<GenerationAttachment> images;
+
+  /// Изображения, извлечённые из файлов, но не привязанные к тексту документа
+  /// (итерация L76, ADR-037): значимые области страниц скана. Попадают в
+  /// каталог `<images>` того фрагмента, где находятся страницы их файла.
+  final List<DocumentImage> documentImages;
 
   /// Провайдер: протокол, адрес, модель и id ключа (ADR-020).
   final ProviderAccount account;

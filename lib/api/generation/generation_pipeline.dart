@@ -144,7 +144,7 @@ class GenerationPipeline implements GenerationRunner {
     _resetImageBudget();
     final String jobId = jobIdFactory();
     final DateTime createdAt = now();
-    final int systemPromptTokens = estimator.estimate(systemPromptGenRuV6);
+    final int systemPromptTokens = estimator.estimate(systemPromptGenRuV7);
     final GenerationJob initialJob = GenerationJob(
       id: jobId,
       status: GenerationJobStatus.running,
@@ -217,10 +217,12 @@ class GenerationPipeline implements GenerationRunner {
       request.documents,
       request.images,
       maxInputTokens: budget,
+      documentImages: request.documentImages,
     );
     if (chunks.isNotEmpty ||
         request.documents.isNotEmpty ||
-        request.images.isNotEmpty) {
+        request.images.isNotEmpty ||
+        request.documentImages.isNotEmpty) {
       return chunks;
     }
     if ((request.wishes ?? '').trim().isEmpty) return chunks;
@@ -837,6 +839,9 @@ List<String> _fileNames(GenerationRunRequest request) {
     for (final document in request.documents) document.fileName,
   ];
   for (final image in request.images) {
+    if (!names.contains(image.fileName)) names.add(image.fileName);
+  }
+  for (final image in request.documentImages) {
     if (!names.contains(image.fileName)) names.add(image.fileName);
   }
   return List<String>.unmodifiable(names);

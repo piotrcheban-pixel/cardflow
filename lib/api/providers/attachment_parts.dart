@@ -21,7 +21,8 @@ String attachmentDataUri(GenerationAttachment attachment) =>
 /// Содержимое пользовательского сообщения OpenAI/OpenAI-compatible.
 ///
 /// Без вложений — строка (совместимо с прежними серверами), с вложениями —
-/// массив частей `text` + `image_url`. PDF протокол не принимает.
+/// массив частей `text` + `image_url`. Если у вложения есть [label], перед
+/// изображением идёт текстовая часть с идентификатором каталога (ADR-037).
 Object openAiUserContent(
   String userContent,
   List<GenerationAttachment> images,
@@ -34,11 +35,14 @@ Object openAiUserContent(
   }
   return <Object?>[
     <String, Object?>{'type': 'text', 'text': userContent},
-    for (final GenerationAttachment image in images)
+    for (final GenerationAttachment image in images) ...<Object?>[
+      if (image.label != null)
+        <String, Object?>{'type': 'text', 'text': image.label},
       <String, Object?>{
         'type': 'image_url',
         'image_url': <String, Object?>{'url': attachmentDataUri(image)},
       },
+    ],
   ];
 }
 
@@ -49,20 +53,22 @@ List<Object?> geminiParts(
 ) {
   return <Object?>[
     <String, Object?>{'text': userContent},
-    for (final GenerationAttachment image in images)
+    for (final GenerationAttachment image in images) ...<Object?>[
+      if (image.label != null) <String, Object?>{'text': image.label},
       <String, Object?>{
         'inlineData': <String, Object?>{
           'mimeType': image.mimeType,
           'data': attachmentBase64(image),
         },
       },
+    ],
   ];
 }
 
 /// Содержимое пользовательского сообщения Anthropic.
 ///
 /// Изображения — блок `image`, PDF-сканы — блок `document`; без вложений —
-/// прежняя строка.
+/// прежняя строка. Подпись каталога — текстовый блок перед изображением.
 Object anthropicUserContent(
   String userContent,
   List<GenerationAttachment> images,
@@ -70,7 +76,9 @@ Object anthropicUserContent(
   if (images.isEmpty) return userContent;
   return <Object?>[
     <String, Object?>{'type': 'text', 'text': userContent},
-    for (final GenerationAttachment image in images)
+    for (final GenerationAttachment image in images) ...<Object?>[
+      if (image.label != null)
+        <String, Object?>{'type': 'text', 'text': image.label},
       if (image.isPdf)
         <String, Object?>{
           'type': 'document',
@@ -89,5 +97,6 @@ Object anthropicUserContent(
             'data': attachmentBase64(image),
           },
         },
+    ],
   ];
 }

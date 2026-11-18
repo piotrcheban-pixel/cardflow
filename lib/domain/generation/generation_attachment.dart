@@ -43,6 +43,7 @@ class GenerationAttachment {
     required this.bytes,
     this.pageNumber,
     this.groupKey,
+    this.label,
   });
 
   /// Имя исходного файла (для prompt и `generation_jobs.files`).
@@ -59,6 +60,14 @@ class GenerationAttachment {
 
   /// Ключ группы: страницы одного PDF отправляются одним фрагментом.
   final String? groupKey;
+
+  /// Подпись части запроса для модели (итерация L76, ADR-037).
+  ///
+  /// Для изображений из документов перед image-частью отправляется текстом
+  /// строка каталога `<images>` (`img3 | файл | подпись | стр. 2`): так модель
+  /// однозначно сопоставляет увиденное изображение с `image_id`, а не только
+  /// с порядком частей. `null` — подпись не нужна (файлы пользователя).
+  final String? label;
 
   /// MIME-тип строкой.
   String get mimeType => mediaType.mimeType;

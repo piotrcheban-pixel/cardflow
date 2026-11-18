@@ -9,7 +9,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:cardflow/api/images/placeholder_image_generator.dart';
 import 'package:cardflow/api/parsers/document_parser.dart';
 import 'package:cardflow/api/parsers/file_parsing_service.dart';
-import 'package:cardflow/api/parsers/pdf_scan_renderer.dart';
+import 'package:cardflow/api/parsers/pdf_scan_pages.dart';
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/decks/deck_summary.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
@@ -720,7 +720,7 @@ void main() {
       parsingService: FileParsingService(
         parsers: <DocumentParser>[const _ScannedPdfParser()],
         isolateRunner: inlineIsolate,
-        pdfScanRenderer: _FakePdfScanRenderer(error: StateError('PDFium')),
+        pdfScanPages: _FakePdfScanRenderer(error: StateError('PDFium')),
       ),
     );
     await tester.tap(
@@ -763,7 +763,7 @@ void main() {
         parsingService: FileParsingService(
           parsers: <DocumentParser>[const _ShortTextPdfParser()],
           isolateRunner: inlineIsolate,
-          pdfScanRenderer: _FakePdfScanRenderer(pageCount: pageCount),
+          pdfScanPages: _FakePdfScanRenderer(pageCount: pageCount),
         ),
       );
       await tester.tap(
@@ -859,7 +859,7 @@ void main() {
         parsingService: FileParsingService(
           parsers: <DocumentParser>[const _ShortTextPdfParser()],
           isolateRunner: inlineIsolate,
-          pdfScanRenderer: _FakePdfScanRenderer(error: StateError('PDFium')),
+          pdfScanPages: _FakePdfScanRenderer(error: StateError('PDFium')),
         ),
       );
       await tester.tap(
@@ -921,8 +921,8 @@ class _ShortTextPdfParser implements DocumentParser {
   }
 }
 
-/// Фейковый рендер PDF-страниц в PNG для widget-тестов экрана генерации.
-class _FakePdfScanRenderer extends PdfScanRenderer {
+/// Фейковый разбор PDF-скана для widget-тестов экрана генерации (ADR-037).
+class _FakePdfScanRenderer extends PdfScanPageExtractor {
   _FakePdfScanRenderer({this.pageCount = 3, this.error});
 
   final int pageCount;
@@ -943,12 +943,23 @@ class _FakePdfScanRenderer extends PdfScanRenderer {
   ]);
 
   @override
-  Future<List<Uint8List>> render(
+  Future<PdfScanDocument> extract(
     Uint8List bytes, {
-    String? fileName,
+    required String fileName,
     int? maxPages,
   }) async {
     if (error != null) throw error!;
-    return List<Uint8List>.generate(pageCount, (_) => _png);
+    return PdfScanDocument(
+      fileName: fileName,
+      pages: <PdfScanPage>[
+        for (var index = 0; index < pageCount; index++)
+          PdfScanPage(
+            pageNumber: index + 1,
+            pngBytes: _png,
+            width: 2,
+            height: 2,
+          ),
+      ],
+    );
   }
 }

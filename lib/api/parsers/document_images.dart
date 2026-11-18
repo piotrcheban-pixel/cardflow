@@ -94,6 +94,104 @@ final RegExp _captionPattern = RegExp(
 /// Похож ли текст на подпись рисунка.
 bool looksLikeImageCaption(String text) => _captionPattern.hasMatch(text);
 
+/// Ссылается ли текст страницы на визуальный объект («рис», «схема»,
+/// «график», «формула», «figure», «diagram»).
+///
+/// Нужен фильтру PDF: небольшое изображение рядом с таким текстом — значимая
+/// формула или фрагмент схемы, а не иконка (ADR-037).
+final RegExp _figureContextPattern = RegExp(
+  r'(рис\w*|схем\w*|график\w*|диаграмм\w*|чертёж\w*|чертеж\w*|форм\w*л\w*|'
+  r'fig(?:ure)?|diagram|chart|graph|table)',
+  caseSensitive: false,
+  unicode: true,
+);
+
+/// Есть ли на странице контекст рисунка/схемы/формулы.
+bool pageHasFigureContext(String pageText) =>
+    _figureContextPattern.hasMatch(pageText);
+
+/// Подпись рисунка на странице PDF: первая строка вида «Рис. 3 …».
+String? pdfPageCaption(String pageText) {
+  for (final String line in pageText.split('\n')) {
+    final String trimmed = line.trim();
+    if (trimmed.isEmpty) continue;
+    if (looksLikeImageCaption(trimmed)) {
+      return trimmed.length <= kDocumentImageContextMaxLength
+          ? trimmed
+          : '${trimmed.substring(0, kDocumentImageContextMaxLength)}…';
+    }
+  }
+  return null;
+}
+
+/// Окружающий текст страницы PDF: первая содержательная строка.
+String? pdfPageContextText(
+  String pageText, {
+  int maxLength = kDocumentImageContextMaxLength,
+}) {
+  for (final String line in pageText.split('\n')) {
+    final String trimmed = line.trim();
+    if (trimmed.length < 3) continue;
+    return trimmed.length <= maxLength
+        ? trimmed
+        : '${trimmed.substring(0, maxLength)}…';
+  }
+  return null;
+}
+
+/// Фильтр значимости извлечённых изображений PDF (ADR-037).
+///
+/// Размер — не единственный критерий: иконки, маркеры, тонкие линии и
+/// однотонные плашки отбрасываются, но небольшие изображения на странице с
+/// подписью рисунка/формулы сохраняются ([hasFigureContext]).
+class PdfImageFilter {
+  /// Создаёт фильтр.
+  const PdfImageFilter({
+    this.minSide = 24,
+    this.minBytes = 900,
+    this.maxAspectRatio = 16,
+    this.minInkFraction = 0.01,
+  });
+
+  /// Минимальная сторона изображения в пикселях (без контекста рисунка).
+  final int minSide;
+
+  /// Минимальный размер PNG в байтах (без контекста рисунка).
+  final int minBytes;
+
+  /// Максимальное отношение сторон: тоньше — линия/разделитель.
+  final double maxAspectRatio;
+
+  /// Минимальная доля «непустых» пикселей PNG: однотонная плашка — декор.
+  final double minInkFraction;
+
+  /// Значимо ли изображение.
+  ///
+  /// [width]/[height] — исходные пиксели, [byteLength] — размер PNG,
+  /// [inkFraction] — доля пикселей, отличных от фона (0..1, может быть `null`,
+  /// если неизвестна), [hasFigureContext] — на странице есть подпись рисунка.
+  bool isSignificant({
+    required int width,
+    required int height,
+    required int byteLength,
+    double? inkFraction,
+    bool hasFigureContext = false,
+  }) {
+    if (width <= 0 || height <= 0) return false;
+    final double aspect = (width > height ? width / height : height / width)
+        .toDouble();
+    if (aspect > maxAspectRatio) return false;
+    if (hasFigureContext) {
+      // Контекст важнее размера: сохраняем формулу/фрагмент схемы.
+      return inkFraction == null || inkFraction >= 0.004;
+    }
+    if (width < minSide || height < minSide) return false;
+    if (byteLength < minBytes) return false;
+    if (inkFraction != null && inkFraction < minInkFraction) return false;
+    return true;
+  }
+}
+
 /// Собирает изображения документа: фильтры мусора и дедупликация.
 class DocumentImageCollector {
   /// Создаёт коллектор.

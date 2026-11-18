@@ -28,6 +28,8 @@ class ParsedDocumentBuilder {
   final ParsedDocumentMetadata metadata;
 
   final List<_SectionDraft> _drafts = <_SectionDraft>[];
+  final Map<int, List<DocumentImage>> _sectionImages =
+      <int, List<DocumentImage>>{};
   List<String> _lines = <String>[];
   List<DocumentImage> _images = <DocumentImage>[];
   String? _title;
@@ -46,6 +48,16 @@ class ParsedDocumentBuilder {
   void addImage(DocumentImage image) {
     _ensureCurrent();
     _images.add(image);
+  }
+
+  /// Добавляет изображение к разделу по индексу (0-based) — для изображений
+  /// страниц PDF, у которых нет собственного текстового раздела (ADR-037).
+  ///
+  /// Если раздела с таким индексом в итоговом документе нет, изображение
+  /// отбрасывается: привязка к несуществующему разделу невозможна.
+  void addImageToSection(int sectionIndex, DocumentImage image) {
+    if (sectionIndex < 0) return;
+    (_sectionImages[sectionIndex] ??= <DocumentImage>[]).add(image);
   }
 
   /// Добавляет строку в текущий раздел (раздел начнётся автоматически).
@@ -85,6 +97,10 @@ class ParsedDocumentBuilder {
       );
       final int sectionIndex = sections.length - 1;
       for (final DocumentImage image in draft.images) {
+        images.add(image.withSectionIndex(sectionIndex));
+      }
+      for (final DocumentImage image
+          in _sectionImages[sectionIndex] ?? const <DocumentImage>[]) {
         images.add(image.withSectionIndex(sectionIndex));
       }
     }

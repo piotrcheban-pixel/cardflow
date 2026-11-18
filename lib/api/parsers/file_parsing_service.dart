@@ -5,7 +5,7 @@ import 'package:cardflow/api/parsers/document_parser.dart';
 import 'package:cardflow/api/parsers/docx_parser.dart';
 import 'package:cardflow/api/parsers/odt_parser.dart';
 import 'package:cardflow/api/parsers/pdf_parser.dart';
-import 'package:cardflow/api/parsers/pdf_scan_renderer.dart';
+import 'package:cardflow/api/parsers/pdf_scan_pages.dart';
 import 'package:cardflow/api/parsers/pptx_parser.dart';
 import 'package:cardflow/api/parsers/rtf_parser.dart';
 import 'package:cardflow/api/parsers/txt_parser.dart';
@@ -73,7 +73,7 @@ class FileParsingService {
     List<DocumentParser>? parsers,
     this.isolateRunner,
     this.maxFileBytes = 25 * 1024 * 1024,
-    this.pdfScanRenderer = const PdfScanRenderer(),
+    this.pdfScanPages = const PdfScanPageExtractor(),
   }) : _parsers = parsers ?? _defaultParsers;
 
   /// Парсеры по умолчанию: все поддерживаемые форматы A8.3.
@@ -90,8 +90,8 @@ class FileParsingService {
 
   final List<DocumentParser> _parsers;
 
-  /// Рендер страниц PDF-скана в PNG (итерация 7.9).
-  final PdfScanRenderer pdfScanRenderer;
+  /// Разбор скана: страницы + визуальные области (итерация L76).
+  final PdfScanPageExtractor pdfScanPages;
 
   /// Запуск парсинга в изоляте; `null` — использовать `Isolate.run`.
   final IsolateRunner? isolateRunner;
@@ -99,29 +99,27 @@ class FileParsingService {
   /// Максимальный размер файла в байтах (SPEC A8.3: 25 МБ).
   final int maxFileBytes;
 
-  /// Рендерит первые страницы PDF-скана в PNG (итерация 7.9, ADR-023).
+  /// Разбирает скан: рендер страниц + значимые визуальные области (ADR-037).
   ///
-  /// Ошибка PDFium/PDF → `ParserException(scannedPdf)` без сырых исключений:
-  /// экран генерации покажет понятную строку ARB.
-  Future<List<Uint8List>> renderPdfPages(
+  /// Каждая страница получает полный рендер (контекст для vision-модели), а
+  /// найденные схемы/графики — отдельные `DocumentImage` (`croppedRegion`) с
+  /// номером страницы. Все ошибки PDFium → `ParserException(scannedPdf)`.
+  Future<PdfScanDocument> extractScanPages(
     Uint8List bytes, {
     required String fileName,
     int? maxPages,
   }) async {
     try {
       return await _runInIsolate(
-        () => pdfScanRenderer.render(
-          bytes,
-          fileName: fileName,
-          maxPages: maxPages,
-        ),
+        () =>
+            pdfScanPages.extract(bytes, fileName: fileName, maxPages: maxPages),
       );
     } on ParserException {
       rethrow;
     } on Object catch (error) {
       throw ParserException(
         ParserErrorCode.scannedPdf,
-        details: 'Не удалось отрендерить страницы PDF: $error',
+        details: 'Не удалось разобрать страницы PDF: $error',
       );
     }
   }

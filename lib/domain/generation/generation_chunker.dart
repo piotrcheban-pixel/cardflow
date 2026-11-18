@@ -194,27 +194,57 @@ class GenerationChunker {
   /// Вложения с одинаковым [GenerationAttachment.groupKey] (страницы одного
   /// PDF-скана) идут одним фрагментом — несколько image parts в одном запросе
   /// (итерация 7.9, ADR-023).
+  ///
+  /// [documentImages] — изображения, не привязанные к тексту документа
+  /// (значимые области страниц скана, ADR-037): попадают во фрагмент того
+  /// файла, страницы которого туда вошли.
   List<GenerationChunk> chunkAll(
     List<ParsedDocument> documents,
     List<GenerationAttachment> images, {
     required int maxInputTokens,
+    List<DocumentImage> documentImages = const <DocumentImage>[],
   }) {
     final List<GenerationChunk> textChunks = chunkDocuments(
       documents,
       maxInputTokens: maxInputTokens,
     );
     final List<GenerationChunk> result = <GenerationChunk>[...textChunks];
+    final Map<String, List<DocumentImage>> byFile =
+        <String, List<DocumentImage>>{};
+    for (final DocumentImage image in documentImages) {
+      (byFile[image.fileName] ??= <DocumentImage>[]).add(image);
+    }
     for (final List<GenerationAttachment> group in _attachmentGroups(images)) {
+      final List<String> files = _uniqueAttachmentFiles(group);
+      final List<DocumentImage> pageImages = <DocumentImage>[];
+      for (final String file in files) {
+        final List<DocumentImage>? found = byFile.remove(file);
+        if (found != null) pageImages.addAll(found);
+      }
       result.add(
         GenerationChunk(
           index: result.length + 1,
           materialsText: '',
-          sourceFiles: _uniqueAttachmentFiles(group),
+          sourceFiles: files,
           limit: maxCardsPerChunk,
           images: List<GenerationAttachment>.unmodifiable(group),
+          documentImages: List<DocumentImage>.unmodifiable(pageImages),
         ),
       );
     }
+    // Изображения файлов без вложений (не должны теряться): отдельный
+    // фрагмент-каталог без текста.
+    byFile.forEach((String fileName, List<DocumentImage> fileImages) {
+      result.add(
+        GenerationChunk(
+          index: result.length + 1,
+          materialsText: '',
+          sourceFiles: List<String>.unmodifiable(<String>[fileName]),
+          limit: maxCardsPerChunk,
+          documentImages: List<DocumentImage>.unmodifiable(fileImages),
+        ),
+      );
+    });
     return result;
   }
 
@@ -284,9 +314,10 @@ class GenerationChunker {
   ///
   /// Точка деления выбирается у границы абзаца/строки ближе к середине;
   /// обе половины помечаются `splitAttempted`, чтобы пайплайн не дробил их
-  /// повторно (A8.5 шаг 8).
+  /// повторно (A8.5 шаг 8). Фрагмент с вложениями или каталогом изображений
+  /// файлов не дробится: изображения нельзя разделить по тексту.
   List<GenerationChunk>? splitInHalf(GenerationChunk chunk) {
-    if (chunk.images.isNotEmpty) return null;
+    if (chunk.images.isNotEmpty || chunk.documentImages.isNotEmpty) return null;
     final String text = chunk.materialsText;
     final List<int> runes = text.runes.toList(growable: false);
     if (runes.length < 2) return null;
