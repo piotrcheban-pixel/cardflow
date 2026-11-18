@@ -13,7 +13,15 @@ library;
 
 import 'dart:typed_data';
 
+import 'package:crypto/crypto.dart';
+
 import 'package:cardflow/domain/generation/generation_attachment.dart';
+
+/// SHA-256 содержимого изображения (дедупликация частей запроса и каталога).
+///
+/// Одна реализация на домен и API: сервис/планировщик не должны расходиться в
+/// том, какие байты считаются одинаковыми (TASK 03, D11).
+String documentImageDigest(List<int> bytes) => sha256.convert(bytes).toString();
 
 /// Максимальная длина подписи/окружающего текста в каталоге `<images>`.
 const int kDocumentImageContextMaxLength = 160;

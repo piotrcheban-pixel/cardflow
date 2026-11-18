@@ -9,6 +9,8 @@ library;
 import 'dart:convert';
 import 'dart:developer' as developer;
 
+import 'package:cardflow/domain/generation/token_accounting.dart';
+
 /// Включена ли диагностика по умолчанию (выключена в release).
 const bool kGenerationDiagnosticsEnabled = !bool.fromEnvironment(
   'dart.vm.product',
@@ -86,6 +88,40 @@ class GenerationDiagnostics {
     _write(
       'Генерация: картинка по запросу "$safeQuery": '
       '${redactedDiagnosticText(outcome, maxLength: 300)}',
+    );
+  }
+
+  /// Сводка калибровки токенов (TASK 03): оценка vs фактический `usage`.
+  ///
+  /// Пишутся только числа/отношения и версия оценщика; тексты материалов и
+  /// ключи сюда не попадают. `usage` одного запроса не экстраполируется.
+  void tokenCalibration(TokenCalibrationReport report) {
+    if (!enabled) return;
+    final StringBuffer buffer = StringBuffer(
+      'Генерация: калибровка токенов: $report',
+    );
+    for (final TokenCalibrationSample sample in report.samples) {
+      final double? ratio = sample.inputRatio;
+      if (ratio == null) continue;
+      // Подробности только при заметном расхождении: не засорять консоль.
+      if (ratio >= 0.8 && ratio <= 1.2) continue;
+      buffer.write(
+        '\n  фрагмент ${sample.chunkIndex}, попытка ${sample.attempt}: '
+        'план ${sample.plannedInput.tokens ?? '?'}, '
+        'запрос ${sample.requestInput.tokens ?? '?'}, '
+        'факт ${sample.actualInput.tokens ?? '?'} '
+        '(x${ratio.toStringAsFixed(2)})',
+      );
+    }
+    _write(buffer.toString());
+  }
+
+  /// Участие изображения в запросе (TASK 03, раздел 6): передано/только каталог.
+  void imageParticipation({required String outcome}) {
+    if (!enabled) return;
+    _write(
+      'Генерация: изображения: '
+      '${redactedDiagnosticText(outcome, maxLength: 400)}',
     );
   }
 

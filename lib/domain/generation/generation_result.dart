@@ -49,6 +49,11 @@ class GenerationResult {
     required this.cards,
     required this.usage,
     this.rejectedCards = 0,
+    this.estimatedInputTokens,
+    this.estimatedOutputTokens,
+    this.estimatorVersion,
+    this.sentDocumentImageIds = const <String>[],
+    this.skippedDocumentImageIds = const <String>[],
   });
 
   /// Провайдер ответа.
@@ -68,6 +73,24 @@ class GenerationResult {
 
   /// Сколько карточек отброшено поштучно (схема/структура), fix-gen Д6.
   final int rejectedCards;
+
+  /// Оценка входа по фактически собранному запросу (TASK 03), эвристика.
+  ///
+  /// `null` — исполнитель не считал (старый путь/тест). Это **не** факт:
+  /// фактический расход — [usage].
+  final int? estimatedInputTokens;
+
+  /// Бюджетный резерв вывода, отправленный в запросе (`max_tokens`).
+  final int? estimatedOutputTokens;
+
+  /// Версия оценщика, которой посчитан [estimatedInputTokens].
+  final String? estimatorVersion;
+
+  /// id изображений документов, реально вошедших image-частями в запрос.
+  final List<String> sentDocumentImageIds;
+
+  /// id изображений, исключённых исполнителем (сверх плана) по лимитам.
+  final List<String> skippedDocumentImageIds;
 
   @override
   String toString() =>

@@ -49,24 +49,54 @@ class GenerationPlanSplitter {
   /// Служебный запас тела запроса, байт (оценка).
   final int bodyOverheadBytes;
 
+  /// Копия с оценщиком/моделью изображений планировщика (TASK 03).
+  ///
+  /// Production-пайплайн не должен считать детей другим оценщиком, чем родителя
+  /// (L129): перед дроблением он передаёт сюда оценщик плана и
+  /// `capabilities.imageTokens`. `imageTokenModel` передаётся как есть: `null`
+  /// означает «формулы модели нет», а не «оставить прежнюю».
+  GenerationPlanSplitter withContext({
+    ContentTokenEstimator? estimator,
+    ImageTokenModel? imageTokenModel,
+    int? maxSplitDepth,
+  }) {
+    return GenerationPlanSplitter(
+      estimator: estimator ?? this.estimator,
+      imageTokenModel: imageTokenModel,
+      maxSplitDepth: maxSplitDepth ?? this.maxSplitDepth,
+      minTextLength: minTextLength,
+      bodyOverheadBytes: bodyOverheadBytes,
+    );
+  }
+
   /// Делит [chunk] на две части; `null` — деление невозможно/бесполезно.
-  List<PlannedChunk>? split(PlannedChunk chunk) {
+  ///
+  /// [allowLimitOverflow] — последняя попытка восстановления (context overflow,
+  /// 413, повторная обрезка): если у фрагмента `limit == 1`, дети получают по 1
+  /// карточке. Сумма лимитов тогда больше родителя — это осознанное исключение
+  /// только для восстановления, а не правило планирования; заказ пользователя
+  /// при этом не меняется (`requestedCards` остаётся прежним).
+  List<PlannedChunk>? split(
+    PlannedChunk chunk, {
+    bool allowLimitOverflow = false,
+  }) {
     if (chunk.isPromptOnly) return null;
     if (chunk.splitDepth >= maxSplitDepth) return null;
-    // Сумма лимитов детей обязана равняться лимиту родителя, каждый ≥ 1.
-    if (chunk.limit < 2) return null;
-    if (chunk.units.length >= 2) return _splitByUnits(chunk);
+    if (chunk.limit < 2 && !allowLimitOverflow) return null;
+    final List<int>? limits = _limits(chunk.limit, allowLimitOverflow);
+    if (limits == null) return null;
+    if (chunk.units.length >= 2) return _splitByUnits(chunk, limits);
     if (chunk.attachments.length >= 2 && chunk.units.isEmpty) {
-      return _splitAttachments(chunk);
+      return _splitAttachments(chunk, limits);
     }
     if (chunk.units.length == 1 &&
         chunk.materialsText.trim().length >= minTextLength) {
-      return _splitSingleUnit(chunk);
+      return _splitSingleUnit(chunk, limits);
     }
     return null;
   }
 
-  List<PlannedChunk>? _splitByUnits(PlannedChunk chunk) {
+  List<PlannedChunk>? _splitByUnits(PlannedChunk chunk, List<int> limits) {
     final List<UnitSpan> units = chunk.units;
     final int total = units.fold<int>(
       0,
@@ -110,7 +140,6 @@ class GenerationPlanSplitter {
       leftSections,
       takeWhenMatching: false,
     );
-    final List<int> limits = _limits(chunk.limit);
     final int depth = chunk.splitDepth + 1;
     return <PlannedChunk>[
       _build(
@@ -138,7 +167,7 @@ class GenerationPlanSplitter {
     ];
   }
 
-  List<PlannedChunk>? _splitAttachments(PlannedChunk chunk) {
+  List<PlannedChunk>? _splitAttachments(PlannedChunk chunk, List<int> limits) {
     final List<GenerationAttachment> attachments = chunk.attachments;
     final int middle = (attachments.length / 2).ceil();
     final List<GenerationAttachment> leftAttachments = attachments.sublist(
@@ -154,7 +183,6 @@ class GenerationPlanSplitter {
     };
     final _ImageSplit leftImages = _imagesForFiles(chunk, leftFiles, true);
     final _ImageSplit rightImages = _imagesForFiles(chunk, leftFiles, false);
-    final List<int> limits = _limits(chunk.limit);
     final int depth = chunk.splitDepth + 1;
     return <PlannedChunk>[
       _build(
@@ -182,7 +210,7 @@ class GenerationPlanSplitter {
     ];
   }
 
-  List<PlannedChunk>? _splitSingleUnit(PlannedChunk chunk) {
+  List<PlannedChunk>? _splitSingleUnit(PlannedChunk chunk, List<int> limits) {
     final String text = chunk.materialsText;
     final int boundary = _textBoundary(text);
     if (boundary <= 0 || boundary >= text.length) return null;
@@ -203,7 +231,6 @@ class GenerationPlanSplitter {
       end: rightText.length,
       tokens: estimator.estimateText(rightText),
     );
-    final List<int> limits = _limits(chunk.limit);
     return <PlannedChunk>[
       _build(
         text: leftText,
@@ -293,18 +320,27 @@ class GenerationPlanSplitter {
     final List<DocumentImage> catalog = <DocumentImage>[];
     final List<String> catalogIds = <String>[];
     final Set<String> partIdSet = <String>{};
-    for (var index = 0; index < chunk.imagePartIds.length; index++) {
+    final Set<String> catalogIdSet = <String>{};
+    // Списки id и изображений обязаны соответствовать по порядку, но защищаемся
+    // от легаси-фрагментов без id: изображение не должно потеряться при
+    // дроблении (требование «сохранять исходные идентификаторы единиц»).
+    for (var index = 0; index < chunk.imageParts.length; index++) {
       final DocumentImage image = chunk.imageParts[index];
+      final String id = index < chunk.imagePartIds.length
+          ? chunk.imagePartIds[index]
+          : 'img:${image.fileName}#p$index';
       if (!belongs(image)) continue;
-      partIds.add(chunk.imagePartIds[index]);
+      if (!partIdSet.add(id)) continue;
+      partIds.add(id);
       parts.add(image);
-      partIdSet.add(chunk.imagePartIds[index]);
     }
-    for (var index = 0; index < chunk.catalogOnlyIds.length; index++) {
-      final String id = chunk.catalogOnlyIds[index];
-      if (partIdSet.contains(id)) continue;
+    for (var index = 0; index < chunk.catalogOnly.length; index++) {
       final DocumentImage image = chunk.catalogOnly[index];
+      final String id = index < chunk.catalogOnlyIds.length
+          ? chunk.catalogOnlyIds[index]
+          : 'img:${image.fileName}#c$index';
       if (!belongs(image)) continue;
+      if (partIdSet.contains(id) || !catalogIdSet.add(id)) continue;
       catalogIds.add(id);
       catalog.add(image);
     }
@@ -316,7 +352,12 @@ class GenerationPlanSplitter {
     );
   }
 
-  List<int> _limits(int limit) {
+  /// Лимиты детей: сумма равна лимиту родителя; при [allowLimitOverflow] и
+  /// `limit == 1` — по одной карточке каждому (только восстановление).
+  List<int>? _limits(int limit, bool allowLimitOverflow) {
+    if (limit < 2) {
+      return allowLimitOverflow ? <int>[1, 1] : null;
+    }
     final int left = limit ~/ 2;
     return <int>[math.max(1, left), math.max(1, limit - left)];
   }

@@ -15,6 +15,7 @@ import 'package:cardflow/domain/generation/document_image.dart';
 import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/generation/generation_budget.dart';
 import 'package:cardflow/domain/generation/generation_pricing.dart';
+import 'package:cardflow/domain/generation/model_capabilities.dart';
 
 /// Режим плана: по материалам или только по теме пользователя (ADR-024).
 enum GenerationMode {
@@ -118,6 +119,66 @@ class OmittedUnit {
   String toString() => 'OmittedUnit($unitId, ${reason.name}, $tokens)';
 }
 
+/// Что произошло с изображением при выполнении плана (TASK 03, раздел 6).
+///
+/// Пользователь и диагностика должны различать эти состояния: «в каталоге» —
+/// не значит «модель его видела».
+enum ImageParticipationStatus {
+  /// Байты изображения реально переданы модели image-частью запроса.
+  sentToModel,
+
+  /// Изображение только в текстовом каталоге `<images>` (модель может выбрать
+  /// его по `image_id`; байты будут взяты локально при импорте).
+  catalogOnly,
+
+  /// Модель не принимает изображения (Vision выключен): часть не отправлялась.
+  unsupportedModel,
+
+  /// Изображение не вошло в запрос из-за бюджета.
+  omittedBudget,
+
+  /// Изображение не вошло в запрос из-за лимита тела/байт.
+  omittedPayload,
+}
+
+/// Изображение плана с состоянием участия.
+class PlannedImage {
+  /// Создаёт запись изображения.
+  const PlannedImage({
+    required this.id,
+    required this.fileName,
+    required this.status,
+    this.page,
+    this.tokens = 0,
+  }) : assert(id != ''),
+       assert(fileName != ''),
+       assert(tokens >= 0);
+
+  /// Стабильный id единицы (`img:<файл>#<n>`).
+  final String id;
+
+  /// Имя файла-источника.
+  final String fileName;
+
+  /// Состояние участия.
+  final ImageParticipationStatus status;
+
+  /// Номер страницы (PDF/скан), если известен.
+  final int? page;
+
+  /// Оценка токенов изображения.
+  final int tokens;
+
+  /// true, если байты реально ушли модели.
+  bool get sentToModel => status == ImageParticipationStatus.sentToModel;
+
+  /// true, если изображение только в каталоге (модель могла его не видеть).
+  bool get catalogOnly => status == ImageParticipationStatus.catalogOnly;
+
+  @override
+  String toString() => 'PlannedImage($id, ${status.name})';
+}
+
 /// Код предупреждения плана (строки для пользователя — ARB, раздел H.4).
 enum PlanWarningCode {
   /// Есть неизвестные возможности модели (окно/лимиты/цены).
@@ -134,6 +195,14 @@ enum PlanWarningCode {
 
   /// Часть единиц содержимого не попала в план — см. [GenerationPlan.omitted].
   omittedUnits,
+
+  /// Изображения документов есть, а модель без Vision: они остаются только в
+  /// каталоге и байты не отправляются.
+  imagesWithoutVision,
+
+  /// Лимиты image-частей/байт взяты из конфигурационного допущения, а не из
+  /// подтверждённых возможностей модели (консервативный fallback).
+  assumedImageLimits,
 }
 
 /// Вид валидности плана.
@@ -433,6 +502,7 @@ class GenerationEstimate {
     this.currency,
     this.unknownFields = const <String>[],
     this.confidence = 0,
+    this.continuationReserveTokens = 0,
   }) : assert(inputTextTokens >= 0, 'Токены не могут быть отрицательными'),
        assert(imageTokens >= 0, 'Токены не могут быть отрицательными'),
        assert(fixedPromptTokens >= 0, 'Токены не могут быть отрицательными'),
@@ -519,6 +589,13 @@ class GenerationEstimate {
   /// Версия оценки (для калибровки).
   final String estimatorVersion;
 
+  /// Резерв на компактное состояние продолжения prompt-only (оценка).
+  ///
+  /// Ненулевой, когда prompt-only план выполняет больше одного запроса: каждый
+  /// следующий запрос несёт сводку уже созданных карточек
+  /// (`GenerationContinuityState`), и её токены вычтены из бюджета заранее.
+  final int continuationReserveTokens;
+
   /// true, если стоимость посчитана полностью.
   bool get hasKnownCost =>
       pricingState == PricingState.complete && totalCost != null;
@@ -541,6 +618,9 @@ class GenerationPlan {
     this.requestedCards = 0,
     this.retryAllowanceRequests = 0,
     List<String> unknownFields = const <String>[],
+    List<PlannedImage> images = const <PlannedImage>[],
+    Map<String, CapabilitySource> capabilitySources =
+        const <String, CapabilitySource>{},
     this.mode = GenerationMode.materials,
     this.promptOnlyPrompt,
   }) : assert(requestedCards >= 0),
@@ -557,13 +637,30 @@ class GenerationPlan {
        ),
        chunks = List<PlannedChunk>.unmodifiable(chunks),
        omitted = List<OmittedUnit>.unmodifiable(omitted),
-       unknownFields = List<String>.unmodifiable(unknownFields);
+       unknownFields = List<String>.unmodifiable(unknownFields),
+       images = List<PlannedImage>.unmodifiable(images),
+       capabilitySources = Map<String, CapabilitySource>.unmodifiable(
+         capabilitySources,
+       );
 
   /// Фрагменты плана в порядке отправки.
   final List<PlannedChunk> chunks;
 
   /// Единицы, не попавшие во фрагменты, с причиной.
   final List<OmittedUnit> omitted;
+
+  /// Состояние каждого изображения: передано модели / только каталог / и т.д.
+  ///
+  /// Список строится планировщиком; при выполнении пайплайн передаёт модели
+  /// ровно `sentToModel`-части, поэтому статус — не догадка, а контракт.
+  final List<PlannedImage> images;
+
+  /// Источник каждого параметра возможностей модели (для диагностики).
+  ///
+  /// Ключи — `context_window`, `max_output_tokens`, `image_limits`, `pricing`,
+  /// `max_cards_per_request`, `tokenizer`. Значение `unknown` означает
+  /// консервативное допущение приложения, а не факт провайдера.
+  final Map<String, CapabilitySource> capabilitySources;
 
   /// Заказ карточек от пользователя (0 — не задан).
   final int requestedCards;
@@ -627,6 +724,35 @@ class GenerationPlan {
 
   /// true, если план генерирует без материалов, по теме.
   bool get isPromptOnly => mode == GenerationMode.promptOnly;
+
+  /// Сколько изображений реально передаётся модели image-частями.
+  int get imagesSentToModel =>
+      images.where((PlannedImage image) => image.sentToModel).length;
+
+  /// Сколько изображений остаётся только в текстовом каталоге.
+  int get imagesCatalogOnly =>
+      images.where((PlannedImage image) => image.catalogOnly).length;
+
+  /// Сколько изображений исключено из-за отсутствия Vision.
+  int get imagesUnsupported => images
+      .where(
+        (PlannedImage image) =>
+            image.status == ImageParticipationStatus.unsupportedModel,
+      )
+      .length;
+
+  /// Сколько изображений исключено из-за бюджета/размера.
+  int get imagesOmitted => images
+      .where(
+        (PlannedImage image) =>
+            image.status == ImageParticipationStatus.omittedBudget ||
+            image.status == ImageParticipationStatus.omittedPayload,
+      )
+      .length;
+
+  /// true, если изображения есть, но не все ушли модели.
+  bool get hasImagesNotSent =>
+      images.isNotEmpty && imagesSentToModel < images.length;
 
   @override
   String toString() =>

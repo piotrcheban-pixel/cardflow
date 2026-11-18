@@ -17,17 +17,23 @@ import 'package:cardflow/api/generation/generation_caller.dart';
 import 'package:cardflow/api/generation/generation_diagnostics.dart';
 import 'package:cardflow/api/generation/generation_images.dart';
 import 'package:cardflow/api/generation/generation_prompt.dart';
+import 'package:cardflow/api/generation/generation_request_estimator.dart';
 import 'package:cardflow/api/generation/system_prompt.dart';
 import 'package:cardflow/api/http/generation_http_client.dart';
 import 'package:cardflow/api/providers/generation_provider_adapter.dart';
 import 'package:cardflow/domain/generation/api_key_store.dart';
+import 'package:cardflow/domain/generation/content_token_estimator.dart';
 import 'package:cardflow/domain/generation/document_image.dart';
 import 'package:cardflow/domain/generation/generation_attachment.dart';
+import 'package:cardflow/domain/generation/generation_chunk_planner.dart'
+    show GenerationChunkPlannerConfig;
 import 'package:cardflow/domain/generation/generation_error.dart';
 import 'package:cardflow/domain/generation/generation_failure_reason.dart';
 import 'package:cardflow/domain/generation/generation_provider.dart';
 import 'package:cardflow/domain/generation/generation_request.dart';
+import 'package:cardflow/domain/generation/generation_request_limits.dart';
 import 'package:cardflow/domain/generation/generation_result.dart';
+import 'package:cardflow/domain/generation/model_capabilities.dart';
 import 'package:cardflow/domain/generation/provider_account.dart';
 import 'package:cardflow/domain/generation/provider_protocol.dart';
 import 'package:cardflow/domain/text/text_sanitizer.dart';
@@ -46,6 +52,9 @@ class CardGenerationService implements GenerationCaller {
     this.promptVersion = systemPromptVersion,
     this.maxOutputTokens = 8192,
     this.textSanitizer = const TextSanitizer(),
+    this.estimator = const HeuristicContentTokenEstimator(),
+    this.requestEstimator,
+    this.limitsConfig = const GenerationChunkPlannerConfig(),
     GenerationDiagnostics? diagnostics,
   }) : responseSchema = responseSchema ?? CardResponseSchema(),
        contentValidator = contentValidator ?? const CardContentValidator(),
@@ -81,8 +90,29 @@ class CardGenerationService implements GenerationCaller {
   /// Санитайзер локально извлечённого текста (итерация 7.8).
   final TextSanitizer textSanitizer;
 
+  /// Оценщик единиц (тот же, что у планировщика; TASK 03).
+  final ContentTokenEstimator estimator;
+
+  /// Оценка собранного запроса; `null` — собрать из [estimator] и [systemPrompt].
+  final GenerationRequestEstimator? requestEstimator;
+
+  /// Конфигурация допущений лимитов запроса (та же, что у планировщика).
+  ///
+  /// Один источник значений для плана и исполнителя: если аккаунт не сообщает
+  /// `max_images_per_request`/`max_image_bytes`/`max_request_bytes`, обе стороны
+  /// берут консервативные значения отсюда, а не из разных констант.
+  final GenerationChunkPlannerConfig limitsConfig;
+
   /// Debug-диагностика ответа модели (ADR-024, итерация 7.10).
   final GenerationDiagnostics diagnostics;
+
+  /// Оценщик собранного запроса (ленивая сборка, если не инжектирован).
+  GenerationRequestEstimator get _requestEstimator =>
+      requestEstimator ??
+      GenerationRequestEstimator(
+        estimator: estimator,
+        systemPrompt: systemPrompt,
+      );
 
   /// Генерирует карточки для одного фрагмента материалов.
   ///
@@ -113,13 +143,27 @@ class CardGenerationService implements GenerationCaller {
     final bool tolerantFallback =
         account.protocol == ProviderProtocol.openaiCompletions;
 
-    _validateAttachments(account, request.images);
+    final ModelCapabilities capabilities = resolveModelCapabilities(account);
+    final GenerationRequestLimits limits = resolveGenerationRequestLimits(
+      capabilities,
+      assumedMaxImagesPerRequest: limitsConfig.assumedMaxImagesPerChunk,
+      assumedMaxImageBytesPerImage: limitsConfig.assumedMaxImageBytesPerImage,
+      assumedMaxImageBytesPerChunk: limitsConfig.assumedMaxImageBytesPerChunk,
+      assumedMaxRequestBytes: limitsConfig.assumedMaxRequestBytes,
+    );
+    _validateAttachments(account, request.images, limits);
 
     final String materialsText = textSanitizer.sanitize(request.materialsText);
     final String? wishes = _sanitizedWishes(request.wishes);
+    // Сводка продолжения prompt-only идёт отдельным блоком после пожеланий:
+    // исходные требования пользователя не переписываются (TASK 03, раздел 4).
+    final String? continuation = _sanitizedContinuation(request.continuation);
+    final String? effectiveWishes = _mergeWishes(wishes, continuation);
     // «Генерация по теме» (итерация 7.10, ADR-024): без файлов тема задана в
     // пожеланиях, поэтому пустой текст допустим.
-    if (materialsText.isEmpty && request.images.isEmpty && wishes == null) {
+    if (materialsText.isEmpty &&
+        request.images.isEmpty &&
+        effectiveWishes == null) {
       throw const GenerationException(
         GenerationErrorCode.noMaterials,
         details: 'После санитизации нет текста, вложений и пожеланий',
@@ -133,9 +177,16 @@ class CardGenerationService implements GenerationCaller {
     final List<DocumentImage> documentImages = withCatalogIds(
       request.documentImages,
     );
+    final _DocumentPartsResult parts = _withDocumentImages(
+      account,
+      request.images,
+      documentImages,
+      request.documentImageParts,
+      limits: limits,
+    );
     final String userContent = buildGenerationUserContent(
       materialsText: materials,
-      wishes: wishes,
+      wishes: effectiveWishes,
       limit: request.limit,
       imagesCatalog: documentImages.isEmpty
           ? null
@@ -144,10 +195,18 @@ class CardGenerationService implements GenerationCaller {
     // Vision (ADR-037): модель должна ВИДЕТЬ изображения из документов, а не
     // только их идентификаторы. Байты уходят отдельными частями с подписью
     // каталога; каталог при этом остаётся полным.
-    final List<GenerationAttachment> visionParts = _withDocumentImages(
-      account,
-      request.images,
-      documentImages,
+    final List<GenerationAttachment> visionParts = parts.attachments;
+    final int maxOutputTokens =
+        request.maxOutputTokens ??
+        account.maxOutputTokens ??
+        this.maxOutputTokens;
+    // Оценка собранного запроса тем же оценщиком, что у плана (TASK 03):
+    // сохраняется в результате для калибровки по `usage`; это не факт.
+    final GenerationRequestEstimate estimate = _requestEstimator.estimate(
+      userContent: userContent,
+      attachments: visionParts,
+      maxOutputTokens: maxOutputTokens,
+      unknownFields: capabilities.unknownFields,
     );
 
     final ProviderRawResponse rawResponse = await _postWithFallbacks(
@@ -157,8 +216,7 @@ class CardGenerationService implements GenerationCaller {
       baseUrl: baseUrl,
       userContent: userContent,
       images: visionParts,
-      maxOutputTokens:
-          request.maxOutputTokens ?? account.maxOutputTokens ?? maxOutputTokens,
+      maxOutputTokens: maxOutputTokens,
       tolerantFallback: tolerantFallback,
       cancelToken: cancelToken,
     );
@@ -197,6 +255,11 @@ class CardGenerationService implements GenerationCaller {
       cards: outcome.cards,
       usage: rawResponse.usage,
       rejectedCards: payload.rejectedCards + outcome.rejectedCards,
+      estimatedInputTokens: estimate.inputTotal.tokens,
+      estimatedOutputTokens: estimate.outputReserve.tokens,
+      estimatorVersion: estimate.estimatorVersion,
+      sentDocumentImageIds: parts.sentIds,
+      skippedDocumentImageIds: parts.skippedIds,
     );
   }
 
@@ -284,55 +347,114 @@ class CardGenerationService implements GenerationCaller {
     return adapter.parseResponse(rawJson);
   }
 
-  /// Изображения документов как image-parts запроса (ADR-037).
+  /// Изображения документов как image-parts запроса (ADR-037, TASK 03).
   ///
-  /// Только для моделей с Vision: иначе каталог `<images>` остаётся текстовым
-  /// (прежнее поведение DOCX). Приоритет — в [selectVisionDocumentImages];
-  /// лимиты числа частей и байт берутся из возможностей аккаунта (JSON v2), а
-  /// не из универсальной константы: если модель принимает 20 изображений,
-  /// сервис не урежет их до 8. Не подтверждённый лимит модели заменяется
-  /// документированным допущением приложения. Не вошедшие изображения не
-  /// теряются: они остаются в каталоге и разрешаются по `image_id` при импорте.
-  List<GenerationAttachment> _withDocumentImages(
+  /// Если план передал `documentImageParts` (явный префикс каталога), сервис
+  /// отправляет **ровно эти** части: он не переранжирует и не урезает их
+  /// повторно, иначе план и запрос расходятся (D4/D7/D11). Легаси-режим
+  /// (`null`) сохраняет прежний отбор [selectVisionDocumentImages].
+  ///
+  /// Лимиты числа/байт — из [resolveGenerationRequestLimits] (один источник с
+  /// планировщиком). Дубли байтов не отправляются дважды; исключённые id
+  /// возвращаются в [skippedIds] для диагностики, а не теряются молча.
+  _DocumentPartsResult _withDocumentImages(
     ProviderAccount account,
     List<GenerationAttachment> attachments,
     List<DocumentImage> images,
-  ) {
-    if (!account.supportsVision || images.isEmpty) return attachments;
-    final List<DocumentImage> selected = selectVisionDocumentImages(
-      images,
-      maxImages: account.maxImagesPerRequest ?? kMaxVisionDocumentImages,
-      maxBytes: account.maxImageBytes ?? kMaxVisionDocumentImagesBytes,
+    List<DocumentImage>? explicitParts, {
+    required GenerationRequestLimits limits,
+  }) {
+    if (images.isEmpty) {
+      return _DocumentPartsResult(
+        attachments: attachments,
+        sentIds: const <String>[],
+        skippedIds: const <String>[],
+      );
+    }
+    if (!account.supportsVision) {
+      if (explicitParts != null && explicitParts.isNotEmpty) {
+        // План не должен был отправлять части без Vision; это ошибка
+        // согласования, а не молчаливая потеря изображения.
+        throw const GenerationException(
+          GenerationErrorCode.visionUnsupported,
+          details: 'План содержит image-части, а модель без Vision',
+          failureReason: GenerationFailureReason.unsupportedModality,
+        );
+      }
+      return _DocumentPartsResult(
+        attachments: attachments,
+        sentIds: const <String>[],
+        skippedIds: const <String>[],
+      );
+    }
+    final int? explicitCount = explicitParts?.length;
+    if (explicitCount != null && explicitCount > images.length) {
+      throw ArgumentError.value(
+        explicitCount,
+        'documentImageParts',
+        'Частей больше, чем изображений каталога',
+      );
+    }
+    final List<DocumentImage> selected = explicitCount != null
+        ? images.take(explicitCount).toList(growable: false)
+        : selectVisionDocumentImages(
+            images,
+            maxImages: limits.maxImagesPerRequest,
+            maxBytes: limits.maxImageBytesPerRequest,
+          );
+    final List<GenerationAttachment> parts = <GenerationAttachment>[];
+    final List<String> sentIds = <String>[];
+    final List<String> skippedIds = <String>[];
+    final Set<String> digests = <String>{};
+    for (final DocumentImage image in selected) {
+      if (image.bytes.isEmpty) {
+        skippedIds.add(image.id);
+        continue;
+      }
+      final String digest = documentImageDigest(image.bytes);
+      if (!digests.add(digest)) {
+        skippedIds.add(image.id);
+        continue;
+      }
+      // Легаси-отбор не знает per-image лимит — проверяем его здесь; явный
+      // план уже учёл этот лимит, поэтому его части не фильтруем.
+      if (explicitCount == null &&
+          image.bytes.length > limits.maxImageBytesPerImage) {
+        skippedIds.add(image.id);
+        continue;
+      }
+      parts.add(
+        GenerationAttachment(
+          fileName: image.fileName,
+          mediaType: image.mediaType,
+          bytes: image.bytes,
+          // Подпись каталога идёт текстом перед частью: модель однозначно
+          // сопоставляет изображение с `image_id`.
+          label: imageCatalogLine(image),
+        ),
+      );
+      sentIds.add(image.id);
+    }
+    return _DocumentPartsResult(
+      attachments: <GenerationAttachment>[...attachments, ...parts],
+      sentIds: List<String>.unmodifiable(sentIds),
+      skippedIds: List<String>.unmodifiable(skippedIds),
     );
-    if (selected.isEmpty) return attachments;
-    final int maxImageBytes =
-        account.maxImageBytes ?? kMaxInlineAttachmentBytes;
-    return <GenerationAttachment>[
-      ...attachments,
-      for (final DocumentImage image in selected)
-        if (image.bytes.isNotEmpty && image.bytes.length <= maxImageBytes)
-          GenerationAttachment(
-            fileName: image.fileName,
-            mediaType: image.mediaType,
-            bytes: image.bytes,
-            // Подпись каталога идёт текстом перед частью: модель однозначно
-            // сопоставляет изображение с `image_id`.
-            label: imageCatalogLine(image),
-          ),
-    ];
   }
 
   /// Проверяет вложения до сборки запроса (итерация 7.8).
   ///
   /// Порядок важен: сначала vision модели, затем PDF-возможность протокола и
   /// лимит; ошибка не доходит до сети и не тратит токены. Лимит байт — из
-  /// возможностей аккаунта, если он их объявляет; иначе — консервативный
-  /// inline-лимит приложения (инфраструктура, не характеристика модели).
+  /// единого резолвера лимитов [GenerationRequestLimits] (TASK 03), чтобы
+  /// сервис и план не расходились; при неизвестности — консервативное
+  /// допущение приложения (инфраструктура, не характеристика модели).
   void _validateAttachments(
     ProviderAccount account,
     List<GenerationAttachment> images,
+    GenerationRequestLimits limits,
   ) {
-    final int maxBytes = account.maxImageBytes ?? kMaxInlineAttachmentBytes;
+    final int maxBytes = limits.maxImageBytesPerImage;
     for (final GenerationAttachment image in images) {
       if (!account.supportsVision) {
         throw GenerationException(
@@ -381,6 +503,23 @@ class CardGenerationService implements GenerationCaller {
     return sanitized.isEmpty ? null : sanitized;
   }
 
+  /// Сводка продолжения после санитизации; пустая — не передаётся.
+  ///
+  /// Текст адресован модели и не содержит пользовательских данных сверх уже
+  /// созданных карточек (front/back/теги этого запуска).
+  String? _sanitizedContinuation(String? continuation) {
+    if (continuation == null) return null;
+    final String sanitized = textSanitizer.sanitize(continuation);
+    return sanitized.isEmpty ? null : sanitized;
+  }
+
+  /// Пожелания + сводка продолжения: исходный текст пользователя не меняется.
+  String? _mergeWishes(String? wishes, String? continuation) {
+    if (continuation == null) return wishes;
+    if (wishes == null) return continuation;
+    return '$wishes\n\n$continuation';
+  }
+
   GenerationProviderAdapter _adapterFor(GenerationProvider provider) {
     for (final adapter in adapters) {
       if (adapter.provider == provider) return adapter;
@@ -391,4 +530,22 @@ class CardGenerationService implements GenerationCaller {
       'Для провайдера не собран адаптер генерации',
     );
   }
+}
+
+/// Результат отбора image-частей документа: вложения запроса и id частей.
+class _DocumentPartsResult {
+  const _DocumentPartsResult({
+    required this.attachments,
+    required this.sentIds,
+    required this.skippedIds,
+  });
+
+  /// Вложения пользователя + image-части документов.
+  final List<GenerationAttachment> attachments;
+
+  /// id (`img1…`) каталога, реально ушедшие частями.
+  final List<String> sentIds;
+
+  /// id, исключённые сервисом (пустые байты/дубли/размер) — для диагностики.
+  final List<String> skippedIds;
 }

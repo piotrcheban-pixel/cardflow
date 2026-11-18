@@ -10,8 +10,6 @@ library;
 
 import 'dart:math' as math;
 
-import 'package:crypto/crypto.dart';
-
 import 'package:cardflow/domain/generation/document_image.dart';
 
 /// Префикс идентификатора изображения в каталоге (id как в промпте: `img1`).
@@ -123,7 +121,7 @@ int _visionScore(DocumentImage image) {
 }
 
 /// SHA-256 содержимого изображения (дедупликация частей запроса).
-String contentDigestOf(List<int> bytes) => sha256.convert(bytes).toString();
+String contentDigestOf(List<int> bytes) => documentImageDigest(bytes);
 
 /// Чистит значение для строки каталога: без переводов строк и разделителя `|`.
 String _clean(String? value, {int maxLength = 80}) {

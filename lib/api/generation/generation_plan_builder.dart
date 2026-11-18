@@ -187,7 +187,10 @@ class GenerationPlanBuilder {
             ),
           ),
         );
-    return promptOnlyPlanner.plan(
+    return PromptOnlyPlanner(
+      estimator: estimator,
+      config: promptOnlyPlanner.config,
+    ).plan(
       request: request,
       capabilities: capabilities,
       overhead: fixed,

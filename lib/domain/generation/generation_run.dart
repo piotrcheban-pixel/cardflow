@@ -12,6 +12,7 @@ import 'package:cardflow/domain/generation/generation_failure_reason.dart';
 import 'package:cardflow/domain/generation/generation_job.dart';
 import 'package:cardflow/domain/generation/generation_plan.dart';
 import 'package:cardflow/domain/generation/provider_account.dart';
+import 'package:cardflow/domain/generation/token_accounting.dart';
 import 'package:cardflow/domain/text/parsed_document.dart';
 
 /// Запрос на генерацию карточек из разобранных документов.
@@ -118,6 +119,8 @@ class GenerationChunkFailure {
     this.documentImages = const <DocumentImage>[],
     this.reason,
     this.plannedChunk,
+    this.retryAfter,
+    this.attempts = 1,
   });
 
   /// Номер фрагмента (с 1).
@@ -160,6 +163,16 @@ class GenerationChunkFailure {
   /// `null` — результат старого пути/теста: повтор восстанавливает фрагмент из
   /// [materialsText]/[documentImages].
   final PlannedChunk? plannedChunk;
+
+  /// Пауза из `Retry-After`, если провайдер её сообщил (TASK 03, требование 5.7).
+  ///
+  /// Транспорт уже учитывает заголовок для автоматических повторов; здесь
+  /// значение нужно UI, чтобы сказать «повторите через N секунд», а не просто
+  /// «слишком много запросов».
+  final Duration? retryAfter;
+
+  /// Сколько запросов уже сделано по фрагменту (1 — первичный).
+  final int attempts;
 }
 
 /// Результат генерации (он же данные предпросмотра).
@@ -179,6 +192,10 @@ class GenerationRunResult {
     this.fatalErrorCode,
     this.fatalProviderReason,
     this.plan,
+    this.calibration = const TokenCalibrationReport.empty(),
+    this.recoveryRequestsUsed = 0,
+    this.recoveryBudget = 0,
+    this.sentDocumentImageIds = const <String>[],
   });
 
   /// Идентификатор задания `generation_jobs`.
@@ -224,6 +241,28 @@ class GenerationRunResult {
   /// `null` — старый результат/тест без плана. План нужен предпросмотру:
   /// показать заказ/достижимое число карточек, потери и предупреждения.
   final GenerationPlan? plan;
+
+  /// Калибровка «оценка vs фактический `usage`» за запуск (TASK 03).
+  ///
+  /// Содержит только машинные значения и отношения; пустой отчёт — не ошибка,
+  /// а отсутствие данных (провайдер не сообщил `usage`).
+  final TokenCalibrationReport calibration;
+
+  /// Сколько дополнительных запросов потрачено на восстановление.
+  final int recoveryRequestsUsed;
+
+  /// Действующий бюджет восстановления для этого запуска (зависит от плана).
+  final int recoveryBudget;
+
+  /// id изображений (`img1…`), реально отправленных модели image-частями.
+  ///
+  /// Для старых результатов/тестов без плана — пусто.
+  final List<String> sentDocumentImageIds;
+
+  /// true, если бюджет восстановления был исчерпан (часть фрагментов не
+  /// удалось вылечить дроблением).
+  bool get recoveryBudgetExhausted =>
+      recoveryBudget > 0 && recoveryRequestsUsed >= recoveryBudget;
 
   /// Предупреждения плана (пусто, если плана нет).
   List<PlanWarningCode> get planWarnings =>

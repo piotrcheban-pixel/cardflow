@@ -39,6 +39,7 @@ import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/generation/generation_budget.dart';
 import 'package:cardflow/domain/generation/generation_plan.dart';
 import 'package:cardflow/domain/generation/generation_pricing.dart';
+import 'package:cardflow/domain/generation/generation_request_limits.dart';
 import 'package:cardflow/domain/generation/model_capabilities.dart';
 
 /// Префикс строки-заголовка файла в `<materials>` (SPEC A8.1: «Файл: <имя>»).
@@ -65,6 +66,7 @@ class GenerationChunkPlannerConfig {
   /// Создаёт конфигурацию.
   const GenerationChunkPlannerConfig({
     this.softTargetMaterialTokensPerCard = 6000,
+    this.minSoftTargetMaterialTokens = 512,
     this.assumedMaxImagesPerChunk = 8,
     this.assumedMaxImageBytesPerImage = 10 * 1024 * 1024,
     this.assumedMaxImageBytesPerChunk = 24 * 1024 * 1024,
@@ -74,6 +76,7 @@ class GenerationChunkPlannerConfig {
     this.maxSplitDepth = 3,
     this.retryAllowanceRequests = 0,
   }) : assert(softTargetMaterialTokensPerCard > 0),
+       assert(minSoftTargetMaterialTokens > 0),
        assert(assumedMaxImagesPerChunk > 0),
        assert(assumedMaxImageBytesPerImage > 0),
        assert(assumedMaxImageBytesPerChunk > 0),
@@ -87,6 +90,13 @@ class GenerationChunkPlannerConfig {
   /// Мягкая цель заполнения: не платить за 1M контекста ради нескольких
   /// карточек. Значение подлежит калибровке (не метаданные провайдера).
   final int softTargetMaterialTokensPerCard;
+
+  /// Минимальная мягкая цель фрагмента при подстройке под заказ.
+  ///
+  /// Не даём создавать крошечные фрагменты из маленького материала: если
+  /// материала на все запросы не хватает, деление не увеличит число карточек,
+  /// а только добавит запросов. Значение — конфигурация приложения.
+  final int minSoftTargetMaterialTokens;
 
   /// Сколько image-частей допускается в одном запросе, если модель не сообщает
   /// лимит (существующая политика приложения, L-29).
@@ -612,12 +622,19 @@ class _PlanRun {
   late final int _cardsByOutputCap;
   late final int _limitTarget;
   late final int _contentAllowance;
-  late final int _softTarget;
+  int _softTarget = 1;
   late final int _maxImagesPerChunk;
   late final int _maxImageBytesPerImage;
   late final int _maxImageBytesPerRequest;
   late final int _payloadLimit;
   late final int _outputCap;
+  late final GenerationRequestLimits _limits;
+
+  /// SHA-256 байтов изображений, уже отправленных частями в этом плане.
+  ///
+  /// Одинаковые байты не отправляются дважды (L126): второе изображение
+  /// остаётся в каталоге, а не молча выкидывается сервисом (TASK 03, D11).
+  final Set<String> _placedPartDigests = <String>{};
 
   _ChunkDraft? _current;
   int _startedChunks = 0;
@@ -641,6 +658,7 @@ class _PlanRun {
     if (!capabilities.supportsVision && _attachments.isNotEmpty) {
       return _invalid(PlanInvalidReason.imagesWithoutVision);
     }
+    _tuneSoftTarget();
     try {
       _pack();
       return _finalize();
@@ -660,6 +678,19 @@ class _PlanRun {
     _cardsByOutputCap = budgetCardsPerRequestCap(capabilities, budgetConfig);
     final int requested = requestedCards ?? _cardsByOutputCap;
     _limitTarget = math.max(1, math.min(requested, _cardsByOutputCap));
+    // Лимиты запроса нужны и для невалидного плана (диагностика допущений),
+    // поэтому резолвятся до проверки бюджета.
+    _limits = resolveGenerationRequestLimits(
+      capabilities,
+      assumedMaxImagesPerRequest: config.assumedMaxImagesPerChunk,
+      assumedMaxImageBytesPerImage: config.assumedMaxImageBytesPerImage,
+      assumedMaxImageBytesPerChunk: config.assumedMaxImageBytesPerChunk,
+      assumedMaxRequestBytes: config.assumedMaxRequestBytes,
+    );
+    _maxImagesPerChunk = _limits.maxImagesPerRequest;
+    _maxImageBytesPerImage = _limits.maxImageBytesPerImage;
+    _maxImageBytesPerRequest = _limits.maxImageBytesPerRequest;
+    _payloadLimit = _limits.maxRequestBytes;
 
     final GenerationBudget base = GenerationBudget.compute(
       capabilities: capabilities,
@@ -679,21 +710,50 @@ class _PlanRun {
         availableTokens: _contentAllowance,
       );
     }
-    _maxImagesPerChunk =
-        capabilities.maxImagesPerRequest ?? config.assumedMaxImagesPerChunk;
-    _maxImageBytesPerImage =
-        capabilities.maxImageBytesPerImage ??
-        config.assumedMaxImageBytesPerImage;
-    _maxImageBytesPerRequest =
-        capabilities.maxImageBytesPerRequest ??
-        config.assumedMaxImageBytesPerChunk;
-    _payloadLimit =
-        capabilities.maxRequestBytes ?? config.assumedMaxRequestBytes;
     final int soft = math.max(
       1,
       _limitTarget * config.softTargetMaterialTokensPerCard,
     );
     _softTarget = math.min(_contentAllowance, soft);
+  }
+
+  /// Уточняет мягкую цель заполнения по заказу карточек (TASK 03, D20).
+  ///
+  /// `_limitTarget × softTargetMaterialTokensPerCard` — цель «не платить за
+  /// 1M контекста ради нескольких карточек». Но при большом заказе и малом
+  /// `outputCap` она упаковывает материал в слишком мало фрагментов: план
+  /// выдаёт `cap × N` карточек, хотя материала хватает на весь заказ, и
+  /// пользователь видит «достижимо меньше запрошенного» без реальной причины.
+  ///
+  /// Нужное число фрагментов: `ceil(requested / cap)` (если заказ ≤ cap —
+  /// одного фрагмента достаточно, D.5 сам укрупнит лишние). Ограничиваем
+  /// мягкую цель сверху текущей (не раздуваем запросы без нужды) и снизу —
+  /// одним токеном, чтобы прогресс упаковки был гарантирован.
+  void _tuneSoftTarget() {
+    final int? requested = requestedCards;
+    if (requested == null || requested <= 0) return;
+    final int cap = math.max(1, _cardsByOutputCap);
+    final int targetChunks = requested <= cap
+        ? 1
+        : ((requested - 1) ~/ cap) + 1;
+    var totalTextTokens = 0;
+    for (final _DocumentPlanData data in _documents) {
+      for (final SectionUnit section in data.document.sections) {
+        totalTextTokens += section.tokens;
+      }
+    }
+    if (totalTextTokens <= 0 || targetChunks <= 1) return;
+    // Берём 80 % среднего: упаковка идёт по границам разделов и может
+    // перешагнуть мягкую цель на один раздел. Без запаса план иногда получает
+    // на один фрагмент меньше и занижает achievableCards.
+    final int average = (totalTextTokens / targetChunks).ceil();
+    final int perChunk = math.max(
+      config.minSoftTargetMaterialTokens,
+      (average * 4) ~/ 5,
+    );
+    if (perChunk < _softTarget) {
+      _softTarget = perChunk;
+    }
   }
 
   void _collectInventory(ContentInventory inventory) {
@@ -962,7 +1022,9 @@ class _PlanRun {
     _TextFragment fragment,
     List<_ImageEntry> images,
   ) {
+    if (!capabilities.supportsVision) return const <_ImageEntry>[];
     final List<_ImageEntry> selected = <_ImageEntry>[];
+    final Set<String> selectedDigests = <String>{};
     for (final _ImageEntry image in images) {
       if (current.partIds.contains(image.id)) continue;
       if (current.parts.any((_ImageEntry part) => part.id == image.id)) {
@@ -970,6 +1032,13 @@ class _PlanRun {
       }
       if (selected.any((_ImageEntry part) => part.id == image.id)) continue;
       if (image.image.image.bytes.length > _maxImageBytesPerImage) continue;
+      final String digest = documentImageDigest(image.image.image.bytes);
+      // Одинаковые байты не отправляем дважды: второе изображение остаётся в
+      // каталоге и разрешается по image_id (TASK 03, D11/L126).
+      if (_placedPartDigests.contains(digest) ||
+          selectedDigests.contains(digest)) {
+        continue;
+      }
       final _Candidate attempt = _candidateForText(
         current,
         data,
@@ -977,7 +1046,10 @@ class _PlanRun {
         fragment,
         newParts: <_ImageEntry>[...selected, image],
       );
-      if (_evaluate(attempt) != null) selected.add(image);
+      if (_evaluate(attempt) != null) {
+        selected.add(image);
+        selectedDigests.add(digest);
+      }
     }
     return selected;
   }
@@ -1233,10 +1305,16 @@ class _PlanRun {
 
   void _applyParts(_ChunkDraft draft, _Candidate candidate) {
     for (final _ImageEntry part in candidate.parts) {
-      if (draft.partIds.add(part.id)) {
-        draft.parts.add(part);
-        _placedPartIds.add(part.id);
+      if (!draft.partIds.add(part.id)) continue;
+      final String digest = documentImageDigest(part.image.image.bytes);
+      if (!_placedPartDigests.add(digest)) {
+        // Байты уже отправлены другой единицей: оставляем это изображение
+        // каталогу, а не дублируем image-часть.
+        draft.partIds.remove(part.id);
+        continue;
       }
+      draft.parts.add(part);
+      _placedPartIds.add(part.id);
     }
   }
 
@@ -1286,6 +1364,10 @@ class _PlanRun {
         if (_current == null) _startChunk();
         final _ChunkDraft current = _current!;
         final bool canBePart =
+            capabilities.supportsVision &&
+            !_placedPartDigests.contains(
+              documentImageDigest(entry.image.image.bytes),
+            ) &&
             entry.image.image.bytes.length <= _maxImageBytesPerImage &&
             entry.image.image.bytes.length <= _maxImageBytesPerRequest;
         if (canBePart) {
@@ -1359,8 +1441,13 @@ class _PlanRun {
       draft.extraCatalog.add(entry);
     }
     if (asPart && draft.partIds.add(entry.id)) {
-      draft.parts.add(entry);
-      _placedPartIds.add(entry.id);
+      final String digest = documentImageDigest(entry.image.image.bytes);
+      if (_placedPartDigests.add(digest)) {
+        draft.parts.add(entry);
+        _placedPartIds.add(entry.id);
+      } else {
+        draft.partIds.remove(entry.id);
+      }
     }
   }
 
@@ -1584,10 +1671,16 @@ class _PlanRun {
     ];
     _ensureCoverage(chunks);
     final List<String> unknown = _unknownFields();
+    final bool hasInventoryImages =
+        _allImageEntries.isNotEmpty || _attachments.isNotEmpty;
     final List<PlanWarningCode> warnings = <PlanWarningCode>[
       if (unknown.isNotEmpty) PlanWarningCode.unknownCapabilities,
       if (chunks.any((PlannedChunk chunk) => chunk.catalogOnly.isNotEmpty))
         PlanWarningCode.catalogOnlyImages,
+      if (hasInventoryImages && !capabilities.supportsVision)
+        PlanWarningCode.imagesWithoutVision,
+      if (hasInventoryImages && _limits.hasAssumption)
+        PlanWarningCode.assumedImageLimits,
       if (requestedCards != null &&
           chunks.isNotEmpty &&
           _plannedCards(limits) > requestedCards!)
@@ -2032,6 +2125,76 @@ class _PlanRun {
     return limits;
   }
 
+  /// Состояние каждого изображения после упаковки (TASK 03, раздел 6).
+  ///
+  /// Различает «передано модели» и «только в каталоге»: пользователь и
+  /// диагностика не должны считать изображение обработанным только потому, что
+  /// оно осталось в каталоге. Для моделей без Vision части не отправляются —
+  /// статус `unsupportedModel`.
+  List<PlannedImage> _imageStatuses(List<PlannedChunk> chunks) {
+    final Set<String> sentIds = <String>{
+      for (final PlannedChunk chunk in chunks) ...chunk.imagePartIds,
+    };
+    final Set<String> catalogIds = <String>{
+      for (final PlannedChunk chunk in chunks) ...chunk.catalogOnlyIds,
+    };
+    final Map<String, OmittedUnit> omitted = <String, OmittedUnit>{
+      for (final OmittedUnit unit in _omitted) unit.unitId: unit,
+    };
+    final List<PlannedImage> statuses = <PlannedImage>[];
+    for (final _ImageEntry entry in _allImageEntries.values) {
+      final ImageParticipationStatus status;
+      if (!capabilities.supportsVision && sentIds.contains(entry.id)) {
+        // Части не отправлялись: планировщик не должен был их помечать, но
+        // защищаемся от рассогласования.
+        status = ImageParticipationStatus.unsupportedModel;
+      } else if (sentIds.contains(entry.id)) {
+        status = ImageParticipationStatus.sentToModel;
+      } else if (!capabilities.supportsVision) {
+        status = ImageParticipationStatus.unsupportedModel;
+      } else if (catalogIds.contains(entry.id)) {
+        status = ImageParticipationStatus.catalogOnly;
+      } else if (omitted.containsKey(entry.id)) {
+        status = omitted[entry.id]!.reason == OmittedReason.payload
+            ? ImageParticipationStatus.omittedPayload
+            : ImageParticipationStatus.omittedBudget;
+      } else {
+        status = ImageParticipationStatus.catalogOnly;
+      }
+      statuses.add(
+        PlannedImage(
+          id: entry.id,
+          fileName: entry.image.image.fileName,
+          status: status,
+          page: entry.image.page,
+          tokens: entry.image.tokens,
+        ),
+      );
+    }
+    for (final _PlannedAttachment attachment in _attachments) {
+      statuses.add(
+        PlannedImage(
+          id: _attachmentPageId(
+            GenerationAttachment(
+              fileName: attachment.unit.fileName,
+              mediaType: attachment.unit.mediaType,
+              bytes: attachment.page.bytes,
+              pageNumber: attachment.page.pageNumber,
+              groupKey: attachment.unit.groupKey,
+            ),
+          ),
+          fileName: attachment.unit.fileName,
+          status: capabilities.supportsVision
+              ? ImageParticipationStatus.sentToModel
+              : ImageParticipationStatus.unsupportedModel,
+          page: attachment.page.pageNumber,
+          tokens: attachment.tokens,
+        ),
+      );
+    }
+    return statuses;
+  }
+
   /// Страховочная проверка: ни одно изображение/страница не потеряны.
   void _ensureCoverage(List<PlannedChunk> chunks) {
     final Set<String> coveredImages = <String>{
@@ -2076,11 +2239,10 @@ class _PlanRun {
       if (!fields.contains(value)) fields.add(value);
     }
 
-    if (capabilities.maxRequestBytes == null) add('max_request_bytes');
-    if (capabilities.maxImagesPerRequest == null) add('max_images_per_request');
-    if (capabilities.maxImageBytesPerImage == null ||
-        capabilities.maxImageBytesPerRequest == null) {
-      add('max_image_bytes');
+    // Единый источник лимитов запроса (TASK 03): те же допущения, что видит
+    // исполнитель, попадают в план и диагностику.
+    for (final String field in _limits.assumptionFields) {
+      add(field);
     }
     if ((_allImageEntries.isNotEmpty || _attachments.isNotEmpty) &&
         _imageEstimateAssumed) {
@@ -2110,6 +2272,8 @@ class _PlanRun {
       ),
       budget: _planBudget(const <_PlannedChunkData>[], const <int>[]),
       chunks: const <PlannedChunk>[],
+      images: _imageStatuses(const <PlannedChunk>[]),
+      capabilitySources: capabilities.sources,
       requestedCards: requestedCards ?? 0,
       retryAllowanceRequests: config.retryAllowanceRequests,
     );
@@ -2147,6 +2311,8 @@ class _PlanRun {
       budget: _planBudget(const <_PlannedChunkData>[], const <int>[]),
       chunks: const <PlannedChunk>[],
       omitted: _omitted,
+      images: _imageStatuses(const <PlannedChunk>[]),
+      capabilitySources: capabilities.sources,
       requestedCards: requestedCards ?? 0,
       retryAllowanceRequests: config.retryAllowanceRequests,
       unknownFields: unknown,
@@ -2166,6 +2332,8 @@ class _PlanRun {
       budget: _planBudget(planned, limits),
       chunks: chunks,
       omitted: _omitted,
+      images: _imageStatuses(chunks),
+      capabilitySources: capabilities.sources,
       requestedCards: requestedCards ?? 0,
       retryAllowanceRequests: config.retryAllowanceRequests,
       unknownFields: unknownFields,

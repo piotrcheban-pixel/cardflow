@@ -19,6 +19,8 @@ class GenerationRequest {
     this.wishes,
     this.images = const <GenerationAttachment>[],
     this.documentImages = const <DocumentImage>[],
+    this.documentImageParts,
+    this.continuation,
     this.maxOutputTokens,
   });
 
@@ -40,6 +42,21 @@ class GenerationRequest {
 
   /// Каталог изображений из документов с id (`img1…`) для `<images>` (fix-gen).
   final List<DocumentImage> documentImages;
+
+  /// Изображения, которые план отправил image-частями (TASK 03).
+  ///
+  /// Контракт: это **префикс** [documentImages] в том же порядке. Планировщик
+  /// строит `documentImages` как `imageParts + catalogOnly`, поэтому первые
+  /// `documentImageParts.length` записей — части. `null` — легаси-режим: сервис
+  /// сам выбирает части из каталога (`selectVisionDocumentImages`), как до
+  /// TASK 03. Пустой список — «частей нет, только каталог».
+  final List<DocumentImage>? documentImageParts;
+
+  /// Компактное состояние уже созданных карточек (prompt-only, TASK 03).
+  ///
+  /// Сервис добавляет его в `<wishes>` после исходных пожеланий пользователя;
+  /// исходный текст не переписывается. `null` — передавать нечего.
+  final String? continuation;
 
   /// Максимум токенов ответа для этого запроса (из плана, D.2).
   ///

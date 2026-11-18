@@ -26,6 +26,7 @@ import 'package:cardflow/domain/generation/content_token_estimator.dart';
 import 'package:cardflow/domain/generation/generation_budget.dart';
 import 'package:cardflow/domain/generation/generation_chunk_planner.dart'
     show GenerationChunkPlannerConfig, GenerationOverheadTokens;
+import 'package:cardflow/domain/generation/generation_continuity.dart';
 import 'package:cardflow/domain/generation/generation_plan.dart';
 import 'package:cardflow/domain/generation/generation_pricing.dart';
 import 'package:cardflow/domain/generation/model_capabilities.dart';
@@ -36,6 +37,14 @@ import 'package:cardflow/domain/generation/prompt_only_request.dart';
 /// Оценка консервативная: точные байты обёртки зависят от протокола и длины
 /// `<limit>`; значение — конфигурация приложения, а не лимит провайдера.
 const int kPromptOnlyBodyOverheadBytes = 512;
+
+/// Консервативная оценка байт компактного состояния продолжения (TASK 03).
+///
+/// Блок ограничен [kPromptOnlyContinuationMaxTokens] токенами; кириллица в
+/// UTF-8 — до 2 байт на символ при консервативных 2,5 симв./токен, поэтому
+/// 2 байта на токен — оценка сверху, а не точное значение.
+const int kPromptOnlyContinuationReserveBytes =
+    kPromptOnlyContinuationMaxTokens * 2;
 
 /// Планировщик prompt-only генерации.
 class PromptOnlyPlanner {
@@ -85,6 +94,14 @@ class PromptOnlyPlanner {
       );
     }
 
+    // Компактное состояние продолжения (уже созданные карточки) добавляется в
+    // каждый следующий запрос. Его бюджет резервируется заранее — иначе план
+    // может выйти за окно модели (TASK 03, D13). Резерв вычитается из бюджета
+    // материалов: при неизвестном окне `inputBudget` — бюджет материалов
+    // (C.5), а обвязка уже учтена консервативно.
+    final int continuationReserve = chunkCount > 1
+        ? kPromptOnlyContinuationMaxTokens
+        : 0;
     final GenerationBudget budget = GenerationBudget.compute(
       capabilities: capabilities,
       limit: maxLimit,
@@ -98,7 +115,10 @@ class PromptOnlyPlanner {
     // Тело запроса проверяется до бюджета: при крошечном maxRequestBytes
     // причина — размер запроса, а не «неизвестное окно».
     final int? maxRequestBytes = capabilities.maxRequestBytes;
-    final int bodyBytes = promptBytes + kPromptOnlyBodyOverheadBytes;
+    final int bodyBytes =
+        promptBytes +
+        kPromptOnlyBodyOverheadBytes +
+        (continuationReserve > 0 ? kPromptOnlyContinuationReserveBytes : 0);
     if (maxRequestBytes != null && bodyBytes > maxRequestBytes) {
       return _invalid(
         prompt: prompt,
@@ -111,7 +131,8 @@ class PromptOnlyPlanner {
         availableTokens: maxRequestBytes,
       );
     }
-    if (!budget.isWorkable || promptTokens > budget.inputBudget) {
+    if (!budget.isWorkable ||
+        promptTokens + continuationReserve > budget.inputBudget) {
       return _invalid(
         prompt: prompt,
         requestedCards: requested,
@@ -119,7 +140,7 @@ class PromptOnlyPlanner {
         overhead: overhead,
         budgetConfig: budgetConfig,
         reason: PlanInvalidReason.contextWindowTooSmall,
-        neededTokens: promptTokens + overhead.fixedTokens,
+        neededTokens: promptTokens + continuationReserve + overhead.fixedTokens,
         availableTokens: budget.inputBudget + overhead.fixedTokens,
       );
     }
@@ -136,7 +157,7 @@ class PromptOnlyPlanner {
           limit: limits[index],
         ),
     ];
-    final List<String> unknown = capabilities.unknownFields;
+    final List<String> unknown = _unknownFields(capabilities);
     final List<PlanWarningCode> warnings = <PlanWarningCode>[
       if (unknown.isNotEmpty) PlanWarningCode.unknownCapabilities,
     ];
@@ -151,15 +172,29 @@ class PromptOnlyPlanner {
         budgetConfig: budgetConfig,
         promptTokens: promptTokens,
         chunks: chunks,
+        continuationReserve: continuationReserve,
+        unknownFields: unknown,
       ),
       budget: budget.trace,
       chunks: chunks,
+      capabilitySources: capabilities.sources,
       requestedCards: requested ?? 0,
       retryAllowanceRequests: config.retryAllowanceRequests,
       unknownFields: unknown,
       mode: GenerationMode.promptOnly,
       promptOnlyPrompt: prompt,
     );
+  }
+
+  /// Неизвестные поля, влияющие на prompt-only план (единый список с
+  /// материаловым планировщиком: `max_request_bytes` тоже допущение).
+  List<String> _unknownFields(ModelCapabilities capabilities) {
+    final List<String> fields = <String>[...capabilities.unknownFields];
+    if (capabilities.maxRequestBytes == null &&
+        !fields.contains('max_request_bytes')) {
+      fields.add('max_request_bytes');
+    }
+    return List<String>.unmodifiable(fields);
   }
 
   /// Делит [total] карточек по фрагментам без нулей и выше [cap] на запрос.
@@ -179,6 +214,8 @@ class PromptOnlyPlanner {
     required GenerationBudgetConfig budgetConfig,
     required int promptTokens,
     required List<PlannedChunk> chunks,
+    required int continuationReserve,
+    required List<String> unknownFields,
   }) {
     final int outputCap = budgetOutputCapTokens(capabilities, budgetConfig);
     final int requests = chunks.length;
@@ -192,7 +229,10 @@ class PromptOnlyPlanner {
     }
     final int inputText = promptTokens * requests;
     final int fixedPrompt = overhead.systemPromptTokens * requests;
-    final int wrapper = overhead.wrapperTokens * requests;
+    // Сводка продолжения добавляется со второго запроса; она ограничена
+    // `continuationReserve` токенами, поэтому оценка — верхняя граница.
+    final int continuation = continuationReserve * math.max(0, requests - 1);
+    final int wrapper = overhead.wrapperTokens * requests + continuation;
     final int schema = overhead.schemaTokens * requests;
     final int inputTotal = inputText + fixedPrompt + wrapper + schema;
     final int total = inputTotal + reservedOutput;
@@ -219,8 +259,9 @@ class PromptOnlyPlanner {
       outputCost: cost?.output,
       totalCost: cost?.total,
       currency: cost?.currency,
-      unknownFields: capabilities.unknownFields,
-      confidence: capabilities.unknownFields.isEmpty ? 1 : 0.5,
+      unknownFields: unknownFields,
+      confidence: unknownFields.isEmpty ? 1 : 0.5,
+      continuationReserveTokens: continuation,
     );
   }
 
@@ -245,7 +286,7 @@ class PromptOnlyPlanner {
       imageTokens: 0,
       config: budgetConfig,
     );
-    final List<String> unknown = capabilities.unknownFields;
+    final List<String> unknown = _unknownFields(capabilities);
     return GenerationPlan(
       validity: PlanValidity.invalid(
         reason,
@@ -270,6 +311,7 @@ class PromptOnlyPlanner {
         unknownFields: unknown,
       ),
       budget: budget.trace,
+      capabilitySources: capabilities.sources,
       requestedCards: requestedCards ?? 0,
       retryAllowanceRequests: config.retryAllowanceRequests,
       unknownFields: unknown,
