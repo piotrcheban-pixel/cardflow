@@ -95,7 +95,7 @@ debug-диагностика включается только вне release и
   запросов и HTTP-попыток — в `LiveRunRecord` (JSON Lines).
 - Test F офлайн: локальный endpoint `local_provider_server.dart` +
   `test/integration/generation_recovery_http_test.dart` (413, 429+`Retry-After`,
-  таймаут, context overflow, битый JSON, `truncated`, 5xx, 401) — 10 тестов
+  таймаут, context overflow, битый JSON, `truncated`, 5xx, 401) — 11 тестов
   на реальном сокете loopback, без оплаты.
 - 28 офлайновых тестов инфраструктуры: `test/unit/live/live_infrastructure_test.dart`.
 
@@ -172,7 +172,7 @@ L135 (`usage` упавших ответов).
 | `fvm flutter build windows --release --no-pub` | **`cardflow.exe`** (63,0 с) |
 
 Новые тесты: `test/unit/live/live_infrastructure_test.dart` (28),
-`test/integration/generation_recovery_http_test.dart` (10),
+`test/integration/generation_recovery_http_test.dart` (11),
 `test/unit/api/generation/generation_diagnostics_test.dart` (7),
 `test/live/adaptive_generation_live_test.dart` (5, пропускаются),
 `test/unit/api/http/redaction_test.dart` (+4). Обычный прогон полностью

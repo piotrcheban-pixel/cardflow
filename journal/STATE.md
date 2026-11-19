@@ -62,7 +62,7 @@ TASK 02C (UI возможностей/цен, `ProviderCapabilitiesDialog`) и �
 - **Управляемый набор:** `test/live/adaptive_generation_live_test.dart` —
   Test A–E, все пропускаются без `CARDFLOW_LIVE_TESTS=1` + бюджета + ключа.
 - **Test F без оплаты:** `local_provider_server.dart` +
-  `test/integration/generation_recovery_http_test.dart` (10 тестов: 413, 429 +
+  `test/integration/generation_recovery_http_test.dart` (11 тестов: 413, 429 +
   `Retry-After`, таймаут, context overflow, битый JSON, `truncated`, 5xx, 401).
 - **Легаси live-тесты** (DeepSeek, метрики картинок, Wikimedia) переведены на
   общий opt-in; обычный прогон стал полностью офлайновым (три Wikimedia-теста

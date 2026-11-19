@@ -106,7 +106,7 @@ fvm flutter test test/live/adaptive_generation_live_test.dart --tags live --no-p
 
 1. **Локальный HTTP-endpoint** (`test/live/support/local_provider_server.dart`)
    — реализован и покрыт офлайновым тестом
-   `test/integration/generation_recovery_http_test.dart` (10 тестов, реальный
+   `test/integration/generation_recovery_http_test.dart` (11 тестов, реальный
    сокет loopback): 413, 429 + `Retry-After` (120 с и 0 с), таймаут приёма,
    400 с текстом переполнения контекста, битый JSON, обрезанный ответ
    (`finish_reason=length`), 5xx с повторами, 401, обрыв соединения.

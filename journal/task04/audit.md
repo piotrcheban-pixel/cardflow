@@ -210,7 +210,7 @@ Wikimedia), тег `live`, skip при отсутствии ключа. Не б�
   по умолчанию).
 - `test/unit/live/live_infrastructure_test.dart` — 28 офлайновых тестов
   инфраструктуры (умолчания, бюджет, стоимость, отчёт, качество, тарифы).
-- `test/integration/generation_recovery_http_test.dart` — 10 тестов на реальном
+- `test/integration/generation_recovery_http_test.dart` — 11 тестов на реальном
   сокете loopback (Test F).
 
 **Одно место правды для адаптеров:** список вынесен из `app_providers.dart` в
