@@ -3007,5 +3007,30 @@
   "deckMoreActions": "Действия",
   "@deckMoreActions": {
     "description": "Кнопка меню действий на карточке колоды."
+  },
+  "reviewCardCounter": "Карточка {current} из {total}",
+  "@reviewCardCounter": {
+    "description": "Счётчик карточек в полосе прогресса сессии.",
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "reviewRatedCount": "Оценено: {count}",
+  "@reviewRatedCount": {
+    "description": "Сколько карточек оценено в текущей сессии.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "reviewRevealAction": "Показать ответ",
+  "@reviewRevealAction": {
+    "description": "Кнопка раскрытия ответа на карточке сессии."
   }
 }

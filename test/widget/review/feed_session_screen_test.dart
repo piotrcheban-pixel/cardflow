@@ -476,7 +476,8 @@ void main() {
       );
     }
 
-    expect(radius().topLeft.x, 28);
+    // ADR-038: карточка ленты — r16 дизайн-системы, при свайпе скругляется.
+    expect(radius().topLeft.x, 16);
     final TestGesture gesture = await tester.startGesture(
       tester.getCenter(find.byKey(firstCardKey)),
     );
@@ -484,13 +485,13 @@ void main() {
     await tester.pump();
     await gesture.moveBy(const Offset(100, 0));
     await tester.pump();
-    expect(radius().topLeft.x, lessThan(28));
-    expect(radius().topLeft.x, greaterThanOrEqualTo(16));
+    expect(radius().topLeft.x, lessThan(16));
+    expect(radius().topLeft.x, greaterThanOrEqualTo(10));
 
     await gesture.up();
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
-    expect(radius().topLeft.x, closeTo(28, 1));
+    expect(radius().topLeft.x, closeTo(16, 1));
   });
 
   testWidgets('клавиши: Space раскрывает, 3 — «Знаю»', (
@@ -568,7 +569,7 @@ void main() {
     expect(find.textContaining('boom'), findsNothing);
 
     cards.cardsByDeckError = null;
-    await tester.tap(find.widgetWithText(TextButton, l10n.retry));
+    await tester.tap(find.widgetWithText(OutlinedButton, l10n.retry));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
     expect(find.text('Первый вопрос'), findsOneWidget);

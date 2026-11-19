@@ -1,14 +1,22 @@
 import 'package:material_ui/material_ui.dart';
 
 import 'package:cardflow/l10n/app_localizations.dart';
+import 'package:cardflow/ui/components/app_dialogs.dart';
+import 'package:cardflow/ui/components/app_surfaces.dart';
+import 'package:cardflow/ui/theme/app_tokens.dart';
+import 'package:cardflow/ui/theme/app_typography.dart';
 
-/// Общий каркас сессии (SPEC A6.4) для классики и ленты.
+/// Общий каркас сессии (SPEC A6.4) для всех режимов обучения.
 ///
-/// Здесь только служебные элементы, не зависящие от режима: AppBar с undo,
-/// «Почему?» и выходом, диалог выхода, bottom sheet цитаты исходника и
+/// Здесь только служебные элементы, не зависящие от режима: верхняя панель
+/// с undo, «Почему?» и выходом, диалог выхода, bottom sheet цитаты исходника и
 /// состояния «пусто/завершено/ошибка загрузки». Тексты — только ARB.
+///
+/// Оформление — дизайн-система ADR-038: панель 56 px на `surfaceContainerLowest`
+/// с нижней границей, рейтинги и карточка — на общих токенах.
 
-/// Верхняя панель сессии: undo, «Почему?», выход (SPEC A6.4).
+/// Верхняя панель сессии: выход, название колоды, метод планировщика, undo и
+/// «Почему?» (SPEC A6.4).
 class ReviewSessionAppBar extends StatelessWidget
     implements PreferredSizeWidget {
   /// Создаёт панель.
@@ -19,6 +27,8 @@ class ReviewSessionAppBar extends StatelessWidget
     required this.onClose,
     this.onWhyPressed,
     this.title,
+    this.progress,
+    this.progressSemanticsLabel,
     super.key,
   });
 
@@ -40,44 +50,116 @@ class ReviewSessionAppBar extends StatelessWidget
 
   /// Заголовок панели; `null` — «Повторение» (классика/лента).
   ///
-  /// Тренировка передаёт свой заголовок (`practiceTitle`, ADR-025).
+  /// Тренировка и учебные режимы передают свой заголовок.
   final String? title;
 
+  /// Прогресс 0..1 для строки под панелью; `null` — прогресса нет.
+  final double? progress;
+
+  /// Семантическая подпись прогресса.
+  final String? progressSemanticsLabel;
+
   @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+  Size get preferredSize => Size.fromHeight(
+    AppSizes.headerHeight + (progress == null ? 0 : AppSpacing.md),
+  );
 
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
     final String? excerpt = whyExcerpt;
     final VoidCallback? onWhy = onWhyPressed;
+    final double? value = progress;
+    final Widget bar = SizedBox(
+      height: AppSizes.headerHeight,
+      child: Row(
+        children: <Widget>[
+          const SizedBox(width: AppSpacing.xxs),
+          IconButton(
+            key: const ValueKey<String>('review-close'),
+            tooltip: l10n.reviewCloseTooltip,
+            icon: const Icon(Icons.close, size: AppSizes.navIcon),
+            onPressed: onClose,
+          ),
+          Expanded(
+            child: Row(
+              children: <Widget>[
+                Flexible(
+                  child: Text(
+                    title ?? l10n.reviewTitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.titleMedium?.copyWith(fontSize: 15),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.xs),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.xs,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: scheme.surfaceContainer,
+                    borderRadius: BorderRadius.circular(AppRadii.xs),
+                    border: Border.all(color: scheme.outlineVariant),
+                  ),
+                  child: Text(
+                    'FSRS',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      fontSize: 10,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            key: const ValueKey<String>('review-undo'),
+            tooltip: l10n.reviewUndoTooltip,
+            icon: const Icon(Icons.undo, size: AppSizes.navIcon),
+            onPressed: undoEnabled ? onUndo : null,
+          ),
+          IconButton(
+            key: const ValueKey<String>('review-why'),
+            tooltip: l10n.reviewWhyTooltip,
+            icon: const Icon(Icons.info_outline, size: AppSizes.navIcon),
+            onPressed:
+                onWhy ??
+                (excerpt == null
+                    ? null
+                    : () => showReviewSourceExcerpt(context, excerpt)),
+          ),
+          const SizedBox(width: AppSpacing.xxs),
+        ],
+      ),
+    );
+
     return AppBar(
       automaticallyImplyLeading: false,
-      title: Text(title ?? l10n.reviewTitle),
-      actions: <Widget>[
-        IconButton(
-          key: const ValueKey<String>('review-undo'),
-          tooltip: l10n.reviewUndoTooltip,
-          icon: const Icon(Icons.undo),
-          onPressed: undoEnabled ? onUndo : null,
-        ),
-        IconButton(
-          key: const ValueKey<String>('review-why'),
-          tooltip: l10n.reviewWhyTooltip,
-          icon: const Icon(Icons.info_outline),
-          onPressed:
-              onWhy ??
-              (excerpt == null
-                  ? null
-                  : () => showReviewSourceExcerpt(context, excerpt)),
-        ),
-        IconButton(
-          key: const ValueKey<String>('review-close'),
-          tooltip: l10n.reviewCloseTooltip,
-          icon: const Icon(Icons.close),
-          onPressed: onClose,
-        ),
-      ],
+      backgroundColor: scheme.surfaceContainerLowest,
+      surfaceTintColor: Colors.transparent,
+      titleSpacing: 0,
+      title: bar,
+      bottom: value == null
+          ? null
+          : PreferredSize(
+              preferredSize: const Size.fromHeight(AppSpacing.md),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.md,
+                  0,
+                  AppSpacing.md,
+                  AppSpacing.xs,
+                ),
+                child: AppProgressBar(
+                  value: value,
+                  semanticsLabel: progressSemanticsLabel,
+                ),
+              ),
+            ),
     );
   }
 }
@@ -112,24 +194,25 @@ Future<bool> confirmReviewExit(BuildContext context) async {
 /// Bottom sheet «Почему эта карточка?» с цитатой исходника (SPEC A6.4).
 Future<void> showReviewSourceExcerpt(BuildContext context, String excerpt) {
   final AppLocalizations l10n = AppLocalizations.of(context);
-  return showModalBottomSheet<void>(
+  return showAppSheet<void>(
     context: context,
-    showDragHandle: true,
-    builder: (BuildContext sheetContext) => SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Text(
-              l10n.reviewWhySheetTitle,
-              style: Theme.of(sheetContext).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 12),
-            SingleChildScrollView(child: Text(excerpt)),
-          ],
-        ),
+    builder: (BuildContext sheetContext) => Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        0,
+        AppSpacing.lg,
+        AppSpacing.lg,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          AppSheetHeader(
+            title: l10n.reviewWhySheetTitle,
+            icon: Icons.info_outline,
+          ),
+          SingleChildScrollView(child: Text(excerpt)),
+        ],
       ),
     ),
   );
@@ -172,57 +255,35 @@ class ReviewEmptyView extends StatelessWidget {
     final AppLocalizations l10n = AppLocalizations.of(context);
     final VoidCallback? practice = onPractice;
     final VoidCallback? proceed = onContinue;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Icon(
-              Icons.done_all,
-              size: 56,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
+    return _SessionStateLayout(
+      child: AppEmptyState(
+        icon: Icons.done_all,
+        title: title ?? l10n.reviewEmptyTitle,
+        message: message ?? l10n.reviewEmptyMessage,
+        actions: <Widget>[
+          if (proceed != null) ...<Widget>[
+            FilledButton(
+              key: const ValueKey<String>('review-empty-continue'),
+              onPressed: proceed,
+              child: Text(l10n.reviewDailyLimitContinueAction),
             ),
-            const SizedBox(height: 12),
-            Text(
-              title ?? l10n.reviewEmptyTitle,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              message ?? l10n.reviewEmptyMessage,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            if (proceed != null) ...<Widget>[
-              FilledButton(
-                key: const ValueKey<String>('review-empty-continue'),
-                onPressed: proceed,
-                child: Text(l10n.reviewDailyLimitContinueAction),
-              ),
-              const SizedBox(height: 8),
-              if (practice != null) ...<Widget>[
-                OutlinedButton(
-                  key: const ValueKey<String>('review-empty-practice'),
-                  onPressed: practice,
-                  child: Text(l10n.practiceStartAction),
-                ),
-                const SizedBox(height: 8),
-              ],
-              TextButton(onPressed: onBack, child: Text(l10n.reviewBack)),
-            ] else if (practice != null) ...<Widget>[
-              FilledButton(
+            if (practice != null)
+              OutlinedButton(
                 key: const ValueKey<String>('review-empty-practice'),
                 onPressed: practice,
                 child: Text(l10n.practiceStartAction),
               ),
-              const SizedBox(height: 8),
-              OutlinedButton(onPressed: onBack, child: Text(l10n.reviewBack)),
-            ] else
-              FilledButton(onPressed: onBack, child: Text(l10n.reviewBack)),
-          ],
-        ),
+            TextButton(onPressed: onBack, child: Text(l10n.reviewBack)),
+          ] else if (practice != null) ...<Widget>[
+            FilledButton(
+              key: const ValueKey<String>('review-empty-practice'),
+              onPressed: practice,
+              child: Text(l10n.practiceStartAction),
+            ),
+            OutlinedButton(onPressed: onBack, child: Text(l10n.reviewBack)),
+          ] else
+            FilledButton(onPressed: onBack, child: Text(l10n.reviewBack)),
+        ],
       ),
     );
   }
@@ -246,31 +307,14 @@ class ReviewCompletedView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Icon(
-              Icons.celebration_outlined,
-              size: 56,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              l10n.reviewCompletedTitle,
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              l10n.reviewCompletedMessage(ratedCount),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            FilledButton(onPressed: onDone, child: Text(l10n.reviewDone)),
-          ],
-        ),
+    return _SessionStateLayout(
+      child: AppEmptyState(
+        icon: Icons.celebration_outlined,
+        title: l10n.reviewCompletedTitle,
+        message: l10n.reviewCompletedMessage(ratedCount),
+        actions: <Widget>[
+          FilledButton(onPressed: onDone, child: Text(l10n.reviewDone)),
+        ],
       ),
     );
   }
@@ -287,23 +331,11 @@ class ReviewLoadErrorView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Icon(
-              Icons.error_outline,
-              size: 48,
-              color: Theme.of(context).colorScheme.error,
-            ),
-            const SizedBox(height: 12),
-            Text(l10n.reviewLoadError, textAlign: TextAlign.center),
-            const SizedBox(height: 12),
-            TextButton(onPressed: onRetry, child: Text(l10n.retry)),
-          ],
-        ),
+    return _SessionStateLayout(
+      child: AppErrorState(
+        message: l10n.reviewLoadError,
+        retryLabel: l10n.retry,
+        onRetry: onRetry,
       ),
     );
   }
@@ -330,31 +362,14 @@ class ReviewTimeUpView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Icon(
-              Icons.timer_off_outlined,
-              size: 56,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              l10n.reviewTimeUpTitle,
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              l10n.reviewTimeUpMessage(ratedCount),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            FilledButton(onPressed: onDone, child: Text(l10n.reviewDone)),
-          ],
-        ),
+    return _SessionStateLayout(
+      child: AppEmptyState(
+        icon: Icons.timer_off_outlined,
+        title: l10n.reviewTimeUpTitle,
+        message: l10n.reviewTimeUpMessage(ratedCount),
+        actions: <Widget>[
+          FilledButton(onPressed: onDone, child: Text(l10n.reviewDone)),
+        ],
       ),
     );
   }
@@ -374,29 +389,81 @@ class ReviewPlanMissingView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
+    return _SessionStateLayout(
+      child: AppEmptyState(
+        icon: Icons.search_off,
+        title: l10n.reviewPlanMissingTitle,
+        message: l10n.reviewPlanMissingMessage,
+        actions: <Widget>[
+          FilledButton(onPressed: onBack, child: Text(l10n.reviewBack)),
+        ],
+      ),
+    );
+  }
+}
+
+/// Центрированный контент состояний сессии с шириной карточки.
+class _SessionStateLayout extends StatelessWidget {
+  const _SessionStateLayout({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Icon(
-              Icons.search_off,
-              size: 56,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              l10n.reviewPlanMissingTitle,
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            Text(l10n.reviewPlanMissingMessage, textAlign: TextAlign.center),
-            const SizedBox(height: 16),
-            FilledButton(onPressed: onBack, child: Text(l10n.reviewBack)),
-          ],
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            maxWidth: AppSizes.studyCardMaxWidth,
+          ),
+          child: child,
         ),
       ),
+    );
+  }
+}
+
+/// Строка прогресса над карточкой: подпись, полоса и хвостовая метрика.
+class SessionProgressStrip extends StatelessWidget {
+  /// Создаёт строку прогресса.
+  const SessionProgressStrip({
+    required this.label,
+    required this.value,
+    this.trailing,
+    super.key,
+  });
+
+  /// Подпись («Карточка 1 из 4», «Оценено 5»).
+  final String label;
+
+  /// Доля 0..1.
+  final double value;
+
+  /// Дополнительный текст справа.
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Row(
+          children: <Widget>[
+            Expanded(
+              child: Text(
+                label,
+                style: AppTypography.numeric(context, color: scheme.onSurface),
+              ),
+            ),
+            ?trailing,
+          ],
+        ),
+        const SizedBox(height: AppSpacing.xxs + 2),
+        AppProgressBar(value: value, semanticsLabel: label),
+      ],
     );
   }
 }

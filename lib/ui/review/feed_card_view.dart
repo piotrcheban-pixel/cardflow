@@ -180,7 +180,7 @@ class _FeedCardViewState extends State<FeedCardView>
             final double fraction = width <= 0
                 ? 0
                 : (dx.abs() / (width * feedLongSwipeFraction)).clamp(0.0, 1.0);
-            final double radius = committing ? 999 : 28 - 12 * fraction;
+            final double radius = committing ? 999 : 16 - 6 * fraction;
             final Rating? preview =
                 _commitRating ?? _directionRating(dx, width);
             final Color cardColor = _cardColor(
@@ -199,10 +199,13 @@ class _FeedCardViewState extends State<FeedCardView>
                     angle: width <= 0 ? 0 : (dx / width) * 0.04,
                     child: Material(
                       color: cardColor,
-                      elevation: 4,
+                      elevation: 0,
                       clipBehavior: Clip.antiAlias,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(radius),
+                        side: BorderSide(
+                          color: Theme.of(context).colorScheme.outlineVariant,
+                        ),
                       ),
                       child: GestureDetector(
                         behavior: HitTestBehavior.opaque,
@@ -254,15 +257,16 @@ class _FeedCardViewState extends State<FeedCardView>
   }
 
   Color _cardColor(ColorScheme scheme, Rating? rating, double fraction) {
-    final Color base = scheme.surfaceContainerHigh;
+    final Color base = scheme.surfaceContainerLowest;
     if (rating == null || fraction <= 0) return base;
+    // Тона свайпа — те же роли, что у кнопок оценок (ADR-038).
     final Color tint = switch (rating) {
       Rating.again => scheme.errorContainer,
-      Rating.hard => scheme.secondaryContainer,
-      Rating.good => scheme.primary,
-      Rating.easy => scheme.tertiaryContainer,
+      Rating.hard => scheme.surfaceContainer,
+      Rating.good => scheme.secondaryContainer,
+      Rating.easy => scheme.primaryFixed,
     };
-    return Color.alphaBlend(tint.withValues(alpha: 0.12 * fraction), base);
+    return Color.alphaBlend(tint.withValues(alpha: 0.18 * fraction), base);
   }
 }
 

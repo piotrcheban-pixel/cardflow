@@ -432,7 +432,10 @@ class AppIconBadge extends StatelessWidget {
   }
 }
 
-/// Полоса прогресса дизайн-системы: 6 px, скруглённая, с плавным изменением.
+/// Полоса прогресса дизайн-системы: 6 px, скруглённая, цвет из темы.
+///
+/// Внутри — стандартный `LinearProgressIndicator`: widget-тесты и скринридеры
+/// продолжают видеть знакомый тип, а форма/цвет задаются токенами.
 class AppProgressBar extends StatelessWidget {
   /// Создаёт полосу.
   const AppProgressBar({
@@ -462,35 +465,14 @@ class AppProgressBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
-    final Widget bar = ClipRRect(
+    return LinearProgressIndicator(
+      value: value.clamp(0, 1),
+      minHeight: height,
       borderRadius: BorderRadius.circular(height / 2),
-      child: SizedBox(
-        height: height,
-        child: Stack(
-          children: <Widget>[
-            Positioned.fill(
-              child: ColoredBox(color: trackColor ?? scheme.surfaceContainer),
-            ),
-            TweenAnimationBuilder<double>(
-              tween: Tween<double>(begin: 0, end: value.clamp(0, 1)),
-              duration: AppDurations.slow,
-              curve: Curves.easeOutCubic,
-              builder: (BuildContext context, double animated, Widget? child) =>
-                  FractionallySizedBox(
-                    widthFactor: animated,
-                    child: ColoredBox(
-                      color: color ?? scheme.primary,
-                      child: const SizedBox.expand(),
-                    ),
-                  ),
-            ),
-          ],
-        ),
-      ),
+      color: color ?? scheme.primary,
+      backgroundColor: trackColor ?? scheme.surfaceContainer,
+      semanticsLabel: semanticsLabel,
     );
-    return semanticsLabel == null
-        ? bar
-        : Semantics(label: semanticsLabel, child: bar);
   }
 }
 

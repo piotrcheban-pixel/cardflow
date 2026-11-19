@@ -19,6 +19,7 @@ import 'package:cardflow/ui/review/review_session_engine.dart'
 import 'package:cardflow/ui/review/review_toolbar.dart';
 import 'package:cardflow/ui/review/session_media.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
+import 'package:cardflow/ui/theme/app_tokens.dart';
 
 /// Экран режима «Тренировка» (ADR-025, итерация 7.11).
 ///
@@ -248,20 +249,30 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-          child: LinearProgressIndicator(
-            value: state.total == 0 ? 0 : state.ratedCount / state.total,
-            semanticsLabel: l10n.practiceRatedLabel(
-              state.ratedCount,
-              state.total,
+        Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 896),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.md,
+                AppSpacing.sm,
+                AppSpacing.md,
+                0,
+              ),
+              child: SessionProgressStrip(
+                label: l10n.practiceRatedLabel(state.ratedCount, state.total),
+                value: state.total == 0 ? 0 : state.ratedCount / state.total,
+              ),
             ),
-            minHeight: 6,
-            borderRadius: BorderRadius.circular(3),
           ),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 6, 20, 0),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.md,
+            AppSpacing.xxs + 2,
+            AppSpacing.md,
+            0,
+          ),
           child: Text(
             l10n.practiceSubtitle,
             key: const ValueKey<String>('practice-subtitle'),
@@ -273,22 +284,40 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
         ),
         Expanded(
           child: Center(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: KeyedSubtree(
-                key: const ValueKey<String>('practice-card'),
-                child: ReviewCardView(
-                  key: ValueKey<String>(state.current!.id),
-                  front: state.current!.front,
-                  back: state.current!.back,
-                  card: state.current!,
-                  mediaBytes: _media.bytes,
-                  mediaMetadata: _media.metadata,
-                  revealed: state.revealed,
-                  spring: settings.motion == MotionPreference.standard
-                      ? AppMotion.standardSpring()
-                      : null,
-                  onTap: _reveal,
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  maxWidth: AppSizes.studyCardMaxWidth,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    KeyedSubtree(
+                      key: const ValueKey<String>('practice-card'),
+                      child: ReviewCardView(
+                        key: ValueKey<String>(state.current!.id),
+                        front: state.current!.front,
+                        back: state.current!.back,
+                        card: state.current!,
+                        mediaBytes: _media.bytes,
+                        mediaMetadata: _media.metadata,
+                        revealed: state.revealed,
+                        spring: settings.motion == MotionPreference.standard
+                            ? AppMotion.standardSpring()
+                            : null,
+                        onTap: _reveal,
+                      ),
+                    ),
+                    if (!state.revealed) ...<Widget>[
+                      const SizedBox(height: AppSpacing.sm),
+                      FilledButton(
+                        key: const ValueKey<String>('practice-reveal'),
+                        onPressed: _reveal,
+                        child: Text(l10n.reviewRevealAction),
+                      ),
+                    ],
+                  ],
                 ),
               ),
             ),

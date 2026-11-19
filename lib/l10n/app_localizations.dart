@@ -3781,6 +3781,24 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Действия'**
   String get deckMoreActions;
+
+  /// Счётчик карточек в полосе прогресса сессии.
+  ///
+  /// In ru, this message translates to:
+  /// **'Карточка {current} из {total}'**
+  String reviewCardCounter(int current, int total);
+
+  /// Сколько карточек оценено в текущей сессии.
+  ///
+  /// In ru, this message translates to:
+  /// **'Оценено: {count}'**
+  String reviewRatedCount(int count);
+
+  /// Кнопка раскрытия ответа на карточке сессии.
+  ///
+  /// In ru, this message translates to:
+  /// **'Показать ответ'**
+  String get reviewRevealAction;
 }
 
 class _AppLocalizationsDelegate

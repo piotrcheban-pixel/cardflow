@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart' hide Card;
 
 import 'package:cardflow/domain/cards/card.dart';
+import 'package:cardflow/domain/decks/deck.dart';
 import 'package:cardflow/domain/review/daily_limits.dart';
 import 'package:cardflow/domain/review/review_queue.dart';
 import 'package:cardflow/domain/scheduling/rating.dart';
@@ -21,7 +22,10 @@ import 'package:cardflow/ui/review/review_session_engine.dart';
 import 'package:cardflow/ui/review/review_toolbar.dart';
 import 'package:cardflow/ui/router/app_router.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
+import 'package:cardflow/ui/state/decks_ui_providers.dart';
 import 'package:cardflow/ui/state/review_limits.dart';
+import 'package:cardflow/ui/theme/app_tokens.dart';
+import 'package:cardflow/ui/theme/app_typography.dart';
 
 /// Экран классической сессии повторения (SPEC A6.4, A7.2).
 ///
@@ -304,6 +308,9 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
     final String? excerpt = (rawExcerpt == null || rawExcerpt.trim().isEmpty)
         ? null
         : rawExcerpt;
+    final Deck? deck = widget.deckId == null
+        ? null
+        : ref.watch(deckProvider(widget.deckId!)).value;
     // Единая точка выхода (M2 ревью): системный back и кнопка AppBar не должны
     // обходить диалог SPEC A6.4.
     return PopScope(
@@ -314,6 +321,7 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
       },
       child: Scaffold(
         appBar: ReviewSessionAppBar(
+          title: deck?.name ?? l10n.reviewTitle,
           undoEnabled: state != null && state.undoCount > 0 && !state.busy,
           onUndo: _undo,
           whyExcerpt: excerpt,
@@ -362,36 +370,70 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
       return ReviewCompletedView(ratedCount: state.ratedCount, onDone: _leave);
     }
     final AppSettings settings = ref.watch(effectiveAppSettingsProvider);
+    final int displayIndex = (state.ratedCount + 1).clamp(1, state.total);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-          child: LinearProgressIndicator(
-            value: state.total == 0 ? 0 : state.ratedCount / state.total,
-            semanticsLabel: l10n.reviewProgressLabel,
-            minHeight: 6,
-            borderRadius: BorderRadius.circular(3),
+        Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 896),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.md,
+                AppSpacing.sm,
+                AppSpacing.md,
+                0,
+              ),
+              child: SessionProgressStrip(
+                label: l10n.reviewCardCounter(displayIndex, state.total),
+                value: state.total == 0 ? 0 : state.ratedCount / state.total,
+                trailing: Text(
+                  l10n.reviewRatedCount(state.ratedCount),
+                  style: AppTypography.numeric(
+                    context,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            ),
           ),
         ),
         Expanded(
           child: Center(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: KeyedSubtree(
-                key: const ValueKey<String>('review-card'),
-                child: ReviewCardView(
-                  key: ValueKey<String>(state.current!.card.id),
-                  front: state.current!.card.front,
-                  back: state.current!.card.back,
-                  card: state.current!.card,
-                  mediaBytes: _media.bytes,
-                  mediaMetadata: _media.metadata,
-                  revealed: state.revealed,
-                  spring: settings.motion == MotionPreference.standard
-                      ? AppMotion.standardSpring()
-                      : null,
-                  onTap: _reveal,
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  maxWidth: AppSizes.studyCardMaxWidth,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    KeyedSubtree(
+                      key: const ValueKey<String>('review-card'),
+                      child: ReviewCardView(
+                        key: ValueKey<String>(state.current!.card.id),
+                        front: state.current!.card.front,
+                        back: state.current!.card.back,
+                        card: state.current!.card,
+                        mediaBytes: _media.bytes,
+                        mediaMetadata: _media.metadata,
+                        revealed: state.revealed,
+                        spring: settings.motion == MotionPreference.standard
+                            ? AppMotion.standardSpring()
+                            : null,
+                        onTap: _reveal,
+                      ),
+                    ),
+                    if (!state.revealed) ...<Widget>[
+                      const SizedBox(height: AppSpacing.sm),
+                      FilledButton(
+                        key: const ValueKey<String>('review-reveal'),
+                        onPressed: _reveal,
+                        child: Text(l10n.reviewRevealAction),
+                      ),
+                    ],
+                  ],
                 ),
               ),
             ),

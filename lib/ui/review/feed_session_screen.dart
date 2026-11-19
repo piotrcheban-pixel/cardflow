@@ -23,6 +23,7 @@ import 'package:cardflow/ui/review/session_media.dart';
 import 'package:cardflow/ui/review/review_session_engine.dart';
 import 'package:cardflow/ui/router/app_router.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
+import 'package:cardflow/ui/theme/app_tokens.dart';
 
 /// Экран режима «Лента» (SPEC A7.3, ADR-016).
 ///
@@ -484,12 +485,22 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-          child: FeedProgressBar(
-            rated: ratedFlags,
-            currentIndex: state.index,
-            animatePulse: settings.motion == MotionPreference.expressive,
+        Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 896),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.md,
+                AppSpacing.sm,
+                AppSpacing.md,
+                0,
+              ),
+              child: FeedProgressBar(
+                rated: ratedFlags,
+                currentIndex: state.index,
+                animatePulse: settings.motion == MotionPreference.expressive,
+              ),
+            ),
           ),
         ),
         Expanded(

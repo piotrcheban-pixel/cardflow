@@ -2319,4 +2319,17 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get deckMoreActions => 'Действия';
+
+  @override
+  String reviewCardCounter(int current, int total) {
+    return 'Карточка $current из $total';
+  }
+
+  @override
+  String reviewRatedCount(int count) {
+    return 'Оценено: $count';
+  }
+
+  @override
+  String get reviewRevealAction => 'Показать ответ';
 }

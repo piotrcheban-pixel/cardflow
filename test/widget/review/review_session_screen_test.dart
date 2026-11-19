@@ -414,7 +414,7 @@ void main() {
     expect(find.textContaining('boom'), findsNothing);
 
     cards.cardsByDeckError = null;
-    await tester.tap(find.widgetWithText(TextButton, l10n.retry));
+    await tester.tap(find.widgetWithText(OutlinedButton, l10n.retry));
     await tester.pumpAndSettle();
     expect(find.text('Первый вопрос'), findsOneWidget);
   });
@@ -616,10 +616,12 @@ void main() {
           .style
           ?.backgroundColor
           ?.resolve(<WidgetState>{});
+      // Цвета ролей дизайн-системы v2 (ADR-038): Again — errorContainer,
+      // Hard — surfaceContainer, Good — secondaryContainer, Easy — primaryFixed.
       expect(background('again'), scheme.errorContainer);
-      expect(background('hard'), scheme.secondaryContainer);
-      expect(background('good'), scheme.primary);
-      expect(background('easy'), scheme.tertiaryContainer);
+      expect(background('hard'), scheme.surfaceContainer);
+      expect(background('good'), scheme.secondaryContainer);
+      expect(background('easy'), scheme.primaryFixed);
 
       LinearProgressIndicator progress() =>
           tester.widget<LinearProgressIndicator>(

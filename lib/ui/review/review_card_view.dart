@@ -8,6 +8,7 @@ import 'package:cardflow/domain/cards/card.dart' as domain;
 import 'package:cardflow/domain/cards/media_metadata.dart';
 import 'package:cardflow/ui/cards/content/card_content_view.dart';
 import 'package:cardflow/ui/motion.dart';
+import 'package:cardflow/ui/theme/app_tokens.dart';
 
 /// Карточка классического режима: front/back с 3D-flip по тапу
 /// (SPEC A7.2 — «3D-flip с Expressive-пружиной»).
@@ -87,6 +88,7 @@ class _ReviewCardViewState extends State<ReviewCardView>
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
     return AnimatedBuilder(
       animation: _controller,
       builder: (BuildContext context, Widget? child) {
@@ -102,7 +104,7 @@ class _ReviewCardViewState extends State<ReviewCardView>
               : Matrix4.identity(),
           child: Center(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(AppSpacing.xl),
               child: widget.card == null
                   ? Text(
                       showBack ? widget.back : widget.front,
@@ -132,18 +134,25 @@ class _ReviewCardViewState extends State<ReviewCardView>
             child: Semantics(
               button: true,
               label: showBack ? widget.back : widget.front,
-              child: Card(
-                elevation: 3,
-                clipBehavior: Clip.antiAlias,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(28),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: scheme.surfaceContainerLowest,
+                  borderRadius: AppRadii.cardRadius,
+                  border: Border.all(
+                    color: scheme.outlineVariant,
+                    width: AppSizes.borderWidth,
+                  ),
+                  boxShadow: AppShadows.card(theme.brightness),
                 ),
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(
                     minHeight: 240,
-                    maxWidth: 640,
+                    maxWidth: AppSizes.studyCardMaxWidth,
                   ),
-                  child: Padding(padding: const EdgeInsets.all(8), child: face),
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.xxs),
+                    child: face,
+                  ),
                 ),
               ),
             ),

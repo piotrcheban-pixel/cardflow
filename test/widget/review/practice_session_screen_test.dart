@@ -177,7 +177,7 @@ void main() {
     expect(find.textContaining('boom'), findsNothing);
 
     cards.cardsByDeckError = null;
-    await tester.tap(find.widgetWithText(TextButton, l10n.retry));
+    await tester.tap(find.widgetWithText(OutlinedButton, l10n.retry));
     await tester.pumpAndSettle();
     expect(find.text('Первый вопрос'), findsOneWidget);
   });
