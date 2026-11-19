@@ -190,6 +190,14 @@ inputBudget = окно ? окно − reserved − fixed − safety
 `GenerationFailureReason` (`json_parse`, `schema_invalid`, `truncated`,
 `context_overflow`, `payload_too_large`, `unsupported_modality`, …).
 
+**Разбор тела ответа (TASK 04).** Транспорт запрашивает `ResponseType.plain` и
+разбирает JSON сам (`_decodeJsonObject`): битый JSON провайдера — это
+`invalidResponse`, а не `network`. До этого Dio с `ContentType: application/json`
+падал в трансформере до создания ответа, ошибка классифицировалась как сетевая и
+**повторялась** (до 4 попыток) — то есть битый ответ стоил денег. 404
+«модель не найдена» отдельного кода не имеет: это `badRequest` с очищенной
+причиной провайдера (L140).
+
 **Текст PDF.** `PdfParser` санитизирует текст (C1-управляющие, BOM, zero-width, одиночные
 суррогаты — `TextSanitizer`, итерация 7.10) и проверяет его `PdfTextQuality`: если замен
 `U+FFFD` не меньше 5 и их доля строго больше 5 %, файл считается нечитаемым
@@ -286,3 +294,34 @@ inputBudget = окно ? окно − reserved − fixed − safety
 - Атрибуция CC-картинок не переносится в БД (в `media` нет метаданных);
   изображения используются локально (L58). Живые Vision-вызовы PDF-страниц у
   облачных провайдеров не проверялись (L52/L53 в силе).
+
+## 9. Управляемые испытания на реальных API (TASK 04)
+
+Платные запросы **не** входят в обычный прогон и в CI. Инфраструктура —
+`test/live/support/`, управляемый набор — `test/live/adaptive_generation_live_test.dart`.
+
+- **По умолчанию запросы запрещены:** тег `live` + `CARDFLOW_LIVE_TESTS=1`;
+  без него тесты пропускаются даже при наличии ключа. `maxRequests=0` и
+  `maxCost=0` по умолчанию — запуск невозможен.
+- **Параметры:** `CARDFLOW_LIVE_PROVIDER`/`_MODEL`/`_BASE_URL`, `_MAX_REQUESTS`,
+  `_MAX_COST_USD`, `_ALLOW_UNKNOWN_COST`, `_TIMEOUT_SEC`,
+  `_ENABLE_PROMPT_ONLY`/`_MATERIALS`/`_IMAGES`/`_RECOVERY`, `_VISION`, `_REPORT`.
+  Отсутствие ключа (`DEEPSEEK_API_KEY`, `OPENAI_API_KEY`, …) — безопасный skip.
+- **Бюджет:** `LiveRequestBudget` считает логические запросы
+  (`LiveProbeTransport`), `LiveAttemptLimiter` ограничивает HTTP-попытки
+  (включая повторы 429/5xx). Таймаут каждого запроса — из конфигурации.
+- **Стоимость:** тарифы только с официальных страниц, с URL и датой проверки
+  (`test/live/support/live_pricing.dart`). Неизвестный тариф → `null` и
+  блокировка автоматического запуска; ноль вместо неизвестности не
+  подставляется.
+- **Отчёт:** `LiveRunRecord` (JSON Lines, `build/live/live-runs.jsonl`) —
+  провайдер, модель, версия оценщика, оценки/факты токенов, байты тела, число
+  изображений, время запросов, статус, число запросов восстановления.
+  Отсутствующие поля — `null`; материалы и ключи в отчёт не попадают.
+- **Test F без оплаты:** локальный endpoint (`local_provider_server.dart`)
+  проверяет на реальном сокете 413, 429 + `Retry-After`, таймаут, context
+  overflow, битый JSON, `truncated`, 5xx, 401 — обычным офлайновым тестом
+  `test/integration/generation_recovery_http_test.dart`.
+- **Ограничения:** `journal/KNOWN_LIMITATIONS.md` L137–L142 (устаревшие id
+  моделей каталога, неизвестные тарифы, Vision-флаг пресета DeepSeek,
+  отсутствие `modelNotFound`, непроверенные живые негативные контракты).

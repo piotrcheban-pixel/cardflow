@@ -204,7 +204,7 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
 - **Фикстуры документов — программные** (`test/unit/api/parsers/fixtures/`): DOCX/PPTX/ODT/XLSX/PDF/RTF
   и тексты в кодировках собираются кодом, бинарные файлы в репозиторий не коммитятся; PDF-фикстуры включают
   скан и запароленный PDF (V1/R2 RC4 40-bit).
-- Live-тесты API — под тегом `live`, только при наличии ключей в окружении (иначе skip).
+- Live-тесты API — под тегом `live` и **только по явному разрешению** `CARDFLOW_LIVE_TESTS=1` (+ бюджет `CARDFLOW_LIVE_MAX_REQUESTS`/`_MAX_COST_USD`); без разрешения или без ключа — skip, обычный `flutter test` и CI остаются офлайновыми. Инфраструктура — `test/live/support/` (бюджет, тарифы, отчёт калибровки), управляемый набор — `test/live/adaptive_generation_live_test.dart`; восстановление после ошибок проверяется офлайн на локальном endpoint (`test/integration/generation_recovery_http_test.dart`).
 - `flutter analyze` — 0 issues; `dart format` применён.
 
 ## Процесс

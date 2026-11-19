@@ -1688,3 +1688,64 @@ production-путь.
 - `ProviderCapabilitiesDialog` (ввод возможностей/цен в UI) не добавлен;
   `capabilitySources` доступен в плане/диагностике.
 - Реальные пределы провайдеров и негативные live-контракты не проверялись.
+
+## S. TASK 04: готовность к реальной генерации и управляемые испытания (2026-11-19)
+
+**Статус:** аудит и подготовка; **ни одного платного API-запроса не
+выполнено**. Схема БД, `format_version`, архитектура плана/бюджета/восстановления
+не менялись. Аудит — `journal/task04/audit.md`, программа испытаний и смета —
+`journal/task04/live-test-plan.md`.
+
+### S.1 Что подтверждено кодом
+
+- Провайдеры — аккаунты каталога поверх четырёх адаптеров
+  (`generation_adapters.dart`: OpenAI, OpenAI-compatible, Anthropic, Gemini);
+  все девять пресетов обслуживаются этими адаптерами. Vision/PDF/JSON/usage —
+  по §1 `journal/task04/audit.md`.
+- Streaming не реализован ни одним адаптером; OpenAI не передаёт `max_tokens`
+  (осознанно), Anthropic/Gemini передают всегда, OpenAI-compatible — по
+  лестнице ADR-021.
+- Классификация ошибок: 401/403 → `invalidApiKey`, 429 → `rateLimited` с
+  `Retry-After`, 5xx → `serverUnavailable`, 413 → `payloadTooLarge`,
+  400 с текстом контекста → `contextOverflow`, прочие 4xx → `badRequest`
+  (404 «модель не найдена» отдельного кода не имеет — ограничение L140).
+
+### S.2 Исправлено в TASK 04
+
+- `GenerationHttpClient` запрашивает `ResponseType.plain` и разбирает тело сам:
+  битый JSON провайдера теперь `invalidResponse`, а не `network` (раньше такой
+  ответ повторялся как сетевая ошибка — до 4 запросов). Подтверждено локальным
+  HTTP-тестом на реальном сокете.
+- Единый санитайзер `redactSecretsInText` (`lib/api/http/log_redaction.dart`)
+  для диагностики и `providerReason`: заголовки, `Bearer`, `sk-`/`AIza`/`gsk_`/
+  `xai-`/`nvapi-`, секретные query-параметры.
+- Список адаптеров вынесен в `lib/api/providers/generation_adapters.dart`
+  (production и live-тесты используют один набор).
+
+### S.3 Инфраструктура испытаний
+
+- `test/live/support/` — конфигурация по окружению (по умолчанию запросы
+  запрещены), тарифы с официальных страниц и датой проверки, предварительная
+  стоимость (неизвестно → `null` + блокировка), бюджет логических запросов и
+  лимит HTTP-попыток, план сценариев Test A–E, фикстуры, качество карточек,
+  запись калибровки (`LiveRunRecord`) и harness на production-адаптерах.
+- `test/live/adaptive_generation_live_test.dart` — Test A–E; все тесты
+  пропускаются без `CARDFLOW_LIVE_TESTS=1` + бюджета + ключа.
+- `test/live/support/local_provider_server.dart` +
+  `test/integration/generation_recovery_http_test.dart` — Test F офлайн: 413,
+  429/`Retry-After`, таймаут, context overflow, битый JSON, `truncated`, 5xx,
+  401 на реальном сокете loopback.
+- Легаси live-файлы (DeepSeek, метрики картинок, Wikimedia) требуют того же
+  явного разрешения.
+
+### S.4 Что осталось
+
+- id моделей каталога не подтверждены и частично устарели (DeepSeek:
+  актуальны `deepseek-flash`/`deepseek-v4-pro`; Anthropic 3.5 в актуальной
+  таблице тарифов отсутствует) — L137.
+- Тарифы большинства моделей неизвестны; платные прогоны этих моделей
+  блокируются до ручного разрешения — L138.
+- Vision-флаг пресета DeepSeek неверен для `deepseek-flash`; UI-поля
+  «модель принимает изображения» для пресета нет — L139.
+- Негативные живые контракты провайдеров не проверялись (ADR-014).
+- Ручная приёмка GUI и живой прогон — за владельцем (L67/L75/L78).

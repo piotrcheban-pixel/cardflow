@@ -1,16 +1,97 @@
 # STATE — текущее состояние CardFlow
 
-**Дата:** 2026-11-19 · **Итерация:** `TASK 03` «Надёжность адаптивной
-генерации: оценка токенов, возможности модели, prompt-only, recovery,
-изображения, D.5, UI» — завершена. Предыдущая итерация `TASK 02B-FINAL` —
-в истории ниже. Схема БД и `format_version` не менялись.
+**Дата:** 2026-11-19 · **Итерация:** `TASK 04` «Live API readiness audit &
+controlled generation test preparation» — завершена (только аудит и
+подготовка; платных запросов нет). Предыдущая итерация `TASK 03` — в истории
+ниже. Схема БД и `format_version` не менялись.
 **Режим:** ИТЕРАЦИИ.
 
-**Следующий шаг:** TASK 02C — UI возможностей/цен провайдера
-(`ProviderCapabilitiesDialog`), диалог стоимости/подтверждения; вёрстка по
-макетам Stitch — отдельным решением владельца (L113). Точный токенизатор и
-семантический дедуп prompt-only — по итогам живой эксплуатации
-(L122/L130/L136).
+**Следующий шаг:** **TASK 05 — Controlled Live Generation Testing** — только
+по отдельному разрешению владельца: DeepSeek `deepseek-flash`, Test A–C
+(5 запросов, ≈ $0.031), затем Test D/E при успехе; бюджет
+`CARDFLOW_LIVE_MAX_REQUESTS=15`, `CARDFLOW_LIVE_MAX_COST_USD=0.12`. План,
+риски и критерии — `journal/task04/live-test-plan.md`. После TASK 05 —
+TASK 02C (UI возможностей/цен, `ProviderCapabilitiesDialog`) и точный
+токенизатор/семантический дедуп (L122/L130/L136).
+
+## TASK 04 — готовность к реальной генерации и управляемые испытания (2026-11-19)
+
+**Задача:** после TASK 01/02A/02B-FINAL/03 установить фактическую готовность
+к реальной генерации: аудит провайдеров/адаптеров/моделей/ключей, безопасная
+инфраструктура live-тестов, предварительная стоимость, тестовые сценарии,
+калибровка токенов. **Платные API-запросы запрещены** — только подготовка.
+
+**Факты старта:** `git status --porcelain` → только `?? redesign/` (каталог
+владельца не тронут); `HEAD = dba80ec`, ветка `main`, коммиты TASK 03 на
+месте. Baseline — **2110 passed + 8 skipped**, `analyze` 0. Прогоны — только
+с `--no-pub` (L64).
+
+**Аудит (по коду и официальным страницам, `journal/task04/audit.md`):**
+- 9 пресетов-провайдеров обслуживаются 4 адаптерами (OpenAI,
+  OpenAI-compatible, Anthropic, Gemini); streaming не реализован; OpenAI не
+  передаёт `max_tokens`; Vision/PDF/JSON/usage — по протоколам.
+- **Каталог моделей устарел/не подтверждён:** официальная страница DeepSeek
+  (2026-11-19) перечисляет `deepseek-flash` (1M контекст, вывод до 384K,
+  Vision ✓) и `deepseek-v4-pro`; `deepseek-chat`/`deepseek-reasoner` в ней
+  отсутствуют; `claude-3-5-*` нет в актуальной таблице тарифов Anthropic;
+  страница тарифов Gemini из окружения недоступна.
+- **Тарифы подтверждены только для 4 моделей** (`deepseek-flash`,
+  `deepseek-v4-pro`, `gpt-4o`, `gpt-4o-mini`); у остальных цена неизвестна.
+- **Ключи/безопасность:** только secure storage, read-back, логи без
+  заголовков/тел; `DioException.toString()` (dio 5.11.1) не печатает URI и
+  заголовки. Найдено расхождение санитайзеров (диагностика vs
+  `providerReason`) — устранено.
+- **Дефект:** битый JSON провайдера классифицировался как `network` и
+  **повторялся** (лишние платные запросы до 4 на фрагмент).
+
+**Сделано:**
+- **Транспорт:** `GenerationHttpClient` запрашивает `ResponseType.plain` и
+  разбирает тело сам — битый JSON → `invalidResponse` без повторов;
+  подтверждено локальным HTTP-тестом на реальном сокете.
+- **Безопасность:** единый `redactSecretsInText` (`log_redaction.dart`) для
+  диагностики и `providerReason`: заголовки `Authorization`/`x-api-key`/
+  `x-goog-api-key`, `Bearer`, `sk-`/`AIza`/`gsk_`/`xai-`/`nvapi-`, секретные
+  query-параметры (`?key=`, `&api_key=`).
+- **Инфраструктура live-тестов (`test/live/support/`):** конфигурация по
+  окружению с безопасными умолчаниями (`enabled=false`, `maxRequests=0`,
+  `maxCost=0`), тарифы с URL/датой проверки, предварительная стоимость
+  (неизвестно → `null` + блокировка), бюджет логических запросов + лимит
+  HTTP-попыток, план сценариев Test A–E, фикстуры, качество карточек,
+  `LiveRunRecord` (провайдер/модель/версия оценщика/оценки и факты токенов/
+  байты/изображения/время/статус/recovery), harness на production-адаптерах.
+- **Управляемый набор:** `test/live/adaptive_generation_live_test.dart` —
+  Test A–E, все пропускаются без `CARDFLOW_LIVE_TESTS=1` + бюджета + ключа.
+- **Test F без оплаты:** `local_provider_server.dart` +
+  `test/integration/generation_recovery_http_test.dart` (10 тестов: 413, 429 +
+  `Retry-After`, таймаут, context overflow, битый JSON, `truncated`, 5xx, 401).
+- **Легаси live-тесты** (DeepSeek, метрики картинок, Wikimedia) переведены на
+  общий opt-in; обычный прогон стал полностью офлайновым (два Wikimedia-теста
+  раньше выполнялись в нём).
+- **Список адаптеров** вынесен в `lib/api/providers/generation_adapters.dart`
+  (production и live-тесты — один набор).
+- **Документация:** раздел S `docs/adaptive-generation-architecture.md`;
+  `docs/generation-pipeline.md` (§5 разбор тела ответа, §9 управляемые
+  испытания); `journal/KNOWN_LIMITATIONS.md` L137–L142; правило live-тестов в
+  `AGENTS.md`; `journal/task04/{audit.md,live-test-plan.md,report.md}`.
+
+**Гейты:** `fvm flutter test --no-pub --exclude-tags golden` →
+**2158 passed + 15 skipped** (`All tests passed!`; baseline 2110 + 8,
++48 passed / +7 skipped); `fvm flutter test --no-pub --coverage
+--exclude-tags golden` → **2158 passed + 15 skipped**, покрытие рукописного
+кода **92.4 % (16201/17535)**; `fvm flutter analyze --no-pub` → **No issues
+found!**; `fvm dart format --set-exit-if-changed lib test integration_test
+tool` → **499 файлов / 0 changed**; `fvm flutter build windows --release
+--no-pub` → **`cardflow.exe`** (63,0 с).
+
+**Остатки (L137–L142):** устаревшие/непроверенные id моделей каталога;
+неизвестные тарифы большинства моделей; Vision-флаг пресета DeepSeek неверен
+для `deepseek-flash`; 404/402/422 не имеют отдельных кодов; live-тесты не в
+CI и требуют ручного запуска; живых платных запросов не было (L142).
+Негативные живые контракты по-прежнему не проверяются (ADR-014).
+
+**Стоимость безопасной проверки (оценка):** Test A–C — 5 запросов,
+≈ $0.031; A–E — 11 запросов, ≈ $0.072; рекомендуемый бюджет TASK 05 —
+15 запросов, $0.12 (`journal/task04/live-test-plan.md` §3).
 
 ## TASK 03 — надёжность адаптивной генерации (2026-11-19)
 
