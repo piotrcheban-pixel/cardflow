@@ -1,11 +1,12 @@
-/// Экран «Настройки» (SPEC A6.6, ADR-019).
+/// Экран «Настройки» (SPEC A6.6, ADR-019, ADR-038).
 ///
-/// Блоки: внешний вид, API, обучение, доступность, «О приложении». Каждый
-/// элемент меняет `AppSettings` и сохраняется через `AppSettingsController`
-/// (ошибка записи — сообщение из ARB, состояние откатывается). Ключи API
-/// сюда не попадают: только статус present/absent и переход в настройки
-/// генерации (ADR-013). «Проверить» выполняет реальный минимальный запрос
-/// через `ApiKeyVerifier` (ADR-019 §5).
+/// Двухколоночная раскладка макета: поднавигация по секциям и карточки
+/// «Обучение и FSRS», «Внешний вид», «Доступность», «ИИ и модели»,
+/// «О приложении». Каждый элемент меняет `AppSettings` и сохраняется через
+/// `AppSettingsController` (ошибка записи — сообщение из ARB, состояние
+/// откатывается). Ключи API сюда не попадают: только статус present/absent и
+/// переход в настройки генерации (ADR-013). «Проверить» выполняет реальный
+/// минимальный запрос через `ApiKeyVerifier` (ADR-019 §5).
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,267 +16,452 @@ import 'package:material_ui/material_ui.dart';
 import 'package:cardflow/domain/generation/provider_account.dart';
 import 'package:cardflow/domain/settings/app_settings.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
+import 'package:cardflow/ui/components/app_layout.dart';
+import 'package:cardflow/ui/components/app_surfaces.dart';
 import 'package:cardflow/ui/decks/deck_actions.dart';
 import 'package:cardflow/ui/router/app_router.dart';
 import 'package:cardflow/ui/settings/about_links.dart';
 import 'package:cardflow/ui/settings/provider_labels.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
+import 'package:cardflow/ui/theme/app_tokens.dart';
+import 'package:cardflow/ui/theme/app_typography.dart';
 
 /// Экран настроек приложения.
-class SettingsScreen extends ConsumerWidget {
+class SettingsScreen extends ConsumerStatefulWidget {
   /// Создаёт экран.
   const SettingsScreen({super.key});
 
-  Future<void> _update(
-    BuildContext context,
-    WidgetRef ref,
-    AppSettings settings,
-  ) async {
+  @override
+  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+  final GlobalKey _learningKey = GlobalKey();
+  final GlobalKey _appearanceKey = GlobalKey();
+  final GlobalKey _accessibilityKey = GlobalKey();
+  final GlobalKey _aiKey = GlobalKey();
+  final GlobalKey _aboutKey = GlobalKey();
+
+  Future<void> _update(AppSettings settings) async {
     try {
       await ref.read(appSettingsProvider.notifier).save(settings);
     } on Object {
-      if (context.mounted) {
+      if (mounted) {
         showAppMessage(context, AppLocalizations.of(context).settingsSaveError);
       }
     }
   }
 
+  void _scrollTo(GlobalKey key) {
+    final BuildContext? target = key.currentContext;
+    if (target == null) return;
+    Scrollable.ensureVisible(
+      target,
+      duration: AppDurations.slow,
+      curve: Curves.easeOut,
+      alignment: 0.05,
+    );
+  }
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
     final AsyncValue<AppSettings> settings = ref.watch(appSettingsProvider);
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.settingsScreenTitle)),
-      body: settings.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (Object error, StackTrace stackTrace) => _SettingsLoadError(
-          onRetry: () => ref.invalidate(appSettingsProvider),
+      body: AppPageScaffold(
+        header: AppPageHeader(
+          title: l10n.settingsScreenTitle,
+          breadcrumb:
+              '${l10n.settingsOverline.toUpperCase()} / '
+              '${l10n.settingsBreadcrumbSection}',
+          subtitle: Text(l10n.settingsSubtitle),
         ),
-        data: (AppSettings value) => ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-          children: <Widget>[
-            _SectionTitle(l10n.settingsAppearanceTitle),
-            _AppearanceSection(
-              settings: value,
-              onChanged: (AppSettings next) => _update(context, ref, next),
+        slivers: <Widget>[
+          settings.when(
+            loading: () => const Padding(
+              padding: EdgeInsets.symmetric(vertical: AppSpacing.huge),
+              child: Center(child: CircularProgressIndicator()),
             ),
-            const SizedBox(height: 24),
-            _SectionTitle(l10n.settingsApiTitle),
-            const _ApiSection(),
-            const SizedBox(height: 24),
-            _SectionTitle(l10n.settingsLearningTitle),
-            _LearningSection(
-              settings: value,
-              onChanged: (AppSettings next) => _update(context, ref, next),
+            error: (Object error, StackTrace stackTrace) => AppErrorState(
+              message: l10n.settingsLoadError,
+              retryLabel: l10n.retry,
+              onRetry: () => ref.invalidate(appSettingsProvider),
             ),
-            const SizedBox(height: 24),
-            _SectionTitle(l10n.settingsAccessibilityTitle),
-            _AccessibilitySection(
-              settings: value,
-              onChanged: (AppSettings next) => _update(context, ref, next),
+            data: (AppSettings value) => LayoutBuilder(
+              builder: (BuildContext context, BoxConstraints constraints) {
+                final bool wide = constraints.maxWidth >= 1024;
+                final List<_SettingsNavItem> items = <_SettingsNavItem>[
+                  _SettingsNavItem(
+                    label: l10n.settingsNavLearning,
+                    icon: Icons.psychology_outlined,
+                    key: _learningKey,
+                  ),
+                  _SettingsNavItem(
+                    label: l10n.settingsNavAppearance,
+                    icon: Icons.palette_outlined,
+                    key: _appearanceKey,
+                  ),
+                  _SettingsNavItem(
+                    label: l10n.settingsNavAccessibility,
+                    icon: Icons.accessibility_new,
+                    key: _accessibilityKey,
+                  ),
+                  _SettingsNavItem(
+                    label: l10n.settingsNavAi,
+                    icon: Icons.auto_awesome_outlined,
+                    key: _aiKey,
+                  ),
+                  _SettingsNavItem(
+                    label: l10n.settingsNavAbout,
+                    icon: Icons.info_outline,
+                    key: _aboutKey,
+                  ),
+                ];
+                final Widget nav = _SettingsSubNav(
+                  items: items,
+                  onSelect: _scrollTo,
+                  horizontal: !wide,
+                );
+                final Widget sections = _buildSections(
+                  context,
+                  l10n,
+                  value,
+                  items,
+                );
+                if (!wide) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: <Widget>[
+                      nav,
+                      const SizedBox(height: AppSpacing.md),
+                      sections,
+                    ],
+                  );
+                }
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    SizedBox(width: 260, child: nav),
+                    const SizedBox(width: AppSpacing.xxl),
+                    Expanded(child: sections),
+                  ],
+                );
+              },
             ),
-            const SizedBox(height: 24),
-            _SectionTitle(l10n.settingsAboutTitle),
-            const _AboutSection(),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
-}
 
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle(this.title);
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
-      child: Text(title, style: Theme.of(context).textTheme.titleLarge),
-    );
-  }
-}
-
-class _AppearanceSection extends StatelessWidget {
-  const _AppearanceSection({required this.settings, required this.onChanged});
-
-  final AppSettings settings;
-  final ValueChanged<AppSettings> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final AppLocalizations l10n = AppLocalizations.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        Text(l10n.settingsThemeTitle),
-        const SizedBox(height: 8),
-        SegmentedButton<AppThemePreference>(
-          key: const ValueKey<String>('settings-theme'),
-          segments: <ButtonSegment<AppThemePreference>>[
-            ButtonSegment<AppThemePreference>(
-              value: AppThemePreference.light,
-              label: Text(l10n.settingsThemeLight),
-            ),
-            ButtonSegment<AppThemePreference>(
-              value: AppThemePreference.dark,
-              label: Text(l10n.settingsThemeDark),
-            ),
-            ButtonSegment<AppThemePreference>(
-              value: AppThemePreference.system,
-              label: Text(l10n.settingsThemeSystem),
-            ),
-          ],
-          selected: <AppThemePreference>{settings.theme},
-          onSelectionChanged: (Set<AppThemePreference> selection) =>
-              onChanged(settings.copyWith(theme: selection.single)),
-        ),
-        SwitchListTile(
-          key: const ValueKey<String>('settings-dynamic-color'),
-          contentPadding: EdgeInsets.zero,
-          title: Text(l10n.settingsDynamicColor),
-          subtitle: Text(l10n.settingsDynamicColorHint),
-          value: settings.dynamicColor,
-          onChanged: (bool value) =>
-              onChanged(settings.copyWith(dynamicColor: value)),
-        ),
-        const SizedBox(height: 8),
-        Text(l10n.settingsMotionTitle),
-        const SizedBox(height: 8),
-        SegmentedButton<MotionPreference>(
-          key: const ValueKey<String>('settings-motion'),
-          segments: <ButtonSegment<MotionPreference>>[
-            ButtonSegment<MotionPreference>(
-              value: MotionPreference.expressive,
-              label: Text(l10n.settingsMotionExpressive),
-            ),
-            ButtonSegment<MotionPreference>(
-              value: MotionPreference.standard,
-              label: Text(l10n.settingsMotionStandard),
-            ),
-          ],
-          selected: <MotionPreference>{settings.motion},
-          onSelectionChanged: (Set<MotionPreference> selection) =>
-              onChanged(settings.copyWith(motion: selection.single)),
-        ),
-        SwitchListTile(
-          key: const ValueKey<String>('settings-dyslexia-font'),
-          contentPadding: EdgeInsets.zero,
-          title: Text(l10n.settingsDyslexiaFont),
-          value: settings.dyslexiaFont,
-          onChanged: (bool value) =>
-              onChanged(settings.copyWith(dyslexiaFont: value)),
-        ),
-        _PercentSlider(
-          key: const ValueKey<String>('settings-text-scale'),
-          title: l10n.settingsTextScaleTitle,
-          value: settings.textScale,
-          min: AppSettings.minTextScale,
-          max: AppSettings.maxTextScale,
-          divisions: 12,
-          label: l10n.settingsTextScaleValue(
-            (settings.textScale * 100).round(),
-          ),
-          onChangedEnd: (double value) =>
-              onChanged(settings.copyWith(textScale: value)),
-        ),
-      ],
-    );
-  }
-}
-
-class _LearningSection extends StatelessWidget {
-  const _LearningSection({required this.settings, required this.onChanged});
-
-  final AppSettings settings;
-  final ValueChanged<AppSettings> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final AppLocalizations l10n = AppLocalizations.of(context);
+  Widget _buildSections(
+    BuildContext context,
+    AppLocalizations l10n,
+    AppSettings settings,
+    List<_SettingsNavItem> items,
+  ) {
     final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
+    final Widget learning = AppSectionCard(
+      key: items[0].key,
+      title: l10n.settingsFsrsTitle,
+      subtitle: l10n.settingsLearningSubtitle,
+      icon: Icons.tune,
+      contentPadding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.md,
+        AppSpacing.lg,
+        AppSpacing.lg,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          _PercentSlider(
+            key: const ValueKey<String>('settings-retention'),
+            title: l10n.settingsRetentionTitle,
+            hint: l10n.settingsRetentionHint,
+            value: settings.desiredRetention,
+            min: AppSettings.minRetention,
+            max: AppSettings.maxRetention,
+            divisions: 25,
+            label: l10n.settingsRetentionValue(
+              (settings.desiredRetention * 100).round(),
+            ),
+            onChangedEnd: (double value) =>
+                _update(settings.copyWith(desiredRetention: value)),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Divider(color: scheme.outlineVariant),
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            l10n.settingsLearningStepsTitle,
+            style: theme.textTheme.titleSmall,
+          ),
+          const SizedBox(height: 2),
+          Text(
+            l10n.settingsLearningStepsHint,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Wrap(
+            spacing: AppSpacing.xs,
+            runSpacing: AppSpacing.xs,
+            children: <Widget>[
+              for (final Duration step in settings.learningSteps)
+                InputChip(
+                  key: ValueKey<String>('learning-step-${step.inMinutes}'),
+                  label: Text(l10n.settingsLearningStepValue(step.inMinutes)),
+                  onDeleted: settings.learningSteps.length <= 1
+                      ? null
+                      : () => _update(
+                          settings.copyWith(
+                            learningSteps: <Duration>[
+                              for (final Duration existing
+                                  in settings.learningSteps)
+                                if (existing != step) existing,
+                            ],
+                          ),
+                        ),
+                  deleteButtonTooltipMessage:
+                      l10n.settingsLearningStepDeleteTooltip,
+                ),
+              ActionChip(
+                key: const ValueKey<String>('learning-step-add'),
+                avatar: const Icon(Icons.add, size: 18),
+                label: Text(l10n.settingsLearningStepAdd),
+                onPressed: () => _addStep(settings),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Divider(color: scheme.outlineVariant),
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            l10n.settingsDailyLimitsTitle,
+            style: theme.textTheme.titleSmall,
+          ),
+          const SizedBox(height: AppSpacing.xxs),
+          _DailyLimitRow(
+            key: const ValueKey<String>('settings-new-limit'),
+            id: 'new-limit',
+            title: l10n.settingsDailyNewLimitTitle,
+            hint: l10n.settingsDailyNewLimitHint,
+            value: settings.dailyNewLimit,
+            onChanged: (int value) =>
+                _update(settings.copyWith(dailyNewLimit: value)),
+          ),
+          _DailyLimitRow(
+            key: const ValueKey<String>('settings-review-limit'),
+            id: 'review-limit',
+            title: l10n.settingsDailyReviewLimitTitle,
+            hint: l10n.settingsDailyReviewLimitHint,
+            value: settings.dailyReviewLimit,
+            onChanged: (int value) =>
+                _update(settings.copyWith(dailyReviewLimit: value)),
+          ),
+          const SizedBox(height: AppSpacing.xxs),
+          Text(
+            l10n.settingsDailyLimitZeroHint,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+    );
+
+    final Widget appearance = AppSectionCard(
+      key: items[1].key,
+      title: l10n.settingsAppearanceTitle,
+      subtitle: l10n.settingsAppearanceSubtitle,
+      icon: Icons.palette_outlined,
+      contentPadding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.md,
+        AppSpacing.lg,
+        AppSpacing.lg,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Text(l10n.settingsThemeTitle, style: theme.textTheme.titleSmall),
+          const SizedBox(height: 2),
+          Text(
+            l10n.settingsThemeHint,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          SegmentedButton<AppThemePreference>(
+            key: const ValueKey<String>('settings-theme'),
+            segments: <ButtonSegment<AppThemePreference>>[
+              ButtonSegment<AppThemePreference>(
+                value: AppThemePreference.light,
+                label: Text(l10n.settingsThemeLight),
+                icon: const Icon(Icons.light_mode_outlined, size: 16),
+              ),
+              ButtonSegment<AppThemePreference>(
+                value: AppThemePreference.dark,
+                label: Text(l10n.settingsThemeDark),
+                icon: const Icon(Icons.dark_mode_outlined, size: 16),
+              ),
+              ButtonSegment<AppThemePreference>(
+                value: AppThemePreference.system,
+                label: Text(l10n.settingsThemeSystem),
+                icon: const Icon(Icons.brightness_auto_outlined, size: 16),
+              ),
+            ],
+            selected: <AppThemePreference>{settings.theme},
+            onSelectionChanged: (Set<AppThemePreference> selection) =>
+                _update(settings.copyWith(theme: selection.single)),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          SwitchListTile(
+            key: const ValueKey<String>('settings-dynamic-color'),
+            contentPadding: EdgeInsets.zero,
+            title: Text(l10n.settingsDynamicColor),
+            subtitle: Text(l10n.settingsDynamicColorHint),
+            value: settings.dynamicColor,
+            onChanged: (bool value) =>
+                _update(settings.copyWith(dynamicColor: value)),
+          ),
+          Divider(color: scheme.outlineVariant),
+          const SizedBox(height: AppSpacing.xs),
+          Text(l10n.settingsMotionTitle, style: theme.textTheme.titleSmall),
+          const SizedBox(height: 2),
+          Text(
+            l10n.settingsMotionHint,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          SegmentedButton<MotionPreference>(
+            key: const ValueKey<String>('settings-motion'),
+            segments: <ButtonSegment<MotionPreference>>[
+              ButtonSegment<MotionPreference>(
+                value: MotionPreference.expressive,
+                label: Text(l10n.settingsMotionExpressive),
+              ),
+              ButtonSegment<MotionPreference>(
+                value: MotionPreference.standard,
+                label: Text(l10n.settingsMotionStandard),
+              ),
+            ],
+            selected: <MotionPreference>{settings.motion},
+            onSelectionChanged: (Set<MotionPreference> selection) =>
+                _update(settings.copyWith(motion: selection.single)),
+          ),
+        ],
+      ),
+    );
+
+    final Widget accessibility = AppSectionCard(
+      key: items[2].key,
+      title: l10n.settingsAccessibilityTitle,
+      subtitle: l10n.settingsAccessibilitySubtitle,
+      icon: Icons.accessibility_new,
+      contentPadding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        0,
+        AppSpacing.lg,
+        AppSpacing.lg,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          SwitchListTile(
+            key: const ValueKey<String>('settings-dyslexia-font'),
+            contentPadding: EdgeInsets.zero,
+            title: Text(l10n.settingsDyslexiaFont),
+            value: settings.dyslexiaFont,
+            onChanged: (bool value) =>
+                _update(settings.copyWith(dyslexiaFont: value)),
+          ),
+          SwitchListTile(
+            key: const ValueKey<String>('settings-haptics'),
+            contentPadding: EdgeInsets.zero,
+            title: Text(l10n.settingsHapticsTitle),
+            subtitle: Text(l10n.settingsHapticsHint),
+            value: settings.haptics,
+            onChanged: (bool value) =>
+                _update(settings.copyWith(haptics: value)),
+          ),
+          SwitchListTile(
+            key: const ValueKey<String>('settings-high-contrast'),
+            contentPadding: EdgeInsets.zero,
+            title: Text(l10n.settingsHighContrast),
+            value: settings.highContrast,
+            onChanged: (bool value) =>
+                _update(settings.copyWith(highContrast: value)),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          _PercentSlider(
+            key: const ValueKey<String>('settings-text-scale'),
+            title: l10n.settingsTextScaleTitle,
+            hint: l10n.settingsTextScaleHint,
+            value: settings.textScale,
+            min: AppSettings.minTextScale,
+            max: AppSettings.maxTextScale,
+            divisions: 12,
+            label: l10n.settingsTextScaleValue(
+              (settings.textScale * 100).round(),
+            ),
+            onChangedEnd: (double value) =>
+                _update(settings.copyWith(textScale: value)),
+          ),
+        ],
+      ),
+    );
+
+    final Widget ai = AppSectionCard(
+      key: items[3].key,
+      title: l10n.settingsApiTitle,
+      subtitle: l10n.settingsAiSubtitle,
+      icon: Icons.auto_awesome_outlined,
+      contentPadding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.md,
+        AppSpacing.lg,
+        AppSpacing.lg,
+      ),
+      child: const _ApiSection(),
+    );
+
+    final Widget about = AppSectionCard(
+      key: items[4].key,
+      title: l10n.settingsAboutTitle,
+      subtitle: l10n.settingsAboutSubtitle,
+      icon: Icons.info_outline,
+      contentPadding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.xs,
+        AppSpacing.lg,
+        AppSpacing.xs,
+      ),
+      child: const _AboutSection(),
+    );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        _PercentSlider(
-          key: const ValueKey<String>('settings-retention'),
-          title: l10n.settingsRetentionTitle,
-          value: settings.desiredRetention,
-          min: AppSettings.minRetention,
-          max: AppSettings.maxRetention,
-          divisions: 25,
-          label: l10n.settingsRetentionValue(
-            (settings.desiredRetention * 100).round(),
-          ),
-          onChangedEnd: (double value) =>
-              onChanged(settings.copyWith(desiredRetention: value)),
-        ),
-        const SizedBox(height: 12),
-        Text(
-          l10n.settingsLearningStepsTitle,
-          style: theme.textTheme.titleSmall,
-        ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: <Widget>[
-            for (final Duration step in settings.learningSteps)
-              InputChip(
-                key: ValueKey<String>('learning-step-${step.inMinutes}'),
-                label: Text(l10n.settingsLearningStepValue(step.inMinutes)),
-                onDeleted: settings.learningSteps.length <= 1
-                    ? null
-                    : () => onChanged(
-                        settings.copyWith(
-                          learningSteps: <Duration>[
-                            for (final Duration existing
-                                in settings.learningSteps)
-                              if (existing != step) existing,
-                          ],
-                        ),
-                      ),
-                deleteButtonTooltipMessage:
-                    l10n.settingsLearningStepDeleteTooltip,
-              ),
-            ActionChip(
-              key: const ValueKey<String>('learning-step-add'),
-              avatar: const Icon(Icons.add, size: 18),
-              label: Text(l10n.settingsLearningStepAdd),
-              onPressed: () => _addStep(context),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        _DailyLimitRow(
-          key: const ValueKey<String>('settings-new-limit'),
-          id: 'new-limit',
-          title: l10n.settingsDailyNewLimitTitle,
-          value: settings.dailyNewLimit,
-          onChanged: (int value) =>
-              onChanged(settings.copyWith(dailyNewLimit: value)),
-        ),
-        _DailyLimitRow(
-          key: const ValueKey<String>('settings-review-limit'),
-          id: 'review-limit',
-          title: l10n.settingsDailyReviewLimitTitle,
-          value: settings.dailyReviewLimit,
-          onChanged: (int value) =>
-              onChanged(settings.copyWith(dailyReviewLimit: value)),
-        ),
-        Text(
-          l10n.settingsDailyLimitZeroHint,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-        ),
+        learning,
+        const SizedBox(height: AppSpacing.md),
+        appearance,
+        const SizedBox(height: AppSpacing.md),
+        accessibility,
+        const SizedBox(height: AppSpacing.md),
+        ai,
+        const SizedBox(height: AppSpacing.md),
+        about,
       ],
     );
   }
 
-  Future<void> _addStep(BuildContext context) async {
+  Future<void> _addStep(AppSettings settings) async {
     final AppLocalizations l10n = AppLocalizations.of(context);
     if (settings.learningSteps.length >= AppSettings.maxLearningSteps) {
       showAppMessage(context, l10n.settingsLearningStepLimit);
@@ -286,7 +472,7 @@ class _LearningSection extends StatelessWidget {
       builder: (BuildContext dialogContext) => const _LearningStepDialog(),
     );
     if (minutes == null) return;
-    onChanged(
+    await _update(
       settings.copyWith(
         learningSteps: <Duration>[
           ...settings.learningSteps,
@@ -297,10 +483,104 @@ class _LearningSection extends StatelessWidget {
   }
 }
 
+/// Пункт поднавигации настроек.
+class _SettingsNavItem {
+  const _SettingsNavItem({
+    required this.label,
+    required this.icon,
+    required this.key,
+  });
+
+  final String label;
+  final IconData icon;
+  final GlobalKey key;
+}
+
+/// Поднавигация по секциям настроек: вертикальная колонка (ПК) или чипы
+/// (узкий экран). Нажатие прокручивает страницу к секции — действие реальное.
+class _SettingsSubNav extends StatelessWidget {
+  const _SettingsSubNav({
+    required this.items,
+    required this.onSelect,
+    required this.horizontal,
+  });
+
+  final List<_SettingsNavItem> items;
+  final ValueChanged<GlobalKey> onSelect;
+  final bool horizontal;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
+    final Widget content = horizontal
+        ? Wrap(
+            spacing: AppSpacing.xs,
+            runSpacing: AppSpacing.xs,
+            children: <Widget>[
+              for (final _SettingsNavItem item in items)
+                ActionChip(
+                  key: ValueKey<String>('settings-nav-${item.label}'),
+                  avatar: Icon(item.icon, size: 16, color: scheme.primary),
+                  label: Text(item.label),
+                  onPressed: () => onSelect(item.key),
+                ),
+            ],
+          )
+        : Container(
+            padding: const EdgeInsets.all(AppSpacing.xxs),
+            decoration: BoxDecoration(
+              color: scheme.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(AppRadii.input),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                for (final _SettingsNavItem item in items)
+                  InkWell(
+                    key: ValueKey<String>('settings-nav-${item.label}'),
+                    onTap: () => onSelect(item.key),
+                    borderRadius: BorderRadius.circular(AppRadii.sm),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.sm,
+                        vertical: AppSpacing.sm - 2,
+                      ),
+                      child: Row(
+                        children: <Widget>[
+                          Icon(
+                            item.icon,
+                            size: AppSizes.icon,
+                            color: scheme.onSurfaceVariant,
+                          ),
+                          const SizedBox(width: AppSpacing.xs),
+                          Expanded(
+                            child: Text(
+                              item.label,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.w500,
+                                color: scheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          );
+    return content;
+  }
+}
+
 class _DailyLimitRow extends StatelessWidget {
   const _DailyLimitRow({
     required this.id,
     required this.title,
+    required this.hint,
     required this.value,
     required this.onChanged,
     super.key,
@@ -308,72 +588,67 @@ class _DailyLimitRow extends StatelessWidget {
 
   final String id;
   final String title;
+  final String hint;
   final int value;
   final ValueChanged<int> onChanged;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: <Widget>[
-        Expanded(child: Text(title)),
-        IconButton(
-          key: ValueKey<String>('settings-$id-minus'),
-          icon: const Icon(Icons.remove),
-          onPressed: value <= 0 ? null : () => onChanged(value - 1),
-        ),
-        SizedBox(
-          width: 40,
-          child: Text(
-            value.toString(),
-            key: ValueKey<String>('settings-$id-value'),
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.titleMedium,
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xxs),
+      child: Row(
+        children: <Widget>[
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(title, style: theme.textTheme.bodyLarge),
+                Text(
+                  hint,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-        IconButton(
-          key: ValueKey<String>('settings-$id-plus'),
-          icon: const Icon(Icons.add),
-          onPressed: value >= AppSettings.maxDailyLimit
-              ? null
-              : () => onChanged(value + 1),
-        ),
-      ],
-    );
-  }
-}
-
-class _AccessibilitySection extends StatelessWidget {
-  const _AccessibilitySection({
-    required this.settings,
-    required this.onChanged,
-  });
-
-  final AppSettings settings;
-  final ValueChanged<AppSettings> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final AppLocalizations l10n = AppLocalizations.of(context);
-    return Column(
-      children: <Widget>[
-        SwitchListTile(
-          key: const ValueKey<String>('settings-haptics'),
-          contentPadding: EdgeInsets.zero,
-          title: Text(l10n.settingsHapticsTitle),
-          subtitle: Text(l10n.settingsHapticsHint),
-          value: settings.haptics,
-          onChanged: (bool value) =>
-              onChanged(settings.copyWith(haptics: value)),
-        ),
-        SwitchListTile(
-          key: const ValueKey<String>('settings-high-contrast'),
-          contentPadding: EdgeInsets.zero,
-          title: Text(l10n.settingsHighContrast),
-          value: settings.highContrast,
-          onChanged: (bool value) =>
-              onChanged(settings.copyWith(highContrast: value)),
-        ),
-      ],
+          Container(
+            decoration: BoxDecoration(
+              color: scheme.surface,
+              borderRadius: BorderRadius.circular(AppRadii.control),
+              border: Border.all(color: scheme.outlineVariant),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                IconButton(
+                  key: ValueKey<String>('settings-$id-minus'),
+                  icon: const Icon(Icons.remove, size: AppSizes.icon),
+                  onPressed: value <= 0 ? null : () => onChanged(value - 1),
+                ),
+                SizedBox(
+                  width: 32,
+                  child: Text(
+                    value.toString(),
+                    key: ValueKey<String>('settings-$id-value'),
+                    textAlign: TextAlign.center,
+                    style: AppTypography.numeric(context),
+                  ),
+                ),
+                IconButton(
+                  key: ValueKey<String>('settings-$id-plus'),
+                  icon: const Icon(Icons.add, size: AppSizes.icon),
+                  onPressed: value >= AppSettings.maxDailyLimit
+                      ? null
+                      : () => onChanged(value + 1),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -388,10 +663,12 @@ class _PercentSlider extends StatefulWidget {
     required this.divisions,
     required this.label,
     required this.onChangedEnd,
+    this.hint,
     super.key,
   });
 
   final String title;
+  final String? hint;
   final double value;
   final double min;
   final double max;
@@ -414,20 +691,40 @@ class _PercentSliderState extends State<_PercentSlider> {
 
   @override
   Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         Row(
           children: <Widget>[
             Expanded(
+              child: Text(widget.title, style: theme.textTheme.titleSmall),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.xs,
+                vertical: 2,
+              ),
+              decoration: BoxDecoration(
+                color: scheme.surface,
+                borderRadius: BorderRadius.circular(AppRadii.sm),
+                border: Border.all(color: scheme.outlineVariant),
+              ),
               child: Text(
-                widget.title,
-                style: Theme.of(context).textTheme.titleSmall,
+                widget.label,
+                style: AppTypography.numeric(context, color: scheme.primary),
               ),
             ),
-            Text(widget.label),
           ],
         ),
+        if (widget.hint != null)
+          Text(
+            widget.hint!,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
         Slider(
           value: _value.clamp(widget.min, widget.max),
           min: widget.min,
@@ -458,11 +755,10 @@ class _ApiSection extends ConsumerWidget {
     );
     final AsyncValue<int> tokens = ref.watch(weeklyTokensProvider);
     final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        Text(l10n.settingsApiProvidersTitle, style: theme.textTheme.titleSmall),
-        const SizedBox(height: 8),
         accounts.when(
           loading: () => const LinearProgressIndicator(),
           error: (Object error, StackTrace stackTrace) => Text(
@@ -475,7 +771,7 @@ class _ApiSection extends ConsumerWidget {
                 l10n.providersEmptyTitle,
                 key: const ValueKey<String>('settings-providers-empty'),
                 style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
+                  color: scheme.onSurfaceVariant,
                 ),
               );
             }
@@ -485,25 +781,31 @@ class _ApiSection extends ConsumerWidget {
               children: <Widget>[
                 for (final ProviderAccount account in value.accounts)
                   Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AppSpacing.xxs,
+                    ),
                     child: Row(
                       children: <Widget>[
-                        Icon(providerProtocolIcon(account.protocol), size: 20),
-                        const SizedBox(width: 8),
+                        AppIconBadge(
+                          icon: providerProtocolIcon(account.protocol),
+                          color: scheme.primary,
+                          size: 28,
+                        ),
+                        const SizedBox(width: AppSpacing.xs),
                         Expanded(
                           child: Text(
                             providerSummary(l10n, account),
                             key: ValueKey<String>(
                               'settings-provider-${account.id}',
                             ),
+                            style: theme.textTheme.bodyMedium,
                           ),
                         ),
                         if (active?.id == account.id)
-                          Text(
-                            l10n.providersActive,
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: theme.colorScheme.primary,
-                            ),
+                          AppStatusChip(
+                            label: l10n.providersActive,
+                            tone: AppStatusTone.success,
+                            dense: true,
                           ),
                       ],
                     ),
@@ -512,17 +814,17 @@ class _ApiSection extends ConsumerWidget {
             );
           },
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.xs),
         Align(
           alignment: AlignmentDirectional.centerStart,
-          child: TextButton.icon(
+          child: OutlinedButton.icon(
             key: const ValueKey<String>('settings-open-generation'),
             onPressed: () => context.push(AppRoutes.generationSettingsPath),
-            icon: const Icon(Icons.key_outlined),
+            icon: const Icon(Icons.key_outlined, size: 16),
             label: Text(l10n.settingsApiOpenGeneration),
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: AppSpacing.xs),
         tokens.when(
           loading: () => const SizedBox.shrink(),
           error: (Object error, StackTrace stackTrace) =>
@@ -531,7 +833,7 @@ class _ApiSection extends ConsumerWidget {
             l10n.settingsApiTokensWeek(count),
             key: const ValueKey<String>('settings-weekly-tokens'),
             style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
+              color: scheme.onSurfaceVariant,
             ),
           ),
         ),
@@ -642,33 +944,6 @@ class _LearningStepDialogState extends State<_LearningStepDialog> {
           child: Text(l10n.save),
         ),
       ],
-    );
-  }
-}
-
-class _SettingsLoadError extends StatelessWidget {
-  const _SettingsLoadError({required this.onRetry});
-
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final AppLocalizations l10n = AppLocalizations.of(context);
-    final ThemeData theme = Theme.of(context);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Icon(Icons.error_outline, size: 48, color: theme.colorScheme.error),
-            const SizedBox(height: 12),
-            Text(l10n.settingsLoadError, textAlign: TextAlign.center),
-            const SizedBox(height: 12),
-            TextButton(onPressed: onRetry, child: Text(l10n.retry)),
-          ],
-        ),
-      ),
     );
   }
 }

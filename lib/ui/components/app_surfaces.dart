@@ -49,38 +49,42 @@ class AppPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
     final ColorScheme scheme = theme.colorScheme;
-    final Widget surface = AnimatedContainer(
-      duration: AppDurations.quick,
-      curve: Curves.easeOut,
-      decoration: BoxDecoration(
-        color: color ?? scheme.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(radius),
-        border: Border.all(
+    final BorderRadius shape = BorderRadius.circular(radius);
+    final Widget content = Padding(padding: padding, child: child);
+    // Material, а не только DecoratedBox: внутри панели живут ListTile/Switch,
+    // которым для фона и splash нужен Material-предок.
+    final Widget surface = Material(
+      color: color ?? scheme.surfaceContainerLowest,
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: shape,
+        side: BorderSide(
           color: borderColor ?? scheme.outlineVariant,
           width: AppSizes.borderWidth,
         ),
+      ),
+      child: onTap == null && onLongPress == null
+          ? content
+          : InkWell(
+              onTap: onTap,
+              onLongPress: onLongPress,
+              borderRadius: shape,
+              child: content,
+            ),
+    );
+    final Widget decorated = DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: shape,
         boxShadow: AppShadows.card(theme.brightness),
       ),
-      padding: padding,
-      child: child,
+      child: surface,
     );
-    if (onTap == null && onLongPress == null) {
-      return semanticLabel == null
-          ? surface
-          : Semantics(label: semanticLabel, container: true, child: surface);
-    }
+    if (semanticLabel == null) return decorated;
     return Semantics(
-      button: true,
       label: semanticLabel,
-      child: Material(
-        type: MaterialType.transparency,
-        child: InkWell(
-          onTap: onTap,
-          onLongPress: onLongPress,
-          borderRadius: BorderRadius.circular(radius),
-          child: surface,
-        ),
-      ),
+      container: true,
+      button: onTap != null || onLongPress != null,
+      child: decorated,
     );
   }
 }

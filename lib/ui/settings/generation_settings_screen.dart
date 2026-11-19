@@ -17,6 +17,8 @@ import 'package:cardflow/api/generation/api_key_verifier.dart';
 import 'package:cardflow/domain/generation/api_key_store.dart';
 import 'package:cardflow/domain/generation/provider_account.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
+import 'package:cardflow/ui/components/app_surfaces.dart';
+import 'package:cardflow/ui/theme/app_tokens.dart';
 import 'package:cardflow/ui/decks/deck_actions.dart' show showAppMessage;
 import 'package:cardflow/ui/settings/provider_account_dialogs.dart';
 import 'package:cardflow/ui/settings/provider_labels.dart';
@@ -303,13 +305,38 @@ class _GenerationSettingsScreenState
       body: _buildBody(l10n),
       bottomNavigationBar: _loading || _loadFailed
           ? null
-          : SafeArea(
-              minimum: const EdgeInsets.all(16),
-              child: FilledButton.icon(
-                key: const ValueKey<String>('providers-add'),
-                onPressed: _openAddMenu,
-                icon: const Icon(Icons.add),
-                label: Text(l10n.providersAdd),
+          : DecoratedBox(
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surfaceContainerLowest,
+                border: Border(
+                  top: BorderSide(
+                    color: Theme.of(context).colorScheme.outlineVariant,
+                  ),
+                ),
+              ),
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.md,
+                    AppSpacing.xs,
+                    AppSpacing.md,
+                    AppSpacing.sm,
+                  ),
+                  child: Center(
+                    heightFactor: 1,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(
+                        maxWidth: AppSizes.formMaxWidth,
+                      ),
+                      child: FilledButton.icon(
+                        key: const ValueKey<String>('providers-add'),
+                        onPressed: _openAddMenu,
+                        icon: const Icon(Icons.add, size: AppSizes.icon),
+                        label: Text(l10n.providersAdd),
+                      ),
+                    ),
+                  ),
+                ),
               ),
             ),
     );
@@ -322,54 +349,60 @@ class _GenerationSettingsScreenState
     if (_loadFailed) {
       return Center(
         child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Icon(
-                Icons.error_outline,
-                size: 48,
-                color: Theme.of(context).colorScheme.error,
-              ),
-              const SizedBox(height: 12),
-              Text(l10n.settingsLoadError, textAlign: TextAlign.center),
-              const SizedBox(height: 12),
-              TextButton(onPressed: _retryLoad, child: Text(l10n.retry)),
-            ],
+          padding: const EdgeInsets.all(AppSpacing.xl),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              maxWidth: AppSizes.dialogMaxWidth,
+            ),
+            child: AppErrorState(
+              message: l10n.settingsLoadError,
+              retryLabel: l10n.retry,
+              onRetry: _retryLoad,
+            ),
           ),
         ),
       );
     }
 
     final ThemeData theme = Theme.of(context);
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-      children: <Widget>[
-        Text(
-          l10n.providersDescription,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: AppSizes.formMaxWidth),
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.md,
+            AppSpacing.md,
+            AppSpacing.md,
+            AppSpacing.sm,
           ),
-        ),
-        const SizedBox(height: 12),
-        if (_accounts.isEmpty)
-          _EmptyProviders(l10n: l10n)
-        else
-          for (final ProviderAccount account in _accounts.accounts)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: _ProviderCard(
-                account: account,
-                active: _accounts.active?.id == account.id,
-                keyConfigured: _keyConfigured[account.id] ?? false,
-                checking: _checking.contains(account.id),
-                onCheck: () => _check(account),
-                onEdit: () => _edit(account),
-                onDelete: () => _delete(account),
-                onActivate: () => _setActive(account),
+          children: <Widget>[
+            Text(
+              l10n.providersDescription,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
-      ],
+            const SizedBox(height: AppSpacing.sm),
+            if (_accounts.isEmpty)
+              _EmptyProviders(l10n: l10n)
+            else
+              for (final ProviderAccount account in _accounts.accounts)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                  child: _ProviderCard(
+                    account: account,
+                    active: _accounts.active?.id == account.id,
+                    keyConfigured: _keyConfigured[account.id] ?? false,
+                    checking: _checking.contains(account.id),
+                    onCheck: () => _check(account),
+                    onEdit: () => _edit(account),
+                    onDelete: () => _delete(account),
+                    onActivate: () => _setActive(account),
+                  ),
+                ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -391,32 +424,10 @@ class _EmptyProviders extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 32),
-      child: Column(
-        children: <Widget>[
-          Icon(
-            Icons.key_off_outlined,
-            size: 48,
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-          const SizedBox(height: 12),
-          Text(
-            l10n.providersEmptyTitle,
-            style: theme.textTheme.titleMedium,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            l10n.providersEmptyDescription,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
+    return AppEmptyState(
+      icon: Icons.key_off_outlined,
+      title: l10n.providersEmptyTitle,
+      message: l10n.providersEmptyDescription,
     );
   }
 }
@@ -450,112 +461,115 @@ class _ProviderCard extends StatelessWidget {
     final String keyStatus = account.requiresApiKey
         ? (keyConfigured ? l10n.settingsKeyConfigured : l10n.settingsKeyMissing)
         : l10n.providersKeyNotRequired;
-    return Card(
+    return AppPanel(
       key: ValueKey<String>('provider-card-${account.id}'),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Row(
-              children: <Widget>[
-                Icon(providerProtocolIcon(account.protocol)),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Text(
-                        providerAccountLabel(l10n, account),
-                        style: theme.textTheme.titleMedium,
+      padding: const EdgeInsets.all(AppSpacing.md),
+      radius: AppRadii.input,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              AppIconBadge(
+                icon: providerProtocolIcon(account.protocol),
+                color: theme.colorScheme.primary,
+                size: 32,
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      providerAccountLabel(l10n, account),
+                      style: theme.textTheme.titleMedium,
+                    ),
+                    Text(
+                      providerSummary(l10n, account),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
                       ),
-                      Text(
-                        providerSummary(l10n, account),
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
+                    ),
+                    Text(
+                      account.baseUrl,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
                       ),
-                      Text(
-                        account.baseUrl,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (active)
-                  Chip(
-                    key: ValueKey<String>('provider-active-${account.id}'),
-                    label: Text(l10n.providersActive),
-                    visualDensity: VisualDensity.compact,
-                  ),
-              ],
-            ),
-            if (!account.isConfigured)
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Text(
-                  l10n.providersIncompleteHint,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.error,
-                  ),
+                    ),
+                  ],
                 ),
               ),
-            const SizedBox(height: 8),
-            Text(
-              keyStatus,
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: keyConfigured || !account.requiresApiKey
-                    ? theme.colorScheme.primary
-                    : theme.colorScheme.onSurfaceVariant,
+              if (active)
+                Chip(
+                  key: ValueKey<String>('provider-active-${account.id}'),
+                  label: Text(l10n.providersActive),
+                  visualDensity: VisualDensity.compact,
+                ),
+            ],
+          ),
+          if (!account.isConfigured)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                l10n.providersIncompleteHint,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.error,
+                ),
               ),
             ),
-            Text(
-              account.supportsVision
-                  ? l10n.providersVisionSupported
-                  : l10n.providersVisionNotSupported,
-              key: ValueKey<String>('provider-vision-${account.id}'),
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+          const SizedBox(height: 8),
+          Text(
+            keyStatus,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: keyConfigured || !account.requiresApiKey
+                  ? theme.colorScheme.primary
+                  : theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          Text(
+            account.supportsVision
+                ? l10n.providersVisionSupported
+                : l10n.providersVisionNotSupported,
+            key: ValueKey<String>('provider-vision-${account.id}'),
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Wrap(
+            spacing: 4,
+            runSpacing: 4,
+            children: <Widget>[
+              TextButton(
+                key: ValueKey<String>('provider-check-${account.id}'),
+                onPressed: checking ? null : onCheck,
+                child: checking
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Text(l10n.providersCheck),
               ),
-            ),
-            const SizedBox(height: 4),
-            Wrap(
-              spacing: 4,
-              runSpacing: 4,
-              children: <Widget>[
+              if (!active)
                 TextButton(
-                  key: ValueKey<String>('provider-check-${account.id}'),
-                  onPressed: checking ? null : onCheck,
-                  child: checking
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : Text(l10n.providersCheck),
+                  key: ValueKey<String>('provider-activate-${account.id}'),
+                  onPressed: onActivate,
+                  child: Text(l10n.providersMakeActive),
                 ),
-                if (!active)
-                  TextButton(
-                    key: ValueKey<String>('provider-activate-${account.id}'),
-                    onPressed: onActivate,
-                    child: Text(l10n.providersMakeActive),
-                  ),
-                TextButton(
-                  key: ValueKey<String>('provider-edit-${account.id}'),
-                  onPressed: onEdit,
-                  child: Text(l10n.providersEdit),
-                ),
-                TextButton(
-                  key: ValueKey<String>('provider-delete-${account.id}'),
-                  onPressed: onDelete,
-                  child: Text(l10n.providersDelete),
-                ),
-              ],
-            ),
-          ],
-        ),
+              TextButton(
+                key: ValueKey<String>('provider-edit-${account.id}'),
+                onPressed: onEdit,
+                child: Text(l10n.providersEdit),
+              ),
+              TextButton(
+                key: ValueKey<String>('provider-delete-${account.id}'),
+                onPressed: onDelete,
+                child: Text(l10n.providersDelete),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

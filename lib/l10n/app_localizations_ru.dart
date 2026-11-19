@@ -2359,4 +2359,141 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get generationBackTooltip => 'Назад';
+
+  @override
+  String get statisticsOverline => 'Аналитический центр';
+
+  @override
+  String get statisticsSubtitle =>
+      'Отслеживание прогресса, эффективности интервального повторения и темпа обучения';
+
+  @override
+  String get statisticsKpiStreak => 'Текущая серия';
+
+  @override
+  String statisticsDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count дня',
+      many: '$count дней',
+      few: '$count дня',
+      one: '$count день',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get statisticsKpiRetention => 'Удержание';
+
+  @override
+  String get statisticsRetentionWindow => 'за 30 дней';
+
+  @override
+  String get statisticsKpiReviews => 'Повторений за год';
+
+  @override
+  String get statisticsKpiActiveDays => 'Дней активности';
+
+  @override
+  String statisticsActiveDaysValue(int done, int total) {
+    return '$done из $total';
+  }
+
+  @override
+  String statisticsGoal(int percent) {
+    return 'Цель: $percent%';
+  }
+
+  @override
+  String statisticsHeatmapSummary(int active, int total) {
+    return '$active дней активности из $total';
+  }
+
+  @override
+  String get statisticsLegendLess => 'Меньше';
+
+  @override
+  String get statisticsLegendMore => 'Больше';
+
+  @override
+  String get statisticsWeakTopicsSubtitle => 'Темы с высокой долей ошибок';
+
+  @override
+  String get statisticsForecastSubtitle =>
+      'Запланированные повторения на основе расписания FSRS';
+
+  @override
+  String get settingsOverline => 'Конфигурация';
+
+  @override
+  String get settingsBreadcrumbSection => 'Система';
+
+  @override
+  String get settingsSubtitle =>
+      'Управление алгоритмом интервального повторения, внешним видом и параметрами генерации';
+
+  @override
+  String get settingsNavLearning => 'Обучение и FSRS';
+
+  @override
+  String get settingsNavAppearance => 'Внешний вид';
+
+  @override
+  String get settingsNavAccessibility => 'Доступность';
+
+  @override
+  String get settingsNavAi => 'ИИ и модели';
+
+  @override
+  String get settingsNavAbout => 'О приложении';
+
+  @override
+  String get settingsFsrsTitle => 'Алгоритм интервального повторения (FSRS)';
+
+  @override
+  String get settingsLearningSubtitle =>
+      'Модель интервалов памяти на основе FSRS';
+
+  @override
+  String get settingsRetentionHint =>
+      'Рекомендуется 85–92% для баланса времени и прочности';
+
+  @override
+  String get settingsLearningStepsHint => 'Интервалы первого изучения карточки';
+
+  @override
+  String get settingsDailyLimitsTitle => 'Дневные лимиты';
+
+  @override
+  String get settingsDailyNewLimitHint =>
+      'Сколько новых карточек показывать за день';
+
+  @override
+  String get settingsDailyReviewLimitHint =>
+      'Сколько повторений показывать за день';
+
+  @override
+  String get settingsAppearanceSubtitle =>
+      'Настройка темы оформления, типографики и плотности интерфейса';
+
+  @override
+  String get settingsThemeHint => 'Светлая, тёмная или системная тема';
+
+  @override
+  String get settingsMotionHint => 'Характер анимаций интерфейса';
+
+  @override
+  String get settingsAccessibilitySubtitle =>
+      'Отклик, контраст и шрифт для чтения';
+
+  @override
+  String get settingsTextScaleHint =>
+      'Размер интерфейса относительно системного';
+
+  @override
+  String get settingsAiSubtitle => 'Аккаунты провайдеров и расход токенов';
+
+  @override
+  String get settingsAboutSubtitle => 'Версия, лицензии и политика приватности';
 }

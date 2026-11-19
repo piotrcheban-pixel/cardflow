@@ -3847,6 +3847,228 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Назад'**
   String get generationBackTooltip;
+
+  /// Надзаголовок экрана статистики.
+  ///
+  /// In ru, this message translates to:
+  /// **'Аналитический центр'**
+  String get statisticsOverline;
+
+  /// Пояснение под заголовком статистики.
+  ///
+  /// In ru, this message translates to:
+  /// **'Отслеживание прогресса, эффективности интервального повторения и темпа обучения'**
+  String get statisticsSubtitle;
+
+  /// KPI-плитка: серия дней занятий.
+  ///
+  /// In ru, this message translates to:
+  /// **'Текущая серия'**
+  String get statisticsKpiStreak;
+
+  /// Число дней с правильной формой слова.
+  ///
+  /// In ru, this message translates to:
+  /// **'{count, plural, one{{count} день} few{{count} дня} many{{count} дней} other{{count} дня}}'**
+  String statisticsDays(int count);
+
+  /// KPI-плитка: удержание за 30 дней.
+  ///
+  /// In ru, this message translates to:
+  /// **'Удержание'**
+  String get statisticsKpiRetention;
+
+  /// Окно расчёта удержания.
+  ///
+  /// In ru, this message translates to:
+  /// **'за 30 дней'**
+  String get statisticsRetentionWindow;
+
+  /// KPI-плитка: число повторений в окне года.
+  ///
+  /// In ru, this message translates to:
+  /// **'Повторений за год'**
+  String get statisticsKpiReviews;
+
+  /// KPI-плитка: дни с повторениями.
+  ///
+  /// In ru, this message translates to:
+  /// **'Дней активности'**
+  String get statisticsKpiActiveDays;
+
+  /// Активные дни из окна карты.
+  ///
+  /// In ru, this message translates to:
+  /// **'{done} из {total}'**
+  String statisticsActiveDaysValue(int done, int total);
+
+  /// Целевое удержание из настроек.
+  ///
+  /// In ru, this message translates to:
+  /// **'Цель: {percent}%'**
+  String statisticsGoal(int percent);
+
+  /// Сводка по годовой карте повторений.
+  ///
+  /// In ru, this message translates to:
+  /// **'{active} дней активности из {total}'**
+  String statisticsHeatmapSummary(int active, int total);
+
+  /// Легенда карты: меньше активности.
+  ///
+  /// In ru, this message translates to:
+  /// **'Меньше'**
+  String get statisticsLegendLess;
+
+  /// Легенда карты: больше активности.
+  ///
+  /// In ru, this message translates to:
+  /// **'Больше'**
+  String get statisticsLegendMore;
+
+  /// Пояснение к блоку слабых тем.
+  ///
+  /// In ru, this message translates to:
+  /// **'Темы с высокой долей ошибок'**
+  String get statisticsWeakTopicsSubtitle;
+
+  /// Пояснение к прогнозу нагрузки.
+  ///
+  /// In ru, this message translates to:
+  /// **'Запланированные повторения на основе расписания FSRS'**
+  String get statisticsForecastSubtitle;
+
+  /// Надзаголовок экрана настроек.
+  ///
+  /// In ru, this message translates to:
+  /// **'Конфигурация'**
+  String get settingsOverline;
+
+  /// Вторая часть «хлебных крошек» настроек.
+  ///
+  /// In ru, this message translates to:
+  /// **'Система'**
+  String get settingsBreadcrumbSection;
+
+  /// Пояснение под заголовком настроек.
+  ///
+  /// In ru, this message translates to:
+  /// **'Управление алгоритмом интервального повторения, внешним видом и параметрами генерации'**
+  String get settingsSubtitle;
+
+  /// Пункт поднавигации настроек.
+  ///
+  /// In ru, this message translates to:
+  /// **'Обучение и FSRS'**
+  String get settingsNavLearning;
+
+  /// Пункт поднавигации настроек.
+  ///
+  /// In ru, this message translates to:
+  /// **'Внешний вид'**
+  String get settingsNavAppearance;
+
+  /// Пункт поднавигации настроек.
+  ///
+  /// In ru, this message translates to:
+  /// **'Доступность'**
+  String get settingsNavAccessibility;
+
+  /// Пункт поднавигации настроек.
+  ///
+  /// In ru, this message translates to:
+  /// **'ИИ и модели'**
+  String get settingsNavAi;
+
+  /// Пункт поднавигации настроек.
+  ///
+  /// In ru, this message translates to:
+  /// **'О приложении'**
+  String get settingsNavAbout;
+
+  /// Заголовок секции обучения.
+  ///
+  /// In ru, this message translates to:
+  /// **'Алгоритм интервального повторения (FSRS)'**
+  String get settingsFsrsTitle;
+
+  /// Пояснение секции обучения.
+  ///
+  /// In ru, this message translates to:
+  /// **'Модель интервалов памяти на основе FSRS'**
+  String get settingsLearningSubtitle;
+
+  /// Подсказка к ползунку удержания.
+  ///
+  /// In ru, this message translates to:
+  /// **'Рекомендуется 85–92% для баланса времени и прочности'**
+  String get settingsRetentionHint;
+
+  /// Подсказка к шагам обучения.
+  ///
+  /// In ru, this message translates to:
+  /// **'Интервалы первого изучения карточки'**
+  String get settingsLearningStepsHint;
+
+  /// Заголовок блока дневных лимитов.
+  ///
+  /// In ru, this message translates to:
+  /// **'Дневные лимиты'**
+  String get settingsDailyLimitsTitle;
+
+  /// Подсказка к лимиту новых карточек.
+  ///
+  /// In ru, this message translates to:
+  /// **'Сколько новых карточек показывать за день'**
+  String get settingsDailyNewLimitHint;
+
+  /// Подсказка к лимиту повторений.
+  ///
+  /// In ru, this message translates to:
+  /// **'Сколько повторений показывать за день'**
+  String get settingsDailyReviewLimitHint;
+
+  /// Пояснение секции внешнего вида.
+  ///
+  /// In ru, this message translates to:
+  /// **'Настройка темы оформления, типографики и плотности интерфейса'**
+  String get settingsAppearanceSubtitle;
+
+  /// Подсказка к выбору темы.
+  ///
+  /// In ru, this message translates to:
+  /// **'Светлая, тёмная или системная тема'**
+  String get settingsThemeHint;
+
+  /// Подсказка к выбору движения.
+  ///
+  /// In ru, this message translates to:
+  /// **'Характер анимаций интерфейса'**
+  String get settingsMotionHint;
+
+  /// Пояснение секции доступности.
+  ///
+  /// In ru, this message translates to:
+  /// **'Отклик, контраст и шрифт для чтения'**
+  String get settingsAccessibilitySubtitle;
+
+  /// Подсказка к масштабу текста.
+  ///
+  /// In ru, this message translates to:
+  /// **'Размер интерфейса относительно системного'**
+  String get settingsTextScaleHint;
+
+  /// Пояснение секции ИИ.
+  ///
+  /// In ru, this message translates to:
+  /// **'Аккаунты провайдеров и расход токенов'**
+  String get settingsAiSubtitle;
+
+  /// Пояснение секции «О приложении».
+  ///
+  /// In ru, this message translates to:
+  /// **'Версия, лицензии и политика приватности'**
+  String get settingsAboutSubtitle;
 }
 
 class _AppLocalizationsDelegate

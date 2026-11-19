@@ -155,8 +155,16 @@ void main() {
       expect(find.byType(SettingsScreen), findsOneWidget);
       expect(find.text(l10n.settingsScreenTitle), findsWidgets);
       // Настройки читаются через production-провайдеры с фейками
-      // (без drift/secure storage в тесте).
-      expect(find.text(l10n.settingsAppearanceTitle), findsOneWidget);
+      // (без drift/secure storage в тесте). Секция «Внешний вид» идёт после
+      // «Обучения и FSRS» (ADR-038) — прокручиваем к ней.
+      await tester.scrollUntilVisible(
+        find.byKey(const ValueKey<String>('settings-dynamic-color')),
+        240,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+      // «Внешний вид» есть и в поднавигации, и в заголовке секции.
+      expect(find.text(l10n.settingsAppearanceTitle), findsWidgets);
 
       // Настройки генерации (ADR-013) остаются доступны из блока API.
       final Finder generationLink = find.byKey(

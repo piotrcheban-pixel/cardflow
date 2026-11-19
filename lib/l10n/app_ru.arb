@@ -3069,5 +3069,179 @@
   "generationBackTooltip": "Назад",
   "@generationBackTooltip": {
     "description": "Кнопка возврата со страницы генерации."
+  },
+  "statisticsOverline": "Аналитический центр",
+  "@statisticsOverline": {
+    "description": "Надзаголовок экрана статистики."
+  },
+  "statisticsSubtitle": "Отслеживание прогресса, эффективности интервального повторения и темпа обучения",
+  "@statisticsSubtitle": {
+    "description": "Пояснение под заголовком статистики."
+  },
+  "statisticsKpiStreak": "Текущая серия",
+  "@statisticsKpiStreak": {
+    "description": "KPI-плитка: серия дней занятий."
+  },
+  "statisticsDays": "{count, plural, one{{count} день} few{{count} дня} many{{count} дней} other{{count} дня}}",
+  "@statisticsDays": {
+    "description": "Число дней с правильной формой слова.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "statisticsKpiRetention": "Удержание",
+  "@statisticsKpiRetention": {
+    "description": "KPI-плитка: удержание за 30 дней."
+  },
+  "statisticsRetentionWindow": "за 30 дней",
+  "@statisticsRetentionWindow": {
+    "description": "Окно расчёта удержания."
+  },
+  "statisticsKpiReviews": "Повторений за год",
+  "@statisticsKpiReviews": {
+    "description": "KPI-плитка: число повторений в окне года."
+  },
+  "statisticsKpiActiveDays": "Дней активности",
+  "@statisticsKpiActiveDays": {
+    "description": "KPI-плитка: дни с повторениями."
+  },
+  "statisticsActiveDaysValue": "{done} из {total}",
+  "@statisticsActiveDaysValue": {
+    "description": "Активные дни из окна карты.",
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "statisticsGoal": "Цель: {percent}%",
+  "@statisticsGoal": {
+    "description": "Целевое удержание из настроек.",
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "statisticsHeatmapSummary": "{active} дней активности из {total}",
+  "@statisticsHeatmapSummary": {
+    "description": "Сводка по годовой карте повторений.",
+    "placeholders": {
+      "active": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "statisticsLegendLess": "Меньше",
+  "@statisticsLegendLess": {
+    "description": "Легенда карты: меньше активности."
+  },
+  "statisticsLegendMore": "Больше",
+  "@statisticsLegendMore": {
+    "description": "Легенда карты: больше активности."
+  },
+  "statisticsWeakTopicsSubtitle": "Темы с высокой долей ошибок",
+  "@statisticsWeakTopicsSubtitle": {
+    "description": "Пояснение к блоку слабых тем."
+  },
+  "statisticsForecastSubtitle": "Запланированные повторения на основе расписания FSRS",
+  "@statisticsForecastSubtitle": {
+    "description": "Пояснение к прогнозу нагрузки."
+  },
+  "settingsOverline": "Конфигурация",
+  "@settingsOverline": {
+    "description": "Надзаголовок экрана настроек."
+  },
+  "settingsBreadcrumbSection": "Система",
+  "@settingsBreadcrumbSection": {
+    "description": "Вторая часть «хлебных крошек» настроек."
+  },
+  "settingsSubtitle": "Управление алгоритмом интервального повторения, внешним видом и параметрами генерации",
+  "@settingsSubtitle": {
+    "description": "Пояснение под заголовком настроек."
+  },
+  "settingsNavLearning": "Обучение и FSRS",
+  "@settingsNavLearning": {
+    "description": "Пункт поднавигации настроек."
+  },
+  "settingsNavAppearance": "Внешний вид",
+  "@settingsNavAppearance": {
+    "description": "Пункт поднавигации настроек."
+  },
+  "settingsNavAccessibility": "Доступность",
+  "@settingsNavAccessibility": {
+    "description": "Пункт поднавигации настроек."
+  },
+  "settingsNavAi": "ИИ и модели",
+  "@settingsNavAi": {
+    "description": "Пункт поднавигации настроек."
+  },
+  "settingsNavAbout": "О приложении",
+  "@settingsNavAbout": {
+    "description": "Пункт поднавигации настроек."
+  },
+  "settingsFsrsTitle": "Алгоритм интервального повторения (FSRS)",
+  "@settingsFsrsTitle": {
+    "description": "Заголовок секции обучения."
+  },
+  "settingsLearningSubtitle": "Модель интервалов памяти на основе FSRS",
+  "@settingsLearningSubtitle": {
+    "description": "Пояснение секции обучения."
+  },
+  "settingsRetentionHint": "Рекомендуется 85–92% для баланса времени и прочности",
+  "@settingsRetentionHint": {
+    "description": "Подсказка к ползунку удержания."
+  },
+  "settingsLearningStepsHint": "Интервалы первого изучения карточки",
+  "@settingsLearningStepsHint": {
+    "description": "Подсказка к шагам обучения."
+  },
+  "settingsDailyLimitsTitle": "Дневные лимиты",
+  "@settingsDailyLimitsTitle": {
+    "description": "Заголовок блока дневных лимитов."
+  },
+  "settingsDailyNewLimitHint": "Сколько новых карточек показывать за день",
+  "@settingsDailyNewLimitHint": {
+    "description": "Подсказка к лимиту новых карточек."
+  },
+  "settingsDailyReviewLimitHint": "Сколько повторений показывать за день",
+  "@settingsDailyReviewLimitHint": {
+    "description": "Подсказка к лимиту повторений."
+  },
+  "settingsAppearanceSubtitle": "Настройка темы оформления, типографики и плотности интерфейса",
+  "@settingsAppearanceSubtitle": {
+    "description": "Пояснение секции внешнего вида."
+  },
+  "settingsThemeHint": "Светлая, тёмная или системная тема",
+  "@settingsThemeHint": {
+    "description": "Подсказка к выбору темы."
+  },
+  "settingsMotionHint": "Характер анимаций интерфейса",
+  "@settingsMotionHint": {
+    "description": "Подсказка к выбору движения."
+  },
+  "settingsAccessibilitySubtitle": "Отклик, контраст и шрифт для чтения",
+  "@settingsAccessibilitySubtitle": {
+    "description": "Пояснение секции доступности."
+  },
+  "settingsTextScaleHint": "Размер интерфейса относительно системного",
+  "@settingsTextScaleHint": {
+    "description": "Подсказка к масштабу текста."
+  },
+  "settingsAiSubtitle": "Аккаунты провайдеров и расход токенов",
+  "@settingsAiSubtitle": {
+    "description": "Пояснение секции ИИ."
+  },
+  "settingsAboutSubtitle": "Версия, лицензии и политика приватности",
+  "@settingsAboutSubtitle": {
+    "description": "Пояснение секции «О приложении»."
   }
 }

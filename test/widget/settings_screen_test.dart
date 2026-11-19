@@ -98,6 +98,8 @@ void main() {
   ) async {
     await pump(tester);
 
+    // Секция «Внешний вид» идёт после «Обучения и FSRS» — прокручиваем к ней.
+    await reveal(tester, find.text('Тёмная'));
     await tester.tap(find.text('Тёмная'));
     await tester.pumpAndSettle();
     expect(settings.settings.theme, AppThemePreference.dark);
@@ -128,6 +130,10 @@ void main() {
     settings.failWrites = true;
     final AppLocalizations l10n = l10nOf(tester);
 
+    await reveal(
+      tester,
+      find.byKey(const ValueKey<String>('settings-dynamic-color')),
+    );
     await tester.tap(
       find.byKey(const ValueKey<String>('settings-dynamic-color')),
     );

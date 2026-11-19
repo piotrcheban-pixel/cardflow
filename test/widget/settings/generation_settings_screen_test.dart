@@ -204,7 +204,7 @@ void main() {
     expect(find.text(l10n.settingsLoadError), findsOneWidget);
     expect(find.textContaining('boom'), findsNothing);
 
-    await tester.tap(find.widgetWithText(TextButton, l10n.retry));
+    await tester.tap(find.widgetWithText(OutlinedButton, l10n.retry));
     await tester.pumpAndSettle();
     expect(failing.readCalls, 2);
     expect(find.text(l10n.providersEmptyTitle), findsOneWidget);
