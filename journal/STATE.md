@@ -1255,3 +1255,43 @@ L65, L66 (обновлено L80), L67, L68, L69, L70, L71–L75,
 - 7.8 «Вложения и Vision» — ADR-022, CI run `43650756271` 9/9.
 - 7.6 «Пустой ответ LLM» — CI runs `43637919516`/`43639479927` 9/9.
 - 7.5 «Провайдеры и ключи» — ADR-020, CI run `43632334916` 9/9.
+
+## TASK 05 — Controlled Live Generation Validation, подготовка A–C (2026-11-19)
+
+**Старт:** `git status --porcelain` → только `?? redesign/`; `HEAD = 6bdf3e4`;
+baseline **2157 passed + 16 skipped**, `analyze` 0.
+
+**Сделано (без единого платного запроса):**
+- каталог DeepSeek приведён к официальной странице 2026-11-19:
+  добавлены `deepseek-flash` (default, 1M, Vision) и `deepseek-v4-pro` (1M),
+  legacy `deepseek-chat`/`deepseek-reasoner` оставлены для сохранённых
+  аккаунтов; это убрало «1 карточку на запрос» у unknown-модели (L137/L139
+  обновлены, L147);
+- live-инфраструктура: logical/HTTP/attempts/retries разделены, бюджеты общие
+  на файл (`LiveRecordingCaller`, `LiveProbeTransport`, `LiveAttemptLimiter`),
+  `LiveCostGuard` резервирует стоимость каждой физической попытки до отправки,
+  strict-400 освобождает резерв; отчёт содержит цены, estimated/actual cost,
+  `requestCosts[]`, latency; `note` редактируется;
+- сценарии A–C: A = 5 карточек (1 запрос), B = 40 (6 запросов, continuity),
+  C = DOCX с 3 Heading1 через production `DocxParser`; importability
+  проверяется `CardDraft.validate()`;
+- `CARDFLOW_LIVE_SCENARIOS` — явный список id, чтобы A–C не задевали Test D;
+- ручная рубрика 8 критериев 0/1/2 + `LiveDocumentAssessment` для Test C;
+- артефакты: `journal/task05/{audit,test-plan,budget,readiness-report}.md`,
+  `journal/task05/results/README.md`; `docs/generation-pipeline.md` §9.
+
+**Гейты:** `test --no-pub --exclude-tags golden` → **2177 passed + 16 skipped**;
+`test/unit/live` → **48 passed**; Test F (`generation_recovery_http_test`) →
+**11 passed**; `test/live --tags live` → **16 skipped, 0 запросов**; `analyze`
+0; `format` **500 файлов / 0 changed**; `build windows --release --no-pub` →
+`cardflow.exe` (62,1 с); `--coverage` → **92.4 % (16202/17535)**.
+
+**Коммиты:** `4e385ff` (каталог DeepSeek), `e401c69` (live-инфраструктура и
+A–C), docs-коммит `docs(journal): record TASK 05 live readiness` (аудит, план,
+бюджет, отчёт). Push не выполнялся.
+
+**Платные запросы:** не выполнялись. `DEEPSEEK_API_KEY` present в Windows
+User scope, значение не выводилось. Готовность A–C — YES, запуск только по
+отдельному разрешению (`journal/task05/readiness-report.md`). Ограничения:
+L143–L148 (биллинг 400/повторов, thinking mode, live-импорт в БД, legacy
+DeepSeek, ручная приёмка).

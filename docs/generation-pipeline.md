@@ -302,26 +302,42 @@ inputBudget = окно ? окно − reserved − fixed − safety
 
 - **По умолчанию запросы запрещены:** тег `live` + `CARDFLOW_LIVE_TESTS=1`;
   без него тесты пропускаются даже при наличии ключа. `maxRequests=0` и
-  `maxCost=0` по умолчанию — запуск невозможен.
+  `maxCost=0` по умолчанию — запуск невозможен. `CARDFLOW_LIVE_SCENARIOS`
+  (id через запятую) дополнительно ограничивает набор: C и D делят флаг
+  `_ENABLE_MATERIALS`, поэтому для A–C список обязателен.
 - **Параметры:** `CARDFLOW_LIVE_PROVIDER`/`_MODEL`/`_BASE_URL`, `_MAX_REQUESTS`,
   `_MAX_COST_USD`, `_ALLOW_UNKNOWN_COST`, `_TIMEOUT_SEC`,
   `_ENABLE_PROMPT_ONLY`/`_MATERIALS`/`_IMAGES`/`_RECOVERY`, `_VISION`, `_REPORT`.
   Отсутствие ключа (`DEEPSEEK_API_KEY`, `OPENAI_API_KEY`, …) — безопасный skip.
-- **Бюджет:** `LiveRequestBudget` считает логические запросы
-  (`LiveProbeTransport`), `LiveAttemptLimiter` ограничивает HTTP-попытки
-  (включая повторы 429/5xx). Таймаут каждого запроса — из конфигурации.
-- **Стоимость:** тарифы только с официальных страниц, с URL и датой проверки
-  (`test/live/support/live_pricing.dart`). Неизвестный тариф → `null` и
-  блокировка автоматического запуска; ноль вместо неизвестности не
-  подставляется.
+- **Бюджет (TASK 05):** `LiveRecordingCaller` + `LiveRequestBudget` считают
+  **логические** запросы (`GenerationCaller.generate`, включая recovery);
+  `LiveProbeTransport` + отдельный `LiveRequestBudget` — HTTP-обмены
+  (`postJson`, включая strict → tolerant); `LiveAttemptLimiter` — физические
+  попытки (включая повторы 429/5xx). Бюджеты можно сделать общими на файл —
+  тогда A+B+C делят один лимит, а не получают по копии на тест.
+- **Стоимость (TASK 05):** тарифы только с официальных страниц, с URL и датой
+  проверки (`test/live/support/live_pricing.dart`). Неизвестный тариф → `null`
+  и блокировка автоматического запуска; ноль вместо неизвестности не
+  подставляется. `LiveCostGuard` в `LiveAttemptLimiter` резервирует
+  предварительную оценку **каждой физической попытки** до отправки и
+  засчитывает факт из `usage` после ответа; strict-400 освобождает резерв;
+  превышение `CARDFLOW_LIVE_MAX_COST_USD` блокирует запрос до отправки.
 - **Отчёт:** `LiveRunRecord` (JSON Lines, `build/live/live-runs.jsonl`) —
-  провайдер, модель, версия оценщика, оценки/факты токенов, байты тела, число
-  изображений, время запросов, статус, число запросов восстановления.
-  Отсутствующие поля — `null`; материалы и ключи в отчёт не попадают.
+  провайдер, модель, версия оценщика, `logicalRequests`/`httpRequests`/
+  `httpAttempts`/`retries`/`recoveryRequests`, оценки/факты токенов, цены и
+  `estimatedCostUsd`/`actualCostUsd`, per-request `requestCosts[]`, байты
+  тела, число изображений, latency, статус. Отсутствующие поля — `null`;
+  материалы и ключи в отчёт не попадают; `note` редактируется.
+- **Каталог DeepSeek (TASK 05):** `deepseek-flash` (1M, Vision) — модель по
+  умолчанию; `deepseek-v4-pro` (1M, без Vision); legacy `deepseek-chat`/
+  `deepseek-reasoner` оставлены для сохранённых аккаунтов (в актуальной
+  документации DeepSeek их нет — L137).
 - **Test F без оплаты:** локальный endpoint (`local_provider_server.dart`)
   проверяет на реальном сокете 413, 429 + `Retry-After`, таймаут, context
   overflow, битый JSON, `truncated`, 5xx, 401 — обычным офлайновым тестом
   `test/integration/generation_recovery_http_test.dart`.
-- **Ограничения:** `journal/KNOWN_LIMITATIONS.md` L137–L142 (устаревшие id
-  моделей каталога, неизвестные тарифы, Vision-флаг пресета DeepSeek,
-  отсутствие `modelNotFound`, непроверенные живые негативные контракты).
+- **Ограничения:** `journal/KNOWN_LIMITATIONS.md` L137–L142 (актуальные id
+  DeepSeek добавлены, но legacy-имена сохранены и в документации
+  отсутствуют; неизвестные тарифы остальных моделей; отсутствие
+  `modelNotFound`; непроверенные живые негативные контракты; тарификация
+  strict-400/повторов не подтверждена).
