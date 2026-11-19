@@ -7,7 +7,6 @@ import 'package:cardflow/api/parsers/file_parsing_service.dart';
 import 'package:cardflow/domain/decks/deck_summary.dart';
 import 'package:cardflow/domain/generation/provider_account.dart';
 import 'package:cardflow/ui/generation/generation_screen.dart';
-import 'package:cardflow/ui/m3e/m3e.dart';
 import 'package:cardflow/ui/settings/generation_settings_screen.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
 

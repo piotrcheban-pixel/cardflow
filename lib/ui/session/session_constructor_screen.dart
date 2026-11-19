@@ -12,6 +12,8 @@ import 'package:cardflow/domain/session/session_config.dart';
 import 'package:cardflow/domain/session/session_plan.dart';
 import 'package:cardflow/domain/session/session_preset.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
+import 'package:cardflow/ui/components/app_surfaces.dart';
+import 'package:cardflow/ui/theme/app_tokens.dart';
 import 'package:cardflow/ui/decks/deck_actions.dart';
 import 'package:cardflow/ui/router/app_router.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
@@ -382,256 +384,297 @@ class _SessionConstructorScreenState
     if (_decks.isEmpty) {
       return _ConstructorEmptyState(message: l10n.constructorEmptyDecks);
     }
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-      children: <Widget>[
-        _Section(
-          title: l10n.constructorDecksSection,
-          child: Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: <Widget>[
-              for (final DeckSummary summary in _decks)
-                FilterChip(
-                  key: ValueKey<String>('constructor-deck-${summary.deck.id}'),
-                  label: Text(summary.deck.name),
-                  selected: _selectedDecks.contains(summary.deck.id),
-                  onSelected: (_) => _toggleDeck(summary.deck.id),
-                ),
-            ],
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 896),
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.md,
+            AppSpacing.sm,
+            AppSpacing.md,
+            AppSpacing.md,
           ),
-        ),
-        _Section(
-          title: l10n.constructorTagsSection,
-          child: _availableTags.isEmpty
-              ? Text(
-                  _selectedDecks.isEmpty
-                      ? l10n.constructorSelectDecksHint
-                      : l10n.constructorTagsEmpty,
-                )
-              : Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: <Widget>[
-                    for (final String tag in _availableTags)
-                      FilterChip(
-                        key: ValueKey<String>('constructor-tag-$tag'),
-                        label: Text(tag),
-                        selected: _selectedTags.contains(tag),
-                        onSelected: (_) => _toggleTag(tag),
-                      ),
-                  ],
-                ),
-        ),
-        _Section(
-          title: l10n.constructorTypesSection,
-          child: Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: <Widget>[
-              for (final CardType type in CardType.values)
-                FilterChip(
-                  key: ValueKey<String>('constructor-type-${type.wireName}'),
-                  label: Text(_cardTypeLabel(l10n, type)),
-                  selected: _selectedTypes.contains(type),
-                  onSelected: (_) => _toggleType(type),
-                ),
-            ],
-          ),
-        ),
-        _Section(
-          title: l10n.constructorStatesSection,
-          child: Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: <Widget>[
-              for (final SessionStateFilter filter in SessionStateFilter.values)
-                FilterChip(
-                  key: ValueKey<String>('constructor-state-${filter.wireName}'),
-                  label: Text(_stateLabel(l10n, filter)),
-                  selected: _selectedStates.contains(filter),
-                  onSelected: (_) => _toggleState(filter),
-                ),
-            ],
-          ),
-        ),
-        _Section(
-          title: l10n.constructorModeSection,
-          child: SegmentedButton<SessionMode>(
-            key: const ValueKey<String>('constructor-mode'),
-            segments: <ButtonSegment<SessionMode>>[
-              ButtonSegment<SessionMode>(
-                value: SessionMode.classic,
-                label: Text(l10n.reviewModeClassic),
-                icon: const Icon(Icons.style_outlined),
-              ),
-              ButtonSegment<SessionMode>(
-                value: SessionMode.feed,
-                label: Text(l10n.reviewModeFeed),
-                icon: const Icon(Icons.view_agenda_outlined),
-              ),
-            ],
-            selected: <SessionMode>{_mode},
-            onSelectionChanged: (Set<SessionMode> selection) =>
-                setState(() => _mode = selection.first),
-          ),
-        ),
-        _Section(
-          title: l10n.constructorLimitSection,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Wrap(
+          children: <Widget>[
+            _Section(
+              title: l10n.constructorDecksSection,
+              child: Wrap(
                 spacing: 8,
+                runSpacing: 8,
                 children: <Widget>[
-                  ChoiceChip(
-                    key: const ValueKey<String>('constructor-limit-cards'),
-                    label: Text(l10n.constructorLimitCards),
-                    selected: _limitKind == SessionLimitKind.cards,
-                    onSelected: (_) => _setLimitKind(SessionLimitKind.cards),
-                  ),
-                  ChoiceChip(
-                    key: const ValueKey<String>('constructor-limit-minutes'),
-                    label: Text(l10n.constructorLimitMinutes),
-                    selected: _limitKind == SessionLimitKind.minutes,
-                    onSelected: (_) => _setLimitKind(SessionLimitKind.minutes),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              DropdownButton<int>(
-                key: const ValueKey<String>('constructor-limit-value'),
-                value: _limitKind == SessionLimitKind.cards
-                    ? _cardsLimit
-                    : _minutesLimit,
-                items: <DropdownMenuItem<int>>[
-                  for (final int value
-                      in _limitKind == SessionLimitKind.cards
-                          ? SessionConstructorScreen.cardLimitValues
-                          : SessionConstructorScreen.minuteLimitValues)
-                    DropdownMenuItem<int>(
-                      value: value,
-                      child: Text(
-                        _limitKind == SessionLimitKind.cards
-                            ? l10n.constructorLimitCardsValue(value)
-                            : l10n.constructorLimitMinutesValue(value),
+                  for (final DeckSummary summary in _decks)
+                    FilterChip(
+                      key: ValueKey<String>(
+                        'constructor-deck-${summary.deck.id}',
                       ),
+                      label: Text(summary.deck.name),
+                      selected: _selectedDecks.contains(summary.deck.id),
+                      onSelected: (_) => _toggleDeck(summary.deck.id),
                     ),
                 ],
-                onChanged: (int? value) {
-                  if (value == null) return;
-                  setState(() {
-                    if (_limitKind == SessionLimitKind.cards) {
-                      _cardsLimit = value;
-                    } else {
-                      _minutesLimit = value;
-                    }
-                  });
-                },
               ),
-            ],
-          ),
-        ),
-        _Section(
-          title: l10n.constructorOrderSection,
-          child: Column(
-            children: <Widget>[
-              SwitchListTile(
-                key: const ValueKey<String>('constructor-shuffle'),
-                contentPadding: EdgeInsets.zero,
-                value: _shuffle,
-                onChanged: (bool value) => setState(() => _shuffle = value),
-                title: Text(l10n.constructorShuffle),
-                subtitle: Text(l10n.constructorShuffleHint),
-              ),
-              SwitchListTile(
-                key: const ValueKey<String>('constructor-interleave'),
-                contentPadding: EdgeInsets.zero,
-                value: _interleave,
-                onChanged: (bool value) => setState(() => _interleave = value),
-                title: Text(l10n.constructorInterleave),
-                subtitle: Text(l10n.constructorInterleaveHint),
-              ),
-              SwitchListTile(
-                key: const ValueKey<String>('constructor-warmup'),
-                contentPadding: EdgeInsets.zero,
-                value: _warmup,
-                onChanged: (bool value) => setState(() => _warmup = value),
-                title: Text(l10n.constructorWarmup),
-                subtitle: Text(l10n.constructorWarmupHint),
-              ),
-            ],
-          ),
-        ),
-        _Section(
-          title: l10n.constructorPresetsSection,
-          child: _presets.isEmpty
-              ? Text(l10n.constructorPresetsEmpty)
-              : Column(
-                  children: <Widget>[
-                    for (final SessionPreset preset in _presets)
-                      ListTile(
-                        key: ValueKey<String>(
-                          'constructor-preset-${preset.id}',
-                        ),
-                        contentPadding: EdgeInsets.zero,
-                        title: Text(preset.name),
-                        onTap: () => unawaited(_applyPreset(preset)),
-                        trailing: IconButton(
-                          key: ValueKey<String>(
-                            'constructor-preset-delete-${preset.id}',
+            ),
+            _Section(
+              title: l10n.constructorTagsSection,
+              child: _availableTags.isEmpty
+                  ? Text(
+                      _selectedDecks.isEmpty
+                          ? l10n.constructorSelectDecksHint
+                          : l10n.constructorTagsEmpty,
+                    )
+                  : Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: <Widget>[
+                        for (final String tag in _availableTags)
+                          FilterChip(
+                            key: ValueKey<String>('constructor-tag-$tag'),
+                            label: Text(tag),
+                            selected: _selectedTags.contains(tag),
+                            onSelected: (_) => _toggleTag(tag),
                           ),
-                          tooltip: l10n.constructorPresetDeleteTooltip,
-                          icon: const Icon(Icons.delete_outline),
-                          onPressed: () => unawaited(_deletePreset(preset)),
-                        ),
+                      ],
+                    ),
+            ),
+            _Section(
+              title: l10n.constructorTypesSection,
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: <Widget>[
+                  for (final CardType type in CardType.values)
+                    FilterChip(
+                      key: ValueKey<String>(
+                        'constructor-type-${type.wireName}',
                       ),
-                  ],
-                ),
+                      label: Text(_cardTypeLabel(l10n, type)),
+                      selected: _selectedTypes.contains(type),
+                      onSelected: (_) => _toggleType(type),
+                    ),
+                ],
+              ),
+            ),
+            _Section(
+              title: l10n.constructorStatesSection,
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: <Widget>[
+                  for (final SessionStateFilter filter
+                      in SessionStateFilter.values)
+                    FilterChip(
+                      key: ValueKey<String>(
+                        'constructor-state-${filter.wireName}',
+                      ),
+                      label: Text(_stateLabel(l10n, filter)),
+                      selected: _selectedStates.contains(filter),
+                      onSelected: (_) => _toggleState(filter),
+                    ),
+                ],
+              ),
+            ),
+            _Section(
+              title: l10n.constructorModeSection,
+              child: SegmentedButton<SessionMode>(
+                key: const ValueKey<String>('constructor-mode'),
+                segments: <ButtonSegment<SessionMode>>[
+                  ButtonSegment<SessionMode>(
+                    value: SessionMode.classic,
+                    label: Text(l10n.reviewModeClassic),
+                    icon: const Icon(Icons.style_outlined),
+                  ),
+                  ButtonSegment<SessionMode>(
+                    value: SessionMode.feed,
+                    label: Text(l10n.reviewModeFeed),
+                    icon: const Icon(Icons.view_agenda_outlined),
+                  ),
+                ],
+                selected: <SessionMode>{_mode},
+                onSelectionChanged: (Set<SessionMode> selection) =>
+                    setState(() => _mode = selection.first),
+              ),
+            ),
+            _Section(
+              title: l10n.constructorLimitSection,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Wrap(
+                    spacing: 8,
+                    children: <Widget>[
+                      ChoiceChip(
+                        key: const ValueKey<String>('constructor-limit-cards'),
+                        label: Text(l10n.constructorLimitCards),
+                        selected: _limitKind == SessionLimitKind.cards,
+                        onSelected: (_) =>
+                            _setLimitKind(SessionLimitKind.cards),
+                      ),
+                      ChoiceChip(
+                        key: const ValueKey<String>(
+                          'constructor-limit-minutes',
+                        ),
+                        label: Text(l10n.constructorLimitMinutes),
+                        selected: _limitKind == SessionLimitKind.minutes,
+                        onSelected: (_) =>
+                            _setLimitKind(SessionLimitKind.minutes),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  DropdownButton<int>(
+                    key: const ValueKey<String>('constructor-limit-value'),
+                    value: _limitKind == SessionLimitKind.cards
+                        ? _cardsLimit
+                        : _minutesLimit,
+                    items: <DropdownMenuItem<int>>[
+                      for (final int value
+                          in _limitKind == SessionLimitKind.cards
+                              ? SessionConstructorScreen.cardLimitValues
+                              : SessionConstructorScreen.minuteLimitValues)
+                        DropdownMenuItem<int>(
+                          value: value,
+                          child: Text(
+                            _limitKind == SessionLimitKind.cards
+                                ? l10n.constructorLimitCardsValue(value)
+                                : l10n.constructorLimitMinutesValue(value),
+                          ),
+                        ),
+                    ],
+                    onChanged: (int? value) {
+                      if (value == null) return;
+                      setState(() {
+                        if (_limitKind == SessionLimitKind.cards) {
+                          _cardsLimit = value;
+                        } else {
+                          _minutesLimit = value;
+                        }
+                      });
+                    },
+                  ),
+                ],
+              ),
+            ),
+            _Section(
+              title: l10n.constructorOrderSection,
+              child: Column(
+                children: <Widget>[
+                  SwitchListTile(
+                    key: const ValueKey<String>('constructor-shuffle'),
+                    contentPadding: EdgeInsets.zero,
+                    value: _shuffle,
+                    onChanged: (bool value) => setState(() => _shuffle = value),
+                    title: Text(l10n.constructorShuffle),
+                    subtitle: Text(l10n.constructorShuffleHint),
+                  ),
+                  SwitchListTile(
+                    key: const ValueKey<String>('constructor-interleave'),
+                    contentPadding: EdgeInsets.zero,
+                    value: _interleave,
+                    onChanged: (bool value) =>
+                        setState(() => _interleave = value),
+                    title: Text(l10n.constructorInterleave),
+                    subtitle: Text(l10n.constructorInterleaveHint),
+                  ),
+                  SwitchListTile(
+                    key: const ValueKey<String>('constructor-warmup'),
+                    contentPadding: EdgeInsets.zero,
+                    value: _warmup,
+                    onChanged: (bool value) => setState(() => _warmup = value),
+                    title: Text(l10n.constructorWarmup),
+                    subtitle: Text(l10n.constructorWarmupHint),
+                  ),
+                ],
+              ),
+            ),
+            _Section(
+              title: l10n.constructorPresetsSection,
+              child: _presets.isEmpty
+                  ? Text(l10n.constructorPresetsEmpty)
+                  : Column(
+                      children: <Widget>[
+                        for (final SessionPreset preset in _presets)
+                          ListTile(
+                            key: ValueKey<String>(
+                              'constructor-preset-${preset.id}',
+                            ),
+                            contentPadding: EdgeInsets.zero,
+                            title: Text(preset.name),
+                            onTap: () => unawaited(_applyPreset(preset)),
+                            trailing: IconButton(
+                              key: ValueKey<String>(
+                                'constructor-preset-delete-${preset.id}',
+                              ),
+                              tooltip: l10n.constructorPresetDeleteTooltip,
+                              icon: const Icon(Icons.delete_outline),
+                              onPressed: () => unawaited(_deletePreset(preset)),
+                            ),
+                          ),
+                      ],
+                    ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 
   Widget _buildBottomBar(AppLocalizations l10n) {
     final int available = _available.length;
     final bool busy = _loading || _loadingDecks.isNotEmpty || _starting;
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            Text(
-              l10n.constructorAvailableCount(available),
-              key: const ValueKey<String>('constructor-available'),
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerLowest,
+        border: Border(
+          top: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
+        ),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.md,
+            AppSpacing.xs,
+            AppSpacing.md,
+            AppSpacing.sm,
+          ),
+          child: Center(
+            heightFactor: 1,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 896),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  Text(
+                    l10n.constructorAvailableCount(available),
+                    key: const ValueKey<String>('constructor-available'),
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: <Widget>[
+                      TextButton(
+                        key: const ValueKey<String>('constructor-save-preset'),
+                        onPressed: busy || _selectedDecks.isEmpty
+                            ? null
+                            : () => unawaited(_savePreset()),
+                        child: Text(l10n.constructorSavePreset),
+                      ),
+                      const Spacer(),
+                      FilledButton(
+                        key: const ValueKey<String>('constructor-start'),
+                        onPressed: busy || available == 0
+                            ? null
+                            : () => unawaited(_start()),
+                        child: Text(l10n.reviewStartSession),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 8),
-            Row(
-              children: <Widget>[
-                TextButton(
-                  key: const ValueKey<String>('constructor-save-preset'),
-                  onPressed: busy || _selectedDecks.isEmpty
-                      ? null
-                      : () => unawaited(_savePreset()),
-                  child: Text(l10n.constructorSavePreset),
-                ),
-                const Spacer(),
-                FilledButton(
-                  key: const ValueKey<String>('constructor-start'),
-                  onPressed: busy || available == 0
-                      ? null
-                      : () => unawaited(_start()),
-                  child: Text(l10n.reviewStartSession),
-                ),
-              ],
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -648,14 +691,16 @@ class _Section extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Text(title, style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
-          child,
-        ],
+      padding: const EdgeInsets.only(bottom: AppSpacing.md),
+      child: AppSectionCard(
+        title: title,
+        contentPadding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          AppSpacing.md,
+          AppSpacing.lg,
+          AppSpacing.lg,
+        ),
+        child: child,
       ),
     );
   }
@@ -669,21 +714,18 @@ class _ConstructorEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
+    final AppLocalizations l10n = AppLocalizations.of(context);
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Icon(
-              Icons.library_books_outlined,
-              size: 48,
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-            const SizedBox(height: 12),
-            Text(message, textAlign: TextAlign.center),
-          ],
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 896),
+          child: AppEmptyState(
+            icon: Icons.library_books_outlined,
+            title: l10n.constructorTitle,
+            message: message,
+            compact: true,
+          ),
         ),
       ),
     );
@@ -700,19 +742,16 @@ class _ConstructorErrorState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
-    final ThemeData theme = Theme.of(context);
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Icon(Icons.error_outline, size: 48, color: theme.colorScheme.error),
-            const SizedBox(height: 12),
-            Text(message, textAlign: TextAlign.center),
-            const SizedBox(height: 12),
-            TextButton(onPressed: onRetry, child: Text(l10n.retry)),
-          ],
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 896),
+          child: AppErrorState(
+            message: message,
+            retryLabel: l10n.retry,
+            onRetry: onRetry,
+          ),
         ),
       ),
     );

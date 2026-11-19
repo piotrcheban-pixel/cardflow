@@ -279,9 +279,11 @@ void main() {
       find.byKey(const ValueKey<String>('constructor-deck-deck-1')),
     );
     await tester.pumpAndSettle();
-    await tester.tap(
-      find.byKey(const ValueKey<String>('constructor-state-in_progress')),
+    final Finder inProgress = find.byKey(
+      const ValueKey<String>('constructor-state-in_progress'),
     );
+    await scrollTo(tester, inProgress);
+    await tester.tap(inProgress);
     await tester.pumpAndSettle();
 
     expect(find.text(l10n.constructorAvailableCount(1)), findsOneWidget);
@@ -314,9 +316,11 @@ void main() {
       location: '/constructor?deck=deck-1',
     );
 
-    await tester.tap(
-      find.byKey(const ValueKey<String>('constructor-state-leeches')),
+    final Finder leechesChip = find.byKey(
+      const ValueKey<String>('constructor-state-leeches'),
     );
+    await scrollTo(tester, leechesChip);
+    await tester.tap(leechesChip);
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey<String>('constructor-start')));
     await tester.pumpAndSettle();

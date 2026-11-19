@@ -12,8 +12,10 @@ import 'package:cardflow/domain/study/distractor_generator.dart';
 import 'package:cardflow/domain/study/true_false_question.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/cards/card_form_screen.dart';
+import 'package:cardflow/ui/components/app_surfaces.dart';
+import 'package:cardflow/ui/theme/app_tokens.dart';
+import 'package:cardflow/ui/theme/app_typography.dart';
 import 'package:cardflow/ui/decks/deck_actions.dart';
-import 'package:cardflow/ui/m3e/m3e.dart';
 import 'package:cardflow/ui/router/app_router.dart';
 import 'package:cardflow/ui/state/decks_ui_providers.dart';
 import 'package:cardflow/ui/state/review_limits.dart';
@@ -71,6 +73,12 @@ class DeckScreen extends ConsumerWidget {
             ? null
             : <Widget>[
                 IconButton(
+                  key: const ValueKey<String>('deck-add-card'),
+                  tooltip: l10n.deckAddCard,
+                  icon: const Icon(Icons.add),
+                  onPressed: () => _openCardForm(context, deckId: deckId),
+                ),
+                IconButton(
                   key: const ValueKey<String>('deck-generate-action'),
                   tooltip: l10n.deckGenerateTooltip,
                   icon: const Icon(Icons.auto_awesome_outlined),
@@ -105,14 +113,6 @@ class DeckScreen extends ConsumerWidget {
                 ),
               ],
       ),
-      floatingActionButton: deck == null
-          ? null
-          : FloatingActionButton.small(
-              key: const ValueKey<String>('deck-add-card'),
-              tooltip: l10n.deckAddCardTooltip,
-              onPressed: () => _openCardForm(context, deckId: deckId),
-              child: const Icon(Icons.add),
-            ),
       body: _buildBody(
         context,
         ref,
@@ -156,40 +156,110 @@ class DeckScreen extends ConsumerWidget {
     }
     final DeckSummary? summary = summaryAsync.asData?.value;
     final List<Card> cards = cardsAsync.value ?? const <Card>[];
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        _DeckCounters(summary: summary),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-          child: M3ECard(
-            key: const ValueKey<String>('deck-start-session'),
-            headline: l10n.reviewStartSession,
-            semanticLabel: l10n.reviewStartSession,
-            onPressed: () =>
-                _startSession(context, ref, deckId: deckId, cards: cards),
+    return CustomScrollView(
+      slivers: <Widget>[
+        SliverToBoxAdapter(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 896),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.md,
+                  AppSpacing.md,
+                  AppSpacing.md,
+                  AppSpacing.sm,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    _DeckCounters(summary: summary),
+                    const SizedBox(height: AppSpacing.md),
+                    _DeckProgress(summary: summary),
+                    const SizedBox(height: AppSpacing.md),
+                    _StartSessionPanel(
+                      key: const ValueKey<String>('deck-start-session'),
+                      title: l10n.reviewStartSession,
+                      subtitle: l10n.deckStudyModesTitle,
+                      onPressed: () => _startSession(
+                        context,
+                        ref,
+                        deckId: deckId,
+                        cards: cards,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    Row(
+                      children: <Widget>[
+                        Expanded(
+                          child: Text(
+                            l10n.deckCardsTitle,
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
+                        ),
+                        Text(
+                          l10n.deckCardCount(cards.length),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant,
+                              ),
+                        ),
+                        const SizedBox(width: AppSpacing.xs),
+                        OutlinedButton.icon(
+                          key: const ValueKey<String>('deck-add-card-button'),
+                          onPressed: () =>
+                              _openCardForm(context, deckId: deckId),
+                          icon: const Icon(Icons.add, size: 16),
+                          label: Text(l10n.deckAddCard),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
         ),
-        const Divider(height: 1),
-        Expanded(
-          child: cards.isEmpty
-              ? _DeckCardsEmpty()
-              : ListView.separated(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  itemCount: cards.length,
-                  separatorBuilder: (BuildContext context, int index) =>
-                      const Divider(height: 1, indent: 16, endIndent: 16),
-                  itemBuilder: (BuildContext context, int index) =>
-                      _DeckCardTile(
-                        card: cards[index],
-                        onTap: () => _openCardForm(
-                          context,
-                          deckId: deckId,
-                          cardId: cards[index].id,
-                        ),
-                      ),
+        if (cards.isEmpty)
+          SliverToBoxAdapter(
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 896),
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  child: _DeckCardsEmpty(),
                 ),
-        ),
+              ),
+            ),
+          )
+        else
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              0,
+              AppSpacing.md,
+              AppSpacing.xxl,
+            ),
+            sliver: SliverList.separated(
+              itemCount: cards.length,
+              separatorBuilder: (BuildContext context, int index) =>
+                  const SizedBox(height: AppSpacing.xs),
+              itemBuilder: (BuildContext context, int index) => Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 896),
+                  child: _DeckCardTile(
+                    card: cards[index],
+                    onTap: () => _openCardForm(
+                      context,
+                      deckId: deckId,
+                      cardId: cards[index].id,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
       ],
     );
   }
@@ -513,7 +583,7 @@ class DeckScreen extends ConsumerWidget {
   }
 }
 
-/// Счётчики шапки экрана колоды: к повторению / новые / в процессе.
+/// Счётчики колоды: к повторению / новые / в процессе / всего карточек.
 class _DeckCounters extends StatelessWidget {
   const _DeckCounters({required this.summary});
 
@@ -525,20 +595,78 @@ class _DeckCounters extends StatelessWidget {
     final int due = summary?.dueCards ?? 0;
     final int newCards = summary?.newCards ?? 0;
     final int inProgress = summary?.inProgressCards ?? 0;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-      child: Wrap(
-        spacing: 16,
-        runSpacing: 4,
+    final int total = summary?.totalCards ?? 0;
+    return Wrap(
+      spacing: AppSpacing.xs,
+      runSpacing: AppSpacing.xs,
+      children: <Widget>[
+        AppStatusChip(
+          label: l10n.deckDueCount(due),
+          tone: AppStatusTone.danger,
+          icon: Icons.schedule,
+        ),
+        AppStatusChip(
+          label: l10n.deckNewCount(newCards),
+          tone: AppStatusTone.info,
+          icon: Icons.fiber_new,
+        ),
+        AppStatusChip(
+          label: l10n.deckInProgressCount(inProgress),
+          tone: AppStatusTone.neutral,
+          icon: Icons.autorenew,
+        ),
+        AppStatusChip(
+          label: l10n.deckCardCount(total),
+          tone: AppStatusTone.neutral,
+          icon: Icons.style_outlined,
+        ),
+      ],
+    );
+  }
+}
+
+/// Прогресс изучения колоды (доля карточек не в состоянии «новая»).
+class _DeckProgress extends StatelessWidget {
+  const _DeckProgress({required this.summary});
+
+  final DeckSummary? summary;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
+    final int total = summary?.totalCards ?? 0;
+    final int studied = total - (summary?.newCards ?? 0);
+    final double progress = total == 0 ? 0 : studied / total;
+    final int percent = (progress * 100).round();
+    return AppPanel(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          _CounterLabel(icon: Icons.schedule, label: l10n.deckDueCount(due)),
-          _CounterLabel(
-            icon: Icons.fiber_new,
-            label: l10n.deckNewCount(newCards),
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: Text(
+                  l10n.deckProgressTitle,
+                  style: theme.textTheme.titleSmall,
+                ),
+              ),
+              Text(
+                l10n.statisticsRetentionValue(percent),
+                style: AppTypography.numeric(
+                  context,
+                  color: progress >= 1 ? scheme.secondary : scheme.onSurface,
+                ),
+              ),
+            ],
           ),
-          _CounterLabel(
-            icon: Icons.autorenew,
-            label: l10n.deckInProgressCount(inProgress),
+          const SizedBox(height: AppSpacing.xs),
+          AppProgressBar(
+            value: progress,
+            color: progress >= 1 ? scheme.secondary : scheme.primary,
+            semanticsLabel: l10n.deckProgressTitle,
           ),
         ],
       ),
@@ -546,27 +674,53 @@ class _DeckCounters extends StatelessWidget {
   }
 }
 
-class _CounterLabel extends StatelessWidget {
-  const _CounterLabel({required this.icon, required this.label});
+/// Панель «Начать сессию»: главное действие экрана колоды.
+class _StartSessionPanel extends StatelessWidget {
+  const _StartSessionPanel({
+    required this.title,
+    required this.subtitle,
+    required this.onPressed,
+    super.key,
+  });
 
-  final IconData icon;
-  final String label;
+  final String title;
+  final String subtitle;
+  final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        Icon(icon, size: 16, color: theme.colorScheme.onSurfaceVariant),
-        const SizedBox(width: 4),
-        Text(
-          label,
-          style: theme.textTheme.labelMedium?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
+    final ColorScheme scheme = theme.colorScheme;
+    return AppPanel(
+      onTap: onPressed,
+      semanticLabel: title,
+      padding: const EdgeInsets.all(AppSpacing.md),
+      child: Row(
+        children: <Widget>[
+          AppIconBadge(
+            icon: Icons.play_circle_outline,
+            color: scheme.primary,
+            size: 44,
           ),
-        ),
-      ],
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(title, style: theme.textTheme.titleLarge),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Icon(Icons.chevron_right, color: scheme.outline),
+        ],
+      ),
     );
   }
 }
@@ -576,29 +730,11 @@ class _DeckCardsEmpty extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
-    final ThemeData theme = Theme.of(context);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Icon(
-              Icons.notes_outlined,
-              size: 48,
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              l10n.deckCardsEmpty,
-              style: theme.textTheme.titleMedium,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(l10n.deckCardsEmptyHint, textAlign: TextAlign.center),
-          ],
-        ),
-      ),
+    return AppEmptyState(
+      icon: Icons.notes_outlined,
+      title: l10n.deckCardsEmpty,
+      message: l10n.deckCardsEmptyHint,
+      compact: true,
     );
   }
 }
@@ -614,23 +750,57 @@ class _DeckCardTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
     final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
     final String tags = card.tags.map((String tag) => '#$tag').join(', ');
-    return ListTile(
+    return AppPanel(
       onTap: onTap,
-      title: Text(card.front),
-      subtitle: card.tags.isEmpty
-          ? null
-          : Text(
-              l10n.cardTagsLine(tags),
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        AppSpacing.sm,
+        AppSpacing.sm,
+        AppSpacing.sm,
+      ),
+      radius: AppRadii.input,
+      child: Row(
+        children: <Widget>[
+          AppIconBadge(
+            icon: Icons.notes_outlined,
+            color: scheme.primary,
+            size: 32,
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  card.front,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodyLarge,
+                ),
+                if (card.tags.isNotEmpty)
+                  Text(
+                    l10n.cardTagsLine(tags),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+              ],
             ),
-      trailing: Text(
-        _cardStateLabel(l10n, card.state),
-        style: theme.textTheme.labelSmall?.copyWith(
-          color: theme.colorScheme.onSurfaceVariant,
-        ),
+          ),
+          const SizedBox(width: AppSpacing.xs),
+          AppStatusChip(
+            label: _cardStateLabel(l10n, card.state),
+            tone: card.state == CardState.newCard
+                ? AppStatusTone.info
+                : AppStatusTone.neutral,
+            dense: true,
+          ),
+          Icon(Icons.chevron_right, color: scheme.outline),
+        ],
       ),
     );
   }
@@ -655,19 +825,16 @@ class _DeckErrorState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
-    final ThemeData theme = Theme.of(context);
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Icon(Icons.error_outline, size: 48, color: theme.colorScheme.error),
-            const SizedBox(height: 12),
-            Text(message, textAlign: TextAlign.center),
-            const SizedBox(height: 12),
-            TextButton(onPressed: onRetry, child: Text(l10n.retry)),
-          ],
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: AppSizes.dialogMaxWidth),
+          child: AppErrorState(
+            message: message,
+            retryLabel: l10n.retry,
+            onRetry: onRetry,
+          ),
         ),
       ),
     );

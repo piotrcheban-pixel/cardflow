@@ -13,6 +13,9 @@ import 'package:cardflow/domain/cards/card_repository.dart';
 import 'package:cardflow/domain/cards/occlusion.dart';
 import 'package:cardflow/domain/generation/card_image_kind.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
+import 'package:cardflow/ui/components/app_layout.dart';
+import 'package:cardflow/ui/components/app_surfaces.dart';
+import 'package:cardflow/ui/theme/app_tokens.dart';
 import 'package:cardflow/ui/cards/content/card_image_view.dart';
 import 'package:cardflow/ui/cards/occlusion_mask_editor.dart';
 import 'package:cardflow/ui/decks/deck_actions.dart';
@@ -378,13 +381,36 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
       bottomNavigationBar:
           _loading || _loadFailed || (_isEditing && _card == null)
           ? null
-          : SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                child: FilledButton(
-                  key: const ValueKey<String>('card-form-save'),
-                  onPressed: _saving ? null : _save,
-                  child: Text(l10n.save),
+          : DecoratedBox(
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surfaceContainerLowest,
+                border: Border(
+                  top: BorderSide(
+                    color: Theme.of(context).colorScheme.outlineVariant,
+                  ),
+                ),
+              ),
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.md,
+                    AppSpacing.xs,
+                    AppSpacing.md,
+                    AppSpacing.sm,
+                  ),
+                  child: Center(
+                    heightFactor: 1,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(
+                        maxWidth: AppSizes.formMaxWidth,
+                      ),
+                      child: FilledButton(
+                        key: const ValueKey<String>('card-form-save'),
+                        onPressed: _saving ? null : _save,
+                        child: Text(l10n.save),
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -396,78 +422,82 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
     if (_loadFailed || (_isEditing && _card == null)) {
       return Center(
         child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Icon(
-                Icons.error_outline,
-                size: 48,
-                color: Theme.of(context).colorScheme.error,
-              ),
-              const SizedBox(height: 12),
-              Text(l10n.cardFormLoadError, textAlign: TextAlign.center),
-              const SizedBox(height: 12),
-              TextButton(onPressed: _loadCard, child: Text(l10n.retry)),
-            ],
+          padding: const EdgeInsets.all(AppSpacing.xl),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              maxWidth: AppSizes.dialogMaxWidth,
+            ),
+            child: AppErrorState(
+              message: l10n.cardFormLoadError,
+              retryLabel: l10n.retry,
+              onRetry: _loadCard,
+            ),
           ),
         ),
       );
     }
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          _textField(
-            key: const ValueKey<String>('card-form-front'),
-            controller: _front,
-            label: l10n.cardFormFrontLabel,
-            errorText: _errorText(l10n, CardDraftField.front),
-            validationField: CardDraftField.front,
-            minLines: 1,
-            maxLines: 2,
-            autofocus: true,
-          ),
-          const SizedBox(height: 12),
-          _textField(
-            key: const ValueKey<String>('card-form-back'),
-            controller: _back,
-            label: l10n.cardFormBackLabel,
-            errorText: _errorText(l10n, CardDraftField.back),
-            validationField: CardDraftField.back,
-            minLines: 3,
-            maxLines: 6,
-          ),
-          const SizedBox(height: 12),
-          _textField(
-            key: const ValueKey<String>('card-form-hint'),
-            controller: _hint,
-            label: l10n.cardFormHintLabel,
-          ),
-          const SizedBox(height: 12),
-          _textField(
-            key: const ValueKey<String>('card-form-tags'),
-            controller: _tags,
-            label: l10n.cardFormTagsLabel,
-            errorText: _errorText(l10n, CardDraftField.tags),
-            validationField: CardDraftField.tags,
-          ),
-          const SizedBox(height: 12),
-          _textField(
-            key: const ValueKey<String>('card-form-source'),
-            controller: _sourceExcerpt,
-            label: l10n.cardFormSourceExcerptLabel,
-            errorText: _errorText(l10n, CardDraftField.sourceExcerpt),
-            validationField: CardDraftField.sourceExcerpt,
-            minLines: 2,
-            maxLines: 4,
-          ),
-          const SizedBox(height: 16),
-          _buildTypeSection(l10n),
-          const SizedBox(height: 20),
-          _buildMediaSection(l10n),
-        ],
+    return AppContentWidth(
+      maxWidth: AppSizes.formMaxWidth,
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        AppSpacing.md,
+        AppSpacing.md,
+        AppSpacing.xl,
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            _textField(
+              key: const ValueKey<String>('card-form-front'),
+              controller: _front,
+              label: l10n.cardFormFrontLabel,
+              errorText: _errorText(l10n, CardDraftField.front),
+              validationField: CardDraftField.front,
+              minLines: 1,
+              maxLines: 2,
+              autofocus: true,
+            ),
+            const SizedBox(height: 12),
+            _textField(
+              key: const ValueKey<String>('card-form-back'),
+              controller: _back,
+              label: l10n.cardFormBackLabel,
+              errorText: _errorText(l10n, CardDraftField.back),
+              validationField: CardDraftField.back,
+              minLines: 3,
+              maxLines: 6,
+            ),
+            const SizedBox(height: 12),
+            _textField(
+              key: const ValueKey<String>('card-form-hint'),
+              controller: _hint,
+              label: l10n.cardFormHintLabel,
+            ),
+            const SizedBox(height: 12),
+            _textField(
+              key: const ValueKey<String>('card-form-tags'),
+              controller: _tags,
+              label: l10n.cardFormTagsLabel,
+              errorText: _errorText(l10n, CardDraftField.tags),
+              validationField: CardDraftField.tags,
+            ),
+            const SizedBox(height: 12),
+            _textField(
+              key: const ValueKey<String>('card-form-source'),
+              controller: _sourceExcerpt,
+              label: l10n.cardFormSourceExcerptLabel,
+              errorText: _errorText(l10n, CardDraftField.sourceExcerpt),
+              validationField: CardDraftField.sourceExcerpt,
+              minLines: 2,
+              maxLines: 4,
+            ),
+            const SizedBox(height: 16),
+            _buildTypeSection(l10n),
+            const SizedBox(height: 20),
+            _buildMediaSection(l10n),
+          ],
+        ),
       ),
     );
   }

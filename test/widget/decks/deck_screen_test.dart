@@ -143,7 +143,7 @@ void main() {
       expect(find.textContaining('boom'), findsNothing);
 
       repository.failDeck = false;
-      await tester.tap(find.widgetWithText(TextButton, l10n.retry));
+      await tester.tap(find.widgetWithText(OutlinedButton, l10n.retry));
       await tester.pumpAndSettle();
       expect(find.text('Испанский'), findsOneWidget);
     });

@@ -4,7 +4,6 @@ import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/l10n/app_localizations_ru.dart';
 import 'package:cardflow/ui/decks/deck_screen.dart';
 import 'package:cardflow/ui/decks/decks_screen.dart';
-import 'package:cardflow/ui/m3e/m3e.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
