@@ -274,6 +274,14 @@ dev_dependencies:
 `assets/fonts/OFL.txt`), объявлен в `pubspec.yaml` как семейство `OpenDyslexic`; используется только
 при включённом переключателе (ADR-019 §6). `flutter pub get` граф не изменил; `fvm flutter analyze` — 0.
 
+**Типографика редизайна v2 (ADR-038, 2026-11-19):** `assets/fonts/Inter-Variable.ttf` —
+переменный Inter (ось `wght` 100…900), **SIL Open Font License 1.1**
+(`assets/fonts/OFL-Inter.txt`), источник — `google/fonts` (OFL). Объявлен в `pubspec.yaml`
+как семейство `Inter` и является основным шрифтом интерфейса; вес задаётся `FontWeight`
+(Flutter проецирует его в ось `wght`, спайк ADR-035). Файл лежит в репозитории — сеть во
+время работы приложения не используется (AGENTS: внешние шрифты запрещены). Новых
+pub-зависимостей нет; `flutter pub get` граф не изменил.
+
 ## 13. Фактическое состояние после итерации 7.5 (2026-11-14)
 
 **Новый dev-пакет — `integration_test` (Flutter SDK):** нужен, чтобы проверить реальное платформенное

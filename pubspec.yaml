@@ -107,10 +107,17 @@ flutter:
 
   # Шрифт для дислексии (SPEC A6.6, ADR-019 §6): SIL OFL 1.1,
   # assets/fonts/OFL.txt. Включается переключателем в настройках.
+  #
+  # Inter (ADR-038) — переменный файл (ось wght 100…900), SIL OFL 1.1,
+  # лицензия assets/fonts/OFL-Inter.txt. Основное семейство интерфейса;
+  # вес задаётся `FontWeight`, Flutter проецирует его в ось `wght`.
   fonts:
     - family: OpenDyslexic
       fonts:
         - asset: assets/fonts/OpenDyslexic-Regular.otf
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter-Variable.ttf
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
