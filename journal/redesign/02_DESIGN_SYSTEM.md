@@ -89,12 +89,13 @@ rgba(...,0.10)` (в `AppShadows.card` — мягкий вариант 0.04/6/2 �
 | `AppPageScaffold` | шапка + прокручиваемый список секций, ширина и отступы страницы |
 | `AppPageHeader` | надзаголовок/крошки, заголовок, пояснение, адаптивные действия |
 | `AppContentWidth` | центр + максимальная ширина |
-| `AppPanel` | поверхность r16, граница, тень, `onTap`/`onLongPress`, семантика |
+| `AppPanel` | поверхность r16 на `Material` (фон, splash, границы), тень снаружи, `onTap`/`onLongPress`, семантика |
 | `AppSectionCard` | панель с иконкой, заголовком, пояснением, разделителем |
 | `AppStatTile` | KPI: надзаголовок, значение, единица, хелпер, иконка-бейдж |
 | `AppStatusChip` | pill, тона neutral/info/success/warning/danger |
 | `AppIconBadge` | квадрат с тонированным фоном и иконкой |
-| `AppProgressBar` | 6 px, скругление pill, однократная анимация |
+| `AppProgressBar` | 6 px, скругление pill, внутри — `LinearProgressIndicator` (тесты/скринридеры видят знакомый тип) |
+| `AppDashedBorder` | пунктирная рамка зоны загрузки (`foregroundPainter`, без новых зависимостей) |
 | `AppEmptyState` / `AppErrorState` | пусто/ошибка с действиями |
 | `AppSkeleton` / `AppLoadingPlaceholder` | статичные заглушки загрузки |
 | `AppDialog` / `showAppDialog` | диалог 512, шапка/тело/действия в контексте диалога |
