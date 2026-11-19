@@ -36,20 +36,8 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  Future<void> openCreateMenu(WidgetTester tester) async {
-    await tester.tap(
-      find.descendant(
-        of: find.byKey(const ValueKey<String>('decks-create-split')),
-        matching: find.byIcon(M3EIcons.keyboard_arrow_down),
-      ),
-    );
-    await tester.pumpAndSettle();
-  }
-
   Future<void> startImport(WidgetTester tester) async {
-    final AppLocalizations l10n = l10nOf(tester);
-    await openCreateMenu(tester);
-    await tester.tap(find.text(l10n.decksImportZip));
+    await tester.tap(find.byKey(const ValueKey<String>('decks-import')));
     await tester.pumpAndSettle();
   }
 

@@ -47,9 +47,14 @@ void main() {
     WidgetTester tester,
     AppLocalizations l10n,
   ) async {
-    await tester.tap(find.text(l10n.decksCreateDeckFab));
+    await tester.tap(find.byKey(const ValueKey<String>('decks-new-deck')));
     await tester.pumpAndSettle();
-    expect(find.text(l10n.deckCreateDialogTitle), findsOneWidget);
+    // Заголовок диалога совпадает с подписью кнопки шапки, поэтому
+    // открытие проверяем по полю ввода (ADR-036: диалог на оболочке).
+    expect(
+      find.byKey(const ValueKey<String>('deck-name-submit')),
+      findsOneWidget,
+    );
   }
 
   testWidgets('диалог создания открывается и закрывается, экран не исчезает', (
@@ -67,7 +72,10 @@ void main() {
     await tester.tap(find.text(l10n.cancel));
     await tester.pumpAndSettle();
 
-    expect(find.text(l10n.deckCreateDialogTitle), findsNothing);
+    expect(
+      find.byKey(const ValueKey<String>('deck-name-submit')),
+      findsNothing,
+    );
     expect(
       find.byType(DecksScreen),
       findsOneWidget,
@@ -92,7 +100,10 @@ void main() {
     await tester.tap(find.byKey(const ValueKey<String>('deck-name-submit')));
     await tester.pumpAndSettle();
 
-    expect(find.text(l10n.deckCreateDialogTitle), findsNothing);
+    expect(
+      find.byKey(const ValueKey<String>('deck-name-submit')),
+      findsNothing,
+    );
     expect(repository.createdNames, <String>['ТОЭ']);
     expect(find.byType(DecksScreen), findsOneWidget);
   });
@@ -109,12 +120,18 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text(l10n.deckNameEmptyError), findsOneWidget);
-    expect(find.text(l10n.deckCreateDialogTitle), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey<String>('deck-name-submit')),
+      findsOneWidget,
+    );
     expect(repository.createdNames, isEmpty);
 
     await tester.tap(find.text(l10n.cancel));
     await tester.pumpAndSettle();
-    expect(find.text(l10n.deckCreateDialogTitle), findsNothing);
+    expect(
+      find.byKey(const ValueKey<String>('deck-name-submit')),
+      findsNothing,
+    );
     expect(find.byType(DecksScreen), findsOneWidget);
   });
 }
