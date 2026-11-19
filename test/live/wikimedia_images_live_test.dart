@@ -138,6 +138,7 @@ void main() {
         print(line);
       }
     },
+    skip: liveSkip,
     timeout: const Timeout(Duration(minutes: 3)),
     tags: <String>['live'],
   );
