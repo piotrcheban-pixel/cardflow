@@ -237,6 +237,45 @@ abstract final class AppColors {
   /// Текст карточки-оценки Easy.
   static Color ratingEasyForeground(ColorScheme scheme) =>
       scheme.onPrimaryFixed;
+
+  // --- Обратная связь режимов «Тест», «Ввод», «Верно/Неверно» ---------------
+  // Единые цвета результата ответа: раньше были литералами в трёх экранах.
+
+  /// Фон правильного ответа (режимы проверки ответа).
+  static Color feedbackCorrectBackground(ColorScheme scheme) =>
+      scheme.brightness == Brightness.dark
+      ? const Color(0xFF1B5E20)
+      : const Color(0xFFE8F5E9);
+
+  /// Текст правильного ответа.
+  static Color feedbackCorrectForeground(ColorScheme scheme) =>
+      scheme.brightness == Brightness.dark
+      ? const Color(0xFFC8E6C9)
+      : const Color(0xFF1B5E20);
+
+  /// Фон ответа «почти верно».
+  static Color feedbackAlmostBackground(ColorScheme scheme) =>
+      scheme.brightness == Brightness.dark
+      ? const Color(0xFF5D4300)
+      : const Color(0xFFFFF8E1);
+
+  /// Текст ответа «почти верно».
+  static Color feedbackAlmostForeground(ColorScheme scheme) =>
+      scheme.brightness == Brightness.dark
+      ? const Color(0xFFFFE082)
+      : const Color(0xFF5D4300);
+
+  /// Фон неверного ответа.
+  static Color feedbackWrongBackground(ColorScheme scheme) =>
+      scheme.brightness == Brightness.dark
+      ? const Color(0xFFB71C1C)
+      : const Color(0xFFFFEBEE);
+
+  /// Текст неверного ответа.
+  static Color feedbackWrongForeground(ColorScheme scheme) =>
+      scheme.brightness == Brightness.dark
+      ? const Color(0xFFFFCDD2)
+      : const Color(0xFFB71C1C);
 }
 
 /// Скругления системы.

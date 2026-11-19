@@ -117,7 +117,7 @@ undo, LaTeX/cloze/occlusion/медиа не менялась. Цвета оце�
 - `fvm flutter test --no-pub --coverage --exclude-tags golden` → **2187 passed
   + 16 skipped, 0 failed** (baseline был 2176+16+1; +11 тестов, guard
   `no_secrets` починен очисткой неотслеживаемого снимка дизайна).
-- Покрытие: **91.9 % рукописного кода (17661/19220)**, все файлы 82.8 %.
+- Покрытие: **91.9 % рукописного кода (17687/19243)**, все файлы 82.8 %.
 - `fvm flutter analyze --no-pub` → **No issues found**.
 - `fvm dart format --set-exit-if-changed lib test integration_test` →
   **504 файла, 0 changed**.

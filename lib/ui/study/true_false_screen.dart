@@ -10,6 +10,7 @@ import 'package:cardflow/domain/scheduling/rating.dart';
 import 'package:cardflow/domain/study/study_mode.dart';
 import 'package:cardflow/domain/study/true_false_question.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
+import 'package:cardflow/ui/theme/app_tokens.dart';
 import 'package:cardflow/ui/cards/content/card_content_view.dart';
 import 'package:cardflow/ui/cards/content/card_text.dart';
 import 'package:cardflow/ui/decks/deck_actions.dart';
@@ -391,14 +392,16 @@ class _TrueFalseFeedback extends StatelessWidget {
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
     final ThemeData theme = Theme.of(context);
-    final bool dark = theme.brightness == Brightness.dark;
+    final ColorScheme scheme = theme.colorScheme;
     final (Color background, Color foreground) = correct
-        ? dark
-              ? (const Color(0xFF1B5E20), const Color(0xFFC8E6C9))
-              : (const Color(0xFFE8F5E9), const Color(0xFF1B5E20))
-        : dark
-        ? (const Color(0xFFB71C1C), const Color(0xFFFFCDD2))
-        : (const Color(0xFFFFEBEE), const Color(0xFFB71C1C));
+        ? (
+            AppColors.feedbackCorrectBackground(scheme),
+            AppColors.feedbackCorrectForeground(scheme),
+          )
+        : (
+            AppColors.feedbackWrongBackground(scheme),
+            AppColors.feedbackWrongForeground(scheme),
+          );
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(14),

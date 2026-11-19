@@ -11,6 +11,7 @@ import 'package:cardflow/domain/study/answer_matcher.dart';
 import 'package:cardflow/domain/study/answer_type.dart';
 import 'package:cardflow/domain/study/study_mode.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
+import 'package:cardflow/ui/theme/app_tokens.dart';
 import 'package:cardflow/ui/cards/content/card_content_view.dart';
 import 'package:cardflow/ui/cards/content/card_text.dart';
 import 'package:cardflow/ui/cards/content/latex_spans.dart';
@@ -419,48 +420,27 @@ class _TypingFeedback extends StatelessWidget {
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
     final ThemeData theme = Theme.of(context);
-    final bool dark = theme.brightness == Brightness.dark;
+    final ColorScheme scheme = theme.colorScheme;
     final (
       Color background,
       Color foreground,
       String text,
     ) = switch (match.result) {
-      AnswerMatchResult.exact =>
-        dark
-            ? (
-                const Color(0xFF1B5E20),
-                const Color(0xFFC8E6C9),
-                l10n.typingCorrect,
-              )
-            : (
-                const Color(0xFFE8F5E9),
-                const Color(0xFF1B5E20),
-                l10n.typingCorrect,
-              ),
-      AnswerMatchResult.almost =>
-        dark
-            ? (
-                const Color(0xFF5D4300),
-                const Color(0xFFFFE082),
-                l10n.typingAlmost,
-              )
-            : (
-                const Color(0xFFFFF8E1),
-                const Color(0xFF5D4300),
-                l10n.typingAlmost,
-              ),
-      AnswerMatchResult.wrong =>
-        dark
-            ? (
-                const Color(0xFFB71C1C),
-                const Color(0xFFFFCDD2),
-                l10n.typingWrong,
-              )
-            : (
-                const Color(0xFFFFEBEE),
-                const Color(0xFFB71C1C),
-                l10n.typingWrong,
-              ),
+      AnswerMatchResult.exact => (
+        AppColors.feedbackCorrectBackground(scheme),
+        AppColors.feedbackCorrectForeground(scheme),
+        l10n.typingCorrect,
+      ),
+      AnswerMatchResult.almost => (
+        AppColors.feedbackAlmostBackground(scheme),
+        AppColors.feedbackAlmostForeground(scheme),
+        l10n.typingAlmost,
+      ),
+      AnswerMatchResult.wrong => (
+        AppColors.feedbackWrongBackground(scheme),
+        AppColors.feedbackWrongForeground(scheme),
+        l10n.typingWrong,
+      ),
     };
     final bool showExpected = gaveUp || match.result != AnswerMatchResult.exact;
     return Container(

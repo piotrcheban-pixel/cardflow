@@ -46,6 +46,11 @@
 Again — errorContainer/onErrorContainer; Hard — surfaceContainer/onSurface;
 Good — secondaryContainer/onSecondaryContainer; Easy — primaryFixed/onPrimaryFixed.
 
+Обратная связь режимов «Тест», «Ввод», «Верно/Неверно»
+(`AppColors.feedbackCorrect/Almost/Wrong*`): зелёная/янтарная/красная пары
+«фон + текст» для светлой и тёмной темы; раньше были литералами в трёх
+экранах, теперь единый токен-контракт.
+
 ## 2. Типографика
 
 Inter (переменный, `assets/fonts/Inter-Variable.ttf`, SIL OFL 1.1;
