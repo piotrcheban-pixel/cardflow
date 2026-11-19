@@ -43,6 +43,12 @@ const String kLiveMaxCostVariable = 'CARDFLOW_LIVE_MAX_COST_USD';
 /// Разрешение прогона при неизвестном тарифе (по умолчанию нельзя).
 const String kLiveAllowUnknownCostVariable = 'CARDFLOW_LIVE_ALLOW_UNKNOWN_COST';
 
+/// Явный список id сценариев через запятую (пусто — действуют флаги).
+///
+/// Нужен TASK 05, чтобы запустить A–C, не задевая Test D (он делит флаг
+/// `_ENABLE_MATERIALS` с Test C) и не расширяя объём без разрешения.
+const String kLiveScenariosVariable = 'CARDFLOW_LIVE_SCENARIOS';
+
 /// Таймаут одного HTTP-запроса, секунды.
 const String kLiveTimeoutVariable = 'CARDFLOW_LIVE_TIMEOUT_SEC';
 
@@ -142,6 +148,7 @@ class LiveTestConfig {
     this.enableRecovery = false,
     this.vision = false,
     this.reportPath = 'build/live/live-runs.jsonl',
+    this.scenarioIds = const <String>{},
     this.environment = const <String, String>{},
   });
 
@@ -161,6 +168,7 @@ class LiveTestConfig {
       enableRecovery = false,
       vision = false,
       reportPath = 'build/live/live-runs.jsonl',
+      scenarioIds = const <String>{},
       environment = const <String, String>{};
 
   /// Собирает конфигурацию из окружения процесса.
@@ -212,6 +220,7 @@ class LiveTestConfig {
           _flag(env, kLiveVisionVariable) ||
           (presetModel?.supportsVision ?? false),
       reportPath: report.isNotEmpty ? report : 'build/live/live-runs.jsonl',
+      scenarioIds: _scenarioIds(env, kLiveScenariosVariable),
       environment: env,
     );
   }
@@ -260,6 +269,16 @@ class LiveTestConfig {
 
   /// Путь файла отчёта (JSON Lines).
   final String reportPath;
+
+  /// Явный список id сценариев; пусто — действуют флаги `enable*`.
+  final Set<String> scenarioIds;
+
+  /// Разрешён ли сценарий [id] по явному списку.
+  ///
+  /// Пустой список — обратная совместимость: решение принимают флаги
+  /// `CARDFLOW_LIVE_ENABLE_*`.
+  bool isScenarioSelected(String id) =>
+      scenarioIds.isEmpty || scenarioIds.contains(id);
 
   /// Пресет каталога (может быть `null` для неизвестного id).
   ProviderPreset? get preset => providerPresetById(provider);
@@ -356,6 +375,7 @@ class LiveTestConfig {
     bool? enableRecovery,
     bool? vision,
     String? reportPath,
+    Set<String>? scenarioIds,
     Map<String, String>? environment,
   }) {
     return LiveTestConfig(
@@ -373,6 +393,7 @@ class LiveTestConfig {
       enableRecovery: enableRecovery ?? this.enableRecovery,
       vision: vision ?? this.vision,
       reportPath: reportPath ?? this.reportPath,
+      scenarioIds: scenarioIds ?? this.scenarioIds,
       environment: environment ?? this.environment,
     );
   }
@@ -392,6 +413,15 @@ class LiveTestConfig {
   static bool _flag(Map<String, String> env, String name) {
     final String value = _value(env, name).toLowerCase();
     return value == '1' || value == 'true' || value == 'yes' || value == 'on';
+  }
+
+  static Set<String> _scenarioIds(Map<String, String> env, String name) {
+    final String raw = _value(env, name);
+    if (raw.isEmpty) return const <String>{};
+    return <String>{
+      for (final String part in raw.split(','))
+        if (part.trim().isNotEmpty) part.trim(),
+    };
   }
 
   static int _positiveInt(

@@ -8,6 +8,7 @@ library;
 
 import 'dart:typed_data';
 
+import 'package:cardflow/api/parsers/docx_parser.dart';
 import 'package:cardflow/api/parsers/pdf_parser.dart';
 import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/text/document_format.dart';
@@ -20,11 +21,12 @@ const String kLiveTopicShort =
     'Круговорот воды в природе: испарение, '
     'конденсация, осадки и сток';
 
-/// Тема Test B: список понятий для 20 карточек (статика/физика).
+/// Тема Test B: список понятий для 40 карточек (статика/физика).
 const String kLiveTopicMany =
     'Основные понятия статики: сила, момент силы, '
     'плечо, центр масс, равновесие, опора, трение, жёсткость, деформация, '
-    'устойчивость';
+    'устойчивость, рычаг, блок, наклонная плоскость, реакция опоры, пара сил, '
+    'линия действия силы, условие равновесия, статически определимая система';
 
 /// Пожелания Test A: короткий prompt-only.
 String liveWishesShort({int cards = 3}) {
@@ -32,29 +34,49 @@ String liveWishesShort({int cards = 3}) {
       'повторения, уровень школьного курса.';
 }
 
-/// Пожелания Test B: 20 карточек (несколько запросов при малом лимите вывода).
-String liveWishesMany({int cards = 20}) {
+/// Пожелания Test B: 40 карточек (несколько запросов при малом лимите вывода).
+String liveWishesMany({int cards = 40}) {
   return 'Тема: $kLiveTopicMany. Сделай ровно $cards карточек, по одному '
       'чёткому определению или правилу на карточку, без повторов.';
 }
 
+/// Разделы небольшого документа Test C (3 смысловых блока).
+const List<String> kLiveSmallDocumentSections = <String>[
+  'Испарение — переход воды из жидкого состояния в газообразное. '
+      'Оно происходит при любой температуре, но с ростом температуры '
+      'скорость испарения увеличивается.',
+  'Конденсация — обратный процесс: водяной пар превращается в капли '
+      'жидкости. В атмосфере конденсация образует облака и туман.',
+  'Осадки выпадают, когда капли в облаке укрупняются настолько, что '
+      'не могут удерживаться в воздухе. Часть воды возвращается в океан '
+      'и на сушу, замыкая круговорот.',
+];
+
 /// Небольшой текстовый документ Test C (3 раздела, ~800 символов).
 ParsedDocument liveSmallDocument() {
-  const List<String> sections = <String>[
-    'Испарение — переход воды из жидкого состояния в газообразное. '
-        'Оно происходит при любой температуре, но с ростом температуры '
-        'скорость испарения увеличивается.',
-    'Конденсация — обратный процесс: водяной пар превращается в капли '
-        'жидкости. В атмосфере конденсация образует облака и туман.',
-    'Осадки выпадают, когда капли в облаке укрупняются настолько, что '
-        'не могут удерживаться в воздухе. Часть воды возвращается в океан '
-        'и на сушу, замыкая круговорот.',
-  ];
   return _documentFromSections(
     fileName: 'krugovorot-vody.txt',
     format: DocumentFormat.txt,
-    sectionTexts: sections,
+    sectionTexts: kLiveSmallDocumentSections,
   );
+}
+
+/// Test C через **production-парсер** DOCX: проверяет реальное извлечение
+/// текста и границы трёх разделов (Heading1), а не только заранее собранный
+/// `ParsedDocument`. Программная фикстура — по правилу AGENTS (бинарные файлы
+/// в репозиторий не коммитятся).
+Future<ParsedDocument> liveSmallDocumentParsed() async {
+  final Uint8List docx = buildDocx(
+    bodyXml: <String>[
+      docxParagraph('Испарение', style: 'Heading1'),
+      docxParagraph(kLiveSmallDocumentSections[0]),
+      docxParagraph('Конденсация', style: 'Heading1'),
+      docxParagraph(kLiveSmallDocumentSections[1]),
+      docxParagraph('Осадки', style: 'Heading1'),
+      docxParagraph(kLiveSmallDocumentSections[2]),
+    ].join(),
+  );
+  return const DocxParser().parse(docx, fileName: 'krugovorot-vody.docx');
 }
 
 /// Большой документ Test D: 8 разделов по ~1000 символов.

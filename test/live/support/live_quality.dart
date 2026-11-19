@@ -44,6 +44,240 @@ const List<String> kManualQualityChecklist = <String>[
   'разумная длина ответа',
 ];
 
+/// Критерии ручной оценки одной карточки (TASK 05, раздел 7).
+///
+/// Оценка ставится человеком по шкале 0/1/2; автоматический JSON-валид не
+/// является доказательством содержательного качества. `null` — критерий ещё
+/// не оценён (не подставляем 0).
+enum LiveCardCriterion {
+  /// Фактическая корректность: утверждения верны.
+  factualCorrectness,
+
+  /// Релевантность теме/материалу.
+  relevance,
+
+  /// Полнота: карточка покрывает существенную часть факта.
+  completeness,
+
+  /// Ясность формулировки.
+  clarity,
+
+  /// Образовательная ценность (чему учит карточка).
+  educationalValue,
+
+  /// Отвечаемость: на вопрос есть однозначный ответ.
+  answerability,
+
+  /// Отсутствие дублирования с другими карточками.
+  duplication,
+
+  /// Привязка к источнику (для материаловых сценариев).
+  sourceGrounding,
+}
+
+/// Подписи критериев для markdown-отчёта.
+const Map<LiveCardCriterion, String> kLiveCardCriterionLabels =
+    <LiveCardCriterion, String>{
+      LiveCardCriterion.factualCorrectness: 'фактическая корректность',
+      LiveCardCriterion.relevance: 'релевантность',
+      LiveCardCriterion.completeness: 'полнота',
+      LiveCardCriterion.clarity: 'ясность',
+      LiveCardCriterion.educationalValue: 'образовательная ценность',
+      LiveCardCriterion.answerability: 'отвечаемость',
+      LiveCardCriterion.duplication: 'отсутствие дублей',
+      LiveCardCriterion.sourceGrounding: 'привязка к источнику',
+    };
+
+/// Ручная оценка одной карточки.
+class LiveCardAssessment {
+  /// Создаёт оценку; [scores] — 0/1/2 или `null` (не оценено).
+  LiveCardAssessment({
+    required this.cardIndex,
+    Map<LiveCardCriterion, int?> scores = const <LiveCardCriterion, int?>{},
+    this.comment,
+  }) : scores = <LiveCardCriterion, int?>{
+         for (final LiveCardCriterion criterion in LiveCardCriterion.values)
+           criterion: scores[criterion],
+       };
+
+  /// Номер карточки в результате (с 1).
+  final int cardIndex;
+
+  /// Баллы по критериям (0/1/2; `null` — не оценено).
+  final Map<LiveCardCriterion, int?> scores;
+
+  /// Короткий комментарий (без персональных данных).
+  final String? comment;
+
+  /// true, если все критерии оценены.
+  bool get isComplete => scores.values.every((int? value) => value != null);
+
+  /// Ошибки шкалы (значение вне 0..2); пусто — оценка корректна.
+  List<String> get validationErrors => <String>[
+    for (final MapEntry<LiveCardCriterion, int?> entry in scores.entries)
+      if (entry.value != null && (entry.value! < 0 || entry.value! > 2))
+        '${entry.key.name}: ${entry.value} (допустимо 0/1/2)',
+  ];
+
+  /// Сумма баллов по оценённым критериям; `null` — ничего не оценено.
+  int? get total {
+    var sum = 0;
+    var any = false;
+    for (final int? value in scores.values) {
+      if (value == null) continue;
+      any = true;
+      sum += value;
+    }
+    return any ? sum : null;
+  }
+
+  /// JSON для журнала испытаний.
+  Map<String, Object?> toJson() => <String, Object?>{
+    'cardIndex': cardIndex,
+    'scores': <String, int?>{
+      for (final MapEntry<LiveCardCriterion, int?> entry in scores.entries)
+        entry.key.name: entry.value,
+    },
+    'total': total,
+    'comment': comment,
+  };
+
+  /// Строка markdown-таблицы.
+  String toMarkdownRow() {
+    final String cells = LiveCardCriterion.values
+        .map(
+          (LiveCardCriterion criterion) => scores[criterion]?.toString() ?? '—',
+        )
+        .join(' | ');
+    return '| $cardIndex | $cells | ${total?.toString() ?? '—'} | '
+        '${comment ?? ''} |';
+  }
+}
+
+/// Дополнительная ручная оценка документального сценария (TEST C).
+class LiveDocumentAssessment {
+  /// Создаёт оценку; баллы 0/1/2, `null` — не оценено.
+  const LiveDocumentAssessment({
+    this.coverage,
+    this.importantFacts,
+    this.sourceLinks,
+    this.unsupportedClaims = false,
+    this.comment,
+  });
+
+  /// Покрытие исходного документа (0–2).
+  final int? coverage;
+
+  /// Сохранение важных фактов (0–2).
+  final int? importantFacts;
+
+  /// Корректность связей с разделами (0–2).
+  final int? sourceLinks;
+
+  /// В карточках есть неподтверждённые исходником утверждения.
+  final bool unsupportedClaims;
+
+  /// Комментарий.
+  final String? comment;
+
+  /// Ошибки шкалы.
+  List<String> get validationErrors => <String>[
+    for (final MapEntry<String, int?> entry in <String, int?>{
+      'coverage': coverage,
+      'importantFacts': importantFacts,
+      'sourceLinks': sourceLinks,
+    }.entries)
+      if (entry.value != null && (entry.value! < 0 || entry.value! > 2))
+        '${entry.key}: ${entry.value} (допустимо 0/1/2)',
+  ];
+
+  /// JSON для журнала.
+  Map<String, Object?> toJson() => <String, Object?>{
+    'coverage': coverage,
+    'importantFacts': importantFacts,
+    'sourceLinks': sourceLinks,
+    'unsupportedClaims': unsupportedClaims,
+    'comment': comment,
+  };
+}
+
+/// Итог ручной оценки сценария: карточки + (для TEST C) документ + вердикт.
+class LiveScenarioAssessment {
+  /// Создаёт итог.
+  const LiveScenarioAssessment({
+    required this.scenario,
+    required this.cards,
+    this.document,
+    this.verdict,
+    this.comment,
+  });
+
+  /// Имя сценария.
+  final String scenario;
+
+  /// Оценки карточек.
+  final List<LiveCardAssessment> cards;
+
+  /// Оценка документального сценария (TEST C); `null` — не применимо.
+  final LiveDocumentAssessment? document;
+
+  /// Вердикт «принято / доработка» (заполняет человек).
+  final String? verdict;
+
+  /// Общий комментарий.
+  final String? comment;
+
+  /// Ошибки шкалы по всем частям.
+  List<String> get validationErrors => <String>[
+    for (final LiveCardAssessment card in cards)
+      ...card.validationErrors.map(
+        (String e) => 'карточка ${card.cardIndex}: $e',
+      ),
+    ...?document?.validationErrors,
+  ];
+
+  /// JSON для журнала результатов.
+  Map<String, Object?> toJson() => <String, Object?>{
+    'scenario': scenario,
+    'cards': cards.map((LiveCardAssessment c) => c.toJson()).toList(),
+    'document': document?.toJson(),
+    'verdict': verdict,
+    'comment': comment,
+    'validationErrors': validationErrors,
+  };
+
+  /// Markdown-таблица для `journal/task05/results/`.
+  String toMarkdown() {
+    final StringBuffer buffer = StringBuffer()
+      ..writeln('### $scenario')
+      ..writeln()
+      ..writeln(
+        '| # | ${LiveCardCriterion.values.map((LiveCardCriterion c) => kLiveCardCriterionLabels[c]).join(' | ')} | сумма | комментарий |',
+      )
+      ..writeln(
+        '|---|${LiveCardCriterion.values.map((_) => '---').join('|')}|---:|---|',
+      );
+    for (final LiveCardAssessment card in cards) {
+      buffer.writeln(card.toMarkdownRow());
+    }
+    if (document != null) {
+      final LiveDocumentAssessment doc = document!;
+      buffer
+        ..writeln()
+        ..writeln(
+          'Документ: покрытие ${doc.coverage ?? '—'}, '
+          'важные факты ${doc.importantFacts ?? '—'}, '
+          'связи с разделами ${doc.sourceLinks ?? '—'}, '
+          'неподтверждённые утверждения: '
+          '${doc.unsupportedClaims ? 'есть' : 'нет'}.',
+        );
+    }
+    if (verdict != null) buffer.writeln('\nВердикт: $verdict');
+    if (comment != null) buffer.writeln(comment!);
+    return buffer.toString();
+  }
+}
+
 /// Результат автоматической проверки набора карточек.
 class LiveCardQualityReport {
   /// Создаёт отчёт.

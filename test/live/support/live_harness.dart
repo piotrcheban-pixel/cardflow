@@ -1,14 +1,15 @@
 /// Проводка live-прогона: production-адаптеры, транспорт с бюджетом, отчёт.
 ///
-/// Один harness на файл теста: он собирает те же адаптеры, что приложение
+/// Один harness на сценарий: он собирает те же адаптеры, что приложение
 /// (`generationAdapters`), тот же `CardGenerationService` и `GenerationPipeline`,
 /// но с In-memory хранилищем заданий/карточек. Никаких production-ключей, БД
 /// и пользовательских материалов: только материалы сценария и ключ из
 /// окружения.
 ///
-/// Всё, что может потратить деньги, проходит через [LiveRequestBudget] и
-/// [LiveProbeTransport]; отчёт пишется в `build/live/` и содержит только числа
-/// и машинные коды.
+/// Всё, что может потратить деньги, проходит через общий [LiveRequestBudget]
+/// (логические запросы), [LiveProbeTransport] (HTTP-обмены), [LiveAttemptLimiter]
+/// (физические попытки) и [LiveCostGuard] (предварительная стоимость).
+/// Бюджеты можно передать общими на весь файл — тогда A–C делят один лимит.
 library;
 
 import 'dart:io';
@@ -55,19 +56,26 @@ class LiveHarness {
     required this.recorder,
     required this.dio,
     required this.budget,
+    required this.httpBudget,
     required this.probe,
     required this.attemptLimiter,
     required this.pipeline,
+    required this.calls,
     required this.diagnosticsLog,
+    this.costGuard,
   });
 
   /// Собирает harness из [config].
   ///
-  /// Ключ берётся только из окружения; при его отсутствии вызывающая сторона
-  /// обязана пропустить тест (`config.skipReason`).
+  /// [budget]/[httpBudget]/[attemptLimiter]/[costGuard] можно передать общими
+  /// на весь файл тестов; иначе создаются с лимитами из [config].
   factory LiveHarness.create({
     required LiveTestConfig config,
     LiveRunRecorder? recorder,
+    LiveRequestBudget? budget,
+    LiveRequestBudget? httpBudget,
+    LiveAttemptLimiter? attemptLimiter,
+    LiveCostGuard? costGuard,
   }) {
     final String? apiKey = config.apiKey;
     if (config.requiresApiKey && (apiKey == null || apiKey.isEmpty)) {
@@ -82,16 +90,29 @@ class LiveHarness {
         receiveTimeout: config.timeout,
       ),
     );
-    final LiveRequestBudget budget = LiveRequestBudget(
-      maxRequests: config.maxRequests,
-      label: '${config.provider}/${config.model}',
-    );
-    // Страховка: один логический запрос может дать несколько HTTP-попыток
-    // (retry на 429/5xx). Лимит — с запасом 4×, но конечный.
-    final LiveAttemptLimiter attemptLimiter = LiveAttemptLimiter(
-      maxAttempts: config.maxRequests * RetryPolicy().maxAttempts,
-    );
-    dio.interceptors.add(attemptLimiter);
+    final LiveRequestBudget logicalBudget =
+        budget ??
+        LiveRequestBudget(
+          maxRequests: config.maxRequests,
+          label: '${config.provider}/${config.model}',
+        );
+    // Один логический запрос в худшем случае даёт strict + tolerant обмен.
+    final int defaultHttpRequests = config.maxRequests * 2;
+    final LiveRequestBudget sharedHttpBudget =
+        httpBudget ??
+        LiveRequestBudget(
+          maxRequests: defaultHttpRequests,
+          label: '${config.provider}/${config.model} http',
+        );
+    // Физические попытки: до RetryPolicy.maxAttempts на HTTP-обмен. Лимит
+    // конечный; стоимость дополнительно ограничена [LiveCostGuard].
+    final LiveAttemptLimiter limiter =
+        attemptLimiter ??
+        LiveAttemptLimiter(
+          maxAttempts: sharedHttpBudget.maxRequests * RetryPolicy().maxAttempts,
+          costGuard: costGuard,
+        );
+    dio.interceptors.add(limiter);
 
     final List<String> diagnosticsLog = <String>[];
     final GenerationDiagnostics diagnostics = GenerationDiagnostics(
@@ -105,7 +126,7 @@ class LiveHarness {
     );
     final LiveProbeTransport probe = LiveProbeTransport(
       inner: httpClient,
-      budget: budget,
+      budget: sharedHttpBudget,
     );
     final CardGenerationService service = CardGenerationService(
       adapters: generationAdapters,
@@ -115,8 +136,14 @@ class LiveHarness {
       httpClient: probe,
       diagnostics: diagnostics,
     );
+    final List<LiveCallRecord> calls = <LiveCallRecord>[];
+    final LiveRecordingCaller caller = LiveRecordingCaller(
+      inner: service,
+      budget: logicalBudget,
+      records: calls,
+    );
     final GenerationPipeline pipeline = GenerationPipeline(
-      caller: service,
+      caller: caller,
       jobRepository: FakeGenerationJobRepository(),
       cardStore: FakeGenerationCardStore(),
       diagnostics: diagnostics,
@@ -125,11 +152,14 @@ class LiveHarness {
       config: config,
       recorder: recorder ?? LiveRunRecorder(reportPath: config.reportPath),
       dio: dio,
-      budget: budget,
+      budget: logicalBudget,
+      httpBudget: sharedHttpBudget,
       probe: probe,
-      attemptLimiter: attemptLimiter,
+      attemptLimiter: limiter,
       pipeline: pipeline,
+      calls: calls,
       diagnosticsLog: diagnosticsLog,
+      costGuard: costGuard,
     );
   }
 
@@ -142,17 +172,26 @@ class LiveHarness {
   /// Dio (для закрытия после теста).
   final Dio dio;
 
-  /// Бюджет логических запросов.
+  /// Бюджет логических запросов (вызовы генерации).
   final LiveRequestBudget budget;
 
-  /// Транспорт-обёртка (размеры тел, время, счётчик).
+  /// Бюджет HTTP-обменов (вызовы транспорта).
+  final LiveRequestBudget httpBudget;
+
+  /// Транспорт-обёртка (размеры тел, время, стоимость обменов).
   final LiveProbeTransport probe;
 
-  /// Лимитер HTTP-попыток.
+  /// Лимитер физических HTTP-попыток.
   final LiveAttemptLimiter attemptLimiter;
 
   /// Пайплайн (production-адаптеры, in-memory job/card store).
   final GenerationPipeline pipeline;
+
+  /// Журнал логических запросов сценария (без текстов).
+  final List<LiveCallRecord> calls;
+
+  /// Учёт стоимости; `null` — guard не создан (цена неизвестна).
+  final LiveCostGuard? costGuard;
 
   /// Debug-диагностика прогона (без ключей; используется только при разборе).
   final List<String> diagnosticsLog;
@@ -167,15 +206,19 @@ class LiveHarness {
 
   /// Выполняет сценарий и записывает отчёт.
   ///
-  /// [imageCount] — сколько изображений сценарий приложил к запросу: сервис
-  /// отправляет их частями только при Vision, поэтому это входная величина, а
-  /// не «сколько модель увидела».
+  /// [expectedOutputTokens] — ожидаемый выход одного запроса из плана сценария:
+  /// по нему [LiveCostGuard] проверяет бюджет **до** отправки. [imageCount] —
+  /// сколько изображений сценарий передаёт модели (входная величина).
   Future<LiveScenarioOutcome> run({
     required String scenario,
     required GenerationRunRequest request,
     int imageCount = 0,
+    int expectedOutputTokens = 3000,
     String? note,
   }) async {
+    final int attemptsBefore = attemptLimiter.attempts;
+    final double spentBefore = costGuard?.spentUsd ?? 0;
+    costGuard?.outputTokensPerRequest = expectedOutputTokens;
     final DateTime startedAt = DateTime.now();
     final Stopwatch stopwatch = Stopwatch()..start();
     final GenerationRunResult result = await pipeline.run(request);
@@ -188,7 +231,12 @@ class LiveHarness {
       result: result,
       probe: probe,
       imageCount: imageCount,
-      httpAttempts: attemptLimiter.attempts,
+      httpAttempts: attemptLimiter.attempts - attemptsBefore,
+      logicalRequests: calls.length,
+      httpBudget: httpBudget,
+      costGuard: costGuard,
+      guardSpentUsd: (costGuard?.spentUsd ?? 0) - spentBefore,
+      elapsed: stopwatch.elapsed,
       note: note,
     );
     recorder.add(record);
@@ -208,16 +256,23 @@ class LiveHarness {
   /// Краткая диагностика для `print` при падении: без материалов и ключей.
   String diagnosticsSummary() {
     final StringBuffer buffer = StringBuffer()
-      ..writeln('budget: $budget')
+      ..writeln('logical budget: $budget')
+      ..writeln('http budget: $httpBudget')
       ..writeln(
         'attempts: ${attemptLimiter.attempts}, '
         'rejected: ${attemptLimiter.rejected}',
       )
       ..writeln(
-        'requests: ${probe.exchanges.length}, '
+        'http exchanges: ${probe.exchanges.length}, '
         'bytes: ${probe.totalBytes}, '
         'duration: ${probe.totalDuration.inMilliseconds} ms',
       );
+    if (costGuard != null) {
+      buffer.writeln('cost: $costGuard');
+    }
+    for (final LiveCallRecord call in calls) {
+      buffer.writeln('call: ${call.toJson()}');
+    }
     for (final String line in diagnosticsLog) {
       buffer.writeln('diag: $line');
     }

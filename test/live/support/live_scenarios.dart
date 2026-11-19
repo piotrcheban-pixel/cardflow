@@ -12,6 +12,8 @@ library;
 
 import 'dart:math' as math;
 
+import 'package:cardflow/api/http/retry_policy.dart';
+
 import 'live_cost.dart';
 import 'live_pricing.dart';
 import 'live_test_config.dart';
@@ -72,11 +74,20 @@ class LiveScenarioPlan {
   /// Нужна ли модель с Vision.
   final bool requiresVision;
 
-  /// Ожидаемое число запросов по лимиту вывода.
+  /// Ожидаемое число логических запросов по лимиту вывода.
   int get expectedRequests {
     final int cardsPerRequest = math.max(1, kLiveCardsPerRequest);
     return math.max(1, (requestedCards / cardsPerRequest).ceil());
   }
+
+  /// Ожидаемое число HTTP-обменов: DeepSeek отклоняет strict-схему (ADR-021),
+  /// поэтому на каждый логический запрос — strict + tolerant.
+  int get expectedHttpRequests => expectedRequests * 2;
+
+  /// Верхняя граница физических HTTP-попыток: каждый обмен может повториться
+  /// до `RetryPolicy.maxAttempts` раз (429/5xx/таймаут).
+  int get expectedHttpAttemptsUpperBound =>
+      expectedHttpRequests * RetryPolicy().maxAttempts;
 
   /// Число токенов входа за весь сценарий.
   int get totalInputTokens => expectedRequests * inputTokensPerRequest;
@@ -101,6 +112,8 @@ class LiveScenarioPlan {
     'title': title,
     'requestedCards': requestedCards,
     'expectedRequests': expectedRequests,
+    'expectedHttpRequests': expectedHttpRequests,
+    'expectedHttpAttemptsUpperBound': expectedHttpAttemptsUpperBound,
     'inputTokensPerRequest': inputTokensPerRequest,
     'outputTokensPerRequest': outputTokensPerRequest,
     'images': images,
@@ -124,19 +137,20 @@ class LiveScenarioPlan {
 const List<LiveScenarioPlan> kLiveScenarioPlans = <LiveScenarioPlan>[
   LiveScenarioPlan(
     id: 'prompt_only_short',
-    title: 'Test A — короткий prompt-only',
+    title: 'Test A — короткий prompt-only, 5 карточек',
     kind: LiveScenario.promptOnly,
-    requestedCards: 3,
+    requestedCards: 5,
     inputTokensPerRequest: 7800,
-    outputTokensPerRequest: 1500,
+    outputTokensPerRequest: 2500,
     images: 0,
     expectsMultipleRequests: false,
   ),
   LiveScenarioPlan(
-    id: 'prompt_only_many_20',
-    title: 'Test B — 20 карточек prompt-only',
+    id: 'prompt_only_many_40',
+    title: 'Test B — 40 карточек prompt-only, continuity',
     kind: LiveScenario.promptOnlyMany,
-    requestedCards: 20,
+    requestedCards: 40,
+    // 7 карточек/запрос по лимиту вывода 8192 → 6 логических запросов.
     inputTokensPerRequest: 9000,
     outputTokensPerRequest: 3500,
     images: 0,
