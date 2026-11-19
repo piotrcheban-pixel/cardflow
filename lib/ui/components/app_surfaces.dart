@@ -1,3 +1,5 @@
+import 'dart:ui' show PathMetric;
+
 import 'package:material_ui/material_ui.dart';
 
 import 'package:cardflow/ui/theme/app_tokens.dart';
@@ -596,7 +598,108 @@ class AppErrorState extends StatelessWidget {
   }
 }
 
-/// Скелетон загрузки: статичные тонированные блоки (без бесконечной анимации,
+/// Пунктирная рамка поверхностей (зона загрузки файлов в макете).
+///
+/// Собственный `CustomPainter` вместо новой зависимости: рисует скруглённый
+/// прямоугольник штрихами по длине пути.
+class AppDashedBorder extends StatelessWidget {
+  /// Создаёт рамку.
+  const AppDashedBorder({
+    required this.child,
+    this.color,
+    this.radius = AppRadii.input,
+    this.strokeWidth = 2,
+    this.dashLength = 6,
+    this.gapLength = 5,
+    super.key,
+  });
+
+  /// Содержимое внутри рамки.
+  final Widget child;
+
+  /// Цвет штриха; по умолчанию `outlineVariant`.
+  final Color? color;
+
+  /// Радиус скругления.
+  final double radius;
+
+  /// Толщина.
+  final double strokeWidth;
+
+  /// Длина штриха.
+  final double dashLength;
+
+  /// Длина промежутка.
+  final double gapLength;
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      painter: _DashedBorderPainter(
+        color: color ?? Theme.of(context).colorScheme.outlineVariant,
+        radius: radius,
+        strokeWidth: strokeWidth,
+        dashLength: dashLength,
+        gapLength: gapLength,
+      ),
+      child: child,
+    );
+  }
+}
+
+class _DashedBorderPainter extends CustomPainter {
+  const _DashedBorderPainter({
+    required this.color,
+    required this.radius,
+    required this.strokeWidth,
+    required this.dashLength,
+    required this.gapLength,
+  });
+
+  final Color color;
+  final double radius;
+  final double strokeWidth;
+  final double dashLength;
+  final double gapLength;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth;
+    final Path path = Path()
+      ..addRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(
+            strokeWidth / 2,
+            strokeWidth / 2,
+            size.width - strokeWidth,
+            size.height - strokeWidth,
+          ),
+          Radius.circular(radius),
+        ),
+      );
+    for (final PathMetric metric in path.computeMetrics()) {
+      double distance = 0;
+      while (distance < metric.length) {
+        final double end = (distance + dashLength).clamp(0, metric.length);
+        canvas.drawPath(metric.extractPath(distance, end), paint);
+        distance = end + gapLength;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DashedBorderPainter oldDelegate) =>
+      oldDelegate.color != color ||
+      oldDelegate.radius != radius ||
+      oldDelegate.strokeWidth != strokeWidth ||
+      oldDelegate.dashLength != dashLength ||
+      oldDelegate.gapLength != gapLength;
+}
+
+/// Скелетон загрузки: статичный тонированный блок (без бесконечной анимации,
 /// чтобы не нагружать кадры и не ломать `pumpAndSettle` в тестах).
 class AppSkeleton extends StatelessWidget {
   /// Создаёт блок-заглушку.

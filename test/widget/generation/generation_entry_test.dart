@@ -79,21 +79,10 @@ void main() {
     await tester.pumpAndSettle();
     final l10n = l10nOf(tester);
 
-    await tester.tap(
-      find.descendant(
-        of: find.byKey(const ValueKey<String>('decks-create-split')),
-        matching: find.byIcon(M3EIcons.keyboard_arrow_down),
-      ),
-    );
-    await tester.pumpAndSettle();
-    expect(
-      find.byKey(const ValueKey<String>('decks-create-generate')),
-      findsOneWidget,
-    );
-    await tester.tap(find.text(l10n.decksCreateGenerate));
+    await tester.tap(find.byTooltip(l10n.deckGenerateTooltip));
     await tester.pumpAndSettle();
 
-    expect(find.text(l10n.generationTitle), findsOneWidget);
+    expect(find.text(l10n.generationPageTitle), findsOneWidget);
     expect(
       find.byKey(const ValueKey<String>('generation-attach-zone')),
       findsOneWidget,
@@ -118,7 +107,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text(l10n.generationTitle), findsOneWidget);
+    expect(find.text(l10n.generationPageTitle), findsOneWidget);
     expect(find.text(l10n.generationTargetDeck('Моя колода')), findsOneWidget);
     expect(
       find.byKey(const ValueKey<String>('generation-deck-name')),
@@ -144,9 +133,12 @@ void main() {
       find.text(l10n.generationErrorProviderNotConfigured),
       findsOneWidget,
     );
-    await tester.tap(
-      find.byKey(const ValueKey<String>('generation-open-settings')),
+    final Finder openSettings = find.byKey(
+      const ValueKey<String>('generation-open-settings'),
     );
+    await tester.ensureVisible(openSettings);
+    await tester.pumpAndSettle();
+    await tester.tap(openSettings);
     await tester.pumpAndSettle();
     expect(find.text(l10n.providersTitle), findsOneWidget);
     expect(find.byKey(const ValueKey<String>('providers-add')), findsOneWidget);

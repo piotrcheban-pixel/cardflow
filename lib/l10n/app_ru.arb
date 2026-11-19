@@ -3032,5 +3032,42 @@
   "reviewRevealAction": "Показать ответ",
   "@reviewRevealAction": {
     "description": "Кнопка раскрытия ответа на карточке сессии."
+  },
+  "generationPageTitle": "Генерация карточек с помощью ИИ",
+  "@generationPageTitle": {
+    "description": "Заголовок страницы генерации (макет v2)."
+  },
+  "generationOverline": "Нейросетевой модуль",
+  "@generationOverline": {
+    "description": "Акцентный надзаголовок страницы генерации."
+  },
+  "generationSubtitle": "Превратите лекции, конспекты или статьи в готовые колоды с интервальным повторением",
+  "@generationSubtitle": {
+    "description": "Пояснение под заголовком генерации."
+  },
+  "generationSectionMaterials": "1. Загрузка исходных материалов",
+  "@generationSectionMaterials": {
+    "description": "Нумерованный заголовок секции загрузки файлов."
+  },
+  "generationSectionParameters": "2. Параметры колоды",
+  "@generationSectionParameters": {
+    "description": "Нумерованный заголовок секции параметров."
+  },
+  "generationSectionModel": "3. Модель и параметры",
+  "@generationSectionModel": {
+    "description": "Нумерованный заголовок секции провайдера и модели."
+  },
+  "generationFilesCount": "Всего файлов: {count}",
+  "@generationFilesCount": {
+    "description": "Счётчик прикреплённых файлов.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "generationBackTooltip": "Назад",
+  "@generationBackTooltip": {
+    "description": "Кнопка возврата со страницы генерации."
   }
 }

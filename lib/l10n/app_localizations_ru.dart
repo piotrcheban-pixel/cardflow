@@ -2332,4 +2332,31 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get reviewRevealAction => 'Показать ответ';
+
+  @override
+  String get generationPageTitle => 'Генерация карточек с помощью ИИ';
+
+  @override
+  String get generationOverline => 'Нейросетевой модуль';
+
+  @override
+  String get generationSubtitle =>
+      'Превратите лекции, конспекты или статьи в готовые колоды с интервальным повторением';
+
+  @override
+  String get generationSectionMaterials => '1. Загрузка исходных материалов';
+
+  @override
+  String get generationSectionParameters => '2. Параметры колоды';
+
+  @override
+  String get generationSectionModel => '3. Модель и параметры';
+
+  @override
+  String generationFilesCount(int count) {
+    return 'Всего файлов: $count';
+  }
+
+  @override
+  String get generationBackTooltip => 'Назад';
 }

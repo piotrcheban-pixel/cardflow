@@ -26,10 +26,12 @@ import 'package:cardflow/domain/generation/document_gateway.dart'
     show PickedDocument;
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/cards/content/card_image_view.dart';
+import 'package:cardflow/ui/components/app_surfaces.dart';
 import 'package:cardflow/ui/decks/deck_actions.dart' show showAppMessage;
 import 'package:cardflow/ui/generation/generation_error_message.dart';
 import 'package:cardflow/ui/generation/generation_failure_message.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
+import 'package:cardflow/ui/theme/app_tokens.dart';
 
 /// Экран предпросмотра.
 class GenerationPreviewScreen extends ConsumerStatefulWidget {
@@ -421,217 +423,263 @@ class _GenerationPreviewScreenState
         : _result.chunkCount;
     return Scaffold(
       appBar: AppBar(title: Text(l10n.generationPreviewTitle)),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-        children: <Widget>[
-          ..._statusWidgets(l10n, theme),
-          if (_result.requestedCards > 0 &&
-              _result.requestedCards > _result.achievableCards)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Text(
-                l10n.generationPlanRequestedAboveAchievable(
-                  _result.requestedCards,
-                  _result.achievableCards,
-                ),
-                key: const ValueKey<String>('generation-preview-plan-warning'),
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.tertiary,
-                ),
-              ),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: AppSizes.formMaxWidth),
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              AppSpacing.sm,
+              AppSpacing.md,
+              AppSpacing.xxl,
             ),
-          if (_result.requestedCards > 0 &&
-              _result.achievableCards > _result.requestedCards)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Text(
-                l10n.generationPlanAchievableAboveRequested(
-                  _result.requestedCards,
-                  _result.achievableCards,
-                ),
-                key: const ValueKey<String>(
-                  'generation-preview-plan-above-requested',
-                ),
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.tertiary,
-                ),
-              ),
-            ),
-          if (_result.plan != null && _result.plan!.hasOmittedUnits)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Text(
-                l10n.generationPlanOmittedUnits(_result.plan!.omitted.length),
-                key: const ValueKey<String>('generation-preview-plan-omitted'),
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.tertiary,
-                ),
-              ),
-            ),
-          if (_result.cancelled)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Text(
-                l10n.generationCancelled,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.tertiary,
-                ),
-              ),
-            ),
-          if (_result.cards.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 24),
-              child: Text(
-                l10n.generationPreviewEmpty,
-                textAlign: TextAlign.center,
-              ),
-            )
-          else ...<Widget>[
-            Text(
-              l10n.generationPreviewSelected(
-                _selectedCount,
-                _result.cards.length,
-              ),
-              key: const ValueKey<String>('generation-preview-selected'),
-              style: theme.textTheme.titleSmall,
-            ),
-            if (_result.duplicatesRemoved > 0)
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Text(
-                  l10n.generationDuplicatesRemoved(_result.duplicatesRemoved),
-                  style: theme.textTheme.bodySmall,
-                ),
-              ),
-            if (_result.rejectedCards > 0)
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Text(
-                  l10n.generationRejectedCards(_result.rejectedCards),
-                  key: const ValueKey<String>('generation-preview-rejected'),
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.tertiary,
-                  ),
-                ),
-              ),
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                l10n.generationTokensUsed(_result.tokensUsed),
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ),
-            if (_imagesNotFound > 0)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Row(
-                  key: const ValueKey<String>(
-                    'generation-preview-image-warning',
-                  ),
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Icon(
-                      Icons.image_not_supported_outlined,
-                      size: 18,
+            children: <Widget>[
+              ..._statusWidgets(l10n, theme),
+              if (_result.requestedCards > 0 &&
+                  _result.requestedCards > _result.achievableCards)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(
+                    l10n.generationPlanRequestedAboveAchievable(
+                      _result.requestedCards,
+                      _result.achievableCards,
+                    ),
+                    key: const ValueKey<String>(
+                      'generation-preview-plan-warning',
+                    ),
+                    style: theme.textTheme.bodyMedium?.copyWith(
                       color: theme.colorScheme.tertiary,
                     ),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        l10n.generationImageSearchFailed(_imagesNotFound),
-                        style: theme.textTheme.bodySmall?.copyWith(
+                  ),
+                ),
+              if (_result.requestedCards > 0 &&
+                  _result.achievableCards > _result.requestedCards)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(
+                    l10n.generationPlanAchievableAboveRequested(
+                      _result.requestedCards,
+                      _result.achievableCards,
+                    ),
+                    key: const ValueKey<String>(
+                      'generation-preview-plan-above-requested',
+                    ),
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.tertiary,
+                    ),
+                  ),
+                ),
+              if (_result.plan != null && _result.plan!.hasOmittedUnits)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(
+                    l10n.generationPlanOmittedUnits(
+                      _result.plan!.omitted.length,
+                    ),
+                    key: const ValueKey<String>(
+                      'generation-preview-plan-omitted',
+                    ),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.tertiary,
+                    ),
+                  ),
+                ),
+              if (_result.cancelled)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(
+                    l10n.generationCancelled,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.tertiary,
+                    ),
+                  ),
+                ),
+              if (_result.cards.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 24),
+                  child: Text(
+                    l10n.generationPreviewEmpty,
+                    textAlign: TextAlign.center,
+                  ),
+                )
+              else ...<Widget>[
+                Text(
+                  l10n.generationPreviewSelected(
+                    _selectedCount,
+                    _result.cards.length,
+                  ),
+                  key: const ValueKey<String>('generation-preview-selected'),
+                  style: theme.textTheme.titleSmall,
+                ),
+                if (_result.duplicatesRemoved > 0)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      l10n.generationDuplicatesRemoved(
+                        _result.duplicatesRemoved,
+                      ),
+                      style: theme.textTheme.bodySmall,
+                    ),
+                  ),
+                if (_result.rejectedCards > 0)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      l10n.generationRejectedCards(_result.rejectedCards),
+                      key: const ValueKey<String>(
+                        'generation-preview-rejected',
+                      ),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.tertiary,
+                      ),
+                    ),
+                  ),
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    l10n.generationTokensUsed(_result.tokensUsed),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+                if (_imagesNotFound > 0)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Row(
+                      key: const ValueKey<String>(
+                        'generation-preview-image-warning',
+                      ),
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Icon(
+                          Icons.image_not_supported_outlined,
+                          size: 18,
                           color: theme.colorScheme.tertiary,
                         ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            l10n.generationImageSearchFailed(_imagesNotFound),
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.tertiary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                const SizedBox(height: 12),
+              ],
+              // Ошибки фрагментов — до карточек: при частичном успехе их видно
+              // сразу, не прокручивая список (fix-gen, Д6).
+              if (_result.failures.isNotEmpty) ...<Widget>[
+                Text(
+                  l10n.generationFailuresTitle,
+                  style: theme.textTheme.titleSmall,
+                ),
+                const SizedBox(height: 8),
+                for (var i = 0; i < _result.failures.length; i++)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Text(
+                      l10n.generationFailureChunkOf(
+                        _result.failures[i].chunkIndex,
+                        chunkTotal,
+                        _failureMessage(l10n, _result.failures[i]),
                       ),
+                      key: ValueKey<String>('generation-preview-failure-$i'),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.error,
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 8),
+                OutlinedButton(
+                  key: const ValueKey<String>(
+                    'generation-preview-retry-failed',
+                  ),
+                  onPressed: _retrying ? null : _retryFailed,
+                  child: Text(l10n.generationRetryFailed),
+                ),
+                const SizedBox(height: 16),
+              ],
+              if (_result.cards.isNotEmpty)
+                for (var i = 0; i < _cards.length; i++)
+                  _PreviewCardTile(
+                    key: ValueKey<String>('generation-preview-card-$i'),
+                    card: _cards[i],
+                    index: i,
+                    onSelected: (bool selected) =>
+                        setState(() => _cards[i].selected = selected),
+                    onRemoveImage: () => _removeImage(i),
+                    onReplaceImage: () => _replaceImage(i),
+                  ),
+            ],
+          ),
+        ),
+      ),
+      bottomNavigationBar: DecoratedBox(
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surfaceContainerLowest,
+          border: Border(
+            top: BorderSide(color: theme.colorScheme.outlineVariant),
+          ),
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              AppSpacing.xs,
+              AppSpacing.md,
+              AppSpacing.sm,
+            ),
+            child: Center(
+              heightFactor: 1,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  maxWidth: AppSizes.formMaxWidth,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    FilledButton(
+                      key: const ValueKey<String>(
+                        'generation-preview-import-all',
+                      ),
+                      onPressed: _importing || _cards.isEmpty
+                          ? null
+                          : () => _import(all: true),
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size.fromHeight(
+                          AppSizes.buttonHeightLarge,
+                        ),
+                      ),
+                      child: Text(l10n.generationPreviewImportAll),
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    OutlinedButton(
+                      key: const ValueKey<String>(
+                        'generation-preview-import-selected',
+                      ),
+                      onPressed: _importing || _selectedCount == 0
+                          ? null
+                          : () => _import(all: false),
+                      child: Text(l10n.generationPreviewImportSelected),
+                    ),
+                    const SizedBox(height: AppSpacing.xxs),
+                    TextButton(
+                      key: const ValueKey<String>('generation-preview-cancel'),
+                      onPressed: _importing
+                          ? null
+                          : () => Navigator.of(context).maybePop(),
+                      child: Text(l10n.generationPreviewCancel),
                     ),
                   ],
                 ),
               ),
-            const SizedBox(height: 12),
-          ],
-          // Ошибки фрагментов — до карточек: при частичном успехе их видно
-          // сразу, не прокручивая список (fix-gen, Д6).
-          if (_result.failures.isNotEmpty) ...<Widget>[
-            Text(
-              l10n.generationFailuresTitle,
-              style: theme.textTheme.titleSmall,
             ),
-            const SizedBox(height: 8),
-            for (var i = 0; i < _result.failures.length; i++)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Text(
-                  l10n.generationFailureChunkOf(
-                    _result.failures[i].chunkIndex,
-                    chunkTotal,
-                    _failureMessage(l10n, _result.failures[i]),
-                  ),
-                  key: ValueKey<String>('generation-preview-failure-$i'),
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.error,
-                  ),
-                ),
-              ),
-            const SizedBox(height: 8),
-            OutlinedButton(
-              key: const ValueKey<String>('generation-preview-retry-failed'),
-              onPressed: _retrying ? null : _retryFailed,
-              child: Text(l10n.generationRetryFailed),
-            ),
-            const SizedBox(height: 16),
-          ],
-          if (_result.cards.isNotEmpty)
-            for (var i = 0; i < _cards.length; i++)
-              _PreviewCardTile(
-                key: ValueKey<String>('generation-preview-card-$i'),
-                card: _cards[i],
-                index: i,
-                onSelected: (bool selected) =>
-                    setState(() => _cards[i].selected = selected),
-                onRemoveImage: () => _removeImage(i),
-                onReplaceImage: () => _replaceImage(i),
-              ),
-        ],
-      ),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              FilledButton(
-                key: const ValueKey<String>('generation-preview-import-all'),
-                onPressed: _importing || _cards.isEmpty
-                    ? null
-                    : () => _import(all: true),
-                style: FilledButton.styleFrom(
-                  minimumSize: const Size.fromHeight(48),
-                  shape: const StadiumBorder(),
-                ),
-                child: Text(l10n.generationPreviewImportAll),
-              ),
-              const SizedBox(height: 8),
-              OutlinedButton(
-                key: const ValueKey<String>(
-                  'generation-preview-import-selected',
-                ),
-                onPressed: _importing || _selectedCount == 0
-                    ? null
-                    : () => _import(all: false),
-                child: Text(l10n.generationPreviewImportSelected),
-              ),
-              const SizedBox(height: 4),
-              TextButton(
-                key: const ValueKey<String>('generation-preview-cancel'),
-                onPressed: _importing
-                    ? null
-                    : () => Navigator.of(context).maybePop(),
-                child: Text(l10n.generationPreviewCancel),
-              ),
-            ],
           ),
         ),
       ),
@@ -661,10 +709,16 @@ class _PreviewCardTile extends StatelessWidget {
     final AppLocalizations l10n = AppLocalizations.of(context);
     final ThemeData theme = Theme.of(context);
     final GeneratedCardImage? image = card.image;
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(8, 4, 12, 12),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: AppPanel(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.xs,
+          AppSpacing.xxs,
+          AppSpacing.sm + 4,
+          AppSpacing.sm,
+        ),
+        radius: AppRadii.input,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[

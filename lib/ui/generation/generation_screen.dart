@@ -41,6 +41,8 @@ import 'package:cardflow/domain/text/parsed_document.dart';
 import 'package:cardflow/domain/text/parser_exception.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/cards/content/card_image_view.dart';
+import 'package:cardflow/ui/components/app_layout.dart';
+import 'package:cardflow/ui/components/app_surfaces.dart';
 import 'package:cardflow/ui/decks/deck_actions.dart' show showAppMessage;
 import 'package:cardflow/ui/settings/provider_labels.dart';
 import 'package:cardflow/ui/generation/generation_error_message.dart';
@@ -49,6 +51,7 @@ import 'package:cardflow/ui/generation/parser_error_message.dart';
 import 'package:cardflow/ui/router/app_router.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
 import 'package:cardflow/ui/state/decks_ui_providers.dart';
+import 'package:cardflow/ui/theme/app_tokens.dart';
 
 /// Порог «PDF-скан»: меньше символов текста — отправляем страницы как PNG
 /// (итерация 7.9, ADR-023).
@@ -769,7 +772,6 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
         }
       },
       child: Scaffold(
-        appBar: AppBar(title: Text(l10n.generationTitle)),
         body: _loading
             ? const Center(child: CircularProgressIndicator())
             : _configError
@@ -777,10 +779,35 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
             : _buildBody(context, l10n, targetDeck),
         bottomNavigationBar: _loading || _configError
             ? null
-            : SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                  child: _buildActions(l10n),
+            : DecoratedBox(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceContainerLowest,
+                  border: Border(
+                    top: BorderSide(
+                      color: Theme.of(context).colorScheme.outlineVariant,
+                    ),
+                  ),
+                ),
+                child: SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.md,
+                      AppSpacing.xs,
+                      AppSpacing.md,
+                      AppSpacing.sm,
+                    ),
+                    child: Center(
+                      // heightFactor: 1 — панель не растягивается на весь
+                      // экран (Scaffold даёт нижней панели неограниченную высоту).
+                      heightFactor: 1,
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(
+                          maxWidth: AppSizes.formMaxWidth,
+                        ),
+                        child: _buildActions(l10n),
+                      ),
+                    ),
+                  ),
                 ),
               ),
       ),
@@ -790,31 +817,37 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
   /// Ошибка чтения ключей/настроек: сообщение ARB и повтор.
   Widget _buildConfigError(BuildContext context, AppLocalizations l10n) {
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Icon(
-              Icons.error_outline,
-              size: 48,
-              color: Theme.of(context).colorScheme.error,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: AppSizes.dialogMaxWidth),
+          child: AppPanel(
+            padding: const EdgeInsets.all(AppSpacing.xxl),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                AppIconBadge(
+                  icon: Icons.error_outline,
+                  color: Theme.of(context).colorScheme.error,
+                  size: 48,
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Text(l10n.settingsLoadError, textAlign: TextAlign.center),
+                const SizedBox(height: AppSpacing.md),
+                OutlinedButton(
+                  key: const ValueKey<String>('generation-config-retry'),
+                  onPressed: () {
+                    setState(() {
+                      _loading = true;
+                      _configError = false;
+                    });
+                    _loadProviderConfig();
+                  },
+                  child: Text(l10n.retry),
+                ),
+              ],
             ),
-            const SizedBox(height: 12),
-            Text(l10n.settingsLoadError, textAlign: TextAlign.center),
-            const SizedBox(height: 12),
-            TextButton(
-              key: const ValueKey<String>('generation-config-retry'),
-              onPressed: () {
-                setState(() {
-                  _loading = true;
-                  _configError = false;
-                });
-                _loadProviderConfig();
-              },
-              child: Text(l10n.retry),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -828,7 +861,7 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           _ProgressView(progress: _progress, l10n: l10n),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.xs),
           OutlinedButton(
             key: const ValueKey<String>('generation-cancel'),
             onPressed: _cancel,
@@ -846,7 +879,7 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
       children: <Widget>[
         if (!canGenerate)
           Padding(
-            padding: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.only(bottom: AppSpacing.xs),
             child: Text(
               l10n.generationTopicRequired,
               key: const ValueKey<String>('generation-start-hint'),
@@ -860,8 +893,7 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
           key: const ValueKey<String>('generation-start'),
           onPressed: _anyParsing || !canGenerate ? null : _generate,
           style: FilledButton.styleFrom(
-            minimumSize: const Size.fromHeight(48),
-            shape: const StadiumBorder(),
+            minimumSize: const Size.fromHeight(AppSizes.buttonHeightLarge),
           ),
           child: Text(l10n.generationStart),
         ),
@@ -899,91 +931,117 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
     Deck? targetDeck,
   ) {
     final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
     final bool hasContent = _hasContent;
     final GenerationPlan? planPreview = _currentPlanPreview;
     // Оценка показывается только когда есть план: без провайдера/возможностей
     // «0 токенов» вводил бы в заблуждение.
     final bool showEstimate = (hasContent || _hasWishes) && planPreview != null;
     final int estimate = planPreview?.estimate.totalTokens ?? 0;
-    return DropTarget(
-      onDragEntered: (_) => setState(() => _dragging = true),
-      onDragExited: (_) => setState(() => _dragging = false),
-      onDragDone: _handleDrop,
-      enable: !_generating,
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-        children: <Widget>[
-          InkWell(
-            key: const ValueKey<String>('generation-attach-zone'),
-            onTap: _generating ? null : _pickFiles,
-            borderRadius: BorderRadius.circular(20),
+    // Навигатор, а не GoRouter: экран монтируется и в тестах без роутера.
+    final NavigatorState navigator = Navigator.of(context);
+    final bool canPop = navigator.canPop();
+
+    final Widget materials = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        InkWell(
+          key: const ValueKey<String>('generation-attach-zone'),
+          onTap: _generating ? null : _pickFiles,
+          borderRadius: BorderRadius.circular(AppRadii.input),
+          child: AppDashedBorder(
+            color: _dragging ? scheme.primary : scheme.outlineVariant,
             child: Container(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.lg,
+                vertical: AppSpacing.xxl,
+              ),
               decoration: BoxDecoration(
                 color: _dragging
-                    ? theme.colorScheme.primaryContainer
-                    : theme.colorScheme.surfaceContainerLow,
-                border: Border.all(
-                  color: _dragging
-                      ? theme.colorScheme.primary
-                      : theme.colorScheme.outlineVariant,
-                ),
-                borderRadius: BorderRadius.circular(20),
+                    ? scheme.surfaceContainer
+                    : scheme.surfaceContainerLow,
+                borderRadius: BorderRadius.circular(AppRadii.input),
               ),
               child: Column(
                 children: <Widget>[
-                  Icon(
-                    Icons.upload_file_outlined,
-                    size: 40,
-                    color: theme.colorScheme.primary,
+                  AppIconBadge(
+                    icon: Icons.upload_file_outlined,
+                    color: scheme.primary,
+                    size: 56,
+                    background: scheme.surfaceContainerLowest,
                   ),
-                  const SizedBox(height: 8),
-                  Text(l10n.generationAttachHint, textAlign: TextAlign.center),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(
+                    l10n.generationAttachHint,
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      color: scheme.onSurface,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
                   Text(
                     l10n.generationAttachButton,
                     style: theme.textTheme.labelLarge?.copyWith(
-                      color: theme.colorScheme.primary,
+                      color: scheme.primary,
                     ),
                   ),
                 ],
               ),
             ),
           ),
-          const SizedBox(height: 12),
-          if (_noProvider || _accountNotConfigured) ...<Widget>[
-            _KeyBanner(
-              key: const ValueKey<String>('generation-provider-banner'),
-              message: l10n.generationErrorProviderNotConfigured,
-              actionLabel: l10n.generationOpenSettings,
-              onAction: _openSettings,
+        ),
+        if (_noProvider || _accountNotConfigured) ...<Widget>[
+          const SizedBox(height: AppSpacing.sm),
+          _KeyBanner(
+            key: const ValueKey<String>('generation-provider-banner'),
+            message: l10n.generationErrorProviderNotConfigured,
+            actionLabel: l10n.generationOpenSettings,
+            onAction: _openSettings,
+          ),
+        ] else if (_providerNeedsKey) ...<Widget>[
+          const SizedBox(height: AppSpacing.sm),
+          _KeyBanner(
+            key: const ValueKey<String>('generation-key-banner'),
+            message: l10n.generationKeyMissing,
+            actionLabel: l10n.generationOpenSettings,
+            onAction: _openSettings,
+          ),
+        ],
+        const SizedBox(height: AppSpacing.sm),
+        if (_files.isEmpty)
+          Text(
+            l10n.generationFilesEmpty,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: scheme.onSurfaceVariant,
             ),
-            const SizedBox(height: 12),
-          ] else if (_providerNeedsKey) ...<Widget>[
-            _KeyBanner(
-              key: const ValueKey<String>('generation-key-banner'),
-              message: l10n.generationKeyMissing,
-              actionLabel: l10n.generationOpenSettings,
-              onAction: _openSettings,
+          )
+        else
+          AppPanel(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.xs,
+              vertical: AppSpacing.xxs,
             ),
-            const SizedBox(height: 12),
-          ],
-          if (_files.isEmpty)
-            Text(
-              l10n.generationFilesEmpty,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            )
-          else
-            for (var i = 0; i < _files.length; i++)
-              _FileTile(
-                key: ValueKey<String>('generation-file-tile-$i'),
-                file: _files[i],
-                index: i,
-                onRemove: _generating ? null : () => _removeFile(i),
-              ),
-          const SizedBox(height: 16),
+            child: Column(
+              children: <Widget>[
+                for (var i = 0; i < _files.length; i++)
+                  _FileTile(
+                    key: ValueKey<String>('generation-file-tile-$i'),
+                    file: _files[i],
+                    index: i,
+                    onRemove: _generating ? null : () => _removeFile(i),
+                  ),
+              ],
+            ),
+          ),
+      ],
+    );
+
+    final Widget parameters = AppPanel(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
           if (widget.deckId == null)
             TextField(
               key: const ValueKey<String>('generation-deck-name'),
@@ -996,50 +1054,31 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
               ),
             )
           else
-            Text(l10n.generationTargetDeck(targetDeck?.name ?? '')),
-          if (showEstimate) ...<Widget>[
-            const SizedBox(height: 8),
-            Text(
-              l10n.generationEstimate(estimate),
-              key: const ValueKey<String>('generation-estimate'),
-              style: theme.textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              _planSummary(l10n, planPreview),
-              key: const ValueKey<String>('generation-plan-preview'),
-              style: theme.textTheme.bodySmall,
-            ),
-            if (planPreview.validity.isInvalid)
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Text(
-                  l10n.generationPlanInvalid(
-                    _planReason(l10n, planPreview.validity.reason!),
+            Container(
+              key: const ValueKey<String>('generation-target-deck'),
+              padding: const EdgeInsets.all(AppSpacing.sm),
+              decoration: BoxDecoration(
+                color: scheme.surfaceContainerLow,
+                borderRadius: BorderRadius.circular(AppRadii.input),
+              ),
+              child: Row(
+                children: <Widget>[
+                  Icon(
+                    Icons.style_outlined,
+                    size: AppSizes.navIcon,
+                    color: scheme.primary,
                   ),
-                  key: const ValueKey<String>('generation-plan-invalid'),
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.error,
+                  const SizedBox(width: AppSpacing.xs),
+                  Expanded(
+                    child: Text(
+                      l10n.generationTargetDeck(targetDeck?.name ?? ''),
+                      style: theme.textTheme.bodyMedium,
+                    ),
                   ),
-                ),
-              )
-            else
-              ..._planWarningWidgets(l10n, planPreview, theme),
-          ],
-          const SizedBox(height: 20),
-          TextField(
-            key: const ValueKey<String>('generation-wishes'),
-            controller: _wishesController,
-            minLines: 2,
-            maxLines: 4,
-            enabled: !_generating,
-            decoration: InputDecoration(
-              labelText: l10n.generationWishesLabel,
-              hintText: l10n.generationWishesHint,
-              border: _fieldBorder,
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.md),
           TextField(
             key: const ValueKey<String>('generation-cards-count'),
             controller: _cardCountController,
@@ -1056,12 +1095,33 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
               border: _fieldBorder,
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: AppSpacing.md),
+          TextField(
+            key: const ValueKey<String>('generation-wishes'),
+            controller: _wishesController,
+            minLines: 3,
+            maxLines: 6,
+            enabled: !_generating,
+            decoration: InputDecoration(
+              labelText: l10n.generationWishesLabel,
+              hintText: l10n.generationWishesHint,
+              border: _fieldBorder,
+            ),
+          ),
+        ],
+      ),
+    );
+
+    final Widget model = AppPanel(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
           Text(l10n.generationProviderLabel, style: theme.textTheme.titleSmall),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.xs),
           Wrap(
-            spacing: 8,
-            runSpacing: 8,
+            spacing: AppSpacing.xs,
+            runSpacing: AppSpacing.xs,
             children: <Widget>[
               for (final ProviderAccount account in _accounts.accounts)
                 ChoiceChip(
@@ -1084,7 +1144,7 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
                 ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.md),
           if (_account?.preset != null)
             DropdownButtonFormField<String>(
               key: ValueKey<String>('generation-model-${_account?.preset?.id}'),
@@ -1116,17 +1176,138 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
               ),
               child: Text(_account?.modelId ?? ''),
             ),
-          const SizedBox(height: 16),
-          if (_actualTokens != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                l10n.generationTokensUsed(_actualTokens!),
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
+          if (showEstimate) ...<Widget>[
+            const SizedBox(height: AppSpacing.md),
+            Divider(color: scheme.outlineVariant),
+            const SizedBox(height: AppSpacing.xs),
+            Row(
+              children: <Widget>[
+                Icon(
+                  Icons.calculate_outlined,
+                  size: AppSizes.icon,
+                  color: scheme.onSurfaceVariant,
                 ),
+                const SizedBox(width: AppSpacing.xxs + 2),
+                Expanded(
+                  child: Text(
+                    l10n.generationEstimate(estimate),
+                    key: const ValueKey<String>('generation-estimate'),
+                    style: theme.textTheme.bodyMedium,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 2),
+            Text(
+              _planSummary(l10n, planPreview),
+              key: const ValueKey<String>('generation-plan-preview'),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: scheme.onSurfaceVariant,
               ),
             ),
+            if (planPreview.validity.isInvalid)
+              Padding(
+                padding: const EdgeInsets.only(top: AppSpacing.xxs),
+                child: Text(
+                  l10n.generationPlanInvalid(
+                    _planReason(l10n, planPreview.validity.reason!),
+                  ),
+                  key: const ValueKey<String>('generation-plan-invalid'),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: scheme.error,
+                  ),
+                ),
+              )
+            else
+              ..._planWarningWidgets(l10n, planPreview, theme),
+          ],
+          if (_actualTokens != null) ...<Widget>[
+            const SizedBox(height: AppSpacing.xxs),
+            Text(
+              l10n.generationTokensUsed(_actualTokens!),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+
+    return DropTarget(
+      onDragEntered: (_) => setState(() => _dragging = true),
+      onDragExited: (_) => setState(() => _dragging = false),
+      onDragDone: _handleDrop,
+      enable: !_generating,
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: <Widget>[
+          AppContentWidth(
+            maxWidth: AppSizes.formMaxWidth,
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              AppSpacing.xs,
+              AppSpacing.md,
+              AppSpacing.xxl,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                Row(
+                  children: <Widget>[
+                    IconButton(
+                      key: const ValueKey<String>('generation-back'),
+                      tooltip: l10n.generationBackTooltip,
+                      icon: const Icon(
+                        Icons.arrow_back,
+                        size: AppSizes.navIcon,
+                      ),
+                      onPressed: _generating || !canPop
+                          ? null
+                          : () => navigator.maybePop(),
+                    ),
+                  ],
+                ),
+                AppPageHeader(
+                  title: l10n.generationPageTitle,
+                  overline: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      Icon(
+                        Icons.auto_awesome,
+                        size: AppSizes.iconSmall,
+                        color: scheme.primary,
+                      ),
+                      const SizedBox(width: AppSpacing.xxs + 2),
+                      Flexible(
+                        child: Text(
+                          l10n.generationOverline.toUpperCase(),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                  subtitle: Text(l10n.generationSubtitle),
+                ),
+                const SizedBox(height: AppSpacing.xl),
+                _GenSectionLabel(
+                  label: l10n.generationSectionMaterials,
+                  trailing: l10n.generationFilesCount(_files.length),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                materials,
+                const SizedBox(height: AppSpacing.xl),
+                _GenSectionLabel(label: l10n.generationSectionParameters),
+                const SizedBox(height: AppSpacing.xs),
+                parameters,
+                const SizedBox(height: AppSpacing.xl),
+                _GenSectionLabel(label: l10n.generationSectionModel),
+                const SizedBox(height: AppSpacing.xs),
+                model,
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -1197,7 +1378,7 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
   }
 
   static OutlineInputBorder get _fieldBorder =>
-      OutlineInputBorder(borderRadius: BorderRadius.circular(16));
+      OutlineInputBorder(borderRadius: BorderRadius.circular(AppRadii.input));
 }
 
 /// Одна строка списка прикреплённых файлов со статусом парсинга.
@@ -1285,6 +1466,42 @@ String formatFileSize(AppLocalizations l10n, int sizeBytes) {
     return l10n.generationFileSizeKb((sizeBytes / 1024).ceil());
   }
   return l10n.generationFileSizeMb((sizeBytes / (1024 * 1024)).ceil());
+}
+
+/// Нумерованный надзаголовок секции формы генерации (макет v2).
+class _GenSectionLabel extends StatelessWidget {
+  const _GenSectionLabel({required this.label, this.trailing});
+
+  final String label;
+  final String? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
+    return Row(
+      children: <Widget>[
+        Expanded(
+          child: Text(
+            label.toUpperCase(),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: scheme.outline,
+              letterSpacing: 0.6,
+            ),
+          ),
+        ),
+        if (trailing != null)
+          Text(
+            trailing!,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+      ],
+    );
+  }
 }
 
 /// Баннер «ключ не задан / сервер не настроен» с переходом в настройки.

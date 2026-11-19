@@ -3799,6 +3799,54 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Показать ответ'**
   String get reviewRevealAction;
+
+  /// Заголовок страницы генерации (макет v2).
+  ///
+  /// In ru, this message translates to:
+  /// **'Генерация карточек с помощью ИИ'**
+  String get generationPageTitle;
+
+  /// Акцентный надзаголовок страницы генерации.
+  ///
+  /// In ru, this message translates to:
+  /// **'Нейросетевой модуль'**
+  String get generationOverline;
+
+  /// Пояснение под заголовком генерации.
+  ///
+  /// In ru, this message translates to:
+  /// **'Превратите лекции, конспекты или статьи в готовые колоды с интервальным повторением'**
+  String get generationSubtitle;
+
+  /// Нумерованный заголовок секции загрузки файлов.
+  ///
+  /// In ru, this message translates to:
+  /// **'1. Загрузка исходных материалов'**
+  String get generationSectionMaterials;
+
+  /// Нумерованный заголовок секции параметров.
+  ///
+  /// In ru, this message translates to:
+  /// **'2. Параметры колоды'**
+  String get generationSectionParameters;
+
+  /// Нумерованный заголовок секции провайдера и модели.
+  ///
+  /// In ru, this message translates to:
+  /// **'3. Модель и параметры'**
+  String get generationSectionModel;
+
+  /// Счётчик прикреплённых файлов.
+  ///
+  /// In ru, this message translates to:
+  /// **'Всего файлов: {count}'**
+  String generationFilesCount(int count);
+
+  /// Кнопка возврата со страницы генерации.
+  ///
+  /// In ru, this message translates to:
+  /// **'Назад'**
+  String get generationBackTooltip;
 }
 
 class _AppLocalizationsDelegate

@@ -179,7 +179,7 @@ void main() {
   ) async {
     await pumpScreen(tester);
     final l10n = l10nOf(tester);
-    expect(find.text(l10n.generationTitle), findsOneWidget);
+    expect(find.text(l10n.generationPageTitle), findsOneWidget);
     expect(
       find.byKey(const ValueKey<String>('generation-attach-zone')),
       findsOneWidget,
@@ -266,9 +266,13 @@ void main() {
   testWidgets('файл можно убрать', (tester) async {
     await pumpScreen(tester);
     await attachTextFile(tester);
-    await tester.tap(
-      find.byKey(const ValueKey<String>('generation-file-remove-0')),
+    // Кнопка удаления ниже первого экрана (шапка страницы + секции).
+    final Finder removeButton = find.byKey(
+      const ValueKey<String>('generation-file-remove-0'),
     );
+    await tester.ensureVisible(removeButton);
+    await tester.pumpAndSettle();
+    await tester.tap(removeButton);
     await tester.pumpAndSettle();
     final l10n = l10nOf(tester);
     expect(find.text(l10n.generationFilesEmpty), findsOneWidget);
