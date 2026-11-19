@@ -36,8 +36,9 @@ void main() {
         expect(account.preset?.label, 'DeepSeek');
         expect(account.protocol, ProviderProtocol.openaiCompletions);
         expect(account.baseUrl, 'https://api.deepseek.com');
-        expect(account.modelId, 'deepseek-chat');
-        expect(account.contextTokens, 128000);
+        expect(account.modelId, 'deepseek-flash');
+        expect(account.contextTokens, 1000000);
+        expect(account.supportsVision, isTrue);
         expect(account.requiresApiKey, isTrue);
         expect(account.isConfigured, isTrue);
       },
@@ -140,7 +141,15 @@ void main() {
         id: 'openai',
       );
       expect(openAi.supportsVision, isTrue);
-      expect(deepseek().supportsVision, isFalse);
+      // Модель DeepSeek по умолчанию — deepseek-flash: официальная страница
+      // подтверждает Vision; legacy deepseek-chat остаётся текстовой.
+      expect(deepseek().supportsVision, isTrue);
+      final ProviderAccount legacy = ProviderAccount.fromPreset(
+        providerPresetById('deepseek')!,
+        id: 'deepseek-legacy',
+        modelId: 'deepseek-chat',
+      );
+      expect(legacy.supportsVision, isFalse);
       expect(deepseek().copyWith(supportsVision: true).supportsVision, isTrue);
       expect(openAi.toJson()['supports_vision'], isTrue);
       expect(ProviderAccount.fromJson(openAi.toJson())!.supportsVision, isTrue);

@@ -43,7 +43,7 @@ void main() {
   final String? apiKey = _env('DEEPSEEK_API_KEY');
   final String baseUrl =
       _env('DEEPSEEK_BASE_URL') ?? 'https://api.deepseek.com';
-  final String model = _env('DEEPSEEK_MODEL') ?? 'deepseek-chat';
+  final String model = _env('DEEPSEEK_MODEL') ?? 'deepseek-flash';
   // TASK 04: без явного CARDFLOW_LIVE_TESTS=1 файл не делает запросов.
   final String? liveSkip = liveDetailedTestsSkipReason(
     apiKey: apiKey,

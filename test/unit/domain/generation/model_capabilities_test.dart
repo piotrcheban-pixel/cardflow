@@ -132,12 +132,12 @@ void main() {
         id: 'deepseek',
       );
       final ModelCapabilities capabilities = resolveModelCapabilities(account);
-      expect(capabilities.contextWindowTokens, 128000);
+      expect(capabilities.contextWindowTokens, 1000000);
       expect(capabilities.contextSource, CapabilitySource.preset);
       expect(capabilities.maxOutputTokens, isNull);
       expect(capabilities.maxImagesPerRequest, isNull);
       expect(capabilities.pricing, isNull);
-      expect(capabilities.supportsVision, isFalse);
+      expect(capabilities.supportsVision, isTrue);
       expect(capabilities.supportsPdfDocumentPart, isFalse);
       expect(capabilities.supportsStrictJsonSchema, isNull);
       expect(capabilities.tokenizer, TokenizerKind.unknown);
@@ -219,7 +219,7 @@ void main() {
             capabilitiesSource: CapabilitySource.user,
           );
       final ModelCapabilities capabilities = resolveModelCapabilities(account);
-      expect(capabilities.contextWindowTokens, 128000);
+      expect(capabilities.contextWindowTokens, 1000000);
       expect(capabilities.contextSource, CapabilitySource.preset);
       expect(capabilities.maxOutputTokens, 16384);
       expect(capabilities.outputSource, CapabilitySource.user);
@@ -320,6 +320,7 @@ void main() {
       );
       expect(account, isNotNull);
       final ModelCapabilities capabilities = resolveModelCapabilities(account!);
+      // Legacy deepseek-chat остаётся в каталоге с окном 128k.
       expect(capabilities.contextWindowTokens, 128000);
       expect(capabilities.maxOutputTokens, isNull);
       expect(capabilities.pricing, isNull);

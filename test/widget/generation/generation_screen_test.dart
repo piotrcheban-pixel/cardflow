@@ -43,8 +43,13 @@ void main() {
     gateway = FakeDocumentGateway();
     runner = FakeGenerationRunner();
     keyStore = FakeApiKeyStore(<String, String>{'deepseek': 'sk-deepseek'});
+    // Базовый аккаунт тестов — legacy-модель без Vision: сценарии с
+    // изображениями проверяют отказ, а Vision-успех задаётся явно (OpenAI).
+    // Отдельный тест проверяет актуальную модель по умолчанию (flash).
     accountsStore = FakeProviderAccountsStore(
-      ProviderAccounts.empty.withAccount(testProviderAccount()),
+      ProviderAccounts.empty.withAccount(
+        testProviderAccount(modelId: 'deepseek-chat'),
+      ),
     );
     deckRepository = FakeDeckRepository();
   });
@@ -818,7 +823,7 @@ void main() {
       tester,
     ) async {
       accountsStore.accounts = ProviderAccounts.empty.withAccount(
-        testProviderAccount(),
+        testProviderAccount(modelId: 'deepseek-chat'),
       );
       keyStore.keys['deepseek'] = 'sk-deepseek';
       await attachScan(tester);

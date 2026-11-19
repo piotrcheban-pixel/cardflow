@@ -232,7 +232,7 @@ void main() {
       expect(saved.id, 'deepseek');
       expect(saved.presetId, 'deepseek');
       expect(saved.baseUrl, 'https://api.deepseek.com');
-      expect(saved.modelId, 'deepseek-chat');
+      expect(saved.modelId, 'deepseek-flash');
       expect(
         keys.keys['deepseek'],
         'sk-deepseek-key',

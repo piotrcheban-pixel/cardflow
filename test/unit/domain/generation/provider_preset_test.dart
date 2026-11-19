@@ -50,7 +50,15 @@ void main() {
         GenerationProvider.openaiCompatible,
       );
       expect(deepseek.baseUrl, 'https://api.deepseek.com');
-      expect(deepseek.defaultModel.id, 'deepseek-chat');
+      // Актуальные id моделей DeepSeek (проверено 2026-11-19): flash — модель
+      // по умолчанию, legacy-имена остаются для сохранённых аккаунтов.
+      expect(deepseek.defaultModel.id, 'deepseek-flash');
+      expect(deepseek.defaultModel.contextTokens, 1000000);
+      expect(deepseek.defaultModel.supportsVision, isTrue);
+      expect(deepseek.modelById('deepseek-v4-pro')?.contextTokens, 1000000);
+      expect(deepseek.modelById('deepseek-v4-pro')?.supportsVision, isFalse);
+      expect(deepseek.modelById('deepseek-chat')?.contextTokens, 128000);
+      expect(deepseek.modelById('deepseek-reasoner'), isNotNull);
       expect(deepseek.requiresApiKey, isTrue);
     });
 
@@ -113,6 +121,8 @@ void main() {
       expect(vision['openrouter/openai/gpt-4o-mini'], isTrue);
       expect(vision['openrouter/anthropic/claude-3.5-sonnet'], isTrue);
 
+      expect(vision['deepseek/deepseek-flash'], isTrue);
+      expect(vision['deepseek/deepseek-v4-pro'], isFalse);
       expect(vision['deepseek/deepseek-chat'], isFalse);
       expect(vision['deepseek/deepseek-reasoner'], isFalse);
       expect(vision['openrouter/deepseek/deepseek-chat'], isFalse);

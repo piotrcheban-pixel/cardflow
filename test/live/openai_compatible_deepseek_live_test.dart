@@ -42,13 +42,13 @@ import '../unit/api/parsers/fixtures/document_fixtures.dart';
 ///   set DEEPSEEK_API_KEY=...            (значение не выводить в терминал)
 ///   fvm flutter test test/live --tags live
 /// Необязательно: DEEPSEEK_BASE_URL (по умолчанию `https://api.deepseek.com`),
-/// DEEPSEEK_MODEL (по умолчанию `deepseek-chat`).
+/// DEEPSEEK_MODEL (по умолчанию `deepseek-flash` — актуальный id каталога).
 void main() {
   final Map<String, String> env = Platform.environment;
   final String? apiKey = _envValue(env, 'DEEPSEEK_API_KEY');
   final String baseUrl =
       _envValue(env, 'DEEPSEEK_BASE_URL') ?? 'https://api.deepseek.com';
-  final String model = _envValue(env, 'DEEPSEEK_MODEL') ?? 'deepseek-chat';
+  final String model = _envValue(env, 'DEEPSEEK_MODEL') ?? 'deepseek-flash';
   // TASK 04: без явного CARDFLOW_LIVE_TESTS=1 файл не делает запросов.
   final String? liveSkip = liveDetailedTestsSkipReason(
     apiKey: apiKey,

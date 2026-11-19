@@ -99,7 +99,26 @@ const List<ProviderPreset> kProviderPresets = <ProviderPreset>[
     label: 'DeepSeek',
     protocol: ProviderProtocol.openaiCompletions,
     baseUrl: 'https://api.deepseek.com',
+    // Актуальные id DeepSeek по официальной странице моделей и тарифов
+    // (https://api-docs.deepseek.com/quick_start/pricing, проверено
+    // 2026-11-19): `deepseek-flash` (контекст 1M, вывод до 384K, Vision) и
+    // `deepseek-v4-pro` (1M, Vision нет). Первая модель каталога — модель по
+    // умолчанию для новых аккаунтов, поэтому это `deepseek-flash`.
+    // `deepseek-chat`/`deepseek-reasoner` — legacy-имена: в актуальной
+    // документации их нет, они оставлены только для уже сохранённых аккаунтов
+    // и не выбираются по умолчанию.
     models: <ProviderPresetModel>[
+      ProviderPresetModel(
+        id: 'deepseek-flash',
+        label: 'DeepSeek Flash',
+        contextTokens: 1000000,
+        supportsVision: true,
+      ),
+      ProviderPresetModel(
+        id: 'deepseek-v4-pro',
+        label: 'DeepSeek V4 Pro',
+        contextTokens: 1000000,
+      ),
       ProviderPresetModel(
         id: 'deepseek-chat',
         label: 'DeepSeek Chat',
