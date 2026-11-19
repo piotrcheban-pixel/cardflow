@@ -15,7 +15,12 @@ import 'package:cardflow/domain/generation/card_image_finder.dart';
 import 'package:cardflow/domain/generation/card_image_kind.dart';
 import 'package:cardflow/domain/generation/generation_attachment.dart';
 
+import 'support/live_test_config.dart';
+
 void main() {
+  // TASK 04: сетевые live-проверки тоже только по явному разрешению.
+  final String? liveSkip = liveOptInSkipReason();
+
   test(
     'живой Wikimedia Commons: русский image_query → JPEG/PNG',
     () async {
@@ -55,6 +60,7 @@ void main() {
       );
       expect(diagnostics.join('\n'), contains('wikimedia'));
     },
+    skip: liveSkip,
     timeout: const Timeout(Duration(minutes: 2)),
     tags: <String>['live'],
   );
@@ -92,6 +98,7 @@ void main() {
       );
       expect(diagnostics.join('\n'), contains('wikipedia'));
     },
+    skip: liveSkip,
     timeout: const Timeout(Duration(minutes: 2)),
     tags: <String>['live'],
   );

@@ -35,6 +35,8 @@ import 'package:cardflow/domain/generation/provider_account.dart';
 import 'package:cardflow/domain/generation/provider_protocol.dart';
 import 'package:cardflow/domain/text/parsed_document.dart';
 
+import 'support/live_test_config.dart';
+
 import '../helpers/generation_fakes.dart';
 
 void main() {
@@ -42,6 +44,11 @@ void main() {
   final String baseUrl =
       _env('DEEPSEEK_BASE_URL') ?? 'https://api.deepseek.com';
   final String model = _env('DEEPSEEK_MODEL') ?? 'deepseek-chat';
+  // TASK 04: без явного CARDFLOW_LIVE_TESTS=1 файл не делает запросов.
+  final String? liveSkip = liveDetailedTestsSkipReason(
+    apiKey: apiKey,
+    keyVariable: 'DEEPSEEK_API_KEY',
+  );
 
   test(
     'живые колоды «Статика» и «Биология»: картинки, провайдеры, время',
@@ -205,9 +212,7 @@ void main() {
         print('DIAG $line');
       }
     },
-    skip: apiKey == null
-        ? 'Нет DEEPSEEK_API_KEY — live-прогон метрик пропущен'
-        : false,
+    skip: liveSkip,
     timeout: const Timeout(Duration(minutes: 25)),
     tags: <String>['live'],
   );

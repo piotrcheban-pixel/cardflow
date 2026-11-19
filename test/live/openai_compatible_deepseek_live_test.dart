@@ -31,6 +31,8 @@ import 'package:cardflow/domain/generation/provider_account.dart';
 import 'package:cardflow/domain/generation/provider_protocol.dart';
 import 'package:cardflow/domain/text/parsed_document.dart';
 
+import 'support/live_test_config.dart';
+
 import '../helpers/generation_fakes.dart';
 import '../unit/api/parsers/fixtures/document_fixtures.dart';
 
@@ -47,6 +49,12 @@ void main() {
   final String baseUrl =
       _envValue(env, 'DEEPSEEK_BASE_URL') ?? 'https://api.deepseek.com';
   final String model = _envValue(env, 'DEEPSEEK_MODEL') ?? 'deepseek-chat';
+  // TASK 04: без явного CARDFLOW_LIVE_TESTS=1 файл не делает запросов.
+  final String? liveSkip = liveDetailedTestsSkipReason(
+    apiKey: apiKey,
+    keyVariable: 'DEEPSEEK_API_KEY',
+    environment: env,
+  );
 
   test(
     'реальный вызов DeepSeek через OpenAI-compatible: один запрос, '
@@ -102,9 +110,7 @@ void main() {
         'tokens=${result.usage.totalTokens}',
       );
     },
-    skip: apiKey == null
-        ? 'Нет DEEPSEEK_API_KEY — live-тест пропущен (L30)'
-        : false,
+    skip: liveSkip,
     timeout: const Timeout(Duration(minutes: 2)),
     tags: <String>['live'],
   );
@@ -190,9 +196,7 @@ void main() {
         'cards=${result.cards.length}',
       );
     },
-    skip: apiKey == null
-        ? 'Нет DEEPSEEK_API_KEY — live-тест пропущен (L30)'
-        : false,
+    skip: liveSkip,
     timeout: const Timeout(Duration(minutes: 2)),
     tags: <String>['live'],
   );
@@ -281,9 +285,7 @@ void main() {
         reason: 'в ответе нет ни image_query (v5), ни image (v6+)',
       );
     },
-    skip: apiKey == null
-        ? 'Нет DEEPSEEK_API_KEY — live-тест пропущен (L30)'
-        : false,
+    skip: liveSkip,
     timeout: const Timeout(Duration(minutes: 2)),
     tags: <String>['live'],
   );
@@ -390,9 +392,7 @@ void main() {
         reason: 'живой поиск должен приложить хотя бы одну картинку',
       );
     },
-    skip: apiKey == null
-        ? 'Нет DEEPSEEK_API_KEY — live-тест пропущен (L30)'
-        : false,
+    skip: liveSkip,
     timeout: const Timeout(Duration(minutes: 5)),
     tags: <String>['live'],
   );
@@ -466,9 +466,7 @@ void main() {
         'cards=${result.cards.length}, tokens=${result.usage.totalTokens}',
       );
     },
-    skip: apiKey == null
-        ? 'Нет DEEPSEEK_API_KEY — live-тест пропущен (L30)'
-        : false,
+    skip: liveSkip,
     timeout: const Timeout(Duration(minutes: 3)),
     tags: <String>['live'],
   );
@@ -541,9 +539,7 @@ void main() {
       }
       expect(result.promptVersion, 'gen-ru-v7');
     },
-    skip: apiKey == null
-        ? 'Нет DEEPSEEK_API_KEY — live-тест пропущен (L30)'
-        : false,
+    skip: liveSkip,
     timeout: const Timeout(Duration(minutes: 5)),
     tags: <String>['live'],
   );
@@ -630,9 +626,7 @@ void main() {
       expect(result.cards, isNotEmpty);
       expect(result.cards.length, lessThanOrEqualTo(20));
     },
-    skip: apiKey == null
-        ? 'Нет DEEPSEEK_API_KEY — live-тест пропущен (L30)'
-        : false,
+    skip: liveSkip,
     timeout: const Timeout(Duration(minutes: 5)),
     tags: <String>['live'],
   );
