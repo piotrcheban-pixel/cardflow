@@ -71,9 +71,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       body: AppPageScaffold(
         header: AppPageHeader(
           title: l10n.settingsScreenTitle,
-          breadcrumb:
-              '${l10n.settingsOverline.toUpperCase()} / '
-              '${l10n.settingsBreadcrumbSection}',
+          // Вторые «хлебные крошки» не дублируем: раздел уже показан в шапке
+          // оболочки, здесь — только контекст страницы.
+          overline: Text(l10n.settingsOverline.toUpperCase()),
           subtitle: Text(l10n.settingsSubtitle),
         ),
         slivers: <Widget>[
@@ -295,28 +295,56 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
           ),
           const SizedBox(height: AppSpacing.xs),
-          SegmentedButton<AppThemePreference>(
-            key: const ValueKey<String>('settings-theme'),
-            segments: <ButtonSegment<AppThemePreference>>[
-              ButtonSegment<AppThemePreference>(
-                value: AppThemePreference.light,
-                label: Text(l10n.settingsThemeLight),
-                icon: const Icon(Icons.light_mode_outlined, size: 16),
-              ),
-              ButtonSegment<AppThemePreference>(
-                value: AppThemePreference.dark,
-                label: Text(l10n.settingsThemeDark),
-                icon: const Icon(Icons.dark_mode_outlined, size: 16),
-              ),
-              ButtonSegment<AppThemePreference>(
-                value: AppThemePreference.system,
-                label: Text(l10n.settingsThemeSystem),
-                icon: const Icon(Icons.brightness_auto_outlined, size: 16),
-              ),
-            ],
-            selected: <AppThemePreference>{settings.theme},
-            onSelectionChanged: (Set<AppThemePreference> selection) =>
-                _update(settings.copyWith(theme: selection.single)),
+          // На узком экране сегменты не помещаются (перенос по слогам):
+          // те же три выбора показываются чипами.
+          LayoutBuilder(
+            builder: (BuildContext context, BoxConstraints constraints) {
+              final bool narrow = constraints.maxWidth < 420;
+              if (narrow) {
+                return Wrap(
+                  key: const ValueKey<String>('settings-theme'),
+                  spacing: AppSpacing.xs,
+                  runSpacing: AppSpacing.xs,
+                  children: <Widget>[
+                    for (final AppThemePreference preference
+                        in AppThemePreference.values)
+                      ChoiceChip(
+                        label: Text(switch (preference) {
+                          AppThemePreference.light => l10n.settingsThemeLight,
+                          AppThemePreference.dark => l10n.settingsThemeDark,
+                          AppThemePreference.system => l10n.settingsThemeSystem,
+                        }),
+                        selected: settings.theme == preference,
+                        onSelected: (_) =>
+                            _update(settings.copyWith(theme: preference)),
+                      ),
+                  ],
+                );
+              }
+              return SegmentedButton<AppThemePreference>(
+                key: const ValueKey<String>('settings-theme'),
+                segments: <ButtonSegment<AppThemePreference>>[
+                  ButtonSegment<AppThemePreference>(
+                    value: AppThemePreference.light,
+                    label: Text(l10n.settingsThemeLight),
+                    icon: const Icon(Icons.light_mode_outlined, size: 16),
+                  ),
+                  ButtonSegment<AppThemePreference>(
+                    value: AppThemePreference.dark,
+                    label: Text(l10n.settingsThemeDark),
+                    icon: const Icon(Icons.dark_mode_outlined, size: 16),
+                  ),
+                  ButtonSegment<AppThemePreference>(
+                    value: AppThemePreference.system,
+                    label: Text(l10n.settingsThemeSystem),
+                    icon: const Icon(Icons.brightness_auto_outlined, size: 16),
+                  ),
+                ],
+                selected: <AppThemePreference>{settings.theme},
+                onSelectionChanged: (Set<AppThemePreference> selection) =>
+                    _update(settings.copyWith(theme: selection.single)),
+              );
+            },
           ),
           const SizedBox(height: AppSpacing.xs),
           SwitchListTile(
@@ -339,21 +367,48 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
           ),
           const SizedBox(height: AppSpacing.xs),
-          SegmentedButton<MotionPreference>(
-            key: const ValueKey<String>('settings-motion'),
-            segments: <ButtonSegment<MotionPreference>>[
-              ButtonSegment<MotionPreference>(
-                value: MotionPreference.expressive,
-                label: Text(l10n.settingsMotionExpressive),
-              ),
-              ButtonSegment<MotionPreference>(
-                value: MotionPreference.standard,
-                label: Text(l10n.settingsMotionStandard),
-              ),
-            ],
-            selected: <MotionPreference>{settings.motion},
-            onSelectionChanged: (Set<MotionPreference> selection) =>
-                _update(settings.copyWith(motion: selection.single)),
+          LayoutBuilder(
+            builder: (BuildContext context, BoxConstraints constraints) {
+              final bool narrow = constraints.maxWidth < 420;
+              if (narrow) {
+                return Wrap(
+                  key: const ValueKey<String>('settings-motion'),
+                  spacing: AppSpacing.xs,
+                  runSpacing: AppSpacing.xs,
+                  children: <Widget>[
+                    for (final MotionPreference preference
+                        in MotionPreference.values)
+                      ChoiceChip(
+                        label: Text(switch (preference) {
+                          MotionPreference.expressive =>
+                            l10n.settingsMotionExpressive,
+                          MotionPreference.standard =>
+                            l10n.settingsMotionStandard,
+                        }),
+                        selected: settings.motion == preference,
+                        onSelected: (_) =>
+                            _update(settings.copyWith(motion: preference)),
+                      ),
+                  ],
+                );
+              }
+              return SegmentedButton<MotionPreference>(
+                key: const ValueKey<String>('settings-motion'),
+                segments: <ButtonSegment<MotionPreference>>[
+                  ButtonSegment<MotionPreference>(
+                    value: MotionPreference.expressive,
+                    label: Text(l10n.settingsMotionExpressive),
+                  ),
+                  ButtonSegment<MotionPreference>(
+                    value: MotionPreference.standard,
+                    label: Text(l10n.settingsMotionStandard),
+                  ),
+                ],
+                selected: <MotionPreference>{settings.motion},
+                onSelectionChanged: (Set<MotionPreference> selection) =>
+                    _update(settings.copyWith(motion: selection.single)),
+              );
+            },
           ),
         ],
       ),

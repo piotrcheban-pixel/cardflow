@@ -48,22 +48,6 @@
   "@decksSearchClearTooltip": {
     "description": "Подсказка кнопки очистки поиска."
   },
-  "deckFilterAll": "Все",
-  "@deckFilterAll": {
-    "description": "Чип фильтра: все активные колоды."
-  },
-  "deckFilterNew": "Новые",
-  "@deckFilterNew": {
-    "description": "Чип фильтра: колоды с новыми карточками."
-  },
-  "deckFilterInProgress": "В процессе",
-  "@deckFilterInProgress": {
-    "description": "Чип фильтра: колоды с карточками в процессе изучения."
-  },
-  "deckFilterDue": "Просроченные",
-  "@deckFilterDue": {
-    "description": "Чип фильтра: колоды с просроченными карточками."
-  },
   "decksEmptyTitle": "Пока нет колод",
   "@decksEmptyTitle": {
     "description": "Пустое состояние списка колод."
@@ -84,18 +68,6 @@
   "@decksCreateButton": {
     "description": "Основная кнопка создания колоды (Split button)."
   },
-  "decksCreateDeckFab": "Создать колоду",
-  "@decksCreateDeckFab": {
-    "description": "Расширенная FAB-кнопка создания колоды."
-  },
-  "decksCreateManual": "Вручную",
-  "@decksCreateManual": {
-    "description": "Пункт меню создания: ввести название вручную."
-  },
-  "decksImportZip": "Импорт ZIP",
-  "@decksImportZip": {
-    "description": "Пункт меню/кнопка импорта колоды из ZIP-архива."
-  },
   "decksMenuTooltip": "Действия с колодой",
   "@decksMenuTooltip": {
     "description": "Подсказка кнопки меню действий с колодой."
@@ -111,10 +83,6 @@
   "deckActionArchive": "Архивировать",
   "@deckActionArchive": {
     "description": "Пункт меню колоды: отправить колоду в архив (альтернатива свайпу, доступность)."
-  },
-  "decksCreateMenuTooltip": "Другие способы создания",
-  "@decksCreateMenuTooltip": {
-    "description": "Подсказка второй (меню) сегмента Split-кнопки «Создать»."
   },
   "deckCardCount": "{count, plural, =0{Нет карточек} one{{count} карточка} few{{count} карточки} many{{count} карточек} other{{count} карточки}}",
   "@deckCardCount": {
@@ -484,10 +452,6 @@
   "@reviewWhySheetTitle": {
     "description": "Заголовок bottom sheet с цитатой исходника."
   },
-  "reviewProgressLabel": "Прогресс сессии",
-  "@reviewProgressLabel": {
-    "description": "Семантическая подпись линейного прогресса классической сессии."
-  },
   "feedPause": "Пауза",
   "@feedPause": {
     "description": "Кнопка паузы авто-продвижения в ленте (SPEC A7.3)."
@@ -721,10 +685,6 @@
   "@cardDeletedMessage": {
     "description": "Сообщение после удаления карточки."
   },
-  "deckAddCardTooltip": "Добавить карточку",
-  "@deckAddCardTooltip": {
-    "description": "Подсказка FAB mini «Добавить» на экране колоды (SPEC A6.3)."
-  },
   "parserErrorUnreadableFile": "Не удалось прочитать файл",
   "@parserErrorUnreadableFile": {
     "description": "Ошибка парсинга: файл не удалось прочитать (SPEC A8.3)."
@@ -867,10 +827,6 @@
   "@settingsModelEmptyError": {
     "description": "Валидация: имя модели OpenAI-совместимого сервера пустое."
   },
-  "settingsOpenTooltip": "Настройки",
-  "@settingsOpenTooltip": {
-    "description": "Подсказка иконки перехода в настройки генерации."
-  },
   "settingsKeyConfigured": "Ключ сохранён",
   "@settingsKeyConfigured": {
     "description": "Индикатор: ключ облачного провайдера сохранён."
@@ -898,10 +854,6 @@
   "deckGenerateTooltip": "Сгенерировать карточки",
   "@deckGenerateTooltip": {
     "description": "Подсказка пункта меню экрана колоды: генерация карточек в эту колоду (SPEC A6.3)."
-  },
-  "generationTitle": "Генерация карточек",
-  "@generationTitle": {
-    "description": "Заголовок экрана генерации карточек (SPEC A6.8)."
   },
   "generationAttachHint": "Перетащите файлы сюда или нажмите, чтобы выбрать. Поддерживаются Word, Excel, PDF, PowerPoint, текст, изображения JPG и PNG",
   "@generationAttachHint": {
@@ -2066,10 +2018,6 @@
   "@settingsHighContrast": {
     "description": "Переключатель контраста."
   },
-  "settingsLearningTitle": "Обучение",
-  "@settingsLearningTitle": {
-    "description": "Блок обучения."
-  },
   "settingsRetentionTitle": "Желаемое удержание",
   "@settingsRetentionTitle": {
     "description": "Ползунок desiredRetention."
@@ -2147,10 +2095,6 @@
   "settingsApiTitle": "API",
   "@settingsApiTitle": {
     "description": "Блок API (SPEC A6.6)."
-  },
-  "settingsApiProvidersTitle": "Провайдеры",
-  "@settingsApiProvidersTitle": {
-    "description": "Заголовок списка провайдеров."
   },
   "settingsApiCheckMissing": "Сначала добавьте ключ",
   "@settingsApiCheckMissing": {
@@ -2771,10 +2715,6 @@
   "@shellNavSection": {
     "description": "Надзаголовок группы пунктов навигации."
   },
-  "shellWorkspace": "Рабочее пространство",
-  "@shellWorkspace": {
-    "description": "Корень «хлебных крошек» верхней панели."
-  },
   "shellBreadcrumb": "Рабочее пространство / {section}",
   "@shellBreadcrumb": {
     "description": "Хлебные крошки: корень и текущий раздел.",
@@ -2842,7 +2782,7 @@
   "@decksOverline": {
     "description": "Надзаголовок экрана «Мои колоды»."
   },
-  "decksSubtitle": "{decks} активных колод · {due} карточек на повторение сегодня",
+  "decksSubtitle": "{decks, plural, one{{decks} активная колода} few{{decks} активные колоды} many{{decks} активных колод} other{{decks} активные колоды}} · {due, plural, one{{due} карточка} few{{due} карточки} many{{due} карточек} other{{due} карточки}} на повторение сегодня",
   "@decksSubtitle": {
     "description": "Пояснение под заголовком списка колод.",
     "placeholders": {
@@ -3164,10 +3104,6 @@
   "@settingsOverline": {
     "description": "Надзаголовок экрана настроек."
   },
-  "settingsBreadcrumbSection": "Система",
-  "@settingsBreadcrumbSection": {
-    "description": "Вторая часть «хлебных крошек» настроек."
-  },
   "settingsSubtitle": "Управление алгоритмом интервального повторения, внешним видом и параметрами генерации",
   "@settingsSubtitle": {
     "description": "Пояснение под заголовком настроек."
@@ -3176,7 +3112,7 @@
   "@settingsNavLearning": {
     "description": "Пункт поднавигации настроек."
   },
-  "settingsNavAppearance": "Внешний вид",
+  "settingsNavAppearance": "Оформление",
   "@settingsNavAppearance": {
     "description": "Пункт поднавигации настроек."
   },

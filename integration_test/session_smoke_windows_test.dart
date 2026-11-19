@@ -234,7 +234,7 @@ void main() {
       // диалог открывается и закрывается, экран ветки остаётся на месте.
       // Регрессия Nocturne выталкивала из ветки экран вместо маршрута диалога
       // (белый экран, `has popped the last page`) — ADR-036.
-      await tester.tap(find.text(l10n.decksCreateDeckFab));
+      await tester.tap(find.byKey(const ValueKey<String>('decks-new-deck')));
       await tester.pumpAndSettle();
       expect(
         find.text(l10n.deckCreateDialogTitle),

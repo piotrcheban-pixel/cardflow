@@ -261,10 +261,8 @@ class _StatisticsContent extends StatelessWidget {
                 ? Theme.of(context).textTheme.titleMedium?.copyWith(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   )
-                : AppTypography.kpi(context).copyWith(
-                    fontSize: 36,
-                    color: Theme.of(context).colorScheme.secondary,
-                  ),
+                : AppTypography.kpiLarge(context)
+                      .copyWith(color: Theme.of(context).colorScheme.secondary),
           ),
           const SizedBox(height: AppSpacing.md),
           StatisticsWaveform(
@@ -435,7 +433,7 @@ class _WeakTopicsSection extends StatelessWidget {
                             topic.reviews,
                           ),
                           style: theme.textTheme.labelSmall?.copyWith(
-                            color: scheme.outline,
+                            color: scheme.onSurfaceVariant,
                           ),
                         ),
                         const SizedBox(height: AppSpacing.xxs + 2),

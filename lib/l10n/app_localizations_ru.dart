@@ -47,18 +47,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get decksSearchClearTooltip => 'Очистить поиск';
 
   @override
-  String get deckFilterAll => 'Все';
-
-  @override
-  String get deckFilterNew => 'Новые';
-
-  @override
-  String get deckFilterInProgress => 'В процессе';
-
-  @override
-  String get deckFilterDue => 'Просроченные';
-
-  @override
   String get decksEmptyTitle => 'Пока нет колод';
 
   @override
@@ -75,15 +63,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get decksCreateButton => 'Создать';
 
   @override
-  String get decksCreateDeckFab => 'Создать колоду';
-
-  @override
-  String get decksCreateManual => 'Вручную';
-
-  @override
-  String get decksImportZip => 'Импорт ZIP';
-
-  @override
   String get decksMenuTooltip => 'Действия с колодой';
 
   @override
@@ -94,9 +73,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get deckActionArchive => 'Архивировать';
-
-  @override
-  String get decksCreateMenuTooltip => 'Другие способы создания';
 
   @override
   String deckCardCount(int count) {
@@ -399,9 +375,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get reviewWhySheetTitle => 'Почему эта карточка?';
 
   @override
-  String get reviewProgressLabel => 'Прогресс сессии';
-
-  @override
   String get feedPause => 'Пауза';
 
   @override
@@ -575,9 +548,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get cardDeletedMessage => 'Карточка удалена';
 
   @override
-  String get deckAddCardTooltip => 'Добавить карточку';
-
-  @override
   String get parserErrorUnreadableFile => 'Не удалось прочитать файл';
 
   @override
@@ -713,9 +683,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsModelEmptyError => 'Укажите модель';
 
   @override
-  String get settingsOpenTooltip => 'Настройки';
-
-  @override
   String get settingsKeyConfigured => 'Ключ сохранён';
 
   @override
@@ -735,9 +702,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get deckGenerateTooltip => 'Сгенерировать карточки';
-
-  @override
-  String get generationTitle => 'Генерация карточек';
 
   @override
   String get generationAttachHint =>
@@ -1645,9 +1609,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsHighContrast => 'Повышенный контраст';
 
   @override
-  String get settingsLearningTitle => 'Обучение';
-
-  @override
   String get settingsRetentionTitle => 'Желаемое удержание';
 
   @override
@@ -1701,9 +1662,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get settingsApiTitle => 'API';
-
-  @override
-  String get settingsApiProvidersTitle => 'Провайдеры';
 
   @override
   String get settingsApiCheckMissing => 'Сначала добавьте ключ';
@@ -2153,9 +2111,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get shellNavSection => 'Навигация';
 
   @override
-  String get shellWorkspace => 'Рабочее пространство';
-
-  @override
   String shellBreadcrumb(String section) {
     return 'Рабочее пространство / $section';
   }
@@ -2212,7 +2167,23 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String decksSubtitle(int decks, int due) {
-    return '$decks активных колод · $due карточек на повторение сегодня';
+    String _temp0 = intl.Intl.pluralLogic(
+      decks,
+      locale: localeName,
+      other: '$decks активные колоды',
+      many: '$decks активных колод',
+      few: '$decks активные колоды',
+      one: '$decks активная колода',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      due,
+      locale: localeName,
+      other: '$due карточки',
+      many: '$due карточек',
+      few: '$due карточки',
+      one: '$due карточка',
+    );
+    return '$_temp0 · $_temp1 на повторение сегодня';
   }
 
   @override
@@ -2430,9 +2401,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsOverline => 'Конфигурация';
 
   @override
-  String get settingsBreadcrumbSection => 'Система';
-
-  @override
   String get settingsSubtitle =>
       'Управление алгоритмом интервального повторения, внешним видом и параметрами генерации';
 
@@ -2440,7 +2408,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsNavLearning => 'Обучение и FSRS';
 
   @override
-  String get settingsNavAppearance => 'Внешний вид';
+  String get settingsNavAppearance => 'Оформление';
 
   @override
   String get settingsNavAccessibility => 'Доступность';

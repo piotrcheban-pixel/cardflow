@@ -256,6 +256,23 @@ void main() {
     expect(find.text(l10n.providersEmptyTitle), findsOneWidget);
   });
 
+  testWidgets('узкий экран 360×800: тема выбирается чипами, без переполнений', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(360, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await pump(tester);
+    await reveal(tester, find.text('Тёмная'));
+    await tester.tap(find.text('Тёмная'));
+    await tester.pumpAndSettle();
+
+    expect(settings.settings.theme, AppThemePreference.dark);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('«О приложении»: версия, лицензии, политика приватности', (
     WidgetTester tester,
   ) async {

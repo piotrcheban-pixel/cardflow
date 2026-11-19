@@ -8,6 +8,7 @@ import 'package:cardflow/ui/router/app_router.dart';
 import 'package:cardflow/ui/settings/about_links.dart';
 import 'package:cardflow/ui/state/decks_ui_providers.dart';
 import 'package:cardflow/ui/theme/app_tokens.dart';
+import 'package:cardflow/ui/theme/app_typography.dart';
 
 /// Пункт навигации боковой панели.
 class _SidebarDestination {
@@ -137,8 +138,8 @@ class AppSidebar extends ConsumerWidget {
                     ),
                     child: Text(
                       l10n.shellVersion(appVersion),
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        fontSize: 10,
+                      style: AppTypography.caption(
+                        context,
                         color: scheme.onSurfaceVariant,
                       ),
                     ),
@@ -213,7 +214,7 @@ class AppSidebar extends ConsumerWidget {
             child: Text(
               l10n.shellNavSection.toUpperCase(),
               style: theme.textTheme.labelMedium?.copyWith(
-                color: scheme.outline,
+                color: scheme.onSurfaceVariant,
                 letterSpacing: 0.6,
               ),
             ),
@@ -278,14 +279,13 @@ class AppSidebar extends ConsumerWidget {
                             overflow: TextOverflow.ellipsis,
                             style: theme.textTheme.labelLarge?.copyWith(
                               color: scheme.onSurface,
-                              fontSize: 12,
                             ),
                           ),
                           Text(
                             l10n.shellDueLabel,
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: scheme.outline,
-                              fontSize: 10,
+                            style: AppTypography.caption(
+                              context,
+                              color: scheme.onSurfaceVariant,
                             ),
                           ),
                         ],
@@ -318,13 +318,7 @@ class _BrandMark extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadii.control),
       ),
       alignment: Alignment.center,
-      child: Icon(
-        Icons.style_rounded,
-        size: 19,
-        color: scheme.brightness == Brightness.dark
-            ? scheme.onPrimary
-            : scheme.onPrimary,
-      ),
+      child: Icon(Icons.style_rounded, size: 19, color: scheme.onPrimary),
     );
   }
 }
@@ -355,7 +349,7 @@ class _SidebarItem extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppRadii.control),
           child: AnimatedContainer(
             duration: AppDurations.quick,
-            height: 38,
+            height: AppSizes.minTouchTarget,
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs + 2),
             decoration: BoxDecoration(
               color: selected ? scheme.surfaceContainer : Colors.transparent,
@@ -375,7 +369,6 @@ class _SidebarItem extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.bodyMedium?.copyWith(
-                      fontSize: 13.5,
                       color: selected
                           ? scheme.primary
                           : scheme.onSurfaceVariant,

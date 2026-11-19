@@ -127,7 +127,7 @@ void main() {
       },
     );
 
-    testWidgets('success: карточки колод с счётчиками (M3ECard)', (
+    testWidgets('success: карточки колод с счётчиками', (
       WidgetTester tester,
     ) async {
       final FakeDeckRepository repository = FakeDeckRepository(
@@ -166,6 +166,95 @@ void main() {
         findsNothing,
         reason: 'Счётчик «к повторению» показывается только при наличии due',
       );
+    });
+  });
+
+  group('Колоды: KPI и адаптивность', () {
+    testWidgets('KPI считаются по реальным сводкам', (
+      WidgetTester tester,
+    ) async {
+      final FakeDeckRepository repository = FakeDeckRepository(
+        summaries: <DeckSummary>[
+          makeSummary(
+            id: 'deck-1',
+            name: 'Испанский',
+            totalCards: 12,
+            newCards: 3,
+            dueCards: 4,
+          ),
+          makeSummary(
+            id: 'deck-2',
+            name: 'История',
+            totalCards: 8,
+            newCards: 1,
+            dueCards: 0,
+          ),
+        ],
+      );
+
+      await pumpDecks(tester, repository: repository);
+      await tester.pumpAndSettle();
+
+      Finder tileValue(String key, String value) => find.descendant(
+        of: find.byKey(ValueKey<String>(key)),
+        matching: find.text(value),
+      );
+      expect(tileValue('decks-kpi-total', '20'), findsOneWidget);
+      expect(tileValue('decks-kpi-due', '4'), findsOneWidget);
+      // Изучено = (12-3) + (8-1) = 16.
+      expect(tileValue('decks-kpi-studied', '16'), findsOneWidget);
+      expect(tileValue('decks-kpi-decks', '2'), findsOneWidget);
+    });
+
+    testWidgets('подзаголовок склоняет числа (1 колода / 1 карточка)', (
+      WidgetTester tester,
+    ) async {
+      final FakeDeckRepository repository = FakeDeckRepository(
+        summaries: <DeckSummary>[
+          makeSummary(
+            id: 'deck-1',
+            name: 'Испанский',
+            totalCards: 1,
+            dueCards: 1,
+          ),
+        ],
+      );
+
+      await pumpDecks(tester, repository: repository);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('1 активная колода · 1 карточка на повторение сегодня'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('узкий экран 360×800: без переполнений, карточка читается', (
+      WidgetTester tester,
+    ) async {
+      tester.view.physicalSize = const Size(360, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final FakeDeckRepository repository = FakeDeckRepository(
+        summaries: <DeckSummary>[
+          makeSummary(
+            id: 'deck-1',
+            name: 'Испанский',
+            totalCards: 12,
+            dueCards: 4,
+            newCards: 3,
+          ),
+        ],
+      );
+
+      await pumpDecks(tester, repository: repository);
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      await scrollToDeck(tester, 'Испанский');
+      expect(find.text('Испанский'), findsOneWidget);
+      expect(tester.takeException(), isNull);
     });
   });
 

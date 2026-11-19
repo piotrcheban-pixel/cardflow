@@ -49,10 +49,13 @@ void main() {
   ) async {
     await tester.tap(find.byKey(const ValueKey<String>('decks-new-deck')));
     await tester.pumpAndSettle();
-    // Заголовок диалога совпадает с подписью кнопки шапки, поэтому
-    // открытие проверяем по полю ввода (ADR-036: диалог на оболочке).
+    // Заголовок диалога совпадает с подписью кнопки шапки, поэтому ищем его
+    // внутри самого диалога (ADR-036: диалог на оболочке).
     expect(
-      find.byKey(const ValueKey<String>('deck-name-submit')),
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.text(l10n.deckCreateDialogTitle),
+      ),
       findsOneWidget,
     );
   }
@@ -128,6 +131,7 @@ void main() {
 
     await tester.tap(find.text(l10n.cancel));
     await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsNothing);
     expect(
       find.byKey(const ValueKey<String>('deck-name-submit')),
       findsNothing,

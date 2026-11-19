@@ -76,7 +76,7 @@ class DecksScreen extends ConsumerWidget {
               label: Text(l10n.decksNewDeck),
             ),
             IconButton(
-              key: const ValueKey<String>('decks-more-actions'),
+              key: const ValueKey<String>('decks-generate-action'),
               tooltip: l10n.deckGenerateTooltip,
               icon: const Icon(Icons.auto_awesome_outlined, size: 20),
               onPressed: () => context.push(AppRoutes.generationPath),
@@ -287,6 +287,8 @@ class _DecksOverline extends StatelessWidget {
     final AppLocalizations l10n = AppLocalizations.of(context);
     final ThemeData theme = Theme.of(context);
     final int? due = dueCards;
+    // На узком экране точка-разделитель остаётся в одиночестве на строке.
+    final bool showDot = due != null && MediaQuery.sizeOf(context).width >= 420;
     return Wrap(
       spacing: AppSpacing.xs,
       runSpacing: 2,
@@ -300,7 +302,7 @@ class _DecksOverline extends StatelessWidget {
             icon: due > 0 ? Icons.schedule : Icons.check_circle,
             dense: true,
           ),
-        if (due != null)
+        if (showDot)
           Container(
             width: 3,
             height: 3,
@@ -353,7 +355,6 @@ class _MetricsStrip extends StatelessWidget {
             value: number.format(totalCards),
             icon: Icons.style_outlined,
             iconColor: scheme.primary,
-            helper: Text(l10n.decksMetricDecks),
           ),
           AppStatTile(
             key: const ValueKey<String>('decks-kpi-due'),
@@ -442,7 +443,7 @@ class _DecksToolbar extends ConsumerWidget {
     final bool wide = width >= 900;
     final bool compactControls = width < 520;
 
-    final Widget search = _DecksSearchField(expanded: true);
+    const Widget search = _DecksSearchField();
     final Widget controls = Row(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
@@ -705,21 +706,26 @@ class _FilterChip extends StatelessWidget {
     return InkWell(
       onTap: onPressed,
       borderRadius: BorderRadius.circular(AppRadii.control),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 120),
-        height: 32,
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-        decoration: BoxDecoration(
-          color: background,
-          borderRadius: BorderRadius.circular(AppRadii.control),
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          label,
-          maxLines: 1,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: foreground,
-            fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+      child: SizedBox(
+        height: AppSizes.minTouchTarget,
+        child: Center(
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 120),
+            height: 32,
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+            decoration: BoxDecoration(
+              color: background,
+              borderRadius: BorderRadius.circular(AppRadii.control),
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              label,
+              maxLines: 1,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: foreground,
+                fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+              ),
+            ),
           ),
         ),
       ),
@@ -729,9 +735,7 @@ class _FilterChip extends StatelessWidget {
 
 /// Поле поиска колод.
 class _DecksSearchField extends ConsumerStatefulWidget {
-  const _DecksSearchField({this.expanded = false});
-
-  final bool expanded;
+  const _DecksSearchField();
 
   @override
   ConsumerState<_DecksSearchField> createState() => _DecksSearchFieldState();
@@ -752,6 +756,13 @@ class _DecksSearchFieldState extends ConsumerState<_DecksSearchField> {
     final ThemeData theme = Theme.of(context);
     final ColorScheme scheme = theme.colorScheme;
     final String search = ref.watch(decksQueryProvider).search;
+    // Внешнее изменение запроса (кнопка поиска в панели, сброс) обновляет поле.
+    if (_controller.text != search) {
+      _controller.value = TextEditingValue(
+        text: search,
+        selection: TextSelection.collapsed(offset: search.length),
+      );
+    }
     final Widget field = Container(
       height: 34,
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs + 2),
@@ -767,7 +778,7 @@ class _DecksSearchFieldState extends ConsumerState<_DecksSearchField> {
           Expanded(
             child: TextField(
               controller: _controller,
-              autofocus: !widget.expanded,
+              autofocus: false,
               onChanged: (String value) =>
                   ref.read(decksQueryProvider.notifier).setSearch(value),
               style: theme.textTheme.bodySmall?.copyWith(
@@ -782,7 +793,7 @@ class _DecksSearchFieldState extends ConsumerState<_DecksSearchField> {
                 contentPadding: EdgeInsets.zero,
                 hintText: l10n.decksSearchHint,
                 hintStyle: theme.textTheme.bodySmall?.copyWith(
-                  color: scheme.outline,
+                  color: scheme.onSurfaceVariant,
                 ),
               ),
             ),
@@ -801,7 +812,7 @@ class _DecksSearchFieldState extends ConsumerState<_DecksSearchField> {
         ],
       ),
     );
-    return widget.expanded ? field : SizedBox(width: 320, child: field);
+    return field;
   }
 }
 
@@ -908,176 +919,170 @@ class _DeckTile extends StatelessWidget {
     final String date = MaterialLocalizations.of(context)
         .formatShortDate(summary.deck.updatedAt.toLocal());
 
-    return Semantics(
-      label: summary.deck.name,
-      child: AppPanel(
-        key: ValueKey<String>('deck-tile-${summary.deck.id}'),
-        onTap: onOpen,
-        onLongPress: onMenu,
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                _DeckMonogram(name: summary.deck.name),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Text(
-                        l10n.deckCardCount(summary.totalCards).toUpperCase(),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTypography.overline(context),
-                      ),
-                      Text(
-                        summary.deck.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.titleMedium,
-                      ),
-                    ],
-                  ),
-                ),
-                IconButton(
-                  key: ValueKey<String>('deck-menu-${summary.deck.id}'),
-                  tooltip: l10n.deckMoreActions,
-                  icon: const Icon(Icons.more_horiz, size: AppSizes.icon),
-                  onPressed: onMenu,
-                  style: IconButton.styleFrom(
-                    foregroundColor: scheme.outline,
-                    minimumSize: const Size(32, 32),
-                    padding: EdgeInsets.zero,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Wrap(
-              spacing: AppSpacing.xs,
-              runSpacing: AppSpacing.xxs,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: <Widget>[
-                if (summary.dueCards > 0)
-                  AppStatusChip(
-                    label: l10n.deckDueCount(summary.dueCards),
-                    tone: AppStatusTone.danger,
-                    dense: true,
-                  )
-                else if (summary.newCards > 0)
-                  AppStatusChip(
-                    label: l10n.deckNewCount(summary.newCards),
-                    tone: AppStatusTone.info,
-                    dense: true,
-                  )
-                else if (summary.totalCards > 0)
-                  AppStatusChip(
-                    label: l10n.deckAllReviewed,
-                    tone: AppStatusTone.success,
-                    icon: Icons.check_circle,
-                    dense: true,
-                  )
-                else
-                  AppStatusChip(
-                    label: l10n.deckCardsEmpty,
-                    tone: AppStatusTone.neutral,
-                    dense: true,
-                  ),
-                Text(
-                  l10n.deckCardCount(summary.totalCards),
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Row(
-              children: <Widget>[
-                Expanded(
-                  child: Text(
-                    l10n.decksProgressLabel,
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: scheme.outline,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                Text(
-                  l10n.statisticsRetentionValue((progress * 100).round()),
-                  style: AppTypography.numeric(
-                    context,
-                    color: progress >= 1 ? scheme.secondary : scheme.onSurface,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.xxs + 2),
-            AppProgressBar(
-              value: progress,
-              color: progress >= 1 ? scheme.secondary : scheme.primary,
-              semanticsLabel: l10n.decksProgressLabel,
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Divider(
-              height: AppSizes.borderWidth,
-              color: scheme.surfaceContainer,
-            ),
-            Padding(
-              padding: const EdgeInsets.only(top: AppSpacing.sm),
-              child: Row(
-                children: <Widget>[
-                  Icon(
-                    Icons.schedule,
-                    size: AppSizes.iconSmall,
-                    color: scheme.outline,
-                  ),
-                  const SizedBox(width: AppSpacing.xxs),
-                  Expanded(
-                    child: Text(
-                      l10n.deckUpdated(date),
+    return AppPanel(
+      key: ValueKey<String>('deck-tile-${summary.deck.id}'),
+      onTap: onOpen,
+      onLongPress: onMenu,
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              _DeckMonogram(name: summary.deck.name),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      l10n.deckOverline.toUpperCase(),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: scheme.outline,
+                      style: AppTypography.overline(context),
+                    ),
+                    Text(
+                      summary.deck.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleMedium,
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                key: ValueKey<String>('deck-menu-${summary.deck.id}'),
+                tooltip: l10n.deckMoreActions,
+                icon: const Icon(Icons.more_horiz, size: AppSizes.icon),
+                onPressed: onMenu,
+                style: IconButton.styleFrom(
+                  foregroundColor: scheme.outline,
+                  minimumSize: const Size(32, 32),
+                  padding: EdgeInsets.zero,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Wrap(
+            spacing: AppSpacing.xs,
+            runSpacing: AppSpacing.xxs,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: <Widget>[
+              if (summary.dueCards > 0)
+                AppStatusChip(
+                  label: l10n.deckDueCount(summary.dueCards),
+                  tone: AppStatusTone.danger,
+                  dense: true,
+                )
+              else if (summary.newCards > 0)
+                AppStatusChip(
+                  label: l10n.deckNewCount(summary.newCards),
+                  tone: AppStatusTone.info,
+                  dense: true,
+                )
+              else if (summary.totalCards > 0)
+                AppStatusChip(
+                  label: l10n.deckAllReviewed,
+                  tone: AppStatusTone.success,
+                  icon: Icons.check_circle,
+                  dense: true,
+                )
+              else
+                AppStatusChip(
+                  label: l10n.deckCardsEmpty,
+                  tone: AppStatusTone.neutral,
+                  dense: true,
+                ),
+              Text(
+                l10n.deckCardCount(summary.totalCards),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: Text(
+                  l10n.decksProgressLabel,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              Text(
+                l10n.statisticsRetentionValue((progress * 100).round()),
+                style: AppTypography.numeric(
+                  context,
+                  color: progress >= 1 ? scheme.secondary : scheme.onSurface,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xxs + 2),
+          AppProgressBar(
+            value: progress,
+            color: progress >= 1 ? scheme.secondary : scheme.primary,
+            semanticsLabel: l10n.decksProgressLabel,
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Divider(height: AppSizes.borderWidth, color: scheme.surfaceContainer),
+          Padding(
+            padding: const EdgeInsets.only(top: AppSpacing.sm),
+            child: Row(
+              children: <Widget>[
+                Icon(
+                  Icons.schedule,
+                  size: AppSizes.iconSmall,
+                  color: scheme.outline,
+                ),
+                const SizedBox(width: AppSpacing.xxs),
+                Expanded(
+                  child: Text(
+                    l10n.deckUpdated(date),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.xs),
+                if (hasWork)
+                  FilledButton.icon(
+                    key: ValueKey<String>('deck-study-${summary.deck.id}'),
+                    onPressed: onOpen,
+                    icon: const Icon(Icons.play_arrow, size: 16),
+                    label: Text(l10n.deckStudyAction),
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size(0, 34),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.sm,
+                      ),
+                    ),
+                  )
+                else
+                  OutlinedButton.icon(
+                    key: ValueKey<String>('deck-study-${summary.deck.id}'),
+                    onPressed: onOpen,
+                    icon: const Icon(Icons.visibility_outlined, size: 16),
+                    label: Text(l10n.deckReviewAction),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(0, 34),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.sm,
                       ),
                     ),
                   ),
-                  const SizedBox(width: AppSpacing.xs),
-                  if (hasWork)
-                    FilledButton.icon(
-                      key: ValueKey<String>('deck-study-${summary.deck.id}'),
-                      onPressed: onOpen,
-                      icon: const Icon(Icons.play_arrow, size: 16),
-                      label: Text(l10n.deckStudyAction),
-                      style: FilledButton.styleFrom(
-                        minimumSize: const Size(0, 34),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.sm,
-                        ),
-                      ),
-                    )
-                  else
-                    OutlinedButton.icon(
-                      key: ValueKey<String>('deck-study-${summary.deck.id}'),
-                      onPressed: onOpen,
-                      icon: const Icon(Icons.visibility_outlined, size: 16),
-                      label: Text(l10n.deckReviewAction),
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: const Size(0, 34),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.sm,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

@@ -107,8 +107,8 @@ class ReviewSessionAppBar extends StatelessWidget
                   ),
                   child: Text(
                     l10n.reviewFsrsBadge,
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      fontSize: 10,
+                    style: AppTypography.caption(
+                      context,
                       color: scheme.onSurfaceVariant,
                     ),
                   ),
@@ -167,28 +167,28 @@ class ReviewSessionAppBar extends StatelessWidget
 /// Диалог выхода из сессии (SPEC A6.4): «Продолжить» / «Выйти».
 Future<bool> confirmReviewExit(BuildContext context) async {
   final AppLocalizations l10n = AppLocalizations.of(context);
-  final bool result =
-      (await showDialog<bool>(
-        context: context,
-        builder: (BuildContext dialogContext) => AlertDialog(
-          title: Text(l10n.reviewExitDialogTitle),
-          content: Text(l10n.reviewExitDialogMessage),
-          actions: <Widget>[
-            TextButton(
-              key: const ValueKey<String>('review-exit-cancel'),
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: Text(l10n.reviewExitContinue),
-            ),
-            FilledButton(
-              key: const ValueKey<String>('review-exit-confirm'),
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: Text(l10n.reviewExitConfirm),
-            ),
-          ],
-        ),
-      )) ??
-      false;
-  return result;
+  // AppDialog передаёт действиям контекст диалога — правило ADR-036
+  // (закрывается маршрут диалога, а не экран-ветка).
+  final bool? result = await showAppDialog<bool>(
+    context: context,
+    title: l10n.reviewExitDialogTitle,
+    subtitle: l10n.reviewExitDialogMessage,
+    closeLabel: l10n.cancel,
+    bodyBuilder: (BuildContext dialogContext) => const SizedBox.shrink(),
+    actionsBuilder: (BuildContext dialogContext) => <Widget>[
+      TextButton(
+        key: const ValueKey<String>('review-exit-cancel'),
+        onPressed: () => Navigator.of(dialogContext).pop(false),
+        child: Text(l10n.reviewExitContinue),
+      ),
+      FilledButton(
+        key: const ValueKey<String>('review-exit-confirm'),
+        onPressed: () => Navigator.of(dialogContext).pop(true),
+        child: Text(l10n.reviewExitConfirm),
+      ),
+    ],
+  );
+  return result ?? false;
 }
 
 /// Bottom sheet «Почему эта карточка?» с цитатой исходника (SPEC A6.4).

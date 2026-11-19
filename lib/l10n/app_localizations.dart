@@ -166,30 +166,6 @@ abstract class AppLocalizations {
   /// **'Очистить поиск'**
   String get decksSearchClearTooltip;
 
-  /// Чип фильтра: все активные колоды.
-  ///
-  /// In ru, this message translates to:
-  /// **'Все'**
-  String get deckFilterAll;
-
-  /// Чип фильтра: колоды с новыми карточками.
-  ///
-  /// In ru, this message translates to:
-  /// **'Новые'**
-  String get deckFilterNew;
-
-  /// Чип фильтра: колоды с карточками в процессе изучения.
-  ///
-  /// In ru, this message translates to:
-  /// **'В процессе'**
-  String get deckFilterInProgress;
-
-  /// Чип фильтра: колоды с просроченными карточками.
-  ///
-  /// In ru, this message translates to:
-  /// **'Просроченные'**
-  String get deckFilterDue;
-
   /// Пустое состояние списка колод.
   ///
   /// In ru, this message translates to:
@@ -220,24 +196,6 @@ abstract class AppLocalizations {
   /// **'Создать'**
   String get decksCreateButton;
 
-  /// Расширенная FAB-кнопка создания колоды.
-  ///
-  /// In ru, this message translates to:
-  /// **'Создать колоду'**
-  String get decksCreateDeckFab;
-
-  /// Пункт меню создания: ввести название вручную.
-  ///
-  /// In ru, this message translates to:
-  /// **'Вручную'**
-  String get decksCreateManual;
-
-  /// Пункт меню/кнопка импорта колоды из ZIP-архива.
-  ///
-  /// In ru, this message translates to:
-  /// **'Импорт ZIP'**
-  String get decksImportZip;
-
   /// Подсказка кнопки меню действий с колодой.
   ///
   /// In ru, this message translates to:
@@ -261,12 +219,6 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Архивировать'**
   String get deckActionArchive;
-
-  /// Подсказка второй (меню) сегмента Split-кнопки «Создать».
-  ///
-  /// In ru, this message translates to:
-  /// **'Другие способы создания'**
-  String get decksCreateMenuTooltip;
 
   /// Количество карточек в колоде (плюрализация).
   ///
@@ -718,12 +670,6 @@ abstract class AppLocalizations {
   /// **'Почему эта карточка?'**
   String get reviewWhySheetTitle;
 
-  /// Семантическая подпись линейного прогресса классической сессии.
-  ///
-  /// In ru, this message translates to:
-  /// **'Прогресс сессии'**
-  String get reviewProgressLabel;
-
   /// Кнопка паузы авто-продвижения в ленте (SPEC A7.3).
   ///
   /// In ru, this message translates to:
@@ -1012,12 +958,6 @@ abstract class AppLocalizations {
   /// **'Карточка удалена'**
   String get cardDeletedMessage;
 
-  /// Подсказка FAB mini «Добавить» на экране колоды (SPEC A6.3).
-  ///
-  /// In ru, this message translates to:
-  /// **'Добавить карточку'**
-  String get deckAddCardTooltip;
-
   /// Ошибка парсинга: файл не удалось прочитать (SPEC A8.3).
   ///
   /// In ru, this message translates to:
@@ -1216,12 +1156,6 @@ abstract class AppLocalizations {
   /// **'Укажите модель'**
   String get settingsModelEmptyError;
 
-  /// Подсказка иконки перехода в настройки генерации.
-  ///
-  /// In ru, this message translates to:
-  /// **'Настройки'**
-  String get settingsOpenTooltip;
-
   /// Индикатор: ключ облачного провайдера сохранён.
   ///
   /// In ru, this message translates to:
@@ -1263,12 +1197,6 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Сгенерировать карточки'**
   String get deckGenerateTooltip;
-
-  /// Заголовок экрана генерации карточек (SPEC A6.8).
-  ///
-  /// In ru, this message translates to:
-  /// **'Генерация карточек'**
-  String get generationTitle;
 
   /// Подпись зоны прикрепления файлов (SPEC A6.8).
   ///
@@ -2612,12 +2540,6 @@ abstract class AppLocalizations {
   /// **'Повышенный контраст'**
   String get settingsHighContrast;
 
-  /// Блок обучения.
-  ///
-  /// In ru, this message translates to:
-  /// **'Обучение'**
-  String get settingsLearningTitle;
-
   /// Ползунок desiredRetention.
   ///
   /// In ru, this message translates to:
@@ -2719,12 +2641,6 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'API'**
   String get settingsApiTitle;
-
-  /// Заголовок списка провайдеров.
-  ///
-  /// In ru, this message translates to:
-  /// **'Провайдеры'**
-  String get settingsApiProvidersTitle;
 
   /// Проверка без сохранённого ключа.
   ///
@@ -3506,12 +3422,6 @@ abstract class AppLocalizations {
   /// **'Навигация'**
   String get shellNavSection;
 
-  /// Корень «хлебных крошек» верхней панели.
-  ///
-  /// In ru, this message translates to:
-  /// **'Рабочее пространство'**
-  String get shellWorkspace;
-
   /// Хлебные крошки: корень и текущий раздел.
   ///
   /// In ru, this message translates to:
@@ -3593,7 +3503,7 @@ abstract class AppLocalizations {
   /// Пояснение под заголовком списка колод.
   ///
   /// In ru, this message translates to:
-  /// **'{decks} активных колод · {due} карточек на повторение сегодня'**
+  /// **'{decks, plural, one{{decks} активная колода} few{{decks} активные колоды} many{{decks} активных колод} other{{decks} активные колоды}} · {due, plural, one{{due} карточка} few{{due} карточки} many{{due} карточек} other{{due} карточки}} на повторение сегодня'**
   String decksSubtitle(int decks, int due);
 
   /// KPI-плитка: всего карточек.
@@ -3950,12 +3860,6 @@ abstract class AppLocalizations {
   /// **'Конфигурация'**
   String get settingsOverline;
 
-  /// Вторая часть «хлебных крошек» настроек.
-  ///
-  /// In ru, this message translates to:
-  /// **'Система'**
-  String get settingsBreadcrumbSection;
-
   /// Пояснение под заголовком настроек.
   ///
   /// In ru, this message translates to:
@@ -3971,7 +3875,7 @@ abstract class AppLocalizations {
   /// Пункт поднавигации настроек.
   ///
   /// In ru, this message translates to:
-  /// **'Внешний вид'**
+  /// **'Оформление'**
   String get settingsNavAppearance;
 
   /// Пункт поднавигации настроек.

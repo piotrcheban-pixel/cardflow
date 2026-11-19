@@ -693,7 +693,6 @@ class _StartSessionPanel extends StatelessWidget {
     final ColorScheme scheme = theme.colorScheme;
     return AppPanel(
       onTap: onPressed,
-      semanticLabel: title,
       padding: const EdgeInsets.all(AppSpacing.md),
       child: Row(
         children: <Widget>[

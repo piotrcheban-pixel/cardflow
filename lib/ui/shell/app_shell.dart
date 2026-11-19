@@ -115,35 +115,38 @@ class AppShell extends ConsumerWidget {
 
     if (wide) {
       return Scaffold(
-        body: Row(
-          children: <Widget>[
-            SizedBox(
-              width: AppSizes.sidebarWidth,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  border: Border(
-                    right: BorderSide(
-                      color: scheme.outlineVariant,
-                      width: AppSizes.borderWidth,
+        body: SafeArea(
+          bottom: false,
+          child: Row(
+            children: <Widget>[
+              SizedBox(
+                width: AppSizes.sidebarWidth,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    border: Border(
+                      right: BorderSide(
+                        color: scheme.outlineVariant,
+                        width: AppSizes.borderWidth,
+                      ),
                     ),
                   ),
+                  child: sidebar,
                 ),
-                child: sidebar,
               ),
-            ),
-            Expanded(
-              child: Column(
-                children: <Widget>[
-                  AppTopHeader(
-                    section: section,
-                    onNewCard: () => unawaited(_createCard(context, ref)),
-                    onOpenSettings: () => _goBranch(2),
-                  ),
-                  Expanded(child: navigationShell),
-                ],
+              Expanded(
+                child: Column(
+                  children: <Widget>[
+                    AppTopHeader(
+                      section: section,
+                      onNewCard: () => unawaited(_createCard(context, ref)),
+                      onOpenSettings: () => _goBranch(2),
+                    ),
+                    Expanded(child: navigationShell),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       );
     }
@@ -175,16 +178,19 @@ class AppShell extends ConsumerWidget {
         ),
       ),
       body: Builder(
-        builder: (BuildContext bodyContext) => Column(
-          children: <Widget>[
-            AppTopHeader(
-              section: section,
-              onNewCard: () => unawaited(_createCard(bodyContext, ref)),
-              onOpenSettings: () => _goBranch(2),
-              onOpenNav: () => Scaffold.of(bodyContext).openDrawer(),
-            ),
-            Expanded(child: navigationShell),
-          ],
+        builder: (BuildContext bodyContext) => SafeArea(
+          bottom: false,
+          child: Column(
+            children: <Widget>[
+              AppTopHeader(
+                section: section,
+                onNewCard: () => unawaited(_createCard(bodyContext, ref)),
+                onOpenSettings: () => _goBranch(2),
+                onOpenNav: () => Scaffold.of(bodyContext).openDrawer(),
+              ),
+              Expanded(child: navigationShell),
+            ],
+          ),
         ),
       ),
     );

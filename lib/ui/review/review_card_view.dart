@@ -133,6 +133,7 @@ class _ReviewCardViewState extends State<ReviewCardView>
             transform: transform,
             child: Semantics(
               button: true,
+              excludeSemantics: true,
               label: showBack ? widget.back : widget.front,
               child: Container(
                 decoration: BoxDecoration(

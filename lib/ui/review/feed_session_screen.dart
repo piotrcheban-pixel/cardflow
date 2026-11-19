@@ -487,7 +487,9 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
       children: <Widget>[
         Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 896),
+            constraints: const BoxConstraints(
+              maxWidth: AppSizes.studyCardMaxWidth,
+            ),
             child: Padding(
               padding: const EdgeInsets.fromLTRB(
                 AppSpacing.md,

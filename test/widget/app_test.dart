@@ -163,8 +163,7 @@ void main() {
         scrollable: find.byType(Scrollable).first,
       );
       await tester.pumpAndSettle();
-      // «Внешний вид» есть и в поднавигации, и в заголовке секции.
-      expect(find.text(l10n.settingsAppearanceTitle), findsWidgets);
+      expect(find.text(l10n.settingsAppearanceTitle), findsOneWidget);
 
       // Настройки генерации (ADR-013) остаются доступны из блока API.
       final Finder generationLink = find.byKey(

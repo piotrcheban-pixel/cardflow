@@ -772,11 +772,16 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
         }
       },
       child: Scaffold(
-        body: _loading
-            ? const Center(child: CircularProgressIndicator())
-            : _configError
-            ? _buildConfigError(context, l10n)
-            : _buildBody(context, l10n, targetDeck),
+        // Полноэкранный маршрут без AppBar: контент не должен уходить под
+        // системный статус-бар на телефоне.
+        body: SafeArea(
+          bottom: false,
+          child: _loading
+              ? const Center(child: CircularProgressIndicator())
+              : _configError
+              ? _buildConfigError(context, l10n)
+              : _buildBody(context, l10n, targetDeck),
+        ),
         bottomNavigationBar: _loading || _configError
             ? null
             : DecoratedBox(
@@ -1487,7 +1492,7 @@ class _GenSectionLabel extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: theme.textTheme.labelMedium?.copyWith(
-              color: scheme.outline,
+              color: scheme.onSurfaceVariant,
               letterSpacing: 0.6,
             ),
           ),

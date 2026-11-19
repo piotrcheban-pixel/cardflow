@@ -195,12 +195,17 @@ abstract final class AppColors {
     onTertiaryFixed: darkOnTertiaryFixed,
   );
 
-  /// Цвет заливки основного действия: в тёмной теме — насыщенный indigo,
-  /// чтобы белая подпись была читаемой (в макете кнопка `#4F46E5`).
+  /// Заливка основного действия в тёмной теме: indigo `#4F46E5`.
+  ///
+  /// В макете кнопка тоже `#4F46E5`; роль `primaryContainer` (#6366F1) для
+  /// белой подписи даёт лишь 4.47:1 — ниже AA 4.5:1, поэтому действие
+  /// использует отдельный, более тёмный токен (≥6:1).
+  static const Color darkActionFill = Color(0xFF4F46E5);
+
+  /// Цвет заливки основного действия: в тёмной теме — контрастный indigo,
+  /// чтобы белая подпись проходила AA.
   static Color primaryAction(ColorScheme scheme) =>
-      scheme.brightness == Brightness.dark
-      ? scheme.primaryContainer
-      : scheme.primary;
+      scheme.brightness == Brightness.dark ? darkActionFill : scheme.primary;
 
   /// Цвет подписи основного действия (белый в обеих темах).
   static Color onPrimaryAction(ColorScheme scheme) =>

@@ -63,10 +63,25 @@ abstract final class AppTypography {
       Theme.of(context).textTheme.displayMedium!
           .copyWith(fontFeatures: tabularFigures, fontWeight: FontWeight.w600);
 
+  /// Крупная цифра KPI 36 px (статистика).
+  static TextStyle kpiLarge(BuildContext context) =>
+      kpi(context).copyWith(fontSize: 36);
+
+  /// Микроподпись 10/13 (чипы версий, легенды, подписи в панели).
+  static TextStyle caption(BuildContext context, {Color? color}) =>
+      Theme.of(context).textTheme.labelSmall!.copyWith(
+        fontSize: 10,
+        height: 1.3,
+        letterSpacing: 0.2,
+        color: color,
+      );
+
   /// Стиль мелкой подписи-надзаголовка (11/14, uppercase, 0.03em).
   static TextStyle overline(BuildContext context, {Color? color}) =>
       Theme.of(context).textTheme.labelMedium!.copyWith(
-        color: color ?? Theme.of(context).colorScheme.outline,
+        // Текст, а не граница: outline (#777587) на светлой поверхности
+        // даёт 4.27:1 — ниже AA для мелких подписей.
+        color: color ?? Theme.of(context).colorScheme.onSurfaceVariant,
         letterSpacing: 0.66,
       );
 

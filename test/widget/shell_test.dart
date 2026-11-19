@@ -80,6 +80,8 @@ void main() {
     await tester.tap(find.text(l10n.navDecks));
     await tester.pumpAndSettle();
     expect(find.byType(DecksScreen), findsOneWidget);
+    // Ветка не только существует, но и отрисовала данные после возврата.
+    expect(find.text('Испанский'), findsWidgets);
   });
 
   testWidgets('планшет/ПК: постоянная боковая панель и крошки раздела', (
@@ -95,22 +97,33 @@ void main() {
     expect(find.byType(NavigationBar), findsNothing);
     expect(find.byTooltip(l10n.shellOpenNavTooltip), findsNothing);
     expect(find.byType(DecksScreen), findsOneWidget);
-    expect(
-      find.text('${l10n.shellWorkspace} / ${l10n.navDecks}'),
-      findsOneWidget,
-    );
+    expect(find.text(l10n.shellBreadcrumb(l10n.navDecks)), findsOneWidget);
 
     await tester.tap(find.text(l10n.navStatistics));
     await tester.pumpAndSettle();
     expect(find.byType(StatisticsScreen), findsOneWidget);
-    expect(
-      find.text('${l10n.shellWorkspace} / ${l10n.navStatistics}'),
-      findsOneWidget,
-    );
+    expect(find.text(l10n.shellBreadcrumb(l10n.navStatistics)), findsOneWidget);
 
     await tester.tap(find.text(l10n.navSettings));
     await tester.pumpAndSettle();
     expect(find.byType(SettingsScreen), findsOneWidget);
+  });
+
+  testWidgets('узкий экран: шапка ниже системного статус-бара', (
+    WidgetTester tester,
+  ) async {
+    await setSize(tester, const Size(390, 800));
+    tester.view.padding = const FakeViewPadding(top: 24);
+    addTearDown(tester.view.resetPadding);
+    await tester.pumpWidget(appWidget());
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.getTopLeft(find.byType(AppTopHeader)).dy,
+      greaterThanOrEqualTo(24),
+      reason: 'Без AppBar оболочка обязана учитывать SafeArea статус-бара',
+    );
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('глобальное действие «Новая карточка»: выбор колоды', (
