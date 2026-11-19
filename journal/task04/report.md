@@ -147,9 +147,9 @@ DeepSeek `deepseek-flash` (пиковый тариф $0.30/$1.20 за 1M; off-pe
 3. **Список адаптеров дублировался** в тестах/приложении — вынесен в
    `lib/api/providers/generation_adapters.dart` (production и live-тесты
    используют один набор).
-4. **Live-тесты могли выполняться без явного разрешения** (и два
+4. **Live-тесты могли выполняться без явного разрешения** (и три
    Wikimedia-теста шли в обычном прогоне) — введён opt-in `CARDFLOW_LIVE_TESTS=1`,
-   обычный прогон стал полностью офлайновым (+7 skipped).
+   обычный прогон стал полностью офлайновым (+8 skipped).
 
 ## 10. Оставшиеся ограничения
 
@@ -218,13 +218,17 @@ build\windows\x64\runner\Release\cardflow.exe` (63,0 с).
 
 ## 14. Новые коммиты
 
-- `feat(api): classify malformed provider JSON as invalid response` —
+- `7798eb1` `feat(api): classify malformed provider JSON as invalid response` —
   `ResponseType.plain` + разбор тела, единый санитайзер, общий список
   адаптеров (с тестами).
-- `test(live): add opt-in budgets, pricing and calibration reports` —
+- `48cab7a` `test(live): add opt-in budgets, pricing and calibration reports` —
   инфраструктура live-тестов, Test A–E, офлайновый Test F, тесты.
-- `docs(journal): record TASK 04 live readiness audit` — аудит, программа
-  испытаний, отчёт, STATE, ограничения, docs, AGENTS.
+- `4581720` `docs(journal): record TASK 04 live readiness audit` — аудит,
+  программа испытаний, отчёт, STATE, ограничения, docs, AGENTS.
+- `5a3e816` `test(live): gate composite wikimedia live test` — третий тест
+  Wikimedia-файла тоже требует явного opt-in (проверено: 16 skipped).
+- `41f7cf7` `docs(journal): update TASK 04 final gate numbers` — финальные
+  числа прогона после live-гейта.
 
 Push и deploy **не выполнялись** (условие задания); коммиты остаются
 локальными до отдельной команды владельца.
