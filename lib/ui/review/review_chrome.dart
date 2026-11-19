@@ -106,7 +106,7 @@ class ReviewSessionAppBar extends StatelessWidget
                     border: Border.all(color: scheme.outlineVariant),
                   ),
                   child: Text(
-                    'FSRS',
+                    l10n.reviewFsrsBadge,
                     style: theme.textTheme.labelSmall?.copyWith(
                       fontSize: 10,
                       color: scheme.onSurfaceVariant,

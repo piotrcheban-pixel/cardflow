@@ -7,6 +7,7 @@ library;
 
 import 'dart:math' as math;
 
+import 'package:intl/intl.dart' show DateFormat;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:cardflow/domain/statistics/statistics.dart';
@@ -89,12 +90,9 @@ class StatisticsHeatmap extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
-    final MaterialLocalizations localizations = MaterialLocalizations.of(
-      context,
-    );
     final List<String> labels = heatmapMonthLabels(
       days,
-      (DateTime day) => _monthName(localizations, day),
+      (DateTime day) => _monthName(day),
     );
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
@@ -119,9 +117,11 @@ class StatisticsHeatmap extends StatelessWidget {
     );
   }
 
-  static String _monthName(MaterialLocalizations localizations, DateTime day) {
-    final String formatted = localizations.formatMonthYear(day);
-    return formatted.replaceFirst(RegExp(r'\s+\d{4}$'), '');
+  /// Короткое название месяца для подписи колонки карты (янв., фев., …).
+  static String _monthName(DateTime day) {
+    // MaterialLocalizations не даёт месяц без года: берём краткую форму intl
+    // для русской локали (символы дат поставляются пакетом, без сети).
+    return DateFormat('LLL', 'ru').format(day);
   }
 
   /// Подписи месяцев по колонкам карты: только чётные месяцы.

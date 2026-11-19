@@ -399,7 +399,8 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
           ),
         ),
         Expanded(
-          child: Center(
+          child: Align(
+            alignment: Alignment.topCenter,
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(AppSpacing.md),
               child: ConstrainedBox(

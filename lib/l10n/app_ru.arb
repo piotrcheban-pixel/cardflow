@@ -2801,7 +2801,7 @@
   "@shellDueLabel": {
     "description": "Подпись карточки-сводки в боковой панели."
   },
-  "shellVersion": "v{version}",
+  "shellVersion": "{version}",
   "@shellVersion": {
     "description": "Чип версии приложения.",
     "placeholders": {
@@ -3032,6 +3032,10 @@
   "reviewRevealAction": "Показать ответ",
   "@reviewRevealAction": {
     "description": "Кнопка раскрытия ответа на карточке сессии."
+  },
+  "reviewFsrsBadge": "FSRS",
+  "@reviewFsrsBadge": {
+    "description": "Чип метода планировщика в верхней панели сессии."
   },
   "generationPageTitle": "Генерация карточек с помощью ИИ",
   "@generationPageTitle": {

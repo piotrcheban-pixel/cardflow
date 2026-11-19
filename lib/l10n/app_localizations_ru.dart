@@ -2182,7 +2182,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String shellVersion(String version) {
-    return 'v$version';
+    return '$version';
   }
 
   @override
@@ -2332,6 +2332,9 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get reviewRevealAction => 'Показать ответ';
+
+  @override
+  String get reviewFsrsBadge => 'FSRS';
 
   @override
   String get generationPageTitle => 'Генерация карточек с помощью ИИ';

@@ -76,7 +76,7 @@ class AppTopHeader extends StatelessWidget {
                   children: <Widget>[
                     Flexible(
                       child: Text(
-                        '${l10n.shellWorkspace} / $section',
+                        l10n.shellBreadcrumb(section),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: theme.textTheme.bodySmall?.copyWith(

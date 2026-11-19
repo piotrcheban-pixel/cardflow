@@ -116,8 +116,7 @@ class _StatisticsContent extends StatelessWidget {
               child: AppStatTile(
                 key: const ValueKey<String>('statistics-kpi-streak'),
                 label: l10n.statisticsKpiStreak,
-                value: '$streak',
-                unit: l10n.statisticsDays(streak),
+                value: l10n.statisticsDays(streak),
                 icon: Icons.local_fire_department_outlined,
                 iconColor: scheme.tertiary,
               ),
@@ -149,7 +148,6 @@ class _StatisticsContent extends StatelessWidget {
                 value: '${statistics.totalReviewsYear}',
                 icon: Icons.repeat,
                 iconColor: scheme.primary,
-                helper: Text(l10n.statisticsRetentionWindow),
               ),
             ),
             SizedBox(
@@ -451,7 +449,9 @@ class _WeakTopicsSection extends StatelessWidget {
                   ),
                   const SizedBox(width: AppSpacing.xs),
                   Text(
-                    '${(topic.errorRate * 100).round()}%',
+                    l10n.statisticsRetentionValue(
+                      (topic.errorRate * 100).round(),
+                    ),
                     style: AppTypography.numeric(
                       context,
                       color: scheme.tertiary,

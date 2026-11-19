@@ -1007,7 +1007,7 @@ class _DeckTile extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  '${(progress * 100).round()}%',
+                  l10n.statisticsRetentionValue((progress * 100).round()),
                   style: AppTypography.numeric(
                     context,
                     color: progress >= 1 ? scheme.secondary : scheme.onSurface,

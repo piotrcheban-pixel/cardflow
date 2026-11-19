@@ -3539,7 +3539,7 @@ abstract class AppLocalizations {
   /// Чип версии приложения.
   ///
   /// In ru, this message translates to:
-  /// **'v{version}'**
+  /// **'{version}'**
   String shellVersion(String version);
 
   /// Кнопка меню на узком экране.
@@ -3799,6 +3799,12 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Показать ответ'**
   String get reviewRevealAction;
+
+  /// Чип метода планировщика в верхней панели сессии.
+  ///
+  /// In ru, this message translates to:
+  /// **'FSRS'**
+  String get reviewFsrsBadge;
 
   /// Заголовок страницы генерации (макет v2).
   ///

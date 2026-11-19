@@ -639,7 +639,9 @@ class AppDashedBorder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return CustomPaint(
-      painter: _DashedBorderPainter(
+      // Пунктир поверх содержимого: у зоны загрузки есть фон, painter рисует
+      // под ним и был бы невидим.
+      foregroundPainter: _DashedBorderPainter(
         color: color ?? Theme.of(context).colorScheme.outlineVariant,
         radius: radius,
         strokeWidth: strokeWidth,
