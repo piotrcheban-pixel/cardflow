@@ -65,7 +65,7 @@ TASK 02C (UI возможностей/цен, `ProviderCapabilitiesDialog`) и �
   `test/integration/generation_recovery_http_test.dart` (10 тестов: 413, 429 +
   `Retry-After`, таймаут, context overflow, битый JSON, `truncated`, 5xx, 401).
 - **Легаси live-тесты** (DeepSeek, метрики картинок, Wikimedia) переведены на
-  общий opt-in; обычный прогон стал полностью офлайновым (два Wikimedia-теста
+  общий opt-in; обычный прогон стал полностью офлайновым (три Wikimedia-теста
   раньше выполнялись в нём).
 - **Список адаптеров** вынесен в `lib/api/providers/generation_adapters.dart`
   (production и live-тесты — один набор).
@@ -75,10 +75,10 @@ TASK 02C (UI возможностей/цен, `ProviderCapabilitiesDialog`) и �
   `AGENTS.md`; `journal/task04/{audit.md,live-test-plan.md,report.md}`.
 
 **Гейты:** `fvm flutter test --no-pub --exclude-tags golden` →
-**2158 passed + 15 skipped** (`All tests passed!`; baseline 2110 + 8,
-+48 passed / +7 skipped); `fvm flutter test --no-pub --coverage
---exclude-tags golden` → **2158 passed + 15 skipped**, покрытие рукописного
-кода **92.4 % (16201/17535)**; `fvm flutter analyze --no-pub` → **No issues
+**2157 passed + 16 skipped** (`All tests passed!`; baseline 2110 + 8,
++47 passed / +8 skipped); `fvm flutter test --no-pub --coverage
+--exclude-tags golden` → **2157 passed + 16 skipped**, покрытие рукописного
+кода **92.4 % (16200/17535)**; `fvm flutter analyze --no-pub` → **No issues
 found!**; `fvm dart format --set-exit-if-changed lib test integration_test
 tool` → **499 файлов / 0 changed**; `fvm flutter build windows --release
 --no-pub` → **`cardflow.exe`** (63,0 с).

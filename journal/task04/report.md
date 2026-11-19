@@ -82,7 +82,7 @@ debug-диагностика включается только вне release и
 - Отдельная категория: тег `live` + файлы `test/live/`; обычный
   `flutter test` платных запросов не делает.
 - Явное разрешение: `CARDFLOW_LIVE_TESTS=1` (без него пропускаются и
-  платные, и сетевые live-тесты; раньше два Wikimedia-теста выполнялись в
+  платные, и сетевые live-тесты; раньше три Wikimedia-теста выполнялись в
   обычном прогоне).
 - Параметры: provider, model, base_url, maxRequests, maxEstimatedCost,
   timeout, enableImages, enablePromptOnly, enableMaterials, enableRecovery,
@@ -165,9 +165,9 @@ L135 (`usage` упавших ответов).
 
 | Гейт | Результат |
 |---|---|
-| `fvm flutter test --no-pub --exclude-tags golden` | **2158 passed + 15 skipped** (`All tests passed!`; baseline 2110 + 8; +48 passed, +7 skipped) |
-| `fvm flutter test --no-pub --coverage --exclude-tags golden` | **2158 passed + 15 skipped**, покрытие рукописного кода **92.4 % (16201/17535)** |
-| `fvm flutter analyze --no-pub` | **No issues found!** (40,2 с) |
+| `fvm flutter test --no-pub --exclude-tags golden` | **2157 passed + 16 skipped** (`All tests passed!`; baseline 2110 + 8; +47 passed, +8 skipped) |
+| `fvm flutter test --no-pub --coverage --exclude-tags golden` | **2157 passed + 16 skipped**, покрытие рукописного кода **92.4 % (16200/17535)** |
+| `fvm flutter analyze --no-pub` | **No issues found!** (43,3 с) |
 | `fvm dart format --set-exit-if-changed lib test integration_test tool` | **499 файлов / 0 changed** |
 | `fvm flutter build windows --release --no-pub` | **`cardflow.exe`** (63,0 с) |
 
@@ -177,6 +177,11 @@ L135 (`usage` упавших ответов).
 `test/live/adaptive_generation_live_test.dart` (5, пропускаются),
 `test/unit/api/http/redaction_test.dart` (+4). Обычный прогон полностью
 офлайновый: сетевые live-тесты пропускаются без `CARDFLOW_LIVE_TESTS=1`.
+
+**Проверка безопасности live-гейта:** `fvm flutter test --no-pub test/live
+--tags live` → **`All tests skipped.`** (16 пропущено, ни одного сетевого
+запроса). До правки три Wikimedia-теста выполнялись в обычном прогоне — это
+закрыто.
 
 ## 12. Windows Release Build
 
