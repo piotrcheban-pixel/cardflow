@@ -51,13 +51,12 @@ import 'settings_fakes.dart';
 /// `M3ETheme` в `builder` (M3EMaterialApp не принимает `routerConfig`, ADR-007),
 /// локаль только `ru`, делегаты локализации — из `material_ui`.
 
-/// `builder` с M3E-темой по системной яркости (как будет в `lib/ui/app.dart`).
+/// `builder` с M3E-темой, спроецированной из Material-темы приложения —
+/// ровно как в `lib/ui/app.dart` (ADR-019 §2): иначе M3E перекрывает шрифт,
+/// типографику и dynamic color, и widget-тесты проверяют не продовый вид.
 Widget m3eThemeBuilder(BuildContext context, Widget? child) {
-  final Brightness brightness = MediaQuery.platformBrightnessOf(context);
   return M3ETheme(
-    data: brightness == Brightness.dark
-        ? M3EThemeData.dark(seedColor: AppTheme.seedColor)
-        : M3EThemeData.light(seedColor: AppTheme.seedColor),
+    data: M3EThemeData.fromMaterial(Theme.of(context)),
     child: child!,
   );
 }

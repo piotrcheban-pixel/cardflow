@@ -2754,5 +2754,258 @@
   "trueFalseEmptyMessage": "Нужны карточки с ответом и хотя бы один другой ответ в колоде.",
   "@trueFalseEmptyMessage": {
     "description": "Пояснение пустого состояния."
+  },
+  "navAi": "ИИ-генерация",
+  "@navAi": {
+    "description": "Пункт боковой навигации: экран генерации карточек."
+  },
+  "navConstructor": "Конструктор",
+  "@navConstructor": {
+    "description": "Пункт боковой навигации: конструктор сессии."
+  },
+  "shellSearchHint": "Поиск карточек...",
+  "@shellSearchHint": {
+    "description": "Кнопка-триггер поиска в боковой панели."
+  },
+  "shellNavSection": "Навигация",
+  "@shellNavSection": {
+    "description": "Надзаголовок группы пунктов навигации."
+  },
+  "shellWorkspace": "Рабочее пространство",
+  "@shellWorkspace": {
+    "description": "Корень «хлебных крошек» верхней панели."
+  },
+  "shellBreadcrumb": "Рабочее пространство / {section}",
+  "@shellBreadcrumb": {
+    "description": "Хлебные крошки: корень и текущий раздел.",
+    "placeholders": {
+      "section": {
+        "type": "String"
+      }
+    }
+  },
+  "shellNewCard": "Новая карточка",
+  "@shellNewCard": {
+    "description": "Глобальное действие верхней панели: создать карточку."
+  },
+  "shellDueToday": "{count, plural, =0{Нет карточек к повторению} one{{count} карточка к повторению} few{{count} карточки к повторению} many{{count} карточек к повторению} other{{count} карточки к повторению}}",
+  "@shellDueToday": {
+    "description": "Сводка остатка повторений в боковой панели.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "shellDueLabel": "К повторению",
+  "@shellDueLabel": {
+    "description": "Подпись карточки-сводки в боковой панели."
+  },
+  "shellVersion": "v{version}",
+  "@shellVersion": {
+    "description": "Чип версии приложения.",
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "shellOpenNavTooltip": "Открыть навигацию",
+  "@shellOpenNavTooltip": {
+    "description": "Кнопка меню на узком экране."
+  },
+  "shellCloseNavTooltip": "Закрыть навигацию",
+  "@shellCloseNavTooltip": {
+    "description": "Кнопка закрытия выдвижной навигации."
+  },
+  "shellOpenSettingsTooltip": "Открыть настройки",
+  "@shellOpenSettingsTooltip": {
+    "description": "Иконка настроек в верхней панели."
+  },
+  "shellSearchTooltip": "Найти колоду или карточку",
+  "@shellSearchTooltip": {
+    "description": "Подсказка кнопки поиска в боковой панели."
+  },
+  "shellNewCardSheetTitle": "Новая карточка",
+  "@shellNewCardSheetTitle": {
+    "description": "Заголовок листа выбора колоды для новой карточки."
+  },
+  "shellNewCardSheetSubtitle": "Выберите колоду, в которую добавить карточку",
+  "@shellNewCardSheetSubtitle": {
+    "description": "Пояснение листа выбора колоды."
+  },
+  "shellNewCardNoDecks": "Сначала создайте колоду",
+  "@shellNewCardNoDecks": {
+    "description": "Сообщение, если колод нет и создать карточку некуда."
+  },
+  "decksOverline": "Интервальное повторение",
+  "@decksOverline": {
+    "description": "Надзаголовок экрана «Мои колоды»."
+  },
+  "decksSubtitle": "{decks} активных колод · {due} карточек на повторение сегодня",
+  "@decksSubtitle": {
+    "description": "Пояснение под заголовком списка колод.",
+    "placeholders": {
+      "decks": {
+        "type": "int"
+      },
+      "due": {
+        "type": "int"
+      }
+    }
+  },
+  "decksMetricTotal": "Всего карточек",
+  "@decksMetricTotal": {
+    "description": "KPI-плитка: всего карточек."
+  },
+  "decksMetricDue": "Готовы к тесту",
+  "@decksMetricDue": {
+    "description": "KPI-плитка: карточки к повторению."
+  },
+  "decksMetricStudied": "Изучено",
+  "@decksMetricStudied": {
+    "description": "KPI-плитка: карточки не в состоянии «новая»."
+  },
+  "decksMetricDecks": "Колод",
+  "@decksMetricDecks": {
+    "description": "KPI-плитка: число активных колод."
+  },
+  "decksProgressLabel": "Изучено",
+  "@decksProgressLabel": {
+    "description": "Подпись прогресса на карточке колоды."
+  },
+  "decksImportButton": "Импорт",
+  "@decksImportButton": {
+    "description": "Кнопка импорта на экране колод."
+  },
+  "decksSortTooltip": "Сортировка",
+  "@decksSortTooltip": {
+    "description": "Кнопка меню сортировки."
+  },
+  "decksSortName": "По названию",
+  "@decksSortName": {
+    "description": "Вариант сортировки колод."
+  },
+  "decksSortProgress": "По прогрессу",
+  "@decksSortProgress": {
+    "description": "Вариант сортировки колод."
+  },
+  "decksSortCards": "По объёму",
+  "@decksSortCards": {
+    "description": "Вариант сортировки колод."
+  },
+  "decksSortDue": "По срочности",
+  "@decksSortDue": {
+    "description": "Вариант сортировки колод."
+  },
+  "decksViewGrid": "Сетка",
+  "@decksViewGrid": {
+    "description": "Режим отображения колод: сетка."
+  },
+  "decksViewList": "Список",
+  "@decksViewList": {
+    "description": "Режим отображения колод: список."
+  },
+  "decksNewDeck": "Новая колода",
+  "@decksNewDeck": {
+    "description": "Главное действие экрана колод."
+  },
+  "decksFilterAllCount": "Все ({count})",
+  "@decksFilterAllCount": {
+    "description": "Чип фильтра «Все» со счётчиком.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "decksFilterNewCount": "Новые ({count})",
+  "@decksFilterNewCount": {
+    "description": "Чип фильтра «Новые» со счётчиком.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "decksFilterInProgressCount": "В процессе ({count})",
+  "@decksFilterInProgressCount": {
+    "description": "Чип фильтра «В процессе» со счётчиком.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "decksFilterDueCount": "Просроченные ({count})",
+  "@decksFilterDueCount": {
+    "description": "Чип фильтра «Просроченные» со счётчиком.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deckNewBadge": "Новая колода",
+  "@deckNewBadge": {
+    "description": "Статус новой колоды без повторений."
+  },
+  "deckAllReviewed": "Все повторено",
+  "@deckAllReviewed": {
+    "description": "Статус колоды: нет карточек к повторению."
+  },
+  "deckStudyAction": "Учить",
+  "@deckStudyAction": {
+    "description": "Действие карточки колоды: открыть сессию."
+  },
+  "deckStartAction": "Начать",
+  "@deckStartAction": {
+    "description": "Действие карточки новой колоды."
+  },
+  "deckReviewAction": "Просмотр",
+  "@deckReviewAction": {
+    "description": "Действие карточки полностью повторённой колоды."
+  },
+  "deckUpdated": "Обновлена {date}",
+  "@deckUpdated": {
+    "description": "Дата последнего изменения колоды.",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "deckOverline": "Колода",
+  "@deckOverline": {
+    "description": "Надзаголовок экрана колоды."
+  },
+  "deckCardsTitle": "Карточки",
+  "@deckCardsTitle": {
+    "description": "Заголовок секции списка карточек."
+  },
+  "deckStudyModesTitle": "Режимы обучения",
+  "@deckStudyModesTitle": {
+    "description": "Заголовок листа выбора режима сессии."
+  },
+  "deckAddCard": "Добавить карточку",
+  "@deckAddCard": {
+    "description": "Кнопка создания карточки в колоде."
+  },
+  "deckProgressTitle": "Прогресс изучения",
+  "@deckProgressTitle": {
+    "description": "Подпись прогресса на экране колоды."
+  },
+  "deckCreated": "Создана {date}",
+  "@deckCreated": {
+    "description": "Дата создания колоды.",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "deckMoreActions": "Действия",
+  "@deckMoreActions": {
+    "description": "Кнопка меню действий на карточке колоды."
   }
 }

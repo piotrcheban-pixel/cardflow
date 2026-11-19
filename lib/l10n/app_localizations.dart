@@ -3481,6 +3481,306 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Нужны карточки с ответом и хотя бы один другой ответ в колоде.'**
   String get trueFalseEmptyMessage;
+
+  /// Пункт боковой навигации: экран генерации карточек.
+  ///
+  /// In ru, this message translates to:
+  /// **'ИИ-генерация'**
+  String get navAi;
+
+  /// Пункт боковой навигации: конструктор сессии.
+  ///
+  /// In ru, this message translates to:
+  /// **'Конструктор'**
+  String get navConstructor;
+
+  /// Кнопка-триггер поиска в боковой панели.
+  ///
+  /// In ru, this message translates to:
+  /// **'Поиск карточек...'**
+  String get shellSearchHint;
+
+  /// Надзаголовок группы пунктов навигации.
+  ///
+  /// In ru, this message translates to:
+  /// **'Навигация'**
+  String get shellNavSection;
+
+  /// Корень «хлебных крошек» верхней панели.
+  ///
+  /// In ru, this message translates to:
+  /// **'Рабочее пространство'**
+  String get shellWorkspace;
+
+  /// Хлебные крошки: корень и текущий раздел.
+  ///
+  /// In ru, this message translates to:
+  /// **'Рабочее пространство / {section}'**
+  String shellBreadcrumb(String section);
+
+  /// Глобальное действие верхней панели: создать карточку.
+  ///
+  /// In ru, this message translates to:
+  /// **'Новая карточка'**
+  String get shellNewCard;
+
+  /// Сводка остатка повторений в боковой панели.
+  ///
+  /// In ru, this message translates to:
+  /// **'{count, plural, =0{Нет карточек к повторению} one{{count} карточка к повторению} few{{count} карточки к повторению} many{{count} карточек к повторению} other{{count} карточки к повторению}}'**
+  String shellDueToday(int count);
+
+  /// Подпись карточки-сводки в боковой панели.
+  ///
+  /// In ru, this message translates to:
+  /// **'К повторению'**
+  String get shellDueLabel;
+
+  /// Чип версии приложения.
+  ///
+  /// In ru, this message translates to:
+  /// **'v{version}'**
+  String shellVersion(String version);
+
+  /// Кнопка меню на узком экране.
+  ///
+  /// In ru, this message translates to:
+  /// **'Открыть навигацию'**
+  String get shellOpenNavTooltip;
+
+  /// Кнопка закрытия выдвижной навигации.
+  ///
+  /// In ru, this message translates to:
+  /// **'Закрыть навигацию'**
+  String get shellCloseNavTooltip;
+
+  /// Иконка настроек в верхней панели.
+  ///
+  /// In ru, this message translates to:
+  /// **'Открыть настройки'**
+  String get shellOpenSettingsTooltip;
+
+  /// Подсказка кнопки поиска в боковой панели.
+  ///
+  /// In ru, this message translates to:
+  /// **'Найти колоду или карточку'**
+  String get shellSearchTooltip;
+
+  /// Заголовок листа выбора колоды для новой карточки.
+  ///
+  /// In ru, this message translates to:
+  /// **'Новая карточка'**
+  String get shellNewCardSheetTitle;
+
+  /// Пояснение листа выбора колоды.
+  ///
+  /// In ru, this message translates to:
+  /// **'Выберите колоду, в которую добавить карточку'**
+  String get shellNewCardSheetSubtitle;
+
+  /// Сообщение, если колод нет и создать карточку некуда.
+  ///
+  /// In ru, this message translates to:
+  /// **'Сначала создайте колоду'**
+  String get shellNewCardNoDecks;
+
+  /// Надзаголовок экрана «Мои колоды».
+  ///
+  /// In ru, this message translates to:
+  /// **'Интервальное повторение'**
+  String get decksOverline;
+
+  /// Пояснение под заголовком списка колод.
+  ///
+  /// In ru, this message translates to:
+  /// **'{decks} активных колод · {due} карточек на повторение сегодня'**
+  String decksSubtitle(int decks, int due);
+
+  /// KPI-плитка: всего карточек.
+  ///
+  /// In ru, this message translates to:
+  /// **'Всего карточек'**
+  String get decksMetricTotal;
+
+  /// KPI-плитка: карточки к повторению.
+  ///
+  /// In ru, this message translates to:
+  /// **'Готовы к тесту'**
+  String get decksMetricDue;
+
+  /// KPI-плитка: карточки не в состоянии «новая».
+  ///
+  /// In ru, this message translates to:
+  /// **'Изучено'**
+  String get decksMetricStudied;
+
+  /// KPI-плитка: число активных колод.
+  ///
+  /// In ru, this message translates to:
+  /// **'Колод'**
+  String get decksMetricDecks;
+
+  /// Подпись прогресса на карточке колоды.
+  ///
+  /// In ru, this message translates to:
+  /// **'Изучено'**
+  String get decksProgressLabel;
+
+  /// Кнопка импорта на экране колод.
+  ///
+  /// In ru, this message translates to:
+  /// **'Импорт'**
+  String get decksImportButton;
+
+  /// Кнопка меню сортировки.
+  ///
+  /// In ru, this message translates to:
+  /// **'Сортировка'**
+  String get decksSortTooltip;
+
+  /// Вариант сортировки колод.
+  ///
+  /// In ru, this message translates to:
+  /// **'По названию'**
+  String get decksSortName;
+
+  /// Вариант сортировки колод.
+  ///
+  /// In ru, this message translates to:
+  /// **'По прогрессу'**
+  String get decksSortProgress;
+
+  /// Вариант сортировки колод.
+  ///
+  /// In ru, this message translates to:
+  /// **'По объёму'**
+  String get decksSortCards;
+
+  /// Вариант сортировки колод.
+  ///
+  /// In ru, this message translates to:
+  /// **'По срочности'**
+  String get decksSortDue;
+
+  /// Режим отображения колод: сетка.
+  ///
+  /// In ru, this message translates to:
+  /// **'Сетка'**
+  String get decksViewGrid;
+
+  /// Режим отображения колод: список.
+  ///
+  /// In ru, this message translates to:
+  /// **'Список'**
+  String get decksViewList;
+
+  /// Главное действие экрана колод.
+  ///
+  /// In ru, this message translates to:
+  /// **'Новая колода'**
+  String get decksNewDeck;
+
+  /// Чип фильтра «Все» со счётчиком.
+  ///
+  /// In ru, this message translates to:
+  /// **'Все ({count})'**
+  String decksFilterAllCount(int count);
+
+  /// Чип фильтра «Новые» со счётчиком.
+  ///
+  /// In ru, this message translates to:
+  /// **'Новые ({count})'**
+  String decksFilterNewCount(int count);
+
+  /// Чип фильтра «В процессе» со счётчиком.
+  ///
+  /// In ru, this message translates to:
+  /// **'В процессе ({count})'**
+  String decksFilterInProgressCount(int count);
+
+  /// Чип фильтра «Просроченные» со счётчиком.
+  ///
+  /// In ru, this message translates to:
+  /// **'Просроченные ({count})'**
+  String decksFilterDueCount(int count);
+
+  /// Статус новой колоды без повторений.
+  ///
+  /// In ru, this message translates to:
+  /// **'Новая колода'**
+  String get deckNewBadge;
+
+  /// Статус колоды: нет карточек к повторению.
+  ///
+  /// In ru, this message translates to:
+  /// **'Все повторено'**
+  String get deckAllReviewed;
+
+  /// Действие карточки колоды: открыть сессию.
+  ///
+  /// In ru, this message translates to:
+  /// **'Учить'**
+  String get deckStudyAction;
+
+  /// Действие карточки новой колоды.
+  ///
+  /// In ru, this message translates to:
+  /// **'Начать'**
+  String get deckStartAction;
+
+  /// Действие карточки полностью повторённой колоды.
+  ///
+  /// In ru, this message translates to:
+  /// **'Просмотр'**
+  String get deckReviewAction;
+
+  /// Дата последнего изменения колоды.
+  ///
+  /// In ru, this message translates to:
+  /// **'Обновлена {date}'**
+  String deckUpdated(String date);
+
+  /// Надзаголовок экрана колоды.
+  ///
+  /// In ru, this message translates to:
+  /// **'Колода'**
+  String get deckOverline;
+
+  /// Заголовок секции списка карточек.
+  ///
+  /// In ru, this message translates to:
+  /// **'Карточки'**
+  String get deckCardsTitle;
+
+  /// Заголовок листа выбора режима сессии.
+  ///
+  /// In ru, this message translates to:
+  /// **'Режимы обучения'**
+  String get deckStudyModesTitle;
+
+  /// Кнопка создания карточки в колоде.
+  ///
+  /// In ru, this message translates to:
+  /// **'Добавить карточку'**
+  String get deckAddCard;
+
+  /// Подпись прогресса на экране колоды.
+  ///
+  /// In ru, this message translates to:
+  /// **'Прогресс изучения'**
+  String get deckProgressTitle;
+
+  /// Дата создания колоды.
+  ///
+  /// In ru, this message translates to:
+  /// **'Создана {date}'**
+  String deckCreated(String date);
+
+  /// Кнопка меню действий на карточке колоды.
+  ///
+  /// In ru, this message translates to:
+  /// **'Действия'**
+  String get deckMoreActions;
 }
 
 class _AppLocalizationsDelegate

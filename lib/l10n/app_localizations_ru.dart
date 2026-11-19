@@ -2139,4 +2139,184 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get trueFalseEmptyMessage =>
       'Нужны карточки с ответом и хотя бы один другой ответ в колоде.';
+
+  @override
+  String get navAi => 'ИИ-генерация';
+
+  @override
+  String get navConstructor => 'Конструктор';
+
+  @override
+  String get shellSearchHint => 'Поиск карточек...';
+
+  @override
+  String get shellNavSection => 'Навигация';
+
+  @override
+  String get shellWorkspace => 'Рабочее пространство';
+
+  @override
+  String shellBreadcrumb(String section) {
+    return 'Рабочее пространство / $section';
+  }
+
+  @override
+  String get shellNewCard => 'Новая карточка';
+
+  @override
+  String shellDueToday(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count карточки к повторению',
+      many: '$count карточек к повторению',
+      few: '$count карточки к повторению',
+      one: '$count карточка к повторению',
+      zero: 'Нет карточек к повторению',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get shellDueLabel => 'К повторению';
+
+  @override
+  String shellVersion(String version) {
+    return 'v$version';
+  }
+
+  @override
+  String get shellOpenNavTooltip => 'Открыть навигацию';
+
+  @override
+  String get shellCloseNavTooltip => 'Закрыть навигацию';
+
+  @override
+  String get shellOpenSettingsTooltip => 'Открыть настройки';
+
+  @override
+  String get shellSearchTooltip => 'Найти колоду или карточку';
+
+  @override
+  String get shellNewCardSheetTitle => 'Новая карточка';
+
+  @override
+  String get shellNewCardSheetSubtitle =>
+      'Выберите колоду, в которую добавить карточку';
+
+  @override
+  String get shellNewCardNoDecks => 'Сначала создайте колоду';
+
+  @override
+  String get decksOverline => 'Интервальное повторение';
+
+  @override
+  String decksSubtitle(int decks, int due) {
+    return '$decks активных колод · $due карточек на повторение сегодня';
+  }
+
+  @override
+  String get decksMetricTotal => 'Всего карточек';
+
+  @override
+  String get decksMetricDue => 'Готовы к тесту';
+
+  @override
+  String get decksMetricStudied => 'Изучено';
+
+  @override
+  String get decksMetricDecks => 'Колод';
+
+  @override
+  String get decksProgressLabel => 'Изучено';
+
+  @override
+  String get decksImportButton => 'Импорт';
+
+  @override
+  String get decksSortTooltip => 'Сортировка';
+
+  @override
+  String get decksSortName => 'По названию';
+
+  @override
+  String get decksSortProgress => 'По прогрессу';
+
+  @override
+  String get decksSortCards => 'По объёму';
+
+  @override
+  String get decksSortDue => 'По срочности';
+
+  @override
+  String get decksViewGrid => 'Сетка';
+
+  @override
+  String get decksViewList => 'Список';
+
+  @override
+  String get decksNewDeck => 'Новая колода';
+
+  @override
+  String decksFilterAllCount(int count) {
+    return 'Все ($count)';
+  }
+
+  @override
+  String decksFilterNewCount(int count) {
+    return 'Новые ($count)';
+  }
+
+  @override
+  String decksFilterInProgressCount(int count) {
+    return 'В процессе ($count)';
+  }
+
+  @override
+  String decksFilterDueCount(int count) {
+    return 'Просроченные ($count)';
+  }
+
+  @override
+  String get deckNewBadge => 'Новая колода';
+
+  @override
+  String get deckAllReviewed => 'Все повторено';
+
+  @override
+  String get deckStudyAction => 'Учить';
+
+  @override
+  String get deckStartAction => 'Начать';
+
+  @override
+  String get deckReviewAction => 'Просмотр';
+
+  @override
+  String deckUpdated(String date) {
+    return 'Обновлена $date';
+  }
+
+  @override
+  String get deckOverline => 'Колода';
+
+  @override
+  String get deckCardsTitle => 'Карточки';
+
+  @override
+  String get deckStudyModesTitle => 'Режимы обучения';
+
+  @override
+  String get deckAddCard => 'Добавить карточку';
+
+  @override
+  String get deckProgressTitle => 'Прогресс изучения';
+
+  @override
+  String deckCreated(String date) {
+    return 'Создана $date';
+  }
+
+  @override
+  String get deckMoreActions => 'Действия';
 }

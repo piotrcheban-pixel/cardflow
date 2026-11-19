@@ -149,7 +149,7 @@ void main() {
       await tester.pumpAndSettle();
       final AppLocalizations l10n = l10nOf(tester);
 
-      await tester.tap(find.byTooltip(l10n.settingsOpenTooltip));
+      await tester.tap(find.byTooltip(l10n.shellOpenSettingsTooltip));
       await tester.pumpAndSettle();
 
       expect(find.byType(SettingsScreen), findsOneWidget);

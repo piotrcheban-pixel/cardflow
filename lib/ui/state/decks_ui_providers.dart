@@ -47,6 +47,9 @@ class DecksSearchVisibilityNotifier extends Notifier<bool> {
   /// Открывает/закрывает поле поиска; при закрытии сбрасывает запрос.
   void toggle() => state = !state;
 
+  /// Открывает поле поиска (боковая панель / горячая клавиша).
+  void open() => state = true;
+
   /// Закрывает поле поиска.
   void close() => state = false;
 }
@@ -83,6 +86,91 @@ final deckSummariesProvider = StreamProvider.autoDispose<List<DeckSummary>>((
 ) {
   final DeckQuery query = ref.watch(decksQueryProvider);
   return ref.watch(deckRepositoryProvider).watchSummaries(query: query);
+});
+
+/// Порядок сортировки списка колод (UI-состояние, не фильтр запроса).
+enum DecksSort {
+  /// Сначала колоды с наибольшим числом карточек к повторению.
+  due,
+
+  /// Сначала наиболее изученные (доля карточек не в состоянии «новая»).
+  progress,
+
+  /// Сначала самые крупные колоды.
+  cards,
+
+  /// По алфавиту.
+  name,
+}
+
+/// Режим отображения колод.
+enum DecksViewMode {
+  /// Сетка карточек (по умолчанию на широком экране).
+  grid,
+
+  /// Одноколоночный список.
+  list,
+}
+
+/// Сортировка списка колод.
+class DecksSortNotifier extends Notifier<DecksSort> {
+  @override
+  DecksSort build() => DecksSort.due;
+
+  /// Устанавливает порядок сортировки.
+  void set(DecksSort value) {
+    if (state == value) return;
+    state = value;
+  }
+}
+
+/// Текущая сортировка колод.
+final NotifierProvider<DecksSortNotifier, DecksSort> decksSortProvider =
+    NotifierProvider<DecksSortNotifier, DecksSort>(DecksSortNotifier.new);
+
+/// Режим отображения колод.
+class DecksViewModeNotifier extends Notifier<DecksViewMode> {
+  @override
+  DecksViewMode build() => DecksViewMode.grid;
+
+  /// Устанавливает режим отображения.
+  void set(DecksViewMode value) {
+    if (state == value) return;
+    state = value;
+  }
+}
+
+/// Текущий режим отображения колод.
+final NotifierProvider<DecksViewModeNotifier, DecksViewMode>
+decksViewModeProvider = NotifierProvider<DecksViewModeNotifier, DecksViewMode>(
+  DecksViewModeNotifier.new,
+);
+
+/// Все активные колоды без учёта поиска/фильтра экрана «Колоды».
+///
+/// Нужен шапке, KPI-плиткам и чипам фильтра: счётчики категорий не должны
+/// «схлопываться» после выбора фильтра (в макете они считаются по всем колодам).
+/// `autoDispose` — как у [deckSummariesProvider].
+final allDeckSummariesProvider = StreamProvider.autoDispose<List<DeckSummary>>((
+  ref,
+) {
+  return ref.watch(deckRepositoryProvider).watchSummaries();
+});
+
+/// Суммарный остаток карточек к повторению по всем активным колодам.
+///
+/// Используется оболочкой (боковая панель): это реальный агрегат репозитория,
+/// а не отдельное состояние, — поиск/фильтр экрана «Колоды» на него не влияют.
+final totalDueCardsProvider = StreamProvider.autoDispose<int>((ref) {
+  return ref
+      .watch(deckRepositoryProvider)
+      .watchSummaries()
+      .map(
+        (List<DeckSummary> summaries) => summaries.fold<int>(
+          0,
+          (int sum, DeckSummary summary) => sum + summary.dueCards,
+        ),
+      );
 });
 
 /// Конкретная колода; `null` — колода удалена/не найдена.
