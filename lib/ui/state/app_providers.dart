@@ -13,11 +13,7 @@ import 'package:cardflow/api/images/image_api_keys.dart';
 import 'package:cardflow/api/images/image_providers.dart';
 import 'package:cardflow/api/images/image_search_service.dart';
 import 'package:cardflow/api/images/placeholder_image_generator.dart';
-import 'package:cardflow/api/providers/anthropic_adapter.dart';
-import 'package:cardflow/api/providers/gemini_adapter.dart';
-import 'package:cardflow/api/providers/openai_adapter.dart';
-import 'package:cardflow/api/providers/openai_compatible_adapter.dart';
-import 'package:cardflow/api/providers/generation_provider_adapter.dart';
+import 'package:cardflow/api/providers/generation_adapters.dart';
 import 'package:cardflow/api/parsers/file_parsing_service.dart';
 import 'package:cardflow/data/cards/card_image_refresher.dart';
 import 'package:cardflow/data/cards/drift_card_media_repository.dart';
@@ -71,6 +67,13 @@ import 'package:cardflow/domain/transfer/archive_codec.dart';
 import 'package:cardflow/domain/transfer/deck_transfer_service.dart';
 import 'package:cardflow/domain/transfer/file_gateway.dart';
 import 'package:cardflow/ui/settings/external_link_launcher.dart';
+
+/// Адаптеры провайдеров для сервиса генерации (SPEC A8.2, ADR-013).
+///
+/// Список живёт в `lib/api/providers/generation_adapters.dart`: тот же набор
+/// используют live-испытания, поэтому тест проверяет production-адаптеры.
+export 'package:cardflow/api/providers/generation_adapters.dart'
+    show generationAdapters;
 
 /// Провайдеры приложения (ADR-002: Riverpod 3 без кодогенерации).
 ///
@@ -316,15 +319,6 @@ final weeklyTokensProvider = FutureProvider.autoDispose<int>((ref) {
         ),
       );
 });
-
-/// Адаптеры провайдеров для сервиса генерации (SPEC A8.2, ADR-013).
-const List<GenerationProviderAdapter> generationAdapters =
-    <GenerationProviderAdapter>[
-      OpenAiAdapter(),
-      GeminiAdapter(),
-      AnthropicAdapter(),
-      OpenAiCompatibleAdapter(),
-    ];
 
 /// Dio для вызовов провайдеров генерации: таймауты и redaction-перехватчик.
 ///

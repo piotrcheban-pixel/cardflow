@@ -7,6 +7,7 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 
 import 'package:cardflow/api/generation/generation_diagnostics.dart';
+import 'package:cardflow/api/http/log_redaction.dart';
 import 'package:cardflow/api/http/retry_policy.dart';
 import 'package:cardflow/api/providers/generation_provider_adapter.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
@@ -119,7 +120,11 @@ class GenerationHttpClient implements GenerationTransport {
     details: 'запрос отменён',
   );
 
-  /// Опции POST: JSON-тело и явная проверка 2xx (ADR-012 §2).
+  /// Опции POST: JSON-тело, строка ответа и явная проверка 2xx (ADR-012 §2).
+  ///
+  /// `responseType: plain` — Dio не разбирает тело сам: разбор делает
+  /// [_decodeJsonObject], поэтому битый JSON провайдера становится
+  /// `invalidResponse` (а не `network` из упавшего трансформера Dio).
   Options _optionsFor(ProviderRequest request) {
     final headers = Map<String, dynamic>.from(request.headers);
     final hasContentType = headers.keys.any(
@@ -130,6 +135,7 @@ class GenerationHttpClient implements GenerationTransport {
       headers: headers,
       // Нельзя задавать contentType и заголовок Content-Type одновременно.
       contentType: hasContentType ? null : Headers.jsonContentType,
+      responseType: ResponseType.plain,
       validateStatus: (status) =>
           status != null && status >= 200 && status < 300,
     );
@@ -359,13 +365,9 @@ class GenerationHttpClient implements GenerationTransport {
   }
 
   /// Редактирует похожие на ключи фрагменты в причине отказа.
-  String _redactSecrets(String text) {
-    return text
-        .replaceAll(RegExp(r'sk-[A-Za-z0-9_\-]{8,}'), '***')
-        .replaceAll(RegExp(r'AIza[0-9A-Za-z_\-]{8,}'), '***')
-        .replaceAll(
-          RegExp(r'Bearer\s+[A-Za-z0-9._\-]+', caseSensitive: false),
-          'Bearer ***',
-        );
-  }
+  ///
+  /// Единый санитайзер с диагностикой (`redactSecretsInText`): заголовки
+  /// `Authorization`/`x-api-key`, `Bearer`-значения, токены известных форматов
+  /// и секретные query-параметры (`?key=`, `&api_key=`).
+  String _redactSecrets(String text) => redactSecretsInText(text);
 }

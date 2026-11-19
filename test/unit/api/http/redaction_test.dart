@@ -70,6 +70,57 @@ void main() {
     });
   });
 
+  group('redactSecretsInText', () {
+    test('редактирует токены известных форматов', () {
+      final text =
+          'key1=sk-${'A' * 24} key2=AIza${'B' * 30} '
+          'key3=gsk_${'C' * 20} key4=xai-${'D' * 20} '
+          'key5=nvapi-${'E' * 20}';
+      final redacted = redactSecretsInText(text);
+      for (final fragment in <String>[
+        'sk-',
+        'AIza',
+        'gsk_',
+        'xai-',
+        'nvapi-',
+      ]) {
+        expect(redacted, isNot(contains(fragment)), reason: fragment);
+      }
+      expect(redacted, contains(redactedValue));
+    });
+
+    test('редактирует заголовки и Bearer-значения', () {
+      final redacted = redactSecretsInText(
+        'Authorization: Bearer SECRET-TOKEN-123, '
+        'x-api-key: SECRET-HEADER, x-goog-api-key=SECRET-GOOG',
+      );
+      expect(redacted.toLowerCase(), contains('authorization'));
+      expect(redacted.toLowerCase(), contains('x-api-key'));
+      expect(redacted, isNot(contains('SECRET-TOKEN-123')));
+      expect(redacted, isNot(contains('SECRET-HEADER')));
+      expect(redacted, isNot(contains('SECRET-GOOG')));
+      expect(redacted, isNot(contains('Bearer SECRET')));
+    });
+
+    test('редактирует секретные query-параметры, не трогая остальное', () {
+      final redacted = redactSecretsInText(
+        'GET https://pixabay.com/api/?key=SECRET-PIX&q=cat&api_key=SECRET2 '
+        'и https://api.test/v1?model=test',
+      );
+      expect(redacted, isNot(contains('SECRET-PIX')));
+      expect(redacted, isNot(contains('SECRET2')));
+      expect(redacted, contains('?key=$redactedValue'));
+      expect(redacted, contains('q=cat'));
+      expect(redacted, contains('model=test'));
+    });
+
+    test('без секретов текст не меняется', () {
+      const text = 'HTTP 429, повторите через 30 секунд; ответ модели пуст';
+      expect(redactSecretsInText(text), text);
+      expect(redactSecretsInText(''), '');
+    });
+  });
+
   group('RedactingLogInterceptor', () {
     test('логирует метод/URI/статус, но не ключи и не тела', () async {
       final logs = <String>[];

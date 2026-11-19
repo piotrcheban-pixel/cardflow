@@ -9,6 +9,7 @@ library;
 import 'dart:convert';
 import 'dart:developer' as developer;
 
+import 'package:cardflow/api/http/log_redaction.dart';
 import 'package:cardflow/domain/generation/token_accounting.dart';
 
 /// Включена ли диагностика по умолчанию (выключена в release).
@@ -22,7 +23,10 @@ const int kGenerationDiagnosticsMaxLength = 2000;
 /// Редактирует и обрезает диагностический текст.
 ///
 /// Управляющие символы схлопываются в пробелы, секретоподобные значения
-/// (`sk-…`, `AIza…`, `Bearer …`) заменяются, длина ограничивается.
+/// редактируются единым санитайзером `redactSecretsInText` (заголовки
+/// `Authorization`/`x-api-key`, `Bearer`-значения, токены известных форматов,
+/// секретные query-параметры `?key=`), длина ограничивается. Тело запроса
+/// здесь оказаться не должно: оно не логируется вообще.
 String redactedDiagnosticText(
   String text, {
   int maxLength = kGenerationDiagnosticsMaxLength,
@@ -31,13 +35,7 @@ String redactedDiagnosticText(
       .replaceAll(RegExp(r'[\u0000-\u001F\u007F]+'), ' ')
       .replaceAll(RegExp(r'\s+'), ' ')
       .trim();
-  value = value
-      .replaceAll(RegExp(r'sk-[A-Za-z0-9_\-]{8,}'), '***')
-      .replaceAll(RegExp(r'AIza[0-9A-Za-z_\-]{8,}'), '***')
-      .replaceAll(
-        RegExp(r'Bearer\s+[A-Za-z0-9._\-]+', caseSensitive: false),
-        'Bearer ***',
-      );
+  value = redactSecretsInText(value);
   if (value.length <= maxLength) return value;
   return '${value.substring(0, maxLength)}…';
 }

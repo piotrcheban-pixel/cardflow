@@ -94,3 +94,63 @@ String _decodedName(String rawName) {
     return rawName.toLowerCase();
   }
 }
+
+/// Секретоподобные префиксы ключей известных провайдеров.
+///
+/// OpenAI/DeepSeek/Moonshot/Anthropic/OpenRouter — `sk-…`; Google — `AIza…`;
+/// Groq — `gsk_…`; xAI — `xai-…`; NVIDIA — `nvapi-…`. Список расширяется
+/// только под подтверждённый формат: маскировать «любую длинную строку»
+/// нельзя — это испортит диагностические тексты без пользы для безопасности.
+final RegExp _secretTokenPattern = RegExp(
+  r'sk-[A-Za-z0-9_\-]{8,}'
+  r'|AIza[0-9A-Za-z_\-]{8,}'
+  r'|gsk_[A-Za-z0-9_\-]{8,}'
+  r'|xai-[A-Za-z0-9_\-]{8,}'
+  r'|nvapi-[A-Za-z0-9_\-]{8,}',
+);
+
+/// Заголовок вида `Authorization: …`/`x-api-key=…` в свободном тексте.
+///
+/// Значение забирается до конца строки/списка заголовков: в нём может быть
+/// `Bearer <ключ>` (пробел внутри значения), а частично отредактированный
+/// заголовок оставил бы ключ в тексте.
+final RegExp _secretHeaderPattern = RegExp(
+  r'''(x-api-key|x-goog-api-key|authorization|proxy-authorization)'''
+  r'''\s*[:=]\s*[^\n,;"']+''',
+  caseSensitive: false,
+);
+
+/// `Bearer <значение>` в свободном тексте.
+final RegExp _bearerPattern = RegExp(
+  r'Bearer\s+[A-Za-z0-9._\-]+',
+  caseSensitive: false,
+);
+
+/// Секретные query-параметры в свободном тексте (`?key=…`, `&api_key=…`).
+final RegExp _secretQueryPattern = RegExp(
+  r'''([?&;])(key|api_key|apikey|access_token|token)=[^&;\s"'`]+''',
+  caseSensitive: false,
+);
+
+/// Редактирует секретоподобные значения в **свободном тексте**.
+///
+/// Используется диагностикой и причинами ошибок провайдера: текст приходит от
+/// третьей стороны (тело ответа, сообщение исключения) и может содержать
+/// ключ — в заголовке, в `Bearer`-значении, в URL с `?key=` или отдельным
+/// токеном известного формата. Тела запросов генерации сюда не попадают.
+///
+/// Это последний рубеж, а не разрешение логировать секреты: тело запроса не
+/// должно логироваться вообще.
+String redactSecretsInText(String text) {
+  if (text.isEmpty) return text;
+  var value = text.replaceAllMapped(_secretHeaderPattern, (Match match) {
+    final String name = match.group(1)!;
+    return '$name: $redactedValue';
+  });
+  value = value.replaceAll(_bearerPattern, 'Bearer $redactedValue');
+  value = value.replaceAll(_secretTokenPattern, redactedValue);
+  value = value.replaceAllMapped(_secretQueryPattern, (Match match) {
+    return '${match.group(1)}${match.group(2)}=$redactedValue';
+  });
+  return value;
+}
