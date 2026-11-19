@@ -163,9 +163,9 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   пункт «Конструктор» в листе режимов колоды. Движки классики/ленты принимают `prebuilt` (план не
   пересобирается `ReviewQueue`); лимит минут — `Timer` экрана, по истечении «Время сессии истекло»,
   непройденные карточки не трогаются. Схема БД не менялась: таблица `session_presets` есть с schemaVersion=1.
-- **Статистика и настройки** (SPEC A6.1/A6.5/A6.6, ADR-019): оболочка — `lib/ui/shell/app_shell.dart`
-  (`NavigationBar` <600 px / `NavigationRail` ≥600 px, ветки `/`, `/statistics`, `/settings`;
-  «Сессия» скрыта без активной сессии). Настройки — `lib/domain/settings/` (`AppSettings`, JSON
+- **Статистика и настройки** (SPEC A6.1/A6.5/A6.6, ADR-019/ADR-038): оболочка — `lib/ui/shell/app_shell.dart`
+  (боковая панель 240 px + шапка 56 px ≥1024 px, `Drawer` <1024 px; ветки `/`, `/statistics`,
+  `/settings`; «Сессия» скрыта без активной сессии; `NavigationBar`/`NavigationRail` удалены). Настройки — `lib/domain/settings/` (`AppSettings`, JSON
   `version=1` в `app_settings` ключ `app.settings`, клампы), `AppSettingsStore` + drift-реализация,
   `AppSettingsController` (`save`, откат при ошибке), `appSettingsProvider`/`effectiveAppSettingsProvider`
   в `app_providers.dart`; экран `lib/ui/settings/settings_screen.dart`; проверка ключа —

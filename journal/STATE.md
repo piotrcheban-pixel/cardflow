@@ -60,7 +60,7 @@ Flutter-UI целиком, сохранив домен, данные, API, ма�
 (прокрутка, счётчики в чипах, ключи вместо M3ECard), все сценарии
 сохранены; `shell_test.dart` переписан под панель/Drawer.
 
-**Гейты этапов A–C:** `dart format` — применён; `analyze` — 0 issues;
+**Гейты этапов A–C (baseline):** `dart format` — применён; `analyze` — 0 issues;
 `test/widget` — **335 passed**; `test/unit` — **1722 passed**;
 `test/guards/no_secrets_test.dart` — зелёный (9/9).
 Каталог `journal/redesign/` заведён: `00_REFERENCE_AUDIT.md`,
@@ -114,10 +114,10 @@ undo, LaTeX/cloze/occlusion/медиа не менялась. Цвета оце�
 числовые подписи — через локализованные строки.
 
 **Финальные гейты (2026-11-19):**
-- `fvm flutter test --no-pub --coverage --exclude-tags golden` → **2187 passed
+- `fvm flutter test --no-pub --coverage --exclude-tags golden` → **2193 passed
   + 16 skipped, 0 failed** (baseline был 2176+16+1; +11 тестов, guard
   `no_secrets` починен очисткой неотслеживаемого снимка дизайна).
-- Покрытие: **91.9 % рукописного кода (17687/19243)**, все файлы 82.8 %.
+- Покрытие: **92.0 % рукописного кода (17710/19254)**, все файлы 82.9 %.
 - `fvm flutter analyze --no-pub` → **No issues found**.
 - `fvm dart format --set-exit-if-changed lib test integration_test` →
   **504 файла, 0 changed**.
