@@ -321,6 +321,140 @@ void main() {
       expect(result.limits!.contextTokens.isKnown, isFalse);
     });
   });
+
+  group('7.18.1 §3: сверка с официальной документацией 2026-11-21', () {
+    test(
+      'DeepSeek: input_modalities модели → Vision без догадок по имени',
+      () async {
+        final FakeHttpAdapter adapter = FakeHttpAdapter(
+          (RequestOptions options) => jsonResponse(<String, Object?>{
+            'data': <Object?>[
+              <String, Object?>{
+                'id': 'test-model',
+                'context_window': 128000,
+                'max_output_tokens': 8192,
+                'input_modalities': <Object?>['text', 'image'],
+              },
+            ],
+          }),
+        );
+        final DiscoveryResult result = await OpenAiCompatibleModelsDiscovery(
+          dioWith(adapter),
+          readApiKey: keyReader,
+          fieldPolicy: OpenAiModelFieldPolicy.documented,
+          defaultSemantics: ContextSemantics.totalInputPlusOutput,
+        ).discover(account());
+        expect(result.limits!.contextTokens.value, 128000);
+        expect(result.limits!.maxOutputTokens.value, 8192);
+        expect(result.limits!.supportsImageInput.value, isTrue);
+      },
+    );
+
+    test(
+      'Anthropic: capabilities.image_input — документированное поле',
+      () async {
+        final FakeHttpAdapter adapter = FakeHttpAdapter(
+          (RequestOptions options) => jsonResponse(<String, Object?>{
+            'data': <Object?>[
+              <String, Object?>{
+                'id': 'test-model',
+                'max_input_tokens': 200000,
+                'max_tokens': 64000,
+                'capabilities': <String, Object?>{
+                  'image_input': true,
+                  'pdf_input': true,
+                  'structured_outputs': true,
+                },
+              },
+            ],
+            'has_more': false,
+          }),
+        );
+        final DiscoveryResult result =
+            await AnthropicModelsDiscovery(
+              dioWith(adapter),
+              readApiKey: keyReader,
+            ).discover(
+              account(
+                protocol: ProviderProtocol.anthropicMessages,
+                preset: 'anthropic',
+                baseUrl: 'https://api.anthropic.com',
+              ),
+            );
+        expect(result.limits!.maxInputTokens.value, 200000);
+        expect(result.limits!.maxOutputTokens.value, 64000);
+        expect(result.limits!.supportsImageInput.value, isTrue);
+        expect(result.limits!.supportsPdfInput.value, isTrue);
+      },
+    );
+
+    test('Moonshot: supports_image_in и supports_reasoning', () async {
+      final FakeHttpAdapter adapter = FakeHttpAdapter(
+        (RequestOptions options) => jsonResponse(<String, Object?>{
+          'data': <Object?>[
+            <String, Object?>{
+              'id': 'test-model',
+              'context_length': 262144,
+              'supports_image_in': true,
+              'supports_reasoning': true,
+            },
+          ],
+        }),
+      );
+      final DiscoveryResult result =
+          await OpenAiCompatibleModelsDiscovery(
+            dioWith(adapter),
+            readApiKey: keyReader,
+            fieldPolicy: OpenAiModelFieldPolicy.documented,
+          ).discover(
+            account(preset: 'moonshot', baseUrl: 'https://api.moonshot.ai'),
+          );
+      expect(result.limits!.contextTokens.value, 262144);
+      expect(result.limits!.supportsImageInput.value, isTrue);
+      expect(result.limits!.isReasoningModel.value, isTrue);
+      expect(result.limits!.contextSemantics, ContextSemantics.unknown);
+    });
+
+    test('Ollama: семантика окна неизвестна (не догадка total)', () async {
+      final FakeHttpAdapter adapter = FakeHttpAdapter((RequestOptions options) {
+        if (options.path.contains('/api/tags')) {
+          return jsonResponse(_decode(fixture('ollama/tags.json')));
+        }
+        return jsonResponse(_decode(fixture('ollama/show.json')));
+      });
+      final DiscoveryResult result =
+          await OllamaModelsDiscovery(
+            dioWith(adapter),
+            readApiKey: _absentKey,
+          ).discover(
+            account(
+              preset: 'ollama',
+              baseUrl: 'http://localhost:11434',
+              requiresKey: false,
+            ),
+          );
+      expect(result.limits!.contextTokens.value, 8192);
+      expect(result.limits!.contextSemantics, ContextSemantics.unknown);
+    });
+
+    test('имя модели не даёт лимита: foo-128k остаётся unknown', () async {
+      final FakeHttpAdapter adapter = FakeHttpAdapter(
+        (RequestOptions options) => jsonResponse(<String, Object?>{
+          'data': <Object?>[
+            <String, Object?>{'id': 'foo-128k'},
+          ],
+        }),
+      );
+      final DiscoveryResult result = await OpenAiCompatibleModelsDiscovery(
+        dioWith(adapter),
+        readApiKey: keyReader,
+        fieldPolicy: OpenAiModelFieldPolicy.documented,
+      ).discover(account(preset: 'custom-server', model: 'foo-128k'));
+      expect(result.limits!.contextTokens.isKnown, isFalse);
+      expect(result.limits!.maxOutputTokens.isKnown, isFalse);
+      expect(result.limits!.supportsImageInput.isKnown, isFalse);
+    });
+  });
 }
 
 Map<String, Object?> _decode(String text) {

@@ -16,8 +16,13 @@ import 'package:cardflow/domain/generation/provider_protocol.dart';
 /// Семантика окна по умолчанию для пресета (по протоколу).
 ContextSemantics defaultSemanticsForAccount(ProviderAccount account) {
   final String? preset = account.presetId;
-  if (preset == 'ollama' || preset == 'deepseek' || preset == 'openrouter') {
+  if (preset == 'deepseek' || preset == 'openrouter') {
     return ContextSemantics.totalInputPlusOutput;
+  }
+  if (preset == 'ollama') {
+    // `<arch>.context_length` документирован без семантики total/input-only,
+    // а рабочий num_ctx может быть меньше: не выдаём догадку за факт.
+    return ContextSemantics.unknown;
   }
   if (preset == 'groq' || preset == 'moonshot' || preset == 'minimax') {
     return ContextSemantics.unknown;

@@ -284,9 +284,14 @@ class OpenAiCompatibleModelsDiscovery extends _HttpDiscovery
     // Разные провайдеры используют разные имена полей; неизвестные — absent.
     final Object? topProvider = item['top_provider'];
     final Object? architecture = item['architecture'];
+    // OpenRouter: architecture.input_modalities; DeepSeek: input_modalities
+    // на уровне модели (официальная документация 2026-11-21).
     final Object? modalities = architecture is Map
         ? architecture['input_modalities']
-        : null;
+        : item['input_modalities'];
+    // Moonshot: supports_image_in/supports_reasoning (документированы).
+    final Object? supportImageIn = item['supports_image_in'];
+    final Object? supportReasoning = item['supports_reasoning'];
     final Map<String, Object?>? pricing = item['pricing'] is Map
         ? (item['pricing']! as Map).cast<String, Object?>()
         : null;
@@ -320,15 +325,18 @@ class OpenAiCompatibleModelsDiscovery extends _HttpDiscovery
         );
       }
     }
+    final bool? vision = modalities is List
+        ? modalities.map((Object? v) => v?.toString()).contains('image')
+        : supportImageIn is bool
+        ? supportImageIn
+        : null;
+    final bool? reasoning = supportReasoning is bool ? supportReasoning : null;
     return ModelLimits(
       contextTokens: intField(context),
       contextSemantics: defaultSemantics,
       maxOutputTokens: intField(maxOutput),
-      supportsImageInput: modalities is List
-          ? boolField(
-              modalities.map((Object? v) => v?.toString()).contains('image'),
-            )
-          : const Sourced<bool>.absent(),
+      supportsImageInput: boolField(vision),
+      isReasoningModel: boolField(reasoning),
       pricing: price == null
           ? const Sourced<GenerationPricing>.absent()
           : Sourced<GenerationPricing>(
@@ -451,7 +459,12 @@ class AnthropicModelsDiscovery extends _HttpDiscovery
     bool? vision;
     bool? pdf;
     if (capabilities is Map) {
-      if (capabilities['vision'] is bool) {
+      // Официальная документация (2026-11-21): capabilities.image_input и
+      // capabilities.pdf_input. `vision`/`pdf` — терпимое чтение старых
+      // ответов, без подстановки значений.
+      if (capabilities['image_input'] is bool) {
+        vision = capabilities['image_input']! as bool;
+      } else if (capabilities['vision'] is bool) {
         vision = capabilities['vision']! as bool;
       }
       if (capabilities['pdf_input'] is bool) {
@@ -673,7 +686,10 @@ class OllamaModelsDiscovery extends _HttpDiscovery
                     observedAt: now,
                     sourceRef: showUrl,
                   ),
-            contextSemantics: ContextSemantics.totalInputPlusOutput,
+            // Семантика <arch>.context_length не документирована: total —
+            // не факт, а допущение; value остаётся providerApi, семантика —
+            // unknown (num_ctx может быть меньше, warning ниже).
+            contextSemantics: ContextSemantics.unknown,
             supportsImageInput: vision == null
                 ? const Sourced<bool>.absent()
                 : Sourced<bool>(
