@@ -20,6 +20,8 @@ import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/components/app_surfaces.dart';
 import 'package:cardflow/ui/theme/app_tokens.dart';
 import 'package:cardflow/ui/decks/deck_actions.dart' show showAppMessage;
+import 'package:cardflow/api/models/model_capability_service.dart';
+import 'package:cardflow/ui/settings/model_capability_section.dart';
 import 'package:cardflow/ui/settings/provider_account_dialogs.dart';
 import 'package:cardflow/ui/settings/provider_labels.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
@@ -400,6 +402,32 @@ class _GenerationSettingsScreenState
                     onActivate: () => _setActive(account),
                   ),
                 ),
+            if (_accounts.active != null) ...<Widget>[
+              const SizedBox(height: AppSpacing.md),
+              ModelCapabilitySection(
+                account: _accounts.active!,
+                loadLimits: () => ref
+                    .read(modelCapabilityServiceProvider)
+                    .limitsFor(_accounts.active!),
+                refresh: () async {
+                  final CapabilityRefresh result = await ref
+                      .read(modelCapabilityServiceProvider)
+                      .refresh(_accounts.active!);
+                  return result.result.isSuccess;
+                },
+                reset: () async {
+                  final ProviderAccounts accounts = _accounts;
+                  await ref
+                      .read(providerAccountsProvider.notifier)
+                      .save(
+                        accounts.withAccount(
+                          _accounts.active!.withAutomaticCapabilities(),
+                        ),
+                      );
+                  ref.invalidate(providerAccountsProvider);
+                },
+              ),
+            ],
           ],
         ),
       ),

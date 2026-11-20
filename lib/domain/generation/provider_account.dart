@@ -169,6 +169,32 @@ class ProviderAccount {
     );
   }
 
+  /// Аккаунт с автоматическими характеристиками (ADR-039 §6).
+  ///
+  /// Для аккаунта из каталога — значения пресета; для пользовательского —
+  /// неизвестные лимиты (не «типовые числа»). Пользовательские значения
+  /// `max_output_tokens`/`max_images_per_request`/`max_image_bytes`/
+  /// `max_request_bytes`/`pricing` очищаются.
+  ProviderAccount withAutomaticCapabilities() {
+    final ProviderPreset? catalog = preset;
+    if (catalog != null) {
+      return ProviderAccount.fromPreset(
+        catalog,
+        id: id,
+        modelId: modelId,
+      );
+    }
+    return ProviderAccount(
+      id: id,
+      label: label,
+      protocol: protocol,
+      baseUrl: baseUrl,
+      modelId: modelId,
+      requiresApiKey: requiresApiKey,
+      capabilitiesSource: CapabilitySource.unknown,
+    );
+  }
+
   /// Представление для `app_settings.value_json` (без ключа API).
   ///
   /// Новые поля возможностей/цен пишутся всегда (в том числе `null`) —

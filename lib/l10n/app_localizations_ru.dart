@@ -2467,4 +2467,61 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get settingsAboutSubtitle => 'Версия, лицензии и политика приватности';
+
+  @override
+  String get settingsCapabilitiesTitle => 'Характеристики модели';
+
+  @override
+  String get settingsCapabilitiesDescription =>
+      'Лимиты с источником и датой проверки. «Обновить» запрашивает данные у провайдера; «Сбросить» возвращает автоматические значения каталога.';
+
+  @override
+  String get settingsCapabilitiesContext => 'Контекст';
+
+  @override
+  String get settingsCapabilitiesOutput => 'Лимит вывода';
+
+  @override
+  String get settingsCapabilitiesImages => 'Изображений в запросе';
+
+  @override
+  String get settingsCapabilitiesUnknown => 'неизвестно';
+
+  @override
+  String get settingsCapabilitiesLoadFailed =>
+      'Не удалось прочитать характеристики модели.';
+
+  @override
+  String get settingsCapabilitiesSourceUser => 'задано вручную';
+
+  @override
+  String get settingsCapabilitiesSourceApi => 'из API провайдера';
+
+  @override
+  String get settingsCapabilitiesSourceCatalog => 'каталог приложения';
+
+  @override
+  String get settingsCapabilitiesSourceAssumption => 'допущение приложения';
+
+  @override
+  String get settingsCapabilitiesRefresh => 'Обновить характеристики';
+
+  @override
+  String get settingsCapabilitiesRefreshDone => 'Характеристики обновлены.';
+
+  @override
+  String get settingsCapabilitiesRefreshFailed =>
+      'Не удалось обновить характеристики.';
+
+  @override
+  String get settingsCapabilitiesReset => 'Сбросить к автоматическому';
+
+  @override
+  String get settingsCapabilitiesResetDone =>
+      'Значения сброшены к автоматическим.';
+
+  @override
+  String settingsCapabilitiesCheckedAt(String date) {
+    return 'проверено $date';
+  }
 }

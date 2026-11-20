@@ -8,6 +8,7 @@ library;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:cardflow/domain/generation/provider_account.dart';
+import 'package:cardflow/domain/generation/sourced.dart';
 import 'package:cardflow/domain/generation/provider_protocol.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 
@@ -40,5 +41,15 @@ IconData providerProtocolIcon(ProviderProtocol protocol) {
     ProviderProtocol.openai => Icons.auto_awesome_outlined,
     ProviderProtocol.anthropicMessages => Icons.psychology_outlined,
     ProviderProtocol.geminiGenerateContent => Icons.diamond_outlined,
+  };
+}
+/// Подпись источника характеристики модели (ADR-039 §6).
+String capabilitySourceLabel(AppLocalizations l10n, CapabilitySource source) {
+  return switch (source) {
+    CapabilitySource.userConfigured => l10n.settingsCapabilitiesSourceUser,
+    CapabilitySource.providerApi => l10n.settingsCapabilitiesSourceApi,
+    CapabilitySource.officialCatalog => l10n.settingsCapabilitiesSourceCatalog,
+    CapabilitySource.assumption => l10n.settingsCapabilitiesSourceAssumption,
+    CapabilitySource.unknown => l10n.settingsCapabilitiesUnknown,
   };
 }

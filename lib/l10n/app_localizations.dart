@@ -3979,6 +3979,108 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Версия, лицензии и политика приватности'**
   String get settingsAboutSubtitle;
+
+  /// Заголовок блока характеристик модели в настройках провайдеров.
+  ///
+  /// In ru, this message translates to:
+  /// **'Характеристики модели'**
+  String get settingsCapabilitiesTitle;
+
+  /// Пояснение блока характеристик модели.
+  ///
+  /// In ru, this message translates to:
+  /// **'Лимиты с источником и датой проверки. «Обновить» запрашивает данные у провайдера; «Сбросить» возвращает автоматические значения каталога.'**
+  String get settingsCapabilitiesDescription;
+
+  /// Строка лимита контекста модели.
+  ///
+  /// In ru, this message translates to:
+  /// **'Контекст'**
+  String get settingsCapabilitiesContext;
+
+  /// Строка лимита вывода модели.
+  ///
+  /// In ru, this message translates to:
+  /// **'Лимит вывода'**
+  String get settingsCapabilitiesOutput;
+
+  /// Строка лимита изображений модели.
+  ///
+  /// In ru, this message translates to:
+  /// **'Изображений в запросе'**
+  String get settingsCapabilitiesImages;
+
+  /// Значение лимита, которое неизвестно.
+  ///
+  /// In ru, this message translates to:
+  /// **'неизвестно'**
+  String get settingsCapabilitiesUnknown;
+
+  /// Ошибка загрузки характеристик из кэша.
+  ///
+  /// In ru, this message translates to:
+  /// **'Не удалось прочитать характеристики модели.'**
+  String get settingsCapabilitiesLoadFailed;
+
+  /// Источник значения: пользователь.
+  ///
+  /// In ru, this message translates to:
+  /// **'задано вручную'**
+  String get settingsCapabilitiesSourceUser;
+
+  /// Источник значения: discovery API.
+  ///
+  /// In ru, this message translates to:
+  /// **'из API провайдера'**
+  String get settingsCapabilitiesSourceApi;
+
+  /// Источник значения: каталог пресетов.
+  ///
+  /// In ru, this message translates to:
+  /// **'каталог приложения'**
+  String get settingsCapabilitiesSourceCatalog;
+
+  /// Источник значения: консервативное допущение.
+  ///
+  /// In ru, this message translates to:
+  /// **'допущение приложения'**
+  String get settingsCapabilitiesSourceAssumption;
+
+  /// Кнопка запроса характеристик у провайдера.
+  ///
+  /// In ru, this message translates to:
+  /// **'Обновить характеристики'**
+  String get settingsCapabilitiesRefresh;
+
+  /// Успешное обновление характеристик.
+  ///
+  /// In ru, this message translates to:
+  /// **'Характеристики обновлены.'**
+  String get settingsCapabilitiesRefreshDone;
+
+  /// Ошибка обновления характеристик.
+  ///
+  /// In ru, this message translates to:
+  /// **'Не удалось обновить характеристики.'**
+  String get settingsCapabilitiesRefreshFailed;
+
+  /// Кнопка сброса пользовательских значений характеристик.
+  ///
+  /// In ru, this message translates to:
+  /// **'Сбросить к автоматическому'**
+  String get settingsCapabilitiesReset;
+
+  /// Успешный сброс характеристик.
+  ///
+  /// In ru, this message translates to:
+  /// **'Значения сброшены к автоматическим.'**
+  String get settingsCapabilitiesResetDone;
+
+  /// Дата проверки характеристики.
+  ///
+  /// In ru, this message translates to:
+  /// **'проверено {date}'**
+  String settingsCapabilitiesCheckedAt(String date);
 }
 
 class _AppLocalizationsDelegate
