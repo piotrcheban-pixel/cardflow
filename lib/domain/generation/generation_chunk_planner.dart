@@ -170,6 +170,8 @@ final class GenerationChunkPlanner {
     ImageCatalogLineBuilder? catalogLineBuilder,
     String? wishes,
     bool allowPromptOnly = false,
+    int? exactInputTokens,
+    String? inputTokenSource,
   }) {
     assert(
       requestedCards == null || requestedCards > 0,
@@ -227,9 +229,13 @@ final class GenerationChunkPlanner {
         limits: limits,
         fixedTokens: fixedTokens,
         desiredOutputTokens: desired,
-        accuracy: InputAccuracy.estimated,
+        accuracy: exactInputTokens == null
+            ? InputAccuracy.estimated
+            : InputAccuracy.exact,
+        exactInputTokens: exactInputTokens,
         promptOnlyRequestBytes: promptBodyBytes,
-        inputTokenSource: 'estimate:${estimator.version}',
+        inputTokenSource:
+            inputTokenSource ?? 'estimate:${estimator.version}',
       );
       if (inputPlan.budget.payloadExceeded) {
         return _invalidPlan(
@@ -277,10 +283,14 @@ final class GenerationChunkPlanner {
         limits: limits,
         fixedTokens: overhead.fixedTokens,
         desiredOutputTokens: desired,
-        accuracy: InputAccuracy.estimated,
+        accuracy: exactInputTokens == null
+            ? InputAccuracy.estimated
+            : InputAccuracy.exact,
         outlineReserveTokens: overhead.outlineTokens,
         orphanImages: data.orphanImages,
-        inputTokenSource: 'estimate:${estimator.version}',
+        exactInputTokens: exactInputTokens,
+        inputTokenSource:
+            inputTokenSource ?? 'estimate:${estimator.version}',
       );
     }
 

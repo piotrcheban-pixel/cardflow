@@ -38,6 +38,7 @@ import 'package:cardflow/domain/generation/generation_failure_reason.dart';
 import 'package:cardflow/domain/generation/generation_job.dart';
 import 'package:cardflow/domain/generation/generation_chunk_planner.dart';
 import 'package:cardflow/domain/generation/generation_plan.dart';
+import 'package:cardflow/domain/generation/generation_request_budget.dart';
 import 'package:cardflow/domain/generation/input_planner.dart';
 import 'package:cardflow/domain/generation/generation_planning_config.dart';
 import 'package:cardflow/domain/generation/generation_plan_splitter.dart';
@@ -52,6 +53,13 @@ import 'package:cardflow/domain/generation/provider_account.dart';
 import 'package:cardflow/domain/generation/token_calibration.dart';
 import 'package:cardflow/domain/generation/prompt_only_request.dart';
 import 'package:cardflow/domain/generation/token_accounting.dart';
+
+import 'package:cardflow/api/generation/exact_token_cache.dart';
+import 'package:cardflow/api/generation/generation_images.dart';
+import 'package:cardflow/api/generation/generation_prompt.dart';
+import 'package:cardflow/api/generation/request_token_counter.dart';
+import 'package:cardflow/api/prompts/system_prompt.dart';
+import 'package:cardflow/domain/text/text_sanitizer.dart';
 
 /// Коды ошибок, после которых повторять следующие фрагменты бессмысленно.
 const Set<GenerationErrorCode> _fatalCodes = <GenerationErrorCode>{
@@ -105,6 +113,8 @@ class GenerationPipeline implements GenerationRunner {
     this.placeholderGenerator,
     this.imageSearchBudget = const Duration(seconds: 90),
     this.diagnostics = const GenerationDiagnostics(),
+    this.tokenCounter,
+    this.tokenCountCache,
     this.now = _defaultNow,
     this.jobIdFactory = _defaultJobId,
     this.maxRecoveryRequests = 12,
@@ -154,6 +164,17 @@ class GenerationPipeline implements GenerationRunner {
 
   /// Debug-диагностика (ADR-024).
   final GenerationDiagnostics diagnostics;
+
+  /// Нативный подсчёт токенов входа (ADR-040 §3.5.1); `null` — без сети,
+  /// только консервативная оценка. Вызывается **один раз на план**, результат
+  /// кэшируется по хэшу содержимого запроса.
+  final RequestTokenCounter? tokenCounter;
+
+  /// Кэш нативного подсчёта; `null` — создаётся лениво на экземпляр пайплайна.
+  final ExactTokenCountCache? tokenCountCache;
+
+  /// Ленивый кэш нативного подсчёта (живёт вместе с пайплайном).
+  ExactTokenCountCache? _tokenCache;
 
   /// Технический предохранитель восстановления: сколько дополнительных
   /// запросов (дроблений/сокращений вывода) допускается за запуск (F.2/F.3).
@@ -260,13 +281,24 @@ class GenerationPipeline implements GenerationRunner {
         );
         throw const GenerationException(GenerationErrorCode.noMaterials);
       }
+      // Один нативный подсчёт входа на план (§3.5.1): точность запроса вместо
+      // оценки, если провайдер её поддерживает. Сеть — только здесь, до
+      // первого запроса генерации и без тела в диагностике.
+      final GenerationPlan effectivePlan = await _withExactInput(
+        plan: plan,
+        request: request,
+        capabilities: capabilities,
+        hasMaterials: hasMaterials,
+        topic: topic,
+        builder: effectiveBuilder,
+      );
 
       diagnostics.planSummary(
-        strategy: plan.inputStrategy?.name ?? 'legacy',
-        parts: plan.partCount,
-        batches: plan.chunks.length,
-        requestedCards: plan.requestedCards,
-        achievableCards: plan.achievableCards,
+        strategy: effectivePlan.inputStrategy?.name ?? 'legacy',
+        parts: effectivePlan.partCount,
+        batches: effectivePlan.chunks.length,
+        requestedCards: effectivePlan.requestedCards,
+        achievableCards: effectivePlan.achievableCards,
         calibrated: calibration != null,
       );
       final Set<String> seen = <String>{
@@ -275,10 +307,10 @@ class GenerationPipeline implements GenerationRunner {
       final GenerationRunResult result = await _process(
         request: request,
         job: initialJob,
-        plan: plan,
-        chunks: plan.chunks,
+        plan: effectivePlan,
+        chunks: effectivePlan.chunks,
         seen: seen,
-        estimate: plan.estimate.totalTokens,
+        estimate: effectivePlan.estimate.totalTokens,
         onProgress: onProgress,
         cancellation: cancellation,
       );
@@ -296,6 +328,8 @@ class GenerationPipeline implements GenerationRunner {
     required bool hasMaterials,
     required String? topic,
     GenerationPlanBuilder? builder,
+    int? exactInputTokens,
+    String? inputTokenSource,
   }) {
     final GenerationPlanFactory? factory = planFactory;
     if (factory != null) return factory(request, capabilities);
@@ -309,6 +343,8 @@ class GenerationPipeline implements GenerationRunner {
       return effective.buildPromptOnly(
         request: PromptOnlyRequest(prompt: topic!, requestedCards: requested),
         capabilities: capabilities,
+        exactInputTokens: exactInputTokens,
+        inputTokenSource: inputTokenSource,
       );
     }
     return effective.build(
@@ -318,6 +354,107 @@ class GenerationPipeline implements GenerationRunner {
       documentImages: request.documentImages,
       wishes: request.wishes,
       requestedCards: requested,
+      exactInputTokens: exactInputTokens,
+      inputTokenSource: inputTokenSource,
+    );
+  }
+
+  /// Один нативный подсчёт входа на план (§2.2/§3.5.1).
+  ///
+  /// - счётчик выбирается по протоколу (`supports`), иначе — оценка;
+  /// - для fragmented плана точный подсчёт целого запроса неприменим к части,
+  ///   поэтому остаётся оценка (`inputTokenSource`);
+  /// - результат кэшируется по хэшу содержимого запроса: повторный запуск с
+  ///   тем же материалом не делает лишних сетевых обращений;
+  /// - при ошибке — консервативная оценка и код ошибки в диагностике (без тела
+  ///   запроса и ключей).
+  Future<GenerationPlan> _withExactInput({
+    required GenerationPlan plan,
+    required GenerationRunRequest request,
+    required ModelCapabilities capabilities,
+    required bool hasMaterials,
+    required String? topic,
+    required GenerationPlanBuilder builder,
+  }) async {
+    final RequestTokenCounter? counter = tokenCounter;
+    final InputPlan? inputPlan = plan.inputPlan;
+    if (counter == null || inputPlan == null || !plan.isExecutable) {
+      return plan;
+    }
+    if (inputPlan.accuracy == InputAccuracy.exact) return plan;
+    if (!counter.supports(request.account)) {
+      diagnostics.tokenCount(source: 'estimate', errorCode: 'unsupported');
+      return plan;
+    }
+    if (inputPlan.strategy == InputStrategy.fragmented) {
+      diagnostics.tokenCount(source: 'estimate', errorCode: 'fragmented');
+      return plan;
+    }
+    final String? userContent = _countedUserContent(plan, request);
+    if (userContent == null) return plan;
+    final ExactTokenCountCache cache =
+        tokenCountCache ?? (_tokenCache ??= ExactTokenCountCache());
+    final String key = exactTokenCacheKey(
+      account: request.account,
+      systemPrompt: systemPromptGenRuV8,
+      userContent: userContent,
+    );
+    final ExactTokenCount count = await cache.countOrLoad(
+      key: key,
+      load: () => counter.count(
+        request.account,
+        systemPrompt: systemPromptGenRuV8,
+        userContent: userContent,
+      ),
+    );
+    if (!count.isExact) {
+      diagnostics.tokenCount(source: 'estimate', errorCode: count.errorCode);
+      return plan;
+    }
+    final String source = 'count_tokens:${request.account.protocol.wireName}';
+    diagnostics.tokenCount(source: source, tokens: count.tokens);
+    return _buildPlan(
+      request,
+      capabilities,
+      hasMaterials: hasMaterials,
+      topic: topic,
+      builder: builder,
+      exactInputTokens: count.tokens,
+      inputTokenSource: source,
+    );
+  }
+
+  /// Пользовательское сообщение первого запроса плана — ровно в том виде,
+  /// в каком его соберёт `CardGenerationService` (материалы + каталог +
+  /// пожелания + хвост `<task>`). Тело наружу не отдаётся: только число.
+  String? _countedUserContent(
+    GenerationPlan plan,
+    GenerationRunRequest request,
+  ) {
+    if (plan.chunks.isEmpty) return null;
+    final PlannedChunk chunk = plan.chunks.first;
+    const TextSanitizer sanitizer = TextSanitizer();
+    final String materials = sanitizer.sanitize(chunk.materialsText);
+    final String wishes = sanitizer.sanitize(request.wishes ?? '');
+    final Map<String, String> imageIds = _imageIdsFor(plan);
+    final List<DocumentImage> documentImages = <DocumentImage>[
+      for (final DocumentImage image in <DocumentImage>[
+        ...chunk.imageParts,
+        ...chunk.catalogOnly,
+      ])
+        image.withId(imageIds[_imageKey(image)] ?? image.id),
+    ]..sort(_compareImageIds);
+    return buildGenerationUserContent(
+      materialsText: materials,
+      wishes: wishes.isEmpty ? null : wishes,
+      limit: chunk.limit,
+      imagesCatalog: documentImages.isEmpty
+          ? null
+          : buildImageCatalog(documentImages),
+      partIndexHint: chunk.partCount < 1 ? null : chunk.partIndex + 1,
+      partCountHint: chunk.partCount < 1 ? null : chunk.partCount,
+      focusSectionIds: chunk.focusSectionIds,
+      outline: _outlineOf(plan, chunk),
     );
   }
 
@@ -576,8 +713,14 @@ class GenerationPipeline implements GenerationRunner {
                 : _digestOf(cards, chunkSections),
             outline: _outlineOf(plan, chunk),
             focusSectionIds: chunk.focusSectionIds,
-            partIndexHint: plan == null ? null : chunk.partIndex + 1,
-            partCountHint: plan == null ? null : chunk.partCount,
+            // Prompt-only не имеет частей материала (`partCount == 0`):
+            // блок <part> не пишется, иначе модель видит «1 из 0».
+            partIndexHint: plan == null || chunk.partCount < 1
+                ? null
+                : chunk.partIndex + 1,
+            partCountHint: plan == null || chunk.partCount < 1
+                ? null
+                : chunk.partCount,
             contextOnly: null,
             maxOutputTokens: _maxOutputTokensFor(
               plan,

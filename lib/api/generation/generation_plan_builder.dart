@@ -121,6 +121,8 @@ class GenerationPlanBuilder {
     Map<String, Object?> responseSchema = canonicalCardsResponseSchema,
     GenerationOverheadTokens? overhead,
     GenerationBudgetConfig budgetConfig = const GenerationBudgetConfig(),
+    int? exactInputTokens,
+    String? inputTokenSource,
   }) {
     final ContentInventory inventory = inventoryOf(
       documents: documents,
@@ -152,6 +154,8 @@ class GenerationPlanBuilder {
       budgetConfig: budgetConfig,
       catalogLineBuilder: planner.catalogLineBuilder ?? _catalogLine,
       wishes: wishes,
+      exactInputTokens: exactInputTokens,
+      inputTokenSource: inputTokenSource,
     );
   }
 
@@ -168,6 +172,8 @@ class GenerationPlanBuilder {
     Map<String, Object?> responseSchema = canonicalCardsResponseSchema,
     GenerationOverheadTokens? overhead,
     GenerationBudgetConfig budgetConfig = const GenerationBudgetConfig(),
+    int? exactInputTokens,
+    String? inputTokenSource,
   }) {
     assert(!request.isEmpty, 'Prompt-only план требует непустую тему');
     final GenerationOverheadTokens fixed =
@@ -193,6 +199,8 @@ class GenerationPlanBuilder {
       wishes: request.prompt,
       budgetConfig: budgetConfig,
       catalogLineBuilder: planner.catalogLineBuilder,
+      exactInputTokens: exactInputTokens,
+      inputTokenSource: inputTokenSource,
     );
   }
 

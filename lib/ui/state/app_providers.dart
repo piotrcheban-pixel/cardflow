@@ -6,6 +6,7 @@ import 'package:cardflow/api/generation/api_key_verifier.dart';
 import 'package:cardflow/api/generation/card_generation_service.dart';
 import 'package:cardflow/api/generation/generation_diagnostics.dart';
 import 'package:cardflow/api/generation/generation_pipeline.dart';
+import 'package:cardflow/api/generation/request_token_counter.dart';
 import 'package:cardflow/api/http/generation_http_client.dart';
 import 'package:cardflow/api/http/redacting_log_interceptor.dart';
 import 'package:cardflow/api/http/retry_policy.dart';
@@ -445,8 +446,14 @@ final matchBestStoreProvider = Provider<MatchBestStore>((ref) {
 
 /// Пайплайн генерации: чанкинг, вызовы, прогресс/отмена, дедупликация.
 final generationRunnerProvider = Provider<GenerationRunner>((ref) {
+  final ApiKeyStore keyStore = ref.watch(apiKeyStoreProvider);
   return GenerationPipeline(
     caller: ref.watch(cardGenerationServiceProvider),
+    // Нативный подсчёт входа: только Anthropic/Gemini (ADR-040 §3.5.1).
+    tokenCounter: ProtocolRequestTokenCounter(
+      dio: ref.watch(generationDioProvider),
+      readApiKey: (String accountId) => keyStore.read(accountId),
+    ),
     jobRepository: ref.watch(generationJobRepositoryProvider),
     cardStore: ref.watch(generationCardStoreProvider),
     imageFinder: ref.watch(cardImageFinderProvider),

@@ -133,6 +133,23 @@ class GenerationDiagnostics {
     );
   }
 
+  /// Результат нативного подсчёта входа (7.18.1 §2.2).
+  ///
+  /// Только источник/код/число: тело запроса и ключи сюда не попадают.
+  void tokenCount({required String source, int? tokens, String? errorCode}) {
+    if (!enabled) return;
+    final StringBuffer buffer = StringBuffer(
+      'Генерация: count_tokens: источник=',
+    )..write(redactedDiagnosticText(source, maxLength: 80));
+    if (tokens != null) buffer.write(', токенов=$tokens');
+    if (errorCode != null) {
+      buffer.write(
+        ', ошибка=${redactedDiagnosticText(errorCode, maxLength: 80)}',
+      );
+    }
+    _write(buffer.toString());
+  }
+
   /// Участие изображения в запросе (TASK 03, раздел 6): передано/только каталог.
   void imageParticipation({required String outcome}) {
     if (!enabled) return;

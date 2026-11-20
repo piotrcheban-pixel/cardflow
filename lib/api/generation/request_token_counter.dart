@@ -9,6 +9,7 @@ library;
 
 import 'package:dio/dio.dart';
 
+import 'package:cardflow/api/generation/provider_schema.dart';
 import 'package:cardflow/api/models/model_discovery.dart' show ApiKeyReader;
 import 'package:cardflow/domain/generation/provider_account.dart';
 import 'package:cardflow/domain/generation/provider_protocol.dart';
@@ -33,6 +34,9 @@ final class ExactTokenCount {
 
 /// Порт нативного подсчёта входа.
 abstract interface class RequestTokenCounter {
+  /// Поддерживает ли счётчик протокол аккаунта (иначе подсчёт не выполняется).
+  bool supports(ProviderAccount account);
+
   /// Считает вход запроса; ошибки возвращаются как [ExactTokenCount.unknown].
   Future<ExactTokenCount> count(
     ProviderAccount account, {
@@ -121,6 +125,10 @@ class AnthropicRequestTokenCounter extends _HttpCounter
     : super(dio, readApiKey);
 
   @override
+  bool supports(ProviderAccount account) =>
+      account.protocol == ProviderProtocol.anthropicMessages;
+
+  @override
   Future<ExactTokenCount> count(
     ProviderAccount account, {
     required String systemPrompt,
@@ -130,12 +138,27 @@ class AnthropicRequestTokenCounter extends _HttpCounter
       final int tokens = await post(
         account,
         _HttpCounter.join(account.baseUrl, '/v1/messages/count_tokens'),
+        // Схема ответа у Anthropic передаётся инструментом (`tools`), и
+        // count_tokens документированно считает её вместе с tools: без неё
+        // «точный» вход был бы занижен на размер JSON-схемы.
         body: <String, Object?>{
           'model': account.modelId,
           'system': systemPrompt,
           'messages': <Object?>[
             <String, Object?>{'role': 'user', 'content': userContent},
           ],
+          'tools': <Object?>[
+            <String, Object?>{
+              'name': 'emit_cards',
+              'description':
+                  'Emit the generated flashcards as JSON matching the schema.',
+              'input_schema': anthropicToolCardSchema(),
+            },
+          ],
+          'tool_choice': <String, Object?>{
+            'type': 'tool',
+            'name': 'emit_cards',
+          },
         },
         headers: <String, String>{'anthropic-version': '2023-06-01'},
         extract: (Object? data) => data is Map ? data['input_tokens'] : null,
@@ -155,6 +178,10 @@ class GeminiRequestTokenCounter extends _HttpCounter
     : super(dio, readApiKey);
 
   @override
+  bool supports(ProviderAccount account) =>
+      account.protocol == ProviderProtocol.geminiGenerateContent;
+
+  @override
   Future<ExactTokenCount> count(
     ProviderAccount account, {
     required String systemPrompt,
@@ -165,6 +192,8 @@ class GeminiRequestTokenCounter extends _HttpCounter
       final int tokens = await post(
         account,
         _HttpCounter.join(account.baseUrl, '/v1beta/models/$model:countTokens'),
+        // countTokens принимает GenerateContentRequest: системная инструкция
+        // и responseSchema входят в тот же запрос, что и генерация.
         body: <String, Object?>{
           'systemInstruction': <String, Object?>{
             'parts': <Object?>[
@@ -179,6 +208,10 @@ class GeminiRequestTokenCounter extends _HttpCounter
               ],
             },
           ],
+          'generationConfig': <String, Object?>{
+            'responseMimeType': 'application/json',
+            'responseSchema': geminiCardSchema(),
+          },
         },
         headers: const <String, String>{},
         extract: (Object? data) => data is Map ? data['totalTokens'] : null,
@@ -197,11 +230,47 @@ class NoopRequestTokenCounter implements RequestTokenCounter {
   const NoopRequestTokenCounter();
 
   @override
+  bool supports(ProviderAccount account) => false;
+
+  @override
   Future<ExactTokenCount> count(
     ProviderAccount account, {
     required String systemPrompt,
     required String userContent,
   }) async => const ExactTokenCount.unknown('unsupported');
+}
+
+/// Счётчик, выбирающий реализацию по протоколу аккаунта на каждом вызове.
+///
+/// Нужен конвейеру: у одного запуска аккаунт фиксирован, но набор
+/// поддерживаемых протоколов — свойство реализации, а не места входа.
+class ProtocolRequestTokenCounter implements RequestTokenCounter {
+  /// Создаёт роутер.
+  ProtocolRequestTokenCounter({required this.dio, required this.readApiKey});
+
+  /// HTTP-клиент приложения.
+  final Dio dio;
+
+  /// Чтение ключа API (present/absent).
+  final ApiKeyReader readApiKey;
+
+  @override
+  bool supports(ProviderAccount account) => requestTokenCounterFor(
+    account,
+    dio,
+    readApiKey: readApiKey,
+  ).supports(account);
+
+  @override
+  Future<ExactTokenCount> count(
+    ProviderAccount account, {
+    required String systemPrompt,
+    required String userContent,
+  }) => requestTokenCounterFor(
+    account,
+    dio,
+    readApiKey: readApiKey,
+  ).count(account, systemPrompt: systemPrompt, userContent: userContent);
 }
 
 /// Выбирает счётчик по протоколу (только там, где он документирован).

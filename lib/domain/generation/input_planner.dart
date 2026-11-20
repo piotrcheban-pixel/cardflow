@@ -349,6 +349,12 @@ final class InputPlanner {
     final double marginRate = config.margin(
       exact: accuracy == InputAccuracy.exact,
     );
+    // Точный подсчёт относится к целому запросу: если по нему материал всё
+    // равно не помещается, части планируются консервативной оценкой (иначе
+    // запас 3 % применялся бы к неизвестному числу).
+    final InputAccuracy wholeAccuracy = exactInputTokens == null
+        ? accuracy
+        : InputAccuracy.exact;
     final Set<PlanWarningCode> warnings = <PlanWarningCode>{};
     final bool supportsImages = limits.supportsImageInput.value ?? true;
     final int? maxRequestBytes = limits.maxRequestBytes.value;
@@ -377,7 +383,7 @@ final class InputPlanner {
         fixedTokens: fixedTokens,
         materialTokens: 0,
         desiredOutputTokens: desiredOutputTokens,
-        accuracy: accuracy,
+        accuracy: wholeAccuracy,
         config: config,
         requestBytes: promptOnlyRequestBytes,
         countedInputTokens: exactInputTokens,
@@ -388,7 +394,7 @@ final class InputPlanner {
         fixedTokens: fixedTokens,
         inputTokens: budget.inputTokens,
         maxTokens: budget.maxTokens,
-        accuracy: accuracy,
+        accuracy: wholeAccuracy,
         budget: budget,
         materialTokens: 0,
         contextTokens: limits.contextTokens.value,
@@ -446,7 +452,7 @@ final class InputPlanner {
         limits: limits,
         fixedTokens: fixedTokens,
         desiredOutputTokens: desiredOutputTokens,
-        accuracy: accuracy,
+        accuracy: wholeAccuracy,
         allImages: allImages,
         supportsImages: supportsImages,
         imagesOmittedByBudget: imagesOmittedByBudget,
@@ -463,7 +469,7 @@ final class InputPlanner {
       limits: limits,
       fixedTokens: fixedTokens,
       desiredOutputTokens: desiredOutputTokens,
-      accuracy: accuracy,
+      accuracy: InputAccuracy.estimated,
       allImages: allImages,
       orphanImages: orphanImages,
       supportsImages: supportsImages,
@@ -473,7 +479,9 @@ final class InputPlanner {
       warnings: warnings,
       contextTokens: contextTokens,
       marginRate: marginRate,
-      inputTokenSource: inputTokenSource,
+      inputTokenSource: exactInputTokens == null
+          ? inputTokenSource
+          : 'estimate',
     );
   }
 

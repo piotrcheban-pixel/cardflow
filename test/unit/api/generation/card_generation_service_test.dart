@@ -130,7 +130,9 @@ void main() {
     // инструкции плана (ADR-040 §7) модели не передаются.
     final service = CardGenerationService(
       adapters: <FakeProviderAdapter>[adapter],
-      apiKeyStore: FakeApiKeyStore(<String, String>{'openai': 'test-key-openai'}),
+      apiKeyStore: FakeApiKeyStore(<String, String>{
+        'openai': 'test-key-openai',
+      }),
       httpClient: transport,
     );
     final result = await service.generate(requestFor(openAiAccount()));
