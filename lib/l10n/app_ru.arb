@@ -1421,7 +1421,7 @@
   "@generationPlanDetailsContext": {"description": "Строка контекста модели в деталях плана."},
   "generationPlanDetailsInputTokens": "Вход",
   "@generationPlanDetailsInputTokens": {"description": "Строка оценки входных токенов."},
-  "generationPlanDetailsInputExact": "точно: {tokens} токенов (count_tokens)",
+  "generationPlanDetailsInputExact": "точно: {tokens} токенов (нативный подсчёт провайдера)",
   "@generationPlanDetailsInputExact": {"description": "Точный подсчёт входа.", "placeholders": {"tokens": {"type": "int"}}},
   "generationPlanDetailsInputEstimated": "приблизительно: {tokens} токенов",
   "@generationPlanDetailsInputEstimated": {"description": "Приблизительная оценка входа.", "placeholders": {"tokens": {"type": "int"}}},

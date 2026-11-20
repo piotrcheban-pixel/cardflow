@@ -160,7 +160,7 @@ void main() {
         .widget<Text>(find.byKey(const ValueKey<String>('plan-detail-input')))
         .data!;
     expect(input, contains('точно'));
-    expect(input, contains('count_tokens'));
+    expect(input, contains('нативный подсчёт'));
     expect(
       tester
           .widget<Text>(

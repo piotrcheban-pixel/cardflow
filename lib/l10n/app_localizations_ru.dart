@@ -1148,7 +1148,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String generationPlanDetailsInputExact(int tokens) {
-    return 'точно: $tokens токенов (count_tokens)';
+    return 'точно: $tokens токенов (нативный подсчёт провайдера)';
   }
 
   @override

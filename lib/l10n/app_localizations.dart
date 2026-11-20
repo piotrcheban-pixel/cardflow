@@ -1866,7 +1866,7 @@ abstract class AppLocalizations {
   /// Точный подсчёт входа.
   ///
   /// In ru, this message translates to:
-  /// **'точно: {tokens} токенов (count_tokens)'**
+  /// **'точно: {tokens} токенов (нативный подсчёт провайдера)'**
   String generationPlanDetailsInputExact(int tokens);
 
   /// Приблизительная оценка входа.
