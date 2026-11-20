@@ -59,72 +59,79 @@ void main() {
       .join('|');
 
   group('§5.3.1 вход не зависит от заказа (T4)', () {
-    test('заказ 10/50/100 → одинаковые части, разные распределение и партии', () {
-      final List<InputSection> material = sections(30, 10000);
-      final ModelLimits model = limits(context: 128000, maxOutput: 8192);
-      final List<InputPlan> plans = <int>[10, 50, 100]
-          .map(
-            (int requested) => planner.plan(
-              sections: material,
-              limits: model,
-              fixedTokens: 3000,
-              desiredOutputTokens: config.desiredOutputTokens(
-                requestedCards: requested,
-                maxOutputTokens: 8192,
+    test(
+      'заказ 10/50/100 → одинаковые части, разные распределение и партии',
+      () {
+        final List<InputSection> material = sections(30, 10000);
+        final ModelLimits model = limits(context: 128000, maxOutput: 8192);
+        final List<InputPlan> plans = <int>[10, 50, 100]
+            .map(
+              (int requested) => planner.plan(
+                sections: material,
+                limits: model,
+                fixedTokens: 3000,
+                desiredOutputTokens: config.desiredOutputTokens(
+                  requestedCards: requested,
+                  maxOutputTokens: 8192,
+                ),
+                outlineReserveTokens: 1500,
               ),
-              outlineReserveTokens: 1500,
-            ),
-          )
-          .toList();
-      for (final InputPlan plan in plans) {
-        expect(plan.strategy, InputStrategy.fragmented);
-        expect(plan.partCount, 3);
+            )
+            .toList();
+        for (final InputPlan plan in plans) {
+          expect(plan.strategy, InputStrategy.fragmented);
+          expect(plan.partCount, 3);
+          expect(
+            plan.inputTokens,
+            114950,
+            reason: 'бюджет части одинаков: ceil((4500 + 100000) × 1.1)',
+          );
+        }
         expect(
-          plan.inputTokens,
-          114950,
-          reason: 'бюджет части одинаков: ceil((4500 + 100000) × 1.1)',
+          partsSignature(plans[0]),
+          partsSignature(plans[1]),
+          reason: 'границы частей не зависят от заказа',
         );
-      }
-      expect(
-        partsSignature(plans[0]),
-        partsSignature(plans[1]),
-        reason: 'границы частей не зависят от заказа',
-      );
-      expect(partsSignature(plans[1]), partsSignature(plans[2]));
+        expect(partsSignature(plans[1]), partsSignature(plans[2]));
 
-      final CardAllocation ten = allocator.allocate(
-        sections: allocationSections(material),
-        requestedCards: 10,
-      );
-      final CardAllocation fifty = allocator.allocate(
-        sections: allocationSections(material),
-        requestedCards: 50,
-      );
-      expect(ten.achievable, 10);
-      expect(fifty.achievable, 50);
-      expect(ten.planned, isNot(fifty.planned));
+        final CardAllocation ten = allocator.allocate(
+          sections: allocationSections(material),
+          requestedCards: 10,
+        );
+        final CardAllocation fifty = allocator.allocate(
+          sections: allocationSections(material),
+          requestedCards: 50,
+        );
+        expect(ten.achievable, 10);
+        expect(fifty.achievable, 50);
+        expect(ten.planned, isNot(fifty.planned));
 
-      final List<PlannedBatch> one = batchPlanner.plan(
-        input: plans[0],
-        allocation: ten,
-        maxTokensPerBatch: plans[0].maxTokens,
-      );
-      final List<PlannedBatch> three = batchPlanner.plan(
-        input: plans[1],
-        allocation: fifty,
-        maxTokensPerBatch: plans[1].maxTokens,
-      );
-      expect(one.length, lessThan(three.length));
-      expect(one.map((PlannedBatch b) => b.limit).toList(), <int>[10]);
-      // В fragmented-режиме партии строятся внутри частей: распределение 50
-      // карточек по 30 равным разделам даёт 20/20/10 на три части.
-      expect(three.map((PlannedBatch b) => b.limit).toList(), <int>[20, 20, 10]);
-      expect(
-        plans[0].budget.contextTokens,
-        plans[2].budget.contextTokens,
-        reason: 'лимиты модели от заказа не зависят',
-      );
-    });
+        final List<PlannedBatch> one = batchPlanner.plan(
+          input: plans[0],
+          allocation: ten,
+          maxTokensPerBatch: plans[0].maxTokens,
+        );
+        final List<PlannedBatch> three = batchPlanner.plan(
+          input: plans[1],
+          allocation: fifty,
+          maxTokensPerBatch: plans[1].maxTokens,
+        );
+        expect(one.length, lessThan(three.length));
+        expect(one.map((PlannedBatch b) => b.limit).toList(), <int>[10]);
+        // В fragmented-режиме партии строятся внутри частей: распределение 50
+        // карточек по 30 равным разделам даёт 20/20/10 на три части.
+        expect(three.map((PlannedBatch b) => b.limit).toList(), <int>[
+          20,
+          20,
+          10,
+        ]);
+        expect(
+          plans[0].budget.contextTokens,
+          plans[2].budget.contextTokens,
+          reason: 'лимиты модели от заказа не зависят',
+        );
+      },
+    );
   });
 
   group('§5.3.2 вход цел, ответ меняется', () {
@@ -155,40 +162,45 @@ void main() {
       expect(batches.single.partCount, 1);
     });
 
-    test('ответ вмещает 5, заказ 20 → 1 источник, 4 партии, входа не делим', () {
-      final List<InputSection> material = sections(4, 10000);
-      final InputPlan plan = planner.plan(
-        sections: material,
-        limits: limits(context: 128000, maxOutput: 2000),
-        fixedTokens: 3000,
-        desiredOutputTokens: config.desiredOutputTokens(
+    test(
+      'ответ вмещает 5, заказ 20 → 1 источник, 4 партии, входа не делим',
+      () {
+        final List<InputSection> material = sections(4, 10000);
+        final InputPlan plan = planner.plan(
+          sections: material,
+          limits: limits(context: 128000, maxOutput: 2000),
+          fixedTokens: 3000,
+          desiredOutputTokens: config.desiredOutputTokens(
+            requestedCards: 20,
+            maxOutputTokens: 2000,
+          ),
+        );
+        expect(plan.strategy, InputStrategy.wholeDocument);
+        expect(plan.partCount, 1);
+        final CardAllocation allocation = allocator.allocate(
+          sections: allocationSections(material),
           requestedCards: 20,
-          maxOutputTokens: 2000,
-        ),
-      );
-      expect(plan.strategy, InputStrategy.wholeDocument);
-      expect(plan.partCount, 1);
-      final CardAllocation allocation = allocator.allocate(
-        sections: allocationSections(material),
-        requestedCards: 20,
-      );
-      expect(allocation.achievable, 20);
-      final List<PlannedBatch> batches = batchPlanner.plan(
-        input: plan,
-        allocation: allocation,
-        maxTokensPerBatch: plan.maxTokens,
-      );
-      expect(batches, hasLength(4));
-      expect(
-        batches.map((PlannedBatch b) => b.limit).toList(),
-        <int>[5, 5, 5, 5],
-      );
-      expect(
-        batches.every((PlannedBatch b) => b.partCount == 1),
-        isTrue,
-        reason: 'вход не дробится из-за размера ответа',
-      );
-    });
+        );
+        expect(allocation.achievable, 20);
+        final List<PlannedBatch> batches = batchPlanner.plan(
+          input: plan,
+          allocation: allocation,
+          maxTokensPerBatch: plan.maxTokens,
+        );
+        expect(batches, hasLength(4));
+        expect(batches.map((PlannedBatch b) => b.limit).toList(), <int>[
+          5,
+          5,
+          5,
+          5,
+        ]);
+        expect(
+          batches.every((PlannedBatch b) => b.partCount == 1),
+          isTrue,
+          reason: 'вход не дробится из-за размера ответа',
+        );
+      },
+    );
   });
 
   group('§5.3.3 промпт-онли и партии', () {

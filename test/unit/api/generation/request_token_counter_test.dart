@@ -34,18 +34,18 @@ void main() {
 
   test('Anthropic count_tokens: точное значение и тело запроса', () async {
     final FakeHttpAdapter adapter = FakeHttpAdapter(
-      (RequestOptions options) => jsonResponse(<String, Object?>{
-        'input_tokens': 1234,
-      }),
+      (RequestOptions options) =>
+          jsonResponse(<String, Object?>{'input_tokens': 1234}),
     );
-    final ExactTokenCount count = await AnthropicRequestTokenCounter(
-      dioWith(adapter),
-      readApiKey: (String id) async => 'test-key',
-    ).count(
-      account(ProviderProtocol.anthropicMessages, 'claude-test'),
-      systemPrompt: 'system',
-      userContent: 'user content',
-    );
+    final ExactTokenCount count =
+        await AnthropicRequestTokenCounter(
+          dioWith(adapter),
+          readApiKey: (String id) async => 'test-key',
+        ).count(
+          account(ProviderProtocol.anthropicMessages, 'claude-test'),
+          systemPrompt: 'system',
+          userContent: 'user content',
+        );
     expect(count.tokens, 1234);
     expect(count.isExact, isTrue);
     final RequestOptions request = adapter.requests.single;
@@ -55,50 +55,46 @@ void main() {
     );
     expect(request.headers['anthropic-version'], '2023-06-01');
     expect(request.headers['Authorization'], 'Bearer test-key');
-    final Map<String, Object?> body =
-        request.data! as Map<String, Object?>;
+    final Map<String, Object?> body = request.data! as Map<String, Object?>;
     expect(body['model'], 'claude-test');
     expect(body['system'], 'system');
   });
 
   test('Gemini countTokens: x-goog-api-key и totalTokens', () async {
     final FakeHttpAdapter adapter = FakeHttpAdapter(
-      (RequestOptions options) => jsonResponse(<String, Object?>{
-        'totalTokens': 777,
-      }),
+      (RequestOptions options) =>
+          jsonResponse(<String, Object?>{'totalTokens': 777}),
     );
-    final ExactTokenCount count = await GeminiRequestTokenCounter(
-      dioWith(adapter),
-      readApiKey: (String id) async => 'test-key',
-    ).count(
-      account(ProviderProtocol.geminiGenerateContent, 'gemini-test'),
-      systemPrompt: 'sys',
-      userContent: 'text',
-    );
+    final ExactTokenCount count =
+        await GeminiRequestTokenCounter(
+          dioWith(adapter),
+          readApiKey: (String id) async => 'test-key',
+        ).count(
+          account(ProviderProtocol.geminiGenerateContent, 'gemini-test'),
+          systemPrompt: 'sys',
+          userContent: 'text',
+        );
     expect(count.tokens, 777);
     final RequestOptions request = adapter.requests.single;
-    expect(
-      request.uri.path,
-      '/v1beta/models/gemini-test:countTokens',
-    );
+    expect(request.uri.path, '/v1beta/models/gemini-test:countTokens');
     expect(request.headers['x-goog-api-key'], 'test-key');
   });
 
   test('ошибка HTTP — unknown с машинным кодом, не исключение', () async {
     final FakeHttpAdapter adapter = FakeHttpAdapter(
-      (RequestOptions options) => jsonResponse(
-        <String, Object?>{'error': 'unauthorized'},
-        statusCode: 401,
-      ),
+      (RequestOptions options) => jsonResponse(<String, Object?>{
+        'error': 'unauthorized',
+      }, statusCode: 401),
     );
-    final ExactTokenCount count = await AnthropicRequestTokenCounter(
-      dioWith(adapter),
-      readApiKey: (String id) async => 'test-key',
-    ).count(
-      account(ProviderProtocol.anthropicMessages, 'claude-test'),
-      systemPrompt: 's',
-      userContent: 'u',
-    );
+    final ExactTokenCount count =
+        await AnthropicRequestTokenCounter(
+          dioWith(adapter),
+          readApiKey: (String id) async => 'test-key',
+        ).count(
+          account(ProviderProtocol.anthropicMessages, 'claude-test'),
+          systemPrompt: 's',
+          userContent: 'u',
+        );
     expect(count.isExact, isFalse);
     expect(count.errorCode, 'http_401');
   });
@@ -107,14 +103,15 @@ void main() {
     final FakeHttpAdapter adapter = FakeHttpAdapter(
       (RequestOptions options) => jsonResponse(<String, Object?>{}),
     );
-    final ExactTokenCount count = await AnthropicRequestTokenCounter(
-      dioWith(adapter),
-      readApiKey: (String id) async => null,
-    ).count(
-      account(ProviderProtocol.anthropicMessages, 'claude-test'),
-      systemPrompt: 's',
-      userContent: 'u',
-    );
+    final ExactTokenCount count =
+        await AnthropicRequestTokenCounter(
+          dioWith(adapter),
+          readApiKey: (String id) async => null,
+        ).count(
+          account(ProviderProtocol.anthropicMessages, 'claude-test'),
+          systemPrompt: 's',
+          userContent: 'u',
+        );
     expect(count.errorCode, 'no_api_key');
     expect(adapter.requests, isEmpty);
   });
@@ -122,7 +119,11 @@ void main() {
   test('недокументированный протокол — no-op счётчик', () {
     final RequestTokenCounter counter = requestTokenCounterFor(
       account(ProviderProtocol.openai, 'gpt-4o-mini'),
-      dioWith(FakeHttpAdapter((RequestOptions options) => jsonResponse(<String, Object?>{}))),
+      dioWith(
+        FakeHttpAdapter(
+          (RequestOptions options) => jsonResponse(<String, Object?>{}),
+        ),
+      ),
       readApiKey: (String id) async => 'k',
     );
     expect(counter, isA<NoopRequestTokenCounter>());

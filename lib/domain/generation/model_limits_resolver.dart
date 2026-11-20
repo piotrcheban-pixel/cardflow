@@ -24,10 +24,8 @@ ContextSemantics defaultSemanticsForAccount(ProviderAccount account) {
   }
   return switch (account.protocol) {
     ProviderProtocol.anthropicMessages ||
-    ProviderProtocol.geminiGenerateContent =>
-      ContextSemantics.inputOnly,
-    ProviderProtocol.openai =>
-      ContextSemantics.totalInputPlusOutput,
+    ProviderProtocol.geminiGenerateContent => ContextSemantics.inputOnly,
+    ProviderProtocol.openai => ContextSemantics.totalInputPlusOutput,
     ProviderProtocol.openaiCompletions => ContextSemantics.unknown,
   };
 }
@@ -43,8 +41,7 @@ ModelLimits resolveModelLimits({
   DateTime? now,
 }) {
   final DateTime timestamp = now ?? DateTime.now().toUtc();
-  final ProviderPresetModel? presetModel =
-      preset?.modelById(account.modelId);
+  final ProviderPresetModel? presetModel = preset?.modelById(account.modelId);
   final CapabilitySource accountSource =
       account.capabilitiesSource == CapabilitySource.unknown
       ? CapabilitySource.userConfigured
@@ -153,9 +150,8 @@ ModelLimits resolveModelLimits({
   );
 
   // Эвристика ADR-022 больше не «подтверждение»: только `assumption`.
-  final ModelLimits inferredLayer = account.supportsVision &&
-          presetModel == null &&
-          !account.visionConfigured
+  final ModelLimits inferredLayer =
+      account.supportsVision && presetModel == null && !account.visionConfigured
       ? ModelLimits(
           supportsImageInput: Sourced<bool>(
             inferSupportsVisionFromModelId(account.modelId),
@@ -165,7 +161,8 @@ ModelLimits resolveModelLimits({
         )
       : const ModelLimits.absent();
 
-  final ModelLimits providerLayer = cached?.limits ?? const ModelLimits.absent();
+  final ModelLimits providerLayer =
+      cached?.limits ?? const ModelLimits.absent();
   final ModelLimits merged = mergeModelLimits(<ModelLimits>[
     userLayer,
     providerLayer,

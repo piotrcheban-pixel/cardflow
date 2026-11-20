@@ -47,9 +47,20 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   `generationNoCardsFound`. Промпт `gen-ru-v5` скрыт в коде
   (`lib/api/prompts/system_prompt.dart`, сырой литерал; дословная копия —
   `docs/prompts/gen-ru-v5.txt`, тест сверяет байты), пользовательское сообщение —
-  `generation_prompt.dart` (блоки `<materials>`, `<wishes>`, `<limit>`, `<images>`;
-  пустые — одной строкой); каждый файл в `<materials>` начинается со строки
-  `Файл: <имя>`. Схема A8.4 содержит `image_id` (изображение из приложенных файлов) и
+  `generation_prompt.dart`: стабильный префикс `<materials>` → `<images>` →
+  `<outline>` → `<wishes>` и изменяемый хвост `<task>` (`<part>`, `<focus>`,
+  `<cards>`, `<context_only>`, `<already_created>`), промпт `gen-ru-v8`;
+  каждый файл в `<materials>` начинается со строки `Файл: <имя>`.
+  **Планирование (ADR-039/040, итерация 7.18):** характеристики модели —
+  `Sourced<T>` (`lib/domain/generation/sourced.dart`), `ModelLimits`, слоистый
+  `resolveModelLimits` (пользователь > API > каталог > допущение > неизвестно);
+  discovery — `lib/api/models/model_discovery.dart`, кэш JSON v1
+  `generation.model_capabilities` (TTL 7 дней), сервис — `model_capability_service.dart`.
+  Три независимых решения — `input_planner.dart`, `card_allocator.dart`,
+  `output_batch_planner.dart`; фасад — `generation_chunk_planner.dart`; конвейер
+  шлёт focus/part/already_created, обрабатывает исчерпание и калибрует
+  `tokensPerCard` (`generation.calibration` v1). Документация —
+  `docs/generation-planning.md`. Схема A8.4 содержит `image_id` (изображение из приложенных файлов) и
   `image_query`; проверка схемы — поштучно (`CardResponseSchema.splitValid`): одна плохая
   карточка не отбрасывает фрагмент. Контентные правила и мягкие проверки качества A8.4/A8.1 —
   `card_content_validator.dart` (пометки `CardIssueCode`, карточка не отбрасывается);

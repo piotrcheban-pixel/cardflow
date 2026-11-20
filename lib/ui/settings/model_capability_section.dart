@@ -126,14 +126,14 @@ class _ModelCapabilitySectionState extends State<ModelCapabilitySection> {
     } on Object {
       if (!mounted) return;
       setState(() {
-        _message = AppLocalizations.of(context).settingsCapabilitiesRefreshFailed;
+        _message = AppLocalizations.of(context)
+            .settingsCapabilitiesRefreshFailed;
       });
     } finally {
       if (mounted) setState(() => _busy = false);
     }
     await _reload();
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -147,7 +147,10 @@ class _ModelCapabilitySectionState extends State<ModelCapabilitySection> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text(l10n.settingsCapabilitiesTitle, style: theme.textTheme.titleMedium),
+          Text(
+            l10n.settingsCapabilitiesTitle,
+            style: theme.textTheme.titleMedium,
+          ),
           const SizedBox(height: AppSpacing.xs),
           Text(
             l10n.settingsCapabilitiesDescription,
@@ -206,7 +209,10 @@ class _ModelCapabilitySectionState extends State<ModelCapabilitySection> {
                 TextButton.icon(
                   key: const ValueKey<String>('capabilities-reset'),
                   onPressed: _busy ? null : _reset,
-                  icon: const Icon(Icons.settings_backup_restore, size: AppSizes.icon),
+                  icon: const Icon(
+                    Icons.settings_backup_restore,
+                    size: AppSizes.icon,
+                  ),
                   label: Text(l10n.settingsCapabilitiesReset),
                 ),
               ],

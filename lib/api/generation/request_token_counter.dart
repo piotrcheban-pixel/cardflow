@@ -74,7 +74,9 @@ abstract class _HttpCounter {
             'Accept': 'application/json',
             'Content-Type': 'application/json',
             if (key != null && key.isNotEmpty)
-              if (authHeaders != null) ...authHeaders(key) else
+              if (authHeaders != null)
+                ...authHeaders(key)
+              else
                 'Authorization': 'Bearer $key',
             ...headers,
           },
@@ -132,15 +134,11 @@ class AnthropicRequestTokenCounter extends _HttpCounter
           'model': account.modelId,
           'system': systemPrompt,
           'messages': <Object?>[
-            <String, Object?>{
-              'role': 'user',
-              'content': userContent,
-            },
+            <String, Object?>{'role': 'user', 'content': userContent},
           ],
         },
         headers: <String, String>{'anthropic-version': '2023-06-01'},
-        extract: (Object? data) =>
-            data is Map ? data['input_tokens'] : null,
+        extract: (Object? data) => data is Map ? data['input_tokens'] : null,
       );
       return ExactTokenCount.exact(tokens);
     } on _CounterError catch (error) {
@@ -184,9 +182,7 @@ class GeminiRequestTokenCounter extends _HttpCounter
         },
         headers: const <String, String>{},
         extract: (Object? data) => data is Map ? data['totalTokens'] : null,
-        authHeaders: (String key) => <String, String>{
-          'x-goog-api-key': key,
-        },
+        authHeaders: (String key) => <String, String>{'x-goog-api-key': key},
       );
       return ExactTokenCount.exact(tokens);
     } on _CounterError catch (error) {
@@ -222,6 +218,6 @@ RequestTokenCounter requestTokenCounterFor(
     dio,
     readApiKey: readApiKey,
   ),
-  ProviderProtocol.openai || ProviderProtocol.openaiCompletions =>
-    const NoopRequestTokenCounter(),
+  ProviderProtocol.openai ||
+  ProviderProtocol.openaiCompletions => const NoopRequestTokenCounter(),
 };

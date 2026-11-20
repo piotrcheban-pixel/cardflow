@@ -25,11 +25,11 @@ void main() {
     wrapperTokens: 200,
   );
 
-  GenerationPlanBuilder builder() => GenerationChunkPlanner(
-    estimator: const _CharEstimator(),
-  ).let((GenerationChunkPlanner planner) => GenerationPlanBuilder(
-    planner: planner,
-  ));
+  GenerationPlanBuilder builder() =>
+      GenerationChunkPlanner(estimator: const _CharEstimator()).let(
+        (GenerationChunkPlanner planner) =>
+            GenerationPlanBuilder(planner: planner),
+      );
 
   ModelCapabilities caps({
     int? context = 128000,
@@ -122,10 +122,11 @@ void main() {
         reason: 'ceil((3000 + 40000) × 1.1); заголовки разделов входят в текст',
       );
       expect(plan.outputReserveTokens, 8192);
-      expect(
-        plan.chunks.map((PlannedChunk c) => c.limit).toList(),
-        <int>[17, 17, 16],
-      );
+      expect(plan.chunks.map((PlannedChunk c) => c.limit).toList(), <int>[
+        17,
+        17,
+        16,
+      ]);
       expect(plan.achievableCards, 50);
     });
 
@@ -143,10 +144,15 @@ void main() {
       expect(plan.inputStrategy, InputStrategy.wholeDocument);
       expect(plan.partCount, 1);
       expect(plan.outputReserveTokens, 5530);
-      expect(
-        plan.chunks.map((PlannedChunk c) => c.limit).toList(),
-        <int>[15, 15, 14, 14, 14, 14, 14],
-      );
+      expect(plan.chunks.map((PlannedChunk c) => c.limit).toList(), <int>[
+        15,
+        15,
+        14,
+        14,
+        14,
+        14,
+        14,
+      ]);
     });
 
     test('T7: 64000/32000, D=50000 → резерв уменьшен до 5700, вход цел', () {
@@ -158,10 +164,15 @@ void main() {
       expect(plan.inputStrategy, InputStrategy.wholeDocument);
       expect(plan.plannedInputTokens, 58300);
       expect(plan.outputReserveTokens, 5700);
-      expect(
-        plan.chunks.map((PlannedChunk c) => c.limit).toList(),
-        <int>[15, 15, 14, 14, 14, 14, 14],
-      );
+      expect(plan.chunks.map((PlannedChunk c) => c.limit).toList(), <int>[
+        15,
+        15,
+        14,
+        14,
+        14,
+        14,
+        14,
+      ]);
     });
   });
 
@@ -265,10 +276,7 @@ void main() {
       );
       expect(plan.inputStrategy, InputStrategy.wholeDocument);
       expect(plan.images.length, 2);
-      expect(
-        plan.images.where((PlannedImage i) => i.sentToModel).length,
-        1,
-      );
+      expect(plan.images.where((PlannedImage i) => i.sentToModel).length, 1);
       expect(
         plan.images
             .where(
@@ -305,7 +313,10 @@ void main() {
         requestedCards: 100,
       );
       expect(plan.achievableCards, lessThan(100));
-      expect(plan.validity.warnings, contains(PlanWarningCode.requestedAbovePlan));
+      expect(
+        plan.validity.warnings,
+        contains(PlanWarningCode.requestedAbovePlan),
+      );
     });
 
     test('весь заказ помещается в один ответ — ровно один запрос', () {

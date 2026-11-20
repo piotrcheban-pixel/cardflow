@@ -20,10 +20,7 @@ import 'package:cardflow/domain/generation/provider_preset.dart';
 /// Результат обновления кэша (для UI: статус, дата, источник).
 final class CapabilityRefresh {
   /// Создаёт результат.
-  const CapabilityRefresh({
-    required this.result,
-    this.record,
-  });
+  const CapabilityRefresh({required this.result, this.record});
 
   /// Ответ discovery.
   final DiscoveryResult result;
@@ -61,8 +58,8 @@ class ModelCapabilityService {
 
   /// Резолвер discovery по аккаунту (политика полей зависит от пресета).
   ModelCapabilityDiscovery discoveryFor(ProviderAccount account) {
-    final ModelCapabilityDiscovery Function(ProviderAccount account)?
-    override = discoveryOverride;
+    final ModelCapabilityDiscovery Function(ProviderAccount account)? override =
+        discoveryOverride;
     if (override != null) return override(account);
     return discoveryForAccount(account, dio, readApiKey: readApiKey);
   }

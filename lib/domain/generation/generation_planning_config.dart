@@ -95,8 +95,7 @@ final class GenerationPlanningConfig {
     unknownContextOutputTokens:
         unknownContextOutputTokens ?? this.unknownContextOutputTokens,
     defaultOutputTokens: defaultOutputTokens ?? this.defaultOutputTokens,
-    jsonBodyOverheadBytes:
-        jsonBodyOverheadBytes ?? this.jsonBodyOverheadBytes,
+    jsonBodyOverheadBytes: jsonBodyOverheadBytes ?? this.jsonBodyOverheadBytes,
   );
 
   /// Запас точности для вида оценки.

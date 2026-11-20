@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cardflow/domain/generation/model_limits.dart';
-import 'package:cardflow/domain/generation/sourced.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/settings/model_capability_section.dart';
 
@@ -17,7 +16,9 @@ void main() {
     home: Scaffold(body: SingleChildScrollView(child: child)),
   );
 
-  testWidgets('показывает лимиты с источником и датой', (WidgetTester tester) async {
+  testWidgets('показывает лимиты с источником и датой', (
+    WidgetTester tester,
+  ) async {
     final DateTime observedAt = DateTime.utc(2026, 11, 20);
     await tester.pumpWidget(
       wrap(
@@ -50,7 +51,9 @@ void main() {
     expect(find.textContaining('допущение приложения'), findsOneWidget);
   });
 
-  testWidgets('обновление и сброс вызывают действия', (WidgetTester tester) async {
+  testWidgets('обновление и сброс вызывают действия', (
+    WidgetTester tester,
+  ) async {
     var refreshes = 0;
     var resets = 0;
     await tester.pumpWidget(
@@ -69,7 +72,9 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey<String>('capabilities-refresh')));
+    await tester.tap(
+      find.byKey(const ValueKey<String>('capabilities-refresh')),
+    );
     await tester.pumpAndSettle();
     expect(refreshes, 1);
     expect(find.text('Характеристики обновлены.'), findsOneWidget);
@@ -79,7 +84,9 @@ void main() {
     expect(find.text('Значения сброшены к автоматическим.'), findsOneWidget);
   });
 
-  testWidgets('ошибка загрузки показывается без исключения', (WidgetTester tester) async {
+  testWidgets('ошибка загрузки показывается без исключения', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(
       wrap(
         ModelCapabilitySection(

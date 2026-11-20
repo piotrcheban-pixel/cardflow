@@ -54,7 +54,8 @@ class DriftTokenCalibrationStore implements TokenCalibrationStore {
     required String accountId,
     required String model,
   }) async {
-    final String key = '${accountId.trim().toLowerCase()}|'
+    final String key =
+        '${accountId.trim().toLowerCase()}|'
         '${model.trim().toLowerCase()}';
     for (final TokenCalibration calibration in await readAll()) {
       if (calibration.key == key) return calibration;

@@ -460,22 +460,26 @@ void main() {
   });
 
   test('withAutomaticCapabilities: пресет → каталог, custom → unknown', () {
-    final ProviderAccount preset = testProviderAccount(modelId: 'deepseek-chat');
-    final ProviderAccount auto = preset.copyWith(maxOutputTokens: 123).copyWith(
-      capabilitiesSource: CapabilitySource.userConfigured,
-      supportsVision: true,
-    ).withAutomaticCapabilities();
+    final ProviderAccount preset = testProviderAccount(
+      modelId: 'deepseek-chat',
+    );
+    final ProviderAccount auto = preset
+        .copyWith(maxOutputTokens: 123)
+        .copyWith(
+          capabilitiesSource: CapabilitySource.userConfigured,
+          supportsVision: true,
+        )
+        .withAutomaticCapabilities();
     expect(auto.maxOutputTokens, isNull);
     expect(auto.capabilitiesSource, CapabilitySource.unknown);
     expect(auto.contextTokens, preset.contextTokens);
 
-    final ProviderAccount custom = testCustomProviderAccount(
-      supportsVision: true,
-    ).copyWith(
-      maxOutputTokens: 100,
-      maxImagesPerRequest: 2,
-      capabilitiesSource: CapabilitySource.userConfigured,
-    );
+    final ProviderAccount custom =
+        testCustomProviderAccount(supportsVision: true).copyWith(
+          maxOutputTokens: 100,
+          maxImagesPerRequest: 2,
+          capabilitiesSource: CapabilitySource.userConfigured,
+        );
     final ProviderAccount customAuto = custom.withAutomaticCapabilities();
     expect(customAuto.maxOutputTokens, isNull);
     expect(customAuto.maxImagesPerRequest, isNull);

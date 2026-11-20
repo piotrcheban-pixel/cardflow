@@ -168,7 +168,9 @@ void main() {
     );
     expect(result.status, GenerationJobStatus.done);
     expect(caller.calls, greaterThan(1));
-    final String catalog = buildImageCatalog(caller.requests.first.documentImages);
+    final String catalog = buildImageCatalog(
+      caller.requests.first.documentImages,
+    );
     expect(catalog, contains('img1'));
     for (final GenerationRequest request in caller.requests) {
       expect(
@@ -196,45 +198,47 @@ void main() {
     };
     expect(prefixes, hasLength(1), reason: 'кэш префикса с изображениями');
   });
-  test('source_exhausted: остаток разделов не запрашивается, недостача видна',
-      () async {
-    final GenerationPipeline runner = pipeline();
-    caller.onGenerate = (GenerationRequest request, int call) async {
-      if (call == 1) {
-        return resultOf(<String>['Первый'], sourceExhausted: true);
+  test(
+    'source_exhausted: остаток разделов не запрашивается, недостача видна',
+    () async {
+      final GenerationPipeline runner = pipeline();
+      caller.onGenerate = (GenerationRequest request, int call) async {
+        if (call == 1) {
+          return resultOf(<String>['Первый'], sourceExhausted: true);
+        }
+        return resultOf(<String>[
+          for (var index = 0; index < request.limit; index++)
+            'Вопрос $call-$index',
+        ]);
+      };
+      final GenerationRunResult result = await runner.run(
+        requestFor(docOf(200, 100), requestedCards: 40),
+      );
+      expect(result.status, GenerationJobStatus.done);
+      expect(result.exhaustedSectionIds, isNotEmpty);
+      expect(result.shortfallCards, greaterThan(0));
+      expect(
+        caller.calls,
+        3,
+        reason: 'две партии + однократное перераспределение',
+      );
+      // Последняя (дополнительная) партия не просит исчерпанные разделы.
+      final GenerationRequest last = caller.requests.last;
+      for (final String section in result.exhaustedSectionIds) {
+        expect(last.focusSectionIds, isNot(contains(section)));
       }
-      return resultOf(<String>[
-        for (var index = 0; index < request.limit; index++)
-          'Вопрос $call-$index',
-      ]);
-    };
-    final GenerationRunResult result = await runner.run(
-      requestFor(docOf(200, 100), requestedCards: 40),
-    );
-    expect(result.status, GenerationJobStatus.done);
-    expect(result.exhaustedSectionIds, isNotEmpty);
-    expect(result.shortfallCards, greaterThan(0));
-    expect(caller.calls, 3, reason: 'две партии + однократное перераспределение');
-    // Последняя (дополнительная) партия не просит исчерпанные разделы.
-    final GenerationRequest last = caller.requests.last;
-    for (final String section in result.exhaustedSectionIds) {
-      expect(last.focusSectionIds, isNot(contains(section)));
-    }
-    expect(
-      jobs.saved.last.chunkCount,
-      result.plan!.partCount,
-      reason: 'chunk_count — части входа (ADR-040 §8)',
-    );
-  });
+      expect(
+        jobs.saved.last.chunkCount,
+        result.plan!.partCount,
+        reason: 'chunk_count — части входа (ADR-040 §8)',
+      );
+    },
+  );
 
   test('почти-дубли (триграммы ≥ 0.85) не принимаются повторно', () async {
     final GenerationPipeline runner = pipeline();
     caller.onGenerate = (GenerationRequest request, int call) async => resultOf(
-      <String>[
-        'Что такое FSRS?',
-        'что такое fsrs',
-        'Чем отличается интервал?',
-      ],
+      <String>['Что такое FSRS?', 'что такое fsrs', 'Чем отличается интервал?'],
     );
     final GenerationRunResult result = await runner.run(
       requestFor(docOf(3, 400), requestedCards: 3),

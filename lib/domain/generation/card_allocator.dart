@@ -50,10 +50,7 @@ final class SectionFeatures {
     final int meaningfulWords = math.max(1, words.length);
     final int meaningfulTokens = math.max(1, (text.runes.length / 2.5).ceil());
     final double density = estimateDensity(text, words: words);
-    final int capacity = math.max(
-      1,
-      (meaningfulWords / 40 * density).ceil(),
-    );
+    final int capacity = math.max(1, (meaningfulWords / 40 * density).ceil());
     return SectionFeatures(
       density: density,
       meaningfulTokens: meaningfulTokens,
@@ -79,8 +76,7 @@ final class SectionFeatures {
   final bool service;
 
   /// Вес раздела `meaningfulTokens^0.8 × density` (ADR-040 §5).
-  double get weight =>
-      math.pow(meaningfulTokens, 0.8).toDouble() * density;
+  double get weight => math.pow(meaningfulTokens, 0.8).toDouble() * density;
 }
 
 const Set<String> _stopWords = <String>{
@@ -153,9 +149,10 @@ double estimateDensity(String text, {List<String>? words}) {
   score += math.min(4, numbers / 2);
   final int formulas = RegExp(r'\$[^$]+\$').allMatches(text).length;
   score += math.min(3, formulas);
-  final int listItems = RegExp(r'^\s*(?:[-–•*]|\d+[.)])\s', multiLine: true)
-      .allMatches(text)
-      .length;
+  final int listItems = RegExp(
+    r'^\s*(?:[-–•*]|\d+[.)])\s',
+    multiLine: true,
+  ).allMatches(text).length;
   score += math.min(3, listItems / 2);
   final int tableRows = RegExp(r'\|.*\|').allMatches(text).length;
   score += math.min(2, tableRows / 3);
@@ -377,7 +374,8 @@ final class CardAllocator {
       );
       if (totalWeight <= 0) break;
       final Map<String, double> share = <String, double>{
-        for (final String id in active) id: remaining * weights[id]! / totalWeight,
+        for (final String id in active)
+          id: remaining * weights[id]! / totalWeight,
       };
       var added = 0;
       for (final String id in List<String>.of(active)) {

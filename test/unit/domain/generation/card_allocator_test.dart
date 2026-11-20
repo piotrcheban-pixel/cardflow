@@ -10,12 +10,8 @@ void main() {
     double weight = 1,
     int? capacity,
     SectionKind kind = SectionKind.content,
-  }) => AllocationSection(
-    id: id,
-    weight: weight,
-    capacity: capacity,
-    kind: kind,
-  );
+  }) =>
+      AllocationSection(id: id, weight: weight, capacity: capacity, kind: kind);
 
   List<AllocationSection> five({
     List<double> weights = const <double>[1, 3, 2, 3, 1],
@@ -26,8 +22,7 @@ void main() {
   ];
 
   List<int> values(CardAllocation allocation) => <int>[
-    for (final AllocationSection s in five())
-      allocation.forSection(s.id),
+    for (final AllocationSection s in five()) allocation.forSection(s.id),
   ];
 
   group('§5.2 распределение', () {
@@ -43,24 +38,22 @@ void main() {
 
     test('те же веса, ёмкость первого 3 → 3/16/10/16/5', () {
       final CardAllocation allocation = allocator.allocate(
-        sections: five(
-          capacities: const <int?>[3, 20, 20, 20, 20],
-        ),
+        sections: five(capacities: const <int?>[3, 20, 20, 20, 20]),
         requestedCards: 50,
       );
       expect(allocation.achievable, 50);
-      expect(
-        values(allocation),
-        <int>[3, 16, 10, 16, 5],
-        reason: 'остаток после фиксации ёмкости перераспределяется по весам',
-      );
+      expect(values(allocation), <int>[
+        3,
+        16,
+        10,
+        16,
+        5,
+      ], reason: 'остаток после фиксации ёмкости перераспределяется по весам');
     });
 
     test('ёмкости 3/6/5/6/2, заказ 50 → achievable 22, предупреждение', () {
       final CardAllocation allocation = allocator.allocate(
-        sections: five(
-          capacities: const <int?>[3, 6, 5, 6, 2],
-        ),
+        sections: five(capacities: const <int?>[3, 6, 5, 6, 2]),
         requestedCards: 50,
       );
       expect(allocation.achievable, 22);

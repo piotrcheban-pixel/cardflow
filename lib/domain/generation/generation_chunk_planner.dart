@@ -177,7 +177,8 @@ final class GenerationChunkPlanner {
     final GenerationPlanningConfig planning = config.planning;
     final ModelLimits limits = modelLimitsFromCapabilities(capabilities);
     final _InventoryData data = _inventoryData(inventory, estimator);
-    final bool promptOnly = data.sections.isEmpty &&
+    final bool promptOnly =
+        data.sections.isEmpty &&
         data.attachments.isEmpty &&
         data.orphanImages.isEmpty;
     if (promptOnly &&
@@ -321,9 +322,7 @@ final class GenerationChunkPlanner {
     };
     final PlanValidity validity = warnings.isEmpty
         ? const PlanValidity.valid()
-        : PlanValidity.warnings(
-            List<PlanWarningCode>.unmodifiable(warnings),
-          );
+        : PlanValidity.warnings(List<PlanWarningCode>.unmodifiable(warnings));
 
     final List<PlannedChunk> chunks = <PlannedChunk>[];
     final Map<String, PlannedImage> imageStatuses = <String, PlannedImage>{
@@ -582,8 +581,10 @@ final class GenerationChunkPlanner {
       config: config.planning,
       requestBytes: bytes + config.planning.jsonBodyOverheadBytes,
     );
-    final bool whole = !budget.contextExceeded &&
-        budget.maxTokens >= config.planning.tokensFor(config.planning.minBatchCards);
+    final bool whole =
+        !budget.contextExceeded &&
+        budget.maxTokens >=
+            config.planning.tokensFor(config.planning.minBatchCards);
     final InputPart part = InputPart(
       index: 0,
       sections: const <InputSection>[],
@@ -729,7 +730,9 @@ final class GenerationChunkPlanner {
       units: units,
       imageParts: imageParts,
       catalogOnly: catalogPart,
-      imagePartIds: <String>[for (final InputImage image in batchImages) image.id],
+      imagePartIds: <String>[
+        for (final InputImage image in batchImages) image.id,
+      ],
       catalogOnlyIds: <String>[
         for (final InputImage image in catalogImages) image.id,
       ],
@@ -806,8 +809,9 @@ final class GenerationChunkPlanner {
       final bool countFull =
           maxCount != null && current.length >= math.max(1, maxCount);
       final bool bytesFull =
-          maxBytes != null && current.isNotEmpty &&
-              currentBytes + image.bytes.length > maxBytes;
+          maxBytes != null &&
+          current.isNotEmpty &&
+          currentBytes + image.bytes.length > maxBytes;
       if (current.isNotEmpty && (countFull || bytesFull)) {
         bins.add(current);
         current = <InputImage>[];
@@ -830,6 +834,7 @@ final class GenerationChunkPlanner {
         math.max(1, base + (index < remainder ? 1 : 0)),
     ];
   }
+
   DocumentImage _documentImageOf(InputImage image) => DocumentImage(
     fileName: image.fileName,
     bytes: image.bytes,
@@ -1243,14 +1248,22 @@ final class _InventoryData {
   int get attachmentPageTokens => attachments.fold<int>(
     0,
     (int sum, AttachmentUnit unit) =>
-        sum + unit.pages.fold<int>(0, (int inner, PageUnit page) => inner + page.tokens),
+        sum +
+        unit.pages.fold<int>(
+          0,
+          (int inner, PageUnit page) => inner + page.tokens,
+        ),
   );
 
   int get attachmentPageBytes => attachments.fold<int>(
     0,
     (int sum, AttachmentUnit unit) =>
         sum +
-        unit.pages.fold<int>(0, (int inner, PageUnit page) => inner + ((page.bytes.length + 2) ~/ 3) * 4),
+        unit.pages.fold<int>(
+          0,
+          (int inner, PageUnit page) =>
+              inner + ((page.bytes.length + 2) ~/ 3) * 4,
+        ),
   );
 }
 

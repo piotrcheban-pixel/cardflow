@@ -88,13 +88,17 @@ void main() {
       observedTokensPerCard: 500,
     );
     expect(
-      (await store.read(accountId: 'deepseek', model: 'deepseek-flash'))!
-          .tokensPerCard,
+      (await store.read(
+        accountId: 'deepseek',
+        model: 'deepseek-flash',
+      ))!.tokensPerCard,
       300,
     );
     expect(
-      (await store.read(accountId: 'deepseek', model: 'deepseek-chat'))!
-          .tokensPerCard,
+      (await store.read(
+        accountId: 'deepseek',
+        model: 'deepseek-chat',
+      ))!.tokensPerCard,
       500,
     );
     expect(await store.readAll(), hasLength(2));

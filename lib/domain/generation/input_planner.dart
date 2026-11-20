@@ -12,7 +12,8 @@ import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
-import 'package:cardflow/domain/generation/document_image.dart' show documentImageDigest;
+import 'package:cardflow/domain/generation/document_image.dart'
+    show documentImageDigest;
 import 'package:cardflow/domain/generation/generation_plan.dart';
 import 'package:cardflow/domain/generation/generation_planning_config.dart';
 import 'package:cardflow/domain/generation/generation_request_budget.dart';
@@ -291,7 +292,8 @@ RenderedMaterials renderInputMaterials(List<InputSection> sections) {
 }
 
 /// Итог раздачи изображений по бюджету байтов.
-final class _ImagePlacement {  const _ImagePlacement({
+final class _ImagePlacement {
+  const _ImagePlacement({
     required this.sent,
     required this.statuses,
     required this.bytes,
@@ -346,7 +348,10 @@ final class InputPlanner {
       warnings.add(PlanWarningCode.imagesWithoutVision);
     }
     final int imageTokens = supportsImages
-        ? allImages.fold<int>(0, (int sum, InputImage image) => sum + image.tokens)
+        ? allImages.fold<int>(
+            0,
+            (int sum, InputImage image) => sum + image.tokens,
+          )
         : 0;
 
     // -- prompt-only ---------------------------------------------------------
@@ -399,13 +404,15 @@ final class InputPlanner {
         imagesOmittedByBudget = true;
       }
     }
-    final int materialTokens = textTokens +
+    final int materialTokens =
+        textTokens +
         (imagesOmittedByBudget || !supportsImages ? 0 : imageTokens);
     final int minBatchTokens = config.tokensFor(config.minBatchCards);
     final bool withinConservativeBudget =
         contextTokens != null ||
         materialTokens <= config.unknownContextMaterialTokens;
-    final bool wholeCapable = !budget.contextExceeded &&
+    final bool wholeCapable =
+        !budget.contextExceeded &&
         withinConservativeBudget &&
         budget.maxTokens >= minBatchTokens;
 
@@ -558,10 +565,7 @@ final class InputPlanner {
       final double fromMaxInput = maxInputTokens == null
           ? double.infinity
           : maxInputTokens / (1 + marginRate) - fixedPart;
-      materialBudget = math.max(
-        1,
-        math.min(fromContext, fromMaxInput).floor(),
-      );
+      materialBudget = math.max(1, math.min(fromContext, fromMaxInput).floor());
     }
 
     final int textTokens = sections.fold<int>(
@@ -596,8 +600,7 @@ final class InputPlanner {
       textBytes: 0,
     );
     final Map<String, PlannedImage> statuses = <String, PlannedImage>{
-      for (final PlannedImage image in placementAll.statuses)
-        image.id: image,
+      for (final PlannedImage image in placementAll.statuses) image.id: image,
     };
     final List<InputImage> remaining = <InputImage>[
       for (final InputImage image in allImages)
@@ -610,7 +613,8 @@ final class InputPlanner {
         <String, List<InputImage>>{};
     final List<InputImage> orphans = <InputImage>[];
     for (final InputImage image in remaining) {
-      final String? owner = image.sectionId ??
+      final String? owner =
+          image.sectionId ??
           _ownerOf(image, sections) ??
           _ownerOf(image, sections);
       if (owner == null) {
@@ -929,8 +933,7 @@ final class InputPlanner {
       final String candidate = index == 0
           ? '$buffer${titles[index]}'
           : '$buffer · ${titles[index]}';
-      if (maxTokens > 0 &&
-          textBytes(candidate) / 2.5 > maxTokens) {
+      if (maxTokens > 0 && textBytes(candidate) / 2.5 > maxTokens) {
         break;
       }
       buffer.write(index == 0 ? titles[index] : ' · ${titles[index]}');

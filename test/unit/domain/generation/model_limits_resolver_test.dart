@@ -147,9 +147,7 @@ void main() {
       modelId: 'm',
     );
     expect(
-      resolveModelLimits(account: noFlag, now: now)
-          .supportsImageInput
-          .isKnown,
+      resolveModelLimits(account: noFlag, now: now).supportsImageInput.isKnown,
       isFalse,
     );
   });
@@ -160,10 +158,7 @@ void main() {
       base.key,
       'deepseek|openai-completions|https://api.deepseek.com|deepseek-flash',
     );
-    expect(
-      cached(limits: const ModelLimits.absent()).key,
-      base.key,
-    );
+    expect(cached(limits: const ModelLimits.absent()).key, base.key);
     final ModelCapabilityRecord otherModel = ModelCapabilityRecord(
       accountId: 'deepseek',
       protocol: ProviderProtocol.openaiCompletions,

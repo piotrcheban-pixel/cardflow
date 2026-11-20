@@ -86,8 +86,7 @@ final class ModelLimits {
   bool get hasContext => contextTokens.isKnown;
 
   /// true, если семантика окна известна.
-  bool get hasContextSemantics =>
-      contextSemantics != ContextSemantics.unknown;
+  bool get hasContextSemantics => contextSemantics != ContextSemantics.unknown;
 
   /// Поля, значения которых неизвестны (для предупреждений/диагностики).
   List<String> get unknownFields => List<String>.unmodifiable(<String>[
@@ -120,8 +119,7 @@ final class ModelLimits {
     maxCardsPerRequest: maxCardsPerRequest ?? this.maxCardsPerRequest,
     maxRequestBytes: maxRequestBytes ?? this.maxRequestBytes,
     maxImagesPerRequest: maxImagesPerRequest ?? this.maxImagesPerRequest,
-    maxImageBytesPerImage:
-        maxImageBytesPerImage ?? this.maxImageBytesPerImage,
+    maxImageBytesPerImage: maxImageBytesPerImage ?? this.maxImageBytesPerImage,
     maxImageBytesPerRequest:
         maxImageBytesPerRequest ?? this.maxImageBytesPerRequest,
     supportsImageInput: supportsImageInput ?? this.supportsImageInput,
@@ -177,10 +175,12 @@ ModelLimits mergeModelLimits(Iterable<ModelLimits> layers) {
     maxCardsPerRequest: pick<int>((ModelLimits l) => l.maxCardsPerRequest),
     maxRequestBytes: pick<int>((ModelLimits l) => l.maxRequestBytes),
     maxImagesPerRequest: pick<int>((ModelLimits l) => l.maxImagesPerRequest),
-    maxImageBytesPerImage:
-        pick<int>((ModelLimits l) => l.maxImageBytesPerImage),
-    maxImageBytesPerRequest:
-        pick<int>((ModelLimits l) => l.maxImageBytesPerRequest),
+    maxImageBytesPerImage: pick<int>(
+      (ModelLimits l) => l.maxImageBytesPerImage,
+    ),
+    maxImageBytesPerRequest: pick<int>(
+      (ModelLimits l) => l.maxImageBytesPerRequest,
+    ),
     supportsImageInput: pick<bool>((ModelLimits l) => l.supportsImageInput),
     supportsPdfInput: pick<bool>((ModelLimits l) => l.supportsPdfInput),
     isReasoningModel: pick<bool>((ModelLimits l) => l.isReasoningModel),
@@ -297,8 +297,12 @@ Sourced<T> sourcedFromJson<T>(Object? json, T? Function(Object? value) decode) {
   return Sourced<T>(
     value,
     source: source,
-    observedAt: observed is String ? DateTime.tryParse(observed)?.toUtc() : null,
-    sourceRef: json['source_ref'] is String ? json['source_ref']! as String : null,
+    observedAt: observed is String
+        ? DateTime.tryParse(observed)?.toUtc()
+        : null,
+    sourceRef: json['source_ref'] is String
+        ? json['source_ref']! as String
+        : null,
   );
 }
 
@@ -329,7 +333,10 @@ Map<String, Object?> modelLimitsToJson(ModelLimits limits) => <String, Object?>{
     limits.supportsImageInput,
     (bool v) => v,
   ),
-  'supports_pdf_input': sourcedToJson<bool>(limits.supportsPdfInput, (bool v) => v),
+  'supports_pdf_input': sourcedToJson<bool>(
+    limits.supportsPdfInput,
+    (bool v) => v,
+  ),
   'is_reasoning_model': sourcedToJson<bool>(
     limits.isReasoningModel,
     (bool v) => v,
@@ -343,9 +350,8 @@ Map<String, Object?> modelLimitsToJson(ModelLimits limits) => <String, Object?>{
 /// Разбор лимитов из JSON кэша; битые поля — неизвестны (не 0).
 ModelLimits modelLimitsFromJson(Object? json) {
   if (json is! Map) return const ModelLimits.absent();
-  int? intOf(Object? value) => value is num && value.isFinite && value >= 0
-      ? value.toInt()
-      : null;
+  int? intOf(Object? value) =>
+      value is num && value.isFinite && value >= 0 ? value.toInt() : null;
   bool? boolOf(Object? value) => value is bool ? value : null;
   ContextSemantics semantics = ContextSemantics.unknown;
   for (final ContextSemantics value in ContextSemantics.values) {

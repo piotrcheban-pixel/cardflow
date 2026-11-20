@@ -19,7 +19,6 @@ import 'package:cardflow/domain/text/parsed_document.dart';
 /// партии, покрытие и предохранители.
 void main() {
   const GenerationPlanBuilder builder = GenerationPlanBuilder();
-  const GenerationChunkPlanner planner = GenerationChunkPlanner();
   const GenerationOverheadTokens overhead = GenerationOverheadTokens(
     systemPromptTokens: 1000,
     schemaTokens: 200,
@@ -66,34 +65,21 @@ void main() {
 
   String words(int count) => List<String>.filled(count, 'слово').join(' ');
 
-  DocumentImage imageOf(int index, {int bytes = 2048, String file = 'd.txt'}) =>
-      DocumentImage(
-        fileName: file,
-        bytes: Uint8List.fromList(
-          List<int>.generate(bytes, (int i) => (index * 37 + i) % 251),
-        ),
-        mediaType: AttachmentMediaType.png,
-        width: 640,
-        height: 480,
-        sectionIndex: 0,
-        order: index,
-        caption: 'Рис. $index',
-      );
-
   GenerationPlan planFor(
     List<ParsedDocument> documents, {
     ModelCapabilities? capabilities,
     int? requestedCards,
     GenerationChunkPlannerConfig config = const GenerationChunkPlannerConfig(),
-  }) => GenerationChunkPlanner(
-    config: config,
-    estimator: const _MultiplierEstimator(1),
-  ).plan(
-    inventory: builder.inventoryOf(documents: documents),
-    capabilities: capabilities ?? caps(),
-    overhead: overhead,
-    requestedCards: requestedCards,
-  );
+  }) =>
+      GenerationChunkPlanner(
+        config: config,
+        estimator: const _MultiplierEstimator(1),
+      ).plan(
+        inventory: builder.inventoryOf(documents: documents),
+        capabilities: capabilities ?? caps(),
+        overhead: overhead,
+        requestedCards: requestedCards,
+      );
 
   List<String> partIds(GenerationPlan plan) => <String>[
     for (final InputPart part in plan.parts)
@@ -110,14 +96,12 @@ void main() {
     });
 
     test('крошечное окно: план невалиден до сети', () {
-      final GenerationPlan plan = planFor(
-        <ParsedDocument>[
-          docOf('big.txt', <String>[
-            for (var index = 0; index < 40; index++) 'Раздел $index. ${words(400)}',
-          ]),
-        ],
-        capabilities: caps(context: 1500),
-      );
+      final GenerationPlan plan = planFor(<ParsedDocument>[
+        docOf('big.txt', <String>[
+          for (var index = 0; index < 40; index++)
+            'Раздел $index. ${words(400)}',
+        ]),
+      ], capabilities: caps(context: 1500));
       expect(plan.validity.isInvalid, isTrue);
       expect(
         plan.validity.reason,
@@ -131,35 +115,31 @@ void main() {
     });
 
     test('раздел больше бюджета части — unitTooLarge', () {
-      final GenerationPlan plan = planFor(
-        <ParsedDocument>[
-          docOf('one.txt', <String>[words(4000)]),
-        ],
-        capabilities: caps(context: 9000, maxOutput: 2000),
-      );
+      final GenerationPlan plan = planFor(<ParsedDocument>[
+        docOf('one.txt', <String>[words(4000)]),
+      ], capabilities: caps(context: 9000, maxOutput: 2000));
       expect(plan.validity.isInvalid, isTrue);
       expect(plan.validity.reason, PlanInvalidReason.unitTooLarge);
     });
 
     test('вложения без Vision — невыполнимый план, а не тишина', () {
-      final GenerationPlan plan = GenerationChunkPlanner(
-        estimator: const _MultiplierEstimator(1),
-      ).plan(
-        inventory: builder.inventoryOf(
-          documents: const <ParsedDocument>[],
-          attachments: <GenerationAttachment>[
-            GenerationAttachment(
-              fileName: 'scan.pdf',
-              mediaType: AttachmentMediaType.png,
-              bytes: Uint8List.fromList(<int>[1, 2, 3, 4]),
-              pageNumber: 1,
-              groupKey: 'scan.pdf',
+      final GenerationPlan plan =
+          GenerationChunkPlanner(estimator: const _MultiplierEstimator(1)).plan(
+            inventory: builder.inventoryOf(
+              documents: const <ParsedDocument>[],
+              attachments: <GenerationAttachment>[
+                GenerationAttachment(
+                  fileName: 'scan.pdf',
+                  mediaType: AttachmentMediaType.png,
+                  bytes: Uint8List.fromList(<int>[1, 2, 3, 4]),
+                  pageNumber: 1,
+                  groupKey: 'scan.pdf',
+                ),
+              ],
             ),
-          ],
-        ),
-        capabilities: caps(),
-        overhead: overhead,
-      );
+            capabilities: caps(),
+            overhead: overhead,
+          );
       expect(plan.validity.isInvalid, isTrue);
       expect(plan.validity.reason, PlanInvalidReason.imagesWithoutVision);
     });
@@ -168,7 +148,8 @@ void main() {
       final GenerationPlan plan = planFor(
         <ParsedDocument>[
           docOf('many.txt', <String>[
-            for (var index = 0; index < 60; index++) 'Раздел $index. ${words(300)}',
+            for (var index = 0; index < 60; index++)
+              'Раздел $index. ${words(300)}',
           ]),
         ],
         capabilities: caps(context: 6000, maxOutput: 1500),
@@ -183,10 +164,9 @@ void main() {
         'Первый абзац.\n\nВторой абзац.',
         'Третий раздел. ${words(80)}',
       ]);
-      final GenerationPlan plan = planFor(
-        <ParsedDocument>[document],
-        requestedCards: 5,
-      );
+      final GenerationPlan plan = planFor(<ParsedDocument>[
+        document,
+      ], requestedCards: 5);
       final ContentInventory inventory = builder.inventoryOf(
         documents: <ParsedDocument>[document],
       );
@@ -200,12 +180,9 @@ void main() {
 
   group('стратегия входа', () {
     test('документ помещается целиком — wholeDocument, один источник', () {
-      final GenerationPlan plan = planFor(
-        <ParsedDocument>[
-          docOf('small.txt', <String>['Раздел 1. ${words(100)}', 'Раздел 2.']),
-        ],
-        requestedCards: 10,
-      );
+      final GenerationPlan plan = planFor(<ParsedDocument>[
+        docOf('small.txt', <String>['Раздел 1. ${words(100)}', 'Раздел 2.']),
+      ], requestedCards: 10);
       expect(plan.inputStrategy, InputStrategy.wholeDocument);
       expect(plan.partCount, 1);
       expect(plan.chunks, isNotEmpty);
@@ -217,7 +194,8 @@ void main() {
       final GenerationPlan plan = planFor(
         <ParsedDocument>[
           docOf('big.txt', <String>[
-            for (var index = 0; index < 30; index++) 'Раздел $index. ${words(300)}',
+            for (var index = 0; index < 30; index++)
+              'Раздел $index. ${words(300)}',
           ]),
         ],
         capabilities: caps(context: 6000, maxOutput: 1500),
@@ -239,7 +217,8 @@ void main() {
     test('разбиение входа не зависит от числа карточек', () {
       final List<ParsedDocument> documents = <ParsedDocument>[
         docOf('stable.txt', <String>[
-          for (var index = 0; index < 24; index++) 'Раздел $index. ${words(400)}',
+          for (var index = 0; index < 24; index++)
+            'Раздел $index. ${words(400)}',
         ]),
       ];
       final List<GenerationPlan> plans = <int>[10, 50, 100]
@@ -263,12 +242,17 @@ void main() {
 
     test('неизвестное окно — допущение и честное предупреждение', () {
       final GenerationPlan plan = planFor(
-        <ParsedDocument>[docOf('u.txt', <String>['Раздел. ${words(200)}'])],
+        <ParsedDocument>[
+          docOf('u.txt', <String>['Раздел. ${words(200)}']),
+        ],
         capabilities: caps(context: null),
         requestedCards: 5,
       );
       expect(plan.validity.isValid, isTrue);
-      expect(plan.validity.warnings, contains(PlanWarningCode.contextUnconfirmed));
+      expect(
+        plan.validity.warnings,
+        contains(PlanWarningCode.contextUnconfirmed),
+      );
       expect(plan.budget.contextWindowTokens, isNull);
       expect(plan.parts.single.materialsText, isNotEmpty);
     });
@@ -276,14 +260,12 @@ void main() {
 
   group('распределение и партии', () {
     test('заказ 5 — сумма лимитов 5 и каждый ≥ 1', () {
-      final GenerationPlan plan = planFor(
-        <ParsedDocument>[
-          docOf('a.txt', <String>[
-            for (var index = 0; index < 3; index++) 'Раздел $index. ${words(400)}',
-          ]),
-        ],
-        requestedCards: 5,
-      );
+      final GenerationPlan plan = planFor(<ParsedDocument>[
+        docOf('a.txt', <String>[
+          for (var index = 0; index < 3; index++)
+            'Раздел $index. ${words(400)}',
+        ]),
+      ], requestedCards: 5);
       expect(plan.chunks, isNotEmpty);
       expect(plan.plannedCards, 5);
       for (final PlannedChunk chunk in plan.chunks) {
@@ -296,15 +278,17 @@ void main() {
       final GenerationPlan plan = planFor(
         <ParsedDocument>[
           docOf('big.txt', <String>[
-            for (var index = 0; index < 40; index++) 'Раздел $index. ${words(200)}',
+            for (var index = 0; index < 40; index++)
+              'Раздел $index. ${words(200)}',
           ]),
         ],
         capabilities: caps(maxOutput: 8192),
         requestedCards: 100,
       );
       final int perBatch = config.cardsFor(plan.outputReserveTokens!);
-      final int cap =
-          perBatch < config.batchCardsCeiling ? perBatch : config.batchCardsCeiling;
+      final int cap = perBatch < config.batchCardsCeiling
+          ? perBatch
+          : config.batchCardsCeiling;
       for (final PlannedChunk chunk in plan.chunks) {
         expect(chunk.limit, lessThanOrEqualTo(cap));
       }
@@ -315,19 +299,22 @@ void main() {
     });
 
     test('мало материала: achievable < заказа и видимая причина', () {
-      final GenerationPlan plan = planFor(
-        <ParsedDocument>[docOf('tiny.txt', <String>['Короткий раздел.'])],
-        requestedCards: 100,
-      );
+      final GenerationPlan plan = planFor(<ParsedDocument>[
+        docOf('tiny.txt', <String>['Короткий раздел.']),
+      ], requestedCards: 100);
       expect(plan.plannedCards, lessThan(100));
-      expect(plan.validity.warnings, contains(PlanWarningCode.requestedAbovePlan));
+      expect(
+        plan.validity.warnings,
+        contains(PlanWarningCode.requestedAbovePlan),
+      );
     });
 
     test('maxCardsPerRequest ограничивает размер партии', () {
       final GenerationPlan plan = planFor(
         <ParsedDocument>[
           docOf('cards.txt', <String>[
-            for (var index = 0; index < 10; index++) 'Раздел $index. ${words(100)}',
+            for (var index = 0; index < 10; index++)
+              'Раздел $index. ${words(100)}',
           ]),
         ],
         capabilities: caps(maxCards: 4),
@@ -342,7 +329,8 @@ void main() {
       final GenerationPlan plan = planFor(
         <ParsedDocument>[
           docOf('focus.txt', <String>[
-            for (var index = 0; index < 8; index++) 'Раздел $index. ${words(120)}',
+            for (var index = 0; index < 8; index++)
+              'Раздел $index. ${words(120)}',
           ]),
         ],
         capabilities: caps(maxOutput: 2000),
@@ -351,8 +339,7 @@ void main() {
       expect(plan.inputStrategy, InputStrategy.wholeDocument);
       expect(plan.chunks.length, greaterThan(1));
       final Set<String> focus = <String>{
-        for (final PlannedChunk chunk in plan.chunks)
-          ...chunk.focusSectionIds,
+        for (final PlannedChunk chunk in plan.chunks) ...chunk.focusSectionIds,
       };
       final Set<String> expected = <String>{
         for (final InputSection section in plan.parts.single.sections)
@@ -369,16 +356,15 @@ void main() {
 
   group('prompt-only через тот же планировщик', () {
     test('тема без файлов: prompt-only чанки через allowPromptOnly', () {
-      final GenerationPlan plan = GenerationChunkPlanner(
-        estimator: const _MultiplierEstimator(1),
-      ).plan(
-        inventory: builder.inventoryOf(documents: const <ParsedDocument>[]),
-        capabilities: caps(),
-        overhead: overhead,
-        requestedCards: 40,
-        wishes: 'Тема: оптика',
-        allowPromptOnly: true,
-      );
+      final GenerationPlan plan =
+          GenerationChunkPlanner(estimator: const _MultiplierEstimator(1)).plan(
+            inventory: builder.inventoryOf(documents: const <ParsedDocument>[]),
+            capabilities: caps(),
+            overhead: overhead,
+            requestedCards: 40,
+            wishes: 'Тема: оптика',
+            allowPromptOnly: true,
+          );
       expect(plan.mode, GenerationMode.promptOnly);
       expect(plan.chunks, isNotEmpty);
       for (final PlannedChunk chunk in plan.chunks) {
@@ -389,14 +375,13 @@ void main() {
     });
 
     test('без темы пустой инвентарь — пустой план, не ошибка', () {
-      final GenerationPlan plan = GenerationChunkPlanner(
-        estimator: const _MultiplierEstimator(1),
-      ).plan(
-        inventory: builder.inventoryOf(documents: const <ParsedDocument>[]),
-        capabilities: caps(),
-        overhead: overhead,
-        allowPromptOnly: true,
-      );
+      final GenerationPlan plan =
+          GenerationChunkPlanner(estimator: const _MultiplierEstimator(1)).plan(
+            inventory: builder.inventoryOf(documents: const <ParsedDocument>[]),
+            capabilities: caps(),
+            overhead: overhead,
+            allowPromptOnly: true,
+          );
       expect(plan.chunks, isEmpty);
       expect(plan.validity.isValid, isTrue);
     });
@@ -404,10 +389,9 @@ void main() {
 
   group('сообщение и стабильность', () {
     test('обвязка P видна в трассировке бюджета', () {
-      final GenerationPlan plan = planFor(
-        <ParsedDocument>[docOf('p.txt', <String>['Раздел.'])],
-        requestedCards: 1,
-      );
+      final GenerationPlan plan = planFor(<ParsedDocument>[
+        docOf('p.txt', <String>['Раздел.']),
+      ], requestedCards: 1);
       expect(plan.budget.systemPromptTokens, overhead.systemPromptTokens);
       expect(plan.budget.schemaTokens, overhead.schemaTokens);
       expect(
@@ -421,7 +405,8 @@ void main() {
       final GenerationPlan plan = planFor(
         <ParsedDocument>[
           docOf('s.txt', <String>[
-            for (var index = 0; index < 6; index++) 'Раздел $index. ${words(80)}',
+            for (var index = 0; index < 6; index++)
+              'Раздел $index. ${words(80)}',
           ]),
         ],
         capabilities: caps(maxOutput: 2000),
@@ -438,7 +423,8 @@ void main() {
     test('детерминизм: одинаковые входы — одинаковый план', () {
       final List<ParsedDocument> documents = <ParsedDocument>[
         docOf('d.txt', <String>[
-          for (var index = 0; index < 12; index++) 'Раздел $index. ${words(150)}',
+          for (var index = 0; index < 12; index++)
+            'Раздел $index. ${words(150)}',
         ]),
       ];
       final GenerationPlan first = planFor(documents, requestedCards: 25);

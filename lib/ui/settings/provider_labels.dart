@@ -43,6 +43,7 @@ IconData providerProtocolIcon(ProviderProtocol protocol) {
     ProviderProtocol.geminiGenerateContent => Icons.diamond_outlined,
   };
 }
+
 /// Подпись источника характеристики модели (ADR-039 §6).
 String capabilitySourceLabel(AppLocalizations l10n, CapabilitySource source) {
   return switch (source) {

@@ -52,6 +52,7 @@ abstract class _HttpDiscovery {
     if (status >= 400) throw _HttpStatusError(status);
     return response;
   }
+
   String joinBase(String baseUrl, String path) {
     final String base = baseUrl.trim().replaceAll(RegExp(r'/+$'), '');
     final String suffix = path.startsWith('/') ? path : '/$path';
@@ -81,26 +82,56 @@ abstract class _HttpDiscovery {
       return _error(account, DiscoveryStatus.timeout, 'timeout', sourceRef);
     } on _HttpStatusError catch (error) {
       if (error.status == 401 || error.status == 403) {
-        return _error(account, DiscoveryStatus.unauthorized, 'unauthorized', sourceRef);
+        return _error(
+          account,
+          DiscoveryStatus.unauthorized,
+          'unauthorized',
+          sourceRef,
+        );
       }
       if (error.status == 404) {
-        return _error(account, DiscoveryStatus.notFound, 'not_found', sourceRef);
+        return _error(
+          account,
+          DiscoveryStatus.notFound,
+          'not_found',
+          sourceRef,
+        );
       }
-      return _error(account, DiscoveryStatus.error, 'http_${error.status}', sourceRef);
+      return _error(
+        account,
+        DiscoveryStatus.error,
+        'http_${error.status}',
+        sourceRef,
+      );
     } on DioException catch (error) {
       final int? code = error.response?.statusCode;
       if (code == 401 || code == 403) {
-        return _error(account, DiscoveryStatus.unauthorized, 'unauthorized', sourceRef);
+        return _error(
+          account,
+          DiscoveryStatus.unauthorized,
+          'unauthorized',
+          sourceRef,
+        );
       }
       if (code == 404) {
-        return _error(account, DiscoveryStatus.notFound, 'not_found', sourceRef);
+        return _error(
+          account,
+          DiscoveryStatus.notFound,
+          'not_found',
+          sourceRef,
+        );
       }
       if (error.type == DioExceptionType.connectionTimeout ||
           error.type == DioExceptionType.receiveTimeout ||
           error.type == DioExceptionType.sendTimeout) {
         return _error(account, DiscoveryStatus.timeout, 'timeout', sourceRef);
       }
-      return _error(account, DiscoveryStatus.error, 'http_${code ?? 'network'}', sourceRef);
+      return _error(
+        account,
+        DiscoveryStatus.error,
+        'http_${code ?? 'network'}',
+        sourceRef,
+      );
     } on Object {
       return _error(account, DiscoveryStatus.error, 'parse_error', sourceRef);
     }
@@ -166,10 +197,9 @@ class OpenAiCompatibleModelsDiscovery extends _HttpDiscovery
       account,
       sourceRef: sourceRef,
       body: (String? apiKey) async {
-        final Response<Object?> response = await send(dio.getUri<Object?>(
-          Uri.parse(url),
-          options: options(apiKey: apiKey),
-        ));
+        final Response<Object?> response = await send(
+          dio.getUri<Object?>(Uri.parse(url), options: options(apiKey: apiKey)),
+        );
         final Object? data = response.data;
         if (data is! Map) {
           return DiscoveryResult(
@@ -233,12 +263,22 @@ class OpenAiCompatibleModelsDiscovery extends _HttpDiscovery
       final int? value = _positiveInt(raw);
       return value == null
           ? const Sourced<int>.absent()
-          : Sourced<int>(value, source: CapabilitySource.providerApi, observedAt: now, sourceRef: sourceRef);
+          : Sourced<int>(
+              value,
+              source: CapabilitySource.providerApi,
+              observedAt: now,
+              sourceRef: sourceRef,
+            );
     }
 
     Sourced<bool> boolField(Object? raw) {
       if (raw is! bool) return const Sourced<bool>.absent();
-      return Sourced<bool>(raw, source: CapabilitySource.providerApi, observedAt: now, sourceRef: sourceRef);
+      return Sourced<bool>(
+        raw,
+        source: CapabilitySource.providerApi,
+        observedAt: now,
+        sourceRef: sourceRef,
+      );
     }
 
     // Разные провайдеры используют разные имена полей; неизвестные — absent.
@@ -250,17 +290,23 @@ class OpenAiCompatibleModelsDiscovery extends _HttpDiscovery
     final Map<String, Object?>? pricing = item['pricing'] is Map
         ? (item['pricing']! as Map).cast<String, Object?>()
         : null;
-    int? context = _positiveInt(item['context_window']) ??
+    int? context =
+        _positiveInt(item['context_window']) ??
         _positiveInt(item['context_length']);
     final int? topContext = topProvider is Map
         ? _positiveInt(topProvider['context_length'])
         : null;
     if (topContext != null) {
-      context = context == null ? topContext : (context < topContext ? context : topContext);
+      context = context == null
+          ? topContext
+          : (context < topContext ? context : topContext);
     }
-    final int? maxOutput = _positiveInt(item['max_completion_tokens']) ??
+    final int? maxOutput =
+        _positiveInt(item['max_completion_tokens']) ??
         _positiveInt(item['max_output_tokens']) ??
-        (topProvider is Map ? _positiveInt(topProvider['max_completion_tokens']) : null);
+        (topProvider is Map
+            ? _positiveInt(topProvider['max_completion_tokens'])
+            : null);
     GenerationPricing? price;
     if (pricing != null) {
       final double? prompt = _priceFrom(pricing['prompt']);
@@ -279,11 +325,18 @@ class OpenAiCompatibleModelsDiscovery extends _HttpDiscovery
       contextSemantics: defaultSemantics,
       maxOutputTokens: intField(maxOutput),
       supportsImageInput: modalities is List
-          ? boolField(modalities.map((Object? v) => v?.toString()).contains('image'))
+          ? boolField(
+              modalities.map((Object? v) => v?.toString()).contains('image'),
+            )
           : const Sourced<bool>.absent(),
       pricing: price == null
           ? const Sourced<GenerationPricing>.absent()
-          : Sourced<GenerationPricing>(price, source: CapabilitySource.providerApi, observedAt: now, sourceRef: sourceRef),
+          : Sourced<GenerationPricing>(
+              price,
+              source: CapabilitySource.providerApi,
+              observedAt: now,
+              sourceRef: sourceRef,
+            ),
     );
   }
 
@@ -330,16 +383,18 @@ class AnthropicModelsDiscovery extends _HttpDiscovery
               'after_id': ?afterId,
             },
           );
-          final Response<Object?> response = await send(dio.getUri<Object?>(
-            uri,
-            options: options(
-              apiKey: apiKey,
-              headers: <String, String>{
-                'x-api-key': apiKey ?? '',
-                'anthropic-version': '2023-06-01',
-              },
+          final Response<Object?> response = await send(
+            dio.getUri<Object?>(
+              uri,
+              options: options(
+                apiKey: apiKey,
+                headers: <String, String>{
+                  'x-api-key': apiKey ?? '',
+                  'anthropic-version': '2023-06-01',
+                },
+              ),
             ),
-          ));
+          );
           final Object? data = response.data;
           if (data is! Map) break;
           final Object? rawModels = data['data'];
@@ -384,14 +439,21 @@ class AnthropicModelsDiscovery extends _HttpDiscovery
       if (raw is! num || !raw.isFinite || raw <= 0) {
         return const Sourced<int>.absent();
       }
-      return Sourced<int>(raw.toInt(), source: CapabilitySource.providerApi, observedAt: now, sourceRef: sourceRef);
+      return Sourced<int>(
+        raw.toInt(),
+        source: CapabilitySource.providerApi,
+        observedAt: now,
+        sourceRef: sourceRef,
+      );
     }
 
     final Object? capabilities = item['capabilities'];
     bool? vision;
     bool? pdf;
     if (capabilities is Map) {
-      if (capabilities['vision'] is bool) vision = capabilities['vision']! as bool;
+      if (capabilities['vision'] is bool) {
+        vision = capabilities['vision']! as bool;
+      }
       if (capabilities['pdf_input'] is bool) {
         pdf = capabilities['pdf_input']! as bool;
       } else if (capabilities['pdf'] is bool) {
@@ -400,7 +462,12 @@ class AnthropicModelsDiscovery extends _HttpDiscovery
     }
     Sourced<bool> boolField(bool? value) => value == null
         ? const Sourced<bool>.absent()
-        : Sourced<bool>(value, source: CapabilitySource.providerApi, observedAt: now, sourceRef: sourceRef);
+        : Sourced<bool>(
+            value,
+            source: CapabilitySource.providerApi,
+            observedAt: now,
+            sourceRef: sourceRef,
+          );
     return ModelLimits(
       contextTokens: intField(item['max_input_tokens']),
       contextSemantics: ContextSemantics.inputOnly,
@@ -436,16 +503,18 @@ class GeminiModelsDiscovery extends _HttpDiscovery
               'pageToken': ?pageToken,
             },
           );
-          final Response<Object?> response = await send(dio.getUri<Object?>(
-            uri,
-            options: options(
-              apiKey: null,
-              headers: <String, String>{
-                if (apiKey != null && apiKey.isNotEmpty)
-                  'x-goog-api-key': apiKey,
-              },
+          final Response<Object?> response = await send(
+            dio.getUri<Object?>(
+              uri,
+              options: options(
+                apiKey: null,
+                headers: <String, String>{
+                  if (apiKey != null && apiKey.isNotEmpty)
+                    'x-goog-api-key': apiKey,
+                },
+              ),
             ),
-          ));
+          );
           final Object? data = response.data;
           if (data is! Map) break;
           final Object? rawModels = data['models'];
@@ -494,7 +563,12 @@ class GeminiModelsDiscovery extends _HttpDiscovery
       if (raw is! num || !raw.isFinite || raw <= 0) {
         return const Sourced<int>.absent();
       }
-      return Sourced<int>(raw.toInt(), source: CapabilitySource.providerApi, observedAt: now, sourceRef: sourceRef);
+      return Sourced<int>(
+        raw.toInt(),
+        source: CapabilitySource.providerApi,
+        observedAt: now,
+        sourceRef: sourceRef,
+      );
     }
 
     return ModelLimits(
@@ -525,10 +599,12 @@ class OllamaModelsDiscovery extends _HttpDiscovery
       account,
       sourceRef: showUrl,
       body: (String? apiKey) async {
-        final Response<Object?> tags = await send(dio.getUri<Object?>(
-          Uri.parse(tagsUrl),
-          options: options(apiKey: apiKey),
-        ));
+        final Response<Object?> tags = await send(
+          dio.getUri<Object?>(
+            Uri.parse(tagsUrl),
+            options: options(apiKey: apiKey),
+          ),
+        );
         final Object? tagsData = tags.data;
         final List<String> ids = <String>[];
         final bool targetLocal;
@@ -555,11 +631,13 @@ class OllamaModelsDiscovery extends _HttpDiscovery
             warnings: const <String>['model_not_in_list'],
           );
         }
-        final Response<Object?> show = await send(dio.postUri<Object?>(
-          Uri.parse(showUrl),
-          data: <String, Object?>{'model': account.modelId},
-          options: options(apiKey: apiKey),
-        ));
+        final Response<Object?> show = await send(
+          dio.postUri<Object?>(
+            Uri.parse(showUrl),
+            data: <String, Object?>{'model': account.modelId},
+            options: options(apiKey: apiKey),
+          ),
+        );
         final Object? showData = show.data;
         final Object? info = showData is Map ? showData['model_info'] : null;
         final Object? capabilities = showData is Map
@@ -589,11 +667,21 @@ class OllamaModelsDiscovery extends _HttpDiscovery
           limits: ModelLimits(
             contextTokens: context == null
                 ? const Sourced<int>.absent()
-                : Sourced<int>(context, source: CapabilitySource.providerApi, observedAt: now, sourceRef: showUrl),
+                : Sourced<int>(
+                    context,
+                    source: CapabilitySource.providerApi,
+                    observedAt: now,
+                    sourceRef: showUrl,
+                  ),
             contextSemantics: ContextSemantics.totalInputPlusOutput,
             supportsImageInput: vision == null
                 ? const Sourced<bool>.absent()
-                : Sourced<bool>(vision, source: CapabilitySource.providerApi, observedAt: now, sourceRef: showUrl),
+                : Sourced<bool>(
+                    vision,
+                    source: CapabilitySource.providerApi,
+                    observedAt: now,
+                    sourceRef: showUrl,
+                  ),
           ),
           models: List<String>.unmodifiable(ids),
           fetchedAt: now,
@@ -660,6 +748,7 @@ ModelCapabilityDiscovery discoveryForAccount(
       );
   }
 }
+
 /// HTTP-статус ошибки, которую Dio не бросил (validateStatus разрешил 4xx).
 final class _HttpStatusError implements Exception {
   const _HttpStatusError(this.status);

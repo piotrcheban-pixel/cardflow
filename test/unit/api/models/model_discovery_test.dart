@@ -63,38 +63,37 @@ void main() {
       expect(result.status, DiscoveryStatus.success);
       expect(result.models, <String>['deepseek-flash', 'deepseek-chat']);
       expect(result.limits!.contextTokens.isKnown, isFalse);
-      expect(
-        result.warnings,
-        contains('provider_fields_not_documented'),
-      );
+      expect(result.warnings, contains('provider_fields_not_documented'));
       final RequestOptions request = adapter.requests.single;
       expect(request.uri.toString(), 'https://api.example.com/models');
       expect(request.headers['Authorization'], 'Bearer test-key');
       expect(result.sourceRef, isNot(contains('?')));
     });
 
-    test('documented: поля провайдера принимаются с источником providerApi',
-        () async {
-      final FakeHttpAdapter adapter = FakeHttpAdapter(
-        (RequestOptions options) => jsonResponse(
-          _decode(fixture('openai_compatible/models_with_fields.json')),
-        ),
-      );
-      final OpenAiCompatibleModelsDiscovery discovery =
-          OpenAiCompatibleModelsDiscovery(
-            dioWith(adapter),
-            readApiKey: keyReader,
-            fieldPolicy: OpenAiModelFieldPolicy.documented,
-            defaultSemantics: ContextSemantics.totalInputPlusOutput,
-          );
-      final DiscoveryResult result = await discovery.discover(account());
-      final ModelLimits limits = result.limits!;
-      expect(limits.contextTokens.value, 128000);
-      expect(limits.contextTokens.source, CapabilitySource.providerApi);
-      expect(limits.contextTokens.observedAt, isNotNull);
-      expect(limits.maxOutputTokens.value, 8192);
-      expect(limits.contextSemantics, ContextSemantics.totalInputPlusOutput);
-    });
+    test(
+      'documented: поля провайдера принимаются с источником providerApi',
+      () async {
+        final FakeHttpAdapter adapter = FakeHttpAdapter(
+          (RequestOptions options) => jsonResponse(
+            _decode(fixture('openai_compatible/models_with_fields.json')),
+          ),
+        );
+        final OpenAiCompatibleModelsDiscovery discovery =
+            OpenAiCompatibleModelsDiscovery(
+              dioWith(adapter),
+              readApiKey: keyReader,
+              fieldPolicy: OpenAiModelFieldPolicy.documented,
+              defaultSemantics: ContextSemantics.totalInputPlusOutput,
+            );
+        final DiscoveryResult result = await discovery.discover(account());
+        final ModelLimits limits = result.limits!;
+        expect(limits.contextTokens.value, 128000);
+        expect(limits.contextTokens.source, CapabilitySource.providerApi);
+        expect(limits.contextTokens.observedAt, isNotNull);
+        expect(limits.maxOutputTokens.value, 8192);
+        expect(limits.contextSemantics, ContextSemantics.totalInputPlusOutput);
+      },
+    );
 
     test('поля неверного типа и пустые id — не значение', () async {
       final FakeHttpAdapter adapter = FakeHttpAdapter(
@@ -121,11 +120,10 @@ void main() {
           _decode(fixture('openai_compatible/models_empty.json')),
         ),
       );
-      final DiscoveryResult result =
-          await OpenAiCompatibleModelsDiscovery(
-            dioWith(adapter),
-            readApiKey: keyReader,
-          ).discover(account());
+      final DiscoveryResult result = await OpenAiCompatibleModelsDiscovery(
+        dioWith(adapter),
+        readApiKey: keyReader,
+      ).discover(account());
       expect(result.status, DiscoveryStatus.success);
       expect(result.models, isEmpty);
       expect(result.warnings, contains('model_not_in_list'));
@@ -133,9 +131,8 @@ void main() {
 
     test('OpenRouter: min(context) и цены за токен → за 1M', () async {
       final FakeHttpAdapter adapter = FakeHttpAdapter(
-        (RequestOptions options) => jsonResponse(
-          _decode(fixture('openrouter/models_success.json')),
-        ),
+        (RequestOptions options) =>
+            jsonResponse(_decode(fixture('openrouter/models_success.json'))),
       );
       final DiscoveryResult result = await OpenAiCompatibleModelsDiscovery(
         dioWith(adapter),
@@ -155,17 +152,20 @@ void main() {
 
     test('401 — unauthorized, последнее значение не стирается', () async {
       final FakeHttpAdapter adapter = FakeHttpAdapter(
-        (RequestOptions options) => jsonResponse(
-          <String, Object?>{'error': 'unauthorized'},
-          statusCode: 401,
-        ),
+        (RequestOptions options) => jsonResponse(<String, Object?>{
+          'error': 'unauthorized',
+        }, statusCode: 401),
       );
       final Dio dio = dioWith(adapter)..options.validateStatus = (_) => true;
       final DiscoveryResult result = await OpenAiCompatibleModelsDiscovery(
         dio,
         readApiKey: keyReader,
       ).discover(account());
-      expect(result.errorCode, 'unauthorized', reason: 'status: ${result.status}');
+      expect(
+        result.errorCode,
+        'unauthorized',
+        reason: 'status: ${result.status}',
+      );
       expect(result.status, DiscoveryStatus.unauthorized);
       expect(result.keepsPrevious, isTrue);
     });
@@ -213,16 +213,17 @@ void main() {
           ),
         );
       });
-      final DiscoveryResult result = await AnthropicModelsDiscovery(
-        dioWith(adapter),
-        readApiKey: keyReader,
-      ).discover(
-        account(
-          protocol: ProviderProtocol.anthropicMessages,
-          preset: 'anthropic',
-          baseUrl: 'https://api.anthropic.com',
-        ),
-      );
+      final DiscoveryResult result =
+          await AnthropicModelsDiscovery(
+            dioWith(adapter),
+            readApiKey: keyReader,
+          ).discover(
+            account(
+              protocol: ProviderProtocol.anthropicMessages,
+              preset: 'anthropic',
+              baseUrl: 'https://api.anthropic.com',
+            ),
+          );
       expect(result.status, DiscoveryStatus.success);
       expect(adapter.requests, hasLength(2));
       expect(result.models, <String>['claude-a', 'test-model']);
@@ -233,10 +234,7 @@ void main() {
       expect(limits.maxInputTokens.source, CapabilitySource.providerApi);
       expect(limits.supportsImageInput.isKnown, isFalse);
       expect(result.sourceRef, isNot(contains('?')));
-      expect(
-        adapter.requests.first.headers['anthropic-version'],
-        '2023-06-01',
-      );
+      expect(adapter.requests.first.headers['anthropic-version'], '2023-06-01');
     });
   });
 
@@ -254,25 +252,23 @@ void main() {
           ),
         );
       });
-      final DiscoveryResult result = await GeminiModelsDiscovery(
-        dioWith(adapter),
-        readApiKey: keyReader,
-      ).discover(
-        account(
-          protocol: ProviderProtocol.geminiGenerateContent,
-          preset: 'gemini',
-          baseUrl: 'https://generativelanguage.googleapis.com',
-        ),
-      );
+      final DiscoveryResult result =
+          await GeminiModelsDiscovery(
+            dioWith(adapter),
+            readApiKey: keyReader,
+          ).discover(
+            account(
+              protocol: ProviderProtocol.geminiGenerateContent,
+              preset: 'gemini',
+              baseUrl: 'https://generativelanguage.googleapis.com',
+            ),
+          );
       expect(result.status, DiscoveryStatus.success);
       expect(adapter.requests, hasLength(2));
       expect(result.models, <String>['gemini-test', 'test-model']);
       expect(result.limits!.maxInputTokens.value, 32768);
       expect(result.limits!.maxOutputTokens.value, 2048);
-      expect(
-        adapter.requests.first.headers['x-goog-api-key'],
-        'test-key',
-      );
+      expect(adapter.requests.first.headers['x-goog-api-key'], 'test-key');
     });
   });
 
@@ -284,17 +280,18 @@ void main() {
         }
         return jsonResponse(_decode(fixture('ollama/show.json')));
       });
-      final DiscoveryResult result = await OllamaModelsDiscovery(
-        dioWith(adapter),
-        readApiKey: _absentKey,
-      ).discover(
-        account(
-          preset: 'ollama',
-          baseUrl: 'http://localhost:11434',
-          model: 'test-model',
-          requiresKey: false,
-        ),
-      );
+      final DiscoveryResult result =
+          await OllamaModelsDiscovery(
+            dioWith(adapter),
+            readApiKey: _absentKey,
+          ).discover(
+            account(
+              preset: 'ollama',
+              baseUrl: 'http://localhost:11434',
+              model: 'test-model',
+              requiresKey: false,
+            ),
+          );
       expect(result.status, DiscoveryStatus.success);
       expect(result.limits!.contextTokens.value, 8192);
       expect(result.limits!.supportsImageInput.value, isTrue);
@@ -304,21 +301,21 @@ void main() {
 
     test('модели нет локально — только теги, без показа', () async {
       final FakeHttpAdapter adapter = FakeHttpAdapter(
-        (RequestOptions options) => jsonResponse(
-          _decode(fixture('ollama/tags.json')),
-        ),
+        (RequestOptions options) =>
+            jsonResponse(_decode(fixture('ollama/tags.json'))),
       );
-      final DiscoveryResult result = await OllamaModelsDiscovery(
-        dioWith(adapter),
-        readApiKey: _absentKey,
-      ).discover(
-        account(
-          preset: 'ollama',
-          baseUrl: 'http://localhost:11434',
-          model: 'missing',
-          requiresKey: false,
-        ),
-      );
+      final DiscoveryResult result =
+          await OllamaModelsDiscovery(
+            dioWith(adapter),
+            readApiKey: _absentKey,
+          ).discover(
+            account(
+              preset: 'ollama',
+              baseUrl: 'http://localhost:11434',
+              model: 'missing',
+              requiresKey: false,
+            ),
+          );
       expect(adapter.requests, hasLength(1));
       expect(result.warnings, contains('model_not_in_list'));
       expect(result.limits!.contextTokens.isKnown, isFalse);

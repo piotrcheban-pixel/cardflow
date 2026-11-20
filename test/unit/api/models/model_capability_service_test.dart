@@ -152,8 +152,8 @@ class _FakeCache implements ModelCapabilityCache {
   @override
   Future<void> write(ModelCapabilityRecord record) async {
     records.removeWhere(
-      (ModelCapabilityRecord r) => r.accountId == record.accountId &&
-          r.model == record.model,
+      (ModelCapabilityRecord r) =>
+          r.accountId == record.accountId && r.model == record.model,
     );
     records.add(record);
   }

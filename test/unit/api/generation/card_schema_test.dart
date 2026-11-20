@@ -37,8 +37,8 @@ void main() {
   };
 
   Map<String, Object?> validResponse() => <String, Object?>{
-    'source_exhausted': false, 'cards': <Object?>[validCard()],
     'source_exhausted': false,
+    'cards': <Object?>[validCard()],
   };
 
   group('каноническая схема A8.4', () {
@@ -127,7 +127,13 @@ void main() {
     final schema = CardResponseSchema();
 
     test('валидный ответ без карточек и с карточкой', () {
-      expect(schema.isValid(<String, Object?>{'source_exhausted': false, 'cards': <Object?>[], 'source_exhausted': false}), isTrue);
+      expect(
+        schema.isValid(<String, Object?>{
+          'source_exhausted': false,
+          'cards': <Object?>[],
+        }),
+        isTrue,
+      );
       expect(schema.isValid(validResponse()), isTrue);
       expect(schema.validate(validResponse()), isEmpty);
     });
@@ -135,7 +141,8 @@ void main() {
     test('лишнее свойство нарушает additionalProperties:false', () {
       final card = validCard()..['extra'] = 'x';
       final response = <String, Object?>{
-        'source_exhausted': false, 'cards': <Object?>[card],
+        'source_exhausted': false,
+        'cards': <Object?>[card],
       };
       expect(schema.isValid(response), isFalse);
       expect(schema.validate(response), isNotEmpty);
@@ -145,7 +152,8 @@ void main() {
       final card = validCard()..remove('back');
       expect(
         schema.isValid(<String, Object?>{
-          'source_exhausted': false, 'cards': <Object?>[card],
+          'source_exhausted': false,
+          'cards': <Object?>[card],
         }),
         isFalse,
       );
@@ -163,7 +171,8 @@ void main() {
         mutation(card);
         expect(
           schema.isValid(<String, Object?>{
-            'source_exhausted': false, 'cards': <Object?>[card],
+            'source_exhausted': false,
+            'cards': <Object?>[card],
           }),
           isFalse,
         );
@@ -178,7 +187,8 @@ void main() {
         ..['image_id'] = null;
       expect(
         schema.isValid(<String, Object?>{
-          'source_exhausted': false, 'cards': <Object?>[card],
+          'source_exhausted': false,
+          'cards': <Object?>[card],
         }),
         isTrue,
       );
@@ -197,7 +207,8 @@ void main() {
         'image_query': 'truss bridge',
       };
       final validation = CardResponseSchema().splitValid(<String, Object?>{
-        'source_exhausted': false, 'cards': <Object?>[legacy],
+        'source_exhausted': false,
+        'cards': <Object?>[legacy],
       });
       expect(validation.rootInvalid, isFalse);
       expect(validation.cards, hasLength(1));
@@ -210,7 +221,8 @@ void main() {
       expect(schema.isValid(<String, Object?>{'cards': 'нет'}), isFalse);
       expect(
         schema.isValid(<String, Object?>{
-          'source_exhausted': false, 'cards': <Object?>['нет'],
+          'source_exhausted': false,
+          'cards': <Object?>['нет'],
         }),
         isFalse,
       );

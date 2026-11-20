@@ -148,9 +148,7 @@ class GenerationPlanBuilder {
               imagesCatalog: '',
             ),
           ),
-          outlineTokens: estimator.estimateText(
-            _outlineOf(documents),
-          ),
+          outlineTokens: estimator.estimateText(_outlineOf(documents)),
           taskTailTokens: estimator.estimateText(_taskTailTemplate),
         );
     return planner.plan(

@@ -56,8 +56,14 @@ class ProviderPresetModel {
           other.verifiedOn == verifiedOn;
 
   @override
-  int get hashCode =>
-      Object.hash(id, label, contextTokens, supportsVision, sourceRef, verifiedOn);
+  int get hashCode => Object.hash(
+    id,
+    label,
+    contextTokens,
+    supportsVision,
+    sourceRef,
+    verifiedOn,
+  );
 
   @override
   String toString() => 'ProviderPresetModel($id)';

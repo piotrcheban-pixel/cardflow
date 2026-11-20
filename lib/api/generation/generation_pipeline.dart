@@ -340,8 +340,8 @@ class GenerationPipeline implements GenerationRunner {
   /// Builder с калиброванным `tokensPerCard` или исходный.
   GenerationPlanBuilder _calibratedBuilder(TokenCalibration? calibration) {
     if (calibration == null) return planBuilder;
-    final GenerationPlanningConfig planning =
-        const GenerationPlanningConfig().copyWith(
+    final GenerationPlanningConfig planning = const GenerationPlanningConfig()
+        .copyWith(
           tokensPerCard: calibration.tokensPerCard.round().clamp(50, 5000),
         );
     return GenerationPlanBuilder(
@@ -349,7 +349,8 @@ class GenerationPipeline implements GenerationRunner {
         estimator: planBuilder.estimator,
         config: GenerationChunkPlannerConfig(
           planning: planning,
-          retryAllowanceRequests: planBuilder.planner.config.retryAllowanceRequests,
+          retryAllowanceRequests:
+              planBuilder.planner.config.retryAllowanceRequests,
         ),
         catalogLineBuilder: planBuilder.planner.catalogLineBuilder,
       ),
@@ -543,8 +544,7 @@ class GenerationPipeline implements GenerationRunner {
       ]..sort(_compareImageIds);
       // Контракт сервиса: `documentImageParts` — явный список отправляемых
       // image-частей, а не префикс каталога (v8, ADR-040 §7).
-      final List<DocumentImage> documentImageParts =
-          chunk.imageParts.isEmpty
+      final List<DocumentImage> documentImageParts = chunk.imageParts.isEmpty
           ? const <DocumentImage>[]
           : List<DocumentImage>.unmodifiable(<DocumentImage>[
               for (final DocumentImage image in chunk.imageParts)
@@ -701,7 +701,8 @@ class GenerationPipeline implements GenerationRunner {
         );
       }
       // Исчерпание: явный флаг модели или недобор меньше половины партии.
-      final bool exhausted = result.sourceExhausted ||
+      final bool exhausted =
+          result.sourceExhausted ||
           (chunk.limit >= 2 && acceptedInChunk * 2 < chunk.limit);
       if (exhausted && chunkSections.isNotEmpty) {
         exhaustedSections.addAll(chunkSections);
@@ -1384,8 +1385,7 @@ class GenerationPipeline implements GenerationRunner {
     final String? reversed = card.cardType == CardType.basicReversed
         ? contentHashOf(front: card.back, back: card.front)
         : null;
-    if (seen.contains(hash) ||
-        (reversed != null && seen.contains(reversed))) {
+    if (seen.contains(hash) || (reversed != null && seen.contains(reversed))) {
       return false;
     }
     for (final GeneratedCard other in accepted) {
@@ -1405,16 +1405,16 @@ class GenerationPipeline implements GenerationRunner {
     if (_lettersCount(a) < 12 || _lettersCount(b) < 12) return 0;
     final Set<String> first = _trigramsOf(a);
     final Set<String> second = _trigramsOf(b);
-    if (first.isEmpty || second.isEmpty) return first.isEmpty && second.isEmpty ? 1 : 0;
+    if (first.isEmpty || second.isEmpty) {
+      return first.isEmpty && second.isEmpty ? 1 : 0;
+    }
     final Set<String> union = <String>{...first, ...second};
     final int intersection = first.where(second.contains).length;
     return intersection / union.length;
   }
 
-  static int _lettersCount(String value) => RegExp(
-    r'\p{L}',
-    unicode: true,
-  ).allMatches(value).length;
+  static int _lettersCount(String value) =>
+      RegExp(r'\p{L}', unicode: true).allMatches(value).length;
 
   static Set<String> _trigramsOf(String value) {
     final String normalized = value
@@ -1503,7 +1503,8 @@ class GenerationPipeline implements GenerationRunner {
     for (final GeneratedCard card in sorted) {
       final String front = card.front.trim();
       if (front.isEmpty || !seenFronts.add(front)) continue;
-      final String line = '- ${front.length > 80 ? '${front.substring(0, 80)}…' : front}';
+      final String line =
+          '- ${front.length > 80 ? '${front.substring(0, 80)}…' : front}';
       if (buffer.length + line.length + 1 > 1200) break;
       if (buffer.isNotEmpty) buffer.write('\n');
       buffer.write(line);
@@ -1537,10 +1538,7 @@ class GenerationPipeline implements GenerationRunner {
         }
       }
       if (base == null) continue;
-      final int limit = shortfall
-          .clamp(1, maxLimit ?? 40)
-          .clamp(1, 40)
-          .toInt();
+      final int limit = shortfall.clamp(1, maxLimit ?? 40).clamp(1, 40).toInt();
       return base.copyWith(
         index: index,
         limit: limit,
@@ -1677,6 +1675,7 @@ List<String> _fileNames(GenerationRunRequest request) {
 }
 
 String _defaultJobId() => const Uuid().v4();
+
 /// Факт вывода одного ответа для калибровки `tokensPerCard`.
 final class _BatchTokenFact {
   const _BatchTokenFact({

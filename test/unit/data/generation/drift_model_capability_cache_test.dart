@@ -72,10 +72,7 @@ void main() {
     expect(records, hasLength(1));
     final ModelCapabilityRecord loaded = records.single;
     expect(loaded.limits.contextTokens.value, 1000000);
-    expect(
-      loaded.limits.contextTokens.source,
-      CapabilitySource.providerApi,
-    );
+    expect(loaded.limits.contextTokens.source, CapabilitySource.providerApi);
     expect(loaded.limits.contextTokens.observedAt, now);
     expect(loaded.limits.maxOutputTokens.value, 16384);
     expect(loaded.checkedAt, '2026-11-20');

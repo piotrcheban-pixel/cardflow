@@ -280,27 +280,29 @@ void main() {
       expect(systemPromptVersion, 'gen-ru-v8');
     });
 
-    test('v8 задаёт контракт планирования: focus, части, section_id, исчерпание',
-        () {
-      for (final fragment in <String>[
-        'ПЛАНИРОВАНИЕ ВЫДАЧИ',
-        '<task>',
-        '<focus>',
-        '<part>',
-        '<cards>',
-        '<context_only>',
-        '<already_created>',
-        'section_id',
-        'source_exhausted',
-        'только по разделам из <focus>',
-      ]) {
-        expect(
-          systemPromptGenRuV8,
-          contains(fragment),
-          reason: 'В промпте v8 нет фрагмента: $fragment',
-        );
-      }
-    });
+    test(
+      'v8 задаёт контракт планирования: focus, части, section_id, исчерпание',
+      () {
+        for (final fragment in <String>[
+          'ПЛАНИРОВАНИЕ ВЫДАЧИ',
+          '<task>',
+          '<focus>',
+          '<part>',
+          '<cards>',
+          '<context_only>',
+          '<already_created>',
+          'section_id',
+          'source_exhausted',
+          'только по разделам из <focus>',
+        ]) {
+          expect(
+            systemPromptGenRuV8,
+            contains(fragment),
+            reason: 'В промпте v8 нет фрагмента: $fragment',
+          );
+        }
+      },
+    );
   });
 
   group('префикс сообщения стабилен между запросами (ADR-040 §7)', () {
@@ -327,12 +329,18 @@ void main() {
         focusSectionIds: <String>['s2', 's3'],
         alreadyCreated: '- вопрос 1',
       );
-      expect(generationUserContentPrefix(first), generationUserContentPrefix(second));
+      expect(
+        generationUserContentPrefix(first),
+        generationUserContentPrefix(second),
+      );
       expect(first, isNot(second));
       expect(first, contains('<part>1 из 2</part>'));
       expect(first, contains('<focus>s1</focus>'));
       expect(first, contains('<cards>10</cards>'));
-      expect(second, contains('<already_created>\n- вопрос 1\n</already_created>'));
+      expect(
+        second,
+        contains('<already_created>\n- вопрос 1\n</already_created>'),
+      );
     });
   });
 }

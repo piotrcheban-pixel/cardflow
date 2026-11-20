@@ -112,10 +112,22 @@ void main() {
     });
 
     test('CapabilitySource разбирается из wire-имени, мусор — unknown', () {
-      expect(CapabilitySource.fromWire('verified'), CapabilitySource.officialCatalog);
-      expect(CapabilitySource.fromWire('preset'), CapabilitySource.officialCatalog);
-      expect(CapabilitySource.fromWire('user'), CapabilitySource.userConfigured);
-      expect(CapabilitySource.fromWire('inferred'), CapabilitySource.assumption);
+      expect(
+        CapabilitySource.fromWire('verified'),
+        CapabilitySource.officialCatalog,
+      );
+      expect(
+        CapabilitySource.fromWire('preset'),
+        CapabilitySource.officialCatalog,
+      );
+      expect(
+        CapabilitySource.fromWire('user'),
+        CapabilitySource.userConfigured,
+      );
+      expect(
+        CapabilitySource.fromWire('inferred'),
+        CapabilitySource.assumption,
+      );
       expect(CapabilitySource.fromWire('unknown'), CapabilitySource.unknown);
       expect(CapabilitySource.fromWire('magic'), CapabilitySource.unknown);
       expect(CapabilitySource.fromWire(null), CapabilitySource.unknown);

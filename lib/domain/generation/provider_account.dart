@@ -178,11 +178,7 @@ class ProviderAccount {
   ProviderAccount withAutomaticCapabilities() {
     final ProviderPreset? catalog = preset;
     if (catalog != null) {
-      return ProviderAccount.fromPreset(
-        catalog,
-        id: id,
-        modelId: modelId,
-      );
+      return ProviderAccount.fromPreset(catalog, id: id, modelId: modelId);
     }
     return ProviderAccount(
       id: id,
@@ -260,7 +256,7 @@ class ProviderAccount {
           : kCustomProviderContextTokens,
       requiresApiKey: rawRequiresKey is bool ? rawRequiresKey : false,
       supportsVision: supportsVision,
-    visionConfigured: json['vision_configured'] == true,
+      visionConfigured: json['vision_configured'] == true,
       maxOutputTokens: _positiveIntFromJson(json['max_output_tokens']),
       maxImagesPerRequest: _positiveIntFromJson(json['max_images_per_request']),
       maxImageBytes: _positiveIntFromJson(json['max_image_bytes']),
@@ -285,7 +281,7 @@ class ProviderAccount {
           other.contextTokens == contextTokens &&
           other.requiresApiKey == requiresApiKey &&
           other.supportsVision == supportsVision &&
-      other.visionConfigured == visionConfigured &&
+          other.visionConfigured == visionConfigured &&
           other.maxOutputTokens == maxOutputTokens &&
           other.maxImagesPerRequest == maxImagesPerRequest &&
           other.maxImageBytes == maxImageBytes &&

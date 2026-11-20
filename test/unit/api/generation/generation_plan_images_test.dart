@@ -107,7 +107,10 @@ void main() {
   test('источники возможностей доступны в плане', () {
     final GenerationPlan plan = build(<DocumentImage>[imageOf(0)]);
     expect(plan.capabilitySources.containsKey('context_window'), isTrue);
-    expect(plan.capabilitySources['context_window'], CapabilitySource.officialCatalog);
+    expect(
+      plan.capabilitySources['context_window'],
+      CapabilitySource.officialCatalog,
+    );
     expect(
       plan.capabilitySources['max_cards_per_request'],
       CapabilitySource.unknown,
@@ -143,7 +146,10 @@ void main() {
     for (final PlannedChunk chunk in plan.chunks) {
       expect(chunk.imageParts.length, lessThanOrEqualTo(3));
     }
-    expect(plan.capabilitySources['image_limits'], CapabilitySource.userConfigured);
+    expect(
+      plan.capabilitySources['image_limits'],
+      CapabilitySource.userConfigured,
+    );
   });
 
   test('изображение больше лимита байт не отправляется частью', () {
