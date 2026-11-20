@@ -148,7 +148,7 @@ void main() {
         adapter.buildArgs!.userContent,
         contains('<wishes>\nАкцент на датах\n</wishes>'),
       );
-      expect(adapter.buildArgs!.userContent, contains('<limit>10</limit>'));
+      expect(adapter.buildArgs!.userContent, contains('<cards>10</cards>'));
       // Пустые блоки пишутся одной строкой (fix-gen, Д1).
       expect(adapter.buildArgs!.userContent, contains('<images></images>'));
       expect(adapter.buildArgs!.userContent, isNot(contains('<images>\n')));

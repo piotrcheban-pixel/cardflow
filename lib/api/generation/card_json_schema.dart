@@ -23,6 +23,7 @@ const List<String> kImageKinds = <String>['photo', 'diagram', 'illustration'];
 const Map<String, Object?> canonicalCardsResponseSchema = <String, Object?>{
   'type': 'object',
   'properties': <String, Object?>{
+    'source_exhausted': <String, Object?>{'type': 'boolean'},
     'cards': <String, Object?>{
       'type': 'array',
       'items': <String, Object?>{
@@ -50,6 +51,9 @@ const Map<String, Object?> canonicalCardsResponseSchema = <String, Object?>{
           'image_id': <String, Object?>{
             'type': <String>['string', 'null'],
           },
+          'section_id': <String, Object?>{
+            'type': <String>['string', 'null'],
+          },
           'image': <String, Object?>{
             'type': 'object',
             'properties': <String, Object?>{
@@ -70,13 +74,14 @@ const Map<String, Object?> canonicalCardsResponseSchema = <String, Object?>{
           'source_excerpt',
           'source_file',
           'image_id',
+          'section_id',
           'image',
         ],
         'additionalProperties': false,
       },
     },
   },
-  'required': <String>['cards'],
+  'required': <String>['cards', 'source_exhausted'],
   'additionalProperties': false,
 };
 
@@ -124,6 +129,9 @@ Map<String, Object?> localCardItemSchema() {
       },
       'image': <String, Object?>{
         'type': <String>['object', 'null'],
+      },
+      'section_id': <String, Object?>{
+        'type': <String>['string', 'null'],
       },
     },
     'required': <String>['front', 'back', 'card_type'],

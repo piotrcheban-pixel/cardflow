@@ -120,7 +120,7 @@ void main() {
       expect(result.cards, hasLength(1));
       expect(result.cards.single.front, 'Что такое FSRS?');
       expect(result.usage.totalTokens, 30);
-      expect(result.promptVersion, 'gen-ru-v7');
+      expect(result.promptVersion, 'gen-ru-v8');
 
       expect(adapter.requests, hasLength(1));
       final sent = adapter.requests.single;
@@ -136,8 +136,9 @@ void main() {
         contains('<materials>\nМатериал лекции\n</materials>'),
       );
       expect(userMessage, contains('<wishes>\nПокороче\n</wishes>'));
-      expect(userMessage, contains('<limit>7</limit>'));
-      expect(userMessage, endsWith('<images></images>'));
+      expect(userMessage, contains('<cards>7</cards>'));
+      expect(userMessage, contains('<images></images>'));
+      expect(userMessage, endsWith('</task>'));
       final format = body['response_format']! as Map<String, Object?>;
       final strict = format['json_schema']! as Map<String, Object?>;
       expect(strict['strict'], isTrue);

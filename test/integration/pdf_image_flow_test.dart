@@ -184,6 +184,6 @@ void main() {
         .read(generationJobRepositoryProvider)
         .jobById(result.jobId))!;
     expect(job.status, GenerationJobStatus.done);
-    expect(job.promptVersion, 'gen-ru-v7');
+    expect(job.promptVersion, 'gen-ru-v8');
   });
 }

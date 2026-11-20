@@ -537,7 +537,7 @@ void main() {
           'issues=${card.issues.map((issue) => issue.name).toList()}',
         );
       }
-      expect(result.promptVersion, 'gen-ru-v7');
+      expect(result.promptVersion, 'gen-ru-v8');
     },
     skip: liveSkip,
     timeout: const Timeout(Duration(minutes: 5)),

@@ -11,7 +11,7 @@ import 'package:cardflow/api/prompts/system_prompt.dart';
 void main() {
   group('системный промпт gen-ru-v5', () {
     test('v5 сохранён: текст не пустой и без подстановок Dart', () {
-      expect(systemPromptVersion, 'gen-ru-v7');
+      expect(systemPromptVersion, 'gen-ru-v8');
       expect(systemPromptGenRuV5.trim(), isNotEmpty);
       expect(systemPromptGenRuV5, isNot(contains(r'${')));
     });
@@ -178,13 +178,15 @@ void main() {
         'Файл: a.docx\n'
         'Материал A\n'
         '</materials>\n'
+        '<images>\n'
+        'img1 | a.docx | Рис. 1 | Схема\n'
+        '</images>\n'
         '<wishes>\n'
         'Сделай акцент на датах\n'
         '</wishes>\n'
-        '<limit>10</limit>\n'
-        '<images>\n'
-        'img1 | a.docx | Рис. 1 | Схема\n'
-        '</images>',
+        '<task>\n'
+        '<cards>10</cards>\n'
+        '</task>',
       );
     });
 
@@ -197,7 +199,7 @@ void main() {
       expect(content, contains('<materials></materials>'));
       expect(content, contains('<wishes></wishes>'));
       expect(content, contains('<images></images>'));
-      expect(content, contains('<limit>20</limit>'));
+      expect(content, contains('<cards>20</cards>'));
     });
 
     test('материалы и пожелания обрезаются по краям', () {
@@ -259,6 +261,78 @@ void main() {
       expect(isLatexExpressionParsable(r'\frac{1}{2}'), isTrue);
       expect(isLatexExpressionParsable(r'\frac{'), isFalse);
       expect(isLatexExpressionParsable(r'\unknowncommand{x}'), isFalse);
+    });
+  });
+
+  group('системный промпт gen-ru-v8 (итерация 7.18, ADR-040)', () {
+    test('константа совпадает с docs/prompts/gen-ru-v8.txt байт в байт', () {
+      final File file = File('docs/prompts/gen-ru-v8.txt');
+      expect(file.existsSync(), isTrue, reason: 'Копия промпта потеряна');
+      expect(
+        systemPromptGenRuV8,
+        file.readAsStringSync(),
+        reason: 'Промпт в коде должен быть дословной копией файла',
+      );
+    });
+
+    test('v8 содержит весь текст v7 без изменений', () {
+      expect(systemPromptGenRuV8, startsWith(systemPromptGenRuV7));
+      expect(systemPromptVersion, 'gen-ru-v8');
+    });
+
+    test('v8 задаёт контракт планирования: focus, части, section_id, исчерпание',
+        () {
+      for (final fragment in <String>[
+        'ПЛАНИРОВАНИЕ ВЫДАЧИ',
+        '<task>',
+        '<focus>',
+        '<part>',
+        '<cards>',
+        '<context_only>',
+        '<already_created>',
+        'section_id',
+        'source_exhausted',
+        'только по разделам из <focus>',
+      ]) {
+        expect(
+          systemPromptGenRuV8,
+          contains(fragment),
+          reason: 'В промпте v8 нет фрагмента: $fragment',
+        );
+      }
+    });
+  });
+
+  group('префикс сообщения стабилен между запросами (ADR-040 §7)', () {
+    test('материалы и пожелания не меняются, различается только <task>', () {
+      const String materials = 'Файл: a.docx\n## [s1] Раздел\nТекст';
+      final String first = buildGenerationUserContent(
+        materialsText: materials,
+        wishes: 'Пожелания',
+        limit: 10,
+        imagesCatalog: 'img1 | a.docx | | контекст',
+        outline: 'Оглавление: s1',
+        partIndexHint: 1,
+        partCountHint: 2,
+        focusSectionIds: <String>['s1'],
+      );
+      final String second = buildGenerationUserContent(
+        materialsText: materials,
+        wishes: 'Пожелания',
+        limit: 7,
+        imagesCatalog: 'img1 | a.docx | | контекст',
+        outline: 'Оглавление: s1',
+        partIndexHint: 2,
+        partCountHint: 2,
+        focusSectionIds: <String>['s2', 's3'],
+        alreadyCreated: '- вопрос 1',
+      );
+      expect(generationUserContentPrefix(first), generationUserContentPrefix(second));
+      expect(first, isNot(second));
+      expect(first, contains('<part>1 из 2</part>'));
+      expect(first, contains('<focus>s1</focus>'));
+      expect(first, contains('<cards>10</cards>'));
+      expect(second, contains('<already_created>\n- вопрос 1\n</already_created>'));
     });
   });
 }

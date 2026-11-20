@@ -191,6 +191,11 @@ class CardGenerationService implements GenerationCaller {
       imagesCatalog: documentImages.isEmpty
           ? null
           : buildImageCatalog(documentImages),
+      partIndexHint: request.partIndexHint,
+      partCountHint: request.partCountHint,
+      focusSectionIds: request.focusSectionIds,
+      contextOnly: request.contextOnly,
+      alreadyCreated: request.alreadyCreated,
     );
     // Vision (ADR-037): модель должна ВИДЕТЬ изображения из документов, а не
     // только их идентификаторы. Байты уходят отдельными частями с подписью
@@ -232,6 +237,8 @@ class CardGenerationService implements GenerationCaller {
 
     // Поштучная проверка схемы (fix-gen, Д6): одна невалидная карточка не
     // отбрасывает весь фрагмент.
+    final bool sourceExhausted =
+        decoded is Map && decoded['source_exhausted'] == true;
     final CardPayloadValidation payload = responseSchema.splitValid(decoded);
     if (payload.rootInvalid) {
       throw GenerationException(
@@ -260,6 +267,7 @@ class CardGenerationService implements GenerationCaller {
       estimatorVersion: estimate.estimatorVersion,
       sentDocumentImageIds: parts.sentIds,
       skippedDocumentImageIds: parts.skippedIds,
+      sourceExhausted: sourceExhausted,
     );
   }
 

@@ -12,7 +12,7 @@ library;
 /// `GenerationPipeline` берут текст и версию отсюда. Предыдущие версии
 /// `systemPromptGenRuV5`/`systemPromptGenRuV6` остаются в коде: по ним уже
 /// сгенерированы колоды, и они нужны тестам обратной совместимости.
-const String systemPromptVersion = 'gen-ru-v7';
+const String systemPromptVersion = 'gen-ru-v8';
 
 /// Текст системного промпта `gen-ru-v5` — дословно, без изменений.
 ///
@@ -327,3 +327,27 @@ const String systemPromptPdfImagesGenRuV7 = r'''ИЗОБРАЖЕНИЯ ИЗ PDF 
 /// Дословная копия — `docs/prompts/gen-ru-v7.txt` (тест сверяет байты).
 const String systemPromptGenRuV7 =
     '$systemPromptGenRuV6\n$systemPromptPdfImagesGenRuV7';
+// --- gen-ru-v8: планирование выдачи (итерация 7.18, ADR-040) ---
+
+/// Блок `gen-ru-v8` о планировании выдачи: `focus`, части, дайджест.
+///
+/// Дописывается к тексту `gen-ru-v7`: предыдущие версии остаются дословными,
+/// v8 добавляет контракт блоков `<task>` и полей `section_id` /
+/// `source_exhausted`.
+const String systemPromptPlanningGenRuV8 = r'''ПЛАНИРОВАНИЕ ВЫДАЧИ
+Материал может быть отправлен целиком или частями; каждый запрос содержит блок <task>.
+В <task> указаны <part> (номер части, если частей больше одной), <focus> — короткие id разделов, по которым нужно делать карточки, и <cards> — сколько карточек запрошено в этом ответе.
+Делай карточки только по разделам из <focus>. Разделы вне <focus> — контекст: по ним карточки не создаются.
+Блок <context_only> — перекрытие с предыдущей частью для понимания текста; по нему карточки не делаются.
+Блок <already_created> — уже принятые карточки запуска: не повторяй их вопросы и темы.
+Сделай ровно <cards> карточек, но если материал focus исчерпан — меньше; тогда поставь "source_exhausted": true в корне ответа.
+В каждой карточке заполни section_id — короткий id раздела из заголовка «## [sN]» в <materials>, к которому относится карточка; если не уверен — null.
+Не выдумывай факты, которых нет в материалах; не дублируй уже принятые карточки.
+Ответ — один JSON-объект с корнем {"cards": [...], "source_exhausted": false}; у каждой карточки все поля из схемы.
+''';
+
+/// Текст системного промпта `gen-ru-v8` — `gen-ru-v7` + планирование выдачи.
+///
+/// Дословная копия — `docs/prompts/gen-ru-v8.txt` (тест сверяет байты).
+const String systemPromptGenRuV8 =
+    '$systemPromptGenRuV7\n$systemPromptPlanningGenRuV8';

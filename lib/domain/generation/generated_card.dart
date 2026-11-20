@@ -87,6 +87,7 @@ class GeneratedCard {
     this.image,
     this.isOcclusion = false,
     this.occlusionJson,
+    this.sectionId,
   });
 
   /// Лицевая сторона (вопрос).
@@ -112,6 +113,9 @@ class GeneratedCard {
 
   /// Машинные пометки качества (A8.4).
   final List<CardIssueCode> issues;
+
+  /// Короткий id раздела плана (`section_id`, v8) — подсказка, не контракт.
+  final String? sectionId;
 
   /// Краткий поисковый запрос на английском (итерация 7.9, ADR-023;
   /// схема `image.query` в `gen-ru-v6`, итерация 7.14).

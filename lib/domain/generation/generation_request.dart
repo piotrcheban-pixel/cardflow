@@ -22,6 +22,11 @@ class GenerationRequest {
     this.documentImageParts,
     this.continuation,
     this.maxOutputTokens,
+    this.focusSectionIds = const <String>[],
+    this.partIndexHint,
+    this.partCountHint,
+    this.contextOnly,
+    this.alreadyCreated,
   });
 
   /// Провайдер: протокол, адрес, модель и id ключа.
@@ -57,6 +62,21 @@ class GenerationRequest {
   /// Сервис добавляет его в `<wishes>` после исходных пожеланий пользователя;
   /// исходный текст не переписывается. `null` — передавать нечего.
   final String? continuation;
+
+  /// Короткие id разделов, по которым делать карточки (`<focus>`, v8).
+  final List<String> focusSectionIds;
+
+  /// Номер части входа (`<part>k из n</part>`); `null` — одна часть.
+  final int? partIndexHint;
+
+  /// Всего частей входа; `null` — одна часть.
+  final int? partCountHint;
+
+  /// Перекрытие с предыдущей частью (`<context_only>`, без карточек).
+  final String? contextOnly;
+
+  /// Компактный дайджест уже принятых карточек (`<already_created>`).
+  final String? alreadyCreated;
 
   /// Максимум токенов ответа для этого запроса (из плана, D.2).
   ///

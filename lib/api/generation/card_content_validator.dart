@@ -246,8 +246,12 @@ class CardContentValidator {
       imageIds: imageIds,
       issues: issues,
     );
+    final Object? rawSection = raw['section_id'];
     return GeneratedCard(
       front: front,
+      sectionId: rawSection is String && rawSection.trim().isNotEmpty
+          ? rawSection.trim()
+          : null,
       back: back,
       cardType: cardType,
       hint: hint is String

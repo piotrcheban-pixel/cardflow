@@ -28,6 +28,7 @@ void main() {
     'source_excerpt': 'FSRS — алгоритм интервального повторения.',
     'source_file': 'лекция.docx',
     'image_id': null,
+    'section_id': null,
     'image': <String, Object?>{
       'query': 'fsrs algorithm memory',
       'fallback_query': 'fsrs memory',
@@ -36,7 +37,8 @@ void main() {
   };
 
   Map<String, Object?> validResponse() => <String, Object?>{
-    'cards': <Object?>[validCard()],
+    'source_exhausted': false, 'cards': <Object?>[validCard()],
+    'source_exhausted': false,
   };
 
   group('каноническая схема A8.4', () {
@@ -44,9 +46,12 @@ void main() {
       'корень: объект cards, все свойства required, additionalProperties:false',
       () {
         expect(canonicalCardsResponseSchema['type'], 'object');
-        expect(canonicalCardsResponseSchema['required'], <String>['cards']);
+        expect(canonicalCardsResponseSchema['required'], <String>[
+          'cards',
+          'source_exhausted',
+        ]);
         expect(canonicalCardsResponseSchema['additionalProperties'], isFalse);
-        expect(rootProperties().keys, <String>['cards']);
+        expect(rootProperties().keys, <String>['source_exhausted', 'cards']);
         expect(cardsResponseSchemaName, 'cards_response');
       },
     );
@@ -61,6 +66,7 @@ void main() {
         'source_excerpt',
         'source_file',
         'image_id',
+        'section_id',
         'image',
       });
       expect(
@@ -112,6 +118,7 @@ void main() {
       (copy['required']! as List<Object?>).add('extra');
       expect(canonicalCardsResponseSchema['required'], <String>[
         'cards',
+        'source_exhausted',
       ], reason: 'Копия не должна менять канон');
     });
   });
@@ -120,7 +127,7 @@ void main() {
     final schema = CardResponseSchema();
 
     test('валидный ответ без карточек и с карточкой', () {
-      expect(schema.isValid(<String, Object?>{'cards': <Object?>[]}), isTrue);
+      expect(schema.isValid(<String, Object?>{'source_exhausted': false, 'cards': <Object?>[], 'source_exhausted': false}), isTrue);
       expect(schema.isValid(validResponse()), isTrue);
       expect(schema.validate(validResponse()), isEmpty);
     });
@@ -128,7 +135,7 @@ void main() {
     test('лишнее свойство нарушает additionalProperties:false', () {
       final card = validCard()..['extra'] = 'x';
       final response = <String, Object?>{
-        'cards': <Object?>[card],
+        'source_exhausted': false, 'cards': <Object?>[card],
       };
       expect(schema.isValid(response), isFalse);
       expect(schema.validate(response), isNotEmpty);
@@ -138,7 +145,7 @@ void main() {
       final card = validCard()..remove('back');
       expect(
         schema.isValid(<String, Object?>{
-          'cards': <Object?>[card],
+          'source_exhausted': false, 'cards': <Object?>[card],
         }),
         isFalse,
       );
@@ -156,7 +163,7 @@ void main() {
         mutation(card);
         expect(
           schema.isValid(<String, Object?>{
-            'cards': <Object?>[card],
+            'source_exhausted': false, 'cards': <Object?>[card],
           }),
           isFalse,
         );
@@ -171,7 +178,7 @@ void main() {
         ..['image_id'] = null;
       expect(
         schema.isValid(<String, Object?>{
-          'cards': <Object?>[card],
+          'source_exhausted': false, 'cards': <Object?>[card],
         }),
         isTrue,
       );
@@ -190,7 +197,7 @@ void main() {
         'image_query': 'truss bridge',
       };
       final validation = CardResponseSchema().splitValid(<String, Object?>{
-        'cards': <Object?>[legacy],
+        'source_exhausted': false, 'cards': <Object?>[legacy],
       });
       expect(validation.rootInvalid, isFalse);
       expect(validation.cards, hasLength(1));
@@ -203,7 +210,7 @@ void main() {
       expect(schema.isValid(<String, Object?>{'cards': 'нет'}), isFalse);
       expect(
         schema.isValid(<String, Object?>{
-          'cards': <Object?>['нет'],
+          'source_exhausted': false, 'cards': <Object?>['нет'],
         }),
         isFalse,
       );
@@ -235,7 +242,10 @@ void main() {
       expect(schema, canonicalCardsResponseSchema);
       expect(jsonEncode(schema), isNotEmpty);
       (schema['required']! as List<Object?>).add('extra');
-      expect(canonicalCardsResponseSchema['required'], <String>['cards']);
+      expect(canonicalCardsResponseSchema['required'], <String>[
+        'cards',
+        'source_exhausted',
+      ]);
     });
 
     test('Gemini: nullable вместо union, типы верхним регистром, без additionalProperties', () {
@@ -259,7 +269,7 @@ void main() {
       final cards =
           (schema['properties']! as Map<String, Object?>)['cards']!
               as Map<String, Object?>;
-      expect(schema['propertyOrdering'], <String>['cards']);
+      expect(schema['propertyOrdering'], <String>['source_exhausted', 'cards']);
       final cardItemSchema = cards['items']! as Map<String, Object?>;
       expect(cardItemSchema['propertyOrdering'], <String>[
         'front',
@@ -270,6 +280,7 @@ void main() {
         'source_excerpt',
         'source_file',
         'image_id',
+        'section_id',
         'image',
       ]);
       final naming = properties['card_type']! as Map<String, Object?>;
@@ -311,7 +322,10 @@ void main() {
       openAiStrictCardSchema();
       geminiCardSchema();
       anthropicToolCardSchema();
-      expect(canonicalCardsResponseSchema['required'], <String>['cards']);
+      expect(canonicalCardsResponseSchema['required'], <String>[
+        'cards',
+        'source_exhausted',
+      ]);
       expect(
         CardResponseSchema().isValid(validResponse()),
         isTrue,

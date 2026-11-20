@@ -1,12 +1,20 @@
 # Системный промпт генерации CardFlow
 
-**Версия:** `gen-ru-v7` (итерация L76; ADR-037; предыдущие `gen-ru-v5`/`gen-ru-v6`
-сохранены в коде и в `docs/prompts/`) · **Связано:** SPEC A8.1, A8.5; ADR-011,
-ADR-029, ADR-030, ADR-031, ADR-037
+**Версия:** `gen-ru-v8` (итерация 7.18; ADR-040; предыдущие `gen-ru-v5`/`v6`/`v7`
+сохранены в коде и в `docs/prompts/`) · **Связано:** SPEC A8.1, A8.4, A8.5;
+ADR-011, ADR-029, ADR-030, ADR-031, ADR-037, ADR-040
 **Источник правды в коде:** `lib/api/prompts/system_prompt.dart`
-(`systemPromptGenRuV7`, `systemPromptVersion = 'gen-ru-v7'`).
-**Дословная копия текста:** `docs/prompts/gen-ru-v7.txt` (тест сверяет
+(`systemPromptGenRuV8`, `systemPromptVersion = 'gen-ru-v8'`).
+**Дословная копия текста:** `docs/prompts/gen-ru-v8.txt` (тест сверяет
 константу и файл байт в байт).
+
+## 0.0 Что нового в `gen-ru-v8` (ADR-040)
+
+`gen-ru-v8` = `gen-ru-v7` дословно + блок «ПЛАНИРОВАНИЕ ВЫДАЧИ»: хвост `<task>`
+(`<part>`, `<focus>`, `<cards>`, `<context_only>`, `<already_created>`),
+`section_id` у карточки и `source_exhausted` в корне ответа. Неизменный
+префикс сообщения — `<materials>`, `<images>`, `<outline>`, `<wishes>`;
+между запросами одного запуска различается только `<task>` (кэш префикса).
 
 ## 0. Что нового в `gen-ru-v7` (ADR-037)
 

@@ -1,8 +1,9 @@
 # API-схема генерации CardFlow
 
-**Версия:** 6.0 (2026-11-16; промпт `gen-ru-v6`, обязательный объект `image`
-(`query`/`fallback_query`/`kind`) у каждой карточки, `image_query` — только
-legacy v5; ADR-031) ·
+**Версия:** 7.0 (2026-11-20; промпт `gen-ru-v8`: корень `{cards, source_exhausted}`,
+поле карточки `section_id`; обязательный объект `image`
+(`query`/`fallback_query`/`kind`), `image_query` — только legacy v5;
+ADR-031, ADR-040) ·
 **Связано:** SPEC A8.1, A8.2, A8.4, A8.5, A8.6; ADR-011; ADR-012; ADR-013; ADR-021;
 ADR-022; ADR-023; ADR-024; ADR-029; ADR-030; ADR-031
 **Источник правды в коде:** `lib/api/generation/card_json_schema.dart` (канон), `provider_schema.dart`
@@ -21,6 +22,7 @@ ADR-022; ADR-023; ADR-024; ADR-029; ADR-030; ADR-031
 {
   "type": "object",
   "properties": {
+    "source_exhausted": { "type": "boolean" },
     "cards": {
       "type": "array",
       "items": {
@@ -34,6 +36,7 @@ ADR-022; ADR-023; ADR-024; ADR-029; ADR-030; ADR-031
           "source_excerpt": { "type": ["string", "null"] },
           "source_file": { "type": ["string", "null"] },
           "image_id": { "type": ["string", "null"] },
+          "section_id": { "type": ["string", "null"] },
           "image": {
             "type": "object",
             "properties": {
@@ -45,12 +48,12 @@ ADR-022; ADR-023; ADR-024; ADR-029; ADR-030; ADR-031
             "additionalProperties": false
           }
         },
-        "required": ["front", "back", "hint", "tags", "card_type", "source_excerpt", "source_file", "image_id", "image"],
+        "required": ["front", "back", "hint", "tags", "card_type", "source_excerpt", "source_file", "image_id", "section_id", "image"],
         "additionalProperties": false
       }
     }
   },
-  "required": ["cards"],
+  "required": ["cards", "source_exhausted"],
   "additionalProperties": false
 }
 ```

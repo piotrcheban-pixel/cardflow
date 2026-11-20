@@ -245,7 +245,7 @@ void main() {
       expect(job.cardsCount, 1);
       expect(job.chunkCount, 1);
       expect(job.files, <String>['лекция.txt']);
-      expect(job.promptVersion, 'gen-ru-v7');
+      expect(job.promptVersion, 'gen-ru-v8');
 
       final imported = await container
           .read(generationCardStoreProvider)
@@ -569,7 +569,7 @@ void main() {
           .jobById(result.jobId))!;
       expect(job.status, GenerationJobStatus.done);
       expect(job.files, isEmpty);
-      expect(job.promptVersion, 'gen-ru-v7');
+      expect(job.promptVersion, 'gen-ru-v8');
       expect(job.cardsCount, 1);
     },
   );

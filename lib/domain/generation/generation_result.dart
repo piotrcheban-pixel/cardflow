@@ -54,6 +54,7 @@ class GenerationResult {
     this.estimatorVersion,
     this.sentDocumentImageIds = const <String>[],
     this.skippedDocumentImageIds = const <String>[],
+    this.sourceExhausted = false,
   });
 
   /// Провайдер ответа.
@@ -91,6 +92,9 @@ class GenerationResult {
 
   /// id изображений, исключённых исполнителем (сверх плана) по лимитам.
   final List<String> skippedDocumentImageIds;
+
+  /// Модель сообщила, что материал focus исчерпан (`source_exhausted`, v8).
+  final bool sourceExhausted;
 
   @override
   String toString() =>
