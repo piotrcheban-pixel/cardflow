@@ -1132,6 +1132,95 @@ class AppLocalizationsRu extends AppLocalizations {
       'заказ слишком велик для одного запуска — уменьшите число карточек';
 
   @override
+  String get generationPlanDetails => 'Подробнее';
+
+  @override
+  String get generationPlanDetailsUnknownValue => 'неизвестно';
+
+  @override
+  String get generationPlanDetailsModel => 'Модель';
+
+  @override
+  String get generationPlanDetailsContext => 'Контекст';
+
+  @override
+  String get generationPlanDetailsInputTokens => 'Вход';
+
+  @override
+  String generationPlanDetailsInputExact(int tokens) {
+    return 'точно: $tokens токенов (count_tokens)';
+  }
+
+  @override
+  String generationPlanDetailsInputEstimated(int tokens) {
+    return 'приблизительно: $tokens токенов';
+  }
+
+  @override
+  String get generationPlanDetailsStrategy => 'Стратегия';
+
+  @override
+  String get generationPlanDetailsStrategyWhole =>
+      'весь документ в одном запросе';
+
+  @override
+  String get generationPlanDetailsStrategyFragmented =>
+      'документ делится на части';
+
+  @override
+  String get generationPlanDetailsStrategyPromptOnly => 'генерация по теме';
+
+  @override
+  String get generationPlanDetailsParts => 'Частей входа';
+
+  @override
+  String get generationPlanDetailsBatches => 'Партий (запросов)';
+
+  @override
+  String get generationPlanDetailsRequests => 'Запросов (+на повторы)';
+
+  @override
+  String get generationPlanDetailsImagesLabel => 'Изображения';
+
+  @override
+  String generationPlanDetailsImages(
+    int sent,
+    int catalog,
+    int unsupported,
+    int omitted,
+  ) {
+    return 'передано $sent, только каталог $catalog, без поддержки $unsupported, исключено $omitted';
+  }
+
+  @override
+  String get generationPlanDetailsTokensLabel => 'Оценка токенов';
+
+  @override
+  String get generationPlanDetailsCostLabel => 'Стоимость';
+
+  @override
+  String generationPlanDetailsCost(String value) {
+    return '$value';
+  }
+
+  @override
+  String get generationPlanDetailsCostUnknown =>
+      'неизвестна (тариф не подтверждён)';
+
+  @override
+  String get generationPlanDetailsSourcesLabel => 'Источники лимитов';
+
+  @override
+  String get generationPlanDetailsUnknownLimitsLabel => 'Неизвестные лимиты';
+
+  @override
+  String get generationPlanDetailsWarningsLabel => 'Предупреждения плана';
+
+  @override
+  String get generationPlanDetailsNote =>
+      'Числа построены тем же планом, что исполняет генерация; второй оценки нет. Неизвестные значения не подменяются типовыми.';
+
+  @override
   String generationPreviewPartial(int processed, int failed) {
     return 'Частичный результат: обработано фрагментов — $processed, с ошибкой — $failed. Импортируйте полученное или повторите неудавшиеся.';
   }

@@ -19,6 +19,7 @@ import 'package:cardflow/api/generation/generation_caller.dart';
 import 'package:cardflow/api/generation/generation_cancellation.dart';
 import 'package:cardflow/api/generation/generation_diagnostics.dart';
 import 'package:cardflow/api/generation/generation_plan_builder.dart';
+import 'package:cardflow/api/generation/generation_plan_entry.dart';
 import 'package:cardflow/api/generation/system_prompt.dart';
 import 'package:cardflow/api/images/placeholder_image_generator.dart';
 import 'package:cardflow/domain/cards/card.dart';
@@ -30,20 +31,17 @@ import 'package:cardflow/domain/generation/generated_card.dart';
 import 'package:cardflow/domain/generation/generated_card_image.dart';
 import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/generation/generation_budget.dart';
-import 'package:cardflow/domain/generation/generation_card_limit.dart';
 import 'package:cardflow/domain/generation/generation_card_store.dart';
 import 'package:cardflow/domain/generation/generation_continuity.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
 import 'package:cardflow/domain/generation/generation_failure_reason.dart';
 import 'package:cardflow/domain/generation/generation_job.dart';
-import 'package:cardflow/domain/generation/generation_chunk_planner.dart';
 import 'package:cardflow/domain/generation/generation_plan.dart';
+import 'package:cardflow/domain/generation/generation_request.dart';
 import 'package:cardflow/domain/generation/generation_request_budget.dart';
 import 'package:cardflow/domain/generation/input_planner.dart';
-import 'package:cardflow/domain/generation/generation_planning_config.dart';
 import 'package:cardflow/domain/generation/generation_plan_splitter.dart';
 import 'package:cardflow/domain/generation/generation_recovery_budget.dart';
-import 'package:cardflow/domain/generation/generation_request.dart';
 import 'package:cardflow/domain/generation/generation_result.dart';
 import 'package:cardflow/domain/generation/generation_run.dart';
 import 'package:cardflow/domain/generation/image_query.dart';
@@ -51,7 +49,6 @@ import 'package:cardflow/domain/generation/model_capabilities.dart';
 import 'package:cardflow/domain/generation/model_capability_cache.dart';
 import 'package:cardflow/domain/generation/provider_account.dart';
 import 'package:cardflow/domain/generation/token_calibration.dart';
-import 'package:cardflow/domain/generation/prompt_only_request.dart';
 import 'package:cardflow/domain/generation/token_accounting.dart';
 
 import 'package:cardflow/api/generation/exact_token_cache.dart';
@@ -333,37 +330,24 @@ class GenerationPipeline implements GenerationRunner {
   }) {
     final GenerationPlanFactory? factory = planFactory;
     if (factory != null) return factory(request, capabilities);
-    final GenerationPlanBuilder effective = builder ?? planBuilder;
-    final int? requested =
-        request.requestedCards ?? requestedCardCount(request.wishes);
-    if (!hasMaterials) {
-      // Prompt-only план строится тем же builder-ом, что и материаловый: он
-      // считает системный промпт, схему и обёртку (TASK 03, D1/D2). Прямой
-      // вызов планировщика без `overhead` занижал бюджет на тысячи токенов.
-      return effective.buildPromptOnly(
-        request: PromptOnlyRequest(prompt: topic!, requestedCards: requested),
-        capabilities: capabilities,
-        exactInputTokens: exactInputTokens,
-        inputTokenSource: inputTokenSource,
-      );
-    }
-    return effective.build(
-      documents: request.documents,
+    final GenerationPlan? plan = buildRunPlan(
+      builder: builder ?? planBuilder,
+      request: request,
       capabilities: capabilities,
-      attachments: request.images,
-      documentImages: request.documentImages,
-      wishes: request.wishes,
-      requestedCards: requested,
       exactInputTokens: exactInputTokens,
       inputTokenSource: inputTokenSource,
     );
+    if (plan == null) {
+      throw const GenerationException(GenerationErrorCode.noMaterials);
+    }
+    return plan;
   }
 
   /// Один нативный подсчёт входа на план (§2.2/§3.5.1).
   ///
   /// - счётчик выбирается по протоколу (`supports`), иначе — оценка;
   /// - для fragmented плана точный подсчёт целого запроса неприменим к части,
-  ///   поэтому остаётся оценка (`inputTokenSource`);
+  ///   поэтому остаётся оценка;
   /// - результат кэшируется по хэшу содержимого запроса: повторный запуск с
   ///   тем же материалом не делает лишних сетевых обращений;
   /// - при ошибке — консервативная оценка и код ошибки в диагностике (без тела
@@ -475,24 +459,8 @@ class GenerationPipeline implements GenerationRunner {
   }
 
   /// Builder с калиброванным `tokensPerCard` или исходный.
-  GenerationPlanBuilder _calibratedBuilder(TokenCalibration? calibration) {
-    if (calibration == null) return planBuilder;
-    final GenerationPlanningConfig planning = const GenerationPlanningConfig()
-        .copyWith(
-          tokensPerCard: calibration.tokensPerCard.round().clamp(50, 5000),
-        );
-    return GenerationPlanBuilder(
-      planner: GenerationChunkPlanner(
-        estimator: planBuilder.estimator,
-        config: GenerationChunkPlannerConfig(
-          planning: planning,
-          retryAllowanceRequests:
-              planBuilder.planner.config.retryAllowanceRequests,
-        ),
-        catalogLineBuilder: planBuilder.planner.catalogLineBuilder,
-      ),
-    );
-  }
+  GenerationPlanBuilder _calibratedBuilder(TokenCalibration? calibration) =>
+      generationPlanBuilderFor(calibration, base: planBuilder);
 
   /// Тема/пожелания для prompt-only; `null` — пусто.
   String? _topicOf(String? wishes) {

@@ -1833,6 +1833,155 @@ abstract class AppLocalizations {
   /// **'заказ слишком велик для одного запуска — уменьшите число карточек'**
   String get generationPlanReasonTooManyChunks;
 
+  /// Заголовок раскрывающегося блока деталей плана генерации.
+  ///
+  /// In ru, this message translates to:
+  /// **'Подробнее'**
+  String get generationPlanDetails;
+
+  /// Неизвестное значение в деталях плана.
+  ///
+  /// In ru, this message translates to:
+  /// **'неизвестно'**
+  String get generationPlanDetailsUnknownValue;
+
+  /// Строка модели в деталях плана.
+  ///
+  /// In ru, this message translates to:
+  /// **'Модель'**
+  String get generationPlanDetailsModel;
+
+  /// Строка контекста модели в деталях плана.
+  ///
+  /// In ru, this message translates to:
+  /// **'Контекст'**
+  String get generationPlanDetailsContext;
+
+  /// Строка оценки входных токенов.
+  ///
+  /// In ru, this message translates to:
+  /// **'Вход'**
+  String get generationPlanDetailsInputTokens;
+
+  /// Точный подсчёт входа.
+  ///
+  /// In ru, this message translates to:
+  /// **'точно: {tokens} токенов (count_tokens)'**
+  String generationPlanDetailsInputExact(int tokens);
+
+  /// Приблизительная оценка входа.
+  ///
+  /// In ru, this message translates to:
+  /// **'приблизительно: {tokens} токенов'**
+  String generationPlanDetailsInputEstimated(int tokens);
+
+  /// Строка стратегии входа.
+  ///
+  /// In ru, this message translates to:
+  /// **'Стратегия'**
+  String get generationPlanDetailsStrategy;
+
+  /// Стратегия wholeDocument.
+  ///
+  /// In ru, this message translates to:
+  /// **'весь документ в одном запросе'**
+  String get generationPlanDetailsStrategyWhole;
+
+  /// Стратегия fragmented.
+  ///
+  /// In ru, this message translates to:
+  /// **'документ делится на части'**
+  String get generationPlanDetailsStrategyFragmented;
+
+  /// Стратегия promptOnly.
+  ///
+  /// In ru, this message translates to:
+  /// **'генерация по теме'**
+  String get generationPlanDetailsStrategyPromptOnly;
+
+  /// Число частей входа в деталях плана.
+  ///
+  /// In ru, this message translates to:
+  /// **'Частей входа'**
+  String get generationPlanDetailsParts;
+
+  /// Число партий в деталях плана.
+  ///
+  /// In ru, this message translates to:
+  /// **'Партий (запросов)'**
+  String get generationPlanDetailsBatches;
+
+  /// Число запросов и допуск на повторы.
+  ///
+  /// In ru, this message translates to:
+  /// **'Запросов (+на повторы)'**
+  String get generationPlanDetailsRequests;
+
+  /// Строка статусов изображений в деталях плана.
+  ///
+  /// In ru, this message translates to:
+  /// **'Изображения'**
+  String get generationPlanDetailsImagesLabel;
+
+  /// Статусы изображений плана.
+  ///
+  /// In ru, this message translates to:
+  /// **'передано {sent}, только каталог {catalog}, без поддержки {unsupported}, исключено {omitted}'**
+  String generationPlanDetailsImages(
+    int sent,
+    int catalog,
+    int unsupported,
+    int omitted,
+  );
+
+  /// Строка оценки токенов.
+  ///
+  /// In ru, this message translates to:
+  /// **'Оценка токенов'**
+  String get generationPlanDetailsTokensLabel;
+
+  /// Строка стоимости в деталях плана.
+  ///
+  /// In ru, this message translates to:
+  /// **'Стоимость'**
+  String get generationPlanDetailsCostLabel;
+
+  /// Известная стоимость с валютой.
+  ///
+  /// In ru, this message translates to:
+  /// **'{value}'**
+  String generationPlanDetailsCost(String value);
+
+  /// Стоимость неизвестна.
+  ///
+  /// In ru, this message translates to:
+  /// **'неизвестна (тариф не подтверждён)'**
+  String get generationPlanDetailsCostUnknown;
+
+  /// Строка источников лимитов.
+  ///
+  /// In ru, this message translates to:
+  /// **'Источники лимитов'**
+  String get generationPlanDetailsSourcesLabel;
+
+  /// Строка неизвестных лимитов.
+  ///
+  /// In ru, this message translates to:
+  /// **'Неизвестные лимиты'**
+  String get generationPlanDetailsUnknownLimitsLabel;
+
+  /// Строка предупреждений плана.
+  ///
+  /// In ru, this message translates to:
+  /// **'Предупреждения плана'**
+  String get generationPlanDetailsWarningsLabel;
+
+  /// Пояснение к деталям плана.
+  ///
+  /// In ru, this message translates to:
+  /// **'Числа построены тем же планом, что исполняет генерация; второй оценки нет. Неизвестные значения не подменяются типовыми.'**
+  String get generationPlanDetailsNote;
+
   /// Баннер частичного успеха в предпросмотре (TASK 03).
   ///
   /// In ru, this message translates to:

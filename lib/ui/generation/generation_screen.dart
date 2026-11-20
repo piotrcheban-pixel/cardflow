@@ -6,6 +6,7 @@
 /// файлов и провайдера показываются кодами без сырых исключений.
 library;
 
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:desktop_drop/desktop_drop.dart';
@@ -17,6 +18,12 @@ import 'package:path/path.dart' as p;
 import 'package:cardflow/api/generation/generation_cancellation.dart';
 import 'package:cardflow/api/generation/generation_pipeline.dart';
 import 'package:cardflow/api/generation/generation_plan_builder.dart';
+import 'package:cardflow/api/generation/generation_plan_entry.dart';
+import 'package:cardflow/api/models/model_capability_service.dart';
+import 'package:cardflow/domain/generation/model_capability_cache.dart';
+import 'package:cardflow/domain/generation/model_limits.dart';
+import 'package:cardflow/domain/generation/token_calibration.dart';
+import 'package:cardflow/ui/generation/generation_plan_details.dart';
 import 'package:cardflow/api/parsers/file_parsing_service.dart';
 import 'package:cardflow/api/parsers/pdf_page_classifier.dart';
 import 'package:cardflow/api/parsers/pdf_scan_pages.dart';
@@ -33,7 +40,6 @@ import 'package:cardflow/domain/generation/generation_error.dart';
 import 'package:cardflow/domain/generation/generation_plan.dart';
 import 'package:cardflow/domain/generation/generation_run.dart';
 import 'package:cardflow/domain/generation/model_capabilities.dart';
-import 'package:cardflow/domain/generation/prompt_only_request.dart';
 import 'package:cardflow/domain/generation/provider_account.dart';
 import 'package:cardflow/domain/generation/provider_preset.dart';
 import 'package:cardflow/domain/text/document_format.dart';
@@ -100,6 +106,14 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
   /// Кэш предпросмотра плана: ключ входов и сам план (строится до запуска).
   String? _planCacheKey;
   GenerationPlan? _planPreview;
+
+  /// Данные планирования из тех же источников, что у конвейера: лимиты из
+  /// кэша discovery (ADR-039), калибровка `tokensPerCard` (ADR-040 §9) и
+  /// builder с ней. Ключ — `accountId|modelId`, чтобы не показывать чужие числа.
+  String? _planningKey;
+  ModelCapabilities? _planCapabilities;
+  ModelLimits? _planLimits;
+  GenerationPlanBuilder _planBuilder = const GenerationPlanBuilder();
 
   final List<_AttachedFile> _files = <_AttachedFile>[];
 
@@ -173,6 +187,7 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
         _loading = false;
         _configError = false;
       });
+      unawaited(_loadPlanningData());
     } on Object {
       if (!mounted) return;
       setState(() {
@@ -266,6 +281,56 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
         value > BigInt.from(kMaxRepresentableRequestedCards);
   }
 
+  /// Загружает возможности/лимиты из кэша и калибровку — источники конвейера.
+  Future<void> _loadPlanningData() async {
+    final ProviderAccount? account = _requestAccount;
+    if (account == null) return;
+    final String key = '${account.id}|${account.modelId}';
+    try {
+      final ModelCapabilityService service = ref.read(
+        modelCapabilityServiceProvider,
+      );
+      final ModelCapabilityRecord? record = await service.recordFor(account);
+      final ModelLimits limits = await service.limitsFor(account);
+      final ModelCapabilities capabilities = resolveModelCapabilities(
+        account,
+        cached: record,
+      );
+      TokenCalibration? calibration;
+      try {
+        calibration = await ref
+            .read(tokenCalibrationStoreProvider)
+            .read(accountId: account.id, model: account.modelId);
+      } on Object {
+        calibration = null;
+      }
+      if (!mounted) return;
+      setState(() {
+        _planningKey = key;
+        _planCapabilities = capabilities;
+        _planLimits = limits;
+        _planBuilder = generationPlanBuilderFor(calibration);
+        _planCacheKey = null;
+      });
+    } on Object {
+      if (!mounted) return;
+      setState(() {
+        _planningKey = key;
+        _planCapabilities = resolveModelCapabilities(account);
+        _planLimits = null;
+        _planBuilder = const GenerationPlanBuilder();
+        _planCacheKey = null;
+      });
+    }
+  }
+
+  /// Лимиты активного аккаунта для блока «Подробнее»; `null` — не загружены.
+  ModelLimits? _planLimitsFor(ProviderAccount? account) {
+    if (account == null) return null;
+    final String key = '${account.id}|${account.modelId}';
+    return _planningKey == key ? _planLimits : null;
+  }
+
   /// Предпросмотр плана до запуска: тот же `GenerationPlanBuilder`, что и в
   /// production-пути (TASK 03, D1–D3/D20/D25). Кэшируется по входам, чтобы не
   /// перестраивать план на каждую перерисовку.
@@ -280,24 +345,29 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
     if (key == _planCacheKey) return _planPreview;
     _planCacheKey = key;
     try {
-      final ModelCapabilities capabilities = resolveModelCapabilities(account);
-      const GenerationPlanBuilder builder = GenerationPlanBuilder();
-      _planPreview = !_hasContent
-          ? builder.buildPromptOnly(
-              request: PromptOnlyRequest(
-                prompt: wishes,
-                requestedCards: requested,
-              ),
-              capabilities: capabilities,
-            )
-          : builder.build(
-              documents: _parsedDocuments,
-              capabilities: capabilities,
-              attachments: _attachments,
-              documentImages: _scanDocumentImages,
-              wishes: wishes.isEmpty ? null : wishes,
-              requestedCards: requested,
-            );
+      final ModelCapabilities capabilities =
+          _planningKey == '${account.id}|${account.modelId}'
+          ? _planCapabilities ?? resolveModelCapabilities(account)
+          : resolveModelCapabilities(account);
+      final GenerationPlanBuilder builder =
+          _planningKey == '${account.id}|${account.modelId}'
+          ? _planBuilder
+          : const GenerationPlanBuilder();
+      // Единая точка построения плана: предпросмотр и конвейер используют
+      // один builder, одну тему/материалы и один GenerationPlan (§0.11).
+      _planPreview = buildRunPlan(
+        builder: builder,
+        request: GenerationRunRequest(
+          documents: _parsedDocuments,
+          images: _attachments,
+          documentImages: _scanDocumentImages,
+          account: account,
+          deckName: _deckNameController.text.trim(),
+          wishes: wishes.isEmpty ? null : wishes,
+          requestedCards: requested,
+        ),
+        capabilities: capabilities,
+      );
     } on Object {
       _planPreview = null;
     }
@@ -313,7 +383,9 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
       ..write('|')
       ..write(wishes)
       ..write('|')
-      ..write(requested ?? 'auto');
+      ..write(requested ?? 'auto')
+      ..write('|')
+      ..write(_planningKey ?? 'catalog');
     for (final _AttachedFile file in _files) {
       buffer
         ..write('|')
@@ -1145,6 +1217,7 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
                             _account = account;
                             _modelId = account.modelId;
                           });
+                          unawaited(_loadPlanningData());
                         },
                 ),
             ],
@@ -1169,7 +1242,10 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
               ],
               onChanged: _generating
                   ? null
-                  : (String? value) => setState(() => _modelId = value),
+                  : (String? value) {
+                      setState(() => _modelId = value);
+                      unawaited(_loadPlanningData());
+                    },
             )
           else
             InputDecorator(
@@ -1225,6 +1301,12 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
               )
             else
               ..._planWarningWidgets(l10n, planPreview, theme),
+            if (planPreview.validity.isValid && planPreview.chunks.isNotEmpty)
+              GenerationPlanDetails(
+                plan: planPreview,
+                model: (_modelId ?? _account?.modelId ?? '').trim(),
+                limits: _planLimitsFor(_account),
+              ),
           ],
           if (_actualTokens != null) ...<Widget>[
             const SizedBox(height: AppSpacing.xxs),

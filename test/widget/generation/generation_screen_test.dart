@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter_riverpod/misc.dart' show Override;
+import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -19,10 +20,14 @@ import 'package:cardflow/domain/generation/generation_job.dart';
 import 'package:cardflow/domain/generation/generation_run.dart';
 import 'package:cardflow/domain/generation/document_gateway.dart';
 import 'package:cardflow/domain/generation/provider_account.dart';
+import 'package:cardflow/domain/generation/provider_protocol.dart';
 import 'package:cardflow/domain/text/document_format.dart';
 import 'package:cardflow/domain/text/parsed_document.dart';
 import 'package:cardflow/domain/text/parser_exception.dart';
 import 'package:cardflow/ui/generation/generation_screen.dart';
+import 'package:cardflow/api/models/model_capability_service.dart';
+import 'package:cardflow/domain/generation/model_capability_cache.dart';
+import 'package:cardflow/domain/generation/model_limits.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
 
 import '../../helpers/decks_fakes.dart';
@@ -31,6 +36,32 @@ import '../../helpers/pump_app.dart';
 import '../../helpers/settings_fakes.dart';
 
 Future<T> inlineIsolate<T>(Future<T> Function() task) => task();
+
+/// Cache-заглушка с записью discovery (без drift): предпросмотр обязан
+/// читать лимиты из того же кэша, что и конвейер (ADR-039).
+class _MemoryCapabilityCache implements ModelCapabilityCache {
+  _MemoryCapabilityCache(this.record);
+
+  final ModelCapabilityRecord record;
+
+  @override
+  Future<void> invalidateAccount(String accountId) async {}
+
+  @override
+  Future<ModelCapabilityRecord?> read({
+    required String accountId,
+    required ProviderProtocol protocol,
+    required String baseUrl,
+    required String model,
+  }) async => accountId == record.accountId ? record : null;
+
+  @override
+  Future<List<ModelCapabilityRecord>> readAll() async =>
+      <ModelCapabilityRecord>[record];
+
+  @override
+  Future<void> write(ModelCapabilityRecord value) async {}
+}
 
 void main() {
   late FakeDocumentGateway gateway;
@@ -87,10 +118,14 @@ void main() {
     WidgetTester tester, {
     String? deckId,
     FileParsingService? parsingService,
+    List<Override> extraOverrides = const <Override>[],
   }) async {
     await tester.pumpWidget(
       appWithHome(
-        overrides: overrides(parsingService: parsingService),
+        overrides: <Override>[
+          ...overrides(parsingService: parsingService),
+          ...extraOverrides,
+        ],
         home: GenerationScreen(deckId: deckId),
       ),
     );
@@ -105,8 +140,13 @@ void main() {
         sizeBytes: 30,
       ),
     ];
+    // Ёмкость раздела должна позволять шесть карточек (вес/плотность ADR-040).
+    final String lecture = List<String>.filled(
+      400,
+      'Фотосинтез — это процесс преобразования световой энергии.',
+    ).join(' ');
     gateway.bytesByPath['/tmp/лекция.txt'] = Uint8List.fromList(
-      utf8.encode('Материал лекции'),
+      utf8.encode(lecture),
     );
     await tester.tap(
       find.byKey(const ValueKey<String>('generation-attach-zone')),
@@ -965,6 +1005,111 @@ void main() {
     expect(find.textContaining('запрошено — 1000'), findsOneWidget);
     expect(find.textContaining('достижимо —'), findsOneWidget);
     expect(find.textContaining('Запрошено 1000 карточек'), findsOneWidget);
+  });
+
+  testWidgets('предпросмотр и «Подробнее» используют лимиты из кэша discovery', (
+    WidgetTester tester,
+  ) async {
+    final ProviderAccount account = testProviderAccount(
+      modelId: 'deepseek-chat',
+    );
+    final ModelCapabilityRecord record = ModelCapabilityRecord(
+      accountId: account.id,
+      protocol: account.protocol,
+      baseUrl: account.baseUrl,
+      model: account.modelId,
+      fetchedAt: DateTime.utc(2026, 11, 20),
+      checkedAt: '2026-11-20',
+      sourceRef: 'https://api.deepseek.com/models',
+      limits: ModelLimits(
+        // Лимит вывода из discovery: 1000 токенов. С каталожным значением
+        // (8192) шесть карточек помещаются в один запрос, с кэшевым — в три.
+        maxOutputTokens: Sourced<int>(
+          1000,
+          source: CapabilitySource.providerApi,
+          sourceRef: 'https://api.deepseek.com/models',
+        ),
+      ),
+    );
+    final ModelCapabilityService service = ModelCapabilityService(
+      dio: Dio(),
+      readApiKey: (String id) async => null,
+      cache: _MemoryCapabilityCache(record),
+    );
+    await pumpScreen(
+      tester,
+      extraOverrides: <Override>[
+        modelCapabilityServiceProvider.overrideWithValue(service),
+      ],
+    );
+    gateway.picked = <PickedDocument>[
+      const PickedDocument(
+        path: '/tmp/лекция.txt',
+        name: 'лекция.txt',
+        sizeBytes: 30,
+      ),
+    ];
+    // Ёмкость раздела должна позволять шесть карточек (вес/плотность ADR-040).
+    final String lecture = List<String>.filled(
+      400,
+      'Фотосинтез — это процесс преобразования световой энергии.',
+    ).join(' ');
+    gateway.bytesByPath['/tmp/лекция.txt'] = Uint8List.fromList(
+      utf8.encode(lecture),
+    );
+    await tester.tap(
+      find.byKey(const ValueKey<String>('generation-attach-zone')),
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const ValueKey<String>('generation-cards-count')),
+      '6',
+    );
+    await tester.pumpAndSettle();
+
+    final Finder preview = find.byKey(
+      const ValueKey<String>('generation-plan-preview'),
+    );
+    await tester.scrollUntilVisible(
+      preview,
+      -300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    final String previewText = tester.widget<Text>(preview).data!;
+    expect(previewText, contains('запросов — 3'));
+
+    final Finder details = find.byKey(
+      const ValueKey<String>('generation-plan-details'),
+    );
+    await tester.ensureVisible(details);
+    await tester.pumpAndSettle();
+    await tester.tap(details);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(
+      tester
+          .widget<Text>(find.byKey(const ValueKey<String>('plan-detail-model')))
+          .data,
+      'deepseek-chat',
+    );
+    expect(
+      tester
+          .widget<Text>(
+            find.byKey(const ValueKey<String>('plan-detail-batches')),
+          )
+          .data,
+      '3',
+    );
+    expect(
+      tester
+          .widget<Text>(
+            find.byKey(const ValueKey<String>('plan-detail-strategy')),
+          )
+          .data,
+      // Кэшевый лимит вывода 1000 меньше минимальной партии: план честно
+      // переходит во fragmented, хотя материал и уместился бы целиком.
+      'документ делится на части',
+    );
   });
 }
 

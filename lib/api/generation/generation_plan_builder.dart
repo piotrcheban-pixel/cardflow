@@ -30,11 +30,38 @@ import 'package:cardflow/domain/generation/document_image.dart';
 import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/generation/generation_budget.dart';
 import 'package:cardflow/domain/generation/generation_card_limit.dart';
+import 'package:cardflow/domain/generation/generation_planning_config.dart';
 import 'package:cardflow/domain/generation/generation_chunk_planner.dart';
 import 'package:cardflow/domain/generation/generation_plan.dart';
 import 'package:cardflow/domain/generation/model_capabilities.dart';
 import 'package:cardflow/domain/generation/prompt_only_request.dart';
+import 'package:cardflow/domain/generation/token_calibration.dart';
 import 'package:cardflow/domain/text/parsed_document.dart';
+
+/// Сборщик плана с калиброванным `tokensPerCard` (ADR-040 §9).
+///
+/// Единственная точка настройки планировщика: предпросмотр и конвейер обязаны
+/// строить план этим же builder-ом, иначе числа разойдутся.
+GenerationPlanBuilder generationPlanBuilderFor(
+  TokenCalibration? calibration, {
+  GenerationPlanBuilder base = const GenerationPlanBuilder(),
+}) {
+  if (calibration == null) return base;
+  final GenerationPlanningConfig planning = base.planner.config.planning
+      .copyWith(
+        tokensPerCard: calibration.tokensPerCard.round().clamp(50, 5000),
+      );
+  return GenerationPlanBuilder(
+    planner: GenerationChunkPlanner(
+      estimator: base.estimator,
+      config: GenerationChunkPlannerConfig(
+        planning: planning,
+        retryAllowanceRequests: base.planner.config.retryAllowanceRequests,
+      ),
+      catalogLineBuilder: base.planner.catalogLineBuilder,
+    ),
+  );
+}
 
 /// Собирает [GenerationPlan] из разобранных документов и вложений.
 class GenerationPlanBuilder {
