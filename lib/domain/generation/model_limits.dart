@@ -24,7 +24,7 @@ final class ModelLimits {
     this.supportsImageInput = const Sourced<bool>.absent(),
     this.supportsPdfInput = const Sourced<bool>.absent(),
     this.isReasoningModel = const Sourced<bool>.absent(),
-    this.pricing = const Sourced<ModelPricing>.absent(),
+    this.pricing = const Sourced<GenerationPricing>.absent(),
   });
 
   /// Всё неизвестно.
@@ -55,7 +55,7 @@ final class ModelLimits {
   final Sourced<bool> isReasoningModel;
 
   /// Цены за 1M токенов, если известны.
-  final Sourced<ModelPricing> pricing;
+  final Sourced<GenerationPricing> pricing;
 
   /// Значение окна или `null`.
   int? get contextTokensValue => contextTokens.value;
@@ -91,7 +91,7 @@ final class ModelLimits {
     Sourced<bool>? supportsImageInput,
     Sourced<bool>? supportsPdfInput,
     Sourced<bool>? isReasoningModel,
-    Sourced<ModelPricing>? pricing,
+    Sourced<GenerationPricing>? pricing,
   }) => ModelLimits(
     contextTokens: contextTokens ?? this.contextTokens,
     contextSemantics: contextSemantics ?? this.contextSemantics,
@@ -122,7 +122,7 @@ int capabilitySourceRank(CapabilitySource source) => source.priority;
 /// зависит от порядка и всё равно сравнивает ранги.
 ModelLimits mergeModelLimits(Iterable<ModelLimits> layers) {
   final List<ModelLimits> list = layers.toList(growable: false);
-  T pick<T>(Sourced<T> Function(ModelLimits) field) {
+  Sourced<T> pick<T>(Sourced<T> Function(ModelLimits) field) {
     Sourced<T> best = field(const ModelLimits.absent());
     for (final ModelLimits layer in list) {
       final Sourced<T> candidate = field(layer);
@@ -152,7 +152,7 @@ ModelLimits mergeModelLimits(Iterable<ModelLimits> layers) {
     supportsImageInput: pick<bool>((ModelLimits l) => l.supportsImageInput),
     supportsPdfInput: pick<bool>((ModelLimits l) => l.supportsPdfInput),
     isReasoningModel: pick<bool>((ModelLimits l) => l.isReasoningModel),
-    pricing: pick<ModelPricing>((ModelLimits l) => l.pricing),
+    pricing: pick<GenerationPricing>((ModelLimits l) => l.pricing),
   );
 }
 
@@ -210,8 +210,8 @@ ModelLimits modelLimitsFromCapabilities(ModelCapabilities capabilities) {
       sourceRef: 'provider_protocol',
     ),
     pricing: capabilities.pricing == null
-        ? const Sourced<ModelPricing>.absent()
-        : Sourced<ModelPricing>(
+        ? const Sourced<GenerationPricing>.absent()
+        : Sourced<GenerationPricing>(
             capabilities.pricing,
             source: pricingSource == CapabilitySource.unknown
                 ? CapabilitySource.assumption
