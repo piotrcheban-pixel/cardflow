@@ -20,6 +20,7 @@ import 'package:cardflow/domain/generation/content_unit.dart';
 import 'package:cardflow/domain/generation/document_image.dart';
 import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/generation/generation_budget.dart';
+import 'package:cardflow/domain/generation/generation_continuity.dart';
 import 'package:cardflow/domain/generation/generation_plan.dart';
 import 'package:cardflow/domain/generation/generation_planning_config.dart';
 import 'package:cardflow/domain/generation/generation_pricing.dart';
@@ -192,14 +193,77 @@ final class GenerationChunkPlanner {
     );
 
     final InputPlan inputPlan;
+    var promptTokens = 0;
+    var promptCardsCap = 0;
+    var promptBodyBytes = planning.jsonBodyOverheadBytes;
     if (promptOnly) {
+      // Prompt-only идёт по той же машинерии (§0.11): тема — часть обвязки
+      // каждого запроса, распределения по разделам нет, заказ делится только
+      // на партии [OutputBatchPlanner].
+      final String topic = wishes!.trim();
+      promptTokens = math.max(1, estimator.estimateText(topic));
+      final int promptBytes = utf8.encode(topic).length;
+      final int cardsCap = budgetCardsPerRequestCap(capabilities, budgetConfig);
+      promptCardsCap = cardsCap;
+      final int targetCards = math.max(1, requestedCards ?? cardsCap);
+      // Безопасное деление вверх: `(a + b - 1) ~/ b` переполняет int на
+      // `requestedCards == int.max`; остаток считается отдельно.
+      final int chunksByCards = targetCards ~/ cardsCap;
+      final int estimatedChunks =
+          chunksByCards + (targetCards % cardsCap == 0 ? 0 : 1);
+      // Сводка уже созданных карточек добавляется со второго запроса; её
+      // бюджет резервируется заранее (TASK 03, D13).
+      final int continuationReserve = estimatedChunks > 1
+          ? kPromptOnlyContinuationMaxTokens
+          : 0;
+      final int fixedTokens =
+          overhead.fixedTokens + promptTokens + continuationReserve;
+      promptBodyBytes =
+          promptBytes +
+          planning.jsonBodyOverheadBytes +
+          (continuationReserve > 0 ? kPromptOnlyContinuationReserveBytes : 0);
       inputPlan = InputPlanner(config: planning).plan(
         sections: const <InputSection>[],
         limits: limits,
-        fixedTokens: overhead.fixedTokens,
+        fixedTokens: fixedTokens,
         desiredOutputTokens: desired,
         accuracy: InputAccuracy.estimated,
+        promptOnlyRequestBytes: promptBodyBytes,
+        inputTokenSource: 'estimate:${estimator.version}',
       );
+      if (inputPlan.budget.payloadExceeded) {
+        return _invalidPlan(
+          PlanInvalidReason.payloadTooLarge,
+          inputPlan: inputPlan,
+          limits: limits,
+          overhead: overhead,
+          requestedCards: requestedCards,
+          mode: GenerationMode.promptOnly,
+          promptText: topic,
+        );
+      }
+      if (inputPlan.budget.contextExceeded || inputPlan.maxTokens < 1) {
+        return _invalidPlan(
+          PlanInvalidReason.contextWindowTooSmall,
+          inputPlan: inputPlan,
+          limits: limits,
+          overhead: overhead,
+          requestedCards: requestedCards,
+          mode: GenerationMode.promptOnly,
+          promptText: topic,
+        );
+      }
+      if (estimatedChunks > config.maxChunks) {
+        return _invalidPlan(
+          PlanInvalidReason.tooManyChunks,
+          inputPlan: inputPlan,
+          limits: limits,
+          overhead: overhead,
+          requestedCards: requestedCards,
+          mode: GenerationMode.promptOnly,
+          promptText: topic,
+        );
+      }
     } else if (data.sections.isEmpty) {
       inputPlan = _attachmentsOnlyPlan(
         data: data,
@@ -216,6 +280,7 @@ final class GenerationChunkPlanner {
         accuracy: InputAccuracy.estimated,
         outlineReserveTokens: overhead.outlineTokens,
         orphanImages: data.orphanImages,
+        inputTokenSource: 'estimate:${estimator.version}',
       );
     }
 
@@ -281,8 +346,14 @@ final class GenerationChunkPlanner {
             input: inputPlan,
             allocation: allocation,
             maxTokensPerBatch: inputPlan.maxTokens,
-            promptOnlyRequestedCards: requestedCards,
-            maxCardsPerRequest: limits.maxCardsPerRequest.value,
+            promptOnlyRequestedCards: requestedCards ?? promptCardsCap,
+            // Prompt-only сохраняет прежний консервативный лимит карточек на
+            // запрос (`budgetCardsPerRequestCap`): у него нет материалов, а
+            // качество партии без фокуса по разделам проверено этим числом.
+            maxCardsPerRequest: math.min(
+              limits.maxCardsPerRequest.value ?? promptCardsCap,
+              promptCardsCap,
+            ),
           )
         : data.sections.isEmpty
         ? _batchesWithoutSections(
@@ -336,7 +407,8 @@ final class GenerationChunkPlanner {
             PlannedChunk.promptOnly(
               index: nextChunkIndex++,
               limit: batch.limit,
-              bodyBytes: planning.jsonBodyOverheadBytes,
+              textTokens: promptTokens,
+              bodyBytes: promptBodyBytes,
             ),
           );
         } else {
@@ -963,10 +1035,16 @@ final class GenerationChunkPlanner {
     required GenerationChunkPlannerConfig config,
   }) {
     final GenerationPlanningConfig planning = config.planning;
-    final int inputText = inputPlan.parts.fold<int>(
-      0,
-      (int sum, InputPart part) => sum + part.tokens,
-    );
+    final bool promptOnly = inputPlan.isPromptOnly;
+    final int inputText = promptOnly
+        ? chunks.fold<int>(
+            0,
+            (int sum, PlannedChunk chunk) => sum + chunk.textTokens,
+          )
+        : inputPlan.parts.fold<int>(
+            0,
+            (int sum, InputPart part) => sum + part.tokens,
+          );
     final int imageTokens = inputPlan.parts.fold<int>(
       0,
       (int sum, InputPart part) =>
@@ -977,15 +1055,29 @@ final class GenerationChunkPlanner {
           ),
     );
     final int requests = math.max(1, chunks.length);
-    final int reserved = planning.tokensFor(
-      math.min(
-        planning.batchCardsCeiling,
-        chunks.isEmpty
-            ? planning.minBatchCards
-            : chunks.fold<int>(0, (int sum, PlannedChunk c) => sum + c.limit),
-      ),
-    );
-    final int batchInput = inputPlan.parts.isEmpty
+    final int outputCap = planning.outputCapFor(limits);
+    final int reserved;
+    if (promptOnly) {
+      // Партии prompt-only не делят материал: резерв вывода — сумма по партиям,
+      // а не «на партию × число запросов» (иначе оценка растёт вдвое).
+      reserved = chunks.fold<int>(
+        0,
+        (int sum, PlannedChunk chunk) =>
+            sum + math.min(outputCap, planning.tokensFor(chunk.limit)),
+      );
+    } else {
+      reserved = planning.tokensFor(
+        math.min(
+          planning.batchCardsCeiling,
+          chunks.isEmpty
+              ? planning.minBatchCards
+              : chunks.fold<int>(0, (int sum, PlannedChunk c) => sum + c.limit),
+        ),
+      );
+    }
+    final int batchInput = promptOnly
+        ? inputPlan.inputTokens * requests
+        : inputPlan.parts.isEmpty
         ? inputPlan.inputTokens
         : inputPlan.parts.fold<int>(
             0,
@@ -1004,8 +1096,18 @@ final class GenerationChunkPlanner {
                   config: planning,
                 ).inputTokens,
           );
-    final int outputTotal = reserved * requests;
+    final int outputTotal = promptOnly ? reserved : reserved * requests;
     final int totalTokens = batchInput + outputTotal;
+    // Сводка продолжения prompt-only: второй и следующие запросы несут блок
+    // уже созданных карточек; его резерв виден в оценке как часть обвязки.
+    final int continuation = promptOnly && requests > 1
+        ? math.max(
+            0,
+            inputPlan.fixedTokens -
+                overhead.fixedTokens -
+                (chunks.isEmpty ? 0 : chunks.first.textTokens),
+          )
+        : 0;
     GenerationCost? cost;
     final GenerationPricing? pricing = limits.pricing.value;
     if (pricing != null) {
@@ -1017,14 +1119,21 @@ final class GenerationChunkPlanner {
     return GenerationEstimate(
       inputTextTokens: inputText,
       imageTokens: imageTokens,
-      fixedPromptTokens: overhead.systemPromptTokens,
-      wrapperTokens: overhead.wrapperTokens + overhead.taskTailTokens,
-      schemaTokens: overhead.schemaTokens,
+      fixedPromptTokens: promptOnly
+          ? overhead.systemPromptTokens * requests
+          : overhead.systemPromptTokens,
+      wrapperTokens: promptOnly
+          ? (overhead.wrapperTokens + overhead.taskTailTokens) * requests +
+                continuation * (requests - 1)
+          : overhead.wrapperTokens + overhead.taskTailTokens,
+      schemaTokens: promptOnly
+          ? overhead.schemaTokens * requests
+          : overhead.schemaTokens,
       catalogTokens: 0,
       reservedOutputTokens: outputTotal,
       expectedOutputTokens: outputTotal,
       totalTokens: totalTokens,
-      plannedChunks: inputPlan.partCount,
+      plannedChunks: promptOnly ? chunks.length : inputPlan.partCount,
       plannedRequests: chunks.length,
       retryAllowanceRequests: config.retryAllowanceRequests,
       pricingState: limits.pricing.value?.state ?? PricingState.unknown,
@@ -1035,6 +1144,9 @@ final class GenerationChunkPlanner {
       currency: cost?.currency,
       unknownFields: _unknownFields(limits, inputPlan),
       confidence: inputPlan.accuracy == InputAccuracy.exact ? 1 : 0.6,
+      continuationReserveTokens: promptOnly
+          ? continuation * math.max(0, requests - 1)
+          : 0,
     );
   }
 
@@ -1045,6 +1157,7 @@ final class GenerationChunkPlanner {
     required GenerationOverheadTokens overhead,
     required int? requestedCards,
     GenerationMode mode = GenerationMode.materials,
+    String? promptText,
   }) {
     return GenerationPlan(
       validity: PlanValidity.invalid(
@@ -1071,7 +1184,7 @@ final class GenerationChunkPlanner {
       retryAllowanceRequests: config.retryAllowanceRequests,
       mode: mode,
       promptOnlyPrompt: mode == GenerationMode.promptOnly
-          ? 'план по теме'
+          ? (promptText ?? 'план по теме')
           : null,
       inputPlan: inputPlan,
       unknownFields: _unknownFields(limits, inputPlan),

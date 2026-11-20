@@ -25,6 +25,20 @@ import 'package:cardflow/domain/generation/generated_card.dart';
 /// вычитает из бюджета prompt-only плана, когда запросов больше одного.
 const int kPromptOnlyContinuationMaxTokens = 1200;
 
+/// Служебный запас тела prompt-only запроса, байт (обёртка/JSON).
+///
+/// Оценка консервативная: точные байты обёртки зависят от протокола и длины
+/// `<limit>`; значение — конфигурация приложения, а не лимит провайдера.
+const int kPromptOnlyBodyOverheadBytes = 512;
+
+/// Консервативная оценка байт компактной сводки продолжения.
+///
+/// Блок ограничен [kPromptOnlyContinuationMaxTokens] токенами; кириллица в
+/// UTF-8 — до 2 байт на символ при консервативных 2,5 симв./токен, поэтому
+/// 2 байта на токен — оценка сверху, а не точное значение.
+const int kPromptOnlyContinuationReserveBytes =
+    kPromptOnlyContinuationMaxTokens * 2;
+
 /// Максимум карточек в компактной сводке (при большем — равномерная выборка).
 const int kPromptOnlyContinuationMaxCards = 40;
 

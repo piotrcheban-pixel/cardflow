@@ -354,7 +354,6 @@ class GenerationPipeline implements GenerationRunner {
         ),
         catalogLineBuilder: planBuilder.planner.catalogLineBuilder,
       ),
-      promptOnlyPlanner: planBuilder.promptOnlyPlanner,
     );
   }
 

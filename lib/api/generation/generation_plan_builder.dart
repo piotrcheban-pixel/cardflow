@@ -33,23 +33,16 @@ import 'package:cardflow/domain/generation/generation_card_limit.dart';
 import 'package:cardflow/domain/generation/generation_chunk_planner.dart';
 import 'package:cardflow/domain/generation/generation_plan.dart';
 import 'package:cardflow/domain/generation/model_capabilities.dart';
-import 'package:cardflow/domain/generation/prompt_only_planner.dart';
 import 'package:cardflow/domain/generation/prompt_only_request.dart';
 import 'package:cardflow/domain/text/parsed_document.dart';
 
 /// Собирает [GenerationPlan] из разобранных документов и вложений.
 class GenerationPlanBuilder {
   /// Создаёт сборщик плана.
-  const GenerationPlanBuilder({
-    this.planner = const GenerationChunkPlanner(),
-    this.promptOnlyPlanner = const PromptOnlyPlanner(),
-  });
+  const GenerationPlanBuilder({this.planner = const GenerationChunkPlanner()});
 
   /// Планировщик (несёт общий оценщик токенов).
   final GenerationChunkPlanner planner;
-
-  /// Планировщик генерации без материалов (ADR-024).
-  final PromptOnlyPlanner promptOnlyPlanner;
 
   /// Оценщик единиц содержимого (тот же, что у планировщика).
   ContentTokenEstimator get estimator => planner.estimator;
@@ -164,9 +157,10 @@ class GenerationPlanBuilder {
 
   /// Строит план генерации без материалов (prompt-only, ADR-024).
   ///
-  /// Обёртка здесь считается **без** темы: токены пользовательского запроса
-  /// планировщик учитывает в каждом фрагменте сам, поэтому двойного счёта нет.
-  /// Пустой `ContentInventory` для обхода бюджета не используется.
+  /// Использует **ту же** машинерию, что и план по материалам (§0.11):
+  /// [GenerationChunkPlanner] → [InputPlanner] → [OutputBatchPlanner]. Тема
+  /// входит в обвязку каждого запроса, распределения по разделам нет;
+  /// обёртка здесь считается **без** темы, поэтому двойного счёта нет.
   GenerationPlan buildPromptOnly({
     required PromptOnlyRequest request,
     required ModelCapabilities capabilities,
@@ -190,14 +184,15 @@ class GenerationPlanBuilder {
             ),
           ),
         );
-    return PromptOnlyPlanner(
-      estimator: estimator,
-      config: promptOnlyPlanner.config,
-    ).plan(
-      request: request,
+    return planner.plan(
+      inventory: ContentInventory.empty,
       capabilities: capabilities,
       overhead: fixed,
+      requestedCards: request.requestedCards,
+      allowPromptOnly: true,
+      wishes: request.prompt,
       budgetConfig: budgetConfig,
+      catalogLineBuilder: planner.catalogLineBuilder,
     );
   }
 

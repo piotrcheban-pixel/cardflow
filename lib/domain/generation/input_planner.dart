@@ -189,6 +189,8 @@ final class InputPlan {
     this.warnings = const <PlanWarningCode>[],
     this.images = const <PlannedImage>[],
     this.contextTokens,
+    this.materialBudgetTokens,
+    this.inputTokenSource,
   });
 
   /// Стратегия входа.
@@ -229,6 +231,18 @@ final class InputPlan {
 
   /// Окно контекста модели (`null` — неизвестно).
   final int? contextTokens;
+
+  /// Бюджет материалов, на который опиралось разбиение (токенов).
+  ///
+  /// Нужен восстановлению после переполнения (§3.9): следующий план строится
+  /// с бюджетом ×0.8. `null` — план без материалов (prompt-only) или старая
+  /// версия плана; тогда решение о дроблении принимается прежним способом.
+  final int? materialBudgetTokens;
+
+  /// Источник точности входа (`anthropic:count_tokens`, `estimate:heuristic`, …).
+  ///
+  /// Показывается в «Подробнее» и диагностике; тело запроса сюда не попадает.
+  final String? inputTokenSource;
 
   /// Число частей материала.
   int get partCount => parts.length;
@@ -329,6 +343,8 @@ final class InputPlanner {
     int outlineReserveTokens = 0,
     List<InputImage> orphanImages = const <InputImage>[],
     int? exactInputTokens,
+    int promptOnlyRequestBytes = 0,
+    String? inputTokenSource,
   }) {
     final double marginRate = config.margin(
       exact: accuracy == InputAccuracy.exact,
@@ -363,6 +379,8 @@ final class InputPlanner {
         desiredOutputTokens: desiredOutputTokens,
         accuracy: accuracy,
         config: config,
+        requestBytes: promptOnlyRequestBytes,
+        countedInputTokens: exactInputTokens,
       );
       return InputPlan(
         strategy: InputStrategy.promptOnly,
@@ -375,6 +393,7 @@ final class InputPlanner {
         materialTokens: 0,
         contextTokens: limits.contextTokens.value,
         warnings: List<PlanWarningCode>.unmodifiable(warnings),
+        inputTokenSource: inputTokenSource,
       );
     }
 
@@ -435,6 +454,7 @@ final class InputPlanner {
         textTokens: textTokens,
         warnings: warnings,
         exactInputTokens: exactInputTokens,
+        inputTokenSource: inputTokenSource,
       );
     }
 
@@ -453,6 +473,7 @@ final class InputPlanner {
       warnings: warnings,
       contextTokens: contextTokens,
       marginRate: marginRate,
+      inputTokenSource: inputTokenSource,
     );
   }
 
@@ -471,6 +492,7 @@ final class InputPlanner {
     required int textTokens,
     required Set<PlanWarningCode> warnings,
     int? exactInputTokens,
+    String? inputTokenSource,
   }) {
     final String materialsText = renderMaterials(sections);
     final _ImagePlacement placement = _placeImages(
@@ -519,6 +541,13 @@ final class InputPlanner {
       contextTokens: limits.contextTokens.value,
       warnings: List<PlanWarningCode>.unmodifiable(warnings),
       images: placement.statuses,
+      materialBudgetTokens: _materialCapacity(
+        limits: limits,
+        fixedTokens: fixedTokens,
+        outputReserve: budget.maxTokens,
+        marginRate: config.margin(exact: accuracy == InputAccuracy.exact),
+      ),
+      inputTokenSource: inputTokenSource,
     );
   }
 
@@ -539,6 +568,7 @@ final class InputPlanner {
     required Set<PlanWarningCode> warnings,
     required int? contextTokens,
     required double marginRate,
+    String? inputTokenSource,
   }) {
     final int fixedPart = fixedTokens + outlineReserveTokens;
     final bool inputOnly =
@@ -754,6 +784,8 @@ final class InputPlanner {
       warnings: List<PlanWarningCode>.unmodifiable(warnings),
       images: List<PlannedImage>.unmodifiable(statuses.values),
       contextTokens: contextTokens,
+      materialBudgetTokens: materialBudget,
+      inputTokenSource: inputTokenSource,
     );
   }
 
@@ -961,6 +993,30 @@ final class InputPlanner {
       total += base64EncodedByteLength(image.bytes.length);
     }
     return total;
+  }
+
+  /// Бюджет материалов запроса при текущем резерве вывода.
+  ///
+  /// Тот же расчёт, что и у fragmented-части: `(limit − R)/(1 + m) − P`.
+  int _materialCapacity({
+    required ModelLimits limits,
+    required int fixedTokens,
+    required int outputReserve,
+    required double marginRate,
+  }) {
+    final int? context = limits.contextTokens.value;
+    if (context == null) return config.unknownContextMaterialTokens;
+    final int? maxInputTokens = limits.maxInputTokens.value;
+    if (limits.contextSemantics == ContextSemantics.inputOnly) {
+      final int limit = maxInputTokens ?? context;
+      return math.max(1, (limit / (1 + marginRate)).floor() - fixedTokens);
+    }
+    final double fromContext =
+        (context - outputReserve) / (1 + marginRate) - fixedTokens;
+    final double fromMaxInput = maxInputTokens == null
+        ? double.infinity
+        : maxInputTokens / (1 + marginRate) - fixedTokens;
+    return math.max(1, math.min(fromContext, fromMaxInput).floor());
   }
 
   /// Бюджет материалов части: `floor((limit − R)/(1+m)) − P`.

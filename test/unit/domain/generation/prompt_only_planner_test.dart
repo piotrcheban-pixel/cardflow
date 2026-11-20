@@ -3,13 +3,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cardflow/api/generation/generation_plan_builder.dart';
 import 'package:cardflow/domain/generation/generation_budget.dart';
 import 'package:cardflow/domain/generation/generation_card_limit.dart';
-import 'package:cardflow/domain/generation/generation_chunk_planner.dart';
 import 'package:cardflow/domain/generation/generation_plan.dart';
+import 'package:cardflow/domain/generation/generation_chunk_planner.dart';
 import 'package:cardflow/domain/generation/model_capabilities.dart';
-import 'package:cardflow/domain/generation/prompt_only_planner.dart';
 import 'package:cardflow/domain/generation/prompt_only_request.dart';
 
-/// TASK 02B-FINAL: prompt-only планы без фиктивных материалов.
+/// Prompt-only планы без фиктивных материалов через общую машинерию (§0.11).
 void main() {
   const GenerationOverheadTokens overhead = GenerationOverheadTokens(
     systemPromptTokens: 1000,
@@ -38,9 +37,8 @@ void main() {
     int? requestedCards,
     ModelCapabilities? capabilities,
     GenerationOverheadTokens overheadTokens = overhead,
-    GenerationChunkPlannerConfig config = const GenerationChunkPlannerConfig(),
   }) {
-    return PromptOnlyPlanner(config: config).plan(
+    return const GenerationPlanBuilder().buildPromptOnly(
       request: PromptOnlyRequest(
         prompt: prompt,
         requestedCards: requestedCards,
@@ -66,6 +64,8 @@ void main() {
     expect(chunk.attachments, isEmpty);
     expect(chunk.materialsText, isEmpty);
     expect(chunk.limit, greaterThanOrEqualTo(1));
+    expect(plan.inputPlan, isNotNull);
+    expect(plan.inputPlan!.strategy.name, 'promptOnly');
   });
 
   test('тема с пожеланиями и явным числом карточек: ровно заказ', () {

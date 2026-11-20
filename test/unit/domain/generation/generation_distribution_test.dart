@@ -5,7 +5,6 @@ import 'package:cardflow/domain/generation/content_unit.dart';
 import 'package:cardflow/domain/generation/generation_chunk_planner.dart';
 import 'package:cardflow/domain/generation/generation_plan.dart';
 import 'package:cardflow/domain/generation/model_capabilities.dart';
-import 'package:cardflow/domain/generation/prompt_only_planner.dart';
 import 'package:cardflow/domain/generation/prompt_only_request.dart';
 import 'package:cardflow/domain/text/document_format.dart';
 import 'package:cardflow/domain/text/parsed_document.dart';
@@ -58,14 +57,15 @@ void main() {
   group('prompt-only 1…1000', () {
     for (final int count in <int>[1, 2, 5, 10, 20, 50, 100, 200, 500, 1000]) {
       test('$count карточек: сумма лимитов = заказ, запросы по бюджету', () {
-        final GenerationPlan plan = const PromptOnlyPlanner().plan(
-          request: PromptOnlyRequest(
-            prompt: 'Фотосинтез: определения, реакции, роль пигментов',
-            requestedCards: count,
-          ),
-          capabilities: caps(),
-          overhead: overhead,
-        );
+        final GenerationPlan plan = const GenerationPlanBuilder()
+            .buildPromptOnly(
+              request: PromptOnlyRequest(
+                prompt: 'Фотосинтез: определения, реакции, роль пигментов',
+                requestedCards: count,
+              ),
+              capabilities: caps(),
+              overhead: overhead,
+            );
         expect(plan.validity.isInvalid, isFalse);
         expect(plan.requestedCards, count);
         expect(plan.plannedCards, count);
@@ -94,7 +94,7 @@ void main() {
     }
 
     test('int.max заказ: invalid tooManyChunks, заказ не подменён', () {
-      final GenerationPlan plan = const PromptOnlyPlanner().plan(
+      final GenerationPlan plan = const GenerationPlanBuilder().buildPromptOnly(
         request: const PromptOnlyRequest(
           prompt: 'Тема',
           requestedCards: 9223372036854775807,

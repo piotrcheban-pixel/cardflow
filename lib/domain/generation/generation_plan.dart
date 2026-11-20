@@ -361,16 +361,20 @@ class PlannedChunk {
        focusSectionIds = List<String>.unmodifiable(focusSectionIds);
 
   /// Фрагмент «по теме»: без материалов, только `<wishes>`.
+  ///
+  /// [textTokens] — токены пользовательской темы: они входят в каждый запрос
+  /// prompt-only плана и учитываются бюджетом как часть обвязки.
   factory PlannedChunk.promptOnly({
     required int index,
     required int limit,
+    int textTokens = 0,
     int bodyBytes = 0,
     int splitDepth = 0,
   }) {
     return PlannedChunk(
       index: index,
       kind: ChunkKind.promptOnly,
-      textTokens: 0,
+      textTokens: textTokens,
       imageTokens: 0,
       bodyBytes: bodyBytes,
       limit: limit,
@@ -712,7 +716,15 @@ class GenerationPlan {
   List<InputPart> get parts => inputPlan?.parts ?? const <InputPart>[];
 
   /// Число частей входа.
-  int get partCount => inputPlan?.partCount ?? chunks.length;
+  ///
+  /// У prompt-only материалов нет, но тема — одна «часть» запуска (запросы
+  /// различаются только партиями): `0` частей сбивало бы счётчики прогресса.
+  int get partCount {
+    final InputPlan? input = inputPlan;
+    if (input == null) return chunks.length;
+    if (input.isPromptOnly) return 1;
+    return input.partCount;
+  }
 
   /// Оценка входа запроса/части (`null` — неизвестно).
   int? get plannedInputTokens => inputPlan?.inputTokens;
