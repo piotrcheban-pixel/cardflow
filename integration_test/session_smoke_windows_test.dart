@@ -237,13 +237,22 @@ void main() {
       await tester.tap(find.byKey(const ValueKey<String>('decks-new-deck')));
       await tester.pumpAndSettle();
       expect(
-        find.text(l10n.deckCreateDialogTitle),
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.text(l10n.deckCreateDialogTitle),
+        ),
         findsOneWidget,
         reason: 'диалог создания колоды открывается',
       );
       await tester.tap(find.text(l10n.cancel));
       await tester.pumpAndSettle();
-      expect(find.text(l10n.deckCreateDialogTitle), findsNothing);
+      expect(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.text(l10n.deckCreateDialogTitle),
+        ),
+        findsNothing,
+      );
       expect(
         find.text(l10n.decksTitle),
         findsOneWidget,

@@ -12,10 +12,10 @@
 | Тесты (полный набор, без golden) | `fvm flutter test --no-pub --coverage --exclude-tags golden` | **2256 passed + 16 skipped + 0 failed** (3:26; сводка `verify-full.log`) |
 | Анализатор | `fvm flutter analyze --no-pub` | **No issues found** (6,1 с) |
 | Формат | `fvm dart format --set-exit-if-changed lib test integration_test` | **533 files, 0 changed** |
-| Покрытие рукописного кода | `fvm dart run tool/coverage_check.dart` | **91.7 % (18905/20608)**, порог 80 % пройден |
+| Покрытие рукописного кода | `fvm dart run tool/coverage_check.dart --min=80` | **91.7 % (18905/20608)**, `ПОРОГ ПРОЙДЕН` |
 | Guard-тесты | в полном прогоне | `ru_strings`, `no_webview`, `no_secrets`, `architecture` — зелёные |
 | Сборка Windows | `fvm flutter build windows --release --no-pub` | **√ Built build\windows\x64\runner\Release\cardflow.exe** (70,9 с) |
-| Baseline до изменений | `fvm flutter test --no-pub --exclude-tags golden` | 2193 passed + 16 skipped (`baseline-test.txt`); итог +63 теста, 0 ослаблений |`n| CI после push | GitHub Actions run [44819862886](https://github.com/piotrcheban-pixel/cardflow/actions/runs/44819862886) | **9/9 job success** (`format + analyze`, `test` ×3 ОС, `build` linux/windows/macos/android/ios), run completed success |
+| Baseline до изменений | `fvm flutter test --no-pub --exclude-tags golden` | 2193 passed + 16 skipped (`baseline-test.txt`); итог +63 теста, 0 ослаблений |`n| Windows smoke (реальный процесс) | `fvm flutter test integration_test/session_smoke_windows_test.dart -d windows --no-pub` | **All tests passed!** (11 с; debug-сборка 33,7 с) — форма+картинка, лимит, сессия, генерация с картинкой. Найден и исправлен хрупкий finder: заголовок диалога искался по всему дереву и совпадал с кнопкой тулбара; теперь поиск ограничен `AlertDialog` (тест стал точнее, не слабее) |`n| CI после push | GitHub Actions run [44819862886](https://github.com/piotrcheban-pixel/cardflow/actions/runs/44819862886) | **9/9 job success** (`format + analyze`, `test` ×3 ОС, `build` linux/windows/macos/android/ios), run completed success |
 
 ## Инварианты
 
