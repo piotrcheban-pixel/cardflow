@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cardflow/api/generation/card_generation_service.dart';
 import 'package:cardflow/api/generation/generation_diagnostics.dart';
+import 'package:cardflow/api/prompts/system_prompt.dart';
 import 'package:cardflow/domain/generation/document_image.dart';
 import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
@@ -116,6 +117,27 @@ void main() {
       code,
     ),
   );
+
+  test('production: системный промпт по умолчанию — gen-ru-v8', () async {
+    final adapter = FakeProviderAdapter(
+      cardsJson: cardsJson(<Map<String, Object?>>[validCardJson()]),
+    );
+    final transport = FakeGenerationTransport(
+      response: <String, Object?>{'ok': true},
+    );
+    // Без явного systemPrompt/promptVersion: production-путь обязан слать
+    // актуальный промпт с контрактом <focus>/<part>/<section_id>, иначе
+    // инструкции плана (ADR-040 §7) модели не передаются.
+    final service = CardGenerationService(
+      adapters: <FakeProviderAdapter>[adapter],
+      apiKeyStore: FakeApiKeyStore(<String, String>{'openai': 'test-key-openai'}),
+      httpClient: transport,
+    );
+    final result = await service.generate(requestFor(openAiAccount()));
+    expect(adapter.buildArgs!.systemPrompt, systemPromptGenRuV8);
+    expect(adapter.buildArgs!.systemPrompt, contains('ПЛАНИРОВАНИЕ ВЫДАЧИ'));
+    expect(result.promptVersion, systemPromptVersion);
+  });
 
   test(
     'успех: ключ → запрос → ответ → карточки, расход и версия промпта',
