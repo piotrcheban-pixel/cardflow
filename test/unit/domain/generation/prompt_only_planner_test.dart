@@ -22,7 +22,7 @@ void main() {
     int? maxOutput,
     int? maxCards,
     int? maxRequestBytes,
-    CapabilitySource source = CapabilitySource.preset,
+    CapabilitySource source = CapabilitySource.officialCatalog,
   }) {
     return ModelCapabilities(
       contextWindowTokens: context,

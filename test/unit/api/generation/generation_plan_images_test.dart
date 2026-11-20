@@ -42,7 +42,7 @@ void main() {
   ModelCapabilities caps({bool vision = true, int context = 128000}) {
     return ModelCapabilities(
       contextWindowTokens: context,
-      contextSource: CapabilitySource.preset,
+      contextSource: CapabilitySource.officialCatalog,
       supportsVision: vision,
     );
   }
@@ -107,7 +107,7 @@ void main() {
   test('источники возможностей доступны в плане', () {
     final GenerationPlan plan = build(<DocumentImage>[imageOf(0)]);
     expect(plan.capabilitySources.containsKey('context_window'), isTrue);
-    expect(plan.capabilitySources['context_window'], CapabilitySource.preset);
+    expect(plan.capabilitySources['context_window'], CapabilitySource.officialCatalog);
     expect(
       plan.capabilitySources['max_cards_per_request'],
       CapabilitySource.unknown,
@@ -131,10 +131,10 @@ void main() {
       ],
       capabilities: ModelCapabilities(
         contextWindowTokens: 128000,
-        contextSource: CapabilitySource.preset,
+        contextSource: CapabilitySource.officialCatalog,
         supportsVision: true,
         maxImagesPerRequest: 3,
-        imageSource: CapabilitySource.user,
+        imageSource: CapabilitySource.userConfigured,
       ),
       requestedCards: 5,
     );
@@ -143,7 +143,7 @@ void main() {
     for (final PlannedChunk chunk in plan.chunks) {
       expect(chunk.imageParts.length, lessThanOrEqualTo(3));
     }
-    expect(plan.capabilitySources['image_limits'], CapabilitySource.user);
+    expect(plan.capabilitySources['image_limits'], CapabilitySource.userConfigured);
   });
 
   test('изображение больше лимита байт не отправляется частью', () {
@@ -153,10 +153,10 @@ void main() {
       ],
       capabilities: ModelCapabilities(
         contextWindowTokens: 128000,
-        contextSource: CapabilitySource.preset,
+        contextSource: CapabilitySource.officialCatalog,
         supportsVision: true,
         maxImageBytesPerImage: 1000,
-        imageSource: CapabilitySource.user,
+        imageSource: CapabilitySource.userConfigured,
       ),
       requestedCards: 5,
     );
@@ -177,10 +177,10 @@ void main() {
       ],
       capabilities: ModelCapabilities(
         contextWindowTokens: 128000,
-        contextSource: CapabilitySource.preset,
+        contextSource: CapabilitySource.officialCatalog,
         supportsVision: true,
         maxImageBytesPerRequest: 5000,
-        imageSource: CapabilitySource.user,
+        imageSource: CapabilitySource.userConfigured,
       ),
       requestedCards: 5,
     );

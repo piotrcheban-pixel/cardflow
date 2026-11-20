@@ -109,7 +109,7 @@ void main() {
     int? maxImageBytesPerRequest,
     int? maxRequestBytes,
     bool vision = false,
-    CapabilitySource source = CapabilitySource.preset,
+    CapabilitySource source = CapabilitySource.officialCatalog,
   }) {
     return ModelCapabilities(
       contextWindowTokens: context,

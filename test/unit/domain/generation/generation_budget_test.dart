@@ -30,7 +30,7 @@ void main() {
         maxRequestBytes: maxRequestBytes,
         contextSource: contextWindowTokens == null
             ? CapabilitySource.unknown
-            : CapabilitySource.preset,
+            : CapabilitySource.officialCatalog,
       ),
       limit: limit,
       systemPromptTokens: systemPromptTokens,
@@ -69,7 +69,7 @@ void main() {
       expect(budget.isWorkable, isTrue);
       expect(budget.shortfallTokens, 0);
       expect(budget.trace.formula, GenerationBudget.formulaKnownContext);
-      expect(budget.trace.contextSource, CapabilitySource.preset);
+      expect(budget.trace.contextSource, CapabilitySource.officialCatalog);
       expect(budget.trace.outputCapTokens, kBudgetDefaultOutputCapTokens);
       expect(budget.trace.outputCapAssumed, isTrue);
       expect(budget.trace.fixedOverheadTokens, 1400);

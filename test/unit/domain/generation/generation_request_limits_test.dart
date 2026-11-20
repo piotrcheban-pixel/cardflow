@@ -10,7 +10,7 @@ void main() {
     int? maxImageBytes,
     int? maxImageBytesRequest,
     int? maxRequestBytes,
-    CapabilitySource source = CapabilitySource.user,
+    CapabilitySource source = CapabilitySource.userConfigured,
   }) {
     return resolveGenerationRequestLimits(
       ModelCapabilities(
@@ -38,10 +38,10 @@ void main() {
     expect(limits.maxImageBytesPerImage, 5 * 1024 * 1024);
     expect(limits.maxImageBytesPerRequest, 50 * 1024 * 1024);
     expect(limits.maxRequestBytes, 64 * 1024 * 1024);
-    expect(limits.imagesSource, CapabilitySource.user);
-    expect(limits.imageBytesSource, CapabilitySource.user);
-    expect(limits.imageBytesRequestSource, CapabilitySource.user);
-    expect(limits.requestBytesSource, CapabilitySource.user);
+    expect(limits.imagesSource, CapabilitySource.userConfigured);
+    expect(limits.imageBytesSource, CapabilitySource.userConfigured);
+    expect(limits.imageBytesRequestSource, CapabilitySource.userConfigured);
+    expect(limits.requestBytesSource, CapabilitySource.userConfigured);
     expect(limits.hasAssumption, isFalse);
     expect(limits.assumptionFields, isEmpty);
   });
@@ -73,7 +73,7 @@ void main() {
   test('частично заданные лимиты сохраняют источник по каждому значению', () {
     final GenerationRequestLimits limits = resolve(maxImages: 3);
     expect(limits.maxImagesPerRequest, 3);
-    expect(limits.imagesSource, CapabilitySource.user);
+    expect(limits.imagesSource, CapabilitySource.userConfigured);
     expect(limits.imageBytesSource, CapabilitySource.unknown);
     expect(limits.imageBytesRequestSource, CapabilitySource.unknown);
     expect(limits.requestBytesSource, CapabilitySource.unknown);
@@ -84,9 +84,9 @@ void main() {
   test('может быть источник preset, если так решил резолвер возможностей', () {
     final GenerationRequestLimits limits = resolve(
       maxImages: 12,
-      source: CapabilitySource.preset,
+      source: CapabilitySource.officialCatalog,
     );
-    expect(limits.imagesSource, CapabilitySource.preset);
+    expect(limits.imagesSource, CapabilitySource.officialCatalog);
     expect(limits.hasAssumption, isTrue, reason: 'байты всё ещё неизвестны');
   });
 }

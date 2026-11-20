@@ -34,10 +34,10 @@ void main() {
           outputPerMillion: 2,
           currency: 'USD',
         ),
-        contextSource: CapabilitySource.verified,
-        outputSource: CapabilitySource.verified,
-        imageSource: CapabilitySource.verified,
-        pricingSource: CapabilitySource.verified,
+        contextSource: CapabilitySource.officialCatalog,
+        outputSource: CapabilitySource.officialCatalog,
+        imageSource: CapabilitySource.officialCatalog,
+        pricingSource: CapabilitySource.officialCatalog,
       );
       expect(capabilities.contextWindowTokens, 128000);
       expect(capabilities.maxInputTokens, 120000);
@@ -95,7 +95,7 @@ void main() {
     test('unknownFields перечисляет только неизвестные группы', () {
       const ModelCapabilities capabilities = ModelCapabilities(
         contextWindowTokens: 32000,
-        contextSource: CapabilitySource.preset,
+        contextSource: CapabilitySource.officialCatalog,
       );
       expect(
         capabilities.unknownFields,
@@ -112,16 +112,53 @@ void main() {
     });
 
     test('CapabilitySource разбирается из wire-имени, мусор — unknown', () {
-      expect(CapabilitySource.fromWire('verified'), CapabilitySource.verified);
-      expect(CapabilitySource.fromWire('preset'), CapabilitySource.preset);
-      expect(CapabilitySource.fromWire('user'), CapabilitySource.user);
-      expect(CapabilitySource.fromWire('inferred'), CapabilitySource.inferred);
+      expect(CapabilitySource.fromWire('verified'), CapabilitySource.officialCatalog);
+      expect(CapabilitySource.fromWire('preset'), CapabilitySource.officialCatalog);
+      expect(CapabilitySource.fromWire('user'), CapabilitySource.userConfigured);
+      expect(CapabilitySource.fromWire('inferred'), CapabilitySource.assumption);
       expect(CapabilitySource.fromWire('unknown'), CapabilitySource.unknown);
       expect(CapabilitySource.fromWire('magic'), CapabilitySource.unknown);
       expect(CapabilitySource.fromWire(null), CapabilitySource.unknown);
       expect(CapabilitySource.fromWire(1), CapabilitySource.unknown);
       expect(CapabilitySource.unknown.isKnown, isFalse);
-      expect(CapabilitySource.preset.isKnown, isTrue);
+      expect(CapabilitySource.officialCatalog.isKnown, isTrue);
+    });
+
+    test('ADR-039: новые wire-имена и приоритет источников', () {
+      expect(
+        CapabilitySource.fromWire('user_configured'),
+        CapabilitySource.userConfigured,
+      );
+      expect(
+        CapabilitySource.fromWire('provider_api'),
+        CapabilitySource.providerApi,
+      );
+      expect(
+        CapabilitySource.fromWire('official_catalog'),
+        CapabilitySource.officialCatalog,
+      );
+      expect(
+        CapabilitySource.fromWire('assumption'),
+        CapabilitySource.assumption,
+      );
+      expect(
+        CapabilitySource.fromWire('user_configured').wireName,
+        'user_configured',
+      );
+      // Приоритет слияния: пользователь → API → каталог → допущение.
+      expect(
+        CapabilitySource.userConfigured.priority,
+        greaterThan(CapabilitySource.providerApi.priority),
+      );
+      expect(
+        CapabilitySource.providerApi.priority,
+        greaterThan(CapabilitySource.officialCatalog.priority),
+      );
+      expect(
+        CapabilitySource.officialCatalog.priority,
+        greaterThan(CapabilitySource.assumption.priority),
+      );
+      expect(CapabilitySource.assumption.priority, greaterThan(0));
     });
   });
 
@@ -133,7 +170,7 @@ void main() {
       );
       final ModelCapabilities capabilities = resolveModelCapabilities(account);
       expect(capabilities.contextWindowTokens, 1000000);
-      expect(capabilities.contextSource, CapabilitySource.preset);
+      expect(capabilities.contextSource, CapabilitySource.officialCatalog);
       expect(capabilities.maxOutputTokens, isNull);
       expect(capabilities.maxImagesPerRequest, isNull);
       expect(capabilities.pricing, isNull);
@@ -216,19 +253,19 @@ void main() {
               outputPerMillion: 1.1,
               currency: 'USD',
             ),
-            capabilitiesSource: CapabilitySource.user,
+            capabilitiesSource: CapabilitySource.userConfigured,
           );
       final ModelCapabilities capabilities = resolveModelCapabilities(account);
       expect(capabilities.contextWindowTokens, 1000000);
-      expect(capabilities.contextSource, CapabilitySource.preset);
+      expect(capabilities.contextSource, CapabilitySource.officialCatalog);
       expect(capabilities.maxOutputTokens, 16384);
-      expect(capabilities.outputSource, CapabilitySource.user);
+      expect(capabilities.outputSource, CapabilitySource.userConfigured);
       expect(capabilities.maxImagesPerRequest, 8);
       expect(capabilities.maxImageBytesPerImage, 5 * 1024 * 1024);
       expect(capabilities.maxRequestBytes, 25 * 1024 * 1024);
-      expect(capabilities.imageSource, CapabilitySource.user);
+      expect(capabilities.imageSource, CapabilitySource.userConfigured);
       expect(capabilities.pricingState, PricingState.complete);
-      expect(capabilities.pricingSource, CapabilitySource.user);
+      expect(capabilities.pricingSource, CapabilitySource.userConfigured);
       expect(
         capabilities.unknownFields,
         isNot(contains(ModelCapabilities.unknownPricing)),
@@ -252,18 +289,18 @@ void main() {
         baseUrl: 'https://x.test',
         modelId: 'm',
         maxOutputTokens: 4096,
-        capabilitiesSource: CapabilitySource.preset,
+        capabilitiesSource: CapabilitySource.officialCatalog,
       );
       final ModelCapabilities capabilities = resolveModelCapabilities(account);
       expect(capabilities.maxOutputTokens, 4096);
-      expect(capabilities.outputSource, CapabilitySource.preset);
+      expect(capabilities.outputSource, CapabilitySource.officialCatalog);
     });
 
     test('без значений источник остаётся unknown даже при user', () {
       final ProviderAccount account = ProviderAccount.fromPreset(
         providerPresetById('deepseek')!,
         id: 'deepseek',
-      ).copyWith(capabilitiesSource: CapabilitySource.user);
+      ).copyWith(capabilitiesSource: CapabilitySource.userConfigured);
       final ModelCapabilities capabilities = resolveModelCapabilities(account);
       expect(capabilities.maxOutputTokens, isNull);
       expect(capabilities.outputSource, CapabilitySource.unknown);
@@ -286,7 +323,7 @@ void main() {
               outputPerMillion: null,
               currency: 'USD',
             ),
-            capabilitiesSource: CapabilitySource.user,
+            capabilitiesSource: CapabilitySource.userConfigured,
           );
       final ProviderAccount? restored = ProviderAccount.fromJson(
         account.toJson(),
@@ -302,7 +339,7 @@ void main() {
       expect(capabilities.pricing!.inputPerMillion, 0.5);
       expect(capabilities.pricing!.outputPerMillion, isNull);
       expect(capabilities.pricingState, PricingState.incomplete);
-      expect(capabilities.pricingSource, CapabilitySource.user);
+      expect(capabilities.pricingSource, CapabilitySource.userConfigured);
     });
 
     test('старый JSON аккаунта: возможности неизвестны', () {

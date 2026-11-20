@@ -3,50 +3,18 @@
 /// Главное правило: у возможности есть значение **и** источник. Неизвестное
 /// значение — `null` (или [CapabilitySource.unknown]), а не 0 и не «типовое»
 /// число семейства моделей. Каталог пресетов (`provider_preset.dart`) остаётся
-/// источником [CapabilitySource.preset]; цены, лимиты вывода и изображений в
-/// каталоге не подтверждены документацией и потому не подставляются.
+/// источником [CapabilitySource.officialCatalog]; цены, лимиты вывода и
+/// изображений в каталоге не подтверждены документацией и потому не
+/// подставляются. Происхождение значений — ADR-039.
 /// Домен не зависит от Flutter.
 library;
 
 import 'package:cardflow/domain/generation/generation_pricing.dart';
 import 'package:cardflow/domain/generation/provider_account.dart';
 import 'package:cardflow/domain/generation/provider_preset.dart';
-
-/// Источник значения возможности.
-enum CapabilitySource {
-  /// Подтверждено документацией провайдера; в репозитории таких значений нет.
-  verified('verified'),
-
-  /// Значение из статического каталога пресетов приложения (не подтверждено).
-  preset('preset'),
-
-  /// Значение, введённое пользователем в настройках аккаунта.
-  user('user'),
-
-  /// Выведено из имени модели или протокола (эвристика).
-  inferred('inferred'),
-
-  /// Значение неизвестно — использовать консервативное допущение.
-  unknown('unknown');
-
-  const CapabilitySource(this.wireName);
-
-  /// Имя в JSON (`capabilities_source` в разделе K.1 аудита).
-  final String wireName;
-
-  /// true, если источник известен (не [CapabilitySource.unknown]).
-  bool get isKnown => this != CapabilitySource.unknown;
-
-  /// Разбирает источник из JSON; неизвестная/битая строка — `unknown`.
-  static CapabilitySource fromWire(Object? value) {
-    if (value is String) {
-      for (final CapabilitySource source in values) {
-        if (source.wireName == value) return source;
-      }
-    }
-    return CapabilitySource.unknown;
-  }
-}
+import 'package:cardflow/domain/generation/sourced.dart';
+export 'package:cardflow/domain/generation/sourced.dart'
+    show CapabilitySource, Sourced;
 
 /// Вид токенизатора модели.
 enum TokenizerKind {
@@ -93,6 +61,7 @@ class ModelCapabilities {
     this.tokenizer = TokenizerKind.unknown,
     this.imageTokens,
     this.pricing,
+    this.contextSemantics = ContextSemantics.unknown,
     this.contextSource = CapabilitySource.unknown,
     this.outputSource = CapabilitySource.unknown,
     this.imageSource = CapabilitySource.unknown,
@@ -173,6 +142,9 @@ class ModelCapabilities {
   /// Цены; `null` — неизвестно.
   final GenerationPricing? pricing;
 
+  /// Семантика окна контекста (ADR-039); `unknown` — планировать как total.
+  final ContextSemantics contextSemantics;
+
   /// Источник окна контекста.
   final CapabilitySource contextSource;
 
@@ -219,7 +191,7 @@ class ModelCapabilities {
         'max_cards_per_request': CapabilitySource.unknown,
         'tokenizer': tokenizer == TokenizerKind.unknown
             ? CapabilitySource.unknown
-            : CapabilitySource.inferred,
+            : CapabilitySource.assumption,
       });
 }
 
@@ -242,11 +214,11 @@ ModelCapabilities resolveModelCapabilities(ProviderAccount account) {
   final int? contextWindowTokens = presetModel?.contextTokens;
   final CapabilitySource contextSource = contextWindowTokens == null
       ? CapabilitySource.unknown
-      : CapabilitySource.preset;
+      : CapabilitySource.officialCatalog;
 
   final CapabilitySource configuredSource =
       account.capabilitiesSource == CapabilitySource.unknown
-      ? CapabilitySource.user
+      ? CapabilitySource.userConfigured
       : account.capabilitiesSource;
 
   CapabilitySource sourceFor(Object? value) =>

@@ -15,7 +15,7 @@ void main() {
     return GenerationBudget.compute(
       capabilities: const ModelCapabilities(
         contextWindowTokens: 128000,
-        contextSource: CapabilitySource.preset,
+        contextSource: CapabilitySource.officialCatalog,
       ),
       limit: limit,
       systemPromptTokens: 100,

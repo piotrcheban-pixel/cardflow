@@ -218,18 +218,25 @@ void main() {
           outputPerMillion: 1.1,
           currency: 'USD',
         ),
-        capabilitiesSource: CapabilitySource.user,
+        capabilitiesSource: CapabilitySource.userConfigured,
       );
       final Map<String, Object?> json = account.toJson();
       expect(json['max_output_tokens'], 16384);
       expect(json['max_images_per_request'], 8);
       expect(json['max_image_bytes'], 5 * 1024 * 1024);
       expect(json['max_request_bytes'], 25 * 1024 * 1024);
-      expect(json['capabilities_source'], 'user');
+      expect(json['capabilities_source'], 'user_configured');
       final Map<String, Object?> pricing =
           json['pricing']! as Map<String, Object?>;
       expect(pricing['input_per_mtok'], 0.27);
       expect(ProviderAccount.fromJson(json), account);
+      // ADR-039: legacy wire-значение читается как новый источник.
+      final Map<String, Object?> legacy = Map<String, Object?>.of(json)
+        ..['capabilities_source'] = 'user';
+      expect(
+        ProviderAccount.fromJson(legacy)!.capabilitiesSource,
+        CapabilitySource.userConfigured,
+      );
     });
 
     test('нулевые и битые лимиты — неизвестны, а не 0', () {
@@ -251,7 +258,7 @@ void main() {
       expect(account.maxImagesPerRequest, isNull);
       expect(account.maxImageBytes, isNull);
       expect(account.maxRequestBytes, isNull);
-      expect(account.capabilitiesSource, CapabilitySource.user);
+      expect(account.capabilitiesSource, CapabilitySource.userConfigured);
     });
 
     test('pricing с null внутри читается как неполный, стоимость null', () {

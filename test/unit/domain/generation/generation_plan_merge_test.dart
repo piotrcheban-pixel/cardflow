@@ -79,7 +79,7 @@ void main() {
       contextWindowTokens: context,
       contextSource: context == null
           ? CapabilitySource.unknown
-          : CapabilitySource.preset,
+          : CapabilitySource.officialCatalog,
       maxOutputTokens: maxOutput,
       maxCardsPerRequest: maxCards,
       maxImagesPerRequest: maxImages,

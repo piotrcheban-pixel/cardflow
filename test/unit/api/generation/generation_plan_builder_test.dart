@@ -91,11 +91,11 @@ void main() {
       contextWindowTokens: context,
       contextSource: context == null
           ? CapabilitySource.unknown
-          : CapabilitySource.preset,
+          : CapabilitySource.officialCatalog,
       pricing: pricing,
       pricingSource: pricing == null
           ? CapabilitySource.unknown
-          : CapabilitySource.user,
+          : CapabilitySource.userConfigured,
       imageTokens: imageTokens,
       supportsVision: supportsVision,
     );

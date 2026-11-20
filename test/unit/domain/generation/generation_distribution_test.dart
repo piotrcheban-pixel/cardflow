@@ -21,7 +21,7 @@ void main() {
   ModelCapabilities caps({int context = 128000, int? maxOutput}) {
     return ModelCapabilities(
       contextWindowTokens: context,
-      contextSource: CapabilitySource.preset,
+      contextSource: CapabilitySource.officialCatalog,
       maxOutputTokens: maxOutput,
     );
   }

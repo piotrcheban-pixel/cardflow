@@ -4,7 +4,7 @@
 /// умолчанию: `GenerationChunkPlannerConfig` (план) и константы
 /// `generation_images.dart` (сервис). Теперь обе стороны получают значения из
 /// одного резолвера, а каждое значение несёт источник:
-/// - [CapabilitySource.user] — значение задано в настройках аккаунта
+/// - [CapabilitySource.userConfigured] — значение задано в настройках аккаунта
 ///   (`max_images_per_request`/`max_image_bytes`/`max_request_bytes` JSON v2);
 /// - [CapabilitySource.unknown] — подтверждённого значения нет, применяется
 ///   **конфигурационное консервативное допущение приложения**
@@ -98,7 +98,7 @@ GenerationRequestLimits resolveGenerationRequestLimits(
   required int assumedMaxImageBytesPerImage,
   required int assumedMaxImageBytesPerChunk,
   required int assumedMaxRequestBytes,
-  CapabilitySource defaultSource = CapabilitySource.user,
+  CapabilitySource defaultSource = CapabilitySource.userConfigured,
 }) {
   assert(assumedMaxImagesPerRequest > 0);
   assert(assumedMaxImageBytesPerImage > 0);
