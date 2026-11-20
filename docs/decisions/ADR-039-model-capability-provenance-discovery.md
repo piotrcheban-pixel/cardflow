@@ -174,6 +174,42 @@ Wire-имена `capabilities_source` меняются на `user_configured`/`p
 | OpenAI | Веб-страница API reference без авторизованного доступа не получена | `GET /v1/models`: только `id`; лимиты `unknown` |
 | Groq / Moonshot / MiniMax | Документация не проверялась (время истекло, внешний блокер) | `id` + присутствующие поля с проверкой типов, иначе `unknown` |
 
+### 6a. Повторная сверка 2026-11-21 (итерация 7.18.1)
+
+Таблица §6 сохраняется как история: часть страниц тогда была недоступна. При
+повторной сверке по официальным страницам (21.11.2026) установлено:
+
+| Провайдер | Endpoint списка моделей | Документированные поля ответа | Что остаётся unknown | Источники (проверено 2026-11-21) |
+|---|---|---|---|---|
+| DeepSeek | `GET https://api.deepseek.com/models` | `id`, `object`, `owned_by`, `context_window` (total: вход+выход), `max_output_tokens`, `input_modalities`, `output_modalities` | отдельный `max_input_tokens`, цены в API, tokenizer, boolean-флаги возможностей | `api-docs.deepseek.com/api/list-models`, `.../quick_start/pricing` |
+| Anthropic | `GET https://api.anthropic.com/v1/models` | `id`, `display_name`, `created_at`, `max_input_tokens`, `max_tokens`, `capabilities.*` (в т.ч. `image_input`, `pdf_input`, `structured_outputs`), пагинация `has_more`/`last_id` | единый `context_length`, цены, tokenizer, rate limits | `platform.claude.com/docs/en/api/models/list`, `.../messages/count_tokens` |
+| Gemini | `GET https://generativelanguage.googleapis.com/v1beta/models` | `name`, `inputTokenLimit`, `outputTokenLimit`, `supportedGenerationMethods`, `nextPageToken` | цены, capabilities-флаги (кроме методов), tokenizer | `aistudio.google.com/api-reference/models` |
+| OpenRouter | `GET https://openrouter.ai/api/v1/models` | `context_length`, `top_provider.context_length`, `top_provider.max_completion_tokens`, `architecture.input_modalities`, `architecture.tokenizer`, `pricing.*` (USD за токен) | гарантированный output, стабильность upstream-метаданных | `openrouter.ai/docs/api_reference/models.md` |
+| OpenAI | `GET https://api.openai.com/v1/models` | только `id`, `object`, `created`, `owned_by`, `shutdown_date` | все лимиты, цены, capabilities | `developers.openai.com/api/reference/resources/models.md` |
+| Groq | `GET https://api.groq.com/openai/v1/models` | `id`, `created`, `owned_by`, `active`, `context_window`; `max_completion_tokens` — только в `GET /models/{model}` | `max_input_tokens`, цены в API, capabilities, tokenizer | `console.groq.com/docs/api-reference.md`, `.../models` |
+| Moonshot | `GET https://api.moonshot.ai/v1/models` | `id`, `created`, `owned_by`, `context_length`, `supports_image_in`, `supports_video_in`, `supports_reasoning` | семантика `context_length` (total/input-only), `max_output_tokens`, цены в API | `platform.kimi.ai/docs/api/list-models.md` |
+| MiniMax | `GET https://api.minimax.io/v1/models` | только OpenAI-минимум (`id`, `object`, `created`, `owned_by`) | лимиты, цены, capabilities | `platform.minimax.io/docs/api-reference/models/openai/list-models.md` |
+| Ollama | `GET /api/tags`, `POST /api/show` | `models[].name/model/details`; `model_info.<arch>.context_length`, `capabilities` | семантика `context_length` (total/input-only **не документирована**), рабочий `num_ctx`, `max_output_tokens`, цены | `github.com/ollama/ollama/blob/main/docs/api.md` |
+| OpenAI-совместимый | `GET {base}/v1/models` | только `id` (эталон); вендоры добавляют свои поля, доверять им нельзя | все лимиты | спецификация OpenAI Model object |
+
+**Нативный подсчёт входа.** Документирован у Anthropic
+(`POST /v1/messages/count_tokens`, принимает `system`, `messages`, `tools`,
+`tool_choice`; `input_tokens` включает инструменты — поэтому схема ответа
+передаётся как `tools[].input_schema`) и Gemini
+(`POST /v1beta/models/{model}:countTokens`, принимает `contents` и
+`generateContentRequest` с `systemInstruction`/`tools`; включается ли
+`responseSchema`, документация не утверждает — счётчик отправляет его, но
+точность по схеме отмечена ограничением). У OpenAI есть
+`POST /v1/responses/input_tokens`, но он не входит в §3.5 (Anthropic/Gemini) и
+не подключён; у DeepSeek/Groq/OpenRouter/MiniMax/Ollama документированного
+endpoint нет (у Groq/OpenRouter/MiniMax явного отказа в документации нет —
+endpoint отсутствует в перечне API; у DeepSeek рекомендован офлайн-токенизатор).
+
+Реализация после сверки: DeepSeek читает `input_modalities` на уровне модели;
+Anthropic — `capabilities.image_input`/`pdf_input`; Moonshot —
+`supports_image_in`/`supports_reasoning`; Ollama отдаёт семантику `unknown`
+(ранее ошибочно `total`). Неизвестные поля остаются `null`.
+
 Если поле не документировано или отсутствует — значение `unknown` (или
 `assumption` с предупреждением), а не «типовое число семейства». Фикстуры
 `test/fixtures/discovery/<provider>/*.json` построены по документированной

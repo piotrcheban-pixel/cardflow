@@ -131,3 +131,29 @@ Anthropic/Gemini (`request_token_counter.dart`) и передаётся в пл�
   `model_limits_resolver_test.dart`, `drift_model_capability_cache_test.dart`,
   `request_token_counter_test.dart`, `drift_token_calibration_store_test.dart`.
 - Ограничения: `journal/KNOWN_LIMITATIONS.md` L154–L161.
+
+
+## 9. Характеристики моделей: что известно (7.18.1, 2026-11-21)
+
+Полная сверка с официальной документацией и ссылками — ADR-039 §6a. Коротко
+для планирования:
+
+| Провайдер | API отдаёт | Источник в плане | Остаётся unknown/ручное |
+|---|---|---|---|
+| DeepSeek | окно (`context_window`, total), `max_output_tokens`, `input_modalities` | `providerApi` | отдельный вход, цены |
+| Anthropic | `max_input_tokens`, `max_tokens`, `capabilities.image_input/pdf_input` | `providerApi` | единое окно, цены |
+| Gemini | `inputTokenLimit`, `outputTokenLimit` | `providerApi` | цены, capabilities-флаги |
+| OpenRouter | `context_length` (min с `top_provider`), `max_completion_tokens`, модальности, цены за токен | `providerApi` | стабильность upstream |
+| OpenAI | только `id` | — (каталог/ручное) | все лимиты |
+| Groq | `context_window` (список моделей) | `providerApi` | `max_completion_tokens` (только retrieve), цены |
+| Moonshot | `context_length`, `supports_image_in`, `supports_reasoning` | `providerApi` | семантика окна, вывод |
+| MiniMax | только `id` | — (каталог/ручное) | лимиты, цены |
+| Ollama | `<arch>.context_length`, `capabilities.vision` | `providerApi` (контекст), семантика `unknown` | рабочий `num_ctx`, вывод |
+| OpenAI-совместимый | только `id` | — (ручное) | все лимиты |
+
+Каталог приложения (`provider_preset.dart`) даёт окно только там, где у модели
+есть `sourceRef` и дата проверки; иначе это `assumption`. Ручные значения
+(`userConfigured`) важнее API/каталога и сохраняются с датой проверки.
+Нативный подсчёт входа выполняется один раз на план (Anthropic/Gemini), кэш —
+по хэшу содержимого запроса; ошибка деградирует к консервативной оценке, а не
+к исключению.

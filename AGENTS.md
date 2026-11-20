@@ -27,7 +27,7 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   (`GenerationPipeline`: `GenerationPlan` до первого запроса, последовательные вызовы по `PlannedChunk`,
   восстановление context overflow/413/truncated, прогресс/отмена, дедуп, `generation_jobs`, partial/retry);
   чистые правила — `lib/domain/generation/` (`generation_budget.dart`, `generation_chunk_planner.dart`,
-  `generation_plan.dart`, `prompt_only_planner.dart`, `generation_plan_splitter.dart`,
+  `generation_plan.dart`, `generation_plan_entry.dart`, `generation_plan_splitter.dart`,
   `content_token_estimator.dart`, `generation_job.dart`, `generation_run.dart`).
   **Провайдеры — аккаунты, а не enum** (SPEC A6.6/A6.8/A8.6, ADR-020): статический каталог
   `lib/domain/generation/provider_preset.dart` (DeepSeek, OpenAI, Anthropic, Gemini, OpenRouter,
@@ -59,8 +59,18 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   Три независимых решения — `input_planner.dart`, `card_allocator.dart`,
   `output_batch_planner.dart`; фасад — `generation_chunk_planner.dart`; конвейер
   шлёт focus/part/already_created, обрабатывает исчерпание и калибрует
-  `tokensPerCard` (`generation.calibration` v1). Документация —
-  `docs/generation-planning.md`. Схема A8.4 содержит `image_id` (изображение из приложенных файлов) и
+  `tokensPerCard` (`generation.calibration` v1). Prompt-only строится той же
+  машинерией (7.18.1). Нативный `count_tokens` (Anthropic/Gemini) —
+  `request_token_counter.dart` + `exact_token_cache.dart`: один подсчёт на план,
+  ошибка → оценка, точность/источник в `InputPlan`. 413 или подтверждённый 400
+  перепланируют часть с бюджетом ×0.8 (`GenerationPlanSplitter.splitToBudget`),
+  wholeDocument → fragmented, ≤3 операций на запрос; прочие 400/401/403 — без
+  перепланирования. Предпросмотр и конвейер строят план через
+  `generation_plan_entry.dart`; «Подробнее» —
+  `lib/ui/generation/generation_plan_details.dart`; ручные характеристики —
+  `ProviderAccount.withConfiguredCapabilities` + `model_capability_section.dart`.
+  Документация — `docs/generation-planning.md`; сверка discovery 2026-11-21 —
+  ADR-039 §6a. Схема A8.4 содержит `image_id` (изображение из приложенных файлов) и
   `image_query`; проверка схемы — поштучно (`CardResponseSchema.splitValid`): одна плохая
   карточка не отбрасывает фрагмент. Контентные правила и мягкие проверки качества A8.4/A8.1 —
   `card_content_validator.dart` (пометки `CardIssueCode`, карточка не отбрасывается);
