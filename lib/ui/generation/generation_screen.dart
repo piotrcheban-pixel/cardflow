@@ -1305,7 +1305,9 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
               GenerationPlanDetails(
                 plan: planPreview,
                 model: (_modelId ?? _account?.modelId ?? '').trim(),
-                limits: _planLimitsFor(_account),
+                // Лимиты — выбранной модели, а не исходного аккаунта: иначе
+                // после смены модели блок показывал бы чужие/пустые данные.
+                limits: _planLimitsFor(_requestAccount),
               ),
           ],
           if (_actualTokens != null) ...<Widget>[

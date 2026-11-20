@@ -42,7 +42,7 @@ Future<T> inlineIsolate<T>(Future<T> Function() task) => task();
 class _MemoryCapabilityCache implements ModelCapabilityCache {
   _MemoryCapabilityCache(this.record);
 
-  final ModelCapabilityRecord record;
+  final ModelCapabilityRecord? record;
 
   @override
   Future<void> invalidateAccount(String accountId) async {}
@@ -53,11 +53,12 @@ class _MemoryCapabilityCache implements ModelCapabilityCache {
     required ProviderProtocol protocol,
     required String baseUrl,
     required String model,
-  }) async => accountId == record.accountId ? record : null;
+  }) async => accountId == record?.accountId ? record : null;
 
   @override
-  Future<List<ModelCapabilityRecord>> readAll() async =>
-      <ModelCapabilityRecord>[record];
+  Future<List<ModelCapabilityRecord>> readAll() async => record == null
+      ? const <ModelCapabilityRecord>[]
+      : <ModelCapabilityRecord>[record!];
 
   @override
   Future<void> write(ModelCapabilityRecord value) async {}
@@ -1109,6 +1110,71 @@ void main() {
       // Кэшевый лимит вывода 1000 меньше минимальной партии: план честно
       // переходит во fragmented, хотя материал и уместился бы целиком.
       'документ делится на части',
+    );
+  });
+
+  testWidgets('смена модели: «Подробнее» берёт лимиты выбранной модели', (
+    WidgetTester tester,
+  ) async {
+    final ModelCapabilityService service = ModelCapabilityService(
+      dio: Dio(),
+      readApiKey: (String id) async => null,
+      cache: _MemoryCapabilityCache(null),
+    );
+    await pumpScreen(
+      tester,
+      extraOverrides: <Override>[
+        modelCapabilityServiceProvider.overrideWithValue(service),
+      ],
+    );
+    final Finder modelField = find.byKey(
+      const ValueKey<String>('generation-model-deepseek'),
+    );
+    await tester.ensureVisible(modelField);
+    await tester.pumpAndSettle();
+    await tester.tap(modelField, warnIfMissed: false);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.text('DeepSeek Flash').last);
+    await tester.pumpAndSettle();
+
+    gateway.picked = <PickedDocument>[
+      const PickedDocument(
+        path: '/tmp/лекция.txt',
+        name: 'лекция.txt',
+        sizeBytes: 30,
+      ),
+    ];
+    final Finder attach = find.byKey(
+      const ValueKey<String>('generation-attach-zone'),
+    );
+    await tester.ensureVisible(attach);
+    await tester.pumpAndSettle();
+    await tester.tap(attach);
+    await tester.pumpAndSettle();
+    final Finder details = find.byKey(
+      const ValueKey<String>('generation-plan-details'),
+    );
+    await tester.ensureVisible(details);
+    await tester.pumpAndSettle();
+    await tester.tap(details);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    // До исправления блок читал лимиты старого аккаунта (deepseek-chat, 128k)
+    // и показывал «неизвестно»; выбранная модель — Flash с окном 1M.
+    expect(
+      tester
+          .widget<Text>(find.byKey(const ValueKey<String>('plan-detail-model')))
+          .data,
+      'deepseek-flash',
+    );
+    expect(
+      tester
+          .widget<Text>(
+            find.byKey(const ValueKey<String>('plan-detail-context')),
+          )
+          .data,
+      contains('1 000 000'),
     );
   });
 }
