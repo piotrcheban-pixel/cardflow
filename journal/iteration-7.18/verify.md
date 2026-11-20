@@ -15,7 +15,7 @@
 | Покрытие рукописного кода | `fvm dart run tool/coverage_check.dart` | **91.7 % (18905/20608)**, порог 80 % пройден |
 | Guard-тесты | в полном прогоне | `ru_strings`, `no_webview`, `no_secrets`, `architecture` — зелёные |
 | Сборка Windows | `fvm flutter build windows --release --no-pub` | **√ Built build\windows\x64\runner\Release\cardflow.exe** (70,9 с) |
-| Baseline до изменений | `fvm flutter test --no-pub --exclude-tags golden` | 2193 passed + 16 skipped (`baseline-test.txt`); итог +63 теста, 0 ослаблений |
+| Baseline до изменений | `fvm flutter test --no-pub --exclude-tags golden` | 2193 passed + 16 skipped (`baseline-test.txt`); итог +63 теста, 0 ослаблений |`n| CI после push | GitHub Actions run [44819862886](https://github.com/piotrcheban-pixel/cardflow/actions/runs/44819862886) | **9/9 job success** (`format + analyze`, `test` ×3 ОС, `build` linux/windows/macos/android/ios), run completed success |
 
 ## Инварианты
 

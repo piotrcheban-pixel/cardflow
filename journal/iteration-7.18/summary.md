@@ -48,7 +48,7 @@
 - Red-фаза с assertion-level выводом — `journal/iteration-7.18/red-output.md`.
 - Гейты — `verify.md`: **2256 passed + 16 skipped**, analyze 0, format 533/0,
   покрытие **91.7 %**, Windows release — `cardflow.exe`.
-- Ревью — `review.md` (чек-лист §11, 15 пунктов; high/critical нет, R1/R2
+- CI: push `ab57f17..f5f6fe1`, run [44819862886](https://github.com/piotrcheban-pixel/cardflow/actions/runs/44819862886) — **9/9 job success**.`n- Ревью — `review.md` (чек-лист §11, 15 пунктов; high/critical нет, R1/R2
   закрыты с тестами, R3–R10 — L156–L161).
 
 ## Ограничения
