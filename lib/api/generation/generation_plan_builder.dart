@@ -90,6 +90,7 @@ class GenerationPlanBuilder {
     for (final DocumentImage image in documentImages) {
       (extraByFile[image.fileName] ??= <DocumentImage>[]).add(image);
     }
+    int catalogIndex = 0;
     final List<DocumentUnit> documentUnits = <DocumentUnit>[];
     for (final ParsedDocument parsed in documents) {
       final List<DocumentImage> images = <DocumentImage>[
@@ -103,6 +104,7 @@ class GenerationPlanBuilder {
     final List<OrphanImageUnit> orphans = <OrphanImageUnit>[];
     extraByFile.forEach((String fileName, List<DocumentImage> images) {
       for (var index = 0; index < images.length; index++) {
+        catalogIndex++;
         orphans.add(
           OrphanImageUnit(
             image: ImageRef(
@@ -116,6 +118,7 @@ class GenerationPlanBuilder {
                     model: imageTokenModel,
                   )
                   .tokens,
+              catalogLineBytes: _catalogLineBytes(images[index], catalogIndex),
             ),
           ),
         );
@@ -231,6 +234,14 @@ class GenerationPlanBuilder {
     );
   }
 
+  /// Длина строки каталога для изображения (совпадает с `_catalogLine`).
+  static int _catalogLineBytes(DocumentImage image, int index) =>
+      utf8.encode(_catalogLineBody(image, index)).length;
+
+  /// Тело строки каталога без обёртки `ImageRef`.
+  static String _catalogLineBody(DocumentImage image, int index) =>
+      imageCatalogLine(image.withId('$kDocumentImageIdPrefix$index'));
+
   /// Строка каталога `<images>` в формате реального запроса.
   static String _catalogLine(ImageRef image, int index) {
     return imageCatalogLine(
@@ -279,6 +290,7 @@ class GenerationPlanBuilder {
                 model: imageTokenModel,
               )
               .tokens,
+          catalogLineBytes: _catalogLineBytes(images[index], index + 1),
         ),
     ];
     final List<SectionUnit> sections = <SectionUnit>[

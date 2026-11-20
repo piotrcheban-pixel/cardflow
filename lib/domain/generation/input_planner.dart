@@ -50,8 +50,10 @@ final class InputImage {
     this.tokens = 0,
     this.page,
     this.sectionId,
+    this.catalogLineBytes = 0,
   }) : assert(id != ''),
-       assert(fileName != '');
+       assert(fileName != ''),
+       assert(catalogLineBytes >= 0);
 
   /// Стабильный id (`img1…` или `doc:<файл>#<n>`).
   final String id;
@@ -70,6 +72,13 @@ final class InputImage {
 
   /// Раздел-владелец (`null` — изображение вне текста).
   final String? sectionId;
+
+  /// Длина строки каталога `<images>` для этого изображения, байт UTF-8.
+  ///
+  /// Каталог уходит в запрос и занимает тело: без него `requestBytes`
+  /// занижался на подписи/контекст (ревью 7.18.1). Считается сборщиком плана
+  /// тем же `imageCatalogLine`, что и реальный запрос.
+  final int catalogLineBytes;
 }
 
 /// Раздел материала для Input Planner.
@@ -868,7 +877,13 @@ final class InputPlanner {
   }) {
     final List<InputImage> sent = <InputImage>[];
     final List<PlannedImage> statuses = <PlannedImage>[];
-    int bytes = textBytes + config.jsonBodyOverheadBytes;
+    // Каталог `<images>` — часть тела запроса: даже изображение, оставшееся
+    // «только каталогом», занимает байты подписи/контекста (ревью 7.18.1).
+    final int catalogBytes = images.fold<int>(
+      0,
+      (int sum, InputImage image) => sum + image.catalogLineBytes,
+    );
+    int bytes = textBytes + catalogBytes + config.jsonBodyOverheadBytes;
     int tokens = 0;
     var payloadLimited = false;
     final Set<String> digests = seenDigests ?? <String>{};

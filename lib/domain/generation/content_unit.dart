@@ -137,8 +137,10 @@ class ImageRef {
     required this.image,
     required this.tokens,
     this.sectionId,
+    this.catalogLineBytes = 0,
   }) : assert(id != '', 'У единицы обязан быть id'),
-       assert(tokens >= 0, 'Токены не могут быть отрицательными');
+       assert(tokens >= 0, 'Токены не могут быть отрицательными'),
+       assert(catalogLineBytes >= 0);
 
   /// Стабильный id (`img:<файл>#<номер>`).
   final String id;
@@ -151,6 +153,9 @@ class ImageRef {
 
   /// id раздела, где изображение упомянуто; `null` — orphan.
   final String? sectionId;
+
+  /// Длина строки каталога `<images>`, байт UTF-8 (для `requestBytes`).
+  final int catalogLineBytes;
 
   /// Имя документа-источника.
   String get documentId => image.fileName;

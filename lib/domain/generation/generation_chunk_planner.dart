@@ -617,6 +617,7 @@ final class GenerationChunkPlanner {
                   tokens: image.tokens,
                   page: image.image.page,
                   sectionId: section.id,
+                  catalogLineBytes: image.catalogLineBytes,
                 ),
             ],
           ),
@@ -631,6 +632,7 @@ final class GenerationChunkPlanner {
           bytes: orphan.image.image.bytes,
           tokens: orphan.image.tokens,
           page: orphan.image.image.page,
+          catalogLineBytes: orphan.image.catalogLineBytes,
         ),
       );
     }
