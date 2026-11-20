@@ -125,6 +125,33 @@ void main() {
     expect(automatic.contextTokens, model.contextTokens);
   });
 
+  test('сброс к автоматическому не теряет Vision пользовательской модели', () {
+    final ProviderAccount vision =
+        ProviderAccount(
+          id: 'custom',
+          label: 'Свой сервер',
+          protocol: ProviderProtocol.openaiCompletions,
+          baseUrl: 'http://localhost:1234/v1',
+          modelId: 'qwen2.5-vl',
+          supportsVision: true,
+          visionConfigured: true,
+        ).withConfiguredCapabilities(
+          contextTokens: 64000,
+          maxInputTokens: 60000,
+          maxOutputTokens: 8192,
+          configuredAt: DateTime.utc(2026, 11, 21),
+        );
+    final ProviderAccount automatic = vision.withAutomaticCapabilities();
+    expect(
+      automatic.supportsVision,
+      isTrue,
+      reason: 'сброс лимитов не должен молча выключать изображения',
+    );
+    expect(automatic.visionConfigured, isTrue);
+    expect(automatic.maxInputTokens, isNull);
+    expect(automatic.capabilitiesConfiguredAt, isNull);
+  });
+
   test('пользовательский аккаунт без ручных значений: лимиты неизвестны', () {
     final ModelLimits limits = resolveModelLimits(account: account());
     expect(limits.contextTokens.value, isNull);

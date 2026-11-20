@@ -239,6 +239,11 @@ class ProviderAccount {
       baseUrl: baseUrl,
       modelId: modelId,
       requiresApiKey: requiresApiKey,
+      // Сброс лимитов не должен молча менять явный выбор Vision: значение
+      // сохраняется только если пользователь действительно его задавал
+      // (`visionConfigured`); эвристика/старое поле сбрасываются.
+      supportsVision: visionConfigured ? supportsVision : false,
+      visionConfigured: visionConfigured,
       capabilitiesSource: CapabilitySource.unknown,
     );
   }
