@@ -7,6 +7,8 @@
 /// Домен не зависит от Flutter.
 library;
 
+import 'dart:math' as math;
+
 import 'package:cardflow/domain/generation/generation_planning_config.dart';
 import 'package:cardflow/domain/generation/model_limits.dart';
 
@@ -39,6 +41,9 @@ final class RequestBudget {
   });
 
   /// Считает бюджет запроса.
+  ///
+  /// [requestBytes] — оценка тела (текст + base64 вложений + запас JSON); если
+  /// задан и превышает лимит модели, поднимается [payloadExceeded].
   factory RequestBudget.compute({
     required ModelLimits limits,
     required int fixedTokens,
@@ -48,17 +53,73 @@ final class RequestBudget {
     GenerationPlanningConfig config = const GenerationPlanningConfig(),
     int requestBytes = 0,
   }) {
-    // RED-фаза итерации 7.18: контракт зафиксирован, формулы — следующий шаг.
-    return const RequestBudget(
-      fixedTokens: 0,
-      materialTokens: 0,
-      inputTokens: 0,
-      maxTokens: 0,
-      outputCapTokens: 0,
-      marginTokens: 0,
-      accuracy: InputAccuracy.estimated,
-      contextExceeded: false,
-      payloadExceeded: false,
+    final int fixed = math.max(0, fixedTokens);
+    final int material = math.max(0, materialTokens);
+    final double marginRate = config.margin(
+      exact: accuracy == InputAccuracy.exact,
+    );
+    final int marginTokens = ((fixed + material) * marginRate).ceil();
+    final int inputTokens = fixed + material + marginTokens;
+
+    final int? contextTokens = limits.contextTokens.value;
+    final int? maxInputTokens = limits.maxInputTokens.value;
+    final int? maxRequestBytes = limits.maxRequestBytes.value;
+    final int? maxOutputTokens = limits.maxOutputTokens.value;
+    final bool inputOnly =
+        limits.contextSemantics == ContextSemantics.inputOnly;
+
+    final int outputCapTokens;
+    if (maxOutputTokens != null) {
+      outputCapTokens = maxOutputTokens;
+    } else if (contextTokens != null) {
+      outputCapTokens = math.min(
+        config.defaultOutputTokens,
+        math.max(1, contextTokens ~/ 2),
+      );
+    } else {
+      outputCapTokens = config.unknownContextOutputTokens;
+    }
+
+    int maxTokens = math.min(desiredOutputTokens, outputCapTokens);
+    int? roomTokens;
+    var contextExceeded = false;
+
+    if (contextTokens != null) {
+      if (inputOnly) {
+        // Окно — только вход: выход не вычитается повторно.
+        if (inputTokens > contextTokens) contextExceeded = true;
+      } else {
+        roomTokens = contextTokens - inputTokens;
+        if (roomTokens < 0) contextExceeded = true;
+        maxTokens = math.min(maxTokens, math.max(0, roomTokens));
+      }
+    } else if (!inputOnly) {
+      // Окно неизвестно: план ограничивается допущением (его применяет
+      // InputPlanner), а ответ — консервативным лимитом.
+      maxTokens = math.min(maxTokens, config.unknownContextOutputTokens);
+    }
+    if (maxInputTokens != null && inputTokens > maxInputTokens) {
+      contextExceeded = true;
+    }
+    if (maxTokens < 0) maxTokens = 0;
+
+    final bool payloadExceeded =
+        maxRequestBytes != null && requestBytes > maxRequestBytes;
+
+    return RequestBudget(
+      fixedTokens: fixed,
+      materialTokens: material,
+      inputTokens: inputTokens,
+      maxTokens: maxTokens,
+      outputCapTokens: outputCapTokens,
+      marginTokens: marginTokens,
+      accuracy: accuracy,
+      contextExceeded: contextExceeded,
+      payloadExceeded: payloadExceeded,
+      contextTokens: contextTokens,
+      roomTokens: roomTokens,
+      maxInputTokensLimit: maxInputTokens,
+      maxRequestBytesLimit: maxRequestBytes,
     );
   }
 
@@ -108,5 +169,5 @@ final class RequestBudget {
   String toString() =>
       'RequestBudget(input: $inputTokens, max: $maxTokens, '
       'context: ${contextTokens ?? 'unknown'}, '
-      'semantics: ${contextExceeded ? 'overflow' : 'ok'})';
+      'exceeded: $contextExceeded)';
 }

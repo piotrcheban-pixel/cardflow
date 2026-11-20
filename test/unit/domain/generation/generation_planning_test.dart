@@ -185,6 +185,7 @@ void main() {
 
     test('T5: токены помещаются, ограничение — requestBytes; картинки не теряются', () {
       final Uint8List big = Uint8List(13 * 1024 * 1024);
+      final Uint8List other = Uint8List(13 * 1024 * 1024)..[0] = 1;
       final InputImage first = InputImage(
         id: 'img1',
         fileName: 'scheme1.png',
@@ -194,7 +195,7 @@ void main() {
       final InputImage second = InputImage(
         id: 'img2',
         fileName: 'scheme2.png',
-        bytes: big,
+        bytes: other,
         tokens: 1600,
       );
       final InputSection section = InputSection(
@@ -352,7 +353,11 @@ void main() {
         fixedTokens: 3000,
         desiredOutputTokens: desired(100, 5530),
       );
-      expect(fragmented.inputTokens, 100100);
+      expect(
+        fragmented.inputTokens,
+        51700,
+        reason: 'после дробления вход части: ceil((3000 + 44000) × 1.1)',
+      );
       expect(fragmented.strategy, InputStrategy.fragmented);
     });
   });

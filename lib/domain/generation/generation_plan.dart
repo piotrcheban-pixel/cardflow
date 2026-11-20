@@ -11,10 +11,12 @@
 /// (K.2), а материалы в БД не пишутся (SPEC 3.4). Домен не зависит от Flutter.
 library;
 
+import 'package:cardflow/domain/generation/card_allocator.dart';
 import 'package:cardflow/domain/generation/document_image.dart';
 import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/generation/generation_budget.dart';
 import 'package:cardflow/domain/generation/generation_pricing.dart';
+import 'package:cardflow/domain/generation/input_planner.dart';
 import 'package:cardflow/domain/generation/model_capabilities.dart';
 
 /// Режим плана: по материалам или только по теме пользователя (ADR-024).
@@ -327,6 +329,9 @@ class PlannedChunk {
     List<GenerationAttachment> attachments = const <GenerationAttachment>[],
     this.splitDepth = 0,
     this.materialsText = '',
+    List<String> focusSectionIds = const <String>[],
+    this.partIndex = 0,
+    this.partCount = 1,
   }) : assert(index >= 1, 'Фрагменты нумеруются с 1'),
        assert(limit >= 1, 'Лимит карточек запланированного фрагмента ≥ 1'),
        assert(textTokens >= 0, 'Токены не могут быть отрицательными'),
@@ -352,7 +357,8 @@ class PlannedChunk {
        catalogOnly = List<DocumentImage>.unmodifiable(catalogOnly),
        imagePartIds = List<String>.unmodifiable(imagePartIds),
        catalogOnlyIds = List<String>.unmodifiable(catalogOnlyIds),
-       attachments = List<GenerationAttachment>.unmodifiable(attachments);
+       attachments = List<GenerationAttachment>.unmodifiable(attachments),
+       focusSectionIds = List<String>.unmodifiable(focusSectionIds);
 
   /// Фрагмент «по теме»: без материалов, только `<wishes>`.
   factory PlannedChunk.promptOnly({
@@ -424,6 +430,18 @@ class PlannedChunk {
   /// изображения/вложения или prompt-only) — пустая строка.
   final String materialsText;
 
+  /// Короткие id разделов `focus` этой партии (ADR-040 §6).
+  ///
+  /// В whole-режиме все партии несут полный материал, а `focus` говорит модели,
+  /// по каким разделам делать карточки. Пусто — ограничения нет (prompt-only).
+  final List<String> focusSectionIds;
+
+  /// Часть входа, к которой относится партия (`-1` — prompt-only).
+  final int partIndex;
+
+  /// Всего частей входа (0 — prompt-only).
+  final int partCount;
+
   /// true, если фрагмент генерирует по теме без материалов.
   bool get isPromptOnly => kind == ChunkKind.promptOnly;
 
@@ -443,6 +461,9 @@ class PlannedChunk {
     int? limit,
     int? splitDepth,
     String? materialsText,
+    List<String>? focusSectionIds,
+    int? partIndex,
+    int? partCount,
   }) {
     return PlannedChunk(
       index: index ?? this.index,
@@ -459,6 +480,9 @@ class PlannedChunk {
       limit: limit ?? this.limit,
       splitDepth: splitDepth ?? this.splitDepth,
       materialsText: materialsText ?? this.materialsText,
+      focusSectionIds: focusSectionIds ?? this.focusSectionIds,
+      partIndex: partIndex ?? this.partIndex,
+      partCount: partCount ?? this.partCount,
     );
   }
 
@@ -630,6 +654,8 @@ class GenerationPlan {
         const <String, CapabilitySource>{},
     this.mode = GenerationMode.materials,
     this.promptOnlyPrompt,
+    this.inputPlan,
+    this.allocation,
   }) : assert(requestedCards >= 0),
        assert(retryAllowanceRequests >= 0),
        assert(
@@ -671,6 +697,31 @@ class GenerationPlan {
 
   /// Заказ карточек от пользователя (0 — не задан).
   final int requestedCards;
+
+  /// План входа: стратегия whole/fragmented/promptOnly, части и бюджет
+  /// (ADR-040). `null` — план старого пути/теста без этой информации.
+  final InputPlan? inputPlan;
+
+  /// Распределение карточек по разделам (ADR-040 §5); `null` — не строилось.
+  final CardAllocation? allocation;
+
+  /// Стратегия входа; `null` — план без этой информации.
+  InputStrategy? get inputStrategy => inputPlan?.strategy;
+
+  /// Части входа (пусто, если план без `inputPlan`).
+  List<InputPart> get parts => inputPlan?.parts ?? const <InputPart>[];
+
+  /// Число частей входа.
+  int get partCount => inputPlan?.partCount ?? (chunks.isEmpty ? 0 : 1);
+
+  /// Оценка входа запроса/части (`null` — неизвестно).
+  int? get plannedInputTokens => inputPlan?.inputTokens;
+
+  /// Резерв вывода одного запроса (`null` — неизвестно).
+  int? get outputReserveTokens => inputPlan?.maxTokens;
+
+  /// Максимальный объём материалов части при дроблении.
+  int? get materialBudgetPerPart => inputPlan?.materialBudgetPerPart;
 
   /// Допуск на повторы (отдельно от плановых запросов).
   final int retryAllowanceRequests;

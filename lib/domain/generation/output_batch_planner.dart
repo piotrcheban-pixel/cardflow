@@ -64,14 +64,151 @@ final class OutputBatchPlanner {
     required CardAllocation allocation,
     required int maxTokensPerBatch,
     int? promptOnlyRequestedCards,
+    int? maxCardsPerRequest,
   }) {
-    // RED-фаза итерации 7.18: контракт зафиксирован, алгоритм — следующий шаг.
-    return const <PlannedBatch>[];
+    final int perBatch = cardsPerBatch(
+      maxTokensPerBatch,
+      maxCardsPerRequest: maxCardsPerRequest,
+    );
+    if (input.isPromptOnly) {
+      final int total = promptOnlyRequestedCards ?? allocation.achievable;
+      if (total <= 0) return const <PlannedBatch>[];
+      final int count = (total / perBatch).ceil();
+      final List<int> sizes = _balanced(total, count);
+      return List<PlannedBatch>.unmodifiable(<PlannedBatch>[
+        for (var index = 0; index < sizes.length; index++)
+          PlannedBatch(
+            index: index,
+            partIndex: -1,
+            partCount: 0,
+            focusSectionIds: const <String>[],
+            limit: sizes[index],
+          ),
+      ]);
+    }
+    final List<InputPart> parts = input.parts;
+    if (parts.isEmpty) return const <PlannedBatch>[];
+    final List<PlannedBatch> batches = <PlannedBatch>[];
+    var index = 0;
+    if (input.isWholeDocument) {
+      final InputPart part = parts.first;
+      final int total = _totalFor(part, allocation);
+      if (total <= 0) return const <PlannedBatch>[];
+      final int count = (total / perBatch).ceil();
+      final List<int> sizes = _balanced(total, count);
+      final List<List<String>> focus = _focusGroups(
+        part.sections,
+        allocation,
+        sizes,
+      );
+      for (var i = 0; i < sizes.length; i++) {
+        batches.add(
+          PlannedBatch(
+            index: index++,
+            partIndex: part.index,
+            partCount: parts.length,
+            focusSectionIds: focus[i],
+            limit: sizes[i],
+          ),
+        );
+      }
+      return List<PlannedBatch>.unmodifiable(batches);
+    }
+    for (final InputPart part in parts) {
+      final int total = _totalFor(part, allocation);
+      if (total <= 0) continue;
+      final int count = (total / perBatch).ceil();
+      final List<int> sizes = _balanced(total, count);
+      final List<List<String>> focus = _focusGroups(
+        part.sections,
+        allocation,
+        sizes,
+      );
+      for (var i = 0; i < sizes.length; i++) {
+        batches.add(
+          PlannedBatch(
+            index: index++,
+            partIndex: part.index,
+            partCount: parts.length,
+            focusSectionIds: focus[i],
+            limit: sizes[i],
+          ),
+        );
+      }
+    }
+    return List<PlannedBatch>.unmodifiable(batches);
   }
 
-  /// Карточек на ответ: `min(ceiling, cardsFor(maxTokens))`, но не меньше 1.
-  int cardsPerBatch(int maxTokensPerBatch) {
+  /// Карточек на ответ: `min(ceiling, cardsFor(maxTokens), maxCardsPerRequest)`,
+  /// но не меньше 1.
+  int cardsPerBatch(int maxTokensPerBatch, {int? maxCardsPerRequest}) {
     final int byBudget = config.cardsFor(maxTokensPerBatch);
-    return math.max(1, math.min(config.batchCardsCeiling, byBudget));
+    var cap = math.min(config.batchCardsCeiling, byBudget);
+    if (maxCardsPerRequest != null) {
+      cap = math.min(cap, math.max(1, maxCardsPerRequest));
+    }
+    return math.max(1, cap);
+  }
+
+  int _totalFor(InputPart part, CardAllocation allocation) {
+    var total = 0;
+    for (final InputSection section in part.sections) {
+      total += allocation.forSection(section.id);
+    }
+    return total;
+  }
+
+  /// Сбалансированные размеры партий: `n` карточек на `count` партий.
+  static List<int> _balanced(int total, int count) {
+    final int safeCount = math.max(1, count);
+    final int base = total ~/ safeCount;
+    final int remainder = total % safeCount;
+    return <int>[
+      for (var index = 0; index < safeCount; index++)
+        math.max(1, base + (index < remainder ? 1 : 0)),
+    ];
+  }
+
+  /// Непрерывные по порядку документа группы `focus` под размеры партий.
+  ///
+  /// Публичный: планировщик пересобирает партии части, когда изображения не
+  /// помещаются в один запрос (лимиты image-частей/байт).
+  static List<List<String>> focusGroupsFor(
+    List<InputSection> sections,
+    CardAllocation allocation,
+    List<int> sizes,
+  ) => _focusGroups(sections, allocation, sizes);
+
+  static List<List<String>> _focusGroups(
+    List<InputSection> sections,
+    CardAllocation allocation,
+    List<int> sizes,
+  ) {
+    final List<List<String>> groups = <List<String>>[
+      for (var index = 0; index < sizes.length; index++) <String>[],
+    ];
+    var batch = 0;
+    var filled = 0;
+    for (final InputSection section in sections) {
+      var remaining = allocation.forSection(section.id);
+      while (remaining > 0 && batch < sizes.length) {
+        final int room = sizes[batch] - filled;
+        if (room <= 0) {
+          batch++;
+          filled = 0;
+          continue;
+        }
+        final int take = math.min(remaining, room);
+        final String id = section.promptId;
+        if (!groups[batch].contains(id)) groups[batch].add(id);
+        remaining -= take;
+        filled += take;
+        if (filled >= sizes[batch]) {
+          batch++;
+          filled = 0;
+        }
+      }
+    }
+    return groups;
   }
 }

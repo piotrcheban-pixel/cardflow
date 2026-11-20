@@ -114,7 +114,12 @@ void main() {
     final GenerationRunResult result = await runner.run(
       requestFor(
         documents: <ParsedDocument>[
-          docOf('a.txt', <String>['Материал один.', 'Материал два.']),
+          docOf('a.txt', <String>[
+            // Ёмкость разделов (ADR-040 §5) должна позволять 5 карточек:
+            // ~250 значимых слов и определения дают capacity ≥ 5 на раздел.
+            for (var index = 0; index < 5; index++)
+              'Понятие $index — это определение. ${words(250)}',
+          ]),
         ],
         wishes: 'Сделай 5 карточек',
       ),

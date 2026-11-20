@@ -8,6 +8,8 @@ library;
 
 import 'dart:math' as math;
 
+import 'package:cardflow/domain/generation/model_limits.dart';
+
 /// Конфигурация бюджета вывода и запаса точности.
 final class GenerationPlanningConfig {
   /// Создаёт конфигурацию; значения по умолчанию — из ADR-040 §2.
@@ -88,6 +90,16 @@ final class GenerationPlanningConfig {
         (tokens * outputFill - schemaOverheadTokens) / tokensPerCard;
     if (!value.isFinite || value <= 0) return 0;
     return value.floor();
+  }
+
+  /// Потолок вывода модели: подтверждённый лимит, иначе совместимое с окном
+  /// допущение (ADR-040 §3, `RequestBudget`).
+  int outputCapFor(ModelLimits limits) {
+    final int? maxOutput = limits.maxOutputTokens.value;
+    if (maxOutput != null) return maxOutput;
+    final int? context = limits.contextTokens.value;
+    if (context == null) return unknownContextOutputTokens;
+    return math.min(defaultOutputTokens, math.max(1, context ~/ 2));
   }
 
   /// Желаемый объём ответа для заказа [requestedCards].

@@ -20,7 +20,11 @@ final class ModelLimits {
     this.contextSemantics = ContextSemantics.unknown,
     this.maxInputTokens = const Sourced<int>.absent(),
     this.maxOutputTokens = const Sourced<int>.absent(),
+    this.maxCardsPerRequest = const Sourced<int>.absent(),
     this.maxRequestBytes = const Sourced<int>.absent(),
+    this.maxImagesPerRequest = const Sourced<int>.absent(),
+    this.maxImageBytesPerImage = const Sourced<int>.absent(),
+    this.maxImageBytesPerRequest = const Sourced<int>.absent(),
     this.supportsImageInput = const Sourced<bool>.absent(),
     this.supportsPdfInput = const Sourced<bool>.absent(),
     this.isReasoningModel = const Sourced<bool>.absent(),
@@ -42,8 +46,20 @@ final class ModelLimits {
   /// Лимит вывода модели.
   final Sourced<int> maxOutputTokens;
 
+  /// Потолок карточек в одном запросе (структурированный вывод).
+  final Sourced<int> maxCardsPerRequest;
+
   /// Технический предел размера тела запроса протокола.
   final Sourced<int> maxRequestBytes;
+
+  /// Максимум image-частей в одном запросе.
+  final Sourced<int> maxImagesPerRequest;
+
+  /// Максимум байт одного изображения.
+  final Sourced<int> maxImageBytesPerImage;
+
+  /// Максимум байт изображений одного запроса.
+  final Sourced<int> maxImageBytesPerRequest;
 
   /// Принимает ли модель изображения.
   final Sourced<bool> supportsImageInput;
@@ -87,7 +103,11 @@ final class ModelLimits {
     ContextSemantics? contextSemantics,
     Sourced<int>? maxInputTokens,
     Sourced<int>? maxOutputTokens,
+    Sourced<int>? maxCardsPerRequest,
     Sourced<int>? maxRequestBytes,
+    Sourced<int>? maxImagesPerRequest,
+    Sourced<int>? maxImageBytesPerImage,
+    Sourced<int>? maxImageBytesPerRequest,
     Sourced<bool>? supportsImageInput,
     Sourced<bool>? supportsPdfInput,
     Sourced<bool>? isReasoningModel,
@@ -97,7 +117,13 @@ final class ModelLimits {
     contextSemantics: contextSemantics ?? this.contextSemantics,
     maxInputTokens: maxInputTokens ?? this.maxInputTokens,
     maxOutputTokens: maxOutputTokens ?? this.maxOutputTokens,
+    maxCardsPerRequest: maxCardsPerRequest ?? this.maxCardsPerRequest,
     maxRequestBytes: maxRequestBytes ?? this.maxRequestBytes,
+    maxImagesPerRequest: maxImagesPerRequest ?? this.maxImagesPerRequest,
+    maxImageBytesPerImage:
+        maxImageBytesPerImage ?? this.maxImageBytesPerImage,
+    maxImageBytesPerRequest:
+        maxImageBytesPerRequest ?? this.maxImageBytesPerRequest,
     supportsImageInput: supportsImageInput ?? this.supportsImageInput,
     supportsPdfInput: supportsPdfInput ?? this.supportsPdfInput,
     isReasoningModel: isReasoningModel ?? this.isReasoningModel,
@@ -148,7 +174,13 @@ ModelLimits mergeModelLimits(Iterable<ModelLimits> layers) {
     contextSemantics: semantics,
     maxInputTokens: pick<int>((ModelLimits l) => l.maxInputTokens),
     maxOutputTokens: pick<int>((ModelLimits l) => l.maxOutputTokens),
+    maxCardsPerRequest: pick<int>((ModelLimits l) => l.maxCardsPerRequest),
     maxRequestBytes: pick<int>((ModelLimits l) => l.maxRequestBytes),
+    maxImagesPerRequest: pick<int>((ModelLimits l) => l.maxImagesPerRequest),
+    maxImageBytesPerImage:
+        pick<int>((ModelLimits l) => l.maxImageBytesPerImage),
+    maxImageBytesPerRequest:
+        pick<int>((ModelLimits l) => l.maxImageBytesPerRequest),
     supportsImageInput: pick<bool>((ModelLimits l) => l.supportsImageInput),
     supportsPdfInput: pick<bool>((ModelLimits l) => l.supportsPdfInput),
     isReasoningModel: pick<bool>((ModelLimits l) => l.isReasoningModel),
@@ -192,8 +224,32 @@ ModelLimits modelLimitsFromCapabilities(ModelCapabilities capabilities) {
           ? CapabilitySource.assumption
           : outputSource,
     ),
+    maxCardsPerRequest: intField(
+      capabilities.maxCardsPerRequest,
+      outputSource == CapabilitySource.unknown
+          ? CapabilitySource.assumption
+          : outputSource,
+    ),
     maxRequestBytes: intField(
       capabilities.maxRequestBytes,
+      imageSource == CapabilitySource.unknown
+          ? CapabilitySource.assumption
+          : imageSource,
+    ),
+    maxImagesPerRequest: intField(
+      capabilities.maxImagesPerRequest,
+      imageSource == CapabilitySource.unknown
+          ? CapabilitySource.assumption
+          : imageSource,
+    ),
+    maxImageBytesPerImage: intField(
+      capabilities.maxImageBytesPerImage,
+      imageSource == CapabilitySource.unknown
+          ? CapabilitySource.assumption
+          : imageSource,
+    ),
+    maxImageBytesPerRequest: intField(
+      capabilities.maxImageBytesPerRequest,
       imageSource == CapabilitySource.unknown
           ? CapabilitySource.assumption
           : imageSource,

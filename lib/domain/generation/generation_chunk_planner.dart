@@ -1,69 +1,47 @@
-/// Адаптивный планировщик фрагментов генерации (разделы D.4–D.7 аудита
-/// TASK 01, `docs/adaptive-generation-architecture.md`).
+/// Адаптивный планировщик генерации (ADR-040).
 ///
-/// Планировщик получает перечень единиц содержимого ([ContentInventory]),
-/// возможности модели ([ModelCapabilities]) и фиксированную обвязку запроса
-/// (системный промпт, схема ответа, обёртка) и строит [GenerationPlan] **до**
-/// первого API-запроса:
+/// Три независимых решения, собранные в один план:
+/// 1. [InputPlanner] — весь документ целиком или минимальное число частей
+///    (только по бюджету входа и резерву вывода, без числа карточек);
+/// 2. [CardAllocator] — распределение заказа по разделам по насыщенности;
+/// 3. [OutputBatchPlanner] — партии (API-запросы), `focus` и лимит карточек.
 ///
-/// - бюджет входа считается по формуле D.1 через [GenerationBudget] (окно
-///   контекста − резерв вывода − фиксированная обвязка − запас безопасности);
-///   клампинга «всё равно 2 000» нет — при нехватке план невалиден;
-/// - текст упаковывается жадно по смысловым границам (раздел → абзац →
-///   предложение → строка → руна); предложение режется только если само
-///   больше бюджета;
-/// - изображения — полноценные единицы: они сохраняют `image_id`, привязку к
-///   разделу/странице и каталог документа; не вошедшие в image-части остаются
-///   в каталоге (`catalogOnly`) или уходят отдельным фрагментом-каталогом;
-/// - количество карточек не берётся из «универсального 20»: потолок считается
-///   из бюджета вывода модели и `maxCardsPerRequest`, а заказ пользователя
-///   распределяется по фрагментам без молчаливого уменьшения;
-/// - у каждой единицы содержимого есть состояние: во фрагменте (units/
-///   imageParts/attachments), в каталоге (`catalogOnly`) или в
-///   [GenerationPlan.omitted] с причиной. Проверка покрытия —
-///   [GenerationPlanCoverage.check].
-///
-/// Технические предохранители (все — явные поля
-/// [GenerationChunkPlannerConfig], не «магические» числа модели): максимальное
-/// число фрагментов, глубина дробления, допущения по лимитам запроса, когда
-/// возможности модели неизвестны. Домен не зависит от Flutter.
+/// `GenerationChunkPlanner.plan` сохраняет прежний публичный API: он собирает
+/// [GenerationPlan] из перечня единиц содержимого и возможностей модели.
+/// Домен не зависит от Flutter.
 library;
 
 import 'dart:convert';
 import 'dart:math' as math;
 
+import 'package:cardflow/domain/generation/card_allocator.dart';
 import 'package:cardflow/domain/generation/content_token_estimator.dart';
 import 'package:cardflow/domain/generation/content_unit.dart';
 import 'package:cardflow/domain/generation/document_image.dart';
 import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/generation/generation_budget.dart';
 import 'package:cardflow/domain/generation/generation_plan.dart';
+import 'package:cardflow/domain/generation/generation_planning_config.dart';
 import 'package:cardflow/domain/generation/generation_pricing.dart';
-import 'package:cardflow/domain/generation/generation_request_limits.dart';
+import 'package:cardflow/domain/generation/generation_request_budget.dart';
+import 'package:cardflow/domain/generation/input_planner.dart';
 import 'package:cardflow/domain/generation/model_capabilities.dart';
-
-/// Префикс строки-заголовка файла в `<materials>` (SPEC A8.1: «Файл: <имя>»).
-///
-/// Константа продублирована здесь, чтобы планировщик не зависел от
-/// `generation_chunker.dart` (фасад сам зависит от планировщика).
-const String _fileHeaderPrefix = 'Файл: ';
+import 'package:cardflow/domain/generation/model_limits.dart';
+import 'package:cardflow/domain/generation/output_batch_planner.dart';
 
 /// Строка каталога `<images>` для изображения [image] с порядковым номером
 /// [index] (0 — первое изображение документа).
-///
-/// Реальный формат строки (`id | файл | подпись | окружающий текст`) живёт в
-/// API-слое (`imageCatalogLine`); планировщик получает построитель извне,
-/// чтобы не дублировать форматирование. `null` — используется приближение по
-/// полям изображения (для автономных тестов/вызовов).
 typedef ImageCatalogLineBuilder = String Function(ImageRef image, int index);
 
 /// Допущения и технические предохранители планировщика.
-///
-/// Значения — конфигурация приложения, а **не** характеристики моделей:
-/// они применяются, только когда у аккаунта нет подтверждённого значения, и
-/// попадают в `GenerationPlan.unknownFields`/предупреждения.
-class GenerationChunkPlannerConfig {
+final class GenerationChunkPlannerConfig {
   /// Создаёт конфигурацию.
+  ///
+  /// [softTargetMaterialTokensPerCard] и [minSoftTargetMaterialTokens] —
+  /// legacy-поля мягкой цели (ADR-040 §1: больше не режут материал, оставлены
+  /// ради обратной совместимости вызовов); [assumedMaxImagesPerChunk] и
+  /// байтовые лимиты — конфигурационные допущения приложения, когда
+  /// модель/аккаунт лимитов не сообщают.
   const GenerationChunkPlannerConfig({
     this.softTargetMaterialTokensPerCard = 6000,
     this.minSoftTargetMaterialTokens = 512,
@@ -75,96 +53,92 @@ class GenerationChunkPlannerConfig {
     this.maxChunks = 512,
     this.maxSplitDepth = 3,
     this.retryAllowanceRequests = 0,
+    this.planning = const GenerationPlanningConfig(),
   }) : assert(softTargetMaterialTokensPerCard > 0),
        assert(minSoftTargetMaterialTokens > 0),
        assert(assumedMaxImagesPerChunk > 0),
        assert(assumedMaxImageBytesPerImage > 0),
        assert(assumedMaxImageBytesPerChunk > 0),
        assert(assumedMaxRequestBytes > 0),
-       assert(jsonBodyOverheadBytes >= 0),
        assert(maxChunks > 0, 'Предохранитель числа фрагментов должен быть > 0'),
-       assert(maxSplitDepth >= 0);
+       assert(maxSplitDepth >= 0),
+       assert(retryAllowanceRequests >= 0);
 
-  /// Сколько токенов материала ориентировочно нужно на одну карточку (D.3).
-  ///
-  /// Мягкая цель заполнения: не платить за 1M контекста ради нескольких
-  /// карточек. Значение подлежит калибровке (не метаданные провайдера).
+  /// Legacy: мягкая цель материала на карточку (ADR-040 §1 её не использует).
   final int softTargetMaterialTokensPerCard;
 
-  /// Минимальная мягкая цель фрагмента при подстройке под заказ.
-  ///
-  /// Не даём создавать крошечные фрагменты из маленького материала: если
-  /// материала на все запросы не хватает, деление не увеличит число карточек,
-  /// а только добавит запросов. Значение — конфигурация приложения.
+  /// Legacy: минимальная мягкая цель материала.
   final int minSoftTargetMaterialTokens;
 
-  /// Сколько image-частей допускается в одном запросе, если модель не сообщает
-  /// лимит (существующая политика приложения, L-29).
+  /// Допущение: максимум image-частей в запросе.
   final int assumedMaxImagesPerChunk;
 
-  /// Максимальный размер одного изображения, если модель его не сообщает
-  /// (существующая политика приложения, L-28).
+  /// Допущение: максимум байт одного изображения.
   final int assumedMaxImageBytesPerImage;
 
-  /// Максимальный суммарный размер изображений запроса, если модель его не
-  /// сообщает (существующая политика приложения, L-30).
+  /// Допущение: максимум байт изображений запроса.
   final int assumedMaxImageBytesPerChunk;
 
-  /// Защитный потолок тела HTTP-запроса, если возможности модели его не дают
-  /// (E.5). Допущение, а не факт провайдера.
+  /// Допущение: максимум байт тела запроса.
   final int assumedMaxRequestBytes;
 
-  /// Служебный запас JSON-обёртки тела запроса (байт).
+  /// Запас тела запроса (JSON-обёртка), байт.
   final int jsonBodyOverheadBytes;
 
-  /// Технический предохранитель от runaway-дробления (класс D).
+  /// Технический предохранитель: максимум частей входа на запуск.
   final int maxChunks;
 
-  /// Максимальная глубина дробления текста (D.6/F.3): после неё — жёсткое
-  /// деление по рунам.
+  /// Технический предохранитель: глубина дробления при восстановлении.
   final int maxSplitDepth;
 
-  /// Сколько запросов заложено на повторы (F.2); в оценку попадает отдельно.
+  /// Допуск на повторы (не входит в плановые запросы).
   final int retryAllowanceRequests;
+
+  /// Коэффициенты бюджета/вывода ADR-040 §2.
+  final GenerationPlanningConfig planning;
 }
 
-/// Фиксированная обвязка запроса, не зависящая от материалов.
-///
-/// Системный промпт, JSON-схема ответа и обёртка пользовательского сообщения
-/// отправляются в каждом запросе, поэтому вычитаются из окна контекста.
-class GenerationOverheadTokens {
+/// Фиксированная обвязка запроса, токенов (P).
+final class GenerationOverheadTokens {
   /// Создаёт обвязку.
   const GenerationOverheadTokens({
     this.systemPromptTokens = 0,
     this.schemaTokens = 0,
     this.wrapperTokens = 0,
-  }) : assert(systemPromptTokens >= 0, 'Токены не могут быть отрицательными'),
-       assert(schemaTokens >= 0, 'Токены не могут быть отрицательными'),
-       assert(wrapperTokens >= 0, 'Токены не могут быть отрицательными');
+    this.outlineTokens = 0,
+    this.taskTailTokens = 0,
+  });
 
-  /// Нулевая обвязка (для тестов/автономного планирования).
+  /// Пустая обвязка.
   static const GenerationOverheadTokens none = GenerationOverheadTokens();
 
-  /// Токены системного промпта.
+  /// Системный промпт.
   final int systemPromptTokens;
 
-  /// Токены проекции JSON-схемы ответа.
+  /// Каноническая схема ответа.
   final int schemaTokens;
 
-  /// Токены обёртки `<materials>/<wishes>/<limit>/<images>`.
+  /// Обёртка пользовательского сообщения (без `<materials>`).
   final int wrapperTokens;
 
-  /// Суммарная фиксированная обвязка.
-  int get fixedTokens => systemPromptTokens + schemaTokens + wrapperTokens;
+  /// Резерв на компактное оглавление (только при fragmented).
+  final int outlineTokens;
+
+  /// Хвост `<task>` (part/focus/cards).
+  final int taskTailTokens;
+
+  /// Суммарная служебная часть `P`.
+  int get fixedTokens =>
+      systemPromptTokens + schemaTokens + wrapperTokens + taskTailTokens;
 
   @override
   String toString() =>
       'GenerationOverheadTokens($systemPromptTokens + $schemaTokens + '
-      '$wrapperTokens)';
+      '$wrapperTokens + $outlineTokens + $taskTailTokens)';
 }
 
-/// Планировщик фрагментов: бюджет, упаковка, изображения, лимиты карточек.
-class GenerationChunkPlanner {
+/// Планировщик: бюджет, части, распределение карточек и партии.
+final class GenerationChunkPlanner {
   /// Создаёт планировщик.
   const GenerationChunkPlanner({
     this.estimator = const HeuristicContentTokenEstimator(),
@@ -172,7 +146,7 @@ class GenerationChunkPlanner {
     this.catalogLineBuilder,
   });
 
-  /// Единый оценщик единиц содержимого (заменяется `GenerationEstimator`).
+  /// Единый оценщик единиц содержимого.
   final ContentTokenEstimator estimator;
 
   /// Допущения и предохранители.
@@ -183,10 +157,9 @@ class GenerationChunkPlanner {
 
   /// Строит план по перечню содержимого и возможностям модели.
   ///
-  /// [requestedCards] — сколько карточек запросил пользователь (`null` — не
-  /// задавал). Значение не уменьшается молча: если план не может его выдать,
-  /// в плане появляется предупреждение `requestedAbovePlan`; если фрагментов
-  /// больше, чем карточек, — `cardsAboveRequested`.
+  /// [requestedCards] распределяется [CardAllocator], но **не влияет** на
+  /// разбиение входа: [InputPlanner] получает только бюджет и резерв вывода.
+  /// [wishes] нужны для подъёма веса разделов, совпавших с пожеланиями.
   GenerationPlan plan({
     required ContentInventory inventory,
     required ModelCapabilities capabilities,
@@ -194,31 +167,960 @@ class GenerationChunkPlanner {
     int? requestedCards,
     GenerationBudgetConfig budgetConfig = const GenerationBudgetConfig(),
     ImageCatalogLineBuilder? catalogLineBuilder,
+    String? wishes,
+    bool allowPromptOnly = false,
   }) {
     assert(
       requestedCards == null || requestedCards > 0,
       'Заказ карточек должен быть положительным или null',
     );
-    final _PlanRun run = _PlanRun(
-      estimator: estimator,
-      config: config,
-      capabilities: capabilities,
-      overhead: overhead,
-      budgetConfig: budgetConfig,
-      catalogLineBuilder: catalogLineBuilder ?? this.catalogLineBuilder,
+    final GenerationPlanningConfig planning = config.planning;
+    final ModelLimits limits = modelLimitsFromCapabilities(capabilities);
+    final _InventoryData data = _inventoryData(inventory, estimator);
+    final bool promptOnly = data.sections.isEmpty &&
+        data.attachments.isEmpty &&
+        data.orphanImages.isEmpty;
+    if (promptOnly &&
+        (!allowPromptOnly || wishes == null || wishes.trim().isEmpty)) {
+      return _emptyPlan(limits: limits, overhead: overhead);
+    }
+    final int outputCap = planning.outputCapFor(limits);
+    final int desired = planning.desiredOutputTokens(
       requestedCards: requestedCards,
+      maxOutputTokens: outputCap,
     );
-    return run.execute(inventory);
+
+    final InputPlan inputPlan;
+    if (promptOnly) {
+      inputPlan = InputPlanner(config: planning).plan(
+        sections: const <InputSection>[],
+        limits: limits,
+        fixedTokens: overhead.fixedTokens,
+        desiredOutputTokens: desired,
+        accuracy: InputAccuracy.estimated,
+      );
+    } else if (data.sections.isEmpty) {
+      inputPlan = _attachmentsOnlyPlan(
+        data: data,
+        limits: limits,
+        overhead: overhead,
+        desired: desired,
+      );
+    } else {
+      inputPlan = InputPlanner(config: planning).plan(
+        sections: data.sections,
+        limits: limits,
+        fixedTokens: overhead.fixedTokens,
+        desiredOutputTokens: desired,
+        accuracy: InputAccuracy.estimated,
+        outlineReserveTokens: overhead.outlineTokens,
+        orphanImages: data.orphanImages,
+      );
+    }
+
+    if (!capabilities.supportsVision && data.hasVisionPayload) {
+      return _invalidPlan(
+        PlanInvalidReason.imagesWithoutVision,
+        inputPlan: inputPlan,
+        limits: limits,
+        overhead: overhead,
+        requestedCards: requestedCards,
+      );
+    }
+    if (inputPlan.partCount > config.maxChunks) {
+      return _invalidPlan(
+        PlanInvalidReason.tooManyChunks,
+        inputPlan: inputPlan,
+        limits: limits,
+        overhead: overhead,
+        requestedCards: requestedCards,
+      );
+    }
+    if (inputPlan.budget.payloadExceeded) {
+      return _invalidPlan(
+        PlanInvalidReason.payloadTooLarge,
+        inputPlan: inputPlan,
+        limits: limits,
+        overhead: overhead,
+        requestedCards: requestedCards,
+      );
+    }
+    if (_hasUnplaceableUnit(data, inputPlan)) {
+      return _invalidPlan(
+        PlanInvalidReason.unitTooLarge,
+        inputPlan: inputPlan,
+        limits: limits,
+        overhead: overhead,
+        requestedCards: requestedCards,
+      );
+    }
+    if (inputPlan.budget.contextTokens != null &&
+        overhead.fixedTokens >= inputPlan.budget.contextTokens! &&
+        !promptOnly) {
+      return _invalidPlan(
+        PlanInvalidReason.contextWindowTooSmall,
+        inputPlan: inputPlan,
+        limits: limits,
+        overhead: overhead,
+        requestedCards: requestedCards,
+      );
+    }
+
+    final CardAllocation allocation = data.sections.isEmpty
+        ? _syntheticAllocation(
+            requestedCards: requestedCards,
+            batchCap: planning.cardsFor(inputPlan.maxTokens),
+          )
+        : const CardAllocator().allocate(
+            sections: _allocationSections(data, wishes),
+            requestedCards: requestedCards,
+          );
+    final List<PlannedBatch> batches = promptOnly
+        ? OutputBatchPlanner(config: planning).plan(
+            input: inputPlan,
+            allocation: allocation,
+            maxTokensPerBatch: inputPlan.maxTokens,
+            promptOnlyRequestedCards: requestedCards,
+            maxCardsPerRequest: limits.maxCardsPerRequest.value,
+          )
+        : data.sections.isEmpty
+        ? _batchesWithoutSections(
+            inputPlan: inputPlan,
+            allocation: allocation,
+            planning: planning,
+          )
+        : OutputBatchPlanner(config: planning).plan(
+            input: inputPlan,
+            allocation: allocation,
+            maxTokensPerBatch: inputPlan.maxTokens,
+            promptOnlyRequestedCards: requestedCards,
+            maxCardsPerRequest: limits.maxCardsPerRequest.value,
+          );
+
+    final Set<PlanWarningCode> warnings = <PlanWarningCode>{
+      ...inputPlan.warnings,
+      if (allocation.belowRequested) PlanWarningCode.requestedAbovePlan,
+      if (requestedCards != null &&
+          allocation.achievable > requestedCards &&
+          allocation.achievable > 0)
+        PlanWarningCode.cardsAboveRequested,
+      if (inputPlan.images.any(
+        (PlannedImage image) =>
+            image.status == ImageParticipationStatus.unsupportedModel,
+      ))
+        PlanWarningCode.imagesWithoutVision,
+      if (inputPlan.images.any(
+        (PlannedImage image) =>
+            image.status == ImageParticipationStatus.omittedPayload,
+      ))
+        PlanWarningCode.payloadLimited,
+      if (limits.contextTokens.isKnown == false ||
+          limits.maxOutputTokens.isKnown == false)
+        PlanWarningCode.unknownCapabilities,
+      if (_assumedImageLimits(capabilities)) PlanWarningCode.assumedImageLimits,
+    };
+    final PlanValidity validity = warnings.isEmpty
+        ? const PlanValidity.valid()
+        : PlanValidity.warnings(
+            List<PlanWarningCode>.unmodifiable(warnings),
+          );
+
+    final List<PlannedChunk> chunks = <PlannedChunk>[];
+    final Map<String, PlannedImage> imageStatuses = <String, PlannedImage>{
+      for (final PlannedImage image in inputPlan.images) image.id: image,
+    };
+    var nextChunkIndex = 1;
+    if (inputPlan.isPromptOnly || data.sections.isEmpty) {
+      for (final PlannedBatch batch in batches) {
+        if (inputPlan.isPromptOnly) {
+          chunks.add(
+            PlannedChunk.promptOnly(
+              index: nextChunkIndex++,
+              limit: batch.limit,
+              bodyBytes: planning.jsonBodyOverheadBytes,
+            ),
+          );
+        } else {
+          chunks.add(
+            _attachmentChunk(
+              batch: batch,
+              index: nextChunkIndex++,
+              partCount: inputPlan.partCount,
+              data: data,
+              config: config,
+            ),
+          );
+        }
+      }
+    } else {
+      final Map<int, List<PlannedBatch>> batchesByPart =
+          <int, List<PlannedBatch>>{};
+      for (final PlannedBatch batch in batches) {
+        (batchesByPart[batch.partIndex] ??= <PlannedBatch>[]).add(batch);
+      }
+      final Set<int> partsWithChunks = <int>{};
+      for (final InputPart part in inputPlan.parts) {
+        final List<PlannedBatch> base =
+            batchesByPart[part.index] ?? const <PlannedBatch>[];
+        if (base.isEmpty) continue;
+        final int totalCards = base.fold<int>(
+          0,
+          (int sum, PlannedBatch batch) => sum + batch.limit,
+        );
+        if (totalCards <= 0) continue;
+        final List<InputImage> partImages = _imagesOfPart(data, part);
+        final List<List<InputImage>> bins = _imageBins(part.images, limits);
+        var count = base.length;
+        if (bins.length > count) {
+          count = math.min(bins.length, totalCards);
+        }
+        final List<int> sizes = _balancedSizes(totalCards, count);
+        final List<List<String>> focus = OutputBatchPlanner.focusGroupsFor(
+          part.sections,
+          allocation,
+          sizes,
+        );
+        for (var index = 0; index < sizes.length; index++) {
+          final List<InputImage> batchImages = index < bins.length
+              ? bins[index]
+              : const <InputImage>[];
+          final List<InputImage> catalogImages = <InputImage>[
+            for (final InputImage image in partImages)
+              if (!batchImages.any((InputImage sent) => sent.id == image.id))
+                image,
+          ];
+          for (final InputImage image in batchImages) {
+            imageStatuses[image.id] = PlannedImage(
+              id: image.id,
+              fileName: image.fileName,
+              status: ImageParticipationStatus.sentToModel,
+              page: image.page,
+              tokens: image.tokens,
+            );
+          }
+          chunks.add(
+            _chunkFor(
+              index: nextChunkIndex++,
+              partIndex: part.index,
+              partCount: inputPlan.partCount,
+              focusSectionIds: focus[index],
+              limit: sizes[index],
+              part: part,
+              data: data,
+              attachments: partsWithChunks.contains(part.index)
+                  ? const <GenerationAttachment>[]
+                  : _attachmentsForPart(
+                      data: data,
+                      part: part,
+                      firstBatchOfPart: true,
+                    ),
+              config: config,
+              batchImages: batchImages,
+              catalogImages: catalogImages,
+            ),
+          );
+        }
+        partsWithChunks.add(part.index);
+      }
+    }
+
+    return GenerationPlan(
+      validity: validity,
+      estimate: _estimate(
+        chunks: chunks,
+        inputPlan: inputPlan,
+        limits: limits,
+        overhead: overhead,
+        config: config,
+      ),
+      budget: _trace(
+        inputPlan: inputPlan,
+        limits: limits,
+        overhead: overhead,
+        unknownFields: _unknownFields(limits, inputPlan),
+        outputTokens: inputPlan.maxTokens,
+      ),
+      chunks: chunks,
+      requestedCards: requestedCards ?? 0,
+      retryAllowanceRequests: config.retryAllowanceRequests,
+      unknownFields: _unknownFields(limits, inputPlan),
+      images: imageStatuses.values.toList(growable: false),
+      capabilitySources: capabilities.sources,
+      mode: promptOnly ? GenerationMode.promptOnly : GenerationMode.materials,
+      promptOnlyPrompt: promptOnly ? (wishes ?? '') : null,
+      inputPlan: inputPlan,
+      allocation: allocation,
+    );
+  }
+
+  // -- данные ---------------------------------------------------------------
+
+  /// Пустой план: материалов нет, темы тоже (не ошибка плана).
+  GenerationPlan _emptyPlan({
+    required ModelLimits limits,
+    required GenerationOverheadTokens overhead,
+  }) {
+    final InputPlan inputPlan = InputPlanner(config: config.planning).plan(
+      sections: const <InputSection>[],
+      limits: limits,
+      fixedTokens: overhead.fixedTokens,
+      desiredOutputTokens: 0,
+    );
+    return GenerationPlan(
+      validity: const PlanValidity.valid(),
+      estimate: _estimate(
+        chunks: const <PlannedChunk>[],
+        inputPlan: inputPlan,
+        limits: limits,
+        overhead: overhead,
+        config: config,
+      ),
+      budget: _trace(
+        inputPlan: inputPlan,
+        limits: limits,
+        overhead: overhead,
+        unknownFields: _unknownFields(limits, inputPlan),
+        outputTokens: 0,
+      ),
+      chunks: const <PlannedChunk>[],
+      inputPlan: inputPlan,
+      unknownFields: _unknownFields(limits, inputPlan),
+    );
+  }
+
+  _InventoryData _inventoryData(
+    ContentInventory inventory,
+    ContentTokenEstimator estimator,
+  ) {
+    final List<InputSection> sections = <InputSection>[];
+    final Map<String, List<_PieceInfo>> piecesBySection =
+        <String, List<_PieceInfo>>{};
+    final List<InputImage> orphanImages = <InputImage>[];
+    final List<AttachmentUnit> attachments = <AttachmentUnit>[];
+    var shortIndex = 0;
+    for (final DocumentUnit document in inventory.documents) {
+      for (final SectionUnit section in document.sections) {
+        shortIndex++;
+        final List<_PieceInfo> pieces = <_PieceInfo>[];
+        var cursor = 0;
+        for (final TextPiece piece in section.pieces) {
+          if (piece.text.isEmpty) continue;
+          final int index = section.text.indexOf(piece.text, cursor);
+          final int startRel = index >= 0 ? index : cursor;
+          cursor = startRel + piece.text.length;
+          pieces.add(
+            _PieceInfo(
+              unitId: piece.id,
+              startRel: startRel,
+              length: piece.text.length,
+              tokens: piece.tokens,
+            ),
+          );
+        }
+        piecesBySection[section.id] = pieces;
+        sections.add(
+          InputSection(
+            id: section.id,
+            shortId: 's$shortIndex',
+            title: section.title ?? '',
+            text: section.text,
+            tokens: section.tokens,
+            documentName: document.fileName,
+            unitIds: <String>[
+              for (final TextPiece piece in section.pieces) piece.id,
+            ],
+            images: <InputImage>[
+              for (final ImageRef image in section.images)
+                InputImage(
+                  id: image.id,
+                  fileName: image.image.fileName,
+                  bytes: image.image.bytes,
+                  tokens: image.tokens,
+                  page: image.image.page,
+                  sectionId: section.id,
+                ),
+            ],
+          ),
+        );
+      }
+    }
+    for (final OrphanImageUnit orphan in inventory.orphanImages) {
+      orphanImages.add(
+        InputImage(
+          id: orphan.image.id,
+          fileName: orphan.image.image.fileName,
+          bytes: orphan.image.image.bytes,
+          tokens: orphan.image.tokens,
+          page: orphan.image.image.page,
+        ),
+      );
+    }
+    attachments.addAll(inventory.attachments);
+    return _InventoryData(
+      sections: sections,
+      piecesBySection: piecesBySection,
+      orphanImages: orphanImages,
+      attachments: attachments,
+    );
+  }
+
+  /// План для инвентаря без текста: только вложения (страницы скана/картинки).
+  InputPlan _attachmentsOnlyPlan({
+    required _InventoryData data,
+    required ModelLimits limits,
+    required GenerationOverheadTokens overhead,
+    required int desired,
+  }) {
+    final int tokens = data.attachmentPageTokens;
+    final int bytes = data.attachmentPageBytes;
+    final RequestBudget budget = RequestBudget.compute(
+      limits: limits,
+      fixedTokens: overhead.fixedTokens,
+      materialTokens: tokens,
+      desiredOutputTokens: desired,
+      accuracy: InputAccuracy.estimated,
+      config: config.planning,
+      requestBytes: bytes + config.planning.jsonBodyOverheadBytes,
+    );
+    final bool whole = !budget.contextExceeded &&
+        budget.maxTokens >= config.planning.tokensFor(config.planning.minBatchCards);
+    final InputPart part = InputPart(
+      index: 0,
+      sections: const <InputSection>[],
+      materialsText: '',
+      tokens: 0,
+      bytes: bytes + config.planning.jsonBodyOverheadBytes,
+      images: List<InputImage>.unmodifiable(data.orphanImages),
+    );
+    return InputPlan(
+      strategy: whole ? InputStrategy.wholeDocument : InputStrategy.fragmented,
+      parts: List<InputPart>.unmodifiable(<InputPart>[part]),
+      fixedTokens: overhead.fixedTokens,
+      inputTokens: budget.inputTokens,
+      maxTokens: budget.maxTokens,
+      accuracy: InputAccuracy.estimated,
+      budget: budget,
+      materialTokens: tokens,
+      contextTokens: limits.contextTokens.value,
+      warnings: List<PlanWarningCode>.unmodifiable(<PlanWarningCode>[
+        if (limits.contextTokens.isKnown == false)
+          PlanWarningCode.contextUnconfirmed,
+        if (budget.payloadExceeded) PlanWarningCode.payloadLimited,
+      ]),
+    );
+  }
+
+  List<AllocationSection> _allocationSections(
+    _InventoryData data,
+    String? wishes,
+  ) {
+    final List<String> keywords = _wishKeywords(wishes);
+    final List<AllocationSection> result = <AllocationSection>[];
+    for (final InputSection section in data.sections) {
+      final SectionFeatures features = SectionFeatures.of(
+        title: section.title,
+        text: section.text,
+      );
+      final AllocationSection base = AllocationSection.fromFeatures(
+        id: section.id,
+        title: section.title,
+        features: features,
+      );
+      result.add(
+        AllocationSection(
+          id: base.id,
+          title: base.title,
+          weight: CardAllocator.weightedForWishes(
+            base.weight,
+            section.title,
+            keywords,
+          ),
+          capacity: base.capacity,
+          kind: base.kind,
+          meaningfulTokens: base.meaningfulTokens,
+          density: base.density,
+        ),
+      );
+    }
+    return result;
+  }
+
+  List<String> _wishKeywords(String? wishes) {
+    final String text = wishes?.trim() ?? '';
+    if (text.isEmpty) return const <String>[];
+    return <String>[
+      for (final Match match in RegExp(
+        r'[A-Za-zА-Яа-яЁё0-9]{4,}',
+        unicode: true,
+      ).allMatches(text))
+        match.group(0)!.toLowerCase(),
+    ];
+  }
+
+  // -- фрагменты ------------------------------------------------------------
+
+  PlannedChunk _chunkFor({
+    required int index,
+    required int partIndex,
+    required int partCount,
+    required List<String> focusSectionIds,
+    required int limit,
+    required InputPart part,
+    required _InventoryData data,
+    required List<GenerationAttachment> attachments,
+    required GenerationChunkPlannerConfig config,
+    required List<InputImage> batchImages,
+    required List<InputImage> catalogImages,
+  }) {
+    final RenderedMaterials rendered = renderInputMaterials(part.sections);
+    final List<UnitSpan> units = <UnitSpan>[];
+    for (final InputSection section in part.sections) {
+      final int base = rendered.sectionStarts[section.id] ?? 0;
+      final List<_PieceInfo> pieces =
+          data.piecesBySection[section.id] ?? const <_PieceInfo>[];
+      if (pieces.isEmpty && section.text.isNotEmpty) {
+        units.add(
+          UnitSpan(
+            unitId: section.id,
+            start: base,
+            end: base + section.text.length,
+            tokens: section.tokens,
+          ),
+        );
+        continue;
+      }
+      for (final _PieceInfo piece in pieces) {
+        units.add(
+          UnitSpan(
+            unitId: piece.unitId,
+            start: base + piece.startRel,
+            end: base + piece.startRel + piece.length,
+            tokens: piece.tokens,
+          ),
+        );
+      }
+    }
+    final List<DocumentImage> imageParts = <DocumentImage>[
+      for (final InputImage image in batchImages) _documentImageOf(image),
+    ];
+    final List<DocumentImage> catalogPart = <DocumentImage>[
+      for (final InputImage image in catalogImages) _documentImageOf(image),
+    ];
+    final int imageTokens = batchImages.fold<int>(
+      0,
+      (int sum, InputImage image) => sum + image.tokens,
+    );
+    final int bodyBytes =
+        utf8.encode(rendered.text).length +
+        _base64Bytes(batchImages) +
+        config.jsonBodyOverheadBytes;
+    final bool hasText = rendered.text.trim().isNotEmpty;
+    final bool hasParts = imageParts.isNotEmpty || attachments.isNotEmpty;
+    final ChunkKind kind = hasText && hasParts
+        ? ChunkKind.mixed
+        : hasText
+        ? ChunkKind.text
+        : hasParts
+        ? ChunkKind.images
+        : ChunkKind.catalog;
+    return PlannedChunk(
+      index: index,
+      kind: kind,
+      units: units,
+      imageParts: imageParts,
+      catalogOnly: catalogPart,
+      imagePartIds: <String>[for (final InputImage image in batchImages) image.id],
+      catalogOnlyIds: <String>[
+        for (final InputImage image in catalogImages) image.id,
+      ],
+      attachments: attachments,
+      textTokens: part.tokens,
+      imageTokens: imageTokens,
+      bodyBytes: bodyBytes,
+      limit: limit,
+      materialsText: rendered.text,
+      focusSectionIds: focusSectionIds,
+      partIndex: partIndex,
+      partCount: partCount,
+    );
+  }
+
+  /// Фрагмент для инвентаря без текста: вложения (PDF/сканы) целиком.
+  PlannedChunk _attachmentChunk({
+    required PlannedBatch batch,
+    required int index,
+    required int partCount,
+    required _InventoryData data,
+    required GenerationChunkPlannerConfig config,
+  }) {
+    final List<GenerationAttachment> attachments = data.allAttachmentPages;
+    final bool first = batch.index == 0;
+    return PlannedChunk(
+      index: index,
+      kind: ChunkKind.images,
+      imageParts: const <DocumentImage>[],
+      imagePartIds: const <String>[],
+      catalogOnly: const <DocumentImage>[],
+      catalogOnlyIds: const <String>[],
+      attachments: first ? attachments : const <GenerationAttachment>[],
+      units: const <UnitSpan>[],
+      textTokens: 0,
+      imageTokens: data.attachmentPageTokens,
+      bodyBytes: data.attachmentPageBytes + config.jsonBodyOverheadBytes,
+      limit: batch.limit,
+      materialsText: '',
+      partIndex: 0,
+      partCount: partCount,
+    );
+  }
+
+  /// Все изображения части (по разделам части + orphan в первой части).
+  List<InputImage> _imagesOfPart(_InventoryData data, InputPart part) {
+    final List<InputImage> images = <InputImage>[];
+    final Set<String> seen = <String>{};
+    for (final InputSection section in part.sections) {
+      for (final InputImage image in section.images) {
+        if (seen.add(image.id)) images.add(image);
+      }
+    }
+    if (part.index == 0) {
+      for (final InputImage image in data.orphanImages) {
+        if (seen.add(image.id)) images.add(image);
+      }
+    }
+    return images;
+  }
+
+  /// Раскладывает изображения по запросам по лимитам image-частей и байтов.
+  List<List<InputImage>> _imageBins(
+    List<InputImage> images,
+    ModelLimits limits,
+  ) {
+    if (images.isEmpty) return const <List<InputImage>>[];
+    final int? maxCount = limits.maxImagesPerRequest.value;
+    final int? maxBytes = limits.maxImageBytesPerRequest.value;
+    final List<List<InputImage>> bins = <List<InputImage>>[];
+    List<InputImage> current = <InputImage>[];
+    var currentBytes = 0;
+    for (final InputImage image in images) {
+      final bool countFull =
+          maxCount != null && current.length >= math.max(1, maxCount);
+      final bool bytesFull =
+          maxBytes != null && current.isNotEmpty &&
+              currentBytes + image.bytes.length > maxBytes;
+      if (current.isNotEmpty && (countFull || bytesFull)) {
+        bins.add(current);
+        current = <InputImage>[];
+        currentBytes = 0;
+      }
+      current.add(image);
+      currentBytes += image.bytes.length;
+    }
+    if (current.isNotEmpty) bins.add(current);
+    return bins;
+  }
+
+  /// Сбалансированные размеры партий (∑ = [total], каждая ≥ 1).
+  List<int> _balancedSizes(int total, int count) {
+    final int safeCount = math.max(1, math.min(count, total));
+    final int base = total ~/ safeCount;
+    final int remainder = total % safeCount;
+    return <int>[
+      for (var index = 0; index < safeCount; index++)
+        math.max(1, base + (index < remainder ? 1 : 0)),
+    ];
+  }
+  DocumentImage _documentImageOf(InputImage image) => DocumentImage(
+    fileName: image.fileName,
+    bytes: image.bytes,
+    mediaType:
+        attachmentMediaTypeForFileName(image.fileName) ??
+        AttachmentMediaType.png,
+    id: image.id,
+    page: image.page,
+  );
+
+  int _base64Bytes(Iterable<InputImage> images) {
+    var total = 0;
+    for (final InputImage image in images) {
+      total += ((image.bytes.length + 2) ~/ 3) * 4;
+    }
+    return total;
+  }
+
+  List<GenerationAttachment> _attachmentsForPart({
+    required _InventoryData data,
+    required InputPart part,
+    required bool firstBatchOfPart,
+  }) {
+    if (!firstBatchOfPart || data.attachments.isEmpty) {
+      return const <GenerationAttachment>[];
+    }
+    final Set<String> files = <String>{
+      for (final InputSection section in part.sections) section.documentName,
+    };
+    final List<GenerationAttachment> result = <GenerationAttachment>[];
+    for (final AttachmentUnit unit in data.attachments) {
+      final bool fits = files.isEmpty || files.contains(unit.fileName);
+      if (!fits) continue;
+      for (final PageUnit page in unit.pages) {
+        result.add(
+          GenerationAttachment(
+            fileName: unit.fileName,
+            mediaType: unit.mediaType,
+            bytes: page.bytes,
+            pageNumber: page.pageNumber,
+            groupKey: unit.groupKey,
+          ),
+        );
+      }
+    }
+    return List<GenerationAttachment>.unmodifiable(result);
+  }
+
+  // -- служебное ------------------------------------------------------------
+
+  CardAllocation _syntheticAllocation({
+    required int? requestedCards,
+    required int batchCap,
+  }) {
+    final int safeCap = math.max(1, batchCap);
+    final int achievable = requestedCards ?? safeCap;
+    return CardAllocation(
+      planned: const <String, int>{},
+      requested: requestedCards,
+      achievable: achievable,
+      belowRequested: false,
+    );
+  }
+
+  List<PlannedBatch> _batchesWithoutSections({
+    required InputPlan inputPlan,
+    required CardAllocation allocation,
+    required GenerationPlanningConfig planning,
+  }) {
+    final int perBatch = math.max(
+      1,
+      math.min(
+        planning.batchCardsCeiling,
+        planning.cardsFor(inputPlan.maxTokens),
+      ),
+    );
+    final int total = allocation.achievable;
+    if (total <= 0 || inputPlan.parts.isEmpty) return const <PlannedBatch>[];
+    final int count = (total / perBatch).ceil();
+    final int base = total ~/ count;
+    final int remainder = total % count;
+    return <PlannedBatch>[
+      for (var index = 0; index < count; index++)
+        PlannedBatch(
+          index: index,
+          partIndex: 0,
+          partCount: inputPlan.partCount,
+          focusSectionIds: const <String>[],
+          limit: math.max(1, base + (index < remainder ? 1 : 0)),
+        ),
+    ];
+  }
+
+  bool _hasUnplaceableUnit(_InventoryData data, InputPlan inputPlan) {
+    final int? budget = inputPlan.materialBudgetPerPart;
+    if (budget == null) return false;
+    for (final InputSection section in data.sections) {
+      if (section.tokens > budget) return true;
+    }
+    return false;
+  }
+
+  bool _assumedImageLimits(ModelCapabilities capabilities) {
+    return capabilities.maxImagesPerRequest == null ||
+        capabilities.maxImageBytesPerImage == null ||
+        capabilities.maxRequestBytes == null;
+  }
+
+  List<String> _unknownFields(ModelLimits limits, InputPlan inputPlan) {
+    final Set<String> fields = <String>{
+      if (!limits.contextTokens.isKnown) 'context_window',
+      if (!limits.maxOutputTokens.isKnown) 'max_output_tokens',
+    };
+    if (inputPlan.images.isNotEmpty &&
+        limits.supportsImageInput.source != CapabilitySource.providerApi) {
+      fields.add('image_limits');
+    }
+    return List<String>.unmodifiable(fields);
+  }
+
+  GenerationEstimate _estimate({
+    required List<PlannedChunk> chunks,
+    required InputPlan inputPlan,
+    required ModelLimits limits,
+    required GenerationOverheadTokens overhead,
+    required GenerationChunkPlannerConfig config,
+  }) {
+    final GenerationPlanningConfig planning = config.planning;
+    final int inputText = inputPlan.parts.fold<int>(
+      0,
+      (int sum, InputPart part) => sum + part.tokens,
+    );
+    final int imageTokens = inputPlan.parts.fold<int>(
+      0,
+      (int sum, InputPart part) =>
+          sum +
+          part.images.fold<int>(
+            0,
+            (int inner, InputImage image) => inner + image.tokens,
+          ),
+    );
+    final int requests = math.max(1, chunks.length);
+    final int reserved = planning.tokensFor(
+      math.min(
+        planning.batchCardsCeiling,
+        chunks.isEmpty
+            ? planning.minBatchCards
+            : chunks.fold<int>(0, (int sum, PlannedChunk c) => sum + c.limit),
+      ),
+    );
+    final int batchInput = inputPlan.parts.isEmpty
+        ? inputPlan.inputTokens
+        : inputPlan.parts.fold<int>(
+            0,
+            (int sum, InputPart part) =>
+                sum +
+                RequestBudget.compute(
+                  limits: limits,
+                  fixedTokens: overhead.fixedTokens + overhead.outlineTokens,
+                  materialTokens:
+                      part.tokens +
+                      part.images.fold<int>(
+                        0,
+                        (int inner, InputImage image) => inner + image.tokens,
+                      ),
+                  desiredOutputTokens: inputPlan.maxTokens,
+                  config: planning,
+                ).inputTokens,
+          );
+    final int outputTotal = reserved * requests;
+    final int totalTokens = batchInput + outputTotal;
+    GenerationCost? cost;
+    final GenerationPricing? pricing = limits.pricing.value;
+    if (pricing != null) {
+      cost = pricing.costFor(
+        inputTokens: batchInput,
+        outputTokens: outputTotal,
+      );
+    }
+    return GenerationEstimate(
+      inputTextTokens: inputText,
+      imageTokens: imageTokens,
+      fixedPromptTokens: overhead.systemPromptTokens,
+      wrapperTokens: overhead.wrapperTokens + overhead.taskTailTokens,
+      schemaTokens: overhead.schemaTokens,
+      catalogTokens: 0,
+      reservedOutputTokens: outputTotal,
+      expectedOutputTokens: outputTotal,
+      totalTokens: totalTokens,
+      plannedChunks: inputPlan.partCount,
+      plannedRequests: chunks.length,
+      retryAllowanceRequests: config.retryAllowanceRequests,
+      pricingState: limits.pricing.value?.state ?? PricingState.unknown,
+      estimatorVersion: estimator.version,
+      inputCost: cost?.input,
+      outputCost: cost?.output,
+      totalCost: cost?.total,
+      currency: cost?.currency,
+      unknownFields: _unknownFields(limits, inputPlan),
+      confidence: inputPlan.accuracy == InputAccuracy.exact ? 1 : 0.6,
+    );
+  }
+
+  GenerationPlan _invalidPlan(
+    PlanInvalidReason reason, {
+    required InputPlan inputPlan,
+    required ModelLimits limits,
+    required GenerationOverheadTokens overhead,
+    required int? requestedCards,
+    GenerationMode mode = GenerationMode.materials,
+  }) {
+    return GenerationPlan(
+      validity: PlanValidity.invalid(
+        reason,
+        neededTokens: inputPlan.materialBudgetPerPart,
+        availableTokens: inputPlan.budget.contextTokens,
+      ),
+      estimate: _estimate(
+        chunks: const <PlannedChunk>[],
+        inputPlan: inputPlan,
+        limits: limits,
+        overhead: overhead,
+        config: config,
+      ),
+      budget: _trace(
+        inputPlan: inputPlan,
+        limits: limits,
+        overhead: overhead,
+        unknownFields: _unknownFields(limits, inputPlan),
+        outputTokens: inputPlan.maxTokens,
+      ),
+      chunks: const <PlannedChunk>[],
+      requestedCards: requestedCards ?? 0,
+      retryAllowanceRequests: config.retryAllowanceRequests,
+      mode: mode,
+      promptOnlyPrompt: mode == GenerationMode.promptOnly
+          ? 'план по теме'
+          : null,
+      inputPlan: inputPlan,
+      unknownFields: _unknownFields(limits, inputPlan),
+    );
+  }
+
+  /// Трассировка бюджета для плана/диагностики (старые поля сохранены).
+  BudgetTrace _trace({
+    required InputPlan inputPlan,
+    required ModelLimits limits,
+    required GenerationOverheadTokens overhead,
+    required List<String> unknownFields,
+    required int outputTokens,
+  }) {
+    final int imageTokens = inputPlan.parts.fold<int>(
+      0,
+      (int sum, InputPart part) =>
+          sum +
+          part.images.fold<int>(
+            0,
+            (int inner, InputImage image) => inner + image.tokens,
+          ),
+    );
+    return BudgetTrace(
+      formula: inputPlan.contextTokens == null
+          ? GenerationBudget.formulaUnknownContext
+          : GenerationBudget.formulaKnownContext,
+      source: inputPlan.contextTokens == null
+          ? BudgetSource.assumption
+          : BudgetSource.capabilities,
+      contextWindowTokens: inputPlan.contextTokens,
+      contextSource: limits.contextTokens.source,
+      outputCapTokens: config.planning.outputCapFor(limits),
+      outputCapAssumed: !limits.maxOutputTokens.isKnown,
+      expectedOutputTokens: outputTokens,
+      reservedOutputTokens: inputPlan.maxTokens,
+      fixedOverheadTokens: overhead.fixedTokens,
+      systemPromptTokens: overhead.systemPromptTokens,
+      schemaTokens: overhead.schemaTokens,
+      wrapperTokens: overhead.wrapperTokens + overhead.taskTailTokens,
+      catalogTokens: 0,
+      imageTokens: imageTokens,
+      safetyMarginTokens: inputPlan.budget.marginTokens,
+      minWorkableInputTokens: 0,
+      maxInputTokensLimit: inputPlan.budget.maxInputTokensLimit,
+      maxRequestBytesLimit: inputPlan.budget.maxRequestBytesLimit,
+      inputBudget: inputPlan.inputTokens,
+      unknownFields: unknownFields,
+    );
   }
 }
 
-/// Проверка покрытия плана: все исходные единицы учтены (задание 3.6).
-///
-/// Используется тестами и диагностикой: планировщик обязан либо включить
-/// единицу во фрагмент (в том числе строкой каталога), либо записать её в
-/// [GenerationPlan.omitted] с причиной. Помогает ловить регрессии «молча
-/// потеряли изображение/абзац/страницу вложения».
-class GenerationPlanCoverage {
+/// Покрытие плана: все исходные единицы учтены ровно один раз на часть.
+final class GenerationPlanCoverage {
   const GenerationPlanCoverage._({
     required this.missingUnits,
     required this.duplicatedUnits,
@@ -236,15 +1138,11 @@ class GenerationPlanCoverage {
           for (final TextPiece piece in section.pieces) piece.id,
     ];
     final Set<String> expectedPieceSet = expectedPieces.toSet();
-    final Map<String, int> spanCounts = <String, int>{};
+    final Map<String, Set<int>> unitParts = <String, Set<int>>{};
     final Set<String> coveredPieces = <String>{};
     for (final PlannedChunk chunk in plan.chunks) {
       for (final UnitSpan span in chunk.units) {
-        spanCounts.update(
-          span.unitId,
-          (int value) => value + 1,
-          ifAbsent: () => 1,
-        );
+        (unitParts[span.unitId] ??= <int>{}).add(chunk.partIndex);
         final String? root = _rootPieceId(span.unitId, expectedPieceSet);
         if (root != null) coveredPieces.add(root);
       }
@@ -254,10 +1152,9 @@ class GenerationPlanCoverage {
         if (!coveredPieces.contains(id)) id,
     ];
     final List<String> duplicatedUnits = <String>[
-      for (final MapEntry<String, int> entry in spanCounts.entries)
-        if (entry.value > 1) entry.key,
+      for (final MapEntry<String, Set<int>> entry in unitParts.entries)
+        if (entry.value.length > 1) entry.key,
     ];
-
     final List<String> expectedImages = <String>[
       for (final ImageRef image in inventory.allImages) image.id,
     ];
@@ -270,42 +1167,9 @@ class GenerationPlanCoverage {
       for (final String id in expectedImages)
         if (!plannedImages.contains(id)) id,
     ];
-
-    final Map<String, int> expectedPages = <String, int>{};
-    for (final AttachmentUnit unit in inventory.attachments) {
-      for (final PageUnit page in unit.pages) {
-        expectedPages.update(
-          page.id,
-          (int value) => value + 1,
-          ifAbsent: () => 1,
-        );
-      }
-    }
-    final Map<String, int> plannedPages = <String, int>{};
-    for (final PlannedChunk chunk in plan.chunks) {
-      for (final GenerationAttachment attachment in chunk.attachments) {
-        final String id = _attachmentPageId(attachment);
-        plannedPages.update(id, (int value) => value + 1, ifAbsent: () => 1);
-      }
-    }
-    final List<String> missingPages = <String>[
-      for (final MapEntry<String, int> entry in expectedPages.entries)
-        if ((plannedPages[entry.key] ?? 0) < entry.value) entry.key,
-    ];
-    final List<String> duplicatedPages = <String>[
-      for (final MapEntry<String, int> entry in plannedPages.entries)
-        if (entry.value > (expectedPages[entry.key] ?? 0)) entry.key,
-    ];
-
     return GenerationPlanCoverage._(
-      missingUnits: List<String>.unmodifiable(<String>[
-        ...missingText,
-        ...missingPages,
-      ]),
-      duplicatedUnits: List<String>.unmodifiable(<String>[
-        ...duplicatedUnits,
-        ...duplicatedPages,
-      ]),
+      missingUnits: List<String>.unmodifiable(missingText),
+      duplicatedUnits: List<String>.unmodifiable(duplicatedUnits),
       uncoveredImages: List<String>.unmodifiable(uncoveredImages),
     );
   }
@@ -313,7 +1177,7 @@ class GenerationPlanCoverage {
   /// Единицы текста/страницы вложений, которых нет ни в одном фрагменте.
   final List<String> missingUnits;
 
-  /// Единицы, попавшие больше одного раза (полные id, включая под-фрагменты).
+  /// Единицы, попавшие больше одного раза в одну часть.
   final List<String> duplicatedUnits;
 
   /// Изображения, не попавшие ни в части, ни в каталог, ни в `omitted`.
@@ -345,2188 +1209,62 @@ String? _rootPieceId(String spanId, Set<String> expectedPieces) {
   return null;
 }
 
-String _attachmentPageId(GenerationAttachment attachment) {
-  final String unitId = contentAttachmentId(
-    attachment.fileName,
-    groupKey: attachment.groupKey,
+/// Данные инвентаря, подготовленные для трёх планировщиков.
+final class _InventoryData {
+  const _InventoryData({
+    required this.sections,
+    required this.piecesBySection,
+    required this.orphanImages,
+    required this.attachments,
+  });
+
+  final List<InputSection> sections;
+  final Map<String, List<_PieceInfo>> piecesBySection;
+  final List<InputImage> orphanImages;
+  final List<AttachmentUnit> attachments;
+
+  /// true, если модели нужно передавать изображения/сканы.
+  bool get hasVisionPayload =>
+      attachments.isNotEmpty || orphanImages.isNotEmpty;
+
+  /// Все страницы вложений как [GenerationAttachment] (порядок инвентаря).
+  List<GenerationAttachment> get allAttachmentPages => <GenerationAttachment>[
+    for (final AttachmentUnit unit in attachments)
+      for (final PageUnit page in unit.pages)
+        GenerationAttachment(
+          fileName: unit.fileName,
+          mediaType: unit.mediaType,
+          bytes: page.bytes,
+          pageNumber: page.pageNumber,
+          groupKey: unit.groupKey,
+        ),
+  ];
+
+  int get attachmentPageTokens => attachments.fold<int>(
+    0,
+    (int sum, AttachmentUnit unit) =>
+        sum + unit.pages.fold<int>(0, (int inner, PageUnit page) => inner + page.tokens),
   );
-  return contentPageId(unitId, attachment.pageNumber);
+
+  int get attachmentPageBytes => attachments.fold<int>(
+    0,
+    (int sum, AttachmentUnit unit) =>
+        sum +
+        unit.pages.fold<int>(0, (int inner, PageUnit page) => inner + ((page.bytes.length + 2) ~/ 3) * 4),
+  );
 }
 
-// ---------------------------------------------------------------------------
-// Реализация
-// ---------------------------------------------------------------------------
-
-/// Состояние одного фрагмента во время упаковки.
-class _ChunkDraft {
-  final List<_FragmentRecord> fragments = <_FragmentRecord>[];
-  final StringBuffer text = StringBuffer();
-  final List<String> documentIds = <String>[];
-  final List<String> sectionIds = <String>[];
-  final List<_ImageEntry> parts = <_ImageEntry>[];
-  final List<_ImageEntry> extraCatalog = <_ImageEntry>[];
-  final List<_PlannedAttachment> attachments = <_PlannedAttachment>[];
-  final Set<String> partIds = <String>{};
-
-  int textTokens = 0;
-  int textBytes = 0;
-  int labelTokens = 0;
-  int labelBytes = 0;
-  String? lastDocumentId;
-  String? lastSectionId;
-  int splitDepth = 0;
-
-  bool get isEmpty =>
-      fragments.isEmpty &&
-      parts.isEmpty &&
-      extraCatalog.isEmpty &&
-      attachments.isEmpty;
-
-  bool get isNotEmpty => !isEmpty;
-
-  int get imageTokens => parts.fold<int>(
-    0,
-    (int total, _ImageEntry part) => total + part.image.tokens,
-  );
-
-  int get imageBytes => parts.fold<int>(
-    0,
-    (int total, _ImageEntry part) => total + part.image.image.bytes.length,
-  );
-
-  int get attachmentTokens => attachments.fold<int>(
-    0,
-    (int total, _PlannedAttachment attachment) => total + attachment.tokens,
-  );
-
-  int get attachmentBytes => attachments.fold<int>(
-    0,
-    (int total, _PlannedAttachment attachment) => total + attachment.bytes,
-  );
-
-  int get imagePartCount => parts.length + attachments.length;
-
-  int get totalImageBytes => imageBytes + attachmentBytes;
-}
-
-/// Запись о размещённом фрагменте текста: id единицы и границы в тексте
-/// фрагмента (для [UnitSpan]).
-class _FragmentRecord {
-  const _FragmentRecord({
+/// Смещение единицы текста внутри раздела.
+final class _PieceInfo {
+  const _PieceInfo({
     required this.unitId,
+    required this.startRel,
+    required this.length,
     required this.tokens,
-    required this.start,
-    required this.end,
   });
 
   final String unitId;
+  final int startRel;
+  final int length;
   final int tokens;
-  final int start;
-  final int end;
 }
-
-/// Фрагмент текста после дробления (может быть частью [TextPiece]).
-class _TextFragment {
-  const _TextFragment({
-    required this.unitId,
-    required this.text,
-    required this.kind,
-    required this.tokens,
-    required this.splitDepth,
-  });
-
-  /// id единицы плана (исходный или производный `…~N`).
-  final String unitId;
-
-  /// Текст фрагмента (конкатенация даёт исходный текст единицы).
-  final String text;
-
-  /// Вид границы.
-  final TextPieceKind kind;
-
-  /// Оценка токенов.
-  final int tokens;
-
-  /// Глубина дробления.
-  final int splitDepth;
-}
-
-/// Строка каталога изображения с посчитанными токенами и байтами.
-class _ImageEntry {
-  const _ImageEntry({
-    required this.image,
-    required this.line,
-    required this.tokens,
-    required this.bytes,
-  });
-
-  final ImageRef image;
-  final String line;
-  final int tokens;
-  final int bytes;
-
-  String get id => image.id;
-}
-
-/// Данные документа: каталог и изображения разделов.
-class _DocumentPlanData {
-  _DocumentPlanData({required this.document, required this.catalog}) {
-    for (final _ImageEntry entry in catalog) {
-      byId[entry.id] = entry;
-    }
-  }
-
-  final DocumentUnit document;
-  final List<_ImageEntry> catalog;
-  final Map<String, _ImageEntry> byId = <String, _ImageEntry>{};
-  final Map<String, List<_ImageEntry>> bySection =
-      <String, List<_ImageEntry>>{};
-}
-
-/// Вложение, разложенное по страницам для упаковки.
-class _PlannedAttachment {
-  const _PlannedAttachment({
-    required this.unit,
-    required this.page,
-    required this.tokens,
-    required this.bytes,
-  });
-
-  final AttachmentUnit unit;
-  final PageUnit page;
-  final int tokens;
-  final int bytes;
-
-  int get labelTokens => 0;
-
-  int get labelBytes => 0;
-}
-
-/// Кандидат на добавление во фрагмент (без мутации текущего состояния).
-class _Candidate {
-  const _Candidate({
-    required this.textTokens,
-    required this.textBytes,
-    required this.labelTokens,
-    required this.labelBytes,
-    required this.parts,
-    required this.partIds,
-    required this.extraCatalog,
-    required this.attachments,
-    required this.documentIds,
-  });
-
-  final int textTokens;
-  final int textBytes;
-  final int labelTokens;
-  final int labelBytes;
-  final List<_ImageEntry> parts;
-  final Set<String> partIds;
-  final List<_ImageEntry> extraCatalog;
-  final List<_PlannedAttachment> attachments;
-  final List<String> documentIds;
-
-  int get imageTokens => parts.fold<int>(
-    0,
-    (int total, _ImageEntry part) => total + part.image.tokens,
-  );
-
-  int get imageBytes => parts.fold<int>(
-    0,
-    (int total, _ImageEntry part) => total + part.image.image.bytes.length,
-  );
-
-  int get attachmentTokens => attachments.fold<int>(
-    0,
-    (int total, _PlannedAttachment attachment) => total + attachment.tokens,
-  );
-
-  int get attachmentBytes => attachments.fold<int>(
-    0,
-    (int total, _PlannedAttachment attachment) => total + attachment.bytes,
-  );
-
-  int get imagePartCount => parts.length + attachments.length;
-}
-
-/// Подобранный каталог и размеры тела.
-class _Fit {
-  const _Fit({
-    required this.catalog,
-    required this.catalogTokens,
-    required this.catalogBytes,
-    required this.bodyBytes,
-  });
-
-  final List<_ImageEntry> catalog;
-  final int catalogTokens;
-  final int catalogBytes;
-  final int bodyBytes;
-}
-
-/// Результат попытки разместить единицу.
-enum _PlaceResult {
-  /// Размещено в текущем фрагменте.
-  placed,
-
-  /// Содержимое не влезло, но текущий фрагмент непуст: закрыть и повторить.
-  needsNewChunk,
-
-  /// Даже в пустом фрагменте не влезло — нужно дробить текст.
-  split,
-}
-
-/// Внутренний сигнал о невыполнимости плана.
-class _PlanAbort implements Exception {
-  const _PlanAbort(this.reason, {this.neededTokens, this.availableTokens});
-
-  final PlanInvalidReason reason;
-  final int? neededTokens;
-  final int? availableTokens;
-}
-
-/// Один прогон планирования.
-class _PlanRun {
-  _PlanRun({
-    required this.estimator,
-    required this.config,
-    required this.capabilities,
-    required this.overhead,
-    required this.budgetConfig,
-    required this.requestedCards,
-    this.catalogLineBuilder,
-  });
-
-  final ContentTokenEstimator estimator;
-  final GenerationChunkPlannerConfig config;
-  final ModelCapabilities capabilities;
-  final GenerationOverheadTokens overhead;
-  final GenerationBudgetConfig budgetConfig;
-  final int? requestedCards;
-  final ImageCatalogLineBuilder? catalogLineBuilder;
-
-  final List<_DocumentPlanData> _documents = <_DocumentPlanData>[];
-  final Map<String, _DocumentPlanData> _documentById =
-      <String, _DocumentPlanData>{};
-  final List<_PlannedAttachment> _attachments = <_PlannedAttachment>[];
-  final List<_ImageEntry> _orphanImages = <_ImageEntry>[];
-  final Map<String, _ImageEntry> _allImageEntries = <String, _ImageEntry>{};
-  final List<PageUnit> _inventoryPages = <PageUnit>[];
-
-  final List<_ChunkDraft> _drafts = <_ChunkDraft>[];
-  final List<OmittedUnit> _omitted = <OmittedUnit>[];
-  final Set<String> _omittedIds = <String>{};
-  final Set<String> _placedPartIds = <String>{};
-  final Map<String, int> _splitCounters = <String, int>{};
-
-  late final int _cardsByOutputCap;
-  late final int _limitTarget;
-  late final int _contentAllowance;
-  int _softTarget = 1;
-  late final int _maxImagesPerChunk;
-  late final int _maxImageBytesPerImage;
-  late final int _maxImageBytesPerRequest;
-  late final int _payloadLimit;
-  late final int _outputCap;
-  late final GenerationRequestLimits _limits;
-
-  /// SHA-256 байтов изображений, уже отправленных частями в этом плане.
-  ///
-  /// Одинаковые байты не отправляются дважды (L126): второе изображение
-  /// остаётся в каталоге, а не молча выкидывается сервисом (TASK 03, D11).
-  final Set<String> _placedPartDigests = <String>{};
-
-  _ChunkDraft? _current;
-  int _startedChunks = 0;
-  bool _imageEstimateAssumed = false;
-
-  /// Строит план.
-  GenerationPlan execute(ContentInventory inventory) {
-    try {
-      _prepareBudget();
-    } on _PlanAbort catch (abort) {
-      return _invalid(
-        abort.reason,
-        neededTokens: abort.neededTokens,
-        availableTokens: abort.availableTokens,
-      );
-    }
-    _collectInventory(inventory);
-    if (_documents.isEmpty && _attachments.isEmpty && _orphanImages.isEmpty) {
-      return _emptyPlan();
-    }
-    if (!capabilities.supportsVision && _attachments.isNotEmpty) {
-      return _invalid(PlanInvalidReason.imagesWithoutVision);
-    }
-    _tuneSoftTarget();
-    try {
-      _pack();
-      return _finalize();
-    } on _PlanAbort catch (abort) {
-      return _invalid(
-        abort.reason,
-        neededTokens: abort.neededTokens,
-        availableTokens: abort.availableTokens,
-      );
-    }
-  }
-
-  // -- Подготовка -----------------------------------------------------------
-
-  void _prepareBudget() {
-    _outputCap = budgetOutputCapTokens(capabilities, budgetConfig);
-    _cardsByOutputCap = budgetCardsPerRequestCap(capabilities, budgetConfig);
-    final int requested = requestedCards ?? _cardsByOutputCap;
-    _limitTarget = math.max(1, math.min(requested, _cardsByOutputCap));
-    // Лимиты запроса нужны и для невалидного плана (диагностика допущений),
-    // поэтому резолвятся до проверки бюджета.
-    _limits = resolveGenerationRequestLimits(
-      capabilities,
-      assumedMaxImagesPerRequest: config.assumedMaxImagesPerChunk,
-      assumedMaxImageBytesPerImage: config.assumedMaxImageBytesPerImage,
-      assumedMaxImageBytesPerChunk: config.assumedMaxImageBytesPerChunk,
-      assumedMaxRequestBytes: config.assumedMaxRequestBytes,
-    );
-    _maxImagesPerChunk = _limits.maxImagesPerRequest;
-    _maxImageBytesPerImage = _limits.maxImageBytesPerImage;
-    _maxImageBytesPerRequest = _limits.maxImageBytesPerRequest;
-    _payloadLimit = _limits.maxRequestBytes;
-
-    final GenerationBudget base = GenerationBudget.compute(
-      capabilities: capabilities,
-      limit: _limitTarget,
-      systemPromptTokens: overhead.systemPromptTokens,
-      schemaTokens: overhead.schemaTokens,
-      wrapperTokens: overhead.wrapperTokens,
-      catalogTokens: 0,
-      imageTokens: 0,
-      config: budgetConfig,
-    );
-    _contentAllowance = base.inputBudget;
-    if (!base.isWorkable) {
-      throw _PlanAbort(
-        PlanInvalidReason.contextWindowTooSmall,
-        neededTokens: budgetConfig.minWorkableInputTokens,
-        availableTokens: _contentAllowance,
-      );
-    }
-    final int soft = math.max(
-      1,
-      _limitTarget * config.softTargetMaterialTokensPerCard,
-    );
-    _softTarget = math.min(_contentAllowance, soft);
-  }
-
-  /// Уточняет мягкую цель заполнения по заказу карточек (TASK 03, D20).
-  ///
-  /// `_limitTarget × softTargetMaterialTokensPerCard` — цель «не платить за
-  /// 1M контекста ради нескольких карточек». Но при большом заказе и малом
-  /// `outputCap` она упаковывает материал в слишком мало фрагментов: план
-  /// выдаёт `cap × N` карточек, хотя материала хватает на весь заказ, и
-  /// пользователь видит «достижимо меньше запрошенного» без реальной причины.
-  ///
-  /// Нужное число фрагментов: `ceil(requested / cap)` (если заказ ≤ cap —
-  /// одного фрагмента достаточно, D.5 сам укрупнит лишние). Ограничиваем
-  /// мягкую цель сверху текущей (не раздуваем запросы без нужды) и снизу —
-  /// одним токеном, чтобы прогресс упаковки был гарантирован.
-  void _tuneSoftTarget() {
-    final int? requested = requestedCards;
-    if (requested == null || requested <= 0) return;
-    final int cap = math.max(1, _cardsByOutputCap);
-    final int targetChunks = requested <= cap
-        ? 1
-        : ((requested - 1) ~/ cap) + 1;
-    var totalTextTokens = 0;
-    for (final _DocumentPlanData data in _documents) {
-      for (final SectionUnit section in data.document.sections) {
-        totalTextTokens += section.tokens;
-      }
-    }
-    if (totalTextTokens <= 0 || targetChunks <= 1) return;
-    // Берём 80 % среднего: упаковка идёт по границам разделов и может
-    // перешагнуть мягкую цель на один раздел. Без запаса план иногда получает
-    // на один фрагмент меньше и занижает achievableCards.
-    final int average = (totalTextTokens / targetChunks).ceil();
-    final int perChunk = math.max(
-      config.minSoftTargetMaterialTokens,
-      (average * 4) ~/ 5,
-    );
-    if (perChunk < _softTarget) {
-      _softTarget = perChunk;
-    }
-  }
-
-  void _collectInventory(ContentInventory inventory) {
-    final Set<String> sectionImageIds = <String>{};
-    for (final DocumentUnit document in inventory.documents) {
-      final List<_ImageEntry> catalog = <_ImageEntry>[];
-      for (var index = 0; index < document.images.length; index++) {
-        final _ImageEntry entry = _entryFor(document.images[index], index);
-        catalog.add(entry);
-        _allImageEntries[entry.id] = entry;
-      }
-      final _DocumentPlanData data = _DocumentPlanData(
-        document: document,
-        catalog: catalog,
-      );
-      for (final SectionUnit section in document.sections) {
-        final List<_ImageEntry> entries = <_ImageEntry>[];
-        for (final ImageRef image in section.images) {
-          sectionImageIds.add(image.id);
-          final _ImageEntry? existing = data.byId[image.id];
-          final _ImageEntry entry =
-              existing ?? _entryFor(image, catalog.length + entries.length);
-          data.byId[image.id] = entry;
-          _allImageEntries[entry.id] = entry;
-          entries.add(entry);
-        }
-        data.bySection[section.id] = entries;
-      }
-      _documents.add(data);
-      _documentById[document.id] = data;
-    }
-    for (final AttachmentUnit attachment in inventory.attachments) {
-      for (final PageUnit page in attachment.pages) {
-        _inventoryPages.add(page);
-        final ImageTokenEstimate estimate = estimator.estimateImage(
-          bytes: page.bytes.length,
-          model: capabilities.imageTokens,
-        );
-        _trackImageEstimate(estimate);
-        _attachments.add(
-          _PlannedAttachment(
-            unit: attachment,
-            page: page,
-            tokens: estimate.tokens,
-            bytes: page.bytes.length,
-          ),
-        );
-      }
-    }
-    for (final OrphanImageUnit orphan in inventory.orphanImages) {
-      if (sectionImageIds.contains(orphan.id)) continue;
-      final _ImageEntry? existing = _allImageEntries[orphan.id];
-      final _ImageEntry entry =
-          existing ?? _entryFor(orphan.image, _allImageEntries.length);
-      _allImageEntries[entry.id] = entry;
-      _orphanImages.add(entry);
-    }
-    for (final _DocumentPlanData data in _documents) {
-      for (final ImageRef image in data.document.images) {
-        if (sectionImageIds.contains(image.id)) continue;
-        if (_orphanImages.any((_ImageEntry entry) => entry.id == image.id)) {
-          continue;
-        }
-        final _ImageEntry? entry = data.byId[image.id];
-        if (entry == null) continue;
-        _orphanImages.add(entry);
-      }
-    }
-  }
-
-  _ImageEntry _entryFor(ImageRef image, int index) {
-    final String line = (catalogLineBuilder ?? _approximateCatalogLine)(
-      image,
-      index,
-    );
-    final ImageTokenEstimate estimate = estimator.estimateImage(
-      width: image.image.width,
-      height: image.image.height,
-      bytes: image.image.bytes.length,
-      model: capabilities.imageTokens,
-    );
-    _trackImageEstimate(estimate);
-    return _ImageEntry(
-      image: ImageRef(
-        id: image.id,
-        image: image.image,
-        tokens: estimate.tokens,
-        sectionId: image.sectionId,
-      ),
-      line: line,
-      tokens: estimator.estimateText(line),
-      bytes: utf8.encode(line).length,
-    );
-  }
-
-  void _trackImageEstimate(ImageTokenEstimate estimate) {
-    if (estimate.isAssumption) _imageEstimateAssumed = true;
-  }
-
-  String _approximateCatalogLine(ImageRef image, int index) {
-    final String caption = image.caption ?? '';
-    final String context = image.context ?? '';
-    final String page = image.page == null ? '' : 'стр. ${image.page}';
-    final String merged = page.isEmpty
-        ? context
-        : context.isEmpty
-        ? page
-        : '$page. $context';
-    return 'img${index + 1} | ${image.image.fileName} | $caption | $merged';
-  }
-
-  // -- Упаковка -------------------------------------------------------------
-
-  void _pack() {
-    for (final _DocumentPlanData data in _documents) {
-      for (final SectionUnit section in data.document.sections) {
-        _placeSection(data, section);
-      }
-    }
-    for (final _PlannedAttachment attachment in _attachments) {
-      _placeAttachment(attachment);
-    }
-    if (_orphanImages.isNotEmpty) {
-      final List<String> documentIds = <String>[
-        for (final _ImageEntry entry in _orphanImages)
-          if (_documentById.containsKey(
-            contentDocumentId(entry.image.image.fileName),
-          ))
-            contentDocumentId(entry.image.image.fileName),
-      ];
-      _placeImageBlock(
-        _orphanImages,
-        documentIds: documentIds.toSet().toList(growable: false),
-      );
-    }
-    _close();
-  }
-
-  void _placeSection(_DocumentPlanData data, SectionUnit section) {
-    final List<_ImageEntry> sectionImages =
-        data.bySection[section.id] ?? const <_ImageEntry>[];
-    if (section.pieces.isEmpty) {
-      if (sectionImages.isNotEmpty) {
-        _placeImageBlock(
-          sectionImages,
-          documentIds: <String>[data.document.id],
-        );
-      }
-      return;
-    }
-    bool imagesAttempted = false;
-    for (var pieceIndex = 0; pieceIndex < section.pieces.length; pieceIndex++) {
-      List<_TextFragment> fragments = <_TextFragment>[
-        _fragmentOf(section.pieces[pieceIndex]),
-      ];
-      while (fragments.isNotEmpty) {
-        final _TextFragment fragment = fragments.first;
-        final List<_ImageEntry> images = (pieceIndex == 0 && !imagesAttempted)
-            ? sectionImages
-            : const <_ImageEntry>[];
-        final _PlaceResult result = _tryPlaceText(
-          data,
-          section.id,
-          fragment,
-          images,
-        );
-        switch (result) {
-          case _PlaceResult.placed:
-            fragments = fragments.sublist(1);
-            if (pieceIndex == 0) imagesAttempted = true;
-          case _PlaceResult.needsNewChunk:
-            _close();
-          case _PlaceResult.split:
-            final List<_TextFragment> split = _splitFragment(fragment, data);
-            if (split.length == 1 && split.first.text == fragment.text) {
-              throw _PlanAbort(
-                PlanInvalidReason.unitTooLarge,
-                neededTokens: fragment.tokens,
-                availableTokens: _contentAllowance,
-              );
-            }
-            fragments = split;
-        }
-      }
-    }
-    final List<_ImageEntry> remaining = <_ImageEntry>[
-      for (final _ImageEntry entry in sectionImages)
-        if (!_placedPartIds.contains(entry.id)) entry,
-    ];
-    if (remaining.isNotEmpty) {
-      _placeImageBlock(remaining, documentIds: <String>[data.document.id]);
-    }
-  }
-
-  _TextFragment _fragmentOf(TextPiece piece) {
-    return _TextFragment(
-      unitId: piece.id,
-      text: piece.text,
-      kind: piece.kind,
-      tokens: piece.tokens,
-      splitDepth: 0,
-    );
-  }
-
-  _PlaceResult _tryPlaceText(
-    _DocumentPlanData data,
-    String sectionId,
-    _TextFragment fragment,
-    List<_ImageEntry> images,
-  ) {
-    if (_current == null) _startChunk();
-    final _ChunkDraft current = _current!;
-    if (current.isNotEmpty && current.textTokens >= _softTarget) {
-      return _PlaceResult.needsNewChunk;
-    }
-    final _Candidate base = _candidateForText(
-      current,
-      data,
-      sectionId,
-      fragment,
-    );
-    if (_evaluate(base) == null) {
-      return current.isNotEmpty
-          ? _PlaceResult.needsNewChunk
-          : _PlaceResult.split;
-    }
-    final List<_ImageEntry> selected = _selectFittingImages(
-      current,
-      data,
-      sectionId,
-      fragment,
-      images,
-    );
-    if (current.isNotEmpty && images.isNotEmpty && selected.isEmpty) {
-      final List<_ImageEntry> inEmptyChunk = _selectFittingImages(
-        _ChunkDraft(),
-        data,
-        sectionId,
-        fragment,
-        images,
-      );
-      if (inEmptyChunk.isNotEmpty) return _PlaceResult.needsNewChunk;
-    }
-    final _Candidate chosen = selected.isEmpty
-        ? base
-        : _candidateForText(
-            current,
-            data,
-            sectionId,
-            fragment,
-            newParts: selected,
-          );
-    if (_evaluate(chosen) == null) {
-      // Каталог/части не влезли при жадном подборе — размещаем текст отдельно.
-      _commitText(current, data, sectionId, fragment, base);
-      return _PlaceResult.placed;
-    }
-    _commitText(current, data, sectionId, fragment, chosen);
-    return _PlaceResult.placed;
-  }
-
-  List<_ImageEntry> _selectFittingImages(
-    _ChunkDraft current,
-    _DocumentPlanData data,
-    String sectionId,
-    _TextFragment fragment,
-    List<_ImageEntry> images,
-  ) {
-    if (!capabilities.supportsVision) return const <_ImageEntry>[];
-    final List<_ImageEntry> selected = <_ImageEntry>[];
-    final Set<String> selectedDigests = <String>{};
-    for (final _ImageEntry image in images) {
-      if (current.partIds.contains(image.id)) continue;
-      if (current.parts.any((_ImageEntry part) => part.id == image.id)) {
-        continue;
-      }
-      if (selected.any((_ImageEntry part) => part.id == image.id)) continue;
-      if (image.image.image.bytes.length > _maxImageBytesPerImage) continue;
-      final String digest = documentImageDigest(image.image.image.bytes);
-      // Одинаковые байты не отправляем дважды: второе изображение остаётся в
-      // каталоге и разрешается по image_id (TASK 03, D11/L126).
-      if (_placedPartDigests.contains(digest) ||
-          selectedDigests.contains(digest)) {
-        continue;
-      }
-      final _Candidate attempt = _candidateForText(
-        current,
-        data,
-        sectionId,
-        fragment,
-        newParts: <_ImageEntry>[...selected, image],
-      );
-      if (_evaluate(attempt) != null) {
-        selected.add(image);
-        selectedDigests.add(digest);
-      }
-    }
-    return selected;
-  }
-
-  _Candidate _candidateForText(
-    _ChunkDraft current,
-    _DocumentPlanData data,
-    String sectionId,
-    _TextFragment fragment, {
-    List<_ImageEntry> newParts = const <_ImageEntry>[],
-  }) {
-    final bool newDocument = current.lastDocumentId != data.document.id;
-    final bool newSection = !newDocument && current.lastSectionId != sectionId;
-    final String header = '$_fileHeaderPrefix${data.document.fileName}\n';
-    final int separatorTokens = newDocument
-        ? (current.text.isEmpty ? 0 : estimator.estimateText('\n\n'))
-        : newSection
-        ? estimator.estimateText('\n\n')
-        : 0;
-    final int extraTokens = newDocument
-        ? estimator.estimateText(header) + separatorTokens
-        : separatorTokens;
-    final int extraBytes = newDocument
-        ? utf8.encode(header).length + (current.text.isEmpty ? 0 : 2)
-        : newSection
-        ? 2
-        : 0;
-    final List<_ImageEntry> parts = <_ImageEntry>[...current.parts];
-    final Set<String> partIds = <String>{...current.partIds};
-    for (final _ImageEntry image in newParts) {
-      if (!partIds.add(image.id)) continue;
-      parts.add(image);
-    }
-    final List<String> documentIds = newDocument
-        ? <String>[...current.documentIds, data.document.id]
-        : current.documentIds;
-    return _Candidate(
-      textTokens: current.textTokens + fragment.tokens + extraTokens,
-      textBytes:
-          current.textBytes + extraBytes + utf8.encode(fragment.text).length,
-      labelTokens: current.labelTokens,
-      labelBytes: current.labelBytes,
-      parts: parts,
-      partIds: partIds,
-      extraCatalog: current.extraCatalog,
-      attachments: current.attachments,
-      documentIds: documentIds,
-    );
-  }
-
-  _Candidate _candidateForAttachment(
-    _ChunkDraft current,
-    _PlannedAttachment attachment,
-  ) {
-    return _Candidate(
-      textTokens: current.textTokens,
-      textBytes: current.textBytes,
-      labelTokens: current.labelTokens + attachment.labelTokens,
-      labelBytes: current.labelBytes + attachment.labelBytes,
-      parts: current.parts,
-      partIds: current.partIds,
-      extraCatalog: current.extraCatalog,
-      attachments: <_PlannedAttachment>[...current.attachments, attachment],
-      documentIds: current.documentIds,
-    );
-  }
-
-  _Candidate _candidateForBlock(
-    _ChunkDraft current,
-    _ImageEntry entry, {
-    required bool asPart,
-    required List<String> documentIds,
-  }) {
-    final List<_ImageEntry> parts = <_ImageEntry>[...current.parts];
-    final Set<String> partIds = <String>{...current.partIds};
-    if (asPart && partIds.add(entry.id)) parts.add(entry);
-    final List<String> mergedDocuments = <String>[...current.documentIds];
-    for (final String id in documentIds) {
-      if (!mergedDocuments.contains(id)) mergedDocuments.add(id);
-    }
-    final List<_ImageEntry> extraCatalog = <_ImageEntry>[
-      ...current.extraCatalog,
-    ];
-    if (!extraCatalog.any((_ImageEntry item) => item.id == entry.id)) {
-      extraCatalog.add(entry);
-    }
-    return _Candidate(
-      textTokens: current.textTokens,
-      textBytes: current.textBytes,
-      labelTokens: current.labelTokens,
-      labelBytes: current.labelBytes,
-      parts: parts,
-      partIds: partIds,
-      extraCatalog: extraCatalog,
-      attachments: current.attachments,
-      documentIds: mergedDocuments,
-    );
-  }
-
-  _Fit? _evaluate(_Candidate candidate) {
-    if (candidate.imagePartCount > _maxImagesPerChunk) return null;
-    for (final _ImageEntry part in candidate.parts) {
-      if (part.image.image.bytes.length > _maxImageBytesPerImage) return null;
-    }
-    for (final _PlannedAttachment attachment in candidate.attachments) {
-      if (attachment.bytes > _maxImageBytesPerImage) return null;
-    }
-    final int totalImageBytes =
-        candidate.imageBytes + candidate.attachmentBytes;
-    if (totalImageBytes > _maxImageBytesPerRequest) return null;
-    final int required =
-        candidate.textTokens +
-        candidate.labelTokens +
-        candidate.imageTokens +
-        candidate.attachmentTokens;
-    if (required > _contentAllowance) return null;
-    final int allowance = _contentAllowance - required;
-    final Set<String> requiredIds = <String>{
-      ...candidate.partIds,
-      for (final _ImageEntry entry in candidate.extraCatalog) entry.id,
-    };
-    final _CatalogSelection? selection = _selectCatalog(
-      entries: _catalogEntriesForCandidate(candidate),
-      requiredIds: requiredIds,
-      allowance: allowance,
-    );
-    if (selection == null) return null;
-    final GenerationBudget budget = GenerationBudget.compute(
-      capabilities: capabilities,
-      limit: _limitTarget,
-      systemPromptTokens: overhead.systemPromptTokens,
-      schemaTokens: overhead.schemaTokens,
-      wrapperTokens: overhead.wrapperTokens,
-      catalogTokens: selection.tokens,
-      imageTokens: candidate.imageTokens + candidate.attachmentTokens,
-      imagePartBytes: totalImageBytes,
-      config: budgetConfig,
-    );
-    if (budget.inputBudget < candidate.textTokens) return null;
-    final int bodyBytes =
-        candidate.textBytes +
-        selection.bytes +
-        base64EncodedByteLength(totalImageBytes) +
-        candidate.labelBytes +
-        config.jsonBodyOverheadBytes;
-    if (bodyBytes > _payloadLimit) return null;
-    return _Fit(
-      catalog: selection.entries,
-      catalogTokens: selection.tokens,
-      catalogBytes: selection.bytes,
-      bodyBytes: bodyBytes,
-    );
-  }
-
-  List<_ImageEntry> _catalogEntriesForCandidate(_Candidate candidate) {
-    final List<_ImageEntry> entries = <_ImageEntry>[
-      ..._catalogEntriesFor(candidate.documentIds),
-      ...candidate.extraCatalog,
-    ];
-    final Map<String, _ImageEntry> unique = <String, _ImageEntry>{};
-    for (final _ImageEntry entry in entries) {
-      unique.putIfAbsent(entry.id, () => entry);
-    }
-    return unique.values.toList(growable: false);
-  }
-
-  List<_ImageEntry> _catalogEntriesFor(List<String> documentIds) {
-    final Set<String> ids = documentIds.toSet();
-    final List<_ImageEntry> entries = <_ImageEntry>[];
-    for (final _DocumentPlanData data in _documents) {
-      if (!ids.contains(data.document.id)) continue;
-      entries.addAll(data.catalog);
-    }
-    return entries;
-  }
-
-  _CatalogSelection? _selectCatalog({
-    required List<_ImageEntry> entries,
-    required Set<String> requiredIds,
-    required int allowance,
-  }) {
-    if (allowance < 0) return null;
-    final Set<String> selectedIds = <String>{};
-    var used = 0;
-    for (final _ImageEntry entry in entries) {
-      if (!requiredIds.contains(entry.id)) continue;
-      if (selectedIds.add(entry.id)) used += entry.tokens;
-    }
-    if (selectedIds.length < requiredIds.length) return null;
-    if (used > allowance) return null;
-    for (final _ImageEntry entry in entries) {
-      if (selectedIds.contains(entry.id)) continue;
-      if (used + entry.tokens > allowance) continue;
-      selectedIds.add(entry.id);
-      used += entry.tokens;
-    }
-    final List<_ImageEntry> selected = <_ImageEntry>[
-      for (final _ImageEntry entry in entries)
-        if (selectedIds.contains(entry.id)) entry,
-    ];
-    final int bytes = selected.fold<int>(
-      0,
-      (int total, _ImageEntry entry) => total + entry.bytes,
-    );
-    return _CatalogSelection(entries: selected, tokens: used, bytes: bytes);
-  }
-
-  void _commitText(
-    _ChunkDraft draft,
-    _DocumentPlanData data,
-    String sectionId,
-    _TextFragment fragment,
-    _Candidate candidate,
-  ) {
-    final bool newDocument = draft.lastDocumentId != data.document.id;
-    final bool newSection = !newDocument && draft.lastSectionId != sectionId;
-    if (newDocument) {
-      if (draft.text.isNotEmpty) draft.text.write('\n\n');
-      draft.text
-        ..write(_fileHeaderPrefix)
-        ..write(data.document.fileName)
-        ..write('\n');
-    } else if (newSection) {
-      draft.text.write('\n\n');
-    }
-    final int start = draft.text.length;
-    draft.text.write(fragment.text);
-    final int end = draft.text.length;
-    draft.fragments.add(
-      _FragmentRecord(
-        unitId: fragment.unitId,
-        tokens: fragment.tokens,
-        start: start,
-        end: end,
-      ),
-    );
-    draft
-      ..textTokens = candidate.textTokens
-      ..textBytes = candidate.textBytes
-      ..labelTokens = candidate.labelTokens
-      ..labelBytes = candidate.labelBytes;
-    if (newDocument && !draft.documentIds.contains(data.document.id)) {
-      draft.documentIds.add(data.document.id);
-    }
-    if (newSection && !draft.sectionIds.contains(sectionId)) {
-      draft.sectionIds.add(sectionId);
-    }
-    draft.lastDocumentId = data.document.id;
-    draft.lastSectionId = sectionId;
-    draft.splitDepth = math.max(draft.splitDepth, fragment.splitDepth);
-    _applyParts(draft, candidate);
-  }
-
-  void _applyParts(_ChunkDraft draft, _Candidate candidate) {
-    for (final _ImageEntry part in candidate.parts) {
-      if (!draft.partIds.add(part.id)) continue;
-      final String digest = documentImageDigest(part.image.image.bytes);
-      if (!_placedPartDigests.add(digest)) {
-        // Байты уже отправлены другой единицей: оставляем это изображение
-        // каталогу, а не дублируем image-часть.
-        draft.partIds.remove(part.id);
-        continue;
-      }
-      draft.parts.add(part);
-      _placedPartIds.add(part.id);
-    }
-  }
-
-  void _placeAttachment(_PlannedAttachment attachment) {
-    while (true) {
-      if (_current == null) _startChunk();
-      final _ChunkDraft current = _current!;
-      if (current.isNotEmpty && current.textTokens >= _softTarget) {
-        _close();
-        continue;
-      }
-      final _Candidate candidate = _candidateForAttachment(current, attachment);
-      if (_evaluate(candidate) != null) {
-        current.attachments.add(attachment);
-        current
-          ..labelTokens = candidate.labelTokens
-          ..labelBytes = candidate.labelBytes;
-        return;
-      }
-      if (current.isNotEmpty) {
-        _close();
-        continue;
-      }
-      final bool payloadTooLarge =
-          attachment.bytes > _maxImageBytesPerImage ||
-          attachment.bytes > _payloadLimit;
-      throw _PlanAbort(
-        payloadTooLarge
-            ? PlanInvalidReason.payloadTooLarge
-            : PlanInvalidReason.unitTooLarge,
-        neededTokens: payloadTooLarge ? attachment.bytes : attachment.tokens,
-        availableTokens: payloadTooLarge
-            ? math.min(_maxImageBytesPerImage, _payloadLimit)
-            : math.max(0, _contentAllowance),
-      );
-    }
-  }
-
-  void _placeImageBlock(
-    List<_ImageEntry> entries, {
-    List<String> documentIds = const <String>[],
-  }) {
-    if (entries.isEmpty) return;
-    _close();
-    for (final _ImageEntry entry in entries) {
-      while (true) {
-        if (_current == null) _startChunk();
-        final _ChunkDraft current = _current!;
-        final bool canBePart =
-            capabilities.supportsVision &&
-            !_placedPartDigests.contains(
-              documentImageDigest(entry.image.image.bytes),
-            ) &&
-            entry.image.image.bytes.length <= _maxImageBytesPerImage &&
-            entry.image.image.bytes.length <= _maxImageBytesPerRequest;
-        if (canBePart) {
-          final bool capsExceeded =
-              current.imagePartCount >= _maxImagesPerChunk ||
-              current.totalImageBytes + entry.image.image.bytes.length >
-                  _maxImageBytesPerRequest;
-          if (!capsExceeded) {
-            final _Candidate part = _candidateForBlock(
-              current,
-              entry,
-              asPart: true,
-              documentIds: documentIds,
-            );
-            if (_evaluate(part) != null) {
-              _commitBlock(
-                current,
-                entry,
-                asPart: true,
-                documentIds: documentIds,
-              );
-              break;
-            }
-          }
-          // Другая подгруппа: изображение ещё может уйти image-частью.
-          if (current.isNotEmpty) {
-            _close();
-            continue;
-          }
-        }
-        final _Candidate catalog = _candidateForBlock(
-          current,
-          entry,
-          asPart: false,
-          documentIds: documentIds,
-        );
-        if (_evaluate(catalog) != null) {
-          _commitBlock(current, entry, asPart: false, documentIds: documentIds);
-          break;
-        }
-        if (current.isNotEmpty) {
-          _close();
-          continue;
-        }
-        _omit(
-          OmittedUnit(
-            unitId: entry.id,
-            reason: entry.image.image.bytes.length > _payloadLimit
-                ? OmittedReason.payload
-                : OmittedReason.budget,
-            tokens: entry.image.tokens,
-            documentId: entry.image.image.fileName,
-          ),
-        );
-        break;
-      }
-    }
-    _close();
-  }
-
-  void _commitBlock(
-    _ChunkDraft draft,
-    _ImageEntry entry, {
-    required bool asPart,
-    required List<String> documentIds,
-  }) {
-    for (final String id in documentIds) {
-      if (!draft.documentIds.contains(id)) draft.documentIds.add(id);
-    }
-    if (!draft.extraCatalog.any((_ImageEntry item) => item.id == entry.id)) {
-      draft.extraCatalog.add(entry);
-    }
-    if (asPart && draft.partIds.add(entry.id)) {
-      final String digest = documentImageDigest(entry.image.image.bytes);
-      if (_placedPartDigests.add(digest)) {
-        draft.parts.add(entry);
-        _placedPartIds.add(entry.id);
-      } else {
-        draft.partIds.remove(entry.id);
-      }
-    }
-  }
-
-  void _omit(OmittedUnit unit) {
-    if (!_omittedIds.add(unit.unitId)) return;
-    _omitted.add(unit);
-  }
-
-  // -- Дробление ------------------------------------------------------------
-
-  List<_TextFragment> _splitFragment(
-    _TextFragment fragment,
-    _DocumentPlanData data,
-  ) {
-    // В пустом фрагменте текст начинается строкой «Файл: <имя>» — её токены
-    // тоже занимают бюджет, иначе деление зациклится на фрагменте, который
-    // чуть больше бюджета.
-    final int headerTokens = estimator.estimateText(
-      '$_fileHeaderPrefix${data.document.fileName}\n',
-    );
-    final int budget = math.max(1, _contentAllowance - headerTokens);
-    return _splitToBudget(
-      text: fragment.text,
-      kind: fragment.kind,
-      rootId: fragment.unitId,
-      budget: budget,
-      depth: fragment.splitDepth + 1,
-    );
-  }
-
-  List<_TextFragment> _splitToBudget({
-    required String text,
-    required TextPieceKind kind,
-    required String rootId,
-    required int budget,
-    required int depth,
-  }) {
-    final int tokens = estimator.estimateText(text);
-    if (tokens <= budget) {
-      return <_TextFragment>[
-        _derivedFragment(text, kind, rootId, tokens, depth),
-      ];
-    }
-    if (depth >= config.maxSplitDepth) {
-      return _hardSplit(text, kind, rootId, budget);
-    }
-    final List<String> sentences = _splitAfter(text, _sentenceBoundary);
-    if (sentences.length > 1) {
-      return _packParts(
-        sentences,
-        TextPieceKind.sentence,
-        rootId,
-        budget,
-        depth,
-      );
-    }
-    final List<String> lines = _splitAfter(text, _lineBoundary);
-    if (lines.length > 1) {
-      return _packParts(lines, TextPieceKind.line, rootId, budget, depth);
-    }
-    return _hardSplit(text, kind, rootId, budget);
-  }
-
-  List<_TextFragment> _packParts(
-    List<String> parts,
-    TextPieceKind kind,
-    String rootId,
-    int budget,
-    int depth,
-  ) {
-    final List<_TextFragment> result = <_TextFragment>[];
-    final List<String> buffer = <String>[];
-    var bufferRunes = 0;
-    void flush() {
-      if (buffer.isEmpty) return;
-      final String text = buffer.join();
-      buffer.clear();
-      bufferRunes = 0;
-      result.add(
-        _derivedFragment(
-          text,
-          kind,
-          rootId,
-          estimator.estimateText(text),
-          depth,
-        ),
-      );
-    }
-
-    for (final String part in parts) {
-      final int partRunes = part.runes.length;
-      if (_tokensForRunes(partRunes) > budget) {
-        flush();
-        result.addAll(
-          _splitToBudget(
-            text: part,
-            kind: kind,
-            rootId: rootId,
-            budget: budget,
-            depth: depth + 1,
-          ),
-        );
-        continue;
-      }
-      if (buffer.isNotEmpty &&
-          _tokensForRunes(bufferRunes + partRunes) > budget) {
-        flush();
-      }
-      buffer.add(part);
-      bufferRunes += partRunes;
-    }
-    flush();
-    if (result.isEmpty) {
-      final String joined = parts.join();
-      result.add(
-        _derivedFragment(
-          joined,
-          kind,
-          rootId,
-          estimator.estimateText(joined),
-          depth,
-        ),
-      );
-    }
-    return result;
-  }
-
-  /// Оценка токенов по числу рун (консервативная линейная аппроксимация для
-  /// упаковки; финальные токены фрагмента считает [ContentTokenEstimator]).
-  int _tokensForRunes(int runes) {
-    if (runes <= 0) return 0;
-    return (runes / estimator.charsPerToken).ceil();
-  }
-
-  List<_TextFragment> _hardSplit(
-    String text,
-    TextPieceKind kind,
-    String rootId,
-    int budget,
-  ) {
-    final int targetChars = math.max(
-      1,
-      (budget * estimator.charsPerToken * 0.8).floor(),
-    );
-    final List<_TextFragment> result = <_TextFragment>[];
-    var start = 0;
-    while (start < text.length) {
-      int end = math.min(start + targetChars, text.length);
-      if (end < text.length &&
-          _isHighSurrogate(text.codeUnitAt(end - 1)) &&
-          _isLowSurrogate(text.codeUnitAt(end))) {
-        end = math.min(end + 1, text.length);
-      }
-      final String part = text.substring(start, end);
-      result.add(
-        _derivedFragment(
-          part,
-          kind,
-          rootId,
-          estimator.estimateText(part),
-          config.maxSplitDepth,
-        ),
-      );
-      start = end;
-    }
-    return result;
-  }
-
-  _TextFragment _derivedFragment(
-    String text,
-    TextPieceKind kind,
-    String rootId,
-    int tokens,
-    int depth,
-  ) {
-    final int counter = (_splitCounters[rootId] ?? 0) + 1;
-    _splitCounters[rootId] = counter;
-    return _TextFragment(
-      unitId: '$rootId~$counter',
-      text: text,
-      kind: kind,
-      tokens: tokens,
-      splitDepth: depth,
-    );
-  }
-
-  // -- Завершение -----------------------------------------------------------
-
-  void _startChunk() {
-    if (_startedChunks >= config.maxChunks) {
-      throw _PlanAbort(
-        PlanInvalidReason.tooManyChunks,
-        neededTokens: _startedChunks + 1,
-        availableTokens: config.maxChunks,
-      );
-    }
-    _startedChunks++;
-    _current = _ChunkDraft();
-  }
-
-  void _close() {
-    final _ChunkDraft? current = _current;
-    if (current == null) return;
-    _current = null;
-    if (current.isEmpty) return;
-    _drafts.add(current);
-  }
-
-  GenerationPlan _finalize() {
-    final List<_PlannedChunkData> packed = <_PlannedChunkData>[
-      for (var index = 0; index < _drafts.length; index++)
-        _finalizeDraft(_drafts[index], index + 1),
-    ];
-    // D.5: второй проход — если фрагментов больше, чем запрошено карточек,
-    // совместимые соседние фрагменты укрупняются в пределах бюджета.
-    final List<_PlannedChunkData> planned = _mergeToRequested(packed);
-    final List<int> limits = _distributeLimits(planned);
-    final List<PlannedChunk> chunks = <PlannedChunk>[
-      for (var index = 0; index < planned.length; index++)
-        planned[index].toChunk(limit: limits[index], index: index + 1),
-    ];
-    _ensureCoverage(chunks);
-    final List<String> unknown = _unknownFields();
-    final bool hasInventoryImages =
-        _allImageEntries.isNotEmpty || _attachments.isNotEmpty;
-    final List<PlanWarningCode> warnings = <PlanWarningCode>[
-      if (unknown.isNotEmpty) PlanWarningCode.unknownCapabilities,
-      if (chunks.any((PlannedChunk chunk) => chunk.catalogOnly.isNotEmpty))
-        PlanWarningCode.catalogOnlyImages,
-      if (hasInventoryImages && !capabilities.supportsVision)
-        PlanWarningCode.imagesWithoutVision,
-      if (hasInventoryImages && _limits.hasAssumption)
-        PlanWarningCode.assumedImageLimits,
-      if (requestedCards != null &&
-          chunks.isNotEmpty &&
-          _plannedCards(limits) > requestedCards!)
-        PlanWarningCode.cardsAboveRequested,
-      if (requestedCards != null &&
-          chunks.isNotEmpty &&
-          _plannedCards(limits) < requestedCards!)
-        PlanWarningCode.requestedAbovePlan,
-      if (_omitted.isNotEmpty) PlanWarningCode.omittedUnits,
-    ];
-    final PlanValidity validity = warnings.isEmpty
-        ? const PlanValidity.valid()
-        : PlanValidity.warnings(List<PlanWarningCode>.unmodifiable(warnings));
-    return _buildPlan(
-      validity: validity,
-      chunks: chunks,
-      planned: planned,
-      limits: limits,
-      unknownFields: unknown,
-    );
-  }
-
-  _PlannedChunkData _finalizeDraft(_ChunkDraft draft, int index) {
-    final List<_ImageEntry> entries = _catalogEntriesForDraft(draft);
-    final int allowance =
-        _contentAllowance -
-        draft.textTokens -
-        draft.labelTokens -
-        draft.imageTokens -
-        draft.attachmentTokens;
-    final _CatalogSelection? selection = _selectCatalog(
-      entries: entries,
-      requiredIds: <String>{
-        ...draft.partIds,
-        for (final _ImageEntry entry in draft.extraCatalog) entry.id,
-      },
-      allowance: allowance,
-    );
-    if (selection == null) {
-      throw const _PlanAbort(
-        PlanInvalidReason.unitTooLarge,
-        neededTokens: 0,
-        availableTokens: 0,
-      );
-    }
-    final List<DocumentImage> catalogOnly = <DocumentImage>[
-      for (final _ImageEntry entry in selection.entries)
-        if (!draft.partIds.contains(entry.id)) entry.image.image,
-    ];
-    final List<String> catalogOnlyIds = <String>[
-      for (final _ImageEntry entry in selection.entries)
-        if (!draft.partIds.contains(entry.id)) entry.id,
-    ];
-    final bool hasText = draft.text.toString().trim().isNotEmpty;
-    final bool hasParts =
-        draft.parts.isNotEmpty || draft.attachments.isNotEmpty;
-    final ChunkKind kind = hasText && hasParts
-        ? ChunkKind.mixed
-        : hasText
-        ? ChunkKind.text
-        : hasParts
-        ? ChunkKind.images
-        : ChunkKind.catalog;
-    return _PlannedChunkData(
-      index: index,
-      kind: kind,
-      materialsText: draft.text.toString(),
-      units: <UnitSpan>[
-        for (final _FragmentRecord fragment in draft.fragments)
-          UnitSpan(
-            unitId: fragment.unitId,
-            start: fragment.start,
-            end: fragment.end,
-            tokens: fragment.tokens,
-          ),
-      ],
-      imageParts: <DocumentImage>[
-        for (final _ImageEntry entry in draft.parts) entry.image.image,
-      ],
-      imagePartIds: <String>[
-        for (final _ImageEntry entry in draft.parts) entry.id,
-      ],
-      catalogOnly: catalogOnly,
-      catalogOnlyIds: catalogOnlyIds,
-      attachments: <GenerationAttachment>[
-        for (final _PlannedAttachment attachment in draft.attachments)
-          GenerationAttachment(
-            fileName: attachment.unit.fileName,
-            mediaType: attachment.unit.mediaType,
-            bytes: attachment.page.bytes,
-            pageNumber: attachment.page.pageNumber,
-            groupKey: attachment.unit.groupKey,
-          ),
-      ],
-      pureTextTokens: draft.textTokens,
-      catalogTokens: selection.tokens,
-      labelTokens: draft.labelTokens,
-      imagePartTokens: draft.imageTokens,
-      attachmentTokens: draft.attachmentTokens,
-      bodyBytes:
-          draft.textBytes +
-          selection.bytes +
-          base64EncodedByteLength(draft.totalImageBytes) +
-          draft.labelBytes +
-          config.jsonBodyOverheadBytes,
-      splitDepth: draft.splitDepth,
-    );
-  }
-
-  List<_ImageEntry> _catalogEntriesForDraft(_ChunkDraft draft) {
-    final List<_ImageEntry> entries = <_ImageEntry>[
-      ..._catalogEntriesFor(draft.documentIds),
-      ...draft.extraCatalog,
-    ];
-    final Map<String, _ImageEntry> unique = <String, _ImageEntry>{};
-    for (final _ImageEntry entry in entries) {
-      unique.putIfAbsent(entry.id, () => entry);
-    }
-    return unique.values.toList(growable: false);
-  }
-
-  int _plannedCards(List<int> limits) =>
-      limits.fold<int>(0, (int total, int limit) => total + limit);
-
-  // -- D.5: второй проход (укрупнение фрагментов) ---------------------------
-
-  /// Укрупняет фрагменты до [requestedCards], пока это позволяет бюджет.
-  ///
-  /// Целевое число фрагментов — желаемое, а не абсолютное: если безопасно
-  /// объединить нельзя, возвращается меньшее (безопасное) укрупнение, и план
-  /// получает предупреждение `cardsAboveRequested`. Порядок фрагментов и
-  /// единиц сохраняется; единицы/изображения не дублируются и не теряются.
-  List<_PlannedChunkData> _mergeToRequested(List<_PlannedChunkData> packed) {
-    final int? target = requestedCards;
-    if (target == null || packed.length <= target) return packed;
-    final List<_PlannedChunkData> result = List<_PlannedChunkData>.of(packed);
-    // Сначала предпочитаем соседние фрагменты одного документа, затем любые
-    // соседние: «преимущественно одного документа или совместимых».
-    while (result.length > target) {
-      final bool shared = _mergePass(
-        result,
-        target: target,
-        sharedDocumentOnly: true,
-      );
-      if (result.length <= target) break;
-      final bool any = _mergePass(
-        result,
-        target: target,
-        sharedDocumentOnly: false,
-      );
-      if (!shared && !any) break;
-    }
-    return result;
-  }
-
-  /// Один проход слева направо; возвращает true, если что-то объединено.
-  bool _mergePass(
-    List<_PlannedChunkData> planned, {
-    required int target,
-    required bool sharedDocumentOnly,
-  }) {
-    var mergedAny = false;
-    var index = 0;
-    while (index + 1 < planned.length && planned.length > target) {
-      final _PlannedChunkData first = planned[index];
-      final _PlannedChunkData second = planned[index + 1];
-      if (sharedDocumentOnly && !_sharesDocument(first, second)) {
-        index++;
-        continue;
-      }
-      final _PlannedChunkData? merged = _mergePair(first, second);
-      if (merged == null) {
-        index++;
-        continue;
-      }
-      planned.replaceRange(index, index + 2, <_PlannedChunkData>[merged]);
-      mergedAny = true;
-      // Не сливаем всё в первый фрагмент подряд: после объединения шагаем
-      // дальше, чтобы укрупнение распределялось по документу.
-      index++;
-    }
-    return mergedAny;
-  }
-
-  /// true, если у фрагментов есть общий документ/файл.
-  bool _sharesDocument(_PlannedChunkData first, _PlannedChunkData second) {
-    final Set<String> firstFiles = _fileNamesOf(first);
-    if (firstFiles.isEmpty) return false;
-    for (final String file in _fileNamesOf(second)) {
-      if (firstFiles.contains(file)) return true;
-    }
-    return false;
-  }
-
-  /// Имена файлов/документов фрагмента (единицы, изображения, вложения).
-  Set<String> _fileNamesOf(_PlannedChunkData chunk) {
-    final Set<String> names = <String>{};
-    for (final UnitSpan span in chunk.units) {
-      final String id = span.unitId;
-      if (!id.startsWith('doc:')) continue;
-      final int hash = id.indexOf('#');
-      if (hash > 4) names.add(id.substring(4, hash));
-    }
-    for (final DocumentImage image in chunk.imageParts) {
-      names.add(image.fileName);
-    }
-    for (final DocumentImage image in chunk.catalogOnly) {
-      names.add(image.fileName);
-    }
-    for (final GenerationAttachment attachment in chunk.attachments) {
-      names.add(attachment.fileName);
-    }
-    return names;
-  }
-
-  /// Объединяет два соседних фрагмента или возвращает `null`, если нельзя.
-  ///
-  /// Повторно проверяются: бюджет входа/окно контекста (D.1), лимит image-частей
-  /// и байт изображений, лимит тела запроса, выходной резерв (D.2). Объединение
-  /// не создаёт дублей изображений/вложений и сохраняет `unitIds`/`UnitSpan`.
-  _PlannedChunkData? _mergePair(
-    _PlannedChunkData first,
-    _PlannedChunkData second,
-  ) {
-    if (first.kind == ChunkKind.promptOnly ||
-        second.kind == ChunkKind.promptOnly) {
-      return null;
-    }
-    final String firstText = first.materialsText;
-    final String secondText = second.materialsText;
-    final bool firstHasText = firstText.trim().isNotEmpty;
-    final bool secondHasText = secondText.trim().isNotEmpty;
-    final String mergedText;
-    final int shift;
-    if (firstHasText && secondHasText) {
-      mergedText = '$firstText\n\n$secondText';
-      shift = firstText.length + 2;
-    } else if (secondHasText) {
-      mergedText = secondText;
-      shift = 0;
-    } else {
-      mergedText = firstText;
-      shift = 0;
-    }
-    final List<UnitSpan> units = <UnitSpan>[
-      ...first.units,
-      for (final UnitSpan span in second.units)
-        UnitSpan(
-          unitId: span.unitId,
-          start: span.start + shift,
-          end: span.end + shift,
-          tokens: span.tokens,
-        ),
-    ];
-
-    final Map<String, _ImageEntry> entries = <String, _ImageEntry>{};
-    for (final String id in <String>[
-      ...first.imagePartIds,
-      ...first.catalogOnlyIds,
-      ...second.imagePartIds,
-      ...second.catalogOnlyIds,
-    ]) {
-      final _ImageEntry? entry = _allImageEntries[id];
-      if (entry != null) entries[id] = entry;
-    }
-    final Set<String> partIds = <String>{
-      ...first.imagePartIds,
-      ...second.imagePartIds,
-    };
-    final Set<String> catalogIds = <String>{
-      ...partIds,
-      ...first.catalogOnlyIds,
-      ...second.catalogOnlyIds,
-    };
-    final Set<String> catalogOnlyIds = <String>{
-      for (final String id in catalogIds)
-        if (!partIds.contains(id)) id,
-    };
-    final List<_ImageEntry> parts = <_ImageEntry>[
-      for (final _ImageEntry entry in entries.values)
-        if (partIds.contains(entry.id)) entry,
-    ];
-    final List<_ImageEntry> catalogOnly = <_ImageEntry>[
-      for (final _ImageEntry entry in entries.values)
-        if (catalogOnlyIds.contains(entry.id)) entry,
-    ];
-    if (parts.length > _maxImagesPerChunk) return null;
-
-    final List<GenerationAttachment> attachments = _mergeAttachments(
-      first.attachments,
-      second.attachments,
-    );
-    if (parts.length + attachments.length > _maxImagesPerChunk) return null;
-
-    var imagePartTokens = 0;
-    var imageBytes = 0;
-    for (final _ImageEntry entry in parts) {
-      final int bytes = entry.image.image.bytes.length;
-      if (bytes > _maxImageBytesPerImage) return null;
-      imagePartTokens += entry.image.tokens;
-      imageBytes += bytes;
-    }
-    var attachmentTokens = 0;
-    for (final GenerationAttachment attachment in attachments) {
-      if (attachment.bytes.length > _maxImageBytesPerImage) return null;
-      attachmentTokens += estimator
-          .estimateImage(
-            bytes: attachment.bytes.length,
-            model: capabilities.imageTokens,
-          )
-          .tokens;
-      imageBytes += attachment.bytes.length;
-    }
-    if (imageBytes > _maxImageBytesPerRequest) return null;
-
-    var catalogTokens = 0;
-    var catalogBytes = 0;
-    for (final String id in catalogIds) {
-      final _ImageEntry? entry = entries[id];
-      if (entry == null) continue;
-      catalogTokens += entry.tokens;
-      catalogBytes += entry.bytes;
-    }
-    final int pureTextTokens = estimator.estimateText(mergedText);
-    final int labelTokens = first.labelTokens + second.labelTokens;
-    final int textTokens = pureTextTokens + catalogTokens + labelTokens;
-    final int imageTokens = imagePartTokens + attachmentTokens;
-    if (textTokens + imageTokens > _contentAllowance) return null;
-
-    final int bodyBytes =
-        utf8.encode(mergedText).length +
-        catalogBytes +
-        base64EncodedByteLength(imageBytes) +
-        config.jsonBodyOverheadBytes;
-    if (bodyBytes > _payloadLimit) return null;
-
-    // Повторная проверка бюджета с каталогом/изображениями и резервом вывода:
-    // объединённый фрагмент должен помещаться в окно при самом большом
-    // возможном для него лимите карточек.
-    final GenerationBudget mergedBudget = GenerationBudget.compute(
-      capabilities: capabilities,
-      limit: _limitTarget,
-      systemPromptTokens: overhead.systemPromptTokens,
-      schemaTokens: overhead.schemaTokens,
-      wrapperTokens: overhead.wrapperTokens,
-      catalogTokens: catalogTokens,
-      imageTokens: imageTokens,
-      imagePartBytes: imageBytes,
-      config: budgetConfig,
-    );
-    if (!mergedBudget.isWorkable) return null;
-    if (mergedBudget.inputBudget < pureTextTokens + labelTokens) return null;
-
-    final bool hasText = mergedText.trim().isNotEmpty;
-    final bool hasParts = parts.isNotEmpty || attachments.isNotEmpty;
-    final ChunkKind kind = hasText && hasParts
-        ? ChunkKind.mixed
-        : hasText
-        ? ChunkKind.text
-        : hasParts
-        ? ChunkKind.images
-        : ChunkKind.catalog;
-    return _PlannedChunkData(
-      index: first.index,
-      kind: kind,
-      materialsText: mergedText,
-      units: units,
-      imageParts: <DocumentImage>[
-        for (final _ImageEntry entry in parts) entry.image.image,
-      ],
-      imagePartIds: <String>[for (final _ImageEntry entry in parts) entry.id],
-      catalogOnly: <DocumentImage>[
-        for (final _ImageEntry entry in catalogOnly) entry.image.image,
-      ],
-      catalogOnlyIds: <String>[
-        for (final _ImageEntry entry in catalogOnly) entry.id,
-      ],
-      attachments: attachments,
-      pureTextTokens: pureTextTokens,
-      catalogTokens: catalogTokens,
-      labelTokens: labelTokens,
-      imagePartTokens: imagePartTokens,
-      attachmentTokens: attachmentTokens,
-      bodyBytes: bodyBytes,
-      splitDepth: math.max(first.splitDepth, second.splitDepth),
-    );
-  }
-
-  /// Уникальные вложения двух фрагментов (страница одного файла — один раз).
-  List<GenerationAttachment> _mergeAttachments(
-    List<GenerationAttachment> first,
-    List<GenerationAttachment> second,
-  ) {
-    final List<GenerationAttachment> result = <GenerationAttachment>[];
-    final Set<String> seen = <String>{};
-    for (final GenerationAttachment attachment in <GenerationAttachment>[
-      ...first,
-      ...second,
-    ]) {
-      final String key =
-          '${attachment.fileName}\u0000${attachment.pageNumber}\u0000'
-          '${attachment.groupKey}';
-      if (seen.add(key)) result.add(attachment);
-    }
-    return List<GenerationAttachment>.unmodifiable(result);
-  }
-
-  /// Распределяет потолок карточек по фрагментам (D.7) без молчаливого среза.
-  List<int> _distributeLimits(List<_PlannedChunkData> planned) {
-    if (planned.isEmpty) return <int>[];
-    final int cap = _cardsByOutputCap;
-    final int chunks = planned.length;
-    final int? requested = requestedCards;
-    if (requested == null) return List<int>.filled(chunks, cap);
-    if (requested <= chunks) return List<int>.filled(chunks, 1);
-    final int capacity = chunks * cap;
-    if (requested >= capacity) return List<int>.filled(chunks, cap);
-    final List<int> limits = List<int>.filled(chunks, 1);
-    var remaining = requested - chunks;
-    final List<int> volumes = <int>[
-      for (final _PlannedChunkData chunk in planned) math.max(1, chunk.volume),
-    ];
-    final List<int> order = List<int>.generate(chunks, (int index) => index)
-      ..sort((int a, int b) {
-        final int byVolume = volumes[b].compareTo(volumes[a]);
-        return byVolume != 0 ? byVolume : a.compareTo(b);
-      });
-    var cursor = 0;
-    while (remaining > 0) {
-      var progressed = false;
-      for (var step = 0; step < chunks && remaining > 0; step++) {
-        final int index = order[(cursor + step) % chunks];
-        if (limits[index] < cap) {
-          limits[index]++;
-          remaining--;
-          progressed = true;
-        }
-      }
-      if (!progressed) break;
-      cursor++;
-    }
-    return limits;
-  }
-
-  /// Состояние каждого изображения после упаковки (TASK 03, раздел 6).
-  ///
-  /// Различает «передано модели» и «только в каталоге»: пользователь и
-  /// диагностика не должны считать изображение обработанным только потому, что
-  /// оно осталось в каталоге. Для моделей без Vision части не отправляются —
-  /// статус `unsupportedModel`.
-  List<PlannedImage> _imageStatuses(List<PlannedChunk> chunks) {
-    final Set<String> sentIds = <String>{
-      for (final PlannedChunk chunk in chunks) ...chunk.imagePartIds,
-    };
-    final Set<String> catalogIds = <String>{
-      for (final PlannedChunk chunk in chunks) ...chunk.catalogOnlyIds,
-    };
-    final Map<String, OmittedUnit> omitted = <String, OmittedUnit>{
-      for (final OmittedUnit unit in _omitted) unit.unitId: unit,
-    };
-    final List<PlannedImage> statuses = <PlannedImage>[];
-    for (final _ImageEntry entry in _allImageEntries.values) {
-      final ImageParticipationStatus status;
-      if (!capabilities.supportsVision && sentIds.contains(entry.id)) {
-        // Части не отправлялись: планировщик не должен был их помечать, но
-        // защищаемся от рассогласования.
-        status = ImageParticipationStatus.unsupportedModel;
-      } else if (sentIds.contains(entry.id)) {
-        status = ImageParticipationStatus.sentToModel;
-      } else if (!capabilities.supportsVision) {
-        status = ImageParticipationStatus.unsupportedModel;
-      } else if (catalogIds.contains(entry.id)) {
-        status = ImageParticipationStatus.catalogOnly;
-      } else if (omitted.containsKey(entry.id)) {
-        status = omitted[entry.id]!.reason == OmittedReason.payload
-            ? ImageParticipationStatus.omittedPayload
-            : ImageParticipationStatus.omittedBudget;
-      } else {
-        status = ImageParticipationStatus.catalogOnly;
-      }
-      statuses.add(
-        PlannedImage(
-          id: entry.id,
-          fileName: entry.image.image.fileName,
-          status: status,
-          page: entry.image.page,
-          tokens: entry.image.tokens,
-        ),
-      );
-    }
-    for (final _PlannedAttachment attachment in _attachments) {
-      statuses.add(
-        PlannedImage(
-          id: _attachmentPageId(
-            GenerationAttachment(
-              fileName: attachment.unit.fileName,
-              mediaType: attachment.unit.mediaType,
-              bytes: attachment.page.bytes,
-              pageNumber: attachment.page.pageNumber,
-              groupKey: attachment.unit.groupKey,
-            ),
-          ),
-          fileName: attachment.unit.fileName,
-          status: capabilities.supportsVision
-              ? ImageParticipationStatus.sentToModel
-              : ImageParticipationStatus.unsupportedModel,
-          page: attachment.page.pageNumber,
-          tokens: attachment.tokens,
-        ),
-      );
-    }
-    return statuses;
-  }
-
-  /// Страховочная проверка: ни одно изображение/страница не потеряны.
-  void _ensureCoverage(List<PlannedChunk> chunks) {
-    final Set<String> coveredImages = <String>{
-      for (final PlannedChunk chunk in chunks) ...chunk.imagePartIds,
-      for (final PlannedChunk chunk in chunks) ...chunk.catalogOnlyIds,
-    };
-    for (final _ImageEntry entry in _allImageEntries.values) {
-      if (coveredImages.contains(entry.id)) continue;
-      if (_omittedIds.contains(entry.id)) continue;
-      _omit(
-        OmittedUnit(
-          unitId: entry.id,
-          reason: entry.image.image.bytes.length > _payloadLimit
-              ? OmittedReason.payload
-              : OmittedReason.budget,
-          tokens: entry.image.tokens,
-          documentId: entry.image.image.fileName,
-        ),
-      );
-    }
-    final Set<String> coveredPages = <String>{
-      for (final PlannedChunk chunk in chunks)
-        for (final GenerationAttachment attachment in chunk.attachments)
-          _attachmentPageId(attachment),
-    };
-    for (final PageUnit page in _inventoryPages) {
-      if (coveredPages.contains(page.id)) continue;
-      if (_omittedIds.contains(page.id)) continue;
-      _omit(
-        OmittedUnit(
-          unitId: page.id,
-          reason: OmittedReason.budget,
-          tokens: page.tokens,
-        ),
-      );
-    }
-  }
-
-  List<String> _unknownFields() {
-    final List<String> fields = <String>[...capabilities.unknownFields];
-    void add(String value) {
-      if (!fields.contains(value)) fields.add(value);
-    }
-
-    // Единый источник лимитов запроса (TASK 03): те же допущения, что видит
-    // исполнитель, попадают в план и диагностику.
-    for (final String field in _limits.assumptionFields) {
-      add(field);
-    }
-    if ((_allImageEntries.isNotEmpty || _attachments.isNotEmpty) &&
-        _imageEstimateAssumed) {
-      add('image_tokens');
-    }
-    return List<String>.unmodifiable(fields);
-  }
-
-  GenerationPlan _emptyPlan() {
-    return GenerationPlan(
-      validity: const PlanValidity.valid(),
-      estimate: GenerationEstimate(
-        inputTextTokens: 0,
-        imageTokens: 0,
-        fixedPromptTokens: overhead.systemPromptTokens,
-        wrapperTokens: overhead.wrapperTokens,
-        schemaTokens: overhead.schemaTokens,
-        catalogTokens: 0,
-        reservedOutputTokens: 0,
-        expectedOutputTokens: 0,
-        totalTokens: overhead.fixedTokens,
-        plannedChunks: 0,
-        plannedRequests: 0,
-        retryAllowanceRequests: config.retryAllowanceRequests,
-        pricingState: capabilities.pricingState,
-        estimatorVersion: '${estimator.version}/planner-1',
-      ),
-      budget: _planBudget(const <_PlannedChunkData>[], const <int>[]),
-      chunks: const <PlannedChunk>[],
-      images: _imageStatuses(const <PlannedChunk>[]),
-      capabilitySources: capabilities.sources,
-      requestedCards: requestedCards ?? 0,
-      retryAllowanceRequests: config.retryAllowanceRequests,
-    );
-  }
-
-  GenerationPlan _invalid(
-    PlanInvalidReason reason, {
-    int? neededTokens,
-    int? availableTokens,
-  }) {
-    final List<String> unknown = _unknownFields();
-    return GenerationPlan(
-      validity: PlanValidity.invalid(
-        reason,
-        neededTokens: neededTokens,
-        availableTokens: availableTokens,
-      ),
-      estimate: GenerationEstimate(
-        inputTextTokens: 0,
-        imageTokens: 0,
-        fixedPromptTokens: overhead.systemPromptTokens,
-        wrapperTokens: overhead.wrapperTokens,
-        schemaTokens: overhead.schemaTokens,
-        catalogTokens: 0,
-        reservedOutputTokens: 0,
-        expectedOutputTokens: 0,
-        totalTokens: overhead.fixedTokens,
-        plannedChunks: 0,
-        plannedRequests: 0,
-        retryAllowanceRequests: config.retryAllowanceRequests,
-        pricingState: capabilities.pricingState,
-        estimatorVersion: '${estimator.version}/planner-1',
-        unknownFields: unknown,
-      ),
-      budget: _planBudget(const <_PlannedChunkData>[], const <int>[]),
-      chunks: const <PlannedChunk>[],
-      omitted: _omitted,
-      images: _imageStatuses(const <PlannedChunk>[]),
-      capabilitySources: capabilities.sources,
-      requestedCards: requestedCards ?? 0,
-      retryAllowanceRequests: config.retryAllowanceRequests,
-      unknownFields: unknown,
-    );
-  }
-
-  GenerationPlan _buildPlan({
-    required PlanValidity validity,
-    required List<PlannedChunk> chunks,
-    required List<_PlannedChunkData> planned,
-    required List<int> limits,
-    required List<String> unknownFields,
-  }) {
-    return GenerationPlan(
-      validity: validity,
-      estimate: _estimate(planned, chunks),
-      budget: _planBudget(planned, limits),
-      chunks: chunks,
-      omitted: _omitted,
-      images: _imageStatuses(chunks),
-      capabilitySources: capabilities.sources,
-      requestedCards: requestedCards ?? 0,
-      retryAllowanceRequests: config.retryAllowanceRequests,
-      unknownFields: unknownFields,
-    );
-  }
-
-  GenerationEstimate _estimate(
-    List<_PlannedChunkData> planned,
-    List<PlannedChunk> chunks,
-  ) {
-    var inputTextTokens = 0;
-    var imageTokens = 0;
-    var catalogTokens = 0;
-    for (final _PlannedChunkData chunk in planned) {
-      inputTextTokens += chunk.pureTextTokens;
-      imageTokens += chunk.imagePartTokens + chunk.attachmentTokens;
-      catalogTokens += chunk.catalogTokens + chunk.labelTokens;
-    }
-    var reservedOutput = 0;
-    for (final PlannedChunk chunk in chunks) {
-      reservedOutput += math.min(
-        _outputCap,
-        chunk.limit * budgetConfig.perCardOutputTokens +
-            budgetConfig.jsonEnvelopeTokens,
-      );
-    }
-    final int requests = math.max(1, chunks.length);
-    // Обвязка отправляется в каждом запросе — она умножается на число
-    // запросов, иначе оценка входа занижает реальную стоимость (G.1/G.6).
-    final int fixedPrompt = overhead.systemPromptTokens * requests;
-    final int wrapper = overhead.wrapperTokens * requests;
-    final int schema = overhead.schemaTokens * requests;
-    final int inputTotal =
-        inputTextTokens +
-        imageTokens +
-        catalogTokens +
-        fixedPrompt +
-        wrapper +
-        schema;
-    final int totalTokens = inputTotal + reservedOutput;
-    final GenerationCost? cost = capabilities.pricing?.costFor(
-      inputTokens: inputTotal,
-      outputTokens: reservedOutput,
-    );
-    return GenerationEstimate(
-      inputTextTokens: inputTextTokens,
-      imageTokens: imageTokens,
-      fixedPromptTokens: fixedPrompt,
-      wrapperTokens: wrapper,
-      schemaTokens: schema,
-      catalogTokens: catalogTokens,
-      reservedOutputTokens: reservedOutput,
-      expectedOutputTokens: reservedOutput,
-      totalTokens: totalTokens,
-      plannedChunks: chunks.length,
-      plannedRequests: chunks.length,
-      retryAllowanceRequests: config.retryAllowanceRequests,
-      pricingState: capabilities.pricingState,
-      estimatorVersion: '${estimator.version}/planner-1',
-      inputCost: cost?.input,
-      outputCost: cost?.output,
-      totalCost: cost?.total,
-      currency: cost?.currency,
-      unknownFields: _unknownFields(),
-      confidence: _unknownFields().isEmpty ? 1 : 0.5,
-    );
-  }
-
-  BudgetTrace _planBudget(List<_PlannedChunkData> planned, List<int> limits) {
-    var maxCatalog = 0;
-    var maxImage = 0;
-    var maxLimit = _limitTarget;
-    for (final _PlannedChunkData chunk in planned) {
-      maxCatalog = math.max(
-        maxCatalog,
-        chunk.catalogTokens + chunk.labelTokens,
-      );
-      maxImage = math.max(
-        maxImage,
-        chunk.imagePartTokens + chunk.attachmentTokens,
-      );
-    }
-    for (final int limit in limits) {
-      maxLimit = math.max(maxLimit, limit);
-    }
-    return GenerationBudget.compute(
-      capabilities: capabilities,
-      limit: maxLimit,
-      systemPromptTokens: overhead.systemPromptTokens,
-      schemaTokens: overhead.schemaTokens,
-      wrapperTokens: overhead.wrapperTokens,
-      catalogTokens: maxCatalog,
-      imageTokens: maxImage,
-      config: budgetConfig,
-    ).trace;
-  }
-}
-
-/// Итоговые данные фрагмента перед созданием [PlannedChunk] (лимит карточек
-/// назначается после распределения).
-class _PlannedChunkData {
-  _PlannedChunkData({
-    required this.index,
-    required this.kind,
-    required this.materialsText,
-    required this.units,
-    required this.imageParts,
-    required this.imagePartIds,
-    required this.catalogOnly,
-    required this.catalogOnlyIds,
-    required this.attachments,
-    required this.pureTextTokens,
-    required this.catalogTokens,
-    required this.labelTokens,
-    required this.imagePartTokens,
-    required this.attachmentTokens,
-    required this.bodyBytes,
-    required this.splitDepth,
-  });
-
-  final int index;
-  final ChunkKind kind;
-  final String materialsText;
-  final List<UnitSpan> units;
-  final List<DocumentImage> imageParts;
-  final List<String> imagePartIds;
-  final List<DocumentImage> catalogOnly;
-  final List<String> catalogOnlyIds;
-  final List<GenerationAttachment> attachments;
-  final int pureTextTokens;
-  final int catalogTokens;
-  final int labelTokens;
-  final int imagePartTokens;
-  final int attachmentTokens;
-  final int bodyBytes;
-  final int splitDepth;
-
-  int get textTokens => pureTextTokens + catalogTokens + labelTokens;
-
-  int get imageTokens => imagePartTokens + attachmentTokens;
-
-  int get volume => textTokens + imageTokens;
-
-  PlannedChunk toChunk({required int limit, int? index}) {
-    return PlannedChunk(
-      index: index ?? this.index,
-      kind: kind,
-      units: units,
-      imageParts: imageParts,
-      imagePartIds: imagePartIds,
-      catalogOnly: catalogOnly,
-      catalogOnlyIds: catalogOnlyIds,
-      attachments: attachments,
-      textTokens: textTokens,
-      imageTokens: imageTokens,
-      bodyBytes: bodyBytes,
-      limit: math.max(1, limit),
-      splitDepth: splitDepth,
-      materialsText: materialsText,
-    );
-  }
-}
-
-/// Подобранные строки каталога.
-class _CatalogSelection {
-  const _CatalogSelection({
-    required this.entries,
-    required this.tokens,
-    required this.bytes,
-  });
-
-  final List<_ImageEntry> entries;
-  final int tokens;
-  final int bytes;
-}
-
-final RegExp _sentenceBoundary = RegExp(r'[.!?…]+[ \t\n]+');
-final RegExp _lineBoundary = RegExp(r'\n');
-
-List<String> _splitAfter(String text, RegExp boundary) {
-  final List<String> parts = <String>[];
-  var start = 0;
-  for (final Match match in boundary.allMatches(text)) {
-    final int end = match.end;
-    if (end <= start) continue;
-    parts.add(text.substring(start, end));
-    start = end;
-  }
-  if (start < text.length) parts.add(text.substring(start));
-  if (parts.isEmpty) parts.add(text);
-  return parts;
-}
-
-bool _isHighSurrogate(int codeUnit) => codeUnit >= 0xD800 && codeUnit <= 0xDBFF;
-
-bool _isLowSurrogate(int codeUnit) => codeUnit >= 0xDC00 && codeUnit <= 0xDFFF;

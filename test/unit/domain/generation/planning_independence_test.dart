@@ -79,7 +79,11 @@ void main() {
       for (final InputPlan plan in plans) {
         expect(plan.strategy, InputStrategy.fragmented);
         expect(plan.partCount, 3);
-        expect(plan.inputTokens, 62000, reason: 'бюджет части одинаков');
+        expect(
+          plan.inputTokens,
+          114950,
+          reason: 'бюджет части одинаков: ceil((4500 + 100000) × 1.1)',
+        );
       }
       expect(
         partsSignature(plans[0]),
@@ -112,7 +116,9 @@ void main() {
       );
       expect(one.length, lessThan(three.length));
       expect(one.map((PlannedBatch b) => b.limit).toList(), <int>[10]);
-      expect(three.map((PlannedBatch b) => b.limit).toList(), <int>[17, 17, 16]);
+      // В fragmented-режиме партии строятся внутри частей: распределение 50
+      // карточек по 30 равным разделам даёт 20/20/10 на три части.
+      expect(three.map((PlannedBatch b) => b.limit).toList(), <int>[20, 20, 10]);
       expect(
         plans[0].budget.contextTokens,
         plans[2].budget.contextTokens,

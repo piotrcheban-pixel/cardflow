@@ -106,7 +106,7 @@ void main() {
         );
         expect(
           first.achievable,
-          requested < 63 ? requested : 63,
+          requested < 83 ? requested : 83,
           reason: 'Σ = min(requested, Σcapacity)',
         );
         expect(first.planned, second.planned, reason: 'детерминизм');

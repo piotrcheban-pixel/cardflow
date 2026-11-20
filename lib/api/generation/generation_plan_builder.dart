@@ -148,6 +148,10 @@ class GenerationPlanBuilder {
               imagesCatalog: '',
             ),
           ),
+          outlineTokens: estimator.estimateText(
+            _outlineOf(documents),
+          ),
+          taskTailTokens: estimator.estimateText(_taskTailTemplate),
         );
     return planner.plan(
       inventory: inventory,
@@ -156,6 +160,7 @@ class GenerationPlanBuilder {
       requestedCards: requestedCards ?? requestedCardCount(wishes),
       budgetConfig: budgetConfig,
       catalogLineBuilder: planner.catalogLineBuilder ?? _catalogLine,
+      wishes: wishes,
     );
   }
 
@@ -203,6 +208,23 @@ class GenerationPlanBuilder {
     return imageCatalogLine(
       image.image.withId('$kDocumentImageIdPrefix${index + 1}'),
     );
+  }
+
+  /// Хвост `<task>`: изменяемая часть запроса (ADR-040 §7).
+  static const String _taskTailTemplate =
+      '<task><part>1 из 2</part><focus>s1, s2</focus>'
+      '<cards>40</cards></task>';
+
+  /// Компактное оглавление всех заголовков (оценка резерва fragmented).
+  static String _outlineOf(List<ParsedDocument> documents) {
+    final List<String> titles = <String>[
+      for (final ParsedDocument document in documents)
+        for (final ParsedSection section in document.sections)
+          if (section.title != null && section.title!.trim().isNotEmpty)
+            section.title!.trim(),
+    ];
+    if (titles.isEmpty) return '';
+    return 'Оглавление: ${titles.join(' · ')}';
   }
 
   DocumentUnit _documentUnit(

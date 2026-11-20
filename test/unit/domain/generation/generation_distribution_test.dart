@@ -146,9 +146,8 @@ void main() {
 
     for (final int count in <int>[50, 100, 200, 500, 1000]) {
       test('$count карточек: материала хватает — план не занижает', () {
-        final int targetChunks = ((count - 1) ~/ 7) + 1;
-        // ~13 000 символов на фрагмент при 7 карточках: мягкая цель не должна
-        // обрезать achievableCards (D20).
+        // Партии ограничены бюджетом вывода: cardsFor(8192) = 22 при tpc=300.
+        final int targetChunks = ((count - 1) ~/ 22) + 1;
         final int sections = targetChunks * 13;
         final GenerationPlan plan = planFor(
           requestedCards: count,

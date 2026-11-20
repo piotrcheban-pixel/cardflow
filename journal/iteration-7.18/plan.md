@@ -95,26 +95,30 @@ final class OutputBatchPlanner {
 - [x] ADR-039 (`docs/decisions/ADR-039-model-capability-provenance-discovery.md`)
 - [x] ADR-040 (`docs/decisions/ADR-040-whole-document-first-planning.md`)
 - [x] `plan.md` (этот файл)
-- [ ] red-тесты §5.1–5.3: `test/unit/domain/generation/generation_planning_test.dart`,
+- [x] red-тесты §5.1–5.3: `test/unit/domain/generation/generation_planning_test.dart`,
       `card_allocator_test.dart`, `planning_independence_test.dart`
-- [ ] скелеты API (компилируются, поведение не реализовано) → прогон,
+- [x] скелеты API (компилируются, поведение не реализовано) → прогон,
       assertion-level вывод в `journal/iteration-7.18/red-output.md`
-- [ ] коммит `test:`
+- [x] коммит `test:` (`f191375`)
 
 ### Фаза 2 — домен
-- [ ] `sourced.dart`, `model_limits.dart` (слияние по полям, миграция)
-- [ ] `generation_planning_config.dart` (формулы `tokensFor/cardsFor/desiredOutput`)
-- [ ] `generation_request_budget.dart` (P/D/m, total-inputOnly-unknown, байты)
-- [ ] `input_planner.dart` (whole-first, fragmented, оглавление, перекрытие,
-      изображения по разделам)
-- [ ] `card_allocator.dart` (density/weight/capacity, water-filling, min 1)
-- [ ] `output_batch_planner.dart` (focus, балансировка, независимость)
-- [ ] `GenerationPlan`/`PlannedChunk` расширены (`inputStrategy`, части,
+- [x] `sourced.dart`, `model_limits.dart` (слияние по полям, миграция; коммит `04534ba`)
+- [x] `generation_planning_config.dart` (формулы `tokensFor/cardsFor/desiredOutput`)
+- [x] `generation_request_budget.dart` (P/D/m, total-inputOnly-unknown, байты)
+- [x] `input_planner.dart` (whole-first, fragmented, оглавление, изображения по
+      разделам, лимиты/дедуп изображений)
+- [x] `card_allocator.dart` (density/weight/capacity, water-filling, min 1)
+- [x] `output_batch_planner.dart` (focus, балансировка, лимиты ответа и image-частей)
+- [x] `GenerationPlan`/`PlannedChunk` расширены (`inputStrategy`, части,
       распределение, `focusSectionIds`, `partIndex/Count`)
-- [ ] `GenerationChunkPlanner` внутри вызывает три планировщика; prompt-only —
-      через тот же интерфейс
-- [ ] домен без Flutter (`architecture_test`), тесты §5.1–5.3 зелёные
-- [ ] коммит `feat(domain): …`
+- [x] `GenerationChunkPlanner` внутри вызывает три планировщика; prompt-only —
+      через `allowPromptOnly` того же интерфейса
+- [x] домен без Flutter, тесты §5.1–5.3 зелёные; полный прогон
+      **2198 passed + 16 skipped**
+- [x] старые тесты D.5/мягкой цели заменены контрактными:
+      `generation_chunk_planner_test.dart` (20), новый
+      `generation_plan_batches_test.dart` (14) вместо `generation_plan_merge_test.dart`
+- [ ] коммит `feat(domain): …` (следующий шаг)
 
 ### Фаза 3 — discovery и кэш
 - [ ] порт `ModelCapabilityDiscovery` (domain), резолверы
