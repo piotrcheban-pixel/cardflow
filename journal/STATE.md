@@ -1,16 +1,66 @@
 # STATE — текущее состояние CardFlow
 
-**Дата:** 2026-11-21 · **Итерация:** `7.18` «Планирование генерации»
-(`docs/prompts/iteration-7.18.md`) — **завершена**: ADR-039/ADR-040, домен,
-discovery/кэш, `gen-ru-v8`, конвейер, UI, ревью и гейты.
-Предыдущая итерация `REDESIGN 2` — в истории ниже. Схема БД и
-`format_version` не менялись.
+**Дата:** 2026-11-21 · **Итерация:** `7.18.1` «Закрытие остатков 7.18»
+(`journal/iteration-7.18/summary.md`, раздел 7.18.1) — **завершена**:
+prompt-only на общей машинерии, нативный count_tokens в конвейере, recovery
+×0.8, ручные характеристики модели, «Подробнее» плана, сверка discovery.
+Предыдущая итерация `7.18` — историческая запись ниже. Схема БД и
+`schemaVersion` не менялись.
 **Режим:** ИТЕРАЦИИ.
 
-**Следующий шаг:** итерация завершена: push `ab57f17..f5f6fe1`, CI run [44819862886](https://github.com/piotrcheban-pixel/cardflow/actions/runs/44819862886) — **9/9 job success**. После CI:
-закрыть L156 (нативный подсчёт в конвейере), L159 (prompt-only на общей
-машинерии), L160 (recovery-стратегия ×0.8), L161 («Подробнее» в предпросмотре)
-отдельной итерацией.
+**Следующий шаг:** итерация 7.18.1 закрыта; push и CI — по команде владельца.
+Открытые ограничения — L154 (частично), L155, L158, L162–L173: живые прогоны
+discovery/подсчёта, OpenAI Responses-счётчик, Gemini responseSchema, тарифы и
+каталог моделей, токены каталога изображений (L173).
+
+## Итерация 7.18.1 — закрытие остатков 7.18 (2026-11-21)
+
+**Задача:** заключительный аудит соответствия `docs/prompts/iteration-7.18.md`
+и закрытие обязательных пробелов без новой архитектуры.
+
+**Факты старта:** `git status --porcelain` → пусто; ветка `main`;
+`HEAD = origin/main = d66b0ff`; baseline `fvm flutter test --no-pub
+--exclude-tags golden` → **2256 passed + 16 skipped**, `analyze` 0.
+
+**Аудит отчёта 7.18:** кроме заявленных L156/L159/L160/L161 найдено:
+production-сервис слал `gen-ru-v7` (high), каталог `<images>` не входил в
+`requestBytes`, recovery менял только ярлык стратегии, сброс терял Vision,
+«Подробнее» брало лимиты исходного аккаунта.
+
+**Сделано (TDD, red → green, отдельные коммиты):**
+- `4072f4e` — prompt-only через `GenerationChunkPlanner`/`InputPlanner`/
+  `OutputBatchPlanner`; `PromptOnlyPlanner` удалён; тема — в обвязке каждого
+  запроса, разделов нет.
+- `e30562a` — production и builder по умолчанию шлют `gen-ru-v8`.
+- `c007328` — `RequestTokenCounter.supports` + `ProtocolRequestTokenCounter`,
+  один подсчёт на план, `ExactTokenCountCache` (sha256 содержимого), ошибка →
+  оценка, `InputAccuracy`/`inputTokenSource` в `InputPlan`; Anthropic `tools`,
+  Gemini `generationConfig`; `<part>1 из 0</part>` убран.
+- `0e72b61`, `bd99ace` — recovery: 413/подтверждённый 400 → части ≤0.8
+  бюджета; wholeDocument → fragmented с реальными частями/focus; остальные
+  партии части делятся заранее; ≤3 операций на запрос; прочие 400/401/403 без
+  переплана; `bodyBytes` включает каталог.
+- `c646c61` — `max_input_tokens`/`capabilities_configured_at` в JSON v2,
+  `userConfigured` с датой, UI «Изменить»/«Сбросить», тест применения на экране
+  провайдеров.
+- `39ade40` — `GenerationPlanDetails` («Подробнее»), `buildRunPlan` — единая
+  точка предпросмотра и конвейера, калиброванный builder, лимиты из кэша.
+- `0e42437` — discovery: DeepSeek `input_modalities`, Anthropic
+  `capabilities.image_input/pdf_input`, Moonshot `supports_image_in/reasoning`,
+  Ollama семантика `unknown`.
+- `6b374d7`, `419b625`, `9f42da6`, `bd99ace`, `50ca263` — фиксы ревью:
+  каталог в байтах запроса, Vision при сбросе, лимиты выбранной модели,
+  реальные части recovery, ARB без латиницы.
+
+**Гейты:** `gen-l10n` ок; `dart format` **542/0**; `analyze` **0**; полный
+набор → **2302 passed + 16 skipped + 0 failed**; покрытие **91.7 %
+(19433/21185)**; `build windows --release` → `cardflow.exe` (65,8 с); Windows
+smoke → **All tests passed!** (11 с). +46 тестов net, 0 ослаблений.
+
+**Журнал/ревью:** `journal/iteration-7.18/{summary,verify,review}.md`
+(разделы 7.18.1); `KNOWN_LIMITATIONS.md` L154–L173; `docs/generation-planning.md`
+§9; ADR-039 §6a. Находки ревью: high R1 и medium R2–R11 закрыты
+регрессионными тестами; открытых high/medium нет.
 
 ## Итерация 7.18 — планирование генерации (фаза 0, 2026-11-20)
 
