@@ -404,13 +404,37 @@ class CardGenerationService implements GenerationCaller {
         'Частей больше, чем изображений каталога',
       );
     }
-    final List<DocumentImage> selected = explicitCount != null
-        ? images.take(explicitCount).toList(growable: false)
-        : selectVisionDocumentImages(
-            images,
-            maxImages: limits.maxImagesPerRequest,
-            maxBytes: limits.maxImageBytesPerRequest,
-          );
+    final List<DocumentImage> selected;
+    final bool idsPresent =
+        explicitParts != null &&
+        explicitParts.isNotEmpty &&
+        explicitParts.every((DocumentImage part) => part.id.isNotEmpty);
+    if (idsPresent) {
+      final Map<String, DocumentImage> byId = <String, DocumentImage>{
+        for (final DocumentImage image in images)
+          if (image.id.isNotEmpty) image.id: image,
+      };
+      selected = <DocumentImage>[
+        for (final DocumentImage part in explicitParts)
+          if (byId[part.id] case final DocumentImage found)
+            found
+          else
+            throw ArgumentError.value(
+              part.id,
+              'documentImageParts',
+              'Изображения нет в каталоге запроса',
+            ),
+      ];
+    } else if (explicitParts != null) {
+      // Legacy-контракт (TASK 03): части — префикс каталога без id.
+      selected = images.take(explicitParts.length).toList(growable: false);
+    } else {
+      selected = selectVisionDocumentImages(
+        images,
+        maxImages: limits.maxImagesPerRequest,
+        maxBytes: limits.maxImageBytesPerRequest,
+      );
+    }
     final List<GenerationAttachment> parts = <GenerationAttachment>[];
     final List<String> sentIds = <String>[];
     final List<String> skippedIds = <String>[];

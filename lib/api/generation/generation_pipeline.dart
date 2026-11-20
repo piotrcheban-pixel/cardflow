@@ -18,7 +18,6 @@ import 'package:uuid/uuid.dart';
 import 'package:cardflow/api/generation/generation_caller.dart';
 import 'package:cardflow/api/generation/generation_cancellation.dart';
 import 'package:cardflow/api/generation/generation_diagnostics.dart';
-import 'package:cardflow/api/generation/generation_images.dart';
 import 'package:cardflow/api/generation/generation_plan_builder.dart';
 import 'package:cardflow/api/generation/system_prompt.dart';
 import 'package:cardflow/api/images/placeholder_image_generator.dart';
@@ -531,18 +530,26 @@ class GenerationPipeline implements GenerationRunner {
           focusSectionIds: List<String>.unmodifiable(chunkSections),
         );
       }
-      final List<DocumentImage> documentImages = withCatalogIds(<DocumentImage>[
-        ...chunk.imageParts,
-        ...chunk.catalogOnly,
-      ]);
-      // Контракт сервиса: `documentImageParts` — префикс каталога. План
-      // отправляет image-частями ровно `chunk.imageParts`, без повторного
-      // отбора/переупорядочивания (TASK 03, D4/D7).
-      final List<DocumentImage> documentImageParts = chunk.imageParts.isEmpty
+      // id изображений назначаются один раз по порядку плана: повторная
+      // нумерация по порядку партии ломала бы стабильность `<images>` и
+      // `image_id` между запросами. Порядок каталога — по id.
+      final Map<String, String> imageIds = _imageIdsFor(plan);
+      final List<DocumentImage> documentImages = <DocumentImage>[
+        for (final DocumentImage image in <DocumentImage>[
+          ...chunk.imageParts,
+          ...chunk.catalogOnly,
+        ])
+          image.withId(imageIds[_imageKey(image)] ?? image.id),
+      ]..sort(_compareImageIds);
+      // Контракт сервиса: `documentImageParts` — явный список отправляемых
+      // image-частей, а не префикс каталога (v8, ADR-040 §7).
+      final List<DocumentImage> documentImageParts =
+          chunk.imageParts.isEmpty
           ? const <DocumentImage>[]
-          : documentImages
-                .take(chunk.imageParts.length)
-                .toList(growable: false);
+          : List<DocumentImage>.unmodifiable(<DocumentImage>[
+              for (final DocumentImage image in chunk.imageParts)
+                image.withId(imageIds[_imageKey(image)] ?? image.id),
+            ]);
       onProgress?.call(
         GenerationProgress(
           phase: GenerationProgressPhase.sending,
@@ -1422,6 +1429,36 @@ class GenerationPipeline implements GenerationRunner {
     };
   }
 
+  /// Устойчивый ключ изображения в плане.
+  static String _imageKey(DocumentImage image) =>
+      '${image.fileName}|${image.page ?? ''}|${image.caption}|'
+      '${image.bytes.length}';
+
+  /// Стабильные display-id (`img1…`) по порядку плана (ADR-040 §7).
+  static Map<String, String> _imageIdsFor(GenerationPlan? plan) {
+    if (plan == null) return const <String, String>{};
+    final Map<String, String> ids = <String, String>{};
+    for (final PlannedChunk chunk in plan.chunks) {
+      for (final DocumentImage image in <DocumentImage>[
+        ...chunk.imageParts,
+        ...chunk.catalogOnly,
+      ]) {
+        ids.putIfAbsent(_imageKey(image), () => 'img${ids.length + 1}');
+      }
+    }
+    return ids;
+  }
+
+  /// Порядок изображений по числовому id (`img2` < `img10`).
+  static int _compareImageIds(DocumentImage a, DocumentImage b) {
+    int numeric(String id) {
+      final String digits = id.replaceAll(RegExp(r'[^0-9]'), '');
+      return int.tryParse(digits) ?? 0;
+    }
+
+    return numeric(a.id).compareTo(numeric(b.id));
+  }
+
   /// Разделы запроса: `focus` или все разделы части (для исчерпания).
   List<String> _sectionsOf(GenerationPlan? plan, PlannedChunk chunk) {
     if (plan == null ||
@@ -1522,16 +1559,23 @@ class GenerationPipeline implements GenerationRunner {
   ) async {
     final TokenCalibrationStore? store = calibrationStore;
     if (store == null || facts.isEmpty) return;
+    var completion = 0;
+    var accepted = 0;
     for (final _BatchTokenFact fact in facts) {
-      try {
-        await store.record(
-          accountId: account.id,
-          model: account.modelId,
-          observedTokensPerCard: fact.completionTokens / fact.acceptedCards,
-        );
-      } on Object {
-        // Калибровка не должна ломать генерацию.
-      }
+      completion += fact.completionTokens;
+      accepted += fact.acceptedCards;
+    }
+    if (accepted <= 0) return;
+    try {
+      // Один замер на прогон: суммарный usage / принятые карточки — устойчивее
+      // покараточных выбросов и меньше записей в app_settings.
+      await store.record(
+        accountId: account.id,
+        model: account.modelId,
+        observedTokensPerCard: completion / accepted,
+      );
+    } on Object {
+      // Калибровка не должна ломать генерацию.
     }
   }
 

@@ -1,4 +1,7 @@
+import 'dart:typed_data';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:cardflow/api/generation/generation_images.dart';
 
 import 'package:cardflow/api/generation/generation_pipeline.dart';
 import 'package:cardflow/api/generation/generation_prompt.dart';
@@ -9,6 +12,8 @@ import 'package:cardflow/domain/generation/generation_job.dart';
 import 'package:cardflow/domain/generation/generation_plan.dart';
 import 'package:cardflow/domain/generation/input_planner.dart';
 import 'package:cardflow/domain/generation/generation_provider.dart';
+import 'package:cardflow/domain/generation/document_image.dart';
+import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/generation/generation_request.dart';
 import 'package:cardflow/domain/generation/generation_result.dart';
 import 'package:cardflow/domain/generation/generation_run.dart';
@@ -137,6 +142,60 @@ void main() {
     expect(prefixes.toSet(), hasLength(1), reason: 'кэш префикса');
   });
 
+  test('изображения: id и каталог стабильны между партиями', () async {
+    final GenerationPipeline runner = pipeline();
+    caller.onGenerate = (GenerationRequest request, int call) async =>
+        resultOf(<String>['Вопрос $call']);
+    final List<DocumentImage> images = <DocumentImage>[
+      for (var index = 0; index < 3; index++)
+        DocumentImage(
+          fileName: 'scan$index.png',
+          bytes: Uint8List.fromList(<int>[index + 1, index + 2, 10]),
+          mediaType: AttachmentMediaType.png,
+          caption: 'Рис. $index',
+          sectionIndex: 0,
+          page: 1,
+        ),
+    ];
+    final GenerationRunResult result = await runner.run(
+      GenerationRunRequest(
+        documents: <ParsedDocument>[docOf(200, 100)],
+        documentImages: images,
+        account: testProviderAccount(presetId: 'openai', modelId: 'gpt-4o'),
+        deckName: 'Колода',
+        requestedCards: 40,
+      ),
+    );
+    expect(result.status, GenerationJobStatus.done);
+    expect(caller.calls, greaterThan(1));
+    final String catalog = buildImageCatalog(caller.requests.first.documentImages);
+    expect(catalog, contains('img1'));
+    for (final GenerationRequest request in caller.requests) {
+      expect(
+        request.documentImages.map((DocumentImage image) => image.id).toList(),
+        <String>['img1', 'img2', 'img3'],
+        reason: 'id назначаются один раз по плану, а не по порядку партии',
+      );
+      expect(buildImageCatalog(request.documentImages), catalog);
+    }
+    final Set<String> prefixes = <String>{
+      for (final GenerationRequest request in caller.requests)
+        generationUserContentPrefix(
+          buildGenerationUserContent(
+            materialsText: request.materialsText,
+            wishes: request.wishes,
+            limit: request.limit,
+            imagesCatalog: buildImageCatalog(request.documentImages),
+            focusSectionIds: request.focusSectionIds,
+            partIndexHint: request.partIndexHint,
+            partCountHint: request.partCountHint,
+            outline: request.outline,
+            alreadyCreated: request.alreadyCreated,
+          ),
+        ),
+    };
+    expect(prefixes, hasLength(1), reason: 'кэш префикса с изображениями');
+  });
   test('source_exhausted: остаток разделов не запрашивается, недостача видна',
       () async {
     final GenerationPipeline runner = pipeline();
