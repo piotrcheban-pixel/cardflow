@@ -763,7 +763,20 @@ class GenerationPipeline implements GenerationRunner {
               replaceEnd++;
             }
             if (replacement.length > 1 || replaceEnd > index + 1) {
-              activePlan = _fragmentedPlan(activePlan);
+              final _ReplannedPart replanned = _replannedPart(
+                plan: activePlan,
+                source: chunk,
+                budgetTokens: replanBudget,
+                children: <PlannedChunk>[
+                  for (final _QueueItem item in replacement) item.chunk,
+                ],
+              );
+              activePlan = replanned.plan;
+              for (var child = 0; child < replacement.length; child++) {
+                replacement[child] = replacement[child].withChunk(
+                  replanned.chunks[child],
+                );
+              }
             }
             diagnostics.recovery(
               errorCode: error.code.name,
@@ -1196,13 +1209,109 @@ class GenerationPipeline implements GenerationRunner {
     return math.max(1, target);
   }
 
-  /// План после перепланирования: стратегия входа становится fragmented.
-  GenerationPlan? _fragmentedPlan(GenerationPlan? plan) {
+  /// Пересобирает части плана после перепланирования восстановления.
+  ///
+  /// wholeDocument → fragmented: каждая новая часть получает реальные разделы
+  /// (по `unitId`), `partIndex/partCount` и `focus`, поэтому запросы
+  /// восстановления — настоящие части, а не «часть 1 из 1». Для уже
+  /// дроблённого плана части не пересобираются, но дети получают корректные
+  /// `partIndex/partCount` и `focus` своей части.
+  _ReplannedPart _replannedPart({
+    required GenerationPlan? plan,
+    required PlannedChunk source,
+    required List<PlannedChunk> children,
+    required int budgetTokens,
+  }) {
     final InputPlan? input = plan?.inputPlan;
-    if (plan == null || input == null) return plan;
-    if (input.strategy == InputStrategy.fragmented) return plan;
-    return plan.withInputPlan(input.withStrategy(InputStrategy.fragmented));
+    if (plan == null || input == null || input.isPromptOnly) {
+      return _ReplannedPart(plan: plan, chunks: children);
+    }
+    final bool whole = input.strategy == InputStrategy.wholeDocument;
+    final int partIndex = whole
+        ? 0
+        : source.partIndex.clamp(0, input.parts.length - 1);
+    final int partCount = whole ? children.length : input.parts.length;
+    final List<InputSection> sourceSections =
+        partIndex >= 0 && partIndex < input.parts.length
+        ? input.parts[partIndex].sections
+        : const <InputSection>[];
+    final Map<String, InputSection> byId = <String, InputSection>{
+      for (final InputSection section in sourceSections) section.id: section,
+    };
+    final List<PlannedChunk> updated = <PlannedChunk>[];
+    final List<InputPart> rebuiltParts = <InputPart>[];
+    for (var index = 0; index < children.length; index++) {
+      final PlannedChunk child = children[index];
+      final Set<String> sectionIds = <String>{
+        for (final UnitSpan unit in child.units)
+          if (_sectionIdOfUnit(unit.unitId) case final String id
+              when byId.containsKey(id))
+            id,
+      };
+      final List<InputSection> sections = <InputSection>[
+        for (final InputSection section in sourceSections)
+          if (sectionIds.isEmpty || sectionIds.contains(section.id)) section,
+      ];
+      updated.add(
+        child.copyWith(
+          partIndex: whole ? index : partIndex,
+          partCount: partCount,
+          focusSectionIds: <String>[
+            for (final InputSection section in sections) section.promptId,
+          ],
+        ),
+      );
+      if (whole) {
+        rebuiltParts.add(
+          InputPart(
+            index: index,
+            sections: List<InputSection>.unmodifiable(sections),
+            materialsText: child.materialsText,
+            tokens: child.textTokens,
+            bytes: child.bodyBytes,
+            images: List<InputImage>.unmodifiable(<InputImage>[
+              for (final DocumentImage image in child.imageParts)
+                _inputImageOf(image),
+            ]),
+            catalogImages: List<InputImage>.unmodifiable(<InputImage>[
+              for (final DocumentImage image in child.catalogOnly)
+                _inputImageOf(image),
+            ]),
+          ),
+        );
+      }
+    }
+    if (!whole) {
+      return _ReplannedPart(plan: plan, chunks: updated);
+    }
+    final InputPlan rebuilt = input.withParts(
+      strategy: InputStrategy.fragmented,
+      parts: List<InputPart>.unmodifiable(rebuiltParts),
+      materialBudgetTokens: budgetTokens,
+    );
+    return _ReplannedPart(
+      plan: plan.withPlanData(inputPlan: rebuilt, chunks: updated),
+      chunks: updated,
+    );
   }
+
+  /// Разделы, к которым относится единица (`doc:<файл>#<раздел>#<кусок>`).
+  String? _sectionIdOfUnit(String unitId) {
+    final String base = unitId.split('~').first;
+    if (!base.startsWith('doc:')) return null;
+    final int last = base.lastIndexOf('#');
+    if (last <= 4) return null;
+    final int previous = base.lastIndexOf('#', last - 1);
+    if (previous <= 4) return null;
+    return base.substring(0, last);
+  }
+
+  InputImage _inputImageOf(DocumentImage image) => InputImage(
+    id: image.id,
+    fileName: image.fileName,
+    bytes: image.bytes,
+    page: image.page,
+  );
 
   /// Перенумеровывает очередь после дробления (прогресс «фрагмент K из M»).
   void _renumber(List<_QueueItem> queue) {
@@ -1826,6 +1935,14 @@ class _QueueItem {
     limitReduced: limitReduced,
     outputBoosted: outputBoosted,
   );
+}
+
+/// Результат перепланирования части: обновлённый план и фрагменты.
+class _ReplannedPart {
+  const _ReplannedPart({required this.plan, required this.chunks});
+
+  final GenerationPlan? plan;
+  final List<PlannedChunk> chunks;
 }
 
 /// Результат решения о восстановлении: новые фрагменты и флаги попытки.

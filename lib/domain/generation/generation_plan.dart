@@ -828,11 +828,21 @@ class GenerationPlan {
   ///
   /// Меняется только стратегия/части входа; фрагменты, оценка и бюджет
   /// сохраняются: уже принятые карточки и заказ не пересчитываются молча.
-  GenerationPlan withInputPlan(InputPlan value) => GenerationPlan(
+  GenerationPlan withInputPlan(InputPlan value) =>
+      withPlanData(inputPlan: value);
+
+  /// Копия с обновлённым планом входа и фрагментами (перепланирование).
+  ///
+  /// Нужна, когда recovery заменил часть запросов: результат запуска обязан
+  /// показывать те же части/партии, которые реально исполнялись.
+  GenerationPlan withPlanData({
+    InputPlan? inputPlan,
+    List<PlannedChunk>? chunks,
+  }) => GenerationPlan(
     validity: validity,
     estimate: estimate,
     budget: budget,
-    chunks: chunks,
+    chunks: chunks ?? this.chunks,
     omitted: omitted,
     requestedCards: requestedCards,
     retryAllowanceRequests: retryAllowanceRequests,
@@ -841,7 +851,7 @@ class GenerationPlan {
     capabilitySources: capabilitySources,
     mode: mode,
     promptOnlyPrompt: promptOnlyPrompt,
-    inputPlan: value,
+    inputPlan: inputPlan ?? this.inputPlan,
     allocation: allocation,
   );
 

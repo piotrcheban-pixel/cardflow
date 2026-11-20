@@ -265,6 +265,32 @@ final class InputPlan {
   /// true, если материалы отсутствуют.
   bool get isPromptOnly => strategy == InputStrategy.promptOnly;
 
+  /// Копия с пересобранными частями (перепланирование после overflow).
+  ///
+  /// [materialBudgetTokens] — уменьшенный бюджет восстановления: следующие
+  /// переполнения считаются от него, а не от исходного плана.
+  InputPlan withParts({
+    required InputStrategy strategy,
+    required List<InputPart> parts,
+    int? materialBudgetTokens,
+  }) => InputPlan(
+    strategy: strategy,
+    parts: parts,
+    fixedTokens: fixedTokens,
+    inputTokens: inputTokens,
+    maxTokens: maxTokens,
+    accuracy: accuracy,
+    budget: budget,
+    materialTokens: materialTokens,
+    materialBudgetPerPart: materialBudgetPerPart,
+    outlineReserveTokens: outlineReserveTokens,
+    warnings: warnings,
+    images: images,
+    contextTokens: contextTokens,
+    materialBudgetTokens: materialBudgetTokens ?? this.materialBudgetTokens,
+    inputTokenSource: inputTokenSource,
+  );
+
   /// Копия с другой стратегией входа (перепланирование после overflow).
   InputPlan withStrategy(InputStrategy value) => InputPlan(
     strategy: value,

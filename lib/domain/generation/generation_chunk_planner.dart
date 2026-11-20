@@ -793,8 +793,18 @@ final class GenerationChunkPlanner {
       0,
       (int sum, InputImage image) => sum + image.tokens,
     );
+    final int catalogBytes =
+        batchImages.fold<int>(
+          0,
+          (int sum, InputImage image) => sum + image.catalogLineBytes,
+        ) +
+        catalogImages.fold<int>(
+          0,
+          (int sum, InputImage image) => sum + image.catalogLineBytes,
+        );
     final int bodyBytes =
         utf8.encode(rendered.text).length +
+        catalogBytes +
         _base64Bytes(batchImages) +
         config.jsonBodyOverheadBytes;
     final bool hasText = rendered.text.trim().isNotEmpty;
