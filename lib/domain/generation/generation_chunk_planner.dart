@@ -234,8 +234,7 @@ final class GenerationChunkPlanner {
             : InputAccuracy.exact,
         exactInputTokens: exactInputTokens,
         promptOnlyRequestBytes: promptBodyBytes,
-        inputTokenSource:
-            inputTokenSource ?? 'estimate:${estimator.version}',
+        inputTokenSource: inputTokenSource ?? 'estimate:${estimator.version}',
       );
       if (inputPlan.budget.payloadExceeded) {
         return _invalidPlan(
@@ -289,8 +288,7 @@ final class GenerationChunkPlanner {
         outlineReserveTokens: overhead.outlineTokens,
         orphanImages: data.orphanImages,
         exactInputTokens: exactInputTokens,
-        inputTokenSource:
-            inputTokenSource ?? 'estimate:${estimator.version}',
+        inputTokenSource: inputTokenSource ?? 'estimate:${estimator.version}',
       );
     }
 

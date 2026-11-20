@@ -3989,7 +3989,7 @@ abstract class AppLocalizations {
   /// Пояснение блока характеристик модели.
   ///
   /// In ru, this message translates to:
-  /// **'Лимиты с источником и датой проверки. «Обновить» запрашивает данные у провайдера; «Сбросить» возвращает автоматические значения каталога.'**
+  /// **'Лимиты с источником и датой проверки. «Изменить» задаёт значения вручную; «Обновить» запрашивает данные у провайдера; «Сбросить» возвращает автоматические значения каталога.'**
   String get settingsCapabilitiesDescription;
 
   /// Строка лимита контекста модели.
@@ -4003,6 +4003,54 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Лимит вывода'**
   String get settingsCapabilitiesOutput;
+
+  /// Строка отдельного лимита входа модели.
+  ///
+  /// In ru, this message translates to:
+  /// **'Лимит входа'**
+  String get settingsCapabilitiesInput;
+
+  /// Кнопка ручного ввода характеристик модели.
+  ///
+  /// In ru, this message translates to:
+  /// **'Изменить'**
+  String get settingsCapabilitiesEdit;
+
+  /// Заголовок диалога ручных характеристик.
+  ///
+  /// In ru, this message translates to:
+  /// **'Характеристики модели'**
+  String get settingsCapabilitiesEditTitle;
+
+  /// Пояснение к ручному вводу характеристик.
+  ///
+  /// In ru, this message translates to:
+  /// **'Пустое поле — автоматическое значение (каталог или API) либо «неизвестно». Ручные значения имеют приоритет и сохраняются в аккаунте.'**
+  String get settingsCapabilitiesEditHelp;
+
+  /// Кнопка сохранения ручных характеристик.
+  ///
+  /// In ru, this message translates to:
+  /// **'Сохранить'**
+  String get settingsCapabilitiesSave;
+
+  /// Кнопка отмены ручного ввода характеристик.
+  ///
+  /// In ru, this message translates to:
+  /// **'Отмена'**
+  String get settingsCapabilitiesCancel;
+
+  /// Успешное сохранение ручных характеристик.
+  ///
+  /// In ru, this message translates to:
+  /// **'Характеристики сохранены.'**
+  String get settingsCapabilitiesSaved;
+
+  /// Ошибка валидации ручного значения характеристики.
+  ///
+  /// In ru, this message translates to:
+  /// **'Введите положительное целое число или оставьте поле пустым.'**
+  String get settingsCapabilitiesInvalid;
 
   /// Строка лимита изображений модели.
   ///

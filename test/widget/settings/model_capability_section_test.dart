@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cardflow/domain/generation/model_limits.dart';
@@ -6,12 +6,13 @@ import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/settings/model_capability_section.dart';
 
 import '../../helpers/generation_fakes.dart';
+import '../../helpers/pump_app.dart' show ruLocalizationDelegates;
 
 /// Блок характеристик модели в настройках (ADR-039 §6).
 void main() {
   Widget wrap(Widget child) => MaterialApp(
     locale: const Locale('ru'),
-    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    localizationsDelegates: ruLocalizationDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
     home: Scaffold(body: SingleChildScrollView(child: child)),
   );
@@ -47,7 +48,9 @@ void main() {
     expect(find.textContaining('128 000'), findsOneWidget);
     expect(find.textContaining('из API провайдера'), findsOneWidget);
     expect(find.textContaining('проверено 20.11.2026'), findsOneWidget);
-    expect(find.textContaining('неизвестно'), findsOneWidget);
+    // Неизвестны два значения: лимит входа и лимит вывода (7.18.1 добавил
+    // отдельную строку входа). Остальные строки известны.
+    expect(find.textContaining('неизвестно'), findsNWidgets(2));
     expect(find.textContaining('допущение приложения'), findsOneWidget);
   });
 
@@ -82,6 +85,76 @@ void main() {
     await tester.pumpAndSettle();
     expect(resets, 1);
     expect(find.text('Значения сброшены к автоматическим.'), findsOneWidget);
+  });
+
+  testWidgets('ручное редактирование контекста/входа/выхода', (
+    WidgetTester tester,
+  ) async {
+    CapabilityDraft? saved;
+    await tester.pumpWidget(
+      wrap(
+        ModelCapabilitySection(
+          account: testProviderAccount(modelId: 'deepseek-chat'),
+          loadLimits: () async => ModelLimits(
+            contextTokens: Sourced<int>(
+              128000,
+              source: CapabilitySource.providerApi,
+              observedAt: DateTime.utc(2026, 11, 20),
+              sourceRef: 'https://api.deepseek.com/models',
+            ),
+            maxOutputTokens: const Sourced<int>.absent(),
+          ),
+          refresh: () async => true,
+          reset: () async {},
+          save: (CapabilityDraft draft) async => saved = draft,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey<String>('capabilities-edit')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const ValueKey<String>('capabilities-context-field')),
+      '65536',
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey<String>('capabilities-input-field')),
+      '60000',
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey<String>('capabilities-output-field')),
+      '8192',
+    );
+    await tester.tap(find.byKey(const ValueKey<String>('capabilities-save')));
+    await tester.pumpAndSettle();
+    expect(saved, isNotNull);
+    expect(saved!.contextTokens, 65536);
+    expect(saved!.maxInputTokens, 60000);
+    expect(saved!.maxOutputTokens, 8192);
+  });
+
+  testWidgets('пустое поле ручного ввода — автоматическое значение', (
+    WidgetTester tester,
+  ) async {
+    CapabilityDraft? saved;
+    await tester.pumpWidget(
+      wrap(
+        ModelCapabilitySection(
+          account: testProviderAccount(modelId: 'deepseek-chat'),
+          loadLimits: () async => const ModelLimits.absent(),
+          refresh: () async => true,
+          reset: () async {},
+          save: (CapabilityDraft draft) async => saved = draft,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey<String>('capabilities-edit')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey<String>('capabilities-save')));
+    await tester.pumpAndSettle();
+    expect(saved, isNotNull);
+    expect(saved!.isEmpty, isTrue);
   });
 
   testWidgets('ошибка загрузки показывается без исключения', (

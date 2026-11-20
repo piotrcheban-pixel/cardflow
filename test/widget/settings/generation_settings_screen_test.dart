@@ -14,6 +14,10 @@ import 'package:cardflow/api/providers/openai_adapter.dart';
 import 'package:cardflow/api/providers/openai_compatible_adapter.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
 import 'package:cardflow/domain/generation/provider_account.dart';
+import 'package:cardflow/api/models/model_capability_service.dart';
+import 'package:cardflow/domain/generation/model_capability_cache.dart';
+import 'package:cardflow/domain/generation/model_capability_discovery.dart';
+import 'package:cardflow/domain/generation/model_limits.dart';
 import 'package:cardflow/domain/generation/provider_accounts_store.dart';
 import 'package:cardflow/domain/generation/provider_protocol.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
@@ -58,6 +62,50 @@ class _FailingAccountsStore implements ProviderAccountsStore {
 
   @override
   Future<void> write(ProviderAccounts accounts) async {}
+}
+
+class _EmptyCapabilityCache implements ModelCapabilityCache {
+  @override
+  Future<void> invalidateAccount(String accountId) async {}
+
+  @override
+  Future<ModelCapabilityRecord?> read({
+    required String accountId,
+    required ProviderProtocol protocol,
+    required String baseUrl,
+    required String model,
+  }) async => null;
+
+  @override
+  Future<List<ModelCapabilityRecord>> readAll() async =>
+      const <ModelCapabilityRecord>[];
+
+  @override
+  Future<void> write(ModelCapabilityRecord record) async {}
+}
+
+/// Сервис характеристик без drift-кэша: в widget-тесте БД не поднимается.
+class _FakeCapabilityService extends ModelCapabilityService {
+  _FakeCapabilityService()
+    : super(
+        dio: Dio(),
+        readApiKey: (String id) async => null,
+        cache: _EmptyCapabilityCache(),
+      );
+
+  @override
+  Future<ModelLimits> limitsFor(ProviderAccount account) async =>
+      const ModelLimits.absent();
+
+  @override
+  Future<CapabilityRefresh> refresh(ProviderAccount account) async =>
+      CapabilityRefresh(
+        result: DiscoveryResult(
+          status: DiscoveryStatus.unsupported,
+          accountId: account.id,
+          model: account.modelId,
+        ),
+      );
 }
 
 class _Transport implements GenerationTransport {
@@ -588,5 +636,55 @@ void main() {
       reason: 'Аккаунт не сохраняется, если хранилище не вернуло ключ (D3)',
     );
     await hideSnackbar(tester);
+  });
+  testWidgets('характеристики модели: ручной ввод сохраняется в аккаунт', (
+    WidgetTester tester,
+  ) async {
+    final ProviderAccount account = testProviderAccount(
+      presetId: 'deepseek',
+      modelId: 'deepseek-chat',
+    );
+    store.accounts = ProviderAccounts(
+      accounts: <ProviderAccount>[account],
+      activeAccountId: account.id,
+    );
+    await pumpScreen(
+      tester,
+      customOverrides: <Override>[
+        ...overrides(),
+        modelCapabilityServiceProvider.overrideWithValue(
+          _FakeCapabilityService(),
+        ),
+      ],
+    );
+    final Finder section = find.byKey(
+      ValueKey<String>('model-capabilities-${account.id}'),
+    );
+    await tester.scrollUntilVisible(section, 300);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey<String>('capabilities-edit')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.enterText(
+      find.byKey(const ValueKey<String>('capabilities-context-field')),
+      '65536',
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey<String>('capabilities-input-field')),
+      '60000',
+    );
+    await tester.enterText(
+      find.byKey(const ValueKey<String>('capabilities-output-field')),
+      '8192',
+    );
+    await tester.tap(find.byKey(const ValueKey<String>('capabilities-save')));
+    await tester.pumpAndSettle();
+
+    final ProviderAccount saved = store.accounts.active!;
+    expect(saved.contextTokens, 65536);
+    expect(saved.maxInputTokens, 60000);
+    expect(saved.maxOutputTokens, 8192);
+    expect(saved.capabilitiesSource, CapabilitySource.userConfigured);
+    expect(saved.capabilitiesConfiguredAt, isNotNull);
   });
 }

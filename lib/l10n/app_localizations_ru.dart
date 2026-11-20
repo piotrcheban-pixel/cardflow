@@ -2473,13 +2473,39 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get settingsCapabilitiesDescription =>
-      'Лимиты с источником и датой проверки. «Обновить» запрашивает данные у провайдера; «Сбросить» возвращает автоматические значения каталога.';
+      'Лимиты с источником и датой проверки. «Изменить» задаёт значения вручную; «Обновить» запрашивает данные у провайдера; «Сбросить» возвращает автоматические значения каталога.';
 
   @override
   String get settingsCapabilitiesContext => 'Контекст';
 
   @override
   String get settingsCapabilitiesOutput => 'Лимит вывода';
+
+  @override
+  String get settingsCapabilitiesInput => 'Лимит входа';
+
+  @override
+  String get settingsCapabilitiesEdit => 'Изменить';
+
+  @override
+  String get settingsCapabilitiesEditTitle => 'Характеристики модели';
+
+  @override
+  String get settingsCapabilitiesEditHelp =>
+      'Пустое поле — автоматическое значение (каталог или API) либо «неизвестно». Ручные значения имеют приоритет и сохраняются в аккаунте.';
+
+  @override
+  String get settingsCapabilitiesSave => 'Сохранить';
+
+  @override
+  String get settingsCapabilitiesCancel => 'Отмена';
+
+  @override
+  String get settingsCapabilitiesSaved => 'Характеристики сохранены.';
+
+  @override
+  String get settingsCapabilitiesInvalid =>
+      'Введите положительное целое число или оставьте поле пустым.';
 
   @override
   String get settingsCapabilitiesImages => 'Изображений в запросе';

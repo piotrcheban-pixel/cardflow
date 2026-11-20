@@ -38,12 +38,14 @@ class ProviderAccount {
     this.requiresApiKey = false,
     this.supportsVision = false,
     this.visionConfigured = false,
+    this.maxInputTokens,
     this.maxOutputTokens,
     this.maxImagesPerRequest,
     this.maxImageBytes,
     this.maxRequestBytes,
     this.pricing,
     this.capabilitiesSource = CapabilitySource.unknown,
+    this.capabilitiesConfiguredAt,
   });
 
   /// Аккаунт из пресета каталога; [id] — id аккаунта (=== ключ secure storage).
@@ -102,6 +104,12 @@ class ProviderAccount {
   /// каталогом и не считается пользовательским.
   final bool visionConfigured;
 
+  /// Отдельный лимит входа модели, токенов; `null` — неизвестно.
+  ///
+  /// Введён в 7.18.1 (§2.4): модели с отдельным `max_input_tokens` (Anthropic,
+  /// Gemini) не должны ограничиваться только окном контекста.
+  final int? maxInputTokens;
+
   /// Жёсткий лимит вывода модели, токенов; `null` — неизвестно.
   final int? maxOutputTokens;
 
@@ -119,6 +127,13 @@ class ProviderAccount {
 
   /// Источник полей возможностей/цен аккаунта (JSON v2).
   final CapabilitySource capabilitiesSource;
+
+  /// Когда пользователь сохранил ручные характеристики (JSON v2).
+  ///
+  /// Нужен, чтобы UI показывал **дату проверки** пользовательской настройки,
+  /// а не «сегодня» при каждом разрешении лимитов. `null` — значения не
+  /// настраивались вручную.
+  final DateTime? capabilitiesConfiguredAt;
 
   /// Пресет каталога, если аккаунт создан из каталога.
   ProviderPreset? get preset =>
@@ -143,12 +158,14 @@ class ProviderAccount {
     bool? requiresApiKey,
     bool? supportsVision,
     bool? visionConfigured,
+    int? maxInputTokens,
     int? maxOutputTokens,
     int? maxImagesPerRequest,
     int? maxImageBytes,
     int? maxRequestBytes,
     GenerationPricing? pricing,
     CapabilitySource? capabilitiesSource,
+    DateTime? capabilitiesConfiguredAt,
   }) {
     return ProviderAccount(
       id: id,
@@ -160,12 +177,47 @@ class ProviderAccount {
       contextTokens: contextTokens ?? this.contextTokens,
       requiresApiKey: requiresApiKey ?? this.requiresApiKey,
       supportsVision: supportsVision ?? this.supportsVision,
+      maxInputTokens: maxInputTokens ?? this.maxInputTokens,
       maxOutputTokens: maxOutputTokens ?? this.maxOutputTokens,
       maxImagesPerRequest: maxImagesPerRequest ?? this.maxImagesPerRequest,
       maxImageBytes: maxImageBytes ?? this.maxImageBytes,
       maxRequestBytes: maxRequestBytes ?? this.maxRequestBytes,
       pricing: pricing ?? this.pricing,
       capabilitiesSource: capabilitiesSource ?? this.capabilitiesSource,
+      capabilitiesConfiguredAt:
+          capabilitiesConfiguredAt ?? this.capabilitiesConfiguredAt,
+    );
+  }
+
+  /// Ручные характеристики пользователя (источник `userConfigured`).
+  ///
+  /// В отличие от [copyWith], значения **заменяются целиком** (в том числе
+  /// очищаются `null`), а дата проверки фиксируется моментом сохранения.
+  ProviderAccount withConfiguredCapabilities({
+    required int contextTokens,
+    int? maxInputTokens,
+    int? maxOutputTokens,
+    required DateTime configuredAt,
+  }) {
+    return ProviderAccount(
+      id: id,
+      label: label,
+      presetId: presetId,
+      protocol: protocol,
+      baseUrl: baseUrl,
+      modelId: modelId,
+      contextTokens: contextTokens,
+      requiresApiKey: requiresApiKey,
+      supportsVision: supportsVision,
+      visionConfigured: visionConfigured,
+      maxInputTokens: maxInputTokens,
+      maxOutputTokens: maxOutputTokens,
+      maxImagesPerRequest: maxImagesPerRequest,
+      maxImageBytes: maxImageBytes,
+      maxRequestBytes: maxRequestBytes,
+      pricing: pricing,
+      capabilitiesSource: CapabilitySource.userConfigured,
+      capabilitiesConfiguredAt: configuredAt,
     );
   }
 
@@ -205,12 +257,16 @@ class ProviderAccount {
     'context_tokens': contextTokens,
     'requires_api_key': requiresApiKey,
     'supports_vision': supportsVision,
+    'max_input_tokens': maxInputTokens,
     'max_output_tokens': maxOutputTokens,
     'max_images_per_request': maxImagesPerRequest,
     'max_image_bytes': maxImageBytes,
     'max_request_bytes': maxRequestBytes,
     'pricing': pricing?.toJson(),
     'capabilities_source': capabilitiesSource.wireName,
+    'capabilities_configured_at': capabilitiesConfiguredAt
+        ?.toUtc()
+        .toIso8601String(),
   };
 
   /// Разбирает аккаунт из JSON; `null` — запись некорректна и пропускается.
@@ -257,6 +313,7 @@ class ProviderAccount {
       requiresApiKey: rawRequiresKey is bool ? rawRequiresKey : false,
       supportsVision: supportsVision,
       visionConfigured: json['vision_configured'] == true,
+      maxInputTokens: _positiveIntFromJson(json['max_input_tokens']),
       maxOutputTokens: _positiveIntFromJson(json['max_output_tokens']),
       maxImagesPerRequest: _positiveIntFromJson(json['max_images_per_request']),
       maxImageBytes: _positiveIntFromJson(json['max_image_bytes']),
@@ -264,6 +321,9 @@ class ProviderAccount {
       pricing: GenerationPricing.fromJson(json['pricing']),
       capabilitiesSource: CapabilitySource.fromWire(
         json['capabilities_source'],
+      ),
+      capabilitiesConfiguredAt: _dateTimeFromJson(
+        json['capabilities_configured_at'],
       ),
     );
   }
@@ -282,12 +342,14 @@ class ProviderAccount {
           other.requiresApiKey == requiresApiKey &&
           other.supportsVision == supportsVision &&
           other.visionConfigured == visionConfigured &&
+          other.maxInputTokens == maxInputTokens &&
           other.maxOutputTokens == maxOutputTokens &&
           other.maxImagesPerRequest == maxImagesPerRequest &&
           other.maxImageBytes == maxImageBytes &&
           other.maxRequestBytes == maxRequestBytes &&
           other.pricing == pricing &&
-          other.capabilitiesSource == capabilitiesSource;
+          other.capabilitiesSource == capabilitiesSource &&
+          other.capabilitiesConfiguredAt == capabilitiesConfiguredAt;
 
   @override
   int get hashCode => Object.hash(
@@ -301,16 +363,24 @@ class ProviderAccount {
     requiresApiKey,
     supportsVision,
     visionConfigured,
+    maxInputTokens,
     maxOutputTokens,
     maxImagesPerRequest,
     maxImageBytes,
     maxRequestBytes,
     pricing,
     capabilitiesSource,
+    capabilitiesConfiguredAt,
   );
 
   @override
   String toString() => 'ProviderAccount($id, ${protocol.wireName}, $modelId)';
+}
+
+/// Дата из JSON (ISO-8601); отсутствующая/битая — `null`.
+DateTime? _dateTimeFromJson(Object? value) {
+  if (value is! String || value.isEmpty) return null;
+  return DateTime.tryParse(value)?.toUtc();
 }
 
 /// Положительное целое из JSON; отсутствующее, нулевое и отрицательное —

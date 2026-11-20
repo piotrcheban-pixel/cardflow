@@ -87,6 +87,23 @@ class _GenerationSettingsScreenState
     _load();
   }
 
+  /// Сохраняет изменённый активный аккаунт и обновляет локальное состояние.
+  ///
+  /// Без локального обновления блок характеристик продолжил бы показывать
+  /// старую дату/источник: `ref.invalidate` пересобирает провайдер, но не
+  /// состояние этого экрана (ретроспектива итерации 7: проверяется применение).
+  Future<void> _saveActiveAccount(ProviderAccount updated) async {
+    final ProviderAccounts next = _accounts.withAccount(updated);
+    try {
+      await ref.read(providerAccountsProvider.notifier).save(next);
+      ref.invalidate(providerAccountsProvider);
+      if (mounted) setState(() => _accounts = next);
+    } on Object {
+      if (mounted) setState(() => _loadFailed = true);
+      rethrow;
+    }
+  }
+
   /// Следующий свободный id аккаунта для пресета (id === ключ secure storage).
   String _nextIdForPreset(String presetId) {
     return uniqueProviderAccountId(
@@ -415,16 +432,26 @@ class _GenerationSettingsScreenState
                       .refresh(_accounts.active!);
                   return result.result.isSuccess;
                 },
+                save: (CapabilityDraft draft) async {
+                  final ProviderAccount account = _accounts.active!;
+                  final ProviderAccount updated = draft.isEmpty
+                      ? account.withAutomaticCapabilities()
+                      : account.withConfiguredCapabilities(
+                          // Пустой контекст — «не задан пользователем»: 16 000 —
+                          // исторический маркер отсутствия значения (L-18).
+                          contextTokens:
+                              draft.contextTokens ??
+                              kCustomProviderContextTokens,
+                          maxInputTokens: draft.maxInputTokens,
+                          maxOutputTokens: draft.maxOutputTokens,
+                          configuredAt: DateTime.now().toUtc(),
+                        );
+                  await _saveActiveAccount(updated);
+                },
                 reset: () async {
-                  final ProviderAccounts accounts = _accounts;
-                  await ref
-                      .read(providerAccountsProvider.notifier)
-                      .save(
-                        accounts.withAccount(
-                          _accounts.active!.withAutomaticCapabilities(),
-                        ),
-                      );
-                  ref.invalidate(providerAccountsProvider);
+                  await _saveActiveAccount(
+                    _accounts.active!.withAutomaticCapabilities(),
+                  );
                 },
               ),
             ],

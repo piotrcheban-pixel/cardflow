@@ -51,7 +51,11 @@ ModelLimits resolveModelLimits({
   final bool contextFromPreset =
       account.presetId != null &&
       presetModel != null &&
+      account.capabilitiesConfiguredAt == null &&
       account.contextTokens == presetModel.contextTokens;
+  // Дата проверки пользовательской настройки — момент сохранения, а не «сейчас»:
+  // иначе UI показывал бы сегодняшнюю дату у старой настройки.
+  final DateTime? userObservedAt = account.capabilitiesConfiguredAt;
   final Sourced<int> userContext =
       !contextFromPreset &&
           account.contextTokens > 0 &&
@@ -59,36 +63,43 @@ ModelLimits resolveModelLimits({
       ? Sourced<int>(
           account.contextTokens,
           source: accountSource,
-          observedAt: timestamp,
+          observedAt: userObservedAt,
         )
       : const Sourced<int>.absent();
+  final Sourced<int> userInput = account.maxInputTokens == null
+      ? const Sourced<int>.absent()
+      : Sourced<int>(
+          account.maxInputTokens,
+          source: accountSource,
+          observedAt: userObservedAt,
+        );
   final Sourced<int> userOutput = account.maxOutputTokens == null
       ? const Sourced<int>.absent()
       : Sourced<int>(
           account.maxOutputTokens,
           source: accountSource,
-          observedAt: timestamp,
+          observedAt: userObservedAt,
         );
   final Sourced<int> userImages = account.maxImagesPerRequest == null
       ? const Sourced<int>.absent()
       : Sourced<int>(
           account.maxImagesPerRequest,
           source: accountSource,
-          observedAt: timestamp,
+          observedAt: userObservedAt,
         );
   final Sourced<int> userImageBytes = account.maxImageBytes == null
       ? const Sourced<int>.absent()
       : Sourced<int>(
           account.maxImageBytes,
           source: accountSource,
-          observedAt: timestamp,
+          observedAt: userObservedAt,
         );
   final Sourced<int> userRequestBytes = account.maxRequestBytes == null
       ? const Sourced<int>.absent()
       : Sourced<int>(
           account.maxRequestBytes,
           source: accountSource,
-          observedAt: timestamp,
+          observedAt: userObservedAt,
         );
   final GenerationPricing? pricing = account.pricing;
   final Sourced<GenerationPricing> userPricing = pricing == null
@@ -96,10 +107,11 @@ ModelLimits resolveModelLimits({
       : Sourced<GenerationPricing>(
           pricing,
           source: accountSource,
-          observedAt: timestamp,
+          observedAt: userObservedAt,
         );
   final ModelLimits userLayer = ModelLimits(
     contextTokens: userContext,
+    maxInputTokens: userInput,
     maxOutputTokens: userOutput,
     maxImagesPerRequest: userImages,
     maxImageBytesPerImage: userImageBytes,
@@ -109,7 +121,7 @@ ModelLimits resolveModelLimits({
         ? Sourced<bool>(
             account.supportsVision,
             source: accountSource,
-            observedAt: timestamp,
+            observedAt: userObservedAt,
           )
         : const Sourced<bool>.absent(),
   );

@@ -24,6 +24,37 @@ typedef CapabilityRefresher = Future<bool> Function();
 /// Тип сброса пользовательских значений.
 typedef CapabilityResetter = Future<void> Function();
 
+/// Ручные характеристики модели из формы настроек.
+///
+/// `null` — значение автоматическое (каталог/API) или неизвестное; пустая
+/// форма означает «вернуть автоматические значения».
+class CapabilityDraft {
+  /// Создаёт черновик.
+  const CapabilityDraft({
+    this.contextTokens,
+    this.maxInputTokens,
+    this.maxOutputTokens,
+  });
+
+  /// Контекст модели, токенов.
+  final int? contextTokens;
+
+  /// Отдельный лимит входа, токенов.
+  final int? maxInputTokens;
+
+  /// Лимит вывода, токенов.
+  final int? maxOutputTokens;
+
+  /// true, если пользователь ничего не задал.
+  bool get isEmpty =>
+      contextTokens == null &&
+      maxInputTokens == null &&
+      maxOutputTokens == null;
+}
+
+/// Тип сохранения ручных характеристик.
+typedef CapabilitySaver = Future<void> Function(CapabilityDraft draft);
+
 /// Блок «Характеристики модели» для активного аккаунта.
 class ModelCapabilitySection extends StatefulWidget {
   /// Создаёт блок.
@@ -32,6 +63,7 @@ class ModelCapabilitySection extends StatefulWidget {
     required this.loadLimits,
     required this.refresh,
     required this.reset,
+    this.save,
     super.key,
   });
 
@@ -46,6 +78,9 @@ class ModelCapabilitySection extends StatefulWidget {
 
   /// Сброс к автоматическим значениям.
   final CapabilityResetter reset;
+
+  /// Сохранение ручных значений; `null` — ручное редактирование недоступно.
+  final CapabilitySaver? save;
 
   @override
   State<ModelCapabilitySection> createState() => _ModelCapabilitySectionState();
@@ -114,6 +149,33 @@ class _ModelCapabilitySectionState extends State<ModelCapabilitySection> {
     await _reload();
   }
 
+  Future<void> _edit() async {
+    final CapabilitySaver? saver = widget.save;
+    if (saver == null || _busy) return;
+    final CapabilityDraft? draft = await showDialog<CapabilityDraft>(
+      context: context,
+      builder: (BuildContext context) => _CapabilityEditDialog(limits: _limits),
+    );
+    if (draft == null || !mounted) return;
+    setState(() => _busy = true);
+    try {
+      await saver(draft);
+      if (!mounted) return;
+      setState(() {
+        _message = AppLocalizations.of(context).settingsCapabilitiesSaved;
+      });
+    } on Object {
+      if (!mounted) return;
+      setState(() {
+        _message = AppLocalizations.of(context)
+            .settingsCapabilitiesRefreshFailed;
+      });
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+    await _reload();
+  }
+
   Future<void> _reset() async {
     if (_busy) return;
     setState(() => _busy = true);
@@ -175,6 +237,11 @@ class _ModelCapabilitySectionState extends State<ModelCapabilitySection> {
               l10n: l10n,
             ),
             _CapabilityRow(
+              label: l10n.settingsCapabilitiesInput,
+              value: limits.maxInputTokens,
+              l10n: l10n,
+            ),
+            _CapabilityRow(
               label: l10n.settingsCapabilitiesOutput,
               value: limits.maxOutputTokens,
               l10n: l10n,
@@ -200,6 +267,13 @@ class _ModelCapabilitySectionState extends State<ModelCapabilitySection> {
               spacing: AppSpacing.sm,
               runSpacing: AppSpacing.xs,
               children: <Widget>[
+                if (widget.save != null)
+                  OutlinedButton.icon(
+                    key: const ValueKey<String>('capabilities-edit'),
+                    onPressed: _busy ? null : _edit,
+                    icon: const Icon(Icons.edit_outlined, size: AppSizes.icon),
+                    label: Text(l10n.settingsCapabilitiesEdit),
+                  ),
                 OutlinedButton.icon(
                   key: const ValueKey<String>('capabilities-refresh'),
                   onPressed: _busy ? null : _refresh,
@@ -287,5 +361,128 @@ class _CapabilityRow extends StatelessWidget {
     final String month = local.month.toString().padLeft(2, '0');
     final String day = local.day.toString().padLeft(2, '0');
     return '$day.$month.${local.year}';
+  }
+}
+
+/// Диалог ручного ввода характеристик модели (§3.10).
+///
+/// Пустое поле — автоматическое значение. Валидация не обрезает число молча:
+/// неверный ввод показывает ошибку и блокирует сохранение.
+class _CapabilityEditDialog extends StatefulWidget {
+  const _CapabilityEditDialog({required this.limits});
+
+  final ModelLimits? limits;
+
+  @override
+  State<_CapabilityEditDialog> createState() => _CapabilityEditDialogState();
+}
+
+class _CapabilityEditDialogState extends State<_CapabilityEditDialog> {
+  late final TextEditingController _context = TextEditingController(
+    text: _text(widget.limits?.contextTokens.value),
+  );
+  late final TextEditingController _input = TextEditingController(
+    text: _text(widget.limits?.maxInputTokens.value),
+  );
+  late final TextEditingController _output = TextEditingController(
+    text: _text(widget.limits?.maxOutputTokens.value),
+  );
+  String? _error;
+
+  @override
+  void dispose() {
+    _context.dispose();
+    _input.dispose();
+    _output.dispose();
+    super.dispose();
+  }
+
+  static String _text(int? value) => value == null ? '' : '$value';
+
+  int? _parse(String text) {
+    final String trimmed = text.trim();
+    if (trimmed.isEmpty) return null;
+    final int? value = int.tryParse(trimmed);
+    if (value == null || value <= 0) {
+      throw const FormatException('bad capability value');
+    }
+    return value;
+  }
+
+  void _save() {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    try {
+      final CapabilityDraft draft = CapabilityDraft(
+        contextTokens: _parse(_context.text),
+        maxInputTokens: _parse(_input.text),
+        maxOutputTokens: _parse(_output.text),
+      );
+      Navigator.of(context).pop(draft);
+    } on FormatException {
+      setState(() => _error = l10n.settingsCapabilitiesInvalid);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    return AlertDialog(
+      title: Text(l10n.settingsCapabilitiesEditTitle),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(l10n.settingsCapabilitiesEditHelp),
+            const SizedBox(height: AppSpacing.sm),
+            TextField(
+              key: const ValueKey<String>('capabilities-context-field'),
+              controller: _context,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: l10n.settingsCapabilitiesContext,
+              ),
+            ),
+            TextField(
+              key: const ValueKey<String>('capabilities-input-field'),
+              controller: _input,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: l10n.settingsCapabilitiesInput,
+              ),
+            ),
+            TextField(
+              key: const ValueKey<String>('capabilities-output-field'),
+              controller: _output,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: l10n.settingsCapabilitiesOutput,
+              ),
+            ),
+            if (_error != null)
+              Padding(
+                padding: const EdgeInsets.only(top: AppSpacing.xs),
+                child: Text(
+                  _error!,
+                  key: const ValueKey<String>('capabilities-edit-error'),
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
+              ),
+          ],
+        ),
+      ),
+      actions: <Widget>[
+        TextButton(
+          key: const ValueKey<String>('capabilities-cancel'),
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l10n.settingsCapabilitiesCancel),
+        ),
+        FilledButton(
+          key: const ValueKey<String>('capabilities-save'),
+          onPressed: _save,
+          child: Text(l10n.settingsCapabilitiesSave),
+        ),
+      ],
+    );
   }
 }
