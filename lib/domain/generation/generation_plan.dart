@@ -824,6 +824,27 @@ class GenerationPlan {
   bool get hasImagesNotSent =>
       images.isNotEmpty && imagesSentToModel < images.length;
 
+  /// Копия с обновлённым планом входа (перепланирование после overflow).
+  ///
+  /// Меняется только стратегия/части входа; фрагменты, оценка и бюджет
+  /// сохраняются: уже принятые карточки и заказ не пересчитываются молча.
+  GenerationPlan withInputPlan(InputPlan value) => GenerationPlan(
+    validity: validity,
+    estimate: estimate,
+    budget: budget,
+    chunks: chunks,
+    omitted: omitted,
+    requestedCards: requestedCards,
+    retryAllowanceRequests: retryAllowanceRequests,
+    unknownFields: unknownFields,
+    images: images,
+    capabilitySources: capabilitySources,
+    mode: mode,
+    promptOnlyPrompt: promptOnlyPrompt,
+    inputPlan: value,
+    allocation: allocation,
+  );
+
   @override
   String toString() =>
       'GenerationPlan(${mode.name}, chunks: ${chunks.length}, '

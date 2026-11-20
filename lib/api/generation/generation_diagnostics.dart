@@ -150,6 +150,21 @@ class GenerationDiagnostics {
     _write(buffer.toString());
   }
 
+  /// Перепланирование после переполнения контекста/413 (7.18.1 §2.3).
+  ///
+  /// Только код ошибки, число частей и уменьшенный бюджет — без материалов.
+  void recovery({
+    required String errorCode,
+    required int parts,
+    required int budgetTokens,
+  }) {
+    if (!enabled) return;
+    _write(
+      'Генерация: перепланирование: code=$errorCode, частей=$parts, '
+      'бюджет=$budgetTokens',
+    );
+  }
+
   /// Участие изображения в запросе (TASK 03, раздел 6): передано/только каталог.
   void imageParticipation({required String outcome}) {
     if (!enabled) return;

@@ -608,6 +608,10 @@ class GenerationPipeline implements GenerationRunner {
       for (final PlannedChunk chunk in chunks) _QueueItem(chunk),
     ];
     _renumber(queue);
+    // После перепланирования (overflow/413) дальнейшие запросы идут по
+    // обновлённому плану: стратегия wholeDocument → fragmented, части делятся
+    // с бюджетом ×0.8 (ADR-040 §8, 7.18.1 §2.3).
+    GenerationPlan? activePlan = plan;
     final List<GeneratedCard> cards = List<GeneratedCard>.of(initialCards);
     final List<GenerationChunkFailure> failures = <GenerationChunkFailure>[];
     var tokensUsed = initialTokens;
@@ -624,7 +628,7 @@ class GenerationPipeline implements GenerationRunner {
     GenerationException? fatal;
     // Компактное состояние prompt-only: исходные карточки (при повторе) и всё
     // принятое в этом запуске. Для материаловых планов не используется.
-    final bool promptOnly = plan?.isPromptOnly ?? false;
+    final bool promptOnly = activePlan?.isPromptOnly ?? false;
     final ModelCapabilities capabilities = await _capabilitiesFor(
       request.account,
     );
@@ -647,7 +651,7 @@ class GenerationPipeline implements GenerationRunner {
       }
       final _QueueItem item = queue[index];
       PlannedChunk chunk = item.chunk;
-      final List<String> allSections = _sectionsOf(plan, chunk);
+      final List<String> allSections = _sectionsOf(activePlan, chunk);
       // Исчерпанные разделы не запрашиваются; партия с новыми разделами
       // продолжает работу с сокращённым focus (ADR-040 §8).
       final List<String> chunkSections = <String>[
@@ -670,7 +674,7 @@ class GenerationPipeline implements GenerationRunner {
       // id изображений назначаются один раз по порядку плана: повторная
       // нумерация по порядку партии ломала бы стабильность `<images>` и
       // `image_id` между запросами. Порядок каталога — по id.
-      final Map<String, String> imageIds = _imageIdsFor(plan);
+      final Map<String, String> imageIds = _imageIdsFor(activePlan);
       final List<DocumentImage> documentImages = <DocumentImage>[
         for (final DocumentImage image in <DocumentImage>[
           ...chunk.imageParts,
@@ -711,7 +715,7 @@ class GenerationPipeline implements GenerationRunner {
             alreadyCreated: promptOnly
                 ? continuity.block
                 : _digestOf(cards, chunkSections),
-            outline: _outlineOf(plan, chunk),
+            outline: _outlineOf(activePlan, chunk),
             focusSectionIds: chunk.focusSectionIds,
             // Prompt-only не имеет частей материала (`partCount == 0`):
             // блок <part> не пишется, иначе модель видит «1 из 0».
@@ -723,7 +727,7 @@ class GenerationPipeline implements GenerationRunner {
                 : chunk.partCount,
             contextOnly: null,
             maxOutputTokens: _maxOutputTokensFor(
-              plan,
+              activePlan,
               chunk,
               outputBoosted: item.outputBoosted,
             ),
@@ -747,24 +751,67 @@ class GenerationPipeline implements GenerationRunner {
           chunk,
           item,
           error,
-          plan,
+          activePlan,
           capabilities,
         );
         if (recovery != null) {
-          final int extra = recovery.chunks.length == 1
+          // Перепланирование с бюджетом ×0.8 затрагивает не только текущую
+          // партию: остальные партии той же части тоже делятся, иначе они
+          // упрутся в тот же предел и потратят лишний запрос.
+          final List<_QueueItem> replacement = <_QueueItem>[
+            for (final PlannedChunk planned in recovery.chunks)
+              _QueueItem(
+                planned,
+                attempts: item.attempts + 1,
+                limitReduced: item.limitReduced || recovery.limitReduced,
+                outputBoosted: recovery.outputBoosted,
+              ),
+          ];
+          var replaceEnd = index + 1;
+          final int? replanBudget = recovery.replanBudgetTokens;
+          if (replanBudget != null) {
+            final GenerationPlanSplitter prepared = splitter.withContext(
+              estimator: planBuilder.estimator,
+              imageTokenModel: capabilities.imageTokens,
+            );
+            while (replaceEnd < queue.length &&
+                queue[replaceEnd].chunk.partIndex == chunk.partIndex) {
+              final _QueueItem pendingItem = queue[replaceEnd];
+              final PlannedChunk pending = pendingItem.chunk;
+              final List<PlannedChunk>? parts = prepared.splitToBudget(
+                pending,
+                targetTokens: replanBudget,
+              );
+              replacement.addAll(<_QueueItem>[
+                for (final PlannedChunk planned
+                    in parts ?? <PlannedChunk>[pending])
+                  _QueueItem(
+                    planned,
+                    attempts: pendingItem.attempts + 1,
+                    limitReduced: pendingItem.limitReduced,
+                    outputBoosted: pendingItem.outputBoosted,
+                  ),
+              ]);
+              replaceEnd++;
+            }
+            if (replacement.length > 1 || replaceEnd > index + 1) {
+              activePlan = _fragmentedPlan(activePlan);
+            }
+            diagnostics.recovery(
+              errorCode: error.code.name,
+              parts: replacement.length,
+              budgetTokens: replanBudget,
+            );
+          }
+          // Одиночный повтор той же партии тоже расходует одну операцию;
+          // при дроблении — число дополнительных запросов.
+          final int replacedCount = replaceEnd - index;
+          final int extra = replacement.length == 1 && replacedCount == 1
               ? 1
-              : recovery.chunks.length - 1;
+              : replacement.length - replacedCount;
           if (recoveryRequests + extra <= recoveryBudget) {
-            recoveryRequests += extra;
-            queue.replaceRange(index, index + 1, <_QueueItem>[
-              for (final PlannedChunk planned in recovery.chunks)
-                _QueueItem(
-                  planned,
-                  attempts: item.attempts + 1,
-                  limitReduced: item.limitReduced || recovery.limitReduced,
-                  outputBoosted: recovery.outputBoosted,
-                ),
-            ]);
+            recoveryRequests += extra < 0 ? 0 : extra;
+            queue.replaceRange(index, replaceEnd, replacement);
             _renumber(queue);
             continue;
           }
@@ -809,7 +856,7 @@ class GenerationPipeline implements GenerationRunner {
       sentDocumentImageIds.addAll(result.sentDocumentImageIds);
       calibrationSamples.add(
         _calibrationSample(
-          plan: plan,
+          plan: activePlan,
           chunk: chunk,
           item: item,
           result: result,
@@ -945,7 +992,7 @@ class GenerationPipeline implements GenerationRunner {
       job.copyWith(
         status: status,
         // ADR-040 §8: chunk_count — число частей входа, tokens_used — факт.
-        chunkCount: plan?.partCount ?? processed,
+        chunkCount: activePlan?.partCount ?? processed,
         cardsCount: cards.length,
         tokensUsed: tokensUsed,
         errorCode: errorCode,
@@ -975,7 +1022,7 @@ class GenerationPipeline implements GenerationRunner {
       rejectedCards: rejected,
       fatalErrorCode: fatal?.code,
       fatalProviderReason: fatal?.providerReason,
-      plan: plan,
+      plan: activePlan,
       calibration: calibration,
       recoveryRequestsUsed: recoveryRequests,
       recoveryBudget: recoveryBudget,
@@ -1090,6 +1137,9 @@ class GenerationPipeline implements GenerationRunner {
     GenerationPlan? plan,
     ModelCapabilities capabilities,
   ) {
+    // §3.9: не больше 3 операций восстановления на запрос. Дальше фрагмент
+    // фиксируется ошибкой — без бесконечных повторов и лишних расходов.
+    if (item.attempts >= 3) return null;
     final GenerationPlanSplitter prepared = splitter.withContext(
       estimator: planBuilder.estimator,
       imageTokenModel: capabilities.imageTokens,
@@ -1119,6 +1169,20 @@ class GenerationPipeline implements GenerationRunner {
         return halves == null ? null : _Recovery(halves);
       case GenerationErrorCode.contextOverflow:
       case GenerationErrorCode.payloadTooLarge:
+        // §3.9: подтверждённое переполнение → перепланирование с бюджетом
+        // ×0.8. Цель — 80 % прежнего бюджета материалов и не больше 80 %
+        // самого фрагмента (гарантия прогресса). wholeDocument при этом
+        // переходит во fragmented (обновление плана в `_process`).
+        final int target = _reducedBudgetTarget(plan, chunk);
+        if (target > 0) {
+          final List<PlannedChunk>? replanned = prepared.splitToBudget(
+            chunk,
+            targetTokens: target,
+          );
+          if (replanned != null) {
+            return _Recovery(replanned, replanBudgetTokens: target);
+          }
+        }
         final List<PlannedChunk>? halves = prepared.split(
           chunk,
           allowLimitOverflow: true,
@@ -1144,6 +1208,32 @@ class GenerationPipeline implements GenerationRunner {
       case GenerationErrorCode.attachmentTooLarge:
         return null;
     }
+  }
+
+  /// Цель перепланирования после переполнения: `min(0.8 × бюджет, 0.8 ×
+  /// фрагмент)`, чтобы каждая новая часть была меньше и бюджета, и прежней
+  /// части. `0` — бюджета нет (план без материалов) и делить нечего.
+  int _reducedBudgetTarget(GenerationPlan? plan, PlannedChunk chunk) {
+    final int materialTokens =
+        chunk.units.fold<int>(
+          0,
+          (int sum, UnitSpan span) => sum + span.tokens,
+        ) +
+        chunk.imageTokens;
+    if (materialTokens <= 0) return 0;
+    final int byChunk = (materialTokens * 0.8).floor();
+    final int? budget = plan?.inputPlan?.materialBudgetTokens;
+    final int byBudget = budget == null ? byChunk : (budget * 0.8).floor();
+    final int target = budget == null ? byChunk : math.min(byBudget, byChunk);
+    return math.max(1, target);
+  }
+
+  /// План после перепланирования: стратегия входа становится fragmented.
+  GenerationPlan? _fragmentedPlan(GenerationPlan? plan) {
+    final InputPlan? input = plan?.inputPlan;
+    if (plan == null || input == null) return plan;
+    if (input.strategy == InputStrategy.fragmented) return plan;
+    return plan.withInputPlan(input.withStrategy(InputStrategy.fragmented));
   }
 
   /// Перенумеровывает очередь после дробления (прогресс «фрагмент K из M»).
@@ -1776,9 +1866,14 @@ class _Recovery {
     this.chunks, {
     this.limitReduced = false,
     this.outputBoosted = false,
+    this.replanBudgetTokens,
   });
 
   final List<PlannedChunk> chunks;
+
+  /// Бюджет перепланирования после overflow/413 (×0.8); `null` — обычное
+  /// дробление/сокращение без перепланирования остальных партий части.
+  final int? replanBudgetTokens;
 
   /// Эта попытка уменьшила ожидаемый вывод.
   final bool limitReduced;

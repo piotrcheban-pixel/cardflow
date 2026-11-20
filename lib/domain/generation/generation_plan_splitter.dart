@@ -96,6 +96,57 @@ class GenerationPlanSplitter {
     return null;
   }
 
+  /// Делит фрагмент на части не крупнее [targetTokens] (recovery, §3.9).
+  ///
+  /// Используется после подтверждённого переполнения контекста: бюджет
+  /// запроса уменьшается до 0.8 прежнего, и каждая часть обязана в него
+  /// помещаться. Делит повторно, пока самая крупная часть больше цели или
+  /// пока не исчерпан [maxParts]/глубина дробления. Сумма лимитов карточек
+  /// сохраняется, материалы не теряются (использует тот же [split]).
+  List<PlannedChunk>? splitToBudget(
+    PlannedChunk chunk, {
+    required int targetTokens,
+    int maxParts = 8,
+  }) {
+    if (chunk.isPromptOnly || targetTokens < 1) return null;
+    if (_materialTokensOf(chunk) <= targetTokens) return null;
+    final int safeMax = math.max(2, maxParts);
+    var parts = <PlannedChunk>[chunk];
+    var changed = false;
+    while (parts.length < safeMax) {
+      var largest = 0;
+      for (var index = 1; index < parts.length; index++) {
+        if (_materialTokensOf(parts[index]) >
+            _materialTokensOf(parts[largest])) {
+          largest = index;
+        }
+      }
+      if (_materialTokensOf(parts[largest]) <= targetTokens) break;
+      final List<PlannedChunk>? halves = split(
+        parts[largest],
+        allowLimitOverflow: true,
+      );
+      if (halves == null) break;
+      parts = <PlannedChunk>[
+        ...parts.sublist(0, largest),
+        ...halves,
+        ...parts.sublist(largest + 1),
+      ];
+      changed = true;
+    }
+    return changed ? List<PlannedChunk>.unmodifiable(parts) : null;
+  }
+
+  /// Материальные токены фрагмента: сумма единиц (плюс image-части).
+  int _materialTokensOf(PlannedChunk chunk) {
+    final int byUnits = chunk.units.fold<int>(
+      0,
+      (int sum, UnitSpan span) => sum + span.tokens,
+    );
+    if (byUnits > 0) return byUnits + chunk.imageTokens;
+    return chunk.textTokens + chunk.imageTokens;
+  }
+
   List<PlannedChunk>? _splitByUnits(PlannedChunk chunk, List<int> limits) {
     final List<UnitSpan> units = chunk.units;
     final int total = units.fold<int>(

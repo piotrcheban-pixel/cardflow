@@ -256,6 +256,25 @@ final class InputPlan {
   /// true, если материалы отсутствуют.
   bool get isPromptOnly => strategy == InputStrategy.promptOnly;
 
+  /// Копия с другой стратегией входа (перепланирование после overflow).
+  InputPlan withStrategy(InputStrategy value) => InputPlan(
+    strategy: value,
+    parts: parts,
+    fixedTokens: fixedTokens,
+    inputTokens: inputTokens,
+    maxTokens: maxTokens,
+    accuracy: accuracy,
+    budget: budget,
+    materialTokens: materialTokens,
+    materialBudgetPerPart: materialBudgetPerPart,
+    outlineReserveTokens: outlineReserveTokens,
+    warnings: warnings,
+    images: images,
+    contextTokens: contextTokens,
+    materialBudgetTokens: materialBudgetTokens,
+    inputTokenSource: inputTokenSource,
+  );
+
   @override
   String toString() =>
       'InputPlan(${strategy.name}, parts: ${parts.length}, '
