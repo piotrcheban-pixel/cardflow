@@ -140,7 +140,7 @@ Discovery-эндпоинтов нет: каталога `lib/api/models/` не �
 
 ### 5.2 Почему неизвестная модель получает число; где инференс по имени
 
-- Окно неизвестно → `BudgetSource.assumption` (`generation_budget.dart:210–214`)
+- Окно неизвестно → `BudgetSource.assumption` (`generation_budget.dart:238`)
   и бюджет материалов `kBudgetUnknownContextInputTokens = 6000` (`:73`), вывод
   `2048` (`:76`). UI показывает общее предупреждение `unknownCapabilities`
   (`app_ru.arb:1359`), но не отдельное «размер контекста не подтверждён».
@@ -323,7 +323,7 @@ Discovery-эндпоинтов нет: каталога `lib/api/models/` не �
     «Обновить характеристики»/«Сбросить к автоматическому».
 12. **Нативный подсчёт токенов не используется**: оценки — эвристика
     2,5 симв./токен (`token_estimator.dart:15–20`), изображения 750 px/токен
-    или 256 байт/токен (`content_token_estimator.dart:22,28`); `count_tokens`
+    или 256 байт/токен (`content_token_estimator.dart:28,34`); `count_tokens`
     Anthropic/Gemini не вызывается.
 
 ---
