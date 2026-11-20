@@ -196,6 +196,7 @@ class CardGenerationService implements GenerationCaller {
       focusSectionIds: request.focusSectionIds,
       contextOnly: request.contextOnly,
       alreadyCreated: request.alreadyCreated,
+      outline: request.outline,
     );
     // Vision (ADR-037): модель должна ВИДЕТЬ изображения из документов, а не
     // только их идентификаторы. Байты уходят отдельными частями с подписью

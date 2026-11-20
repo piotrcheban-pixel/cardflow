@@ -174,7 +174,7 @@ void main() {
           requestFor(wishes: wishes, requestedCards: 200),
         );
         expect(caller.calls, greaterThan(2));
-        expect(caller.requests.first.continuation, isNull);
+        expect(caller.requests.first.alreadyCreated, isNull);
         for (final GenerationRequest request in caller.requests) {
           expect(
             request.wishes,
@@ -182,13 +182,13 @@ void main() {
             reason: 'исходные требования пользователя не меняются',
           );
         }
-        final String second = caller.requests[1].continuation!;
+        final String second = caller.requests[1].alreadyCreated!;
         expect(second, contains('Уже созданные карточки'));
         expect(second, contains('Вопрос 1-0'));
         expect(second.length, lessThan(8000), reason: 'сводка ограничена');
         // Сводка не содержит инструкций, меняющих заказ.
         expect(second, isNot(contains('Создай 200')));
-        final String last = caller.requests.last.continuation ?? '';
+        final String last = caller.requests.last.alreadyCreated ?? '';
         expect(last, contains('Вопрос'));
         expect(result.cards, hasLength(200));
       },
@@ -230,7 +230,7 @@ void main() {
           first,
         );
         expect(retryCaller.calls, 1);
-        final String? continuation = retryCaller.requests.single.continuation;
+        final String? continuation = retryCaller.requests.single.alreadyCreated;
         expect(continuation, isNotNull);
         expect(
           continuation,

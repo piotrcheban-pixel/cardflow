@@ -196,6 +196,9 @@ class GenerationRunResult {
     this.recoveryRequestsUsed = 0,
     this.recoveryBudget = 0,
     this.sentDocumentImageIds = const <String>[],
+    this.shortfallCards = 0,
+    this.skippedBatches = 0,
+    this.exhaustedSectionIds = const <String>[],
   });
 
   /// Идентификатор задания `generation_jobs`.
@@ -218,6 +221,15 @@ class GenerationRunResult {
 
   /// Сколько дублей отсеяно.
   final int duplicatesRemoved;
+
+  /// Недобор принятых карточек относительно заказанных в партиях (v8).
+  final int shortfallCards;
+
+  /// Сколько партий не отправлено из-за исчерпания разделов.
+  final int skippedBatches;
+
+  /// Разделы, помеченные исчерпанными (`source_exhausted`/недобор < 50 %).
+  final List<String> exhaustedSectionIds;
 
   /// Сколько фрагментов обработано.
   final int chunkCount;

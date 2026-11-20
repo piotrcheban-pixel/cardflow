@@ -37,7 +37,10 @@ import 'package:cardflow/domain/generation/generation_continuity.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
 import 'package:cardflow/domain/generation/generation_failure_reason.dart';
 import 'package:cardflow/domain/generation/generation_job.dart';
+import 'package:cardflow/domain/generation/generation_chunk_planner.dart';
 import 'package:cardflow/domain/generation/generation_plan.dart';
+import 'package:cardflow/domain/generation/input_planner.dart';
+import 'package:cardflow/domain/generation/generation_planning_config.dart';
 import 'package:cardflow/domain/generation/generation_plan_splitter.dart';
 import 'package:cardflow/domain/generation/generation_recovery_budget.dart';
 import 'package:cardflow/domain/generation/generation_request.dart';
@@ -47,6 +50,7 @@ import 'package:cardflow/domain/generation/image_query.dart';
 import 'package:cardflow/domain/generation/model_capabilities.dart';
 import 'package:cardflow/domain/generation/model_capability_cache.dart';
 import 'package:cardflow/domain/generation/provider_account.dart';
+import 'package:cardflow/domain/generation/token_calibration.dart';
 import 'package:cardflow/domain/generation/prompt_only_request.dart';
 import 'package:cardflow/domain/generation/token_accounting.dart';
 
@@ -95,6 +99,7 @@ class GenerationPipeline implements GenerationRunner {
     required this.cardStore,
     this.planBuilder = const GenerationPlanBuilder(),
     this.capabilityCache,
+    this.calibrationStore,
     this.planFactory,
     this.splitter = const GenerationPlanSplitter(),
     this.imageFinder,
@@ -120,6 +125,9 @@ class GenerationPipeline implements GenerationRunner {
 
   /// Кэш характеристик модели (ADR-039); `null` — только каталог/аккаунт.
   final ModelCapabilityCache? capabilityCache;
+
+  /// Калибровка `tokensPerCard` (ADR-040 §9); `null` — значение по умолчанию.
+  final TokenCalibrationStore? calibrationStore;
 
   /// Подмена плана (тесты/встраивание); `null` — production-путь.
   final GenerationPlanFactory? planFactory;
@@ -219,11 +227,18 @@ class GenerationPipeline implements GenerationRunner {
       final ModelCapabilities capabilities = await _capabilitiesFor(
         request.account,
       );
+      final TokenCalibration? calibration = await _calibrationFor(
+        request.account,
+      );
+      final GenerationPlanBuilder effectiveBuilder = _calibratedBuilder(
+        calibration,
+      );
       final GenerationPlan plan = _buildPlan(
         request,
         capabilities,
         hasMaterials: hasMaterials,
         topic: topic,
+        builder: effectiveBuilder,
       );
       // План проверяется до первого API-запроса (D.8): невалидный план не
       // тратит токены и не маскируется частичным успехом.
@@ -247,6 +262,14 @@ class GenerationPipeline implements GenerationRunner {
         throw const GenerationException(GenerationErrorCode.noMaterials);
       }
 
+      diagnostics.planSummary(
+        strategy: plan.inputStrategy?.name ?? 'legacy',
+        parts: plan.partCount,
+        batches: plan.chunks.length,
+        requestedCards: plan.requestedCards,
+        achievableCards: plan.achievableCards,
+        calibrated: calibration != null,
+      );
       final Set<String> seen = <String>{
         ...?await _existingHashes(request.targetDeckId),
       };
@@ -273,27 +296,65 @@ class GenerationPipeline implements GenerationRunner {
     ModelCapabilities capabilities, {
     required bool hasMaterials,
     required String? topic,
+    GenerationPlanBuilder? builder,
   }) {
     final GenerationPlanFactory? factory = planFactory;
     if (factory != null) return factory(request, capabilities);
+    final GenerationPlanBuilder effective = builder ?? planBuilder;
     final int? requested =
         request.requestedCards ?? requestedCardCount(request.wishes);
     if (!hasMaterials) {
       // Prompt-only план строится тем же builder-ом, что и материаловый: он
       // считает системный промпт, схему и обёртку (TASK 03, D1/D2). Прямой
       // вызов планировщика без `overhead` занижал бюджет на тысячи токенов.
-      return planBuilder.buildPromptOnly(
+      return effective.buildPromptOnly(
         request: PromptOnlyRequest(prompt: topic!, requestedCards: requested),
         capabilities: capabilities,
       );
     }
-    return planBuilder.build(
+    return effective.build(
       documents: request.documents,
       capabilities: capabilities,
       attachments: request.images,
       documentImages: request.documentImages,
       wishes: request.wishes,
       requestedCards: requested,
+    );
+  }
+
+  /// Калибровка `tokensPerCard` аккаунта (применяется только после ≥2 замеров).
+  Future<TokenCalibration?> _calibrationFor(ProviderAccount account) async {
+    final TokenCalibrationStore? store = calibrationStore;
+    if (store == null) return null;
+    try {
+      final TokenCalibration? calibration = await store.read(
+        accountId: account.id,
+        model: account.modelId,
+      );
+      if (calibration == null || !calibration.isApplicable) return null;
+      return calibration;
+    } on Object {
+      return null;
+    }
+  }
+
+  /// Builder с калиброванным `tokensPerCard` или исходный.
+  GenerationPlanBuilder _calibratedBuilder(TokenCalibration? calibration) {
+    if (calibration == null) return planBuilder;
+    final GenerationPlanningConfig planning =
+        const GenerationPlanningConfig().copyWith(
+          tokensPerCard: calibration.tokensPerCard.round().clamp(50, 5000),
+        );
+    return GenerationPlanBuilder(
+      planner: GenerationChunkPlanner(
+        estimator: planBuilder.estimator,
+        config: GenerationChunkPlannerConfig(
+          planning: planning,
+          retryAllowanceRequests: planBuilder.planner.config.retryAllowanceRequests,
+        ),
+        catalogLineBuilder: planBuilder.planner.catalogLineBuilder,
+      ),
+      promptOnlyPlanner: planBuilder.promptOnlyPlanner,
     );
   }
 
@@ -437,13 +498,39 @@ class GenerationPipeline implements GenerationRunner {
     if (promptOnly && initialCards.isNotEmpty) continuity.addAll(initialCards);
 
     var index = 0;
+    // ADR-040 §8: исчерпание материала и однократное перераспределение.
+    final Set<String> exhaustedSections = <String>{};
+    final List<_BatchTokenFact> batchFacts = <_BatchTokenFact>[];
+    var shortfall = 0;
+    var skippedBatches = 0;
+    var redistributed = false;
     while (index < queue.length) {
       if (cancellation?.isCancelled ?? false) {
         cancelled = true;
         break;
       }
       final _QueueItem item = queue[index];
-      final PlannedChunk chunk = item.chunk;
+      PlannedChunk chunk = item.chunk;
+      final List<String> allSections = _sectionsOf(plan, chunk);
+      // Исчерпанные разделы не запрашиваются; партия с новыми разделами
+      // продолжает работу с сокращённым focus (ADR-040 §8).
+      final List<String> chunkSections = <String>[
+        for (final String section in allSections)
+          if (!exhaustedSections.contains(section)) section,
+      ];
+      if (chunkSections.isEmpty && allSections.isNotEmpty) {
+        skippedBatches++;
+        shortfall += chunk.limit;
+        queue.removeAt(index);
+        _renumber(queue);
+        await _saveProgress(job, processed, cards.length, tokensUsed);
+        continue;
+      }
+      if (chunkSections.length != allSections.length) {
+        chunk = chunk.copyWith(
+          focusSectionIds: List<String>.unmodifiable(chunkSections),
+        );
+      }
       final List<DocumentImage> documentImages = withCatalogIds(<DocumentImage>[
         ...chunk.imageParts,
         ...chunk.catalogOnly,
@@ -475,7 +562,17 @@ class GenerationPipeline implements GenerationRunner {
             images: chunk.attachments,
             documentImages: documentImages,
             documentImageParts: documentImageParts,
-            continuation: promptOnly ? continuity.block : null,
+            // v8: дайджест уже принятых карточек уходит в <already_created>,
+            // а не в <wishes>; continuation оставлен как legacy-канал.
+            continuation: null,
+            alreadyCreated: promptOnly
+                ? continuity.block
+                : _digestOf(cards, chunkSections),
+            outline: _outlineOf(plan, chunk),
+            focusSectionIds: chunk.focusSectionIds,
+            partIndexHint: plan == null ? null : chunk.partIndex + 1,
+            partCountHint: plan == null ? null : chunk.partCount,
+            contextOnly: null,
             maxOutputTokens: _maxOutputTokensFor(
               plan,
               chunk,
@@ -581,11 +678,28 @@ class GenerationPipeline implements GenerationRunner {
       // показ колоды не ждёт сетевого поиска.
       final int imageStart = cards.length;
       for (final GeneratedCard card in result.cards) {
-        if (_acceptCard(card, seen)) {
+        if (_acceptCard(card, seen, cards)) {
           cards.add(card);
         } else {
           duplicates++;
         }
+      }
+      final int acceptedInChunk = cards.length - imageStart;
+      if (result.usage.completionTokens != null && acceptedInChunk > 0) {
+        batchFacts.add(
+          _BatchTokenFact(
+            completionTokens: result.usage.completionTokens!,
+            acceptedCards: acceptedInChunk,
+          ),
+        );
+      }
+      // Исчерпание: явный флаг модели или недобор меньше половины партии.
+      final bool exhausted = result.sourceExhausted ||
+          (chunk.limit >= 2 && acceptedInChunk * 2 < chunk.limit);
+      if (exhausted && chunkSections.isNotEmpty) {
+        exhaustedSections.addAll(chunkSections);
+        final int deficit = chunk.limit - acceptedInChunk;
+        if (deficit > 0) shortfall += deficit;
       }
       // Состояние продолжения prompt-only: только принятые карточки, чтобы
       // сводка не включала дубли и не раздувалась.
@@ -628,6 +742,33 @@ class GenerationPipeline implements GenerationRunner {
         break;
       }
       index++;
+      // Однократное перераспределение недостачи на разделы с оставшейся
+      // ёмкостью (ADR-040 §8): не больше одной дополнительной партии.
+      if (index >= queue.length &&
+          !redistributed &&
+          shortfall > 0 &&
+          !cancelled &&
+          fatal == null &&
+          plan != null &&
+          initialCards.isEmpty) {
+        final PlannedChunk? topUp = _topUpChunk(
+          plan,
+          exhaustedSections,
+          shortfall,
+          queue.length + 1,
+          maxLimit: capabilities.maxCardsPerRequest,
+        );
+        if (topUp != null && recoveryRequests < recoveryBudget) {
+          recoveryRequests++;
+          redistributed = true;
+          queue.add(_QueueItem(topUp));
+          diagnostics.imageParticipation(
+            outcome:
+                'перераспределение недостачи: +${topUp.limit} карточек '
+                '(focus: ${topUp.focusSectionIds.join(', ')})',
+          );
+        }
+      }
     }
 
     final bool hasCards = cards.isNotEmpty;
@@ -653,13 +794,15 @@ class GenerationPipeline implements GenerationRunner {
     await jobRepository.save(
       job.copyWith(
         status: status,
-        chunkCount: processed,
+        // ADR-040 §8: chunk_count — число частей входа, tokens_used — факт.
+        chunkCount: plan?.partCount ?? processed,
         cardsCount: cards.length,
         tokensUsed: tokensUsed,
         errorCode: errorCode,
         clearErrorCode: errorCode == null,
       ),
     );
+    await _recordCalibration(request.account, batchFacts);
     // Fatal без карточек — ошибка целиком; с карточками возвращаем результат,
     // чтобы пользователь мог открыть предпросмотр и сохранить полученное.
     if (fatal != null && !hasCards) throw fatal;
@@ -687,6 +830,9 @@ class GenerationPipeline implements GenerationRunner {
       recoveryRequestsUsed: recoveryRequests,
       recoveryBudget: recoveryBudget,
       sentDocumentImageIds: List<String>.unmodifiable(sentDocumentImageIds),
+      shortfallCards: shortfall,
+      skippedBatches: skippedBatches,
+      exhaustedSectionIds: List<String>.unmodifiable(exhaustedSections),
     );
   }
 
@@ -1218,18 +1364,175 @@ class GenerationPipeline implements GenerationRunner {
     return List<String>.unmodifiable(names);
   }
 
-  /// Принимает карточку, если её хеш (и обратный для reversed) новый.
-  bool _acceptCard(GeneratedCard card, Set<String> seen) {
+  /// Принимает карточку, если её хеш новый и нет почти-дубля (ADR-040 §8).
+  ///
+  /// Точный дубль — по `content_hash` (и обратному для reversed); почти-дубль —
+  /// сходство триграмм `front` ≥ 0.85 в пределах запуска.
+  bool _acceptCard(
+    GeneratedCard card,
+    Set<String> seen,
+    List<GeneratedCard> accepted,
+  ) {
     final String hash = contentHashOf(front: card.front, back: card.back);
-    if (card.cardType == CardType.basicReversed) {
-      final String reversed = contentHashOf(front: card.back, back: card.front);
-      if (seen.contains(hash) || seen.contains(reversed)) return false;
-      seen
-        ..add(hash)
-        ..add(reversed);
-      return true;
+    final String? reversed = card.cardType == CardType.basicReversed
+        ? contentHashOf(front: card.back, back: card.front)
+        : null;
+    if (seen.contains(hash) ||
+        (reversed != null && seen.contains(reversed))) {
+      return false;
     }
-    return seen.add(hash);
+    for (final GeneratedCard other in accepted) {
+      if (_frontSimilarity(card.front, other.front) >= 0.85) return false;
+    }
+    seen.add(hash);
+    if (reversed != null) seen.add(reversed);
+    return true;
+  }
+
+  /// Сходство `front` по триграммам (Jaccard, 0..1).
+  ///
+  /// Для очень коротких сторон (< 12 букв) почти-дубль не определяется: у
+  /// «Вопрос 1»/«Вопрос 2» триграммы совпадают естественно, а точный хеш уже
+  /// проверен отдельно.
+  static double _frontSimilarity(String a, String b) {
+    if (_lettersCount(a) < 12 || _lettersCount(b) < 12) return 0;
+    final Set<String> first = _trigramsOf(a);
+    final Set<String> second = _trigramsOf(b);
+    if (first.isEmpty || second.isEmpty) return first.isEmpty && second.isEmpty ? 1 : 0;
+    final Set<String> union = <String>{...first, ...second};
+    final int intersection = first.where(second.contains).length;
+    return intersection / union.length;
+  }
+
+  static int _lettersCount(String value) => RegExp(
+    r'\p{L}',
+    unicode: true,
+  ).allMatches(value).length;
+
+  static Set<String> _trigramsOf(String value) {
+    final String normalized = value
+        .toLowerCase()
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .replaceAll(RegExp(r'[^\p{L}\p{N} ]+', unicode: true), '')
+        .trim();
+    if (normalized.length < 3) return <String>{normalized};
+    return <String>{
+      for (var index = 0; index + 3 <= normalized.length; index++)
+        normalized.substring(index, index + 3),
+    };
+  }
+
+  /// Разделы запроса: `focus` или все разделы части (для исчерпания).
+  List<String> _sectionsOf(GenerationPlan? plan, PlannedChunk chunk) {
+    if (plan == null ||
+        chunk.partIndex < 0 ||
+        chunk.partIndex >= plan.parts.length) {
+      return const <String>[];
+    }
+    if (chunk.focusSectionIds.isNotEmpty) {
+      return List<String>.unmodifiable(chunk.focusSectionIds);
+    }
+    final InputPart part = plan.parts[chunk.partIndex];
+    return List<String>.unmodifiable(
+      part.sections.map((InputSection section) => section.promptId),
+    );
+  }
+
+  /// Оглавление части (v8) для текущей партии.
+  String? _outlineOf(GenerationPlan? plan, PlannedChunk chunk) {
+    if (plan == null ||
+        chunk.partIndex < 0 ||
+        chunk.partIndex >= plan.parts.length) {
+      return null;
+    }
+    final String outline = plan.parts[chunk.partIndex].outlineText.trim();
+    return outline.isEmpty ? null : outline;
+  }
+
+  /// Компактный дайджест принятых карточек для `<already_created>` (≤5 %).
+  String? _digestOf(List<GeneratedCard> cards, List<String> focusSections) {
+    if (cards.isEmpty) return null;
+    final Set<String> focus = focusSections.toSet();
+    final List<GeneratedCard> sorted = <GeneratedCard>[
+      for (final GeneratedCard card in cards)
+        if (card.sectionId != null && focus.contains(card.sectionId)) card,
+      ...cards.where(
+        (GeneratedCard card) =>
+            card.sectionId == null || !focus.contains(card.sectionId),
+      ),
+    ];
+    final Set<String> seenFronts = <String>{};
+    final StringBuffer buffer = StringBuffer();
+    for (final GeneratedCard card in sorted) {
+      final String front = card.front.trim();
+      if (front.isEmpty || !seenFronts.add(front)) continue;
+      final String line = '- ${front.length > 80 ? '${front.substring(0, 80)}…' : front}';
+      if (buffer.length + line.length + 1 > 1200) break;
+      if (buffer.isNotEmpty) buffer.write('\n');
+      buffer.write(line);
+      if (seenFronts.length >= 20) break;
+    }
+    return buffer.isEmpty ? null : buffer.toString();
+  }
+
+  /// Дополнительная партия для недостачи (одна, ADR-040 §8).
+  PlannedChunk? _topUpChunk(
+    GenerationPlan plan,
+    Set<String> exhausted,
+    int shortfall,
+    int index, {
+    int? maxLimit,
+  }) {
+    if (shortfall < 1) return null;
+    for (final InputPart part in plan.parts) {
+      final List<String> allowed = <String>[
+        for (final InputSection section in part.sections)
+          if (!exhausted.contains(section.promptId) &&
+              (plan.allocation?.forSection(section.id) ?? 0) > 0)
+            section.promptId,
+      ];
+      if (allowed.isEmpty) continue;
+      PlannedChunk? base;
+      for (final PlannedChunk chunk in plan.chunks) {
+        if (chunk.partIndex == part.index && chunk.units.isNotEmpty) {
+          base = chunk;
+          break;
+        }
+      }
+      if (base == null) continue;
+      final int limit = shortfall
+          .clamp(1, maxLimit ?? 40)
+          .clamp(1, 40)
+          .toInt();
+      return base.copyWith(
+        index: index,
+        limit: limit,
+        focusSectionIds: List<String>.unmodifiable(allowed),
+        imageParts: const <DocumentImage>[],
+        imagePartIds: const <String>[],
+      );
+    }
+    return null;
+  }
+
+  /// Записывает калибровку партий в `generation.calibration` (ADR-040 §9).
+  Future<void> _recordCalibration(
+    ProviderAccount account,
+    List<_BatchTokenFact> facts,
+  ) async {
+    final TokenCalibrationStore? store = calibrationStore;
+    if (store == null || facts.isEmpty) return;
+    for (final _BatchTokenFact fact in facts) {
+      try {
+        await store.record(
+          accountId: account.id,
+          model: account.modelId,
+          observedTokensPerCard: fact.completionTokens / fact.acceptedCards,
+        );
+      } on Object {
+        // Калибровка не должна ломать генерацию.
+      }
+    }
   }
 
   /// Возможности модели: кэш `providerApi` (если есть) → каталог/аккаунт.
@@ -1330,3 +1633,13 @@ List<String> _fileNames(GenerationRunRequest request) {
 }
 
 String _defaultJobId() => const Uuid().v4();
+/// Факт вывода одного ответа для калибровки `tokensPerCard`.
+final class _BatchTokenFact {
+  const _BatchTokenFact({
+    required this.completionTokens,
+    required this.acceptedCards,
+  });
+
+  final int completionTokens;
+  final int acceptedCards;
+}

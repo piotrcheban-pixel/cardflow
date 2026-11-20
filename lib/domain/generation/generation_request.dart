@@ -27,6 +27,7 @@ class GenerationRequest {
     this.partCountHint,
     this.contextOnly,
     this.alreadyCreated,
+    this.outline,
   });
 
   /// Провайдер: протокол, адрес, модель и id ключа.
@@ -77,6 +78,9 @@ class GenerationRequest {
 
   /// Компактный дайджест уже принятых карточек (`<already_created>`).
   final String? alreadyCreated;
+
+  /// Компактное оглавление части (`<outline>`, только при дроблении).
+  final String? outline;
 
   /// Максимум токенов ответа для этого запроса (из плана, D.2).
   ///

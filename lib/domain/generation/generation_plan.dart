@@ -712,7 +712,7 @@ class GenerationPlan {
   List<InputPart> get parts => inputPlan?.parts ?? const <InputPart>[];
 
   /// Число частей входа.
-  int get partCount => inputPlan?.partCount ?? (chunks.isEmpty ? 0 : 1);
+  int get partCount => inputPlan?.partCount ?? chunks.length;
 
   /// Оценка входа запроса/части (`null` — неизвестно).
   int? get plannedInputTokens => inputPlan?.inputTokens;

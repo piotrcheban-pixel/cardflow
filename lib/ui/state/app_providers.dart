@@ -28,7 +28,9 @@ import 'package:cardflow/data/generation/drift_generation_card_store.dart';
 import 'package:cardflow/data/generation/drift_generation_job_repository.dart';
 import 'package:cardflow/data/generation/drift_generation_settings_store.dart';
 import 'package:cardflow/domain/generation/model_capability_cache.dart';
+import 'package:cardflow/domain/generation/token_calibration.dart';
 import 'package:cardflow/data/generation/drift_model_capability_cache.dart';
+import 'package:cardflow/data/generation/drift_token_calibration_store.dart';
 import 'package:cardflow/data/generation/drift_provider_accounts_store.dart';
 import 'package:cardflow/data/generation/file_picker_document_gateway.dart';
 import 'package:cardflow/data/review/drift_review_repository.dart';
@@ -451,12 +453,18 @@ final generationRunnerProvider = Provider<GenerationRunner>((ref) {
     placeholderGenerator: ref.watch(placeholderImageGeneratorProvider),
     diagnostics: ref.watch(generationDiagnosticsProvider),
     capabilityCache: ref.watch(modelCapabilityCacheProvider),
+    calibrationStore: ref.watch(tokenCalibrationStoreProvider),
   );
 });
 
 /// Кэш характеристик модели (`generation.model_capabilities`, ADR-039).
 final modelCapabilityCacheProvider = Provider<ModelCapabilityCache>((ref) {
   return DriftModelCapabilityCache(ref.watch(appDatabaseProvider));
+});
+
+/// Калибровка `tokensPerCard` (ADR-040 §9).
+final tokenCalibrationStoreProvider = Provider<TokenCalibrationStore>((ref) {
+  return DriftTokenCalibrationStore(ref.watch(appDatabaseProvider));
 });
 
 /// Сервис характеристик: discovery, кэш и «Обновить характеристики».

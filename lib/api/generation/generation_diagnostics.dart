@@ -114,6 +114,25 @@ class GenerationDiagnostics {
     _write(buffer.toString());
   }
 
+  /// Сводка плана (ADR-040 §8): стратегия, части, партии, заказ, калибровка.
+  ///
+  /// Только числа и имена режимов — без текстов материалов и ключей.
+  void planSummary({
+    required String strategy,
+    required int parts,
+    required int batches,
+    required int requestedCards,
+    required int achievableCards,
+    required bool calibrated,
+  }) {
+    if (!enabled) return;
+    _write(
+      'Генерация: план: стратегия=$strategy, частей=$parts, '
+      'партий=$batches, заказ=$requestedCards, достижимо=$achievableCards, '
+      'калибровка=${calibrated ? 'применена' : 'нет'}',
+    );
+  }
+
   /// Участие изображения в запросе (TASK 03, раздел 6): передано/только каталог.
   void imageParticipation({required String outcome}) {
     if (!enabled) return;

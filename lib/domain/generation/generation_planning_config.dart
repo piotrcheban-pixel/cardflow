@@ -69,6 +69,36 @@ final class GenerationPlanningConfig {
   /// Запас тела запроса (обёртка/JSON), байт.
   final int jsonBodyOverheadBytes;
 
+  /// Копия с изменёнными значениями (калибровка `tokensPerCard`).
+  GenerationPlanningConfig copyWith({
+    int? tokensPerCard,
+    double? outputFill,
+    int? schemaOverheadTokens,
+    int? minBatchCards,
+    int? batchCardsCeiling,
+    double? estimateMargin,
+    double? exactMargin,
+    int? unknownContextMaterialTokens,
+    int? unknownContextOutputTokens,
+    int? defaultOutputTokens,
+    int? jsonBodyOverheadBytes,
+  }) => GenerationPlanningConfig(
+    tokensPerCard: tokensPerCard ?? this.tokensPerCard,
+    outputFill: outputFill ?? this.outputFill,
+    schemaOverheadTokens: schemaOverheadTokens ?? this.schemaOverheadTokens,
+    minBatchCards: minBatchCards ?? this.minBatchCards,
+    batchCardsCeiling: batchCardsCeiling ?? this.batchCardsCeiling,
+    estimateMargin: estimateMargin ?? this.estimateMargin,
+    exactMargin: exactMargin ?? this.exactMargin,
+    unknownContextMaterialTokens:
+        unknownContextMaterialTokens ?? this.unknownContextMaterialTokens,
+    unknownContextOutputTokens:
+        unknownContextOutputTokens ?? this.unknownContextOutputTokens,
+    defaultOutputTokens: defaultOutputTokens ?? this.defaultOutputTokens,
+    jsonBodyOverheadBytes:
+        jsonBodyOverheadBytes ?? this.jsonBodyOverheadBytes,
+  );
+
   /// Запас точности для вида оценки.
   double margin({required bool exact}) => exact ? exactMargin : estimateMargin;
 
