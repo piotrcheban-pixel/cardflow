@@ -45,6 +45,8 @@ import 'package:cardflow/domain/generation/generation_result.dart';
 import 'package:cardflow/domain/generation/generation_run.dart';
 import 'package:cardflow/domain/generation/image_query.dart';
 import 'package:cardflow/domain/generation/model_capabilities.dart';
+import 'package:cardflow/domain/generation/model_capability_cache.dart';
+import 'package:cardflow/domain/generation/provider_account.dart';
 import 'package:cardflow/domain/generation/prompt_only_request.dart';
 import 'package:cardflow/domain/generation/token_accounting.dart';
 
@@ -92,6 +94,7 @@ class GenerationPipeline implements GenerationRunner {
     required this.jobRepository,
     required this.cardStore,
     this.planBuilder = const GenerationPlanBuilder(),
+    this.capabilityCache,
     this.planFactory,
     this.splitter = const GenerationPlanSplitter(),
     this.imageFinder,
@@ -114,6 +117,9 @@ class GenerationPipeline implements GenerationRunner {
 
   /// Сборщик плана по материалам и по теме (production-путь).
   final GenerationPlanBuilder planBuilder;
+
+  /// Кэш характеристик модели (ADR-039); `null` — только каталог/аккаунт.
+  final ModelCapabilityCache? capabilityCache;
 
   /// Подмена плана (тесты/встраивание); `null` — production-путь.
   final GenerationPlanFactory? planFactory;
@@ -210,7 +216,7 @@ class GenerationPipeline implements GenerationRunner {
         throw const GenerationException(GenerationErrorCode.noMaterials);
       }
 
-      final ModelCapabilities capabilities = resolveModelCapabilities(
+      final ModelCapabilities capabilities = await _capabilitiesFor(
         request.account,
       );
       final GenerationPlan plan = _buildPlan(
@@ -422,7 +428,7 @@ class GenerationPipeline implements GenerationRunner {
     // Компактное состояние prompt-only: исходные карточки (при повторе) и всё
     // принятое в этом запуске. Для материаловых планов не используется.
     final bool promptOnly = plan?.isPromptOnly ?? false;
-    final ModelCapabilities capabilities = resolveModelCapabilities(
+    final ModelCapabilities capabilities = await _capabilitiesFor(
       request.account,
     );
     final GenerationContinuityState continuity = GenerationContinuityState(
@@ -1224,6 +1230,28 @@ class GenerationPipeline implements GenerationRunner {
       return true;
     }
     return seen.add(hash);
+  }
+
+  /// Возможности модели: кэш `providerApi` (если есть) → каталог/аккаунт.
+  ///
+  /// Сеть здесь не вызывается: discovery обновляет кэш отдельно (ADR-039 §4).
+  Future<ModelCapabilities> _capabilitiesFor(ProviderAccount account) async {
+    ModelCapabilityRecord? cached;
+    final ModelCapabilityCache? cache = capabilityCache;
+    if (cache != null) {
+      try {
+        cached = await cache.read(
+          accountId: account.id,
+          protocol: account.protocol,
+          baseUrl: account.baseUrl,
+          model: account.modelId,
+        );
+      } on Object {
+        // Повреждённый кэш не блокирует генерацию: план идёт по каталогу.
+        cached = null;
+      }
+    }
+    return resolveModelCapabilities(account, cached: cached);
   }
 }
 

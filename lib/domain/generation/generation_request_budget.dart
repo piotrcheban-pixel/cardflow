@@ -52,14 +52,17 @@ final class RequestBudget {
     InputAccuracy accuracy = InputAccuracy.estimated,
     GenerationPlanningConfig config = const GenerationPlanningConfig(),
     int requestBytes = 0,
+    int? countedInputTokens,
   }) {
     final int fixed = math.max(0, fixedTokens);
     final int material = math.max(0, materialTokens);
+    final bool exactCount = countedInputTokens != null;
     final double marginRate = config.margin(
-      exact: accuracy == InputAccuracy.exact,
+      exact: accuracy == InputAccuracy.exact || exactCount,
     );
-    final int marginTokens = ((fixed + material) * marginRate).ceil();
-    final int inputTokens = fixed + material + marginTokens;
+    final int counted = countedInputTokens ?? (fixed + material);
+    final int marginTokens = (counted * marginRate).ceil();
+    final int inputTokens = counted + marginTokens;
 
     final int? contextTokens = limits.contextTokens.value;
     final int? maxInputTokens = limits.maxInputTokens.value;

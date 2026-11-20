@@ -1,0 +1,14 @@
+{
+  "models": [
+    {
+      "name": "models/test-model",
+      "inputTokenLimit": 32768,
+      "outputTokenLimit": 2048,
+      "supportedGenerationMethods": ["generateContent", "countTokens"]
+    },
+    {
+      "name": "models/embedding-only",
+      "supportedGenerationMethods": ["embedContent"]
+    }
+  ]
+}

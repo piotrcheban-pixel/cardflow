@@ -1,0 +1,12 @@
+{
+  "data": [
+    {
+      "id": "claude-a",
+      "max_input_tokens": 200000,
+      "max_tokens": 8192,
+      "capabilities": {"vision": true, "pdf": true}
+    }
+  ],
+  "has_more": true,
+  "last_id": "claude-a"
+}

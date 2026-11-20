@@ -13,6 +13,7 @@ import 'package:cardflow/api/images/image_api_keys.dart';
 import 'package:cardflow/api/images/image_providers.dart';
 import 'package:cardflow/api/images/image_search_service.dart';
 import 'package:cardflow/api/images/placeholder_image_generator.dart';
+import 'package:cardflow/api/models/model_capability_service.dart';
 import 'package:cardflow/api/providers/generation_adapters.dart';
 import 'package:cardflow/api/parsers/file_parsing_service.dart';
 import 'package:cardflow/data/cards/card_image_refresher.dart';
@@ -26,6 +27,8 @@ import 'package:cardflow/data/decks/drift_deck_repository.dart';
 import 'package:cardflow/data/generation/drift_generation_card_store.dart';
 import 'package:cardflow/data/generation/drift_generation_job_repository.dart';
 import 'package:cardflow/data/generation/drift_generation_settings_store.dart';
+import 'package:cardflow/domain/generation/model_capability_cache.dart';
+import 'package:cardflow/data/generation/drift_model_capability_cache.dart';
 import 'package:cardflow/data/generation/drift_provider_accounts_store.dart';
 import 'package:cardflow/data/generation/file_picker_document_gateway.dart';
 import 'package:cardflow/data/review/drift_review_repository.dart';
@@ -447,5 +450,21 @@ final generationRunnerProvider = Provider<GenerationRunner>((ref) {
     imageFinder: ref.watch(cardImageFinderProvider),
     placeholderGenerator: ref.watch(placeholderImageGeneratorProvider),
     diagnostics: ref.watch(generationDiagnosticsProvider),
+    capabilityCache: ref.watch(modelCapabilityCacheProvider),
+  );
+});
+
+/// Кэш характеристик модели (`generation.model_capabilities`, ADR-039).
+final modelCapabilityCacheProvider = Provider<ModelCapabilityCache>((ref) {
+  return DriftModelCapabilityCache(ref.watch(appDatabaseProvider));
+});
+
+/// Сервис характеристик: discovery, кэш и «Обновить характеристики».
+final modelCapabilityServiceProvider = Provider<ModelCapabilityService>((ref) {
+  final ApiKeyStore keyStore = ref.watch(apiKeyStoreProvider);
+  return ModelCapabilityService(
+    dio: ref.watch(generationDioProvider),
+    readApiKey: (String accountId) => keyStore.read(accountId),
+    cache: ref.watch(modelCapabilityCacheProvider),
   );
 });

@@ -10,9 +10,11 @@
 library;
 
 import 'package:cardflow/domain/generation/generation_pricing.dart';
+import 'package:cardflow/domain/generation/model_capability_cache.dart';
+import 'package:cardflow/domain/generation/model_limits.dart';
+import 'package:cardflow/domain/generation/model_limits_resolver.dart';
 import 'package:cardflow/domain/generation/provider_account.dart';
 import 'package:cardflow/domain/generation/provider_preset.dart';
-import 'package:cardflow/domain/generation/sourced.dart';
 export 'package:cardflow/domain/generation/sourced.dart'
     show CapabilitySource, Sourced;
 
@@ -205,49 +207,58 @@ class ModelCapabilities {
 /// - `maxOutputTokens` не берётся из `CardGenerationService` (8192 — это
 ///   резерв приложения, а не лимит модели);
 /// - `pricing` и лимиты изображений не заполняются предположениями.
-ModelCapabilities resolveModelCapabilities(ProviderAccount account) {
+ModelCapabilities resolveModelCapabilities(
+  ProviderAccount account, {
+  ModelCapabilityRecord? cached,
+}) {
   final ProviderPreset? preset = account.presetId == null
       ? null
       : providerPresetById(account.presetId!);
-  final ProviderPresetModel? presetModel = preset?.modelById(account.modelId);
+  final ModelLimits limits = resolveModelLimits(
+    account: account,
+    preset: preset,
+    cached: cached,
+  );
+  return modelCapabilitiesFromLimits(limits);
+}
 
-  final int? contextWindowTokens = presetModel?.contextTokens;
-  final CapabilitySource contextSource = contextWindowTokens == null
-      ? CapabilitySource.unknown
-      : CapabilitySource.officialCatalog;
-
-  final CapabilitySource configuredSource =
-      account.capabilitiesSource == CapabilitySource.unknown
-      ? CapabilitySource.userConfigured
-      : account.capabilitiesSource;
-
-  CapabilitySource sourceFor(Object? value) =>
-      value == null ? CapabilitySource.unknown : configuredSource;
-
-  final int? maxImagesPerRequest = account.maxImagesPerRequest;
-  final int? maxImageBytesPerImage = account.maxImageBytes;
-  final int? maxRequestBytes = account.maxRequestBytes;
-  final GenerationPricing? pricing = account.pricing;
-
+/// Проекция `ModelLimits` в `ModelCapabilities` (для существующих потребителей).
+ModelCapabilities modelCapabilitiesFromLimits(ModelLimits limits) {
+  CapabilitySource sourceOf(Sourced<Object?> sourced, Object? value) =>
+      value == null ? CapabilitySource.unknown : sourced.source;
+  final int? context = limits.contextTokens.value;
+  final int? maxOutput = limits.maxOutputTokens.value;
+  final int? maxCards = limits.maxCardsPerRequest.value;
+  final int? maxImages = limits.maxImagesPerRequest.value;
+  final int? imageBytes = limits.maxImageBytesPerImage.value;
+  final int? imageBytesRequest = limits.maxImageBytesPerRequest.value;
+  final int? requestBytes = limits.maxRequestBytes.value;
+  final bool? vision = limits.supportsImageInput.value;
   return ModelCapabilities(
-    contextWindowTokens: contextWindowTokens,
-    // Отдельный входной лимит, потолок карточек, лимит изображений на запрос,
-    // сторона изображения нигде не хранятся: пока это неизвестно.
-    maxOutputTokens: account.maxOutputTokens,
-    maxImagesPerRequest: maxImagesPerRequest,
-    maxImageBytesPerImage: maxImageBytesPerImage,
-    maxRequestBytes: maxRequestBytes,
-    supportsVision: account.supportsVision,
-    supportsPdfDocumentPart: account.protocol.supportsPdfAttachments,
-    // strict-схема у конкретной модели в репозитории не подтверждена:
-    // OpenAI-совместимый протокол переключается по лестнице ADR-021.
+    contextWindowTokens: context,
+    maxInputTokens: limits.maxInputTokens.value,
+    maxOutputTokens: maxOutput,
+    maxCardsPerRequest: maxCards,
+    maxImagesPerRequest: maxImages,
+    maxImageBytesPerImage: imageBytes,
+    maxImageBytesPerRequest: imageBytesRequest,
+    maxRequestBytes: requestBytes,
+    supportsVision: vision ?? false,
+    supportsPdfDocumentPart: limits.supportsPdfInput.value ?? false,
     supportsStrictJsonSchema: null,
     tokenizer: TokenizerKind.unknown,
     imageTokens: null,
-    pricing: pricing,
-    contextSource: contextSource,
-    outputSource: sourceFor(account.maxOutputTokens),
-    imageSource: sourceFor(maxImagesPerRequest ?? maxImageBytesPerImage),
-    pricingSource: sourceFor(pricing),
+    pricing: limits.pricing.value,
+    contextSemantics: limits.contextSemantics,
+    contextSource: sourceOf(limits.contextTokens, context),
+    outputSource: sourceOf(limits.maxOutputTokens, maxOutput),
+    // Групповой источник лимитов изображений (запрос/байт), а не Vision:
+    // Vision — отдельная возможность и в уже существующую группу не входит.
+    imageSource: maxImages != null
+        ? limits.maxImagesPerRequest.source
+        : imageBytes != null
+        ? limits.maxImageBytesPerImage.source
+        : CapabilitySource.unknown,
+    pricingSource: sourceOf(limits.pricing, limits.pricing.value),
   );
 }

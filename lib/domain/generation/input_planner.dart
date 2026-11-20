@@ -326,6 +326,7 @@ final class InputPlanner {
     InputAccuracy accuracy = InputAccuracy.estimated,
     int outlineReserveTokens = 0,
     List<InputImage> orphanImages = const <InputImage>[],
+    int? exactInputTokens,
   }) {
     final double marginRate = config.margin(
       exact: accuracy == InputAccuracy.exact,
@@ -381,6 +382,7 @@ final class InputPlanner {
       desiredOutputTokens: desiredOutputTokens,
       accuracy: accuracy,
       config: config,
+      countedInputTokens: exactInputTokens,
     );
     bool imagesOmittedByBudget = false;
     if (budget.contextExceeded && imageTokens > 0) {
@@ -425,6 +427,7 @@ final class InputPlanner {
         maxRequestBytes: maxRequestBytes,
         textTokens: textTokens,
         warnings: warnings,
+        exactInputTokens: exactInputTokens,
       );
     }
 
@@ -460,6 +463,7 @@ final class InputPlanner {
     required int? maxRequestBytes,
     required int textTokens,
     required Set<PlanWarningCode> warnings,
+    int? exactInputTokens,
   }) {
     final String materialsText = renderMaterials(sections);
     final _ImagePlacement placement = _placeImages(
@@ -481,6 +485,7 @@ final class InputPlanner {
       accuracy: accuracy,
       config: config,
       requestBytes: placement.bytes,
+      countedInputTokens: exactInputTokens,
     );
     final InputPart part = InputPart(
       index: 0,

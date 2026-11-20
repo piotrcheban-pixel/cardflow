@@ -1,0 +1,13 @@
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "test-model",
+      "context_window": "not-a-number",
+      "max_output_tokens": -1,
+      "input_modalities": "image"
+    },
+    {"id": ""},
+    {"object": "model"}
+  ]
+}

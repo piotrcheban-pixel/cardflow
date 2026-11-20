@@ -162,13 +162,23 @@ Wire-имена `capabilities_source` меняются на `user_configured`/`p
 (`user`/`preset`/`verified`/`inferred`) поддерживается и отображается в новые:
 `user→userConfigured`, `preset|verified→officialCatalog`, `inferred→assumption`.
 
-### 6. Что проверено по документации провайдеров
+### 6. Что проверено по документации провайдеров (2026-11-20)
 
-Заполняется в фазе 3: для каждой строки §3.3 задания — URL, дата проверки,
-какие поля реально документированы, какие остаются `unknown`. Если поле не
-документировано — значение `unknown` (или `assumption` с предупреждением), а не
-«типовое число семейства». Результат — таблица в `docs/generation-planning.md`
-и ссылки в фикстурах `test/fixtures/discovery/<provider>/*.json`.
+| Провайдер | Источник/проверка | Что реализовано |
+|---|---|---|
+| DeepSeek | `https://api-docs.deepseek.com/quick_start/pricing` (HTTP 200): модели `deepseek-flash` 1M, `deepseek-v4-pro` 1M, цены; страница `api/get-models` редиректит на quickstart — **поля ответа `/models` не документированы** | `GET {base}/models`; `id` доверяется; `context_window`/`max_output_tokens` принимаются, если присутствуют и корректны, иначе `unknown` |
+| Ollama | `https://raw.githubusercontent.com/ollama/ollama/main/docs/api.md` (HTTP 200): `GET /api/tags` → `models[].name/model/details`; `POST /api/show` → `model_info` (`<arch>.context_length`), `capabilities`, `parameters` (`num_ctx`) | Нативно: теги + show; контекст — `providerApi`, рабочий `num_ctx` — `assumption` (`ollama_num_ctx_assumption`) |
+| OpenRouter | `https://openrouter.ai/docs/api_reference/models` (HTTP 200), но таблица полей в полученном тексте отсутствует | Структура по гипотезе задания (`context_length`, `top_provider.*`, `architecture.input_modalities`, `pricing` за токен); поля принимаются только при корректном типе; помечено «не сверено» |
+| Anthropic | `docs.anthropic.com/en/api/models-list` → 301 на `platform.claude.com` → **404**; сверка не удалась | `GET /v1/models` + `after_id`-пагинация, `max_input_tokens`/`max_tokens`/`capabilities` — только если присутствуют; `inputOnly` |
+| Gemini | `ai.google.dev/api/models` → редирект на `aistudio.google.com`, сверка не удалась | `GET v1beta/models` + `pageToken`, `inputTokenLimit`/`outputTokenLimit`/`supportedGenerationMethods`; `inputOnly` |
+| OpenAI | Веб-страница API reference без авторизованного доступа не получена | `GET /v1/models`: только `id`; лимиты `unknown` |
+| Groq / Moonshot / MiniMax | Документация не проверялась (время истекло, внешний блокер) | `id` + присутствующие поля с проверкой типов, иначе `unknown` |
+
+Если поле не документировано или отсутствует — значение `unknown` (или
+`assumption` с предупреждением), а не «типовое число семейства». Фикстуры
+`test/fixtures/discovery/<provider>/*.json` построены по документированной
+структуре (Ollama) и по гипотезе задания (остальные) — это зафиксировано в
+`KNOWN_LIMITATIONS.md`.
 
 ## Последствия
 

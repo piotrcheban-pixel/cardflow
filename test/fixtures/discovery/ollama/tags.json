@@ -1,0 +1,6 @@
+{
+  "models": [
+    {"name": "llama3.2:latest", "model": "llama3.2:latest"},
+    {"name": "test-model", "model": "test-model"}
+  ]
+}

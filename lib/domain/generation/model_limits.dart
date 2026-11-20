@@ -275,3 +275,114 @@ ModelLimits modelLimitsFromCapabilities(ModelCapabilities capabilities) {
           ),
   );
 }
+
+/// JSON-представление `Sourced` (кэш характеристик, ADR-039 §4).
+Map<String, Object?> sourcedToJson<T>(
+  Sourced<T> sourced,
+  Object? Function(T value) encode,
+) => <String, Object?>{
+  'value': sourced.value == null ? null : encode(sourced.value as T),
+  'source': sourced.source.wireName,
+  if (sourced.observedAt != null)
+    'observed_at': sourced.observedAt!.toUtc().toIso8601String(),
+  if (sourced.sourceRef != null) 'source_ref': sourced.sourceRef,
+};
+
+Sourced<T> sourcedFromJson<T>(Object? json, T? Function(Object? value) decode) {
+  if (json is! Map) return Sourced<T>.absent();
+  final CapabilitySource source = CapabilitySource.fromWire(json['source']);
+  final Object? raw = json['value'];
+  final T? value = raw == null ? null : decode(raw);
+  final Object? observed = json['observed_at'];
+  return Sourced<T>(
+    value,
+    source: source,
+    observedAt: observed is String ? DateTime.tryParse(observed)?.toUtc() : null,
+    sourceRef: json['source_ref'] is String ? json['source_ref']! as String : null,
+  );
+}
+
+/// JSON-представление лимитов модели для кэша `generation.model_capabilities`.
+Map<String, Object?> modelLimitsToJson(ModelLimits limits) => <String, Object?>{
+  'context_window': sourcedToJson<int>(limits.contextTokens, (int v) => v),
+  'context_semantics': limits.contextSemantics.name,
+  'max_input_tokens': sourcedToJson<int>(limits.maxInputTokens, (int v) => v),
+  'max_output_tokens': sourcedToJson<int>(limits.maxOutputTokens, (int v) => v),
+  'max_cards_per_request': sourcedToJson<int>(
+    limits.maxCardsPerRequest,
+    (int v) => v,
+  ),
+  'max_request_bytes': sourcedToJson<int>(limits.maxRequestBytes, (int v) => v),
+  'max_images_per_request': sourcedToJson<int>(
+    limits.maxImagesPerRequest,
+    (int v) => v,
+  ),
+  'max_image_bytes_per_image': sourcedToJson<int>(
+    limits.maxImageBytesPerImage,
+    (int v) => v,
+  ),
+  'max_image_bytes_per_request': sourcedToJson<int>(
+    limits.maxImageBytesPerRequest,
+    (int v) => v,
+  ),
+  'supports_image_input': sourcedToJson<bool>(
+    limits.supportsImageInput,
+    (bool v) => v,
+  ),
+  'supports_pdf_input': sourcedToJson<bool>(limits.supportsPdfInput, (bool v) => v),
+  'is_reasoning_model': sourcedToJson<bool>(
+    limits.isReasoningModel,
+    (bool v) => v,
+  ),
+  'pricing': sourcedToJson<GenerationPricing>(
+    limits.pricing,
+    (GenerationPricing v) => v.toJson(),
+  ),
+};
+
+/// Разбор лимитов из JSON кэша; битые поля — неизвестны (не 0).
+ModelLimits modelLimitsFromJson(Object? json) {
+  if (json is! Map) return const ModelLimits.absent();
+  int? intOf(Object? value) => value is num && value.isFinite && value >= 0
+      ? value.toInt()
+      : null;
+  bool? boolOf(Object? value) => value is bool ? value : null;
+  ContextSemantics semantics = ContextSemantics.unknown;
+  for (final ContextSemantics value in ContextSemantics.values) {
+    if (value.name == json['context_semantics']) semantics = value;
+  }
+  final Sourced<GenerationPricing> pricing = sourcedFromJson<GenerationPricing>(
+    json['pricing'],
+    (Object? value) => GenerationPricing.fromJson(value),
+  );
+  return ModelLimits(
+    contextTokens: sourcedFromJson<int>(json['context_window'], intOf),
+    contextSemantics: semantics,
+    maxInputTokens: sourcedFromJson<int>(json['max_input_tokens'], intOf),
+    maxOutputTokens: sourcedFromJson<int>(json['max_output_tokens'], intOf),
+    maxCardsPerRequest: sourcedFromJson<int>(
+      json['max_cards_per_request'],
+      intOf,
+    ),
+    maxRequestBytes: sourcedFromJson<int>(json['max_request_bytes'], intOf),
+    maxImagesPerRequest: sourcedFromJson<int>(
+      json['max_images_per_request'],
+      intOf,
+    ),
+    maxImageBytesPerImage: sourcedFromJson<int>(
+      json['max_image_bytes_per_image'],
+      intOf,
+    ),
+    maxImageBytesPerRequest: sourcedFromJson<int>(
+      json['max_image_bytes_per_request'],
+      intOf,
+    ),
+    supportsImageInput: sourcedFromJson<bool>(
+      json['supports_image_input'],
+      boolOf,
+    ),
+    supportsPdfInput: sourcedFromJson<bool>(json['supports_pdf_input'], boolOf),
+    isReasoningModel: sourcedFromJson<bool>(json['is_reasoning_model'], boolOf),
+    pricing: pricing,
+  );
+}

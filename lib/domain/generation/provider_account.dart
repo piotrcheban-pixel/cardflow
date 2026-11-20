@@ -37,6 +37,7 @@ class ProviderAccount {
     this.contextTokens = kCustomProviderContextTokens,
     this.requiresApiKey = false,
     this.supportsVision = false,
+    this.visionConfigured = false,
     this.maxOutputTokens,
     this.maxImagesPerRequest,
     this.maxImageBytes,
@@ -95,6 +96,12 @@ class ProviderAccount {
   /// Принимает ли модель изображения (Vision).
   final bool supportsVision;
 
+  /// Задано ли значение Vision пользователем (JSON v2, ADR-039 §5).
+  ///
+  /// `false` у старых записей/пресетов: значение выведено эвристикой или
+  /// каталогом и не считается пользовательским.
+  final bool visionConfigured;
+
   /// Жёсткий лимит вывода модели, токенов; `null` — неизвестно.
   final int? maxOutputTokens;
 
@@ -135,6 +142,7 @@ class ProviderAccount {
     int? contextTokens,
     bool? requiresApiKey,
     bool? supportsVision,
+    bool? visionConfigured,
     int? maxOutputTokens,
     int? maxImagesPerRequest,
     int? maxImageBytes,
@@ -226,6 +234,7 @@ class ProviderAccount {
           : kCustomProviderContextTokens,
       requiresApiKey: rawRequiresKey is bool ? rawRequiresKey : false,
       supportsVision: supportsVision,
+    visionConfigured: json['vision_configured'] == true,
       maxOutputTokens: _positiveIntFromJson(json['max_output_tokens']),
       maxImagesPerRequest: _positiveIntFromJson(json['max_images_per_request']),
       maxImageBytes: _positiveIntFromJson(json['max_image_bytes']),
@@ -250,6 +259,7 @@ class ProviderAccount {
           other.contextTokens == contextTokens &&
           other.requiresApiKey == requiresApiKey &&
           other.supportsVision == supportsVision &&
+      other.visionConfigured == visionConfigured &&
           other.maxOutputTokens == maxOutputTokens &&
           other.maxImagesPerRequest == maxImagesPerRequest &&
           other.maxImageBytes == maxImageBytes &&
@@ -268,6 +278,7 @@ class ProviderAccount {
     contextTokens,
     requiresApiKey,
     supportsVision,
+    visionConfigured,
     maxOutputTokens,
     maxImagesPerRequest,
     maxImageBytes,

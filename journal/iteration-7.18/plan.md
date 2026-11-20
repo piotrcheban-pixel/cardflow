@@ -121,19 +121,19 @@ final class OutputBatchPlanner {
 - [ ] коммит `feat(domain): …` (следующий шаг)
 
 ### Фаза 3 — discovery и кэш
-- [ ] порт `ModelCapabilityDiscovery` (domain), резолверы
-      `lib/api/models/*` (OpenAI-compatible/DeepSeek/Groq/Moonshot/OpenRouter,
-      Anthropic, Gemini, Ollama, generic)
-- [ ] проверка документации провайдеров (web_fetch, URL+дата) → ADR-039 §6,
-      `docs/generation-planning.md`
-- [ ] фикстуры `test/fixtures/discovery/<provider>/*.json` (успех, пагинация,
-      отсутствующие/неверные поля, 401, таймаут, пустой список)
-- [ ] кэш `generation.model_capabilities` v1 (TTL 7 дней, `lastErrorCode`,
-      инвалидация по ключу/baseUrl/modelId, без ключей/хэшей)
-- [ ] миграция legacy (`userConfigured`/`officialCatalog`/`assumption`),
-      `inferred` Vision → `assumption` + метка в UI
-- [ ] нативный count_tokens (Anthropic/Gemini), `exact` в плане, кэш по хэшу
-- [ ] коммит `feat(generation): …`
+- [x] порт `ModelCapabilityDiscovery` (domain), резолверы
+      `lib/api/models/model_discovery.dart` (OpenAI-compatible/DeepSeek/
+      OpenRouter/Groq/Moonshot, Anthropic, Gemini, Ollama, generic)
+- [x] проверка документации провайдеров (web_fetch, URL+дата) → ADR-039 §6
+- [x] фикстуры `test/fixtures/discovery/<provider>/*.json` (успех, пагинация,
+      неверные поля, пустой список; 401/таймаут — статусом в тесте)
+- [x] кэш `generation.model_capabilities` v1 (TTL 7 дней, `lastErrorCode`,
+      инвалидация по аккаунту/baseUrl/modelId, без ключей/хэшей)
+- [x] миграция legacy (`userConfigured`/`officialCatalog`/`assumption`),
+      `inferred` Vision → `assumption`; явный флаг `vision_configured`
+- [x] нативный count_tokens (Anthropic/Gemini) + `exactInputTokens` в
+      `InputPlanner`/`RequestBudget`; оставшееся подключение к конвейеру — фаза 5
+- [x] коммит `feat(generation): …` (следующий шаг)
 
 ### Фаза 4 — `gen-ru-v8`
 - [ ] `lib/api/prompts/system_prompt.dart`: `systemPromptGenRuV8` +

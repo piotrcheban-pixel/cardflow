@@ -1,0 +1,11 @@
+{
+  "models": [
+    {
+      "name": "models/gemini-test",
+      "inputTokenLimit": 1048576,
+      "outputTokenLimit": 8192,
+      "supportedGenerationMethods": ["generateContent"]
+    }
+  ],
+  "nextPageToken": "page2"
+}

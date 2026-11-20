@@ -17,6 +17,8 @@ class ProviderPresetModel {
     required this.label,
     required this.contextTokens,
     this.supportsVision = false,
+    this.sourceRef,
+    this.verifiedOn,
   });
 
   /// Идентификатор модели в запросе провайдеру.
@@ -31,6 +33,17 @@ class ProviderPresetModel {
   /// Принимает ли модель изображения (Vision).
   final bool supportsVision;
 
+  /// URL официальной страницы, где проверены лимиты (без query-параметров).
+  ///
+  /// Без [sourceRef] и [verifiedOn] значения каталога — `assumption`, а не
+  /// подтверждённый факт (ADR-039 §5).
+  final String? sourceRef;
+
+  /// Дата проверки каталога (`YYYY-MM-DD`); `null` — не проверялось.
+  ///
+  /// Строка, а не `DateTime`, чтобы каталог оставался `const`.
+  final String? verifiedOn;
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -38,10 +51,13 @@ class ProviderPresetModel {
           other.id == id &&
           other.label == label &&
           other.contextTokens == contextTokens &&
-          other.supportsVision == supportsVision;
+          other.supportsVision == supportsVision &&
+          other.sourceRef == sourceRef &&
+          other.verifiedOn == verifiedOn;
 
   @override
-  int get hashCode => Object.hash(id, label, contextTokens, supportsVision);
+  int get hashCode =>
+      Object.hash(id, label, contextTokens, supportsVision, sourceRef, verifiedOn);
 
   @override
   String toString() => 'ProviderPresetModel($id)';
@@ -113,11 +129,15 @@ const List<ProviderPreset> kProviderPresets = <ProviderPreset>[
         label: 'DeepSeek Flash',
         contextTokens: 1000000,
         supportsVision: true,
+        sourceRef: 'https://api-docs.deepseek.com/quick_start/pricing',
+        verifiedOn: '2026-11-19',
       ),
       ProviderPresetModel(
         id: 'deepseek-v4-pro',
         label: 'DeepSeek V4 Pro',
         contextTokens: 1000000,
+        sourceRef: 'https://api-docs.deepseek.com/quick_start/pricing',
+        verifiedOn: '2026-11-19',
       ),
       ProviderPresetModel(
         id: 'deepseek-chat',

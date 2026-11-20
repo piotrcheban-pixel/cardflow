@@ -327,6 +327,35 @@ void main() {
       expect(fragmented.strategy, InputStrategy.fragmented);
     });
 
+    test('нативный подсчёт входа: точное значение меняет стратегию честно', () {
+      final InputPlan whole = planner.plan(
+        sections: sections(count: 1, tokensEach: 53364),
+        limits: limits(context: 64000, maxOutput: 32000),
+        fixedTokens: 3000,
+        desiredOutputTokens: desired(100, 32000),
+        accuracy: InputAccuracy.exact,
+        exactInputTokens: 60000,
+      );
+      expect(whole.accuracy, InputAccuracy.exact);
+      expect(whole.inputTokens, 61800, reason: '60000 + 3 % запаса');
+      expect(whole.maxTokens, 2200, reason: 'room = 64000 − 61800');
+      expect(whole.strategy, InputStrategy.wholeDocument);
+
+      final InputPlan fragmented = planner.plan(
+        sections: sections(count: 1, tokensEach: 53364),
+        limits: limits(context: 64000, maxOutput: 32000),
+        fixedTokens: 3000,
+        desiredOutputTokens: desired(100, 32000),
+        accuracy: InputAccuracy.exact,
+        exactInputTokens: 62000,
+      );
+      expect(
+        fragmented.strategy,
+        InputStrategy.fragmented,
+        reason: 'точный вход 63 860 оставляет 140 под ответ → дробим',
+      );
+      expect(fragmented.partCount, greaterThanOrEqualTo(1));
+    });
     test('inputOnly: выход не вычитается из лимита входа повторно', () {
       final InputPlan whole = planner.plan(
         sections: sections(count: 10, tokensEach: 8750),
