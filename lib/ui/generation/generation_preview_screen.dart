@@ -448,6 +448,9 @@ class _GenerationPreviewScreenState
     final int chunkTotal = _result.chunkCount == 0
         ? _result.failures.length
         : _result.chunkCount;
+    final int emptyCoverageSections = _result.sectionCoverage
+        .where((cov) => cov.produced == 0 && cov.allocated > 0)
+        .length;
     return Scaffold(
       appBar: AppBar(title: Text(l10n.generationPreviewTitle)),
       body: Center(
@@ -544,6 +547,21 @@ class _GenerationPreviewScreenState
                   child: Text(
                     l10n.generationPreviewTrimmed(_result.trimmedCards),
                     key: const ValueKey<String>('generation-preview-trimmed'),
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.tertiary,
+                    ),
+                  ),
+                ),
+              if (_result.sectionCoverage.isNotEmpty &&
+                  emptyCoverageSections > 0)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(
+                    l10n.generationPreviewCoverage(
+                      emptyCoverageSections,
+                      _result.sectionCoverage.length,
+                    ),
+                    key: const ValueKey<String>('generation-preview-coverage'),
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: theme.colorScheme.tertiary,
                     ),

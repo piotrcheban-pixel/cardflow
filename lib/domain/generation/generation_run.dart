@@ -180,6 +180,26 @@ class GenerationChunkFailure {
 }
 
 /// Результат генерации (он же данные предпросмотра).
+/// Покрытие раздела материала созданными карточками (TASK 5).
+///
+/// [sectionId] — короткий id раздела (`promptId`), [allocated] — сколько
+/// карточек плану выделено, [produced] — сколько принято из ответов,
+/// [exhausted] — раздел помечен исчерпанным.
+class GenerationSectionCoverage {
+  const GenerationSectionCoverage({
+    required this.sectionId,
+    required this.allocated,
+    required this.produced,
+    required this.exhausted,
+  });
+
+  final String sectionId;
+  final int allocated;
+  final int produced;
+  final bool exhausted;
+}
+
+/// Результат запуска генерации.
 class GenerationRunResult {
   /// Создаёт результат.
   const GenerationRunResult({
@@ -204,6 +224,7 @@ class GenerationRunResult {
     this.skippedBatches = 0,
     this.trimmedCards = 0,
     this.exhaustedSectionIds = const <String>[],
+    this.sectionCoverage = const <GenerationSectionCoverage>[],
   });
 
   /// Идентификатор задания `generation_jobs`.
@@ -238,6 +259,9 @@ class GenerationRunResult {
 
   /// Разделы, помеченные исчерпанными (`source_exhausted`/недобор < 50 %).
   final List<String> exhaustedSectionIds;
+
+  /// Покрытие разделов материала принятыми карточками (TASK 5).
+  final List<GenerationSectionCoverage> sectionCoverage;
 
   /// Сколько фрагментов обработано.
   final int chunkCount;

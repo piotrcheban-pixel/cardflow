@@ -2186,6 +2186,12 @@ abstract class AppLocalizations {
   /// **'Лишние карточек сверх заказа не добавлено: {count}.'**
   String generationPreviewTrimmed(int count);
 
+  /// Отчёт покрытия разделов материала принятыми карточками (TASK 5).
+  ///
+  /// In ru, this message translates to:
+  /// **'Разделов без единой карточки: {empty} из {total}. Проверьте покрытие материала.'**
+  String generationPreviewCoverage(int empty, int total);
+
   /// Постоянное сообщение о fatal-ошибке в предпросмотре (TASK 03).
   ///
   /// In ru, this message translates to:

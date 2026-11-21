@@ -1360,6 +1360,11 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String generationPreviewCoverage(int empty, int total) {
+    return 'Разделов без единой карточки: $empty из $total. Проверьте покрытие материала.';
+  }
+
+  @override
   String generationPreviewFatal(String message) {
     return 'Генерация остановлена: $message';
   }

@@ -668,6 +668,7 @@ class GenerationPipeline implements GenerationRunner {
     var duplicates = initialDuplicates;
     var rejected = initialRejected;
     var trimmed = 0;
+    final Map<String, int> producedBySection = <String, int>{};
     var recoveryRequests = 0;
     var failedRequests = 0;
     final int recoveryBudget = _recoveryBudgetFor(plan);
@@ -976,6 +977,15 @@ class GenerationPipeline implements GenerationRunner {
         }
       }
       final int acceptedInChunk = cards.length - imageStart;
+      if (acceptedInChunk > 0 && chunkSections.isNotEmpty) {
+        final int base = acceptedInChunk ~/ chunkSections.length;
+        int remainder = acceptedInChunk % chunkSections.length;
+        for (final String section in chunkSections) {
+          final int add = base + (remainder > 0 ? 1 : 0);
+          if (remainder > 0) remainder--;
+          producedBySection[section] = (producedBySection[section] ?? 0) + add;
+        }
+      }
       if (result.usage.completionTokens != null && acceptedInChunk > 0) {
         batchFacts.add(
           _BatchTokenFact(
@@ -1078,6 +1088,22 @@ class GenerationPipeline implements GenerationRunner {
       }
     }
 
+    final GenerationPlan? planForCoverage = activePlan;
+    final List<GenerationSectionCoverage> sectionCoverage =
+        <GenerationSectionCoverage>[
+          if (planForCoverage != null)
+            for (final InputPart part in planForCoverage.parts)
+              for (final InputSection section in part.sections)
+                if ((planForCoverage.allocation?.forSection(section.id) ?? 0) >
+                    0)
+                  GenerationSectionCoverage(
+                    sectionId: section.promptId,
+                    allocated:
+                        planForCoverage.allocation?.forSection(section.id) ?? 0,
+                    produced: producedBySection[section.promptId] ?? 0,
+                    exhausted: exhaustedSections.contains(section.promptId),
+                  ),
+        ];
     final bool hasCards = cards.isNotEmpty;
     final int requestedTotal = activePlan?.requestedCards ?? 0;
     final bool targetReached =
@@ -1148,6 +1174,9 @@ class GenerationPipeline implements GenerationRunner {
       shortfallCards: shortfall,
       skippedBatches: skippedBatches,
       exhaustedSectionIds: List<String>.unmodifiable(exhaustedSections),
+      sectionCoverage: List<GenerationSectionCoverage>.unmodifiable(
+        sectionCoverage,
+      ),
     );
   }
 

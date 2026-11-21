@@ -326,6 +326,24 @@ void main() {
     expect(result.status, GenerationJobStatus.done);
   });
 
+  test('покрытие разделов: сумма produced равна принятым карточкам', () async {
+    final GenerationPipeline runner = pipeline();
+    caller.onGenerate = (GenerationRequest request, int call) async =>
+        resultOf(<String>[
+          for (var index = 0; index < request.limit; index++)
+            'Вопрос $call-$index',
+        ]);
+    final GenerationRunResult result = await runner.run(
+      requestFor(docOf(3, 400), requestedCards: 10),
+    );
+    expect(result.sectionCoverage, isNotEmpty);
+    final int produced = result.sectionCoverage.fold<int>(
+      0,
+      (int sum, cov) => sum + cov.produced,
+    );
+    expect(produced, result.cards.length);
+  });
+
   for (final int count in <int>[10, 20, 32, 40, 80, 150]) {
     test('цель $count карточек достигается при полной отдаче модели', () async {
       final GenerationPipeline runner = pipeline();

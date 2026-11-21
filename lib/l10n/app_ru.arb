@@ -1606,6 +1606,18 @@
       }
     }
   },
+  "generationPreviewCoverage": "Разделов без единой карточки: {empty} из {total}. Проверьте покрытие материала.",
+  "@generationPreviewCoverage": {
+    "description": "Отчёт покрытия разделов материала принятыми карточками (TASK 5).",
+    "placeholders": {
+      "empty": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "generationPreviewFatal": "Генерация остановлена: {message}",
   "@generationPreviewFatal": {
     "description": "Постоянное сообщение о fatal-ошибке в предпросмотре (TASK 03).",
