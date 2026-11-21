@@ -57,6 +57,25 @@ Anthropic/Gemini (`request_token_counter.dart`) и передаётся в пл�
   maxOutputTokens)`; неизвестный контекст — консервативный режим с
   предупреждением `contextUnconfirmed`. Байтовое тело проверяется отдельно
   (`maxRequestBytes`), переполнение — `payloadLimited`.
+- **`D` включает каталог изображений** (7.18.2): `InputImage.catalogTokens`
+  считается тем же `imageCatalogLine`, что уходит в `<images>`, и входит в
+  `InputPart.totalMaterialTokens`, `materialTokens`, `inputTokens`,
+  `GenerationEstimate.catalogTokens` и «Подробнее». Без этого подписи и
+  окружающий текст каталога не занимали бюджета (дефект: 24/74/52 токена
+  каталога против 0).
+- **`P` и байты тела** (7.18.2): `GenerationOverheadTokens.fixedBytes` —
+  системный промпт + JSON-схема ответа + обёртка сообщения — входит в
+  `requestBytes` плана. План и факт сверяются тестом: оценка против
+  сериализованного payload (оценка 81 КБ против 110 КБ была дефектом).
+- **Reasoning-модели** (7.18.2): до калибровки `max_tokens` включает
+  `GenerationPlanningConfig.reasoningReserveTokens` (2048, допущение);
+  карточки партии считаются от `max_tokens − резерв`. После ≥2 замеров
+  калибровки резерв = 0 (факт `usage` уже содержит рассуждение).
+- **Точный подсчёт и изображения** (7.18.2): `count_tokens` считает текст
+  запроса (system + сообщение + схема); image-части уходят отдельными блоками,
+  поэтому их стоимость добавляется консервативной оценкой, а источник точности
+  помечается `count_tokens:<протокол>+image_estimate` — ноль вместо оценки не
+  подставляется.
 
 ## 4. Input Planner (ADR-040 §3)
 
@@ -128,9 +147,16 @@ Anthropic/Gemini (`request_token_counter.dart`) и передаётся в пл�
 - Тесты: `generation_planning_test.dart` (T1–T9), `card_allocator_test.dart`,
   `generation_chunk_planner_test.dart`, `generation_plan_batches_test.dart`,
   `generation_pipeline_v8_test.dart`, `model_discovery_test.dart`,
+  `model_discovery_errors_test.dart` (401/таймаут/типы/пустой список),
   `model_limits_resolver_test.dart`, `drift_model_capability_cache_test.dart`,
   `request_token_counter_test.dart`, `drift_token_calibration_store_test.dart`.
-- Ограничения: `journal/KNOWN_LIMITATIONS.md` L154–L161.
+- 7.18.2: `image_catalog_budget_test.dart` (каталог в `D`, 0/1/несколько
+  изображений, длинные подписи, fragmented, exact), `generation_payload_bytes_test.dart`
+  (полный сериализованный payload, `maxRequestBytes`, T5 13+13 МБ/20 МБ,
+  политика для OpenAI-совместимого и Anthropic), `reasoning_reserve_test.dart`
+  (резерв рассуждения и снятие калибровкой), `generation_exact_tokens_test.dart`
+  (exact + изображения).
+- Ограничения: `journal/KNOWN_LIMITATIONS.md` L154–L161, L174–L178.
 
 
 ## 9. Характеристики моделей: что известно (7.18.1, 2026-11-21)

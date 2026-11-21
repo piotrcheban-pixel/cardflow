@@ -9,6 +9,7 @@ import 'package:cardflow/api/generation/generation_prompt.dart';
 import 'package:cardflow/api/generation/generation_plan_builder.dart';
 import 'package:cardflow/api/generation/system_prompt.dart';
 import 'package:cardflow/api/providers/generation_provider_adapter.dart';
+import 'package:cardflow/api/providers/anthropic_adapter.dart';
 import 'package:cardflow/api/providers/openai_compatible_adapter.dart';
 import 'package:cardflow/domain/generation/document_image.dart';
 import 'package:cardflow/domain/generation/generation_attachment.dart';
@@ -292,4 +293,52 @@ void main() {
     expect(body, contains(cardsResponseSchemaName));
     expect(body, contains('ПЛАНИРОВАНИЕ ВЫДАЧИ'));
   });
+
+  test(
+    'измерение общее для протоколов: Anthropic тоже получает лимит',
+    () async {
+      // Anthropic сериализует вложения как блоки `image.source.base64`, а
+      // системный промпт — отдельным полем; лимит проверяется тем же
+      // `serializedRequestBytes`, поэтому ограничение протокол-независимо.
+      final FakeGenerationTransport transport = transportWithResponse();
+      final CardGenerationService service = CardGenerationService(
+        adapters: <GenerationProviderAdapter>[const AnthropicAdapter()],
+        apiKeyStore: FakeApiKeyStore(<String, String>{'acc': 'test-key'}),
+        httpClient: transport,
+      );
+      const ProviderAccount anthropic = ProviderAccount(
+        id: 'acc',
+        label: 'Anthropic',
+        protocol: ProviderProtocol.anthropicMessages,
+        baseUrl: 'https://api.anthropic.com',
+        modelId: 'claude-test',
+        requiresApiKey: true,
+        supportsVision: true,
+        visionConfigured: true,
+        maxRequestBytes: 260 * 1024,
+        maxImageBytes: 30 * 1024 * 1024,
+      );
+      final DocumentImage image = documentImage(bytes: 200 * 1024);
+      await expectLater(
+        service.generate(
+          GenerationRequest(
+            account: anthropic,
+            materialsText: 'Текст.',
+            limit: 3,
+            documentImages: <DocumentImage>[image],
+            documentImageParts: <DocumentImage>[image],
+          ),
+        ),
+        throwsA(
+          isA<GenerationException>().having(
+            (GenerationException error) => error.code,
+            'code',
+            GenerationErrorCode.payloadTooLarge,
+          ),
+        ),
+        reason: 'base64 200 КБ + промпт Anthropic больше лимита 260 КБ',
+      );
+      expect(transport.requests, isEmpty);
+    },
+  );
 }
