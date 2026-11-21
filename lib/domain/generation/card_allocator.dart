@@ -231,6 +231,8 @@ final class CardAllocation {
     required this.requested,
     required this.achievable,
     required this.belowRequested,
+    this.estimatedCapacity,
+    this.materialLimited = false,
   }) : planned = Map<String, int>.unmodifiable(planned);
 
   /// Карточки по разделам (`id → число`), без отрицательных значений.
@@ -244,6 +246,20 @@ final class CardAllocation {
 
   /// true, если материала не хватает на заказ.
   final bool belowRequested;
+
+  /// Оценка содержательной ёмкости материала: `Σ` мягких ёмкостей разделов.
+  ///
+  /// `null` — у материала есть раздел без предела (ёмкость неизвестна); `0` —
+  /// содержательных разделов нет. Это **оценка материала**, а не бюджет модели:
+  /// показывается отдельным статусом «материала хватает примерно на M из N».
+  final int? estimatedCapacity;
+
+  /// true, если заказ больше оценки ёмкости материала (7.20).
+  ///
+  /// Не ограничивает ни `achievable`, ни партии: план запрашивает весь заказ,
+  /// а фактический недобор определяется исчерпанием материала по ответам
+  /// модели (`source_exhausted`).
+  final bool materialLimited;
 
   /// Карточки, выделенные разделу (0, если раздела нет).
   int forSection(String id) => planned[id] ?? 0;
@@ -330,6 +346,8 @@ final class CardAllocator {
         requested: requestedCards,
         achievable: 0,
         belowRequested: requestedCards != null && requestedCards > 0,
+        estimatedCapacity: 0,
+        materialLimited: requestedCards != null && requestedCards > 0,
       );
     }
     if (requestedCards == null) {
@@ -339,11 +357,15 @@ final class CardAllocator {
         planned[section.id] = value;
         total += value;
       }
+      final bool unlimited = items.any(
+        (AllocationSection section) => section.capacity == null,
+      );
       return CardAllocation(
         planned: planned,
         requested: null,
         achievable: total,
         belowRequested: false,
+        estimatedCapacity: unlimited ? null : total,
       );
     }
 
@@ -357,6 +379,7 @@ final class CardAllocator {
             0,
             (int sum, AllocationSection section) => sum + section.capacity!,
           );
+    final int? estimatedCapacity = unlimited ? null : totalCapacity;
     final int target = math.min(requested, totalCapacity);
     final Map<String, double> weights = <String, double>{
       for (final AllocationSection section in items) section.id: section.weight,
@@ -430,6 +453,9 @@ final class CardAllocator {
       requested: requested,
       achievable: achievable,
       belowRequested: achievable < requested,
+      estimatedCapacity: estimatedCapacity,
+      materialLimited:
+          estimatedCapacity != null && requested > estimatedCapacity,
     );
   }
 

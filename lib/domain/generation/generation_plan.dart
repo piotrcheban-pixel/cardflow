@@ -195,6 +195,13 @@ enum PlanWarningCode {
   /// Заказ пользователя больше, чем план может выдать.
   requestedAbovePlan,
 
+  /// Заказ больше **оценки содержательной ёмкости материала** (7.20).
+  ///
+  /// Это ограничение материала, а не бюджета модели: заказ сохраняется целиком,
+  /// партии строятся по вместимости ответа, а фактический недобор определяется
+  /// исчерпанием разделов (`source_exhausted`).
+  materialCapacityBelowRequested,
+
   /// Часть единиц содержимого не попала в план — см. [GenerationPlan.omitted].
   omittedUnits,
 
@@ -783,6 +790,28 @@ class GenerationPlan {
   /// для UI: пользователь видит [requestedCards] и [achievableCards], а не
   /// подменённое число.
   int get achievableCards => plannedCards;
+
+  /// Размеры партий (лимитов карточек) в порядке отправки (7.20).
+  ///
+  /// Показывается в «Подробнее» как распределение карточек по партиям; сумма
+  /// равна [plannedCards], каждая партия не больше вместимости одного ответа.
+  List<int> get batchSizes =>
+      List<int>.unmodifiable(chunks.map((PlannedChunk chunk) => chunk.limit));
+
+  /// Максимум карточек в одной партии (0 — фрагментов нет).
+  int get cardsPerBatchMax => chunks.fold<int>(
+    0,
+    (int max, PlannedChunk chunk) => chunk.limit > max ? chunk.limit : max,
+  );
+
+  /// Оценка содержательной ёмкости материала (`null` — неизвестна).
+  int? get materialCapacity => allocation?.estimatedCapacity;
+
+  /// true, если заказ больше оценки ёмкости материала ([materialCapacity]).
+  ///
+  /// Не влияет на [achievableCards]: заказ не обрезается, а недобор (если он
+  /// реально случится) определяется исчерпанием материала в конвейере.
+  bool get materialLimited => allocation?.materialLimited ?? false;
 
   /// Число запросов плана (вычисляется из [chunks]).
   int get plannedRequests => chunks.length;

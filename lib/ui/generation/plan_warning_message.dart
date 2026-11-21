@@ -32,6 +32,11 @@ String? planWarningMessage(
       plan.requestedCards,
       plan.achievableCards,
     ),
+  PlanWarningCode.materialCapacityBelowRequested =>
+    l10n.generationPlanMaterialCapacityBelowRequested(
+      plan.materialCapacity ?? 0,
+      plan.requestedCards,
+    ),
   PlanWarningCode.cardsAboveRequested =>
     l10n.generationPlanAchievableAboveRequested(
       plan.requestedCards,

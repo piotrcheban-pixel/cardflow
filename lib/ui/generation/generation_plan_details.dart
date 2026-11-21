@@ -112,6 +112,36 @@ class GenerationPlanDetails extends StatelessWidget {
           label: l10n.generationPlanDetailsBatches,
           value: '${plan.chunks.length}',
         ),
+        // §4 задания 7.20: заказ, сумма плана, вместимость партии и её
+        // распределение видны явно — «запрошено 40» не подменяется 32/16.
+        if (plan.requestedCards > 0)
+          _DetailRow(
+            id: 'plan-detail-cards-requested',
+            label: l10n.generationPlanDetailsCardsRequested,
+            value: '${plan.requestedCards}',
+          ),
+        _DetailRow(
+          id: 'plan-detail-cards-planned',
+          label: l10n.generationPlanDetailsCardsPlanned,
+          value: '${plan.plannedCards}',
+        ),
+        if (plan.chunks.isNotEmpty)
+          _DetailRow(
+            id: 'plan-detail-cards-per-batch',
+            label: l10n.generationPlanDetailsCardsPerBatch,
+            value: '${plan.cardsPerBatchMax}',
+          ),
+        if (plan.chunks.isNotEmpty)
+          _DetailRow(
+            id: 'plan-detail-batch-sizes',
+            label: l10n.generationPlanDetailsBatchSizes,
+            value: _batchSizes(l10n),
+          ),
+        _DetailRow(
+          id: 'plan-detail-material-capacity',
+          label: l10n.generationPlanDetailsMaterialCapacity,
+          value: _materialCapacity(l10n),
+        ),
         _DetailRow(
           id: 'plan-detail-requests',
           label: l10n.generationPlanDetailsRequests,
@@ -221,6 +251,27 @@ class GenerationPlanDetails extends StatelessWidget {
         _ => component,
       },
   ].join(', ');
+
+  /// Распределение карточек по партиям (первые 12, остальное — числом).
+  String _batchSizes(AppLocalizations l10n) {
+    final List<int> sizes = plan.batchSizes;
+    const int visible = 12;
+    final String head = sizes.take(visible).join(', ');
+    if (sizes.length <= visible) return head;
+    return l10n.generationPlanDetailsBatchSizesOverflow(
+      head,
+      sizes.length - visible,
+    );
+  }
+
+  /// Оценка содержательной ёмкости материала (не бюджет модели).
+  String _materialCapacity(AppLocalizations l10n) {
+    final int? capacity = plan.materialCapacity;
+    if (capacity == null) {
+      return l10n.generationPlanDetailsMaterialCapacityUnknown;
+    }
+    return l10n.generationPlanDetailsMaterialCapacityValue(capacity);
+  }
 
   String _strategy(AppLocalizations l10n) {
     return switch (plan.inputStrategy) {

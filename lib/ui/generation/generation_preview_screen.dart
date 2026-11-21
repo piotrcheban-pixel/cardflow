@@ -496,6 +496,26 @@ class _GenerationPreviewScreenState
                     ),
                   ),
                 ),
+              // §5 задания 7.20: фактически созданное количество и причина
+              // недобора — материал исчерпан, а не «бюджет модели».
+              if (_result.requestedCards > 0 &&
+                  (_result.shortfallCards > 0 ||
+                      _result.cards.length < _result.requestedCards))
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(
+                    l10n.generationPreviewMaterialExhausted(
+                      _result.cards.length,
+                      _result.requestedCards,
+                    ),
+                    key: const ValueKey<String>(
+                      'generation-preview-material-exhausted',
+                    ),
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.tertiary,
+                    ),
+                  ),
+                ),
               if (_result.plan != null && _result.plan!.hasOmittedUnits)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 8),

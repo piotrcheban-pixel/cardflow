@@ -1047,7 +1047,20 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String generationPlanRequestedAboveAchievable(int requested, int achievable) {
-    return 'Запрошено $requested карточек, план может выдать $achievable: бюджета модели не хватает на весь заказ. Материалы не потеряны; чтобы получить больше карточек, выберите модель с большим лимитом вывода или уменьшите объём.';
+    return 'Запрошено $requested карточек, план может выдать $achievable: в материалах нет содержательных разделов, из которых можно сделать карточки. Добавьте текст или выберите другой файл.';
+  }
+
+  @override
+  String generationPlanMaterialCapacityBelowRequested(
+    int capacity,
+    int requested,
+  ) {
+    return 'Материала хватает примерно на $capacity карточек из $requested. Заказ сохранён полностью: план запросит все карточки партиями, а если материал закончится раньше, оставшиеся партии будут остановлены, а не выдуманы.';
+  }
+
+  @override
+  String generationPlanRequestedCount(int count) {
+    return 'Запрошено: $count карточек';
   }
 
   @override
@@ -1080,7 +1093,7 @@ class AppLocalizationsRu extends AppLocalizations {
     int requested,
     int achievable,
   ) {
-    return 'План: фрагментов — $chunks, запросов — $requests; запрошено — $requested, достижимо — $achievable';
+    return 'План: частей входа — $chunks, партий — $requests; запрошено — $requested, в плане — $achievable';
   }
 
   @override
@@ -1238,6 +1251,35 @@ class AppLocalizationsRu extends AppLocalizations {
   String get generationPlanDetailsBatches => 'Партий (запросов)';
 
   @override
+  String get generationPlanDetailsCardsRequested => 'Запрошено карточек';
+
+  @override
+  String get generationPlanDetailsCardsPlanned => 'Всего карточек в плане';
+
+  @override
+  String get generationPlanDetailsCardsPerBatch => 'Максимум в одной партии';
+
+  @override
+  String get generationPlanDetailsBatchSizes => 'Распределение по партиям';
+
+  @override
+  String generationPlanDetailsBatchSizesOverflow(String sizes, int rest) {
+    return '$sizes и ещё $rest партий';
+  }
+
+  @override
+  String get generationPlanDetailsMaterialCapacity =>
+      'Ёмкость материала (оценка)';
+
+  @override
+  String get generationPlanDetailsMaterialCapacityUnknown => 'не ограничена';
+
+  @override
+  String generationPlanDetailsMaterialCapacityValue(int capacity) {
+    return 'примерно $capacity карточек';
+  }
+
+  @override
   String get generationPlanDetailsRequests => 'Запросов (+на повторы)';
 
   @override
@@ -1290,6 +1332,11 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String generationPreviewPartial(int processed, int failed) {
     return 'Частичный результат: обработано фрагментов — $processed, с ошибкой — $failed. Импортируйте полученное или повторите неудавшиеся.';
+  }
+
+  @override
+  String generationPreviewMaterialExhausted(int created, int requested) {
+    return 'Материал исчерпан: создано $created карточек из $requested. Оставшиеся партии остановлены — карточки не выдумывались.';
   }
 
   @override

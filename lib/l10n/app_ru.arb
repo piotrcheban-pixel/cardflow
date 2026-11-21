@@ -1282,14 +1282,35 @@
   "@generationReasonUnsupportedModality": {
     "description": "Причина падения фрагмента: unsupported_modality (TASK 02B-FINAL)."
   },
-  "generationPlanRequestedAboveAchievable": "Запрошено {requested} карточек, план может выдать {achievable}: бюджета модели не хватает на весь заказ. Материалы не потеряны; чтобы получить больше карточек, выберите модель с большим лимитом вывода или уменьшите объём.",
+  "generationPlanRequestedAboveAchievable": "Запрошено {requested} карточек, план может выдать {achievable}: в материалах нет содержательных разделов, из которых можно сделать карточки. Добавьте текст или выберите другой файл.",
   "@generationPlanRequestedAboveAchievable": {
-    "description": "Предупреждение плана: запрошено больше карточек, чем безопасно получить (TASK 02B-FINAL).",
+    "description": "Предупреждение плана: заказ невыполним, потому что содержательных разделов нет (7.20). Бюджет одного ответа к этому отношению не относится.",
     "placeholders": {
       "requested": {
         "type": "int"
       },
       "achievable": {
+        "type": "int"
+      }
+    }
+  },
+  "generationPlanMaterialCapacityBelowRequested": "Материала хватает примерно на {capacity} карточек из {requested}. Заказ сохранён полностью: план запросит все карточки партиями, а если материал закончится раньше, оставшиеся партии будут остановлены, а не выдуманы.",
+  "@generationPlanMaterialCapacityBelowRequested": {
+    "description": "Отдельный статус: заказ больше оценки содержательной ёмкости материала (7.20). Не путать с бюджетом модели.",
+    "placeholders": {
+      "capacity": {
+        "type": "int"
+      },
+      "requested": {
+        "type": "int"
+      }
+    }
+  },
+  "generationPlanRequestedCount": "Запрошено: {count} карточек",
+  "@generationPlanRequestedCount": {
+    "description": "Строка «Запрошено: N карточек» рядом с полем количества (7.20).",
+    "placeholders": {
+      "count": {
         "type": "int"
       }
     }
@@ -1331,9 +1352,9 @@
   "@generationCardsCountTooLarge": {
     "description": "Валидация: количество карточек не помещается в технический предел int (TASK 03)."
   },
-  "generationPlanPreview": "План: фрагментов — {chunks}, запросов — {requests}; запрошено — {requested}, достижимо — {achievable}",
+  "generationPlanPreview": "План: частей входа — {chunks}, партий — {requests}; запрошено — {requested}, в плане — {achievable}",
   "@generationPlanPreview": {
-    "description": "Предпросмотр плана до запуска: фрагменты, запросы, заказ/достижимое (TASK 03).",
+    "description": "Предпросмотр плана до запуска: части входа, партии, заказ/в плане (7.20).",
     "placeholders": {
       "chunks": {
         "type": "int"
@@ -1477,6 +1498,22 @@
   "@generationPlanDetailsParts": {"description": "Число частей входа в деталях плана."},
   "generationPlanDetailsBatches": "Партий (запросов)",
   "@generationPlanDetailsBatches": {"description": "Число партий в деталях плана."},
+  "generationPlanDetailsCardsRequested": "Запрошено карточек",
+  "@generationPlanDetailsCardsRequested": {"description": "Заказ пользователя в деталях плана (7.20)."},
+  "generationPlanDetailsCardsPlanned": "Всего карточек в плане",
+  "@generationPlanDetailsCardsPlanned": {"description": "Сумма лимитов всех партий (7.20)."},
+  "generationPlanDetailsCardsPerBatch": "Максимум в одной партии",
+  "@generationPlanDetailsCardsPerBatch": {"description": "Вместимость одного ответа, использованная планом (7.20)."},
+  "generationPlanDetailsBatchSizes": "Распределение по партиям",
+  "@generationPlanDetailsBatchSizes": {"description": "Размеры партий по порядку (7.20)."},
+  "generationPlanDetailsBatchSizesOverflow": "{sizes} и ещё {rest} партий",
+  "@generationPlanDetailsBatchSizesOverflow": {"description": "Сокращённое распределение при большом числе партий.", "placeholders": {"sizes": {"type": "String"}, "rest": {"type": "int"}}},
+  "generationPlanDetailsMaterialCapacity": "Ёмкость материала (оценка)",
+  "@generationPlanDetailsMaterialCapacity": {"description": "Оценка содержательной ёмкости материала (7.20)."},
+  "generationPlanDetailsMaterialCapacityUnknown": "не ограничена",
+  "@generationPlanDetailsMaterialCapacityUnknown": {"description": "Ёмкость материала неизвестна/не ограничена."},
+  "generationPlanDetailsMaterialCapacityValue": "примерно {capacity} карточек",
+  "@generationPlanDetailsMaterialCapacityValue": {"description": "Оценка ёмкости материала в карточках.", "placeholders": {"capacity": {"type": "int"}}},
   "generationPlanDetailsRequests": "Запросов (+на повторы)",
   "@generationPlanDetailsRequests": {"description": "Число запросов и допуск на повторы."},
   "generationPlanDetailsImagesLabel": "Изображения",
@@ -1511,6 +1548,18 @@
         "type": "int"
       },
       "failed": {
+        "type": "int"
+      }
+    }
+  },
+  "generationPreviewMaterialExhausted": "Материал исчерпан: создано {created} карточек из {requested}. Оставшиеся партии остановлены — карточки не выдумывались.",
+  "@generationPreviewMaterialExhausted": {
+    "description": "Причина недобора после исчерпания материала (7.20).",
+    "placeholders": {
+      "created": {
+        "type": "int"
+      },
+      "requested": {
         "type": "int"
       }
     }

@@ -1726,11 +1726,26 @@ abstract class AppLocalizations {
   /// **'модель не поддерживает тип вложения'**
   String get generationReasonUnsupportedModality;
 
-  /// Предупреждение плана: запрошено больше карточек, чем безопасно получить (TASK 02B-FINAL).
+  /// Предупреждение плана: заказ невыполним, потому что содержательных разделов нет (7.20). Бюджет одного ответа к этому отношению не относится.
   ///
   /// In ru, this message translates to:
-  /// **'Запрошено {requested} карточек, план может выдать {achievable}: бюджета модели не хватает на весь заказ. Материалы не потеряны; чтобы получить больше карточек, выберите модель с большим лимитом вывода или уменьшите объём.'**
+  /// **'Запрошено {requested} карточек, план может выдать {achievable}: в материалах нет содержательных разделов, из которых можно сделать карточки. Добавьте текст или выберите другой файл.'**
   String generationPlanRequestedAboveAchievable(int requested, int achievable);
+
+  /// Отдельный статус: заказ больше оценки содержательной ёмкости материала (7.20). Не путать с бюджетом модели.
+  ///
+  /// In ru, this message translates to:
+  /// **'Материала хватает примерно на {capacity} карточек из {requested}. Заказ сохранён полностью: план запросит все карточки партиями, а если материал закончится раньше, оставшиеся партии будут остановлены, а не выдуманы.'**
+  String generationPlanMaterialCapacityBelowRequested(
+    int capacity,
+    int requested,
+  );
+
+  /// Строка «Запрошено: N карточек» рядом с полем количества (7.20).
+  ///
+  /// In ru, this message translates to:
+  /// **'Запрошено: {count} карточек'**
+  String generationPlanRequestedCount(int count);
 
   /// Предупреждение плана: фрагменты не удалось объединить, сумма лимитов больше заказа (D.5, TASK 02B-FINAL).
   ///
@@ -1768,10 +1783,10 @@ abstract class AppLocalizations {
   /// **'Слишком большое число'**
   String get generationCardsCountTooLarge;
 
-  /// Предпросмотр плана до запуска: фрагменты, запросы, заказ/достижимое (TASK 03).
+  /// Предпросмотр плана до запуска: части входа, партии, заказ/в плане (7.20).
   ///
   /// In ru, this message translates to:
-  /// **'План: фрагментов — {chunks}, запросов — {requests}; запрошено — {requested}, достижимо — {achievable}'**
+  /// **'План: частей входа — {chunks}, партий — {requests}; запрошено — {requested}, в плане — {achievable}'**
   String generationPlanPreview(
     int chunks,
     int requests,
@@ -2004,6 +2019,54 @@ abstract class AppLocalizations {
   /// **'Партий (запросов)'**
   String get generationPlanDetailsBatches;
 
+  /// Заказ пользователя в деталях плана (7.20).
+  ///
+  /// In ru, this message translates to:
+  /// **'Запрошено карточек'**
+  String get generationPlanDetailsCardsRequested;
+
+  /// Сумма лимитов всех партий (7.20).
+  ///
+  /// In ru, this message translates to:
+  /// **'Всего карточек в плане'**
+  String get generationPlanDetailsCardsPlanned;
+
+  /// Вместимость одного ответа, использованная планом (7.20).
+  ///
+  /// In ru, this message translates to:
+  /// **'Максимум в одной партии'**
+  String get generationPlanDetailsCardsPerBatch;
+
+  /// Размеры партий по порядку (7.20).
+  ///
+  /// In ru, this message translates to:
+  /// **'Распределение по партиям'**
+  String get generationPlanDetailsBatchSizes;
+
+  /// Сокращённое распределение при большом числе партий.
+  ///
+  /// In ru, this message translates to:
+  /// **'{sizes} и ещё {rest} партий'**
+  String generationPlanDetailsBatchSizesOverflow(String sizes, int rest);
+
+  /// Оценка содержательной ёмкости материала (7.20).
+  ///
+  /// In ru, this message translates to:
+  /// **'Ёмкость материала (оценка)'**
+  String get generationPlanDetailsMaterialCapacity;
+
+  /// Ёмкость материала неизвестна/не ограничена.
+  ///
+  /// In ru, this message translates to:
+  /// **'не ограничена'**
+  String get generationPlanDetailsMaterialCapacityUnknown;
+
+  /// Оценка ёмкости материала в карточках.
+  ///
+  /// In ru, this message translates to:
+  /// **'примерно {capacity} карточек'**
+  String generationPlanDetailsMaterialCapacityValue(int capacity);
+
   /// Число запросов и допуск на повторы.
   ///
   /// In ru, this message translates to:
@@ -2092,6 +2155,12 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Частичный результат: обработано фрагментов — {processed}, с ошибкой — {failed}. Импортируйте полученное или повторите неудавшиеся.'**
   String generationPreviewPartial(int processed, int failed);
+
+  /// Причина недобора после исчерпания материала (7.20).
+  ///
+  /// In ru, this message translates to:
+  /// **'Материал исчерпан: создано {created} карточек из {requested}. Оставшиеся партии остановлены — карточки не выдумывались.'**
+  String generationPreviewMaterialExhausted(int created, int requested);
 
   /// Постоянное сообщение о fatal-ошибке в предпросмотре (TASK 03).
   ///

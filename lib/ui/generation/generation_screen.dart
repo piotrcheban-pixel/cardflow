@@ -1319,6 +1319,18 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
               ],
             ),
             const SizedBox(height: 2),
+            // §4 задания 7.20: заказ пользователя виден отдельной строкой и не
+            // подменяется числом, которое помещается в один ответ.
+            if (planPreview.requestedCards > 0) ...<Widget>[
+              Text(
+                l10n.generationPlanRequestedCount(planPreview.requestedCards),
+                key: const ValueKey<String>('generation-plan-requested'),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: scheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 2),
+            ],
             Text(
               _planSummary(l10n, planPreview),
               key: const ValueKey<String>('generation-plan-preview'),

@@ -1,0 +1,354 @@
+00:00 +0: loading C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/card_allocator_soft_capacity_test.dart
+00:00 +0: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/card_allocator_soft_capacity_test.dart: 7.20: заказ не обрезается мягкой ёмкостью заказ 40 при ёмкости 32 → в плане 40, ёмкость 32 отдельно
+00:00 +0 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/card_allocator_soft_capacity_test.dart: 7.20: заказ не обрезается мягкой ёмкостью заказ 40 при ёмкости 32 → в плане 40, ёмкость 32 отдельно [E]
+  Expected: <32>
+    Actual: <40>
+  
+  package:matcher                                                          expect
+  package:flutter_test/src/widget_tester.dart 473:18                       expect
+  test\unit\domain\generation\card_allocator_soft_capacity_test.dart 44:7  main.<fn>.<fn>
+  
+00:00 +0 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/card_allocator_soft_capacity_test.dart: 7.20: заказ не обрезается мягкой ёмкостью заказ 100 при ёмкости 12 → в плане ровно 100
+00:00 +0 -2: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/card_allocator_soft_capacity_test.dart: 7.20: заказ не обрезается мягкой ёмкостью заказ 100 при ёмкости 12 → в плане ровно 100 [E]
+  Expected: <100>
+    Actual: <12>
+  
+  package:matcher                                                          expect
+  package:flutter_test/src/widget_tester.dart 473:18                       expect
+  test\unit\domain\generation\card_allocator_soft_capacity_test.dart 63:7  main.<fn>.<fn>
+  
+00:00 +0 -2: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/card_allocator_soft_capacity_test.dart: 7.20: заказ не обрезается мягкой ёмкостью заказ 200 при ёмкости 20 → в плане ровно 200
+00:00 +0 -3: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/card_allocator_soft_capacity_test.dart: 7.20: заказ не обрезается мягкой ёмкостью заказ 200 при ёмкости 20 → в плане ровно 200 [E]
+  Expected: <200>
+    Actual: <20>
+  
+  package:matcher                                                          expect
+  package:flutter_test/src/widget_tester.dart 473:18                       expect
+  test\unit\domain\generation\card_allocator_soft_capacity_test.dart 74:7  main.<fn>.<fn>
+  
+00:00 +0 -3: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/card_allocator_soft_capacity_test.dart: 7.20: заказ не обрезается мягкой ёмкостью ёмкости хватает → materialLimited ложно, сумма = заказ
+00:00 +1 -3: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/card_allocator_soft_capacity_test.dart: 7.20: заказ не обрезается мягкой ёмкостью нехватка ёмкости не уводит карточки в служебные разделы
+00:00 +1 -4: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/card_allocator_soft_capacity_test.dart: 7.20: заказ не обрезается мягкой ёмкостью нехватка ёмкости не уводит карточки в служебные разделы [E]
+  Expected: <40>
+    Actual: <6>
+  
+  package:matcher                                                           expect
+  package:flutter_test/src/widget_tester.dart 473:18                        expect
+  test\unit\domain\generation\card_allocator_soft_capacity_test.dart 101:7  main.<fn>.<fn>
+  
+00:00 +1 -4: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/card_allocator_soft_capacity_test.dart: 7.20: заказ не обрезается мягкой ёмкостью пустой список содержательных разделов → 0 и belowRequested
+00:00 +2 -4: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/card_allocator_soft_capacity_test.dart: 7.20: заказ не обрезается мягкой ёмкостью «авто» (заказ не задан) по-прежнему равен ёмкости материала
+00:00 +3 -4: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/card_allocator_soft_capacity_test.dart: 7.20: заказ не обрезается мягкой ёмкостью раздел без предела: ёмкость неизвестна, materialLimited ложно
+00:00 +4 -4: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/card_allocator_soft_capacity_test.dart: 7.20: распределение при достаточной ёмкости не изменилось веса 1:3:2:3:1, ёмкость ∞, заказ 50 → 5/15/10/15/5
+00:00 +5 -4: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/card_allocator_soft_capacity_test.dart: 7.20: распределение при достаточной ёмкости не изменилось заказ 1…20 на ёмкости 100 → заказ целиком, сумма точная
+00:00 +6 -4: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/card_allocator_soft_capacity_test.dart: 7.20: свойства распределения заказ 1: сумма = заказ, неотрицательность, детерминизм
+00:00 +7 -4: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/card_allocator_soft_capacity_test.dart: 7.20: свойства распределения заказ 5: сумма = заказ, неотрицательность, детерминизм
+00:00 +8 -4: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/card_allocator_soft_capacity_test.dart: 7.20: свойства распределения заказ 10: сумма = заказ, неотрицательность, детерминизм
+00:00 +9 -4: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/card_allocator_soft_capacity_test.dart: 7.20: свойства распределения заказ 20: сумма = заказ, неотрицательность, детерминизм
+00:00 +10 -4: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/card_allocator_soft_capacity_test.dart: 7.20: свойства распределения заказ 40: сумма = заказ, неотрицательность, детерминизм
+00:00 +10 -5: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/card_allocator_soft_capacity_test.dart: 7.20: свойства распределения заказ 40: сумма = заказ, неотрицательность, детерминизм [E]
+  Expected: <40>
+    Actual: <22>
+  
+  package:matcher                                                            expect
+  package:flutter_test/src/widget_tester.dart 473:18                         expect
+  test\unit\domain\generation\card_allocator_soft_capacity_test.dart 191:11  main.<fn>.<fn>
+  
+00:00 +10 -5: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/card_allocator_soft_capacity_test.dart: 7.20: свойства распределения заказ 50: сумма = заказ, неотрицательность, детерминизм
+00:00 +10 -6: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/card_allocator_soft_capacity_test.dart: 7.20: свойства распределения заказ 50: сумма = заказ, неотрицательность, детерминизм [E]
+  Expected: <50>
+    Actual: <22>
+  
+  package:matcher                                                            expect
+  package:flutter_test/src/widget_tester.dart 473:18                         expect
+  test\unit\domain\generation\card_allocator_soft_capacity_test.dart 191:11  main.<fn>.<fn>
+  
+00:00 +10 -6: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/card_allocator_soft_capacity_test.dart: 7.20: свойства распределения заказ 100: сумма = заказ, неотрицательность, детерминизм
+00:00 +10 -7: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/card_allocator_soft_capacity_test.dart: 7.20: свойства распределения заказ 100: сумма = заказ, неотрицательность, детерминизм [E]
+  Expected: <100>
+    Actual: <22>
+  
+  package:matcher                                                            expect
+  package:flutter_test/src/widget_tester.dart 473:18                         expect
+  test\unit\domain\generation\card_allocator_soft_capacity_test.dart 191:11  main.<fn>.<fn>
+  
+00:00 +10 -7: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/card_allocator_soft_capacity_test.dart: 7.20: свойства распределения заказ 200: сумма = заказ, неотрицательность, детерминизм
+00:00 +10 -8: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/card_allocator_soft_capacity_test.dart: 7.20: свойства распределения заказ 200: сумма = заказ, неотрицательность, детерминизм [E]
+  Expected: <200>
+    Actual: <22>
+  
+  package:matcher                                                            expect
+  package:flutter_test/src/widget_tester.dart 473:18                         expect
+  test\unit\domain\generation\card_allocator_soft_capacity_test.dart 191:11  main.<fn>.<fn>
+  
+00:00 +10 -8: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/card_allocator_soft_capacity_test.dart: 7.20: свойства распределения заказ 500: сумма = заказ, неотрицательность, детерминизм
+00:00 +10 -9: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/card_allocator_soft_capacity_test.dart: 7.20: свойства распределения заказ 500: сумма = заказ, неотрицательность, детерминизм [E]
+  Expected: <500>
+    Actual: <22>
+  
+  package:matcher                                                            expect
+  package:flutter_test/src/widget_tester.dart 473:18                         expect
+  test\unit\domain\generation\card_allocator_soft_capacity_test.dart 191:11  main.<fn>.<fn>
+  
+00:00 +10 -9: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/card_allocator_soft_capacity_test.dart: 7.20: свойства распределения заказ 1 000 000: сумма точная, без переполнения
+00:00 +10 -10: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/card_allocator_soft_capacity_test.dart: 7.20: свойства распределения заказ 1 000 000: сумма точная, без переполнения [E]
+  Expected: <1000000>
+    Actual: <22>
+  
+  package:matcher                                                           expect
+  package:flutter_test/src/widget_tester.dart 473:18                        expect
+  test\unit\domain\generation\card_allocator_soft_capacity_test.dart 212:7  main.<fn>.<fn>
+  
+00:00 +10 -10: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/card_allocator_soft_capacity_test.dart: 7.20: свойства распределения невалидный заказ (0 и отрицательный) → ArgumentError
+00:00 +11 -10: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/output_batching_7_20_test.dart: обязательные примеры задания 7.20 §3 заказ 40, вместимость 16 → 3 партии, сумма 40
+00:00 +11 -11: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/output_batching_7_20_test.dart: обязательные примеры задания 7.20 §3 заказ 40, вместимость 16 → 3 партии, сумма 40 [E]
+  Expected: [16, 16, 8]
+    Actual: [14, 13, 13]
+     Which: at location [0] is <14> instead of <16>
+  
+  package:matcher                                                  expect
+  package:flutter_test/src/widget_tester.dart 473:18               expect
+  test\unit\domain\generation\output_batching_7_20_test.dart 88:7  main.<fn>.<fn>
+  
+00:00 +11 -11: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/output_batching_7_20_test.dart: обязательные примеры задания 7.20 §3 заказ 100, вместимость 12 → 9 партий (12×8 + 4)
+00:00 +11 -12: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/output_batching_7_20_test.dart: обязательные примеры задания 7.20 §3 заказ 100, вместимость 12 → 9 партий (12×8 + 4) [E]
+  Expected: [12, 12, 12, 12, 12, 12, 12, 12, 4]
+    Actual: [12, 11, 11, 11, 11, 11, 11, 11, 11]
+     Which: at location [1] is <11> instead of <12>
+  
+  package:matcher                                                   expect
+  package:flutter_test/src/widget_tester.dart 473:18                expect
+  test\unit\domain\generation\output_batching_7_20_test.dart 103:7  main.<fn>.<fn>
+  
+00:00 +11 -12: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/output_batching_7_20_test.dart: обязательные примеры задания 7.20 §3 заказ 200, вместимость 20 → 10 партий по 20
+00:00 +12 -12: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/output_batching_7_20_test.dart: обязательные примеры задания 7.20 §3 заказ 1 и вместимость 16 → ровно один запрос
+00:00 +13 -12: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/output_batching_7_20_test.dart: обязательные примеры задания 7.20 §3 заказ 16 и вместимость 16 → ровно один запрос
+00:00 +14 -12: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/output_batching_7_20_test.dart: обязательные примеры задания 7.20 §3 заказ 17 и вместимость 16 → 2 запроса (16 + 1)
+00:00 +14 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/output_batching_7_20_test.dart: обязательные примеры задания 7.20 §3 заказ 17 и вместимость 16 → 2 запроса (16 + 1) [E]
+  Expected: [16, 1]
+    Actual: [9, 8]
+     Which: at location [0] is <9> instead of <16>
+  
+  package:matcher                                                   expect
+  package:flutter_test/src/widget_tester.dart 473:18                expect
+  test\unit\domain\generation\output_batching_7_20_test.dart 147:7  main.<fn>.<fn>
+  
+00:00 +14 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/output_batching_7_20_test.dart: свойства партий заказ 1 при бюджете 2500: сумма, минимум, максимум и отсутствие лишнего запроса
+00:00 +15 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/output_batching_7_20_test.dart: свойства партий заказ 1 при бюджете 4600: сумма, минимум, максимум и отсутствие лишнего запроса
+00:00 +16 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/output_batching_7_20_test.dart: свойства партий заказ 1 при бюджете 6000: сумма, минимум, максимум и отсутствие лишнего запроса
+00:00 +17 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/output_batching_7_20_test.dart: свойства партий заказ 1 при бюджете 7400: сумма, минимум, максимум и отсутствие лишнего запроса
+00:00 +18 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/output_batching_7_20_test.dart: свойства партий заказ 1 при бюджете 12000: сумма, минимум, максимум и отсутствие лишнего запроса
+00:00 +19 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/output_batching_7_20_test.dart: свойства партий заказ 5 при бюджете 2500: сумма, минимум, максимум и отсутствие лишнего запроса
+00:00 +20 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/output_batching_7_20_test.dart: свойства партий заказ 5 при бюджете 4600: сумма, минимум, максимум и отсутствие лишнего запроса
+00:00 +21 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/output_batching_7_20_test.dart: свойства партий заказ 5 при бюджете 6000: сумма, минимум, максимум и отсутствие лишнего запроса
+00:00 +22 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/output_batching_7_20_test.dart: свойства партий заказ 5 при бюджете 7400: сумма, минимум, максимум и отсутствие лишнего запроса
+00:00 +23 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/output_batching_7_20_test.dart: свойства партий заказ 5 при бюджете 12000: сумма, минимум, максимум и отсутствие лишнего запроса
+00:00 +24 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/output_batching_7_20_test.dart: свойства партий заказ 10 при бюджете 2500: сумма, минимум, максимум и отсутствие лишнего запроса
+00:00 +25 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/output_batching_7_20_test.dart: свойства партий заказ 10 при бюджете 4600: сумма, минимум, максимум и отсутствие лишнего запроса
+00:00 +26 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/output_batching_7_20_test.dart: свойства партий заказ 10 при бюджете 6000: сумма, минимум, максимум и отсутствие лишнего запроса
+00:00 +27 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/output_batching_7_20_test.dart: свойства партий заказ 10 при бюджете 7400: сумма, минимум, максимум и отсутствие лишнего запроса
+00:00 +28 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/output_batching_7_20_test.dart: свойства партий заказ 10 при бюджете 12000: сумма, минимум, максимум и отсутствие лишнего запроса
+00:00 +29 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/output_batching_7_20_test.dart: свойства партий заказ 20 при бюджете 2500: сумма, минимум, максимум и отсутствие лишнего запроса
+00:00 +30 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/output_batching_7_20_test.dart: свойства партий заказ 20 при бюджете 4600: сумма, минимум, максимум и отсутствие лишнего запроса
+00:00 +31 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/output_batching_7_20_test.dart: свойства партий заказ 20 при бюджете 6000: сумма, минимум, максимум и отсутствие лишнего запроса
+00:00 +32 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/output_batching_7_20_test.dart: свойства партий заказ 20 при бюджете 7400: сумма, минимум, максимум и отсутствие лишнего запроса
+00:00 +33 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/output_batching_7_20_test.dart: свойства партий заказ 20 при бюджете 12000: сумма, минимум, максимум и отсутствие лишнего запроса
+00:00 +34 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/output_batching_7_20_test.dart: свойства партий заказ 40 при бюджете 2500: сумма, минимум, максимум и отсутствие лишнего запроса
+00:00 +35 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/output_batching_7_20_test.dart: свойства партий заказ 40 при бюджете 4600: сумма, минимум, максимум и отсутствие лишнего запроса
+00:00 +36 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/output_batching_7_20_test.dart: свойства партий заказ 40 при бюджете 6000: сумма, минимум, максимум и отсутствие лишнего запроса
+00:00 +37 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/output_batching_7_20_test.dart: свойства партий заказ 40 при бюджете 7400: сумма, минимум, максимум и отсутствие лишнего запроса
+00:00 +38 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/output_batching_7_20_test.dart: свойства партий заказ 40 при бюджете 12000: сумма, минимум, максимум и отсутствие лишнего запроса
+00:00 +39 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/output_batching_7_20_test.dart: свойства партий заказ 50 при бюджете 2500: сумма, минимум, максимум и отсутствие лишнего запроса
+00:00 +40 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/output_batching_7_20_test.dart: свойства партий заказ 50 при бюджете 4600: сумма, минимум, максимум и отсутствие лишнего запроса
+00:00 +41 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/output_batching_7_20_test.dart: свойства партий заказ 50 при бюджете 6000: сумма, минимум, максимум и отсутствие лишнего запроса
+00:00 +42 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/output_batching_7_20_test.dart: свойства партий заказ 50 при бюджете 7400: сумма, минимум, максимум и отсутствие лишнего запроса
+00:00 +43 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/output_batching_7_20_test.dart: свойства партий заказ 50 при бюджете 12000: сумма, минимум, максимум и отсутствие лишнего запроса
+00:00 +44 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/output_batching_7_20_test.dart: свойства партий заказ 100 при бюджете 2500: сумма, минимум, максимум и отсутствие лишнего запроса
+00:00 +45 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/output_batching_7_20_test.dart: свойства партий заказ 100 при бюджете 4600: сумма, минимум, максимум и отсутствие лишнего запроса
+00:00 +46 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/output_batching_7_20_test.dart: свойства партий заказ 100 при бюджете 6000: сумма, минимум, максимум и отсутствие лишнего запроса
+00:00 +47 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/output_batching_7_20_test.dart: свойства партий заказ 100 при бюджете 7400: сумма, минимум, максимум и отсутствие лишнего запроса
+00:00 +48 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/output_batching_7_20_test.dart: свойства партий заказ 100 при бюджете 12000: сумма, минимум, максимум и отсутствие лишнего запроса
+00:00 +49 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/output_batching_7_20_test.dart: свойства партий заказ 200 при бюджете 2500: сумма, минимум, максимум и отсутствие лишнего запроса
+00:00 +50 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/output_batching_7_20_test.dart: свойства партий заказ 200 при бюджете 4600: сумма, минимум, максимум и отсутствие лишнего запроса
+00:00 +51 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/output_batching_7_20_test.dart: свойства партий заказ 200 при бюджете 6000: сумма, минимум, максимум и отсутствие лишнего запроса
+00:00 +52 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/output_batching_7_20_test.dart: свойства партий заказ 200 при бюджете 7400: сумма, минимум, максимум и отсутствие лишнего запроса
+00:00 +53 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/output_batching_7_20_test.dart: свойства партий заказ 200 при бюджете 12000: сумма, минимум, максимум и отсутствие лишнего запроса
+00:00 +54 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/output_batching_7_20_test.dart: свойства партий заказ 500 при бюджете 2500: сумма, минимум, максимум и отсутствие лишнего запроса
+00:00 +55 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/output_batching_7_20_test.dart: свойства партий заказ 500 при бюджете 4600: сумма, минимум, максимум и отсутствие лишнего запроса
+00:00 +56 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/output_batching_7_20_test.dart: свойства партий заказ 500 при бюджете 6000: сумма, минимум, максимум и отсутствие лишнего запроса
+00:00 +57 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/output_batching_7_20_test.dart: свойства партий заказ 500 при бюджете 7400: сумма, минимум, максимум и отсутствие лишнего запроса
+00:00 +58 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/output_batching_7_20_test.dart: свойства партий заказ 500 при бюджете 12000: сумма, минимум, максимум и отсутствие лишнего запроса
+00:00 +59 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/output_batching_7_20_test.dart: свойства партий максимально допустимый заказ: 512 партий по 16 = 8192 карточки
+00:00 +60 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/output_batching_7_20_test.dart: свойства партий заказ ровно кратен вместимости → нет лишней партии
+00:00 +61 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/output_batching_7_20_test.dart: изменение бюджета меняет партии, но не заказ maxOutputTokens 2000…64000: сумма одна, партий больше/меньше
+00:00 +62 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/output_batching_7_20_test.dart: изменение бюджета меняет партии, но не заказ reasoningReserveTokens: партий больше, заказ тот же
+00:00 +63 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/output_batching_7_20_test.dart: изменение бюджета меняет партии, но не заказ batchCardsCeiling: потолок партии, не потолок заказа
+00:00 +64 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/output_batching_7_20_test.dart: изменение бюджета меняет партии, но не заказ maxCardsPerRequest ограничивает партию, но не заказ
+00:00 +65 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/output_batching_7_20_test.dart: prompt-only: та же арифметика партий заказ 40, бюджет 7 карточек на ответ → 6 партий, сумма 40
+00:00 +66 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/card_order_plan_7_20_test.dart: §3 задания: заказ сохраняется, партии считаются по вместимости заказ 40 при вместимости 16 → 3 последовательные партии (16,16,8)
+00:00 +66 -14: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/card_order_plan_7_20_test.dart: §3 задания: заказ сохраняется, партии считаются по вместимости заказ 40 при вместимости 16 → 3 последовательные партии (16,16,8) [E]
+  Expected: [16, 16, 8]
+    Actual: [14, 13, 13]
+     Which: at location [0] is <14> instead of <16>
+  партии заполняются до вместимости, остаток — последней
+  
+  package:matcher                                                   expect
+  package:flutter_test/src/widget_tester.dart 473:18                expect
+  test\unit\domain\generation\card_order_plan_7_20_test.dart 124:9  main.<fn>.<fn>
+  
+00:00 +66 -14: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/card_order_plan_7_20_test.dart: §3 задания: заказ сохраняется, партии считаются по вместимости заказ 100 при вместимости 12 → 9 партий (12×8 + 4)
+00:00 +66 -15: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/card_order_plan_7_20_test.dart: §3 задания: заказ сохраняется, партии считаются по вместимости заказ 100 при вместимости 12 → 9 партий (12×8 + 4) [E]
+  Expected: [12, 12, 12, 12, 12, 12, 12, 12, 4]
+    Actual: [12, 11, 11, 11, 11, 11, 11, 11, 11]
+     Which: at location [1] is <11> instead of <12>
+  
+  package:matcher                                                   expect
+  package:flutter_test/src/widget_tester.dart 473:18                expect
+  test\unit\domain\generation\card_order_plan_7_20_test.dart 153:7  main.<fn>.<fn>
+  
+00:00 +66 -15: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/card_order_plan_7_20_test.dart: §3 задания: заказ сохраняется, партии считаются по вместимости заказ 200 при вместимости 20 → 10 партий
+00:00 +67 -15: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/card_order_plan_7_20_test.dart: §3 задания: заказ сохраняется, партии считаются по вместимости заказ 1, 5, 10, 20 при вместимости 16 → ровно один запрос
+00:00 +68 -15: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/card_order_plan_7_20_test.dart: §3 задания: заказ сохраняется, партии считаются по вместимости заказ 17 при вместимости 16 → 2 запроса
+00:00 +68 -16: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/card_order_plan_7_20_test.dart: §3 задания: заказ сохраняется, партии считаются по вместимости заказ 17 при вместимости 16 → 2 запроса [E]
+  Expected: [16, 1]
+    Actual: [9, 8]
+     Which: at location [0] is <9> instead of <16>
+  
+  package:matcher                                                   expect
+  package:flutter_test/src/widget_tester.dart 473:18                expect
+  test\unit\domain\generation\card_order_plan_7_20_test.dart 203:7  main.<fn>.<fn>
+  
+00:00 +68 -16: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/card_order_plan_7_20_test.dart: §2 задания: три механизма независимы maxOutputTokens меняет число партий, но не общий заказ
+00:00 +69 -16: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/card_order_plan_7_20_test.dart: §2 задания: три механизма независимы resoniningReserveTokens меняет число партий, но не заказ
+00:00 +70 -16: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/card_order_plan_7_20_test.dart: §2 задания: три механизма независимы batchCardsCeiling меняет число партий, но не обрезает заказ
+00:01 +71 -16: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/card_order_plan_7_20_test.dart: §2 задания: три механизма независимы requestedCards меняет партии, но не план входа
+00:01 +72 -16: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/card_order_plan_7_20_test.dart: нехватка материала — отдельный статус, не бюджет модели заказ больше ёмкости: сумма = заказ, статус про материал
+00:01 +72 -17: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/card_order_plan_7_20_test.dart: нехватка материала — отдельный статус, не бюджет модели заказ больше ёмкости: сумма = заказ, статус про материал [E]
+  Expected: <38>
+    Actual: <30>
+  тихой обрезки нет
+  
+  package:matcher                                                   expect
+  package:flutter_test/src/widget_tester.dart 473:18                expect
+  test\unit\domain\generation\card_order_plan_7_20_test.dart 338:7  main.<fn>.<fn>
+  
+00:01 +72 -17: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/card_order_plan_7_20_test.dart: нехватка материала — отдельный статус, не бюджет модели бюджет одного ответа не влияет на achievable
+00:01 +73 -17: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/card_order_plan_7_20_test.dart: нехватка материала — отдельный статус, не бюджет модели материала нет вовсе (только служебные заголовки) → belowRequested
+00:01 +74 -17: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/card_order_plan_7_20_test.dart: wholeDocument и fragmented обслуживают несколько партий whole: все партии используют полный материал и различаются focus
+00:01 +75 -17: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/card_order_plan_7_20_test.dart: wholeDocument и fragmented обслуживают несколько партий fragmented: партии внутри частей, сумма = заказ
+00:01 +76 -17: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/card_order_plan_7_20_test.dart: wholeDocument и fragmented обслуживают несколько партий число партий не выводится из числа частей
+00:01 +77 -17: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/card_order_plan_7_20_test.dart: технические границы максимально допустимый заказ: 512 партий по 10 → 5120 карточек
+00:01 +77 -18: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/card_order_plan_7_20_test.dart: технические границы максимально допустимый заказ: 512 партий по 10 → 5120 карточек [E]
+  Expected: an object with length of <512>
+    Actual: [
+              PlannedChunk:PlannedChunk(1, text, text: 1240, images: 0, limit: 10, depth: 0),
+              PlannedChunk:PlannedChunk(2, text, text: 1240, images: 0, limit: 10, depth: 0),
+              PlannedChunk:PlannedChunk(3, text, text: 1240, images: 0, limit: 10, depth: 0),
+              PlannedChunk:PlannedChunk(4, text, text: 1240, images: 0, limit: 10, depth: 0)
+            ]
+     Which: has length of <4>
+  
+  package:matcher                                                   expect
+  package:flutter_test/src/widget_tester.dart 473:18                expect
+  test\unit\domain\generation\card_order_plan_7_20_test.dart 480:7  main.<fn>.<fn>
+  
+00:01 +77 -18: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/card_order_plan_7_20_test.dart: технические границы заказ выше технического предела → invalid tooManyChunks
+00:01 +77 -19: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/card_order_plan_7_20_test.dart: технические границы заказ выше технического предела → invalid tooManyChunks [E]
+  Expected: true
+    Actual: <false>
+  
+  package:matcher                                                   expect
+  package:flutter_test/src/widget_tester.dart 473:18                expect
+  test\unit\domain\generation\card_order_plan_7_20_test.dart 495:7  main.<fn>.<fn>
+  
+00:01 +77 -19: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/card_order_plan_7_20_test.dart: технические границы int.max заказ в материалах: invalid tooManyChunks, без зависания
+00:01 +77 -20: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/card_order_plan_7_20_test.dart: технические границы int.max заказ в материалах: invalid tooManyChunks, без зависания [E]
+  Expected: true
+    Actual: <false>
+  
+  package:matcher                                                   expect
+  package:flutter_test/src/widget_tester.dart 473:18                expect
+  test\unit\domain\generation\card_order_plan_7_20_test.dart 515:9  main.<fn>.<fn>
+  
+00:01 +77 -20: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/integration/card_order_batches_flow_7_20_test.dart: заказ 40: три последовательные партии, все 40 карточек сохранены
+00:01 +77 -21: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/integration/card_order_batches_flow_7_20_test.dart: заказ 40: три последовательные партии, все 40 карточек сохранены [E]
+  Expected: [16, 16, 8]
+    Actual: [14, 13, 13]
+     Which: at location [0] is <14> instead of <16>
+  
+  package:matcher                                                expect
+  package:flutter_test/src/widget_tester.dart 473:18             expect
+  test\integration\card_order_batches_flow_7_20_test.dart 236:7  main.<fn>
+  
+00:01 +77 -21: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/integration/card_order_batches_flow_7_20_test.dart: предпросмотр и production строят одинаковое число партий
+00:01 +78 -21: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/integration/card_order_batches_flow_7_20_test.dart: source_exhausted: оставшиеся партии не отправляются
+00:01 +79 -21: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/integration/card_order_batches_flow_7_20_test.dart: сбой партии не теряет карточки предыдущих партий
+00:01 +80 -21: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/integration/card_order_batches_flow_7_20_test.dart: recovery дробит только проблемную партию и не дублирует карточки
+00:01 +81 -21: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/integration/card_order_batches_flow_7_20_test.dart: fragmented: партии внутри частей, сумма = заказ
+00:01 +82 -21: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/generation/order_batches_7_20_test.dart: заказ 40: «Запрошено: 40 карточек», партии и распределение
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following TestFailure was thrown running a test:
+Expected: '22'
+  Actual: '20'
+   Which: is different.
+          Expected: 22
+            Actual: 20
+                     ^
+           Differ at offset 1
+
+When the exception was thrown, this was the stack:
+#4      main.<anonymous closure> (file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/generation/order_batches_7_20_test.dart:168:5)
+<asynchronous suspension>
+#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+This was caught by the test expectation on the following line:
+  file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/generation/order_batches_7_20_test.dart line 168
+The test description was:
+  заказ 40: «Запрошено: 40 карточек», партии и распределение
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:03 +82 -22: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/generation/order_batches_7_20_test.dart: заказ 40: «Запрошено: 40 карточек», партии и распределение [E]
+  Test failed. See exception logs above.
+  The test description was: заказ 40: «Запрошено: 40 карточек», партии и распределение
+  
+00:03 +82 -22: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/generation/order_batches_7_20_test.dart: нехватка материала показана отдельно от бюджета модели
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following TestFailure was thrown running a test:
+Expected: contains 'Материала хватает примерно на 26'
+  Actual: 'Запрошено 40 карточек, план может выдать 26: в материалах нет содержательных разделов, из
+которых можно сделать карточки. Добавьте текст или выберите другой файл.'
+   Which: does not contain 'Материала хватает примерно на 26'
+
+When the exception was thrown, this was the stack:
+#4      main.<anonymous closure> (file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/generation/order_batches_7_20_test.dart:192:5)
+<asynchronous suspension>
+#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+This was caught by the test expectation on the following line:
+  file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/generation/order_batches_7_20_test.dart line 192
+The test description was:
+  нехватка материала показана отдельно от бюджета модели
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:03 +82 -23: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/generation/order_batches_7_20_test.dart: нехватка материала показана отдельно от бюджета модели [E]
+  Test failed. See exception logs above.
+  The test description was: нехватка материала показана отдельно от бюджета модели
+  
+00:03 +82 -23: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/generation/order_batches_7_20_test.dart: предпросмотр результата: созданное количество и причина недобора
+00:03 +83 -23: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/generation/order_batches_7_20_test.dart: тексты предупреждений не приписывают недобор бюджету модели
+00:03 +84 -23: Some tests failed.
+
+Failing tests:
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/integration/card_order_batches_flow_7_20_test.dart: заказ 40: три последовательные партии, все 40 карточек сохранены
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/card_allocator_soft_capacity_test.dart: 7.20: заказ не обрезается мягкой ёмкостью заказ 100 при ёмкости 12 → в плане ровно 100
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/card_allocator_soft_capacity_test.dart: 7.20: заказ не обрезается мягкой ёмкостью заказ 200 при ёмкости 20 → в плане ровно 200
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/card_allocator_soft_capacity_test.dart: 7.20: заказ не обрезается мягкой ёмкостью заказ 40 при ёмкости 32 → в плане 40, ёмкость 32 отдельно
+  ... and 19 more
