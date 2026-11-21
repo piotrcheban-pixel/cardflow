@@ -58,8 +58,8 @@ class _EditableCard {
   _EditableCard(this.original)
     : front = TextEditingController(text: original.front),
       back = TextEditingController(text: original.back),
-      image = original.image,
-      imageId = original.imageId,
+      questionImages = List<GeneratedCardImage>.of(original.questionImages),
+      answerImages = List<GeneratedCardImage>.of(original.answerImages),
       selected = true;
 
   final GeneratedCard original;
@@ -67,30 +67,33 @@ class _EditableCard {
   final TextEditingController back;
   bool selected;
 
-  /// Текущая картинка карточки (из файла или поиска); `null` — нет.
-  GeneratedCardImage? image;
+  /// Изображения лицевой стороны (вопрос) — независимо от ответа (7.19).
+  List<GeneratedCardImage> questionImages;
 
-  /// Идентификатор изображения из `<images>`; `null` — нет.
-  String? imageId;
+  /// Изображения обратной стороны (ответ).
+  List<GeneratedCardImage> answerImages;
 
   void dispose() {
     front.dispose();
     back.dispose();
   }
 
+  /// Есть ли изображения хотя бы у одной стороны.
+  bool get hasImages => questionImages.isNotEmpty || answerImages.isNotEmpty;
+
   /// Карточка с текущими правками пользователя.
   GeneratedCard toCard() {
-    // Если картинка выбрана/заменена вручную, пометки о ненайденной картинке
+    // Если изображение выбрано/заменено вручную, пометки о ненайденной картинке
     // больше не актуальны (fix-gen, Д3).
-    final List<CardIssueCode> issues = image == null
+    final List<CardIssueCode> issues = hasImages
         ? original.issues
-        : original.issues
               .where(
                 (CardIssueCode issue) =>
                     issue != CardIssueCode.imageNotFound &&
                     issue != CardIssueCode.imageIdUnknown,
               )
-              .toList(growable: false);
+              .toList(growable: false)
+        : original.issues;
     return GeneratedCard(
       front: front.text.trim(),
       back: back.text.trim(),
@@ -101,8 +104,11 @@ class _EditableCard {
       sourceFile: original.sourceFile,
       issues: issues,
       imageQuery: original.imageQuery,
-      imageId: imageId,
-      image: image,
+      imageFallbackQuery: original.imageFallbackQuery,
+      imageKind: original.imageKind,
+      imageSide: original.imageSide,
+      questionImages: List<GeneratedCardImage>.unmodifiable(questionImages),
+      answerImages: List<GeneratedCardImage>.unmodifiable(answerImages),
       isOcclusion: original.isOcclusion,
       occlusionJson: original.occlusionJson,
     );
@@ -168,7 +174,7 @@ class _GenerationPreviewScreenState
       .where(
         (_EditableCard card) =>
             card.selected &&
-            card.image == null &&
+            !card.hasImages &&
             card.original.issues.contains(CardIssueCode.imageNotFound),
       )
       .length;
@@ -206,17 +212,27 @@ class _GenerationPreviewScreenState
     }
   }
 
-  /// Убирает картинку карточки — она импортируется без изображения (Д3).
-  void _removeImage(int index) {
+  /// Убирает изображение стороны — карточка импортируется без него (Д3/7.19).
+  void _removeImage({required bool question, required int index}) {
     setState(() {
-      _cards[index]
-        ..image = null
-        ..imageId = null;
+      final List<GeneratedCardImage> target = question
+          ? <GeneratedCardImage>[..._cards[index].questionImages]
+          : <GeneratedCardImage>[..._cards[index].answerImages];
+      if (index < 0 || index >= target.length) return;
+      target.removeAt(index);
+      if (question) {
+        _cards[index].questionImages = target;
+      } else {
+        _cards[index].answerImages = target;
+      }
     });
   }
 
-  /// Заменяет картинку карточки изображением JPG/PNG пользователя (Д3).
-  Future<void> _replaceImage(int index) async {
+  /// Заменяет изображение стороны файлом JPG/PNG пользователя (Д3/7.19).
+  Future<void> _replaceImage({
+    required bool question,
+    required int index,
+  }) async {
     final AppLocalizations l10n = AppLocalizations.of(context);
     try {
       final List<PickedDocument> picked = await ref
@@ -240,13 +256,24 @@ class _GenerationPreviewScreenState
         return;
       }
       setState(() {
-        _cards[index]
-          ..image = GeneratedCardImage(
-            bytes: bytes,
-            mediaType: mediaType,
-            query: document.name,
-          )
-          ..imageId = null;
+        final GeneratedCardImage image = GeneratedCardImage(
+          bytes: bytes,
+          mediaType: mediaType,
+          query: document.name,
+        );
+        final List<GeneratedCardImage> target = question
+            ? <GeneratedCardImage>[..._cards[index].questionImages]
+            : <GeneratedCardImage>[..._cards[index].answerImages];
+        if (index < target.length) {
+          target[index] = image;
+        } else {
+          target.add(image);
+        }
+        if (question) {
+          _cards[index].questionImages = target;
+        } else {
+          _cards[index].answerImages = target;
+        }
       });
       showAppMessage(context, l10n.generationPreviewImageReplaced);
     } on Object {
@@ -612,8 +639,10 @@ class _GenerationPreviewScreenState
                     index: i,
                     onSelected: (bool selected) =>
                         setState(() => _cards[i].selected = selected),
-                    onRemoveImage: () => _removeImage(i),
-                    onReplaceImage: () => _replaceImage(i),
+                    onRemoveImage: (bool question, int imageIndex) =>
+                        _removeImage(question: question, index: imageIndex),
+                    onReplaceImage: (bool question, int imageIndex) =>
+                        _replaceImage(question: question, index: imageIndex),
                   ),
             ],
           ),
@@ -701,14 +730,13 @@ class _PreviewCardTile extends StatelessWidget {
   final _EditableCard card;
   final int index;
   final ValueChanged<bool> onSelected;
-  final VoidCallback onRemoveImage;
-  final VoidCallback onReplaceImage;
+  final void Function(bool question, int imageIndex) onRemoveImage;
+  final void Function(bool question, int imageIndex) onReplaceImage;
 
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
     final ThemeData theme = Theme.of(context);
-    final GeneratedCardImage? image = card.image;
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: AppPanel(
@@ -742,51 +770,39 @@ class _PreviewCardTile extends StatelessWidget {
                     style: theme.textTheme.labelMedium,
                   ),
                 ),
-                if (image != null)
-                  IconButton(
-                    key: ValueKey<String>(
-                      'generation-preview-remove-image-$index',
-                    ),
-                    tooltip: l10n.generationPreviewRemoveImage,
-                    onPressed: onRemoveImage,
-                    icon: const Icon(Icons.hide_image_outlined, size: 20),
-                  ),
                 IconButton(
                   key: ValueKey<String>(
                     'generation-preview-replace-image-$index',
                   ),
                   tooltip: l10n.generationPreviewReplaceImage,
-                  onPressed: onReplaceImage,
-                  icon: Icon(
-                    image == null
-                        ? Icons.add_photo_alternate_outlined
-                        : Icons.swap_horiz,
+                  onPressed: () => onReplaceImage(true, 0),
+                  icon: const Icon(
+                    Icons.add_photo_alternate_outlined,
                     size: 20,
                   ),
                 ),
               ],
             ),
-            if (image != null) ...<Widget>[
-              const SizedBox(height: 8),
-              KeyedSubtree(
-                key: ValueKey<String>('generation-preview-image-$index'),
-                child: CardImageView(
-                  bytes: image.bytes,
-                  kind: image.kind,
-                  maxHeight: 160,
-                  metadata: MediaMetadata(
-                    provider: image.provider,
-                    sourceUrl: image.sourceUrl,
-                    author: image.author,
-                    license: image.license,
-                    isPlaceholder: image.isPlaceholder,
-                    query: image.query,
-                    fallbackQuery: image.fallbackQuery,
-                    kind: image.kind,
-                  ),
-                ),
-              ),
-            ],
+            _PreviewSide(
+              l10n: l10n,
+              question: true,
+              title: l10n.cardFormQuestionImages,
+              images: card.questionImages,
+              cardIndex: index,
+              onRemoveImage: onRemoveImage,
+              onReplaceImage: onReplaceImage,
+            ),
+            const SizedBox(height: 8),
+            _PreviewSide(
+              l10n: l10n,
+              question: false,
+              title: l10n.cardFormAnswerImages,
+              images: card.answerImages,
+              cardIndex: index,
+              onRemoveImage: onRemoveImage,
+              onReplaceImage: onReplaceImage,
+            ),
+            const SizedBox(height: 8),
             TextField(
               key: ValueKey<String>('generation-preview-front-$index'),
               controller: card.front,
@@ -832,6 +848,119 @@ class _PreviewCardTile extends StatelessWidget {
       OutlineInputBorder(borderRadius: BorderRadius.circular(12));
 }
 
+/// Изображения одной стороны карточки в предпросмотре (7.19).
+///
+/// Предпросмотр показывает ровно то, что будет на экране обучения: изображения
+/// вопроса — до переворота, изображения ответа — после.
+class _PreviewSide extends StatelessWidget {
+  const _PreviewSide({
+    required this.l10n,
+    required this.question,
+    required this.title,
+    required this.images,
+    required this.cardIndex,
+    required this.onRemoveImage,
+    required this.onReplaceImage,
+  });
+
+  final AppLocalizations l10n;
+  final bool question;
+  final String title;
+  final List<GeneratedCardImage> images;
+  final int cardIndex;
+  final void Function(bool question, int imageIndex) onRemoveImage;
+  final void Function(bool question, int imageIndex) onReplaceImage;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final String prefix = question ? 'question' : 'answer';
+    return Column(
+      key: ValueKey<String>('generation-preview-$prefix-images-$cardIndex'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Text(
+          titleWithCount(title, images.length),
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+        if (images.isEmpty)
+          Text(
+            question
+                ? l10n.cardFormEmptyQuestionImages
+                : l10n.cardFormEmptyAnswerImages,
+            key: ValueKey<String>(
+              'generation-preview-$prefix-empty-$cardIndex',
+            ),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        for (var imageIndex = 0; imageIndex < images.length; imageIndex++)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: Text(
+                        question
+                            ? l10n.cardFormQuestionImages
+                            : l10n.cardFormAnswerImages,
+                        style: theme.textTheme.bodySmall,
+                      ),
+                    ),
+                    IconButton(
+                      key: ValueKey<String>(
+                        'generation-preview-remove-$prefix-$cardIndex-$imageIndex',
+                      ),
+                      tooltip: l10n.generationPreviewRemoveImage,
+                      onPressed: () => onRemoveImage(question, imageIndex),
+                      icon: const Icon(Icons.hide_image_outlined, size: 20),
+                    ),
+                    IconButton(
+                      key: ValueKey<String>(
+                        'generation-preview-replace-$prefix-$cardIndex-$imageIndex',
+                      ),
+                      tooltip: l10n.generationPreviewReplaceImage,
+                      onPressed: () => onReplaceImage(question, imageIndex),
+                      icon: const Icon(Icons.swap_horiz, size: 20),
+                    ),
+                  ],
+                ),
+                KeyedSubtree(
+                  key: ValueKey<String>(
+                    'generation-preview-$prefix-image-$cardIndex-$imageIndex',
+                  ),
+                  child: CardImageView(
+                    bytes: images[imageIndex].bytes,
+                    kind: images[imageIndex].kind,
+                    maxHeight: 140,
+                    metadata: MediaMetadata(
+                      provider: images[imageIndex].provider,
+                      sourceUrl: images[imageIndex].sourceUrl,
+                      author: images[imageIndex].author,
+                      license: images[imageIndex].license,
+                      query: images[imageIndex].query,
+                      fallbackQuery: images[imageIndex].fallbackQuery,
+                      kind: images[imageIndex].kind,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// Подпись секции стороны с числом изображений (без литералов в UI).
+String titleWithCount(String title, int count) => '$title ($count)';
+
 /// Подпись пометки A8.4 для предпросмотра.
 String issueLabel(AppLocalizations l10n, CardIssueCode issue) {
   return switch (issue) {
@@ -847,6 +976,9 @@ String issueLabel(AppLocalizations l10n, CardIssueCode issue) {
     CardIssueCode.imageNotFound => l10n.generationIssueImageNotFound,
     CardIssueCode.imageIdUnknown => l10n.generationIssueImageIdUnknown,
     CardIssueCode.imageQueryAdjusted => l10n.generationIssueImageQueryAdjusted,
+    CardIssueCode.imageDuplicatedSide =>
+      l10n.generationIssueImageDuplicatedSide,
+    CardIssueCode.imageInvalid => l10n.generationIssueImageInvalid,
     CardIssueCode.abstractImageQuery => l10n.generationIssueAbstractImageQuery,
     CardIssueCode.answerInFront => l10n.generationIssueAnswerInFront,
     CardIssueCode.frontLooksLikeHeading =>

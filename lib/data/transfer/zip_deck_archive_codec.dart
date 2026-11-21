@@ -354,6 +354,10 @@ class ZipDeckArchiveCodec implements DeckArchiveCodec {
               'mime_type': item.mimeType,
             },
         ],
+        // 7.19 (ADR-042): стороны изображений; старые архивы без этих ключей
+        // читаются как «всё на стороне вопроса».
+        'question_media_ids': card.questionMediaIds,
+        'answer_media_ids': card.answerMediaIds,
         'latex': card.latex,
         'occlusion': card.occlusionJson,
         'source_doc_id': card.sourceDocId,
@@ -724,6 +728,38 @@ class ZipDeckArchiveCodec implements DeckArchiveCodec {
       mediaRefs.add(ref);
     }
 
+    final bool hasSides =
+        json.containsKey('question_media_ids') ||
+        json.containsKey('answer_media_ids');
+    final List<String> questionMediaIds = hasSides
+        ? _sideMediaIds(
+            json['question_media_ids'],
+            mediaIds: mediaIds,
+            code: code,
+            path: '$path.question_media_ids',
+          )
+        : mediaIds;
+    final List<String> answerMediaIds = hasSides
+        ? _sideMediaIds(
+            json['answer_media_ids'],
+            mediaIds: mediaIds,
+            code: code,
+            path: '$path.answer_media_ids',
+          )
+        : const <String>[];
+    if (hasSides) {
+      final Set<String> union = <String>{
+        ...questionMediaIds,
+        ...answerMediaIds,
+      };
+      if (union.length != mediaIds.length || !union.containsAll(mediaIds)) {
+        throw ArchiveException(
+          code,
+          details: '$path: стороны не покрывают список media',
+        );
+      }
+    }
+
     return Card(
       id: id,
       deckId: _requiredString(json, 'deck_id', code, path),
@@ -732,7 +768,8 @@ class ZipDeckArchiveCodec implements DeckArchiveCodec {
       hint: _requiredNullableString(json, 'hint', code, path),
       cardType: cardType,
       tags: tags,
-      mediaIds: mediaIds,
+      questionMediaIds: questionMediaIds,
+      answerMediaIds: answerMediaIds,
       latex: _requiredNullableString(json, 'latex', code, path),
       occlusionJson: _requiredNullableString(json, 'occlusion', code, path),
       sourceDocId: _requiredNullableString(json, 'source_doc_id', code, path),
@@ -758,6 +795,44 @@ class ZipDeckArchiveCodec implements DeckArchiveCodec {
       createdAt: _requiredDateTimeMs(json, 'created_at', code, path),
       updatedAt: _requiredDateTimeMs(json, 'updated_at', code, path),
     );
+  }
+
+  /// Список id стороны архива: только id из `media` карточки, без повторов.
+  List<String> _sideMediaIds(
+    Object? raw, {
+    required List<String> mediaIds,
+    required ArchiveErrorCode code,
+    required String path,
+  }) {
+    if (raw == null) return const <String>[];
+    if (raw is! List) {
+      throw ArchiveException(code, details: '$path: ожидался список');
+    }
+    final Set<String> available = mediaIds.toSet();
+    final List<String> result = <String>[];
+    for (var index = 0; index < raw.length; index++) {
+      final Object? value = raw[index];
+      if (value is! String || value.isEmpty) {
+        throw ArchiveException(
+          code,
+          details: '$path[$index]: ожидался непустой id',
+        );
+      }
+      if (!available.contains(value)) {
+        throw ArchiveException(
+          code,
+          details: '$path[$index]: id $value отсутствует в media карточки',
+        );
+      }
+      if (result.contains(value)) {
+        throw ArchiveException(
+          code,
+          details: '$path[$index]: повтор id $value',
+        );
+      }
+      result.add(value);
+    }
+    return List<String>.unmodifiable(result);
   }
 
   _MediaRef _mediaRefFromJson(

@@ -13,6 +13,7 @@ import 'package:cardflow/api/generation/latex_escape_repair.dart';
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/generation/card_image_kind.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
+import 'package:cardflow/domain/generation/generated_card_image_side.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
 import 'package:cardflow/domain/generation/generation_failure_reason.dart';
 
@@ -238,7 +239,9 @@ class CardContentValidator {
     final hint = raw['hint'];
     final sourceFile = raw['source_file'];
     final imageSelection = _imageSelectionOf(
-      rawId: raw['image_id'],
+      rawQuestionIds: raw['question_image_ids'],
+      rawAnswerIds: raw['answer_image_ids'],
+      rawLegacyId: raw['image_id'],
       rawImage: raw['image'],
       rawLegacyQuery: raw['image_query'],
       front: front,
@@ -266,25 +269,33 @@ class CardContentValidator {
       imageQuery: imageSelection.query,
       imageFallbackQuery: imageSelection.fallbackQuery,
       imageKind: imageSelection.kind,
-      imageId: imageSelection.id,
+      imageSide: imageSelection.side,
+      questionImageIds: imageSelection.questionIds,
+      answerImageIds: imageSelection.answerIds,
       isOcclusion: isOcclusion,
     );
   }
 
-  /// Проверяет `image_id` и `image` (`gen-ru-v6`) или `image_query` (`gen-ru-v5`).
+  /// Разбирает изображения карточки: v9-массивы сторон, legacy `image_id`
+  /// (сторона вопроса) и необязательный объект `image` со стороной.
   ///
-  /// Правило «абстрактным понятиям картинка не нужна» удалено в 7.14: запрос
-  /// нормализуется (`image_query_normalizer.dart`), а не обнуляется, — картинка
-  /// нужна каждой карточке. Испорченный запрос не роняет карточку: поиск
-  /// просто не выполнится, и пайплайн поставит заглушку.
+  /// Правила 7.19 (ADR-042):
+  /// - id вне каталога `<images>` отбрасывается с пометкой `imageIdUnknown`;
+  /// - один и тот же id в обеих коллекциях остаётся только у вопроса
+  ///   (`imageDuplicatedSide`): ответ не должен дублировать вопрос;
+  /// - пустые/нестроковые элементы игнорируются, карточка не отбрасывается.
   ({
-    String? id,
+    List<String> questionIds,
+    List<String> answerIds,
     String? query,
     String? fallbackQuery,
     GeneratedCardImageKind kind,
+    GeneratedCardImageSide side,
   })
   _imageSelectionOf({
-    required Object? rawId,
+    required Object? rawQuestionIds,
+    required Object? rawAnswerIds,
+    required Object? rawLegacyId,
     required Object? rawImage,
     required Object? rawLegacyQuery,
     required String front,
@@ -292,28 +303,92 @@ class CardContentValidator {
     required Set<String> imageIds,
     required List<CardIssueCode> issues,
   }) {
-    String? id;
-    if (rawId is String && rawId.trim().isNotEmpty) {
-      final candidate = rawId.trim();
+    final List<String> questionIds = _knownIds(
+      rawQuestionIds,
+      imageIds: imageIds,
+      issues: issues,
+    );
+    final List<String> answerIds = _knownIds(
+      rawAnswerIds,
+      imageIds: imageIds,
+      issues: issues,
+    );
+
+    // Совместимость v5–v8: одно поле `image_id` — изображение вопроса.
+    if (rawLegacyId is String && rawLegacyId.trim().isNotEmpty) {
+      final String candidate = rawLegacyId.trim();
       if (imageIds.contains(candidate)) {
-        id = candidate;
+        if (!questionIds.contains(candidate) &&
+            !answerIds.contains(candidate)) {
+          questionIds.add(candidate);
+        }
       } else {
-        issues.add(CardIssueCode.imageIdUnknown);
+        _addIssue(issues, CardIssueCode.imageIdUnknown);
       }
     }
+
+    // Один id не должен дублироваться на обеих сторонах: вопрос приоритетен.
+    final List<String> dedupedAnswer = <String>[];
+    for (final String id in answerIds) {
+      if (questionIds.contains(id)) {
+        _addIssue(issues, CardIssueCode.imageDuplicatedSide);
+      } else {
+        dedupedAnswer.add(id);
+      }
+    }
+
     final NormalizedImageSpec spec = normalizeImageSpec(
       image: rawImage,
       legacyQuery: rawLegacyQuery,
       front: front,
       back: back,
     );
-    if (spec.adjusted) issues.add(CardIssueCode.imageQueryAdjusted);
+    if (spec.adjusted) _addIssue(issues, CardIssueCode.imageQueryAdjusted);
     return (
-      id: id,
+      questionIds: List<String>.unmodifiable(questionIds),
+      answerIds: List<String>.unmodifiable(dedupedAnswer),
       query: spec.query,
       fallbackQuery: spec.fallbackQuery,
       kind: spec.kind,
+      side: _sideOf(rawImage, hasQuery: spec.query != null),
     );
+  }
+
+  /// Сторона внешнего поиска: из `image.side`; без стороны — вопрос (v5–v8).
+  GeneratedCardImageSide _sideOf(Object? rawImage, {required bool hasQuery}) {
+    if (rawImage is Map) {
+      final Object? side = rawImage['side'];
+      if (side != null) return GeneratedCardImageSide.parseOrDefault(side);
+    }
+    return hasQuery
+        ? GeneratedCardImageSide.question
+        : GeneratedCardImageSide.none;
+  }
+
+  /// Валидные id каталога из JSON-массива; неизвестные помечаются и отбрасываются.
+  List<String> _knownIds(
+    Object? raw, {
+    required Set<String> imageIds,
+    required List<CardIssueCode> issues,
+  }) {
+    if (raw is! List) return <String>[];
+    final List<String> result = <String>[];
+    for (final Object? value in raw) {
+      if (value is! String) continue;
+      final String candidate = value.trim();
+      if (candidate.isEmpty) continue;
+      if (!imageIds.contains(candidate)) {
+        _addIssue(issues, CardIssueCode.imageIdUnknown);
+        continue;
+      }
+      if (!result.contains(candidate)) result.add(candidate);
+    }
+    return result;
+  }
+
+  /// Добавляет пометку без повторов.
+  void _addIssue(List<CardIssueCode> issues, CardIssueCode code) {
+    if (!issues.contains(code)) issues.add(code);
   }
 
   /// Пометки форматирования: Unicode-математика и Markdown (A8.1, правило 4).

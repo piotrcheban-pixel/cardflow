@@ -1,7 +1,6 @@
-import 'dart:convert';
-
 import 'package:cardflow/data/db/app_database.dart';
 import 'package:cardflow/data/transfer/media_store.dart';
+import 'package:cardflow/domain/cards/card_media_json.dart';
 
 /// Удаляет только доказанно несвязанные медиа (ADR-017).
 class MediaGarbageCollector {
@@ -18,16 +17,13 @@ class MediaGarbageCollector {
       final referencedByCard = <String, Set<String>>{};
       final malformedCards = <String>{};
       for (final card in cards) {
-        try {
-          final ids = jsonDecode(card.mediaJson);
-          if (ids is List) {
-            referencedByCard[card.id] = ids.whereType<String>().toSet();
-          } else {
-            malformedCards.add(card.id);
-          }
-        } on FormatException {
-          // Битая карточка не должна привести к удалению её возможных медиа.
+        // 7.19: `media_json` v2 (стороны) и legacy-массив поддерживаются одним
+        // разбором; битая карточка не должна привести к удалению её медиа.
+        final CardMediaSides? sides = CardMediaSides.tryDecode(card.mediaJson);
+        if (sides == null) {
           malformedCards.add(card.id);
+        } else {
+          referencedByCard[card.id] = sides.all.toSet();
         }
       }
       final rows = await database.select(database.media).get();

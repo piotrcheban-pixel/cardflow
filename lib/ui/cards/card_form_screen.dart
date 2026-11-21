@@ -7,9 +7,9 @@ import 'package:material_ui/material_ui.dart' hide Card;
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/cards/card_draft.dart';
 import 'package:cardflow/domain/cards/card_image_refresh_result.dart';
-import 'package:cardflow/domain/cards/media_metadata.dart';
 import 'package:cardflow/domain/cards/card_media.dart';
 import 'package:cardflow/domain/cards/card_repository.dart';
+import 'package:cardflow/domain/cards/media_metadata.dart';
 import 'package:cardflow/domain/cards/occlusion.dart';
 import 'package:cardflow/domain/generation/card_image_kind.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
@@ -33,18 +33,54 @@ enum CardFormResult {
   deleted,
 }
 
+/// Одно изображение в редакторе: существующее медиа или новый файл.
+///
+/// Итерация 7.19 (ADR-042): изображения вопроса и ответа — независимые
+/// упорядоченные списки; элемент помнит своё место и может быть перенесён.
+class _MediaItem {
+  _MediaItem.stored(String this.mediaId) : upload = null, uploadSequence = null;
+
+  _MediaItem.upload(CardImageUpload this.upload)
+    : mediaId = null,
+      uploadSequence = ++_uploadCounter;
+
+  static int _uploadCounter = 0;
+
+  /// `media.id` существующего изображения; `null` — новый файл.
+  final String? mediaId;
+
+  /// Новый файл, который сохранит репозиторий.
+  final CardImageUpload? upload;
+
+  /// Номер новой загрузки в рамках экрана (для стабильного ключа).
+  final int? uploadSequence;
+
+  /// Прочитанные байты; `null` — файл недоступен (явное состояние, не подмена).
+  Uint8List? bytes;
+
+  /// Метаданные атрибуции существующего изображения.
+  MediaMetadata? metadata;
+
+  /// Стабильный ключ элемента в дереве (id или номер загрузки).
+  String get key => mediaId ?? 'upload-${uploadSequence ?? 0}';
+
+  /// Запрос модели для «Найти картинку заново».
+  String? get query => metadata?.query;
+
+  bool get isStored => mediaId != null;
+
+  Uint8List? get uploadBytes => upload?.bytes;
+}
+
 /// Экран создания/редактирования карточки (SPEC A6.3, ADR-009).
 ///
 /// Поля: front (обязателен, ≤500), back (обязателен, ≤2000), hint, теги (≤3),
 /// тип (`basic`/`basic_reversed`/`cloze`, при редактировании неизменяем),
-/// `source_excerpt` для кнопки «Почему?», изображение и (необязательно) маски
-/// Image Occlusion.
+/// `source_excerpt` для кнопки «Почему?», независимые изображения вопроса и
+/// ответа и (необязательно) маски Image Occlusion.
 ///
-/// ADR-028 (итерация 7.12): изображение можно привязать к карточке **любого**
-/// типа; это обычная иллюстрация. Маски occlusion — отдельный переключатель
-/// для `basic`, по умолчанию выключен.
-/// Сохранение — через репозиторий;
-/// удаление — с подтверждением.
+/// ADR-028: изображение можно привязать к карточке любого типа. ADR-042:
+/// стороны независимы — добавление, удаление, замена, порядок, перенос.
 class CardFormScreen extends ConsumerStatefulWidget {
   /// Создаёт форму; [cardId] == null — создание новой карточки.
   const CardFormScreen({required this.deckId, this.cardId, super.key});
@@ -71,10 +107,8 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
   bool _loadFailed = false;
   bool _saving = false;
   bool _imageLoading = false;
-  CardImageUpload? _imageUpload;
-  Uint8List? _imageBytes;
-  MediaMetadata? _imageMetadata;
-  bool _imageRemoved = false;
+  List<_MediaItem> _questionImages = <_MediaItem>[];
+  List<_MediaItem> _answerImages = <_MediaItem>[];
   OcclusionDocument? _occlusion;
   bool _useOcclusion = false;
   CardType _cardType = CardType.basic;
@@ -124,30 +158,19 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
       _hint.text = card.hint ?? '';
       _tags.text = card.tags.join(', ');
       _sourceExcerpt.text = card.sourceExcerpt ?? '';
-      Uint8List? imageBytes;
-      MediaMetadata? imageMetadata;
-      if (card.mediaIds.isNotEmpty) {
-        try {
-          final primary = card.mediaIds.first;
-          final bytes = await ref.read(cardMediaRepositoryProvider).readMedia(
-            <String>[primary],
-          );
-          imageBytes = bytes[primary];
-          final metadata = await ref
-              .read(cardMediaRepositoryProvider)
-              .readMetadata(<String>[primary]);
-          imageMetadata = metadata[primary];
-        } on Object {
-          imageBytes = null;
-          imageMetadata = null;
-        }
-      }
+      final List<_MediaItem> question = <_MediaItem>[
+        for (final String id in card.questionMediaIds) _MediaItem.stored(id),
+      ];
+      final List<_MediaItem> answer = <_MediaItem>[
+        for (final String id in card.answerMediaIds) _MediaItem.stored(id),
+      ];
+      await _readStoredImages(<_MediaItem>[...question, ...answer]);
       if (!mounted) return;
       setState(() {
         _card = card;
         _cardType = card.cardType;
-        _imageBytes = imageBytes;
-        _imageMetadata = imageMetadata;
+        _questionImages = question;
+        _answerImages = answer;
         _occlusion = OcclusionDocument.tryParse(card.occlusionJson);
         // Старая occlusion-карточка открывается с включёнными масками; обычная
         // карточка с иллюстрацией — с выключенными (ADR-028).
@@ -163,20 +186,48 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
     }
   }
 
-  /// Выбирает изображение; маски при этом не включаются (ADR-028).
-  Future<void> _pickImage() async {
+  /// Читает байты и метаданные существующих изображений (обе стороны).
+  Future<void> _readStoredImages(List<_MediaItem> items) async {
+    final List<String> ids = <String>[
+      for (final _MediaItem item in items)
+        if (item.mediaId != null) item.mediaId!,
+    ];
+    if (ids.isEmpty) return;
+    final repository = ref.read(cardMediaRepositoryProvider);
+    Map<String, Uint8List> bytes = const <String, Uint8List>{};
+    Map<String, MediaMetadata> metadata = const <String, MediaMetadata>{};
+    try {
+      bytes = await repository.readMedia(ids);
+      metadata = await repository.readMetadata(ids);
+    } on Object {
+      // Файлы не прочитались: элемент покажет явное состояние «недоступно»,
+      // изображение не подменяется (7.19).
+    }
+    for (final _MediaItem item in items) {
+      final String? id = item.mediaId;
+      if (id == null) continue;
+      item.bytes = bytes[id];
+      item.metadata = metadata[id];
+    }
+  }
+
+  /// Выбирает файл и добавляет его на [side] (вопрос = true).
+  Future<void> _addImage({required bool question}) async {
     final AppLocalizations l10n = AppLocalizations.of(context);
     setState(() => _imageLoading = true);
     try {
-      final upload = await ref.read(imageGatewayProvider).pickImage();
+      final CardImageUpload? upload = await ref
+          .read(imageGatewayProvider)
+          .pickImage();
       if (!mounted || upload == null) return;
       setState(() {
-        _imageUpload = upload;
-        _imageBytes = upload.bytes;
-        _imageMetadata = null;
-        _imageRemoved = false;
-        // Новая картинка под включённые маски — чистый холст для разметки.
-        if (_useOcclusion) _occlusion = const OcclusionDocument();
+        final _MediaItem item = _MediaItem.upload(upload);
+        if (question) {
+          _questionImages = <_MediaItem>[..._questionImages, item];
+        } else {
+          _answerImages = <_MediaItem>[..._answerImages, item];
+        }
+        if (question && _useOcclusion) _occlusion = const OcclusionDocument();
         _clearOcclusionError();
       });
     } on Object {
@@ -186,31 +237,108 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
     }
   }
 
-  /// Убирает изображение с карточки (маски при этом становятся недоступны).
-  void _removeImage() {
+  /// Заменяет изображение [index] на [side] новым файлом (позиция сохраняется).
+  Future<void> _replaceImage({
+    required bool question,
+    required int index,
+  }) async {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    setState(() => _imageLoading = true);
+    try {
+      final CardImageUpload? upload = await ref
+          .read(imageGatewayProvider)
+          .pickImage();
+      if (!mounted || upload == null) return;
+      setState(() {
+        final List<_MediaItem> target = question
+            ? <_MediaItem>[..._questionImages]
+            : <_MediaItem>[..._answerImages];
+        target[index] = _MediaItem.upload(upload);
+        if (question) {
+          _questionImages = target;
+          if (_useOcclusion) _occlusion = const OcclusionDocument();
+        } else {
+          _answerImages = target;
+        }
+        _clearOcclusionError();
+      });
+    } on Object {
+      if (mounted) showAppMessage(context, l10n.cardFormImageLoadError);
+    } finally {
+      if (mounted) setState(() => _imageLoading = false);
+    }
+  }
+
+  /// Удаляет изображение [index] со стороны.
+  void _removeImage({required bool question, required int index}) {
     setState(() {
-      _imageUpload = null;
-      _imageBytes = null;
-      _imageMetadata = null;
-      _imageRemoved = true;
+      if (question) {
+        final List<_MediaItem> next = <_MediaItem>[..._questionImages]
+          ..removeAt(index);
+        _questionImages = next;
+      } else {
+        final List<_MediaItem> next = <_MediaItem>[..._answerImages]
+          ..removeAt(index);
+        _answerImages = next;
+      }
       _clearOcclusionError();
     });
   }
 
+  /// Переносит изображение между сторонами (в конец целевого списка).
+  void _moveImage({required bool question, required int index}) {
+    setState(() {
+      if (question) {
+        final List<_MediaItem> source = <_MediaItem>[..._questionImages];
+        final _MediaItem item = source.removeAt(index);
+        _questionImages = source;
+        _answerImages = <_MediaItem>[..._answerImages, item];
+      } else {
+        final List<_MediaItem> source = <_MediaItem>[..._answerImages];
+        final _MediaItem item = source.removeAt(index);
+        _answerImages = source;
+        _questionImages = <_MediaItem>[..._questionImages, item];
+      }
+      _clearOcclusionError();
+    });
+  }
+
+  /// Меняет порядок изображения [index] на стороне ([delta] = ±1).
+  void _moveImageBy({
+    required bool question,
+    required int index,
+    required int delta,
+  }) {
+    final List<_MediaItem> source = question
+        ? <_MediaItem>[..._questionImages]
+        : <_MediaItem>[..._answerImages];
+    final int next = index + delta;
+    if (next < 0 || next >= source.length) return;
+    setState(() {
+      final _MediaItem item = source.removeAt(index);
+      source.insert(next, item);
+      if (question) {
+        _questionImages = source;
+      } else {
+        _answerImages = source;
+      }
+    });
+  }
+
   /// Ищет картинку заново по сохранённому запросу модели (7.14).
-  Future<void> _refreshImage() async {
+  Future<void> _refreshImage(_MediaItem item) async {
     final AppLocalizations l10n = AppLocalizations.of(context);
-    final Card? card = _card;
-    if (card == null || card.mediaIds.isEmpty) return;
+    final String? mediaId = item.mediaId;
+    if (mediaId == null) return;
     setState(() => _imageLoading = true);
     try {
       final CardImageRefreshResult result = await ref
           .read(cardImageRefresherProvider)
-          .refreshMedia(card.mediaIds.first);
+          .refreshMedia(mediaId);
       if (!mounted) return;
       switch (result) {
         case CardImageRefreshResult.updated:
-          await _reloadImage();
+          await _reloadImage(item);
           if (mounted) showAppMessage(context, l10n.cardImageRetrySuccess);
         case CardImageRefreshResult.notFound:
           showAppMessage(context, l10n.cardImageRetryNotFound);
@@ -226,25 +354,25 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
     }
   }
 
-  /// Перечитывает байты и метаданные основного изображения после обновления.
-  Future<void> _reloadImage() async {
-    final Card? card = _card;
-    if (card == null || card.mediaIds.isEmpty) return;
-    final primary = card.mediaIds.first;
+  /// Перечитывает байты и метаданные одного изображения после обновления.
+  Future<void> _reloadImage(_MediaItem item) async {
+    final String? mediaId = item.mediaId;
+    if (mediaId == null) return;
     try {
-      final bytes = await ref.read(cardMediaRepositoryProvider).readMedia(
-        <String>[primary],
-      );
-      final metadata = await ref.read(cardMediaRepositoryProvider).readMetadata(
-        <String>[primary],
+      final repository = ref.read(cardMediaRepositoryProvider);
+      final Map<String, Uint8List> bytes = await repository.readMedia(<String>[
+        mediaId,
+      ]);
+      final Map<String, MediaMetadata> metadata = await repository.readMetadata(
+        <String>[mediaId],
       );
       if (!mounted) return;
       setState(() {
-        _imageBytes = bytes[primary];
-        _imageMetadata = metadata[primary];
+        item.bytes = bytes[mediaId];
+        item.metadata = metadata[mediaId];
       });
     } on Object {
-      // Байты не прочитались — оставляем прежнее изображение.
+      // Байты не прочитались — элемент покажет явное состояние «недоступно».
     }
   }
 
@@ -269,19 +397,6 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
   Future<void> _save() async {
     final AppLocalizations l10n = AppLocalizations.of(context);
     final bool useOcclusion = _useOcclusion && _cardType == CardType.basic;
-    // Существующие медиа: первое — основное изображение. При замене/удалении
-    // основное снимается, а прочие id сохраняются. Если файл не прочитался
-    // (bytes == null), медиа не теряется: удаление — только явное.
-    final List<String> existingMedia = _card?.mediaIds ?? const <String>[];
-    final bool keepExistingPrimary =
-        _imageUpload == null && !_imageRemoved && existingMedia.isNotEmpty;
-    final mediaIds = <String>[
-      if (keepExistingPrimary) existingMedia.first,
-      ...existingMedia.skip(existingMedia.isEmpty ? 0 : 1),
-    ];
-    final OcclusionDocument? occlusion = useOcclusion
-        ? (_occlusion ?? const OcclusionDocument())
-        : null;
     final CardDraft draft = CardDraft(
       front: _front.text,
       back: _back.text,
@@ -289,9 +404,15 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
       tags: CardDraft.parseTags(_tags.text),
       cardType: _cardType,
       sourceExcerpt: _sourceExcerpt.text,
-      mediaIds: mediaIds,
-      occlusionJson: occlusion?.encode(),
-      imageUpload: _imageUpload,
+      questionMediaIds: _storedIdsOf(_questionImages),
+      answerMediaIds: _storedIdsOf(_answerImages),
+      questionUploads: _uploadsOf(_questionImages),
+      answerUploads: _uploadsOf(_answerImages),
+      questionMediaOrder: _orderOf(_questionImages),
+      answerMediaOrder: _orderOf(_answerImages),
+      occlusionJson: useOcclusion
+          ? (_occlusion ?? const OcclusionDocument()).encode()
+          : null,
     );
     final Map<CardDraftField, CardValidationError> errors = draft.validate();
     if (errors.isNotEmpty) {
@@ -323,6 +444,17 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
       showAppMessage(context, l10n.cardFormSaveError);
     }
   }
+
+  static List<String> _storedIdsOf(List<_MediaItem> items) => <String>[
+    for (final _MediaItem item in items)
+      if (item.mediaId != null) item.mediaId!,
+  ];
+
+  static List<CardImageUpload> _uploadsOf(List<_MediaItem> items) =>
+      <CardImageUpload>[
+        for (final _MediaItem item in items)
+          if (item.upload != null) item.upload!,
+      ];
 
   Future<void> _confirmDelete() async {
     final AppLocalizations l10n = AppLocalizations.of(context);
@@ -356,6 +488,24 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
       if (!mounted) return;
       showAppMessage(context, l10n.cardFormDeleteError);
     }
+  }
+
+  /// Порядок стороны: хранимые id и токены `upload:<index>` вперемешку.
+  static List<String> _orderOf(List<_MediaItem> items) {
+    final List<CardImageUpload> uploads = _uploadsOf(items);
+    final List<String> order = <String>[];
+    for (final _MediaItem item in items) {
+      final String? id = item.mediaId;
+      if (id != null) {
+        order.add(id);
+        continue;
+      }
+      final CardImageUpload? upload = item.upload;
+      if (upload == null) continue;
+      final int index = uploads.indexOf(upload);
+      if (index >= 0) order.add(uploadMediaToken(index));
+    }
+    return List<String>.unmodifiable(order);
   }
 
   @override
@@ -502,10 +652,7 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
     );
   }
 
-  /// Секция изображения для любого типа карточки (ADR-028).
-  ///
-  /// Маски — необязательный переключатель у `basic`: по умолчанию картинка
-  /// показывается как иллюстрация без масок.
+  /// Секция изображений: независимые списки вопроса и ответа (ADR-042).
   Widget _buildMediaSection(AppLocalizations l10n) {
     final ThemeData theme = Theme.of(context);
     final bool masksAvailable = _cardType == CardType.basic;
@@ -513,6 +660,11 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
     final String? error = masksEnabled || _useOcclusion
         ? _errorText(l10n, CardDraftField.occlusion)
         : null;
+    final _MediaItem? occlusionSource = _questionImages.isEmpty
+        ? null
+        : _questionImages.first;
+    final Uint8List? occlusionBytes =
+        occlusionSource?.bytes ?? occlusionSource?.uploadBytes;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
@@ -528,48 +680,19 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
           const SizedBox(height: 8),
           Text(error, style: TextStyle(color: theme.colorScheme.error)),
         ],
-        const SizedBox(height: 8),
-        if (_imageBytes != null) ...<Widget>[
-          KeyedSubtree(
-            key: const ValueKey<String>('card-form-image-preview'),
-            child: CardImageView(
-              bytes: _imageBytes!,
-              kind: _imageMetadata?.kind ?? GeneratedCardImageKind.photo,
-              metadata: _imageMetadata,
-              maxHeight: 200,
-            ),
-          ),
-          const SizedBox(height: 8),
-        ],
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: <Widget>[
-            OutlinedButton.icon(
-              key: const ValueKey<String>('card-form-pick-image'),
-              onPressed: _imageLoading || _saving ? null : _pickImage,
-              icon: const Icon(Icons.add_photo_alternate_outlined),
-              label: Text(
-                _imageBytes == null
-                    ? l10n.cardFormPickImage
-                    : l10n.cardFormChangeImage,
-              ),
-            ),
-            if (_isEditing && _imageBytes != null)
-              OutlinedButton.icon(
-                key: const ValueKey<String>('card-form-refresh-image'),
-                onPressed: _imageLoading || _saving ? null : _refreshImage,
-                icon: const Icon(Icons.travel_explore),
-                label: Text(l10n.cardImageRetryAction),
-              ),
-            if (_imageBytes != null || _imageUpload != null)
-              TextButton.icon(
-                key: const ValueKey<String>('card-form-remove-image'),
-                onPressed: _imageLoading || _saving ? null : _removeImage,
-                icon: const Icon(Icons.delete_outline),
-                label: Text(l10n.cardFormRemoveImage),
-              ),
-          ],
+        const SizedBox(height: 12),
+        _buildSide(
+          l10n: l10n,
+          question: true,
+          title: l10n.cardFormQuestionImages,
+          items: _questionImages,
+        ),
+        const SizedBox(height: 16),
+        _buildSide(
+          l10n: l10n,
+          question: false,
+          title: l10n.cardFormAnswerImages,
+          items: _answerImages,
         ),
         if (masksAvailable) ...<Widget>[
           const SizedBox(height: 8),
@@ -589,9 +712,9 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
             style: theme.textTheme.titleSmall,
           ),
           const SizedBox(height: 8),
-          if (_imageBytes != null && _occlusion != null)
+          if (occlusionBytes != null && _occlusion != null)
             OcclusionMaskEditor(
-              imageBytes: _imageBytes!,
+              imageBytes: occlusionBytes,
               document: _occlusion!,
               onChanged: (document) {
                 setState(() {
@@ -599,9 +722,231 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
                   _clearOcclusionError();
                 });
               },
+            )
+          else
+            Text(
+              l10n.cardImageUnavailable,
+              style: TextStyle(color: theme.colorScheme.error),
             ),
         ],
       ],
+    );
+  }
+
+  /// Один независимый список изображений стороны.
+  Widget _buildSide({
+    required AppLocalizations l10n,
+    required bool question,
+    required String title,
+    required List<_MediaItem> items,
+  }) {
+    final ThemeData theme = Theme.of(context);
+    final String prefix = question ? 'question' : 'answer';
+    return Column(
+      key: ValueKey<String>('card-form-$prefix-images'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Row(
+          children: <Widget>[
+            Expanded(
+              child: Text(
+                title,
+                style: theme.textTheme.titleSmall,
+                key: ValueKey<String>('card-form-$prefix-images-title'),
+              ),
+            ),
+            OutlinedButton.icon(
+              key: ValueKey<String>(
+                question
+                    ? 'card-form-add-question-image'
+                    : 'card-form-add-answer-image',
+              ),
+              onPressed: _imageLoading || _saving
+                  ? null
+                  : () => _addImage(question: question),
+              icon: const Icon(Icons.add_photo_alternate_outlined),
+              label: Text(
+                question
+                    ? l10n.cardFormAddQuestionImage
+                    : l10n.cardFormAddAnswerImage,
+              ),
+            ),
+          ],
+        ),
+        if (items.isEmpty)
+          Container(
+            key: ValueKey<String>('card-form-empty-$prefix-images'),
+            margin: const EdgeInsets.only(top: 8),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(kCardImageCornerRadius),
+              border: Border.all(color: theme.colorScheme.outlineVariant),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                Icon(
+                  Icons.image_outlined,
+                  size: 20,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  question
+                      ? l10n.cardFormEmptyQuestionImages
+                      : l10n.cardFormEmptyAnswerImages,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        for (var index = 0; index < items.length; index++)
+          _buildImageTile(
+            l10n: l10n,
+            question: question,
+            index: index,
+            item: items[index],
+          ),
+      ],
+    );
+  }
+
+  /// Карточка одного изображения с действиями стороны.
+  Widget _buildImageTile({
+    required AppLocalizations l10n,
+    required bool question,
+    required int index,
+    required _MediaItem item,
+  }) {
+    final ThemeData theme = Theme.of(context);
+    final String prefix = question ? 'question' : 'answer';
+    final Uint8List? bytes = item.bytes ?? item.uploadBytes;
+    final bool first = index == 0;
+    return Container(
+      key: ValueKey<String>('card-form-$prefix-image-$index'),
+      margin: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(kCardImageCornerRadius),
+        border: Border.all(color: theme.colorScheme.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          if (bytes == null)
+            Container(
+              key: ValueKey<String>('card-form-$prefix-missing-$index'),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.errorContainer.withValues(alpha: 0.4),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: <Widget>[
+                  Icon(
+                    Icons.image_not_supported_outlined,
+                    color: theme.colorScheme.error,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      l10n.cardImageUnavailable,
+                      style: TextStyle(color: theme.colorScheme.error),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            CardImageView(
+              bytes: bytes,
+              kind: item.metadata?.kind ?? GeneratedCardImageKind.photo,
+              metadata: item.metadata,
+              maxHeight: 180,
+              onRetry: item.isStored ? () => _reloadImage(item) : null,
+            ),
+          Wrap(
+            spacing: 4,
+            runSpacing: 4,
+            children: <Widget>[
+              if (index > 0)
+                IconButton(
+                  key: ValueKey<String>('card-form-move-up-$prefix-$index'),
+                  tooltip: l10n.cardFormMoveImageUp,
+                  onPressed: _saving
+                      ? null
+                      : () => _moveImageBy(
+                          question: question,
+                          index: index,
+                          delta: -1,
+                        ),
+                  icon: const Icon(Icons.arrow_upward, size: 20),
+                ),
+              if (index <
+                  (question ? _questionImages : _answerImages).length - 1)
+                IconButton(
+                  key: ValueKey<String>('card-form-move-down-$prefix-$index'),
+                  tooltip: l10n.cardFormMoveImageDown,
+                  onPressed: _saving
+                      ? null
+                      : () => _moveImageBy(
+                          question: question,
+                          index: index,
+                          delta: 1,
+                        ),
+                  icon: const Icon(Icons.arrow_downward, size: 20),
+                ),
+              TextButton.icon(
+                key: ValueKey<String>('card-form-move-$prefix-$index'),
+                onPressed: _saving
+                    ? null
+                    : () => _moveImage(question: question, index: index),
+                icon: const Icon(Icons.swap_horiz, size: 20),
+                label: Text(
+                  question
+                      ? l10n.cardFormMoveToAnswer
+                      : l10n.cardFormMoveToQuestion,
+                ),
+              ),
+              TextButton.icon(
+                key: ValueKey<String>('card-form-replace-$prefix-$index'),
+                onPressed: _imageLoading || _saving
+                    ? null
+                    : () => _replaceImage(question: question, index: index),
+                icon: const Icon(Icons.add_photo_alternate_outlined, size: 20),
+                label: Text(
+                  item.bytes == null && !item.isStored
+                      ? l10n.cardFormPickImage
+                      : l10n.cardFormChangeImage,
+                ),
+              ),
+              if (item.isStored)
+                TextButton.icon(
+                  key: first && question
+                      ? const ValueKey<String>('card-form-refresh-image')
+                      : ValueKey<String>('card-form-refresh-$prefix-$index'),
+                  onPressed: _imageLoading || _saving
+                      ? null
+                      : () => _refreshImage(item),
+                  icon: const Icon(Icons.travel_explore, size: 20),
+                  label: Text(l10n.cardImageRetryAction),
+                ),
+              TextButton.icon(
+                key: ValueKey<String>('card-form-remove-$prefix-$index'),
+                onPressed: _saving
+                    ? null
+                    : () => _removeImage(question: question, index: index),
+                icon: const Icon(Icons.delete_outline, size: 20),
+                label: Text(l10n.cardFormRemoveImage),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 

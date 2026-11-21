@@ -10,9 +10,12 @@ import 'package:drift/drift.dart';
 import 'package:cardflow/data/db/app_database.dart';
 import 'package:cardflow/data/db/epoch.dart';
 import 'package:cardflow/domain/cards/card.dart';
+import 'package:cardflow/domain/cards/card_media_json.dart';
 
 /// Строка `cards` → доменная карточка.
 Card cardFromRow(CardRow row) {
+  // `media_json` v2: стороны независимы; legacy-массив — сторона вопроса.
+  final CardMediaSides media = CardMediaSides.decode(row.mediaJson);
   return Card(
     id: row.id,
     deckId: row.deckId,
@@ -21,7 +24,8 @@ Card cardFromRow(CardRow row) {
     hint: row.hint,
     cardType: CardType.fromWire(row.cardType),
     tags: decodeStringList(row.tagsJson),
-    mediaIds: decodeStringList(row.mediaJson),
+    questionMediaIds: media.question,
+    answerMediaIds: media.answer,
     latex: row.latex,
     occlusionJson: row.occlusionJson,
     sourceDocId: row.sourceDocId,
@@ -49,7 +53,12 @@ CardsCompanion cardToCompanion(Card card) {
     hint: Value<String?>(card.hint),
     cardType: Value<String>(card.cardType.wireName),
     tagsJson: Value<String>(encodeStringList(card.tags)),
-    mediaJson: Value<String>(encodeStringList(card.mediaIds)),
+    mediaJson: Value<String>(
+      CardMediaSides(
+        question: card.questionMediaIds,
+        answer: card.answerMediaIds,
+      ).encode(),
+    ),
     latex: Value<String?>(card.latex),
     occlusionJson: Value<String?>(card.occlusionJson),
     sourceDocId: Value<String?>(card.sourceDocId),

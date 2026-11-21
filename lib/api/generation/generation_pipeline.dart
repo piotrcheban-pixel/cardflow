@@ -21,7 +21,6 @@ import 'package:cardflow/api/generation/generation_diagnostics.dart';
 import 'package:cardflow/api/generation/generation_plan_builder.dart';
 import 'package:cardflow/api/generation/generation_plan_entry.dart';
 import 'package:cardflow/api/generation/system_prompt.dart';
-import 'package:cardflow/api/images/placeholder_image_generator.dart';
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/cards/content_hash.dart';
 import 'package:cardflow/domain/cards/occlusion.dart';
@@ -29,6 +28,7 @@ import 'package:cardflow/domain/generation/card_image_finder.dart';
 import 'package:cardflow/domain/generation/document_image.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
 import 'package:cardflow/domain/generation/generated_card_image.dart';
+import 'package:cardflow/domain/generation/generated_card_image_side.dart';
 import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/generation/generation_budget.dart';
 import 'package:cardflow/domain/generation/generation_card_store.dart';
@@ -108,7 +108,6 @@ class GenerationPipeline implements GenerationRunner {
     this.planFactory,
     this.splitter = const GenerationPlanSplitter(),
     this.imageFinder,
-    this.placeholderGenerator,
     this.imageSearchBudget = const Duration(seconds: 90),
     this.diagnostics = const GenerationDiagnostics(),
     this.tokenCounter,
@@ -144,10 +143,6 @@ class GenerationPipeline implements GenerationRunner {
 
   /// Поиск иллюстраций по `image` (итерации 7.9/7.14); `null` — без поиска.
   final CardImageFinder? imageFinder;
-
-  /// Детерминированная заглушка, если картинку не нашли/не скачали (7.14,
-  /// шаг 3); `null` — заглушки не создаются (старое поведение).
-  final PlaceholderImageGenerator? placeholderGenerator;
 
   /// Бюджет **суммарного времени поиска** иллюстраций за один запуск (7.11).
   ///
@@ -974,7 +969,7 @@ class GenerationPipeline implements GenerationRunner {
         imageIndex < cards.length;
         imageIndex++
       ) {
-        cards[imageIndex] = await _withCardImage(
+        cards[imageIndex] = await _withCardImages(
           cards[imageIndex],
           documentImages,
           cancellation,
@@ -1479,61 +1474,103 @@ class GenerationPipeline implements GenerationRunner {
     return codes.join(',');
   }
 
-  /// Привязывает картинку к карточке (fix-gen, Д2/Д3; 7.14 — картинка у каждой).
+  /// Разрешает изображения обеих сторон карточки (7.19, ADR-041/042).
   ///
-  /// Приоритет 1 — изображение из прикреплённого файла по `image_id`; байты
-  /// берутся из каталога фрагмента, внешний поиск не вызывается. Приоритет 2 —
-  /// внешний поиск по `image.query` → `image.fallback_query`. Если не помог
-  /// никто, для обычной карточки создаётся детерминированная заглушка (шаг 3);
-  /// occlusion без реальной картинки остаётся без иллюстрации (маска на
-  /// заглушке бессмысленна) — карточка становится обычной с пометкой.
-  Future<GeneratedCard> _withCardImage(
+  /// Приоритет 1 — изображения из прикреплённых файлов по
+  /// `question_image_ids`/`answer_image_ids`: только каталог фрагмента и только
+  /// своя сторона, внешний поиск не вызывается. Приоритет 2 — внешний поиск
+  /// **настоящей** фотографии по `image.query`/`image.fallback_query`, если у
+  /// выбранной модели стороны (`image.side`) ещё нет изображений.
+  ///
+  /// Синтезированных изображений нет: если ничего не нашлось, сторона остаётся
+  /// пустой с пометкой `imageNotFound`, а не подменяется нарисованным PNG.
+  Future<GeneratedCard> _withCardImages(
     GeneratedCard card,
     List<DocumentImage> documentImages,
     GenerationCancellation? cancellation, {
     required String? wishes,
   }) async {
-    if (card.image != null) return card;
     if (wishesForbidImages(wishes)) {
-      return _withoutImage(card.clearedImageSelection());
+      return _withoutImages(card.clearedImageSelection());
     }
-    final String? imageId = card.imageId?.trim();
-    if (imageId != null && imageId.isNotEmpty) {
-      final DocumentImage? documentImage = _documentImageById(
-        documentImages,
-        imageId,
-      );
-      if (documentImage != null) {
-        diagnostics.imageSearch(
-          query: 'image_id:$imageId',
-          outcome:
-              'изображение из файла ${documentImage.fileName} '
-              '(${documentImage.bytes.length} Б)',
-        );
-        return card.copyWith(
-          image: GeneratedCardImage(
-            bytes: documentImage.bytes,
-            mediaType: documentImage.mediaType,
+
+    final List<GeneratedCardImage> questionImages = <GeneratedCardImage>[];
+    final List<GeneratedCardImage> answerImages = <GeneratedCardImage>[];
+    final Set<String> digests = <String>{};
+    final List<CardIssueCode> issues = <CardIssueCode>[...card.issues];
+
+    void resolve(List<String> ids, List<GeneratedCardImage> target) {
+      for (final String id in ids) {
+        final DocumentImage? image = _documentImageById(documentImages, id);
+        if (image == null) continue; // уже помечено валидатором как неизвестный
+        // Один и тот же файл не должен попасть на обе стороны.
+        if (!digests.add(documentImageDigest(image.bytes))) continue;
+        target.add(
+          GeneratedCardImage(
+            bytes: image.bytes,
+            mediaType: image.mediaType,
             query: card.imageQuery ?? '',
             kind: card.imageKind,
             fallbackQuery: card.imageFallbackQuery,
             provider: 'file',
-            attribution: documentImage.caption ?? documentImage.fileName,
+            attribution: image.caption ?? image.fileName,
           ),
-          occlusionJson: card.isOcclusion
-              ? card.occlusionJson ?? defaultOcclusionDocumentJson()
-              : card.occlusionJson,
+        );
+        diagnostics.imageSearch(
+          query: 'image_id:$id',
+          outcome:
+              'изображение из файла ${image.fileName} '
+              '(${image.bytes.length} Б)',
         );
       }
     }
+
+    resolve(card.questionImageIds, questionImages);
+    resolve(card.answerImageIds, answerImages);
+
+    final GeneratedCardImageSide side = card.imageSide;
     final String? query = card.imageQuery?.trim();
-    if (query == null ||
-        query.isEmpty ||
-        imageFinder == null ||
-        (cancellation?.isCancelled ?? false)) {
-      return _placeholderOrNothing(card);
+    final List<GeneratedCardImage> sideImages =
+        side == GeneratedCardImageSide.answer ? answerImages : questionImages;
+    final bool canSearch =
+        side != GeneratedCardImageSide.none &&
+        query != null &&
+        query.isNotEmpty &&
+        sideImages.isEmpty &&
+        imageFinder != null &&
+        !(cancellation?.isCancelled ?? false);
+
+    if (canSearch) {
+      final GeneratedCardImage? found = await _searchCardImage(card, query);
+      if (found != null) {
+        sideImages.add(found);
+      } else if (!issues.contains(CardIssueCode.imageNotFound)) {
+        issues.add(CardIssueCode.imageNotFound);
+      }
     }
-    final DateTime? searchStartedAt = _imageSearchBudgeted ? now() : null;
+
+    final bool occlusionWithoutImage =
+        card.isOcclusion && questionImages.isEmpty;
+    return card.copyWith(
+      questionImages: List<GeneratedCardImage>.unmodifiable(questionImages),
+      answerImages: List<GeneratedCardImage>.unmodifiable(answerImages),
+      issues: List<CardIssueCode>.unmodifiable(<CardIssueCode>[
+        ...issues,
+        if (occlusionWithoutImage) CardIssueCode.occlusionImageMissing,
+      ]),
+      isOcclusion: card.isOcclusion && !occlusionWithoutImage,
+      occlusionJson: card.isOcclusion && !occlusionWithoutImage
+          ? card.occlusionJson ?? defaultOcclusionDocumentJson()
+          : card.occlusionJson,
+    );
+  }
+
+  /// Внешний поиск настоящей картинки; `null` — не нашли/бюджет исчерпан/сбой.
+  Future<GeneratedCardImage?> _searchCardImage(
+    GeneratedCard card,
+    String query,
+  ) async {
+    final DateTime? startedAt = _imageSearchBudgeted ? now() : null;
     final bool budgetExhausted =
         _imageSearchBudgeted && _imageSearchSpent >= imageSearchBudget;
     if (budgetExhausted) {
@@ -1541,7 +1578,7 @@ class GenerationPipeline implements GenerationRunner {
         query: query,
         outcome: 'пропущен: бюджет времени поиска исчерпан',
       );
-      return _placeholderOrNothing(card, imageNotFound: true);
+      return null;
     }
     GeneratedCardImage? image;
     try {
@@ -1558,55 +1595,44 @@ class GenerationPipeline implements GenerationRunner {
       _imageCache.remove(query);
       image = null;
     }
-    if (searchStartedAt != null) {
-      _imageSearchSpent += now().difference(searchStartedAt);
+    if (startedAt != null) {
+      _imageSearchSpent += now().difference(startedAt);
     }
     if (image == null) {
       _imageCache.remove(query);
-      return _placeholderOrNothing(card, imageNotFound: true);
+      return null;
     }
     final String? sourceUrl = image.sourceUrl;
-    // Один и тот же URL не должен попасть в колоду дважды (7.14): кэш по
-    // запросу может вернуть картинку, уже занятую другой карточкой.
+    // Один и тот же URL не должен попасть в колоду дважды.
     if (sourceUrl != null && !_usedImageUrls.add(sourceUrl)) {
       _imageCache.remove(query);
-      return _placeholderOrNothing(card, imageNotFound: true);
+      return null;
     }
-    return card.copyWith(
-      image: image,
-      occlusionJson: card.isOcclusion
-          ? card.occlusionJson ?? defaultOcclusionDocumentJson()
-          : card.occlusionJson,
-    );
+    return image;
   }
 
-  /// Заглушка вместо не найденной картинки; occlusion остаётся без иллюстрации.
-  GeneratedCard _placeholderOrNothing(
+  /// Карточка без изображений: occlusion становится обычной с пометкой.
+  GeneratedCard _withoutImages(
     GeneratedCard card, {
     bool imageNotFound = false,
   }) {
-    if (card.isOcclusion) {
-      return _withoutImage(card, imageNotFound: imageNotFound);
-    }
-    final PlaceholderImageGenerator? generator = placeholderGenerator;
-    if (generator == null) {
-      return _withoutImage(card, imageNotFound: imageNotFound);
-    }
-    final GeneratedCardImage placeholder = generator.generate(
-      // Seed — хэш содержимого: одна и та же карточка всегда получает одну и
-      // ту же заглушку (id появляется только при импорте в БД).
-      seed: contentHashOf(front: card.front, back: card.back),
-      kind: card.imageKind,
-      query: card.imageQuery,
-      fallbackQuery: card.imageFallbackQuery,
-    );
-    return card.copyWith(
-      image: placeholder,
+    return GeneratedCard(
+      front: card.front,
+      back: card.back,
+      cardType: card.cardType,
+      hint: card.hint,
+      tags: card.tags,
+      sourceExcerpt: card.sourceExcerpt,
+      sourceFile: card.sourceFile,
       issues: List<CardIssueCode>.unmodifiable(<CardIssueCode>[
         ...card.issues,
-        if (imageNotFound && !card.issues.contains(CardIssueCode.imageNotFound))
-          CardIssueCode.imageNotFound,
+        if (card.isOcclusion) CardIssueCode.occlusionImageMissing,
+        if (imageNotFound) CardIssueCode.imageNotFound,
       ]),
+      imageKind: card.imageKind,
+      isOcclusion: false,
+      occlusionJson: card.occlusionJson,
+      sectionId: card.sectionId,
     );
   }
 
@@ -1621,34 +1647,6 @@ class GenerationPipeline implements GenerationRunner {
   /// Сбрасывает счётчик бюджета поиска иллюстраций (начало запуска/повтора).
   void _resetImageBudget() {
     _imageSearchSpent = Duration.zero;
-  }
-
-  /// Карточка без картинки: occlusion без иллюстрации становится обычной,
-  /// неудачный поиск оставляет пометку для предупреждения в UI (ADR-028).
-  GeneratedCard _withoutImage(
-    GeneratedCard card, {
-    bool imageNotFound = false,
-  }) {
-    var result = card;
-    if (card.isOcclusion) {
-      result = result.copyWith(
-        isOcclusion: false,
-        issues: List<CardIssueCode>.unmodifiable(<CardIssueCode>[
-          ...result.issues,
-          if (!result.issues.contains(CardIssueCode.occlusionImageMissing))
-            CardIssueCode.occlusionImageMissing,
-        ]),
-      );
-    }
-    if (imageNotFound && !result.issues.contains(CardIssueCode.imageNotFound)) {
-      result = result.copyWith(
-        issues: List<CardIssueCode>.unmodifiable(<CardIssueCode>[
-          ...result.issues,
-          CardIssueCode.imageNotFound,
-        ]),
-      );
-    }
-    return result;
   }
 
   /// Сохраняет пошаговый прогресс задания (`generation_jobs` A8.5 шаг 12).

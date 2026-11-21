@@ -1516,6 +1516,18 @@ abstract class AppLocalizations {
   /// **'Не удалось найти картинку по запросу: {count}. Добавьте её вручную или измените вопрос.'**
   String generationImageSearchFailed(int count);
 
+  /// Пометка: дубль image id между сторонами (7.19).
+  ///
+  /// In ru, this message translates to:
+  /// **'Одно изображение указано на обеих сторонах — оставлено у вопроса'**
+  String get generationIssueImageDuplicatedSide;
+
+  /// Пометка: пустые байты или MIME не по сигнатуре (7.19).
+  ///
+  /// In ru, this message translates to:
+  /// **'Изображение повреждено и не сохранено'**
+  String get generationIssueImageInvalid;
+
   /// Пометка fix-gen: image_id модели не найден в каталоге <images>.
   ///
   /// In ru, this message translates to:
@@ -2176,11 +2188,71 @@ abstract class AppLocalizations {
   /// **'Изображение'**
   String get cardFormImageSection;
 
-  /// Пояснение: изображение не требует масок.
+  /// Пояснение: стороны изображений независимы (ADR-042).
   ///
   /// In ru, this message translates to:
-  /// **'Картинка показывается вместе с вопросом и ответом. Маски нужны, только если части изображения надо скрыть.'**
+  /// **'Изображения вопроса видны до переворота, изображения ответа — только после. Маски нужны, только если части изображения надо скрыть.'**
   String get cardFormImageHint;
+
+  /// Секция изображений лицевой стороны.
+  ///
+  /// In ru, this message translates to:
+  /// **'Изображения вопроса'**
+  String get cardFormQuestionImages;
+
+  /// Секция изображений обратной стороны.
+  ///
+  /// In ru, this message translates to:
+  /// **'Изображения ответа'**
+  String get cardFormAnswerImages;
+
+  /// Кнопка добавления изображения на лицевую сторону.
+  ///
+  /// In ru, this message translates to:
+  /// **'Добавить к вопросу'**
+  String get cardFormAddQuestionImage;
+
+  /// Кнопка добавления изображения на обратную сторону.
+  ///
+  /// In ru, this message translates to:
+  /// **'Добавить к ответу'**
+  String get cardFormAddAnswerImage;
+
+  /// Перенос изображения вопроса на обратную сторону.
+  ///
+  /// In ru, this message translates to:
+  /// **'На сторону ответа'**
+  String get cardFormMoveToAnswer;
+
+  /// Перенос изображения ответа на лицевую сторону.
+  ///
+  /// In ru, this message translates to:
+  /// **'На сторону вопроса'**
+  String get cardFormMoveToQuestion;
+
+  /// Изменение порядка изображения: выше.
+  ///
+  /// In ru, this message translates to:
+  /// **'Выше'**
+  String get cardFormMoveImageUp;
+
+  /// Изменение порядка изображения: ниже.
+  ///
+  /// In ru, this message translates to:
+  /// **'Ниже'**
+  String get cardFormMoveImageDown;
+
+  /// Пустой слот лицевой стороны (не заглушка, не картинка).
+  ///
+  /// In ru, this message translates to:
+  /// **'Нет изображений вопроса'**
+  String get cardFormEmptyQuestionImages;
+
+  /// Пустой слот обратной стороны (не заглушка, не картинка).
+  ///
+  /// In ru, this message translates to:
+  /// **'Нет изображений ответа'**
+  String get cardFormEmptyAnswerImages;
 
   /// Кнопка удаления изображения из карточки.
   ///
@@ -3226,11 +3298,17 @@ abstract class AppLocalizations {
   /// **'Изображение карточки'**
   String get cardImageSemantics;
 
-  /// Подпись заглушки изображения карточки для screen reader.
+  /// Файл изображения не найден — явное состояние без подмены (7.19).
   ///
   /// In ru, this message translates to:
-  /// **'Временная картинка карточки'**
-  String get cardImagePlaceholderSemantics;
+  /// **'Изображение недоступно'**
+  String get cardImageUnavailable;
+
+  /// Ошибка декодирования изображения карточки (7.19).
+  ///
+  /// In ru, this message translates to:
+  /// **'Не удалось показать изображение'**
+  String get cardImageLoadFailed;
 
   /// Заголовок полноэкранного просмотра картинки.
   ///

@@ -8,6 +8,7 @@ import 'package:cardflow/data/db/app_database.dart';
 import 'package:cardflow/data/db/epoch.dart';
 import 'package:cardflow/data/transfer/media_store.dart';
 import 'package:cardflow/domain/cards/card.dart';
+import 'package:cardflow/domain/cards/card_media_json.dart';
 import 'package:cardflow/domain/cards/content_hash.dart';
 import 'package:cardflow/domain/scheduling/scheduling_card.dart';
 import 'package:cardflow/domain/transfer/archive_codec.dart';
@@ -193,10 +194,10 @@ class DriftDeckTransferService implements DeckTransferService {
     };
 
     final importedMedia = <_ImportedMedia>[];
-    final newMediaIdsByCard = <String, List<String>>{};
+    final newMediaIdsByCard = <String, Map<String, String>>{};
     for (final card in uniqueCards) {
       final newCardId = newCardIds[card.id]!;
-      final newMediaIds = <String>[];
+      final Map<String, String> mediaMap = <String, String>{};
       for (final oldMediaId in card.mediaIds) {
         final media = archiveMediaById[oldMediaId];
         if (media == null) {
@@ -206,7 +207,7 @@ class DriftDeckTransferService implements DeckTransferService {
           );
         }
         final newMediaId = _uuid.v4();
-        newMediaIds.add(newMediaId);
+        mediaMap[oldMediaId] = newMediaId;
         importedMedia.add(
           _ImportedMedia(
             id: newMediaId,
@@ -217,7 +218,7 @@ class DriftDeckTransferService implements DeckTransferService {
           ),
         );
       }
-      newMediaIdsByCard[newCardId] = newMediaIds;
+      newMediaIdsByCard[newCardId] = mediaMap;
     }
 
     final cardCompanions = <CardsCompanion>[];
@@ -228,6 +229,17 @@ class DriftDeckTransferService implements DeckTransferService {
           ? null
           : newCardIds[oldSiblingId];
       final _ImportedScheduling scheduling = _importScheduling(card, newCardId);
+      final Map<String, String> mediaMap = newMediaIdsByCard[newCardId]!;
+      final CardMediaSides mediaSides = CardMediaSides(
+        question: <String>[
+          for (final String oldId in card.questionMediaIds)
+            if (mediaMap[oldId] != null) mediaMap[oldId]!,
+        ],
+        answer: <String>[
+          for (final String oldId in card.answerMediaIds)
+            if (mediaMap[oldId] != null) mediaMap[oldId]!,
+        ],
+      );
       cardCompanions.add(
         CardsCompanion.insert(
           id: newCardId,
@@ -237,7 +249,7 @@ class DriftDeckTransferService implements DeckTransferService {
           hint: Value<String?>(card.hint),
           cardType: card.cardType.wireName,
           tagsJson: Value<String>(jsonEncode(card.tags)),
-          mediaJson: Value<String>(jsonEncode(newMediaIdsByCard[newCardId]!)),
+          mediaJson: Value<String>(mediaSides.encode()),
           latex: Value<String?>(card.latex),
           occlusionJson: Value<String?>(card.occlusionJson),
           sourceDocId: Value<String?>(card.sourceDocId),
@@ -376,6 +388,18 @@ class DriftDeckTransferService implements DeckTransferService {
     return query.get();
   }
 
+  /// `media_json` карточки: v2 (стороны) или legacy-массив (сторона вопроса).
+  CardMediaSides _mediaSidesFromRow(CardRow row) {
+    try {
+      return CardMediaSides.decode(row.mediaJson);
+    } on FormatException {
+      throw ArchiveException(
+        ArchiveErrorCode.invalidCards,
+        details: 'export: битый media_json карточки ${row.id}',
+      );
+    }
+  }
+
   Card _cardFromRow(CardRow row) => Card(
     id: row.id,
     deckId: row.deckId,
@@ -384,7 +408,8 @@ class DriftDeckTransferService implements DeckTransferService {
     hint: row.hint,
     cardType: CardType.fromWire(row.cardType),
     tags: _decodeStringList(row.tagsJson),
-    mediaIds: _decodeStringList(row.mediaJson),
+    questionMediaIds: _mediaSidesFromRow(row).question,
+    answerMediaIds: _mediaSidesFromRow(row).answer,
     latex: row.latex,
     occlusionJson: row.occlusionJson,
     sourceDocId: row.sourceDocId,

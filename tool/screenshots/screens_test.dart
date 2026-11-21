@@ -13,13 +13,12 @@ import 'package:flutter/services.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image/image.dart' as img;
 import 'package:material_ui/material_ui.dart' hide Card;
 
-import 'package:cardflow/api/images/placeholder_image_generator.dart';
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/cards/media_metadata.dart';
 import 'package:cardflow/domain/generation/card_image_kind.dart';
-import 'package:cardflow/domain/generation/generated_card_image.dart';
 import 'package:cardflow/ui/cards/content/card_content_view.dart';
 import 'package:cardflow/ui/study/match_screen.dart';
 import 'package:cardflow/ui/study/multiple_choice_screen.dart';
@@ -412,7 +411,7 @@ void main() {
       deckId: 'deck-1',
       front: 'Какой пигмент придаёт листьям зелёный цвет?',
       back: 'Хлорофилл',
-      mediaIds: const <String>['media-1'],
+      questionMediaIds: const <String>['media-1'],
       createdAt: _now,
       updatedAt: _now,
     );
@@ -466,7 +465,7 @@ void main() {
       deckId: 'deck-1',
       front: 'Какая органелла изображена на схеме?',
       back: 'Хлоропласт',
-      mediaIds: const <String>['media-1'],
+      questionMediaIds: const <String>['media-1'],
       createdAt: _now,
       updatedAt: _now,
     );
@@ -512,16 +511,17 @@ void main() {
     await _capture(tester, 'card-diagram-dark');
   });
 
-  testWidgets('card placeholder light', (WidgetTester tester) async {
+  testWidgets('card image light', (WidgetTester tester) async {
     await phone(tester);
-    final GeneratedCardImage placeholder = const PlaceholderImageGenerator()
-        .generate(seed: 'screenshot', kind: GeneratedCardImageKind.photo);
+    final Uint8List placeholder = Uint8List.fromList(
+      img.encodePng(img.Image(width: 800, height: 450)),
+    );
     final Card card = makeCard(
       id: 'placeholder',
       deckId: 'deck-1',
       front: 'Что такое фотосинтез?',
       back: 'Преобразование световой энергии в химическую',
-      mediaIds: const <String>['media-1'],
+      questionMediaIds: const <String>['media-1'],
       createdAt: _now,
       updatedAt: _now,
     );
@@ -536,11 +536,10 @@ void main() {
               side: card.front,
               revealed: true,
               faceKey: const ValueKey<String>('face'),
-              mediaBytes: <String, Uint8List>{'media-1': placeholder.bytes},
+              mediaBytes: <String, Uint8List>{'media-1': placeholder},
               mediaMetadata: const <String, MediaMetadata>{
                 'media-1': MediaMetadata(
-                  provider: 'placeholder',
-                  isPlaceholder: true,
+                  provider: 'file',
                   kind: GeneratedCardImageKind.photo,
                 ),
               },
@@ -553,11 +552,11 @@ void main() {
     await tester.pump();
     await tester.runAsync(
       () => precacheImage(
-        MemoryImage(placeholder.bytes),
+        MemoryImage(placeholder),
         tester.element(find.byType(CardContentView)),
       ),
     );
     await tester.pumpAndSettle(const Duration(milliseconds: 100));
-    await _capture(tester, 'card-placeholder-light');
+    await _capture(tester, 'card-image-light');
   });
 }

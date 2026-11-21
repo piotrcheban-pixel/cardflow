@@ -70,7 +70,8 @@ class Card {
     required this.updatedAt,
     this.hint,
     this.tags = const <String>[],
-    this.mediaIds = const <String>[],
+    this.questionMediaIds = const <String>[],
+    this.answerMediaIds = const <String>[],
     this.latex,
     this.occlusionJson,
     this.sourceDocId,
@@ -105,12 +106,23 @@ class Card {
   /// Теги (SPEC: до 3, без `#`).
   final List<String> tags;
 
-  /// Идентификаторы медиа (`media_json`, ссылки на `media.id`).
+  /// Идентификаторы изображений лицевой стороны (`media_json` v2).
   ///
-  /// Поддерживаются всеми типами карточек (ADR-028): у обычной карточки это
-  /// иллюстрация, у occlusion — изображение под маски. Первый id — основное
-  /// изображение.
-  final List<String> mediaIds;
+  /// С 7.19 стороны независимы (ADR-042): на лицевой стороне показываются
+  /// только эти изображения. Legacy-карточки (плоский `media_json`) читаются
+  /// как изображения вопроса — до 7.19 единственная иллюстрация показывалась на
+  /// лицевой стороне. У occlusion-карточки первое изображение вопроса — холст
+  /// под маски.
+  final List<String> questionMediaIds;
+
+  /// Идентификаторы изображений обратной стороны (`media_json` v2).
+  ///
+  /// Показываются только после переворота: изображение-ответ не должно
+  /// раскрывать ответ до него (ADR-042).
+  final List<String> answerMediaIds;
+
+  /// Все id карточки: вопрос, затем ответ (для GC, экспорта, чтения медиа).
+  List<String> get mediaIds => <String>[...questionMediaIds, ...answerMediaIds];
 
   /// LaTeX-разметка карточки, если есть.
   final String? latex;
@@ -154,8 +166,10 @@ class Card {
   /// Момент последнего изменения.
   final DateTime updatedAt;
 
-  /// Первый идентификатор медиа (основное изображение); `null` — медиа нет.
-  String? get primaryMediaId => mediaIds.isEmpty ? null : mediaIds.first;
+  /// Первое изображение карточки: вопроса, иначе ответа; `null` — медиа нет.
+  String? get primaryMediaId => questionMediaIds.isNotEmpty
+      ? questionMediaIds.first
+      : (answerMediaIds.isEmpty ? null : answerMediaIds.first);
 
   @override
   bool operator ==(Object other) {
@@ -169,7 +183,8 @@ class Card {
         other.hint == hint &&
         other.cardType == cardType &&
         deep.equals(other.tags, tags) &&
-        deep.equals(other.mediaIds, mediaIds) &&
+        deep.equals(other.questionMediaIds, questionMediaIds) &&
+        deep.equals(other.answerMediaIds, answerMediaIds) &&
         other.latex == latex &&
         other.occlusionJson == occlusionJson &&
         other.sourceDocId == sourceDocId &&
@@ -197,7 +212,8 @@ class Card {
       hint,
       cardType,
       deep.hash(tags),
-      deep.hash(mediaIds),
+      deep.hash(questionMediaIds),
+      deep.hash(answerMediaIds),
       latex,
       occlusionJson,
       sourceDocId,

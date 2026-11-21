@@ -10,12 +10,14 @@ import 'package:cardflow/data/db/app_database.dart';
 import 'package:cardflow/data/db/epoch.dart';
 import 'package:cardflow/data/transfer/media_store.dart';
 import 'package:cardflow/domain/cards/card.dart';
+import 'package:cardflow/domain/cards/card_media_json.dart';
 import 'package:cardflow/domain/cards/card_scheduling.dart';
 import 'package:cardflow/domain/cards/content_hash.dart';
 import 'package:cardflow/domain/cards/media_metadata.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
 import 'package:cardflow/domain/generation/generated_card_image.dart';
 import 'package:cardflow/domain/generation/generation_card_store.dart';
+import 'package:cardflow/domain/generation/image_bytes.dart';
 
 /// Импорт карточек поверх drift-БД.
 ///
@@ -113,17 +115,41 @@ class DriftGenerationCardStore implements GenerationCardStore {
         }
 
         for (final GeneratedCard card in accepted) {
-          final _PreparedImage? image = await _writeImage(
-            card.image,
-            writtenPaths,
-          );
+          // 7.19 (ADR-042): изображения вопроса и ответа пишутся независимо;
+          // пустые/повреждённые байты не сохраняются (ADR-041).
+          final List<_PreparedImage> questionImages = <_PreparedImage>[];
+          for (final GeneratedCardImage image in card.questionImages) {
+            final _PreparedImage? prepared = await _writeImage(
+              image,
+              writtenPaths,
+            );
+            if (prepared != null) questionImages.add(prepared);
+          }
+          final List<_PreparedImage> answerImages = <_PreparedImage>[];
+          for (final GeneratedCardImage image in card.answerImages) {
+            final _PreparedImage? prepared = await _writeImage(
+              image,
+              writtenPaths,
+            );
+            if (prepared != null) answerImages.add(prepared);
+          }
           final String cardId = await _insertCard(
             card: card,
             deckId: resolvedDeckId,
             epochNow: epochNow,
-            mediaId: image?.id,
+            questionMediaIds: <String>[
+              for (final _PreparedImage image in questionImages) image.id,
+            ],
+            answerMediaIds: <String>[
+              for (final _PreparedImage image in answerImages) image.id,
+            ],
           );
-          if (image != null) await _insertMedia(image, cardId);
+          for (final _PreparedImage image in questionImages) {
+            await _insertMedia(image, cardId);
+          }
+          for (final _PreparedImage image in answerImages) {
+            await _insertMedia(image, cardId);
+          }
         }
 
         await (database.update(
@@ -153,6 +179,12 @@ class DriftGenerationCardStore implements GenerationCardStore {
     List<String> writtenPaths,
   ) async {
     if (image == null) return null;
+    // Пустые/повреждённые байты или MIME, не совпадающий с сигнатурой, — не
+    // изображение: не пишем файл и не создаём строку `media` (7.19).
+    if (!isSupportedImageBytes(image.bytes) ||
+        !imageBytesMatchMediaType(image.bytes, image.mediaType)) {
+      return null;
+    }
     final MediaStore? store = mediaStore;
     if (store == null) {
       throw StateError('MediaStore не настроен для иллюстрации карточки');
@@ -168,7 +200,6 @@ class DriftGenerationCardStore implements GenerationCardStore {
         sourceUrl: image.sourceUrl,
         author: image.author,
         license: image.license,
-        isPlaceholder: image.isPlaceholder,
         query: image.query.trim().isEmpty ? null : image.query.trim(),
         fallbackQuery: image.fallbackQuery,
         kind: image.kind,
@@ -217,10 +248,10 @@ class DriftGenerationCardStore implements GenerationCardStore {
     required GeneratedCard card,
     required String deckId,
     required int epochNow,
-    required String? mediaId,
+    required List<String> questionMediaIds,
+    required List<String> answerMediaIds,
   }) async {
     final String tagsJson = jsonEncode(card.tags);
-    final List<String> mediaIds = <String>[?mediaId];
     if (card.cardType == CardType.basicReversed) {
       final String firstId = _uuid.v4();
       final String secondId = _uuid.v4();
@@ -234,11 +265,13 @@ class DriftGenerationCardStore implements GenerationCardStore {
               back: card.back,
               card: card,
               tagsJson: tagsJson,
-              mediaIds: mediaIds,
+              questionMediaIds: questionMediaIds,
+              answerMediaIds: answerMediaIds,
               siblingId: secondId,
               epochNow: epochNow,
             ),
           );
+      // Обратная карточка пары: её вопрос — исходный ответ (ADR-042).
       await database
           .into(database.cards)
           .insert(
@@ -249,7 +282,8 @@ class DriftGenerationCardStore implements GenerationCardStore {
               back: card.front,
               card: card,
               tagsJson: tagsJson,
-              mediaIds: mediaIds,
+              questionMediaIds: answerMediaIds,
+              answerMediaIds: questionMediaIds,
               siblingId: firstId,
               epochNow: epochNow,
             ),
@@ -267,7 +301,8 @@ class DriftGenerationCardStore implements GenerationCardStore {
             back: card.back,
             card: card,
             tagsJson: tagsJson,
-            mediaIds: mediaIds,
+            questionMediaIds: questionMediaIds,
+            answerMediaIds: answerMediaIds,
             siblingId: null,
             epochNow: epochNow,
           ),
@@ -288,7 +323,8 @@ class DriftGenerationCardStore implements GenerationCardStore {
     required String back,
     required GeneratedCard card,
     required String tagsJson,
-    required List<String> mediaIds,
+    required List<String> questionMediaIds,
+    required List<String> answerMediaIds,
     required String? siblingId,
     required int epochNow,
   }) {
@@ -304,7 +340,12 @@ class DriftGenerationCardStore implements GenerationCardStore {
       hint: Value<String?>(card.hint),
       cardType: card.cardType.wireName,
       tagsJson: Value<String>(tagsJson),
-      mediaJson: Value<String>(jsonEncode(mediaIds)),
+      mediaJson: Value<String>(
+        CardMediaSides(
+          question: questionMediaIds,
+          answer: answerMediaIds,
+        ).encode(),
+      ),
       occlusionJson: Value<String?>(card.occlusionJson),
       sourceExcerpt: Value<String?>(card.sourceExcerpt),
       state: CardState.newCard.wireName,

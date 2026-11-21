@@ -1113,6 +1113,14 @@
       }
     }
   },
+  "generationIssueImageDuplicatedSide": "Одно изображение указано на обеих сторонах — оставлено у вопроса",
+  "@generationIssueImageDuplicatedSide": {
+    "description": "Пометка: дубль image id между сторонами (7.19)."
+  },
+  "generationIssueImageInvalid": "Изображение повреждено и не сохранено",
+  "@generationIssueImageInvalid": {
+    "description": "Пометка: пустые байты или MIME не по сигнатуре (7.19)."
+  },
   "generationIssueImageIdUnknown": "Изображение не найдено в файлах — карточка без картинки",
   "@generationIssueImageIdUnknown": {
     "description": "Пометка fix-gen: image_id модели не найден в каталоге <images>."
@@ -1627,9 +1635,49 @@
   "@cardFormImageSection": {
     "description": "Заголовок секции изображения карточки любого типа (ADR-028, итерация 7.12)."
   },
-  "cardFormImageHint": "Картинка показывается вместе с вопросом и ответом. Маски нужны, только если части изображения надо скрыть.",
+  "cardFormImageHint": "Изображения вопроса видны до переворота, изображения ответа — только после. Маски нужны, только если части изображения надо скрыть.",
   "@cardFormImageHint": {
-    "description": "Пояснение: изображение не требует масок."
+    "description": "Пояснение: стороны изображений независимы (ADR-042)."
+  },
+  "cardFormQuestionImages": "Изображения вопроса",
+  "@cardFormQuestionImages": {
+    "description": "Секция изображений лицевой стороны."
+  },
+  "cardFormAnswerImages": "Изображения ответа",
+  "@cardFormAnswerImages": {
+    "description": "Секция изображений обратной стороны."
+  },
+  "cardFormAddQuestionImage": "Добавить к вопросу",
+  "@cardFormAddQuestionImage": {
+    "description": "Кнопка добавления изображения на лицевую сторону."
+  },
+  "cardFormAddAnswerImage": "Добавить к ответу",
+  "@cardFormAddAnswerImage": {
+    "description": "Кнопка добавления изображения на обратную сторону."
+  },
+  "cardFormMoveToAnswer": "На сторону ответа",
+  "@cardFormMoveToAnswer": {
+    "description": "Перенос изображения вопроса на обратную сторону."
+  },
+  "cardFormMoveToQuestion": "На сторону вопроса",
+  "@cardFormMoveToQuestion": {
+    "description": "Перенос изображения ответа на лицевую сторону."
+  },
+  "cardFormMoveImageUp": "Выше",
+  "@cardFormMoveImageUp": {
+    "description": "Изменение порядка изображения: выше."
+  },
+  "cardFormMoveImageDown": "Ниже",
+  "@cardFormMoveImageDown": {
+    "description": "Изменение порядка изображения: ниже."
+  },
+  "cardFormEmptyQuestionImages": "Нет изображений вопроса",
+  "@cardFormEmptyQuestionImages": {
+    "description": "Пустой слот лицевой стороны (не заглушка, не картинка)."
+  },
+  "cardFormEmptyAnswerImages": "Нет изображений ответа",
+  "@cardFormEmptyAnswerImages": {
+    "description": "Пустой слот обратной стороны (не заглушка, не картинка)."
   },
   "cardFormRemoveImage": "Удалить изображение",
   "@cardFormRemoveImage": {
@@ -2423,9 +2471,13 @@
   "@cardImageSemantics": {
     "description": "Подпись изображения карточки для screen reader."
   },
-  "cardImagePlaceholderSemantics": "Временная картинка карточки",
-  "@cardImagePlaceholderSemantics": {
-    "description": "Подпись заглушки изображения карточки для screen reader."
+  "cardImageUnavailable": "Изображение недоступно",
+  "@cardImageUnavailable": {
+    "description": "Файл изображения не найден — явное состояние без подмены (7.19)."
+  },
+  "cardImageLoadFailed": "Не удалось показать изображение",
+  "@cardImageLoadFailed": {
+    "description": "Ошибка декодирования изображения карточки (7.19)."
   },
   "cardImageFullscreenTitle": "Изображение",
   "@cardImageFullscreenTitle": {

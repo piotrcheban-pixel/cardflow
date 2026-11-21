@@ -3,17 +3,22 @@
 /// Единая для всех провайдеров; проекции под возможности провайдера —
 /// `provider_schema.dart`. Документация — `docs/api-schema.md`.
 ///
-/// Итерация 7.14 (`gen-ru-v6`): у карточки появился обязательный объект
-/// `image` (`query`, `fallback_query`, `kind`). Строгая схема провайдера
-/// требует его; локальная проверка (`localCardItemSchema`) принимает и v6, и
-/// ответ v5 с `image_query`, чтобы старые модели/провайдеры не теряли карточки.
+/// Итерация 7.19 (`gen-ru-v9`, ADR-042): модель назначает изображения обеим
+/// сторонам карточки независимо — обязательные массивы `question_image_ids` и
+/// `answer_image_ids` (могут быть пустыми) и необязательный объект `image` для
+/// внешнего поиска настоящей фотографии со стороной `side`. Прежнее поле
+/// `image_id` (одно на карточку) удалено из строгой схемы; локальная терпимая
+/// схема принимает v5–v9, чтобы старые ответы не теряли карточки.
 library;
 
 /// Имя схемы для `response_format.json_schema.name` (OpenAI).
 const String cardsResponseSchemaName = 'cards_response';
 
-/// Виды иллюстрации схемы `gen-ru-v6`.
+/// Виды иллюстрации схемы `gen-ru-v6`/`gen-ru-v9`.
 const List<String> kImageKinds = <String>['photo', 'diagram', 'illustration'];
+
+/// Стороны внешнего поиска изображения (схема `gen-ru-v9`).
+const List<String> kImageSides = <String>['question', 'answer', 'none'];
 
 /// Каноническая схема A8.4 (валидируется `json_schema`).
 ///
@@ -48,20 +53,26 @@ const Map<String, Object?> canonicalCardsResponseSchema = <String, Object?>{
           'source_file': <String, Object?>{
             'type': <String>['string', 'null'],
           },
-          'image_id': <String, Object?>{
-            'type': <String>['string', 'null'],
-          },
           'section_id': <String, Object?>{
             'type': <String>['string', 'null'],
           },
+          'question_image_ids': <String, Object?>{
+            'type': 'array',
+            'items': <String, Object?>{'type': 'string'},
+          },
+          'answer_image_ids': <String, Object?>{
+            'type': 'array',
+            'items': <String, Object?>{'type': 'string'},
+          },
           'image': <String, Object?>{
-            'type': 'object',
+            'type': <String>['object', 'null'],
             'properties': <String, Object?>{
               'query': <String, Object?>{'type': 'string'},
               'fallback_query': <String, Object?>{'type': 'string'},
               'kind': <String, Object?>{'type': 'string', 'enum': kImageKinds},
+              'side': <String, Object?>{'type': 'string', 'enum': kImageSides},
             },
-            'required': <String>['query', 'fallback_query', 'kind'],
+            'required': <String>['query', 'fallback_query', 'kind', 'side'],
             'additionalProperties': false,
           },
         },
@@ -73,8 +84,9 @@ const Map<String, Object?> canonicalCardsResponseSchema = <String, Object?>{
           'card_type',
           'source_excerpt',
           'source_file',
-          'image_id',
           'section_id',
+          'question_image_ids',
+          'answer_image_ids',
           'image',
         ],
         'additionalProperties': false,
@@ -96,7 +108,8 @@ Map<String, Object?> canonicalCardItemSchema() {
   return _copyMap(items['items']! as Map<String, Object?>);
 }
 
-/// Локальная терпимая схема карточки: v6 (`image`) и v5 (`image_query`).
+/// Локальная терпимая схема карточки: v9 (`*_image_ids`, `image.side`) и
+/// v5–v8 (`image_id`, `image_query`, `image` без стороны).
 ///
 /// Обязательны только структурные поля (`front`, `back`, `card_type`);
 /// остальные проверяет контентный валидатор, а недостающее поле картинки не
@@ -129,6 +142,14 @@ Map<String, Object?> localCardItemSchema() {
       },
       'image': <String, Object?>{
         'type': <String>['object', 'null'],
+      },
+      'question_image_ids': <String, Object?>{
+        'type': <String>['array', 'null'],
+        'items': <String, Object?>{'type': 'string'},
+      },
+      'answer_image_ids': <String, Object?>{
+        'type': <String>['array', 'null'],
+        'items': <String, Object?>{'type': 'string'},
       },
       'section_id': <String, Object?>{
         'type': <String>['string', 'null'],

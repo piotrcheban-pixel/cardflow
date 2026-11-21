@@ -2,8 +2,9 @@
 ///
 /// Байты живут в памяти до импорта карточки; в `MediaStore` их записывает
 /// `DriftGenerationCardStore` только для выбранных пользователем карточек.
-/// С 7.14 вместе с байтами хранятся метаданные атрибуции (провайдер, автор,
-/// лицензия) и флаг `isPlaceholder` для локальной заглушки.
+/// Вместе с байтами хранятся метаданные атрибуции (провайдер, автор, лицензия).
+/// С 7.19 синтезированных изображений нет: `isPlaceholder` удалён, а байты
+/// проверяются по сигнатуре (`image_bytes.dart`) до записи (ADR-041).
 /// Домен не зависит от Flutter.
 library;
 
@@ -26,7 +27,6 @@ class GeneratedCardImage {
     this.provider,
     this.author,
     this.license,
-    this.isPlaceholder = false,
   });
 
   /// Содержимое изображения (JPEG/PNG/WebP).
@@ -44,14 +44,13 @@ class GeneratedCardImage {
   /// Более общий запасной запрос модели; `null` — не задан.
   final String? fallbackQuery;
 
-  /// URL, откуда скачано изображение; `null` — изображение из файла/заглушка.
+  /// URL, откуда скачано изображение; `null` — изображение из файла.
   final String? sourceUrl;
 
   /// Готовая строка атрибуции для показа («автор · лицензия»), если есть.
   final String? attribution;
 
-  /// Провайдер поиска (`wikimedia`, `openverse`, `pixabay`, `pexels`, `file`,
-  /// `placeholder`).
+  /// Провайдер поиска (`wikimedia`, `openverse`, `pixabay`, `pexels`, `file`).
   final String? provider;
 
   /// Автор изображения (для полноэкранного просмотра).
@@ -59,9 +58,6 @@ class GeneratedCardImage {
 
   /// Лицензия изображения (CC BY-SA 4.0, CC0, Public domain, …).
   final String? license;
-
-  /// Изображение — локальная заглушка (картинку не удалось найти/скачать).
-  final bool isPlaceholder;
 
   /// MIME-тип строкой (`image/jpeg`, `image/png`, `image/webp`).
   String get mimeType => mediaType.mimeType;
@@ -86,7 +82,6 @@ class GeneratedCardImage {
     String? provider,
     String? author,
     String? license,
-    bool? isPlaceholder,
   }) {
     return GeneratedCardImage(
       bytes: bytes ?? this.bytes,
@@ -99,13 +94,11 @@ class GeneratedCardImage {
       provider: provider ?? this.provider,
       author: author ?? this.author,
       license: license ?? this.license,
-      isPlaceholder: isPlaceholder ?? this.isPlaceholder,
     );
   }
 
   @override
   String toString() =>
       'GeneratedCardImage(${mediaType.mimeType}, ${bytes.length} байт, '
-      'query: $query, kind: ${kind.wireName}, provider: $provider, '
-      'placeholder: $isPlaceholder)';
+      'query: $query, kind: ${kind.wireName}, provider: $provider)';
 }

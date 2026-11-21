@@ -65,10 +65,14 @@ class CardDraft {
     this.tags = const <String>[],
     this.cardType = CardType.basic,
     this.sourceExcerpt,
-    this.mediaIds = const <String>[],
+    this.questionMediaIds = const <String>[],
+    this.answerMediaIds = const <String>[],
     this.latex,
     this.occlusionJson,
-    this.imageUpload,
+    this.questionUploads = const <CardImageUpload>[],
+    this.answerUploads = const <CardImageUpload>[],
+    this.questionMediaOrder,
+    this.answerMediaOrder,
   });
 
   /// Пустой черновик новой карточки.
@@ -105,12 +109,15 @@ class CardDraft {
   /// Цитата для кнопки «Почему?».
   final String? sourceExcerpt;
 
-  /// Идентификаторы существующего медиа карточки.
+  /// Существующие изображения лицевой стороны (вопрос).
   ///
-  /// Применимы к **любому** типу карточки (ADR-028, итерация 7.12): у
-  /// `basic`/`basic_reversed`/`cloze` это иллюстрация, у occlusion-карточки —
-  /// изображение под маски. Первый id — основное изображение.
-  final List<String> mediaIds;
+  /// Применимы к **любому** типу карточки (ADR-028): у occlusion-карточки
+  /// первое изображение вопроса — холст под маски. Независимы от стороны
+  /// ответа (ADR-042).
+  final List<String> questionMediaIds;
+
+  /// Существующие изображения обратной стороны (ответ).
+  final List<String> answerMediaIds;
 
   /// Дополнительная LaTeX-разметка из импорта.
   final String? latex;
@@ -118,14 +125,32 @@ class CardDraft {
   /// Сериализованные маски Image Occlusion.
   final String? occlusionJson;
 
-  /// Новое изображение, которое репозиторий должен сохранить.
-  final CardImageUpload? imageUpload;
+  /// Новые изображения лицевой стороны, которые сохранит репозиторий.
+  final List<CardImageUpload> questionUploads;
 
-  /// Первый идентификатор медиа (основное изображение); `null` — медиа нет.
-  String? get primaryMediaId => mediaIds.isEmpty ? null : mediaIds.first;
+  /// Новые изображения обратной стороны, которые сохранит репозиторий.
+  final List<CardImageUpload> answerUploads;
 
-  /// Есть ли у черновика изображение — существующее или новое.
-  bool get hasImage => mediaIds.isNotEmpty || imageUpload != null;
+  /// Порядок изображений вопроса: хранимые id и токены `upload:<index>`
+  /// (см. `uploadMediaToken`). `null` — сначала хранимые, затем новые.
+  final List<String>? questionMediaOrder;
+
+  /// Порядок изображений ответа (те же правила).
+  final List<String>? answerMediaOrder;
+
+  /// Все существующие id: вопрос, затем ответ.
+  List<String> get mediaIds => <String>[...questionMediaIds, ...answerMediaIds];
+
+  /// Первое изображение черновика; `null` — медиа нет.
+  String? get primaryMediaId => questionMediaIds.isNotEmpty
+      ? questionMediaIds.first
+      : (answerMediaIds.isEmpty ? null : answerMediaIds.first);
+
+  /// Есть ли у черновика изображение — существующее или новое (любая сторона).
+  bool get hasImage =>
+      mediaIds.isNotEmpty ||
+      questionUploads.isNotEmpty ||
+      answerUploads.isNotEmpty;
 
   /// Разбирает строку тегов из формы: запятые → trim → убрать `#` → пустые
   /// и дубликаты. Порядок сохраняется (SPEC A8.4).
@@ -155,10 +180,18 @@ class CardDraft {
       tags: parseTags(tags.join(',')),
       cardType: cardType,
       sourceExcerpt: normalizedExcerpt.isEmpty ? null : normalizedExcerpt,
-      mediaIds: List<String>.unmodifiable(mediaIds),
+      questionMediaIds: List<String>.unmodifiable(questionMediaIds),
+      answerMediaIds: List<String>.unmodifiable(answerMediaIds),
       latex: normalizedLatex.isEmpty ? null : normalizedLatex,
       occlusionJson: occlusionJson,
-      imageUpload: imageUpload,
+      questionUploads: List<CardImageUpload>.unmodifiable(questionUploads),
+      answerUploads: List<CardImageUpload>.unmodifiable(answerUploads),
+      questionMediaOrder: questionMediaOrder == null
+          ? null
+          : List<String>.unmodifiable(questionMediaOrder!),
+      answerMediaOrder: answerMediaOrder == null
+          ? null
+          : List<String>.unmodifiable(answerMediaOrder!),
     );
   }
 
@@ -188,7 +221,7 @@ class CardDraft {
       errors[CardDraftField.front] = CardValidationError.clozeMissing;
     }
     if (value.occlusionJson != null) {
-      if (value.mediaIds.isEmpty && value.imageUpload == null) {
+      if (value.questionMediaIds.isEmpty && value.questionUploads.isEmpty) {
         errors[CardDraftField.occlusion] =
             CardValidationError.occlusionImageMissing;
       } else {
@@ -226,10 +259,14 @@ class CardDraft {
           _listEquals(other.tags, tags) &&
           other.cardType == cardType &&
           other.sourceExcerpt == sourceExcerpt &&
-          _listEquals(other.mediaIds, mediaIds) &&
+          _listEquals(other.questionMediaIds, questionMediaIds) &&
+          _listEquals(other.answerMediaIds, answerMediaIds) &&
           other.latex == latex &&
           other.occlusionJson == occlusionJson &&
-          other.imageUpload == imageUpload;
+          _listEqualsUploads(other.questionUploads, questionUploads) &&
+          _listEqualsUploads(other.answerUploads, answerUploads) &&
+          _listEqualsNullable(other.questionMediaOrder, questionMediaOrder) &&
+          _listEqualsNullable(other.answerMediaOrder, answerMediaOrder);
 
   @override
   int get hashCode => Object.hash(
@@ -239,11 +276,31 @@ class CardDraft {
     Object.hashAll(tags),
     cardType,
     sourceExcerpt,
-    Object.hashAll(mediaIds),
+    Object.hashAll(questionMediaIds),
+    Object.hashAll(answerMediaIds),
     latex,
     occlusionJson,
-    imageUpload,
+    Object.hashAll(questionUploads),
+    Object.hashAll(answerUploads),
+    questionMediaOrder == null ? null : Object.hashAll(questionMediaOrder!),
+    answerMediaOrder == null ? null : Object.hashAll(answerMediaOrder!),
   );
+
+  static bool _listEqualsNullable(List<String>? a, List<String>? b) {
+    if (a == null || b == null) return a == b;
+    return _listEquals(a, b);
+  }
+
+  static bool _listEqualsUploads(
+    List<CardImageUpload> a,
+    List<CardImageUpload> b,
+  ) {
+    if (a.length != b.length) return false;
+    for (var index = 0; index < a.length; index++) {
+      if (!identical(a[index], b[index]) && a[index] != b[index]) return false;
+    }
+    return true;
+  }
 
   static bool _listEquals(List<String> a, List<String> b) {
     if (identical(a, b)) return true;

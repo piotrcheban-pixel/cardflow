@@ -898,6 +898,14 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String get generationIssueImageDuplicatedSide =>
+      'Одно изображение указано на обеих сторонах — оставлено у вопроса';
+
+  @override
+  String get generationIssueImageInvalid =>
+      'Изображение повреждено и не сохранено';
+
+  @override
   String get generationIssueImageIdUnknown =>
       'Изображение не найдено в файлах — карточка без картинки';
 
@@ -1381,7 +1389,37 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get cardFormImageHint =>
-      'Картинка показывается вместе с вопросом и ответом. Маски нужны, только если части изображения надо скрыть.';
+      'Изображения вопроса видны до переворота, изображения ответа — только после. Маски нужны, только если части изображения надо скрыть.';
+
+  @override
+  String get cardFormQuestionImages => 'Изображения вопроса';
+
+  @override
+  String get cardFormAnswerImages => 'Изображения ответа';
+
+  @override
+  String get cardFormAddQuestionImage => 'Добавить к вопросу';
+
+  @override
+  String get cardFormAddAnswerImage => 'Добавить к ответу';
+
+  @override
+  String get cardFormMoveToAnswer => 'На сторону ответа';
+
+  @override
+  String get cardFormMoveToQuestion => 'На сторону вопроса';
+
+  @override
+  String get cardFormMoveImageUp => 'Выше';
+
+  @override
+  String get cardFormMoveImageDown => 'Ниже';
+
+  @override
+  String get cardFormEmptyQuestionImages => 'Нет изображений вопроса';
+
+  @override
+  String get cardFormEmptyAnswerImages => 'Нет изображений ответа';
 
   @override
   String get cardFormRemoveImage => 'Удалить изображение';
@@ -2004,7 +2042,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get cardImageSemantics => 'Изображение карточки';
 
   @override
-  String get cardImagePlaceholderSemantics => 'Временная картинка карточки';
+  String get cardImageUnavailable => 'Изображение недоступно';
+
+  @override
+  String get cardImageLoadFailed => 'Не удалось показать изображение';
 
   @override
   String get cardImageFullscreenTitle => 'Изображение';

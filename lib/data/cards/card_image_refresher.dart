@@ -1,13 +1,13 @@
 /// Повторный поиск картинки карточки (итерация 7.14, шаг 3).
 ///
-/// Две операции:
-/// - «Найти картинку заново» для конкретного медиа (кнопка в редакторе);
-/// - фоновый ретрай заглушек при следующем запуске с сетью.
+/// Операция «Найти картинку заново» для конкретного медиа (кнопка в
+/// редакторе). Метаданные (`<путь>.meta.json`) хранят исходный запрос модели и
+/// вид иллюстрации, поэтому повтор не требует новых токенов генерации. При
+/// успехе файл заменяется на месте, строка `media` обновляется. Ошибка/пустая
+/// выдача — тихий `notFound`, карточка не страдает.
 ///
-/// Метаданные (`<путь>.meta.json`) хранят исходный запрос модели и вид
-/// иллюстрации, поэтому повтор не требует новых токенов генерации. При успехе
-/// файл заменяется на месте, строка `media` обновляется, флаг заглушки
-/// снимается. Ошибка/пустая выдача — тихий `notFound`, карточка не страдает.
+/// С 7.19 (ADR-041) заглушек нет: фонового ретрая заглушек больше не
+/// существует, а существующие заглушки удаляет `PlaceholderMediaPurger`.
 library;
 
 import 'package:drift/drift.dart';
@@ -52,43 +52,6 @@ class CardImageRefresher {
     return _refresh(row, metadata, query);
   }
 
-  /// Пробует заменить до [limit] заглушек настоящими картинками.
-  ///
-  /// Порядок — порядок файлов метаданных (детерминированный); ошибки одного
-  /// медиа не мешают остальным. Возвращает число заменённых картинок.
-  Future<int> retryPlaceholders({int limit = 5}) async {
-    if (limit <= 0) return 0;
-    var updated = 0;
-    final List<String> paths = await mediaStore.listMetadata();
-    for (final String path in paths) {
-      if (updated >= limit) break;
-      final String mediaPath = path.substring(
-        0,
-        path.length - MediaStore.metadataSuffix.length,
-      );
-      final MediaMetadata? metadata = await mediaStore.readMetadata(mediaPath);
-      if (metadata == null || !metadata.isPlaceholder) continue;
-      final String? query = metadata.query?.trim();
-      if (query == null || query.isEmpty) continue;
-      final MediaRow? row = await (database.select(
-        database.media,
-      )..where((table) => table.path.equals(mediaPath))).getSingleOrNull();
-      if (row == null) continue;
-      try {
-        final CardImageRefreshResult result = await _refresh(
-          row,
-          metadata,
-          query,
-        );
-        if (result == CardImageRefreshResult.updated) updated++;
-      } on Object {
-        // Фоновая задача: сбой одного файла не должен ломать остальные.
-        continue;
-      }
-    }
-    return updated;
-  }
-
   /// Общий путь обновления: поиск → запись файла → строка `media` → метаданные.
   Future<CardImageRefreshResult> _refresh(
     MediaRow row,
@@ -127,7 +90,6 @@ class CardImageRefresher {
         sourceUrl: image.sourceUrl,
         author: image.author,
         license: image.license,
-        isPlaceholder: image.isPlaceholder,
         query: image.query.trim().isEmpty ? query : image.query,
         fallbackQuery: image.fallbackQuery ?? metadata.fallbackQuery,
         kind: image.kind,

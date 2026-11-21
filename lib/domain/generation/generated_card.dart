@@ -1,6 +1,7 @@
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/generation/card_image_kind.dart';
 import 'package:cardflow/domain/generation/generated_card_image.dart';
+import 'package:cardflow/domain/generation/generated_card_image_side.dart';
 
 /// Пометки качества сгенерированной карточки (SPEC A8.4).
 ///
@@ -31,15 +32,16 @@ enum CardIssueCode {
   /// Occlusion без найденной иллюстрации: карточка стала обычной (итерация 7.9).
   occlusionImageMissing,
 
-  /// Иллюстрация не найдена: поиск по `image_query` (модели или выведенному из
-  /// текста) не дал результата (ADR-028, итерация 7.12).
+  /// Изображение не найдено: внешний поиск не дал результата (ADR-028).
+  ///
+  /// С 7.19 карточка остаётся **без** изображения; заглушка не создаётся
+  /// (ADR-041).
   imageNotFound,
 
-  /// `image_id` не найден в каталоге `<images>` — поле обнулено (fix-gen).
+  /// `image_id`/`*_image_ids` вне каталога `<images>` — id отброшен (fix-gen).
   imageIdUnknown,
 
-  /// `image_query` сброшен локальным валидатором: не латиница, длиннее 7 слов,
-  /// абстрактное понятие или задан `image_id` (fix-gen).
+  /// `image_query` сброшен локальным валидатором (fix-gen).
   imageQueryAdjusted,
 
   /// Абстрактное понятие (аксиома/закон/теорема/формула): картинку не ищем.
@@ -64,11 +66,21 @@ enum CardIssueCode {
 
   /// Markdown-выделение в тексте карточки (`**…**`, `_…_`, `#`).
   markdownInText,
+
+  /// Один image id указан и для вопроса, и для ответа: оставлен на стороне
+  /// вопроса, из ответа удалён (7.19).
+  imageDuplicatedSide,
+
+  /// Байты изображения пустые или не совпадают с заявленным MIME: изображение
+  /// не сохранено (7.19).
+  imageInvalid,
 }
 
 /// Карточка, полученная от модели и прошедшая локальную валидацию (SPEC A8.4).
 ///
-/// Immutable-модель домена: без Flutter, БД и UI.
+/// Immutable-модель домена: без Flutter, БД и UI. С 7.19 изображения
+/// хранятся отдельно для вопроса и ответа (ADR-042): модель может назначить
+/// разные изображения сторонам, несколько на сторону или ни одного.
 class GeneratedCard {
   /// Создаёт карточку-кандидата.
   const GeneratedCard({
@@ -83,8 +95,11 @@ class GeneratedCard {
     this.imageQuery,
     this.imageFallbackQuery,
     this.imageKind = GeneratedCardImageKind.photo,
-    this.imageId,
-    this.image,
+    this.imageSide = GeneratedCardImageSide.none,
+    this.questionImageIds = const <String>[],
+    this.answerImageIds = const <String>[],
+    this.questionImages = const <GeneratedCardImage>[],
+    this.answerImages = const <GeneratedCardImage>[],
     this.isOcclusion = false,
     this.occlusionJson,
     this.sectionId,
@@ -105,7 +120,7 @@ class GeneratedCard {
   /// Теги (нормализованные: до 3, без `#`).
   final List<String> tags;
 
-  /// Цитата для кнопки «Почему?» (SPEC A6.4); `null`, если не найдена в исходнике.
+  /// Цитата для кнопки «Почему?» (SPEC A6.4).
   final String? sourceExcerpt;
 
   /// Имя файла/раздела-источника.
@@ -117,24 +132,29 @@ class GeneratedCard {
   /// Короткий id раздела плана (`section_id`, v8) — подсказка, не контракт.
   final String? sectionId;
 
-  /// Краткий поисковый запрос на английском (итерация 7.9, ADR-023;
-  /// схема `image.query` в `gen-ru-v6`, итерация 7.14).
+  /// Краткий поисковый запрос на английском (`image.query`, v9).
   final String? imageQuery;
 
-  /// Более общий запасной запрос модели (`image.fallback_query`, 7.14).
+  /// Более общий запасной запрос модели (`image.fallback_query`).
   final String? imageFallbackQuery;
 
-  /// Вид иллюстрации (`image.kind`, 7.14): фото, схема или метафора.
+  /// Вид иллюстрации (`image.kind`): фото, схема или метафора.
   final GeneratedCardImageKind imageKind;
 
-  /// Идентификатор изображения из `<images>` прикреплённых файлов (fix-gen).
-  ///
-  /// Хранится только в памяти до импорта: pipeline превращает его в [image],
-  /// байты пишутся в `media` при импорте, колонки БД не меняются.
-  final String? imageId;
+  /// Сторона, выбранная моделью для внешнего поиска (`image.side`, v9).
+  final GeneratedCardImageSide imageSide;
 
-  /// Найденная и скачанная иллюстрация; `null` — не искали/не нашли.
-  final GeneratedCardImage? image;
+  /// Идентификаторы изображений вопроса из каталога `<images>` (v9).
+  final List<String> questionImageIds;
+
+  /// Идентификаторы изображений ответа из каталога `<images>` (v9).
+  final List<String> answerImageIds;
+
+  /// Разрешённые изображения вопроса (байты из каталога/поиска).
+  final List<GeneratedCardImage> questionImages;
+
+  /// Разрешённые изображения ответа.
+  final List<GeneratedCardImage> answerImages;
 
   /// Модель запросила формат occlusion (`card_type: "occlusion"`).
   ///
@@ -144,10 +164,18 @@ class GeneratedCard {
   /// JSON масок occlusion для импорта (итерация 7.9).
   final String? occlusionJson;
 
+  /// Первое изображение карточки (вопрос, иначе ответ); `null` — нет.
+  GeneratedCardImage? get image => questionImages.isNotEmpty
+      ? questionImages.first
+      : (answerImages.isEmpty ? null : answerImages.first);
+
+  /// Есть ли изображения хотя бы у одной стороны.
+  bool get hasImages => questionImages.isNotEmpty || answerImages.isNotEmpty;
+
   /// Есть ли пометки, требующие внимания пользователя.
   bool get hasIssues => issues.isNotEmpty;
 
-  /// Копия с изменёнными полями (image/occlusion — результат поиска 7.9).
+  /// Копия с изменёнными полями.
   GeneratedCard copyWith({
     String? front,
     String? back,
@@ -160,8 +188,11 @@ class GeneratedCard {
     String? imageQuery,
     String? imageFallbackQuery,
     GeneratedCardImageKind? imageKind,
-    String? imageId,
-    GeneratedCardImage? image,
+    GeneratedCardImageSide? imageSide,
+    List<String>? questionImageIds,
+    List<String>? answerImageIds,
+    List<GeneratedCardImage>? questionImages,
+    List<GeneratedCardImage>? answerImages,
     bool? isOcclusion,
     String? occlusionJson,
   }) {
@@ -177,14 +208,17 @@ class GeneratedCard {
       imageQuery: imageQuery ?? this.imageQuery,
       imageFallbackQuery: imageFallbackQuery ?? this.imageFallbackQuery,
       imageKind: imageKind ?? this.imageKind,
-      imageId: imageId ?? this.imageId,
-      image: image ?? this.image,
+      imageSide: imageSide ?? this.imageSide,
+      questionImageIds: questionImageIds ?? this.questionImageIds,
+      answerImageIds: answerImageIds ?? this.answerImageIds,
+      questionImages: questionImages ?? this.questionImages,
+      answerImages: answerImages ?? this.answerImages,
       isOcclusion: isOcclusion ?? this.isOcclusion,
       occlusionJson: occlusionJson ?? this.occlusionJson,
     );
   }
 
-  /// Копия с явно сброшенными `imageId`/`imageQuery` (без «умолчаний» copyWith).
+  /// Копия с явно сброшенными `imageId`/`image` (без «умолчаний» copyWith).
   GeneratedCard clearedImageSelection() {
     return GeneratedCard(
       front: front,
@@ -198,8 +232,7 @@ class GeneratedCard {
       imageQuery: null,
       imageFallbackQuery: null,
       imageKind: imageKind,
-      imageId: null,
-      image: image,
+      imageSide: GeneratedCardImageSide.none,
       isOcclusion: isOcclusion,
       occlusionJson: occlusionJson,
     );
@@ -220,8 +253,11 @@ class GeneratedCard {
         other.imageQuery == imageQuery &&
         other.imageFallbackQuery == imageFallbackQuery &&
         other.imageKind == imageKind &&
-        other.imageId == imageId &&
-        identical(other.image, image) &&
+        other.imageSide == imageSide &&
+        _listEquals(other.questionImageIds, questionImageIds) &&
+        _listEquals(other.answerImageIds, answerImageIds) &&
+        identical(other.questionImages, questionImages) &&
+        identical(other.answerImages, answerImages) &&
         other.isOcclusion == isOcclusion &&
         other.occlusionJson == occlusionJson;
   }
@@ -239,8 +275,11 @@ class GeneratedCard {
     imageQuery,
     imageFallbackQuery,
     imageKind,
-    imageId,
-    identityHashCode(image),
+    imageSide,
+    Object.hashAll(questionImageIds),
+    Object.hashAll(answerImageIds),
+    identityHashCode(questionImages),
+    identityHashCode(answerImages),
     isOcclusion,
     occlusionJson,
   );

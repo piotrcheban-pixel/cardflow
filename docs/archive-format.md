@@ -66,6 +66,8 @@ cardflow-deck.zip
       "hint": null,
       "card_type": "basic",
       "tags": ["глаголы"],
+      "question_media_ids": ["c0ffee00-3333-4444-8555-001122334455"],
+      "answer_media_ids": [],
       "media": [],
       "latex": null,
       "occlusion": null,
@@ -126,6 +128,8 @@ cardflow-deck.zip
 | `card_type` | `basic` \| `basic_reversed` \| `cloze` | да | Иное → `invalidCards`. |
 | `tags` | string[] | да | До 3 (лишние не отбрасываются молча при импорте — валидируется до 3; нарушение → `invalidCards`). |
 | `media` | array объектов `{id, card_id, path, mime_type}` | да | Пустой массив, если медиа нет. |
+| `question_media_ids` | array id из `media` | нет | Изображения лицевой стороны (7.19). Если поля нет — все `media` считаются изображениями вопроса (совместимость со старыми архивами). |
+| `answer_media_ids` | array id из `media` | нет | Изображения обратной стороны (7.19); видны только после переворота. |
 | `latex` | string \| null | да | |
 | `occlusion` | string \| null | да | JSON масок (сырая строка SPEC A5). |
 | `source_doc_id` | string \| null | да | |
@@ -149,7 +153,10 @@ cardflow-deck.zip
 
 - `shape` — `rectangle` или `ellipse`; `x/y/width/height` — доли исходного изображения (0..1),
   `width/height > 0`, маска не выходит за границы.
-- Изображение — первый элемент `media`/`media_json` карточки; отдельной ссылки в JSON нет.
+- Стороны изображений (7.19): `question_media_ids` — лицевая сторона, `answer_media_ids` —
+  обратная; вместе они обязаны покрывать `media` без повторов. Старые архивы без этих
+  полей читаются как «все изображения — у вопроса». В БД то же соответствие хранится в
+  `media_json` v2 (`{"version":2,"question":[…],"answer":[…]}`).
 - Сырое значение переносится архивом без нормализации; приложение валидирует его при рендере/редакторе,
   повреждённый JSON не роняет сессию (fallback + ARB-сообщение).
 

@@ -13,7 +13,6 @@ import 'package:cardflow/api/http/retry_policy.dart';
 import 'package:cardflow/api/images/image_api_keys.dart';
 import 'package:cardflow/api/images/image_providers.dart';
 import 'package:cardflow/api/images/image_search_service.dart';
-import 'package:cardflow/api/images/placeholder_image_generator.dart';
 import 'package:cardflow/api/models/model_capability_service.dart';
 import 'package:cardflow/api/providers/generation_adapters.dart';
 import 'package:cardflow/api/parsers/file_parsing_service.dart';
@@ -423,13 +422,6 @@ final cardImageFinderProvider = Provider<CardImageFinder>((ref) {
   );
 });
 
-/// Генератор детерминированных заглушек карточек (7.14, шаг 3).
-final placeholderImageGeneratorProvider = Provider<PlaceholderImageGenerator>((
-  ref,
-) {
-  return const PlaceholderImageGenerator();
-});
-
 /// Повторный поиск картинки карточки (7.14: «Найти картинку заново»).
 final cardImageRefresherProvider = Provider<CardImageRefresher>((ref) {
   return CardImageRefresher(
@@ -457,7 +449,6 @@ final generationRunnerProvider = Provider<GenerationRunner>((ref) {
     jobRepository: ref.watch(generationJobRepositoryProvider),
     cardStore: ref.watch(generationCardStoreProvider),
     imageFinder: ref.watch(cardImageFinderProvider),
-    placeholderGenerator: ref.watch(placeholderImageGeneratorProvider),
     diagnostics: ref.watch(generationDiagnosticsProvider),
     capabilityCache: ref.watch(modelCapabilityCacheProvider),
     calibrationStore: ref.watch(tokenCalibrationStoreProvider),

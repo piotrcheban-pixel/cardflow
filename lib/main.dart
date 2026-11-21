@@ -8,6 +8,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import 'data/cards/media_garbage_collector.dart';
+import 'data/cards/placeholder_media_purger.dart';
 import 'data/db/app_database.dart';
 import 'data/db/database_opener.dart';
 import 'data/transfer/media_store.dart';
@@ -47,6 +48,15 @@ Future<void> main() async {
     ],
   );
 
+  // Итерация 7.19 (ADR-041): существующие нарисованные заглушки удаляются до
+  // первого кадра, чтобы UI не показывал их как иллюстрации. Ошибка пуржа не
+  // должна блокировать запуск — GC ниже доберёт сирот.
+  try {
+    await PlaceholderMediaPurger(database, mediaStore).purge();
+  } on Object {
+    // Пурж повторяется при следующем запуске.
+  }
+
   unawaited(
     MediaGarbageCollector(database, mediaStore).collect().catchError((_) => 0),
   );
@@ -54,16 +64,4 @@ Future<void> main() async {
   runApp(
     UncontrolledProviderScope(container: container, child: const CardFlowApp()),
   );
-
-  // Фоновый ретрай заглушек при следующем запуске с сетью (7.14, шаг 3):
-  // после первого кадра, чтобы старт UI не ждал сеть. Ошибки глушим — это
-  // необязательное улучшение, карточки с заглушками остаются рабочими.
-  WidgetsBinding.instance.addPostFrameCallback((_) {
-    unawaited(
-      container
-          .read(cardImageRefresherProvider)
-          .retryPlaceholders()
-          .catchError((_) => 0),
-    );
-  });
 }

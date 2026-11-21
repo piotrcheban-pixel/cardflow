@@ -12,6 +12,11 @@ import 'package:cardflow/ui/cards/content/latex_text.dart';
 import 'package:cardflow/ui/cards/content/occlusion_image_view.dart';
 
 /// Единый рендер карточки для классики и ленты (ADR-017).
+///
+/// Итерация 7.19 (ADR-042): изображения выбираются **по стороне** — до
+/// переворота видны только `questionMediaIds`, после — только
+/// `answerMediaIds`. Раньше `mediaIds.first` рисовался на обеих сторонах, и
+/// изображение с ответом раскрывало его на лицевой стороне.
 class CardContentView extends StatelessWidget {
   const CardContentView({
     required this.card,
@@ -20,6 +25,7 @@ class CardContentView extends StatelessWidget {
     required this.faceKey,
     this.mediaBytes = const <String, Uint8List>{},
     this.mediaMetadata = const <String, MediaMetadata>{},
+    this.onRetryMedia,
     this.showAllFormulas = false,
     super.key,
   });
@@ -40,25 +46,43 @@ class CardContentView extends StatelessWidget {
   /// Атрибуция и вид иллюстрации по `media.id` (7.14).
   final Map<String, MediaMetadata> mediaMetadata;
 
+  /// Повтор чтения медиа карточки, если файл/байты не нашлись (7.19).
+  final VoidCallback? onRetryMedia;
+
+  /// Сторона вопроса (лицевая): `side` — front или неизвестная строка.
+  bool get _isQuestionSide => side != card.back || side == card.front;
+
+  /// Идентификаторы изображений выбранной стороны.
+  List<String> get _sideMediaIds =>
+      _isQuestionSide ? card.questionMediaIds : card.answerMediaIds;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final style = side == card.back
         ? theme.textTheme.bodyLarge?.copyWith(height: 1.6)
         : theme.textTheme.headlineMedium;
-    final imageId = card.mediaIds.isEmpty ? null : card.mediaIds.first;
-    final image = imageId == null ? null : mediaBytes[imageId];
-    final metadata = imageId == null ? null : mediaMetadata[imageId];
     final occlusionJson = card.occlusionJson;
 
     final content = <Widget>[];
+    // Occlusion-иллюстрация — общий холст обеих сторон: маски управляются
+    // `revealed`, а не выбором стороны (иначе переворот терял бы маски).
     if (occlusionJson != null) {
+      final String? imageId = card.questionMediaIds.isEmpty
+          ? null
+          : card.questionMediaIds.first;
+      final image = imageId == null ? null : mediaBytes[imageId];
       if (image == null) {
         content.add(
-          Text(
-            AppLocalizations.of(context).occlusionImageUnavailable,
-            style: TextStyle(color: theme.colorScheme.error),
-            textAlign: TextAlign.center,
+          _ImageUnavailable(
+            imageKey: imageId == null
+                ? const ValueKey<String>('occlusion-image-unavailable')
+                : ValueKey<String>('card-image-unavailable-$imageId'),
+            message: AppLocalizations.of(context).occlusionImageUnavailable,
+            onRetry: onRetryMedia,
+            retryKey: imageId == null
+                ? const ValueKey<String>('occlusion-image-retry')
+                : ValueKey<String>('card-image-retry-$imageId'),
           ),
         );
       } else {
@@ -70,18 +94,33 @@ class CardContentView extends StatelessWidget {
           ),
         );
       }
-      if (content.isNotEmpty) content.add(const SizedBox(height: 12));
-    } else if (image != null) {
-      // Иллюстрация карточки (7.9/7.14): 16:9 (схема 4:3), ограничение высоты,
-      // тап — полноэкранный просмотр с зумом и атрибуцией.
-      content.add(
-        CardImageView(
-          bytes: image,
-          kind: metadata?.kind ?? GeneratedCardImageKind.photo,
-          metadata: metadata,
-        ),
-      );
       content.add(const SizedBox(height: 12));
+    } else {
+      for (final String imageId in _sideMediaIds) {
+        final image = mediaBytes[imageId];
+        final metadata = mediaMetadata[imageId];
+        if (image == null) {
+          content.add(
+            _ImageUnavailable(
+              imageKey: ValueKey<String>('card-image-unavailable-$imageId'),
+              message: AppLocalizations.of(context).cardImageUnavailable,
+              onRetry: onRetryMedia,
+              retryKey: ValueKey<String>('card-image-retry-$imageId'),
+            ),
+          );
+        } else {
+          content.add(
+            CardImageView(
+              key: ValueKey<String>('card-image-$imageId'),
+              bytes: image,
+              kind: metadata?.kind ?? GeneratedCardImageKind.photo,
+              metadata: metadata,
+              onRetry: onRetryMedia,
+            ),
+          );
+        }
+        content.add(const SizedBox(height: 12));
+      }
     }
 
     final text = _displayText();
@@ -121,5 +160,58 @@ class CardContentView extends StatelessWidget {
       text = text.isEmpty ? latex : '$text\n\n$latex';
     }
     return text;
+  }
+}
+
+/// Явное состояние «изображение недоступно»: без подмены и без скелетона.
+class _ImageUnavailable extends StatelessWidget {
+  const _ImageUnavailable({
+    required this.imageKey,
+    required this.message,
+    required this.onRetry,
+    required this.retryKey,
+  });
+
+  final Key imageKey;
+  final String message;
+  final VoidCallback? onRetry;
+  final Key retryKey;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final ThemeData theme = Theme.of(context);
+    return Container(
+      key: imageKey,
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.errorContainer.withValues(alpha: 0.4),
+        borderRadius: BorderRadius.circular(kCardImageCornerRadius),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Icon(
+            Icons.image_not_supported_outlined,
+            color: theme.colorScheme.error,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.error,
+            ),
+          ),
+          if (onRetry != null)
+            TextButton(
+              key: retryKey,
+              onPressed: onRetry,
+              child: Text(l10n.retry),
+            ),
+        ],
+      ),
+    );
   }
 }

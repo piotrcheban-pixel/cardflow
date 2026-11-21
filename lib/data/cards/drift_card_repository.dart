@@ -1,4 +1,7 @@
 // Drift-реализация репозитория карточек (SPEC A5, A6.3, ADR-009/017).
+//
+// Итерация 7.19 (ADR-042): изображения вопроса и ответа независимы. Стороны
+// хранятся в `media_json` v2 (`CardMediaSides`), схема БД не меняется.
 import 'dart:convert';
 
 import 'package:drift/drift.dart';
@@ -13,6 +16,7 @@ import 'package:cardflow/domain/cards/card_media.dart';
 import 'package:cardflow/domain/cards/card_repository.dart';
 import 'package:cardflow/domain/cards/card_scheduling.dart';
 import 'package:cardflow/domain/cards/content_hash.dart';
+import 'package:cardflow/domain/generation/image_bytes.dart';
 
 /// Репозиторий карточек поверх drift-БД.
 class DriftCardRepository implements CardRepository {
@@ -68,16 +72,31 @@ class DriftCardRepository implements CardRepository {
   }) async {
     final CardDraft normalized = draft.normalized();
     _validate(normalized);
-    final upload = normalized.imageUpload;
-    final prepared = upload == null ? null : _prepareUpload(upload);
+    final List<_PreparedUpload> questionUploads = <_PreparedUpload>[
+      for (final CardImageUpload upload in normalized.questionUploads)
+        _prepareUpload(upload),
+    ];
+    final List<_PreparedUpload> answerUploads = <_PreparedUpload>[
+      for (final CardImageUpload upload in normalized.answerUploads)
+        _prepareUpload(upload),
+    ];
+    final List<_PreparedUpload> uploads = <_PreparedUpload>[
+      ...questionUploads,
+      ...answerUploads,
+    ];
     final writtenPaths = <String>[];
     try {
       return await database.transaction<List<Card>>(() async {
-        final mediaIds = <String>[...normalized.mediaIds];
-        if (prepared != null) {
-          await _writeUpload(prepared, writtenPaths);
-          mediaIds.add(prepared.id);
-        }
+        final List<String> questionIds = _resolveSideOrder(
+          storedIds: normalized.questionMediaIds,
+          uploads: questionUploads,
+          order: normalized.questionMediaOrder,
+        );
+        final List<String> answerIds = _resolveSideOrder(
+          storedIds: normalized.answerMediaIds,
+          uploads: answerUploads,
+          order: normalized.answerMediaOrder,
+        );
         final utcNow = now.toUtc();
         if (normalized.cardType == CardType.basicReversed) {
           final firstId = _uuid.v4();
@@ -88,22 +107,27 @@ class DriftCardRepository implements CardRepository {
             front: normalized.front,
             back: normalized.back,
             draft: normalized,
-            mediaIds: mediaIds,
+            questionMediaIds: questionIds,
+            answerMediaIds: answerIds,
             siblingId: secondId,
             now: utcNow,
           );
+          // Обратная карточка пары: её вопрос — исходный ответ, поэтому
+          // стороны меняются местами (ADR-042).
           final second = _newCard(
             id: secondId,
             deckId: deckId,
             front: normalized.back,
             back: normalized.front,
             draft: normalized,
-            mediaIds: mediaIds,
+            questionMediaIds: answerIds,
+            answerMediaIds: questionIds,
             siblingId: firstId,
             now: utcNow,
           );
-          if (prepared != null) {
-            await _insertMedia(prepared, firstId);
+          for (final _PreparedUpload upload in uploads) {
+            await _writeUpload(upload, writtenPaths);
+            await _insertMedia(upload, firstId);
           }
           await database.into(database.cards).insert(cardToCompanion(first));
           await database.into(database.cards).insert(cardToCompanion(second));
@@ -115,11 +139,15 @@ class DriftCardRepository implements CardRepository {
           front: normalized.front,
           back: normalized.back,
           draft: normalized,
-          mediaIds: mediaIds,
+          questionMediaIds: questionIds,
+          answerMediaIds: answerIds,
           siblingId: null,
           now: utcNow,
         );
-        if (prepared != null) await _insertMedia(prepared, card.id);
+        for (final _PreparedUpload upload in uploads) {
+          await _writeUpload(upload, writtenPaths);
+          await _insertMedia(upload, card.id);
+        }
         await database.into(database.cards).insert(cardToCompanion(card));
         return <Card>[card];
       });
@@ -136,8 +164,18 @@ class DriftCardRepository implements CardRepository {
     required DateTime now,
   }) async {
     final normalized = draft.normalized();
-    final upload = normalized.imageUpload;
-    final prepared = upload == null ? null : _prepareUpload(upload);
+    final List<_PreparedUpload> questionUploads = <_PreparedUpload>[
+      for (final CardImageUpload upload in normalized.questionUploads)
+        _prepareUpload(upload),
+    ];
+    final List<_PreparedUpload> answerUploads = <_PreparedUpload>[
+      for (final CardImageUpload upload in normalized.answerUploads)
+        _prepareUpload(upload),
+    ];
+    final List<_PreparedUpload> uploads = <_PreparedUpload>[
+      ...questionUploads,
+      ...answerUploads,
+    ];
     final writtenPaths = <String>[];
     final obsoletePaths = <String>[];
     try {
@@ -147,11 +185,19 @@ class DriftCardRepository implements CardRepository {
           throw StateError('Карточка не найдена: ${card.id}');
         }
         _validate(_withType(normalized, existing.cardType));
-        final mediaIds = <String>[...normalized.mediaIds];
-        if (prepared != null) {
-          await _writeUpload(prepared, writtenPaths);
-          mediaIds.add(prepared.id);
-          await _insertMedia(prepared, existing.id);
+        final List<String> questionIds = _resolveSideOrder(
+          storedIds: normalized.questionMediaIds,
+          uploads: questionUploads,
+          order: normalized.questionMediaOrder,
+        );
+        final List<String> answerIds = _resolveSideOrder(
+          storedIds: normalized.answerMediaIds,
+          uploads: answerUploads,
+          order: normalized.answerMediaOrder,
+        );
+        for (final _PreparedUpload upload in uploads) {
+          await _writeUpload(upload, writtenPaths);
+          await _insertMedia(upload, existing.id);
         }
         final result = Card(
           id: existing.id,
@@ -161,7 +207,8 @@ class DriftCardRepository implements CardRepository {
           hint: normalized.hint,
           cardType: existing.cardType,
           tags: normalized.tags,
-          mediaIds: List<String>.unmodifiable(mediaIds),
+          questionMediaIds: List<String>.unmodifiable(questionIds),
+          answerMediaIds: List<String>.unmodifiable(answerIds),
           latex: normalized.latex,
           occlusionJson: normalized.occlusionJson,
           sourceDocId: existing.sourceDocId,
@@ -187,14 +234,16 @@ class DriftCardRepository implements CardRepository {
         if (written != 1) {
           throw StateError('Карточка не обновлена: ${card.id}');
         }
-        final removedIds = existing.mediaIds
-            .where((id) => !mediaIds.contains(id))
-            .toList(growable: false);
-        for (final id in removedIds) {
-          final rows = await (database.select(
+        final Set<String> kept = <String>{...questionIds, ...answerIds};
+        final List<String> removedIds = <String>[
+          ...existing.questionMediaIds,
+          ...existing.answerMediaIds,
+        ].where((String id) => !kept.contains(id)).toList(growable: false);
+        for (final String id in removedIds) {
+          final List<MediaRow> rows = await (database.select(
             database.media,
           )..where((table) => table.id.equals(id))).get();
-          for (final row in rows) {
+          for (final MediaRow row in rows) {
             if (row.cardId == existing.id) obsoletePaths.add(row.path);
           }
           await (database.delete(
@@ -226,7 +275,7 @@ class DriftCardRepository implements CardRepository {
       final mediaRows = await (database.select(
         database.media,
       )..where((table) => table.cardId.equals(cardId))).get();
-      paths.addAll(mediaRows.map((row) => row.path));
+      paths.addAll(mediaRows.map((MediaRow row) => row.path));
       await (database.delete(
         database.media,
       )..where((table) => table.cardId.equals(cardId))).go();
@@ -245,18 +294,59 @@ class DriftCardRepository implements CardRepository {
         'Некорректный черновик карточки: ${draft.validate().values.join(', ')}',
       );
     }
-    final upload = draft.imageUpload;
-    if (upload != null &&
-        (upload.bytes.length > CardImageGateway.maxImageBytes ||
-            (upload.mimeType != 'image/png' &&
-                upload.mimeType != 'image/jpeg') ||
-            upload.bytes.isEmpty)) {
-      throw ArgumentError.value(
-        upload,
-        'imageUpload',
-        'Некорректное изображение',
-      );
+    for (final CardImageUpload upload in <CardImageUpload>[
+      ...draft.questionUploads,
+      ...draft.answerUploads,
+    ]) {
+      final bool supported =
+          upload.mimeType == 'image/png' ||
+          upload.mimeType == 'image/jpeg' ||
+          upload.mimeType == 'image/webp';
+      if (upload.bytes.length > CardImageGateway.maxImageBytes ||
+          !supported ||
+          !isSupportedImageBytes(upload.bytes)) {
+        throw ArgumentError.value(
+          upload.fileName,
+          'imageUploads',
+          'Некорректное изображение',
+        );
+      }
     }
+  }
+
+  /// Итоговый порядок стороны: хранимые id и новые загрузки в порядке
+  /// `draft.*MediaOrder` (токены `upload:<index>`); `null` — сначала хранимые.
+  List<String> _resolveSideOrder({
+    required List<String> storedIds,
+    required List<_PreparedUpload> uploads,
+    required List<String>? order,
+  }) {
+    if (order == null) {
+      return <String>[
+        ...storedIds,
+        for (final _PreparedUpload upload in uploads) upload.id,
+      ];
+    }
+    final List<String> result = <String>[];
+    final Set<int> usedUploads = <int>{};
+    for (final String token in order) {
+      final int? index = uploadMediaIndexOf(token);
+      if (index != null) {
+        if (index >= 0 && index < uploads.length && usedUploads.add(index)) {
+          result.add(uploads[index].id);
+        }
+      } else if (storedIds.contains(token) && !result.contains(token)) {
+        result.add(token);
+      }
+    }
+    // Пропущенные (не упомянутые) id не теряются: детерминированный хвост.
+    for (final String id in storedIds) {
+      if (!result.contains(id)) result.add(id);
+    }
+    for (var index = 0; index < uploads.length; index++) {
+      if (!usedUploads.contains(index)) result.add(uploads[index].id);
+    }
+    return result;
   }
 
   CardDraft _withType(CardDraft draft, CardType type) => CardDraft(
@@ -266,10 +356,14 @@ class DriftCardRepository implements CardRepository {
     tags: draft.tags,
     cardType: type,
     sourceExcerpt: draft.sourceExcerpt,
-    mediaIds: draft.mediaIds,
+    questionMediaIds: draft.questionMediaIds,
+    answerMediaIds: draft.answerMediaIds,
     latex: draft.latex,
     occlusionJson: draft.occlusionJson,
-    imageUpload: draft.imageUpload,
+    questionUploads: draft.questionUploads,
+    answerUploads: draft.answerUploads,
+    questionMediaOrder: draft.questionMediaOrder,
+    answerMediaOrder: draft.answerMediaOrder,
   );
 
   _PreparedUpload _prepareUpload(CardImageUpload upload) {
@@ -303,11 +397,11 @@ class DriftCardRepository implements CardRepository {
         .into(database.media)
         .insert(
           MediaCompanion(
-            id: Value(upload.id),
-            cardId: Value(cardId),
-            path: Value(upload.path),
-            mimeType: Value(upload.mimeType),
-            size: Value(upload.bytes.length),
+            id: Value<String>(upload.id),
+            cardId: Value<String>(cardId),
+            path: Value<String>(upload.path),
+            mimeType: Value<String>(upload.mimeType),
+            size: Value<int>(upload.bytes.length),
           ),
         );
   }
@@ -331,7 +425,8 @@ class DriftCardRepository implements CardRepository {
     required String front,
     required String back,
     required CardDraft draft,
-    required List<String> mediaIds,
+    required List<String> questionMediaIds,
+    required List<String> answerMediaIds,
     required String? siblingId,
     required DateTime now,
   }) {
@@ -350,7 +445,8 @@ class DriftCardRepository implements CardRepository {
       hint: draft.hint,
       cardType: draft.cardType,
       tags: draft.tags,
-      mediaIds: List<String>.unmodifiable(mediaIds),
+      questionMediaIds: List<String>.unmodifiable(questionMediaIds),
+      answerMediaIds: List<String>.unmodifiable(answerMediaIds),
       latex: draft.latex,
       occlusionJson: draft.occlusionJson,
       sourceExcerpt: draft.sourceExcerpt,

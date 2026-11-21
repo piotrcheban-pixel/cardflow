@@ -1,11 +1,12 @@
 # API-схема генерации CardFlow
 
-**Версия:** 7.0 (2026-11-20; промпт `gen-ru-v8`: корень `{cards, source_exhausted}`,
-поле карточки `section_id`; обязательный объект `image`
-(`query`/`fallback_query`/`kind`), `image_query` — только legacy v5;
-ADR-031, ADR-040) ·
+**Версия:** 8.0 (2026-11-21; промпт `gen-ru-v9`: корень `{cards, source_exhausted}`,
+поле карточки `section_id`; **независимые изображения сторон** —
+обязательные массивы `question_image_ids` / `answer_image_ids` и необязательный
+объект `image` (`query`/`fallback_query`/`kind`/`side`); `image_id`/`image_query` —
+только legacy v5–v8; ADR-031, ADR-040, ADR-042) ·
 **Связано:** SPEC A8.1, A8.2, A8.4, A8.5, A8.6; ADR-011; ADR-012; ADR-013; ADR-021;
-ADR-022; ADR-023; ADR-024; ADR-029; ADR-030; ADR-031
+ADR-022; ADR-023; ADR-024; ADR-029; ADR-030; ADR-031; ADR-041; ADR-042
 **Источник правды в коде:** `lib/api/generation/card_json_schema.dart` (канон), `provider_schema.dart`
 (проекции), `card_response_schema.dart` (валидатор), `cards_json_extractor.dart` (разбор текста ответа),
 `latex_escape_repair.dart` (восстановление LaTeX), `lib/domain/generation/` (коды ошибок и причин).
@@ -35,20 +36,22 @@ ADR-022; ADR-023; ADR-024; ADR-029; ADR-030; ADR-031
           "card_type": { "type": "string", "enum": ["basic", "basic_reversed", "cloze", "occlusion"] },
           "source_excerpt": { "type": ["string", "null"] },
           "source_file": { "type": ["string", "null"] },
-          "image_id": { "type": ["string", "null"] },
           "section_id": { "type": ["string", "null"] },
+          "question_image_ids": { "type": "array", "items": { "type": "string" } },
+          "answer_image_ids": { "type": "array", "items": { "type": "string" } },
           "image": {
-            "type": "object",
+            "type": ["object", "null"],
             "properties": {
               "query": { "type": "string" },
               "fallback_query": { "type": "string" },
-              "kind": { "type": "string", "enum": ["photo", "diagram", "illustration"] }
+              "kind": { "type": "string", "enum": ["photo", "diagram", "illustration"] },
+              "side": { "type": "string", "enum": ["question", "answer", "none"] }
             },
-            "required": ["query", "fallback_query", "kind"],
+            "required": ["query", "fallback_query", "kind", "side"],
             "additionalProperties": false
           }
         },
-        "required": ["front", "back", "hint", "tags", "card_type", "source_excerpt", "source_file", "image_id", "section_id", "image"],
+        "required": ["front", "back", "hint", "tags", "card_type", "source_excerpt", "source_file", "section_id", "question_image_ids", "answer_image_ids", "image"],
         "additionalProperties": false
       }
     }
@@ -58,26 +61,42 @@ ADR-022; ADR-023; ADR-024; ADR-029; ADR-030; ADR-031
 }
 ```
 
-`image_id` — идентификатор изображения из каталога `<images>` прикреплённых файлов
-(`img1`, `img2`, …; формат строки каталога — `id | файл | подпись | окружающий текст`).
+`question_image_ids` / `answer_image_ids` — **обязательные** массивы id из каталога
+`<images>` прикреплённых файлов (`img1`, `img2`, …; формат строки каталога —
+`id | файл | подпись | окружающий текст`). Стороны независимы (ADR-042):
 
-`image` — **обязательный** объект у каждой карточки (`gen-ru-v6`, ADR-031):
-`query` — 3–7 английских слов, `fallback_query` — более общий запрос 2–4 слова,
-`kind` — `photo` (конкретный объект), `diagram` (закон/процесс/структура/формула),
-`illustration` (визуальная метафора абстракции). Правила локального валидатора:
+- `question_image_ids` — изображения лицевой стороны, только непосредственный
+  стимул вопроса (схема/чертёж/график, о котором спрашивают);
+- `answer_image_ids` — изображения, которые содержат или раскрывают ответ
+  (формула, решение, таблица значений, подписанная схема);
+- массивы могут быть пустыми: изображение **не обязательно**; отсутствие
+  подходящего изображения — нормальный результат, а не ошибка;
+- один и тот же id в обеих коллекциях запрещён: при нарушении он остаётся
+  только у вопроса, из ответа удаляется, ставится пометка `imageDuplicatedSide`;
+- id вне каталога фрагмента отбрасывается с пометкой `imageIdUnknown`
+  (карточка не отбрасывается);
+- каждое изображение привязывается к своей стороне и показывается только на
+  ней: до переворота — вопрос, после — ответ.
 
-- `image_id` вне каталога фрагмента → `null` + пометка `imageIdUnknown`;
-- если `image_id` задан, картинка берётся из файла, но `image` сохраняется как
-  запасной вариант (поиск по нему нужен для «Найти картинку заново»);
+`image` — **необязательный** объект для настоящей фотографии из внешнего поиска
+(`gen-ru-v9`): `query` — 3–7 английских слов, `fallback_query` — более общий
+запрос 2–4 слова, `kind` — `photo`/`diagram`/`illustration`, `side` —
+`question` | `answer` | `none`. Правила локального валидатора:
+
+- `side = "none"` или `image = null` — поиск не выполняется (изображение не
+  нужно); отсутствие `side` в ответах v6–v8 трактуется как сторона вопроса;
+- внешний поиск используется, только если у выбранной стороны ещё нет
+  изображений из `<images>`; поиск ищет **настоящую** фотографию; при неудаче
+  сторона остаётся пустой с пометкой `imageNotFound` — синтезированных
+  изображений и заглушек нет (ADR-041);
 - `query`/`fallback_query` нормализуются (`image_query_normalizer.dart`):
   убираются слова `image/picture/photo of`, имена файлов, LaTeX, не-латиница;
   запрос длиннее 7 слов обрезается; пустой собирается из `fallback_query`;
   запрос из одного слова дополняется контекстом вида. Любая правка —
   пометка `imageQueryAdjusted`; карточка **не отбрасывается**;
-- правило «абстрактным понятиям картинка не нужна» удалено в 7.14: у каждой
-  карточки есть картинка (настоящая или детерминированная заглушка);
-- ответ `gen-ru-v5` с `image_query` (строкой или `null`) по-прежнему принимается:
-  локальная поштучная схема (`localCardItemSchema`) терпима к обеим формам;
+- ответы `gen-ru-v5`–`gen-ru-v8` (`image_id`, `image_query`, `image` без
+  `side`) по-прежнему принимаются: `image_id` → сторона вопроса, `image_query`
+  → поиск для вопроса;
 - `tags` — 1–3, строчные, без `#` и пустых.
 
 `card_type: "occlusion"` — **только wire-значение ответа модели**. В приложении такая
@@ -190,7 +209,7 @@ PDF: они идут вместе. Имя попадает в `generation_jobs.f
 увеличивает тело на ~33 %; лимит 10 МБ на файл.
 
 **Иллюстрации из интернета (ADR-023 §2–3).** После ответа модели пайплайн разрешает
-`image_query` через `ImageSearchService` (Openverse API без ключа, только CC0/PDM/CC BY/CC BY-SA,
+`image` через `ImageSearchService` (Wikimedia Commons → Wikipedia → Openverse/Pixabay/Pexels,
 thumbnail ≤ 5 МБ, JPEG/PNG по сигнатуре, троттлинг 1 запрос/с). Байты попадают в
 `GeneratedCard.image` и записываются в `MediaStore` + `media` только при импорте
 (`DriftGenerationCardStore`), `cards.media_json = [media.id]`. Для `occlusion` без
@@ -247,7 +266,9 @@ markdown-ограждения/текста, и ответ fallback-пути, н�
 | `tagsAdjusted` | теги обрезаны до 3, удалены пустые и `#` |
 | `occlusionImageMissing` | occlusion без иллюстрации стал `basic` |
 | `imageNotFound` | внешний поиск по `image_query` не дал картинку |
-| `imageIdUnknown` | `image_id` вне каталога `<images>` → `null` |
+| `imageIdUnknown` | id вне каталога `<images>` → отброшен (7.19) |
+| `imageDuplicatedSide` | один id в обеих коллекциях: остаётся у вопроса (7.19) |
+| `imageInvalid` | пустые байты или MIME не по сигнатуре: изображение не сохранено (7.19) |
 | `imageQueryAdjusted` | `image_query` обнулён/проигнорирован (не латиница, > 7 слов, задан `image_id`) |
 | `abstractImageQuery` | абстрактное понятие — картинка не ищется |
 | `answerInFront` | ответ или формула из `back` целиком во `front` |
