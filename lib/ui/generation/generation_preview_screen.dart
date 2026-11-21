@@ -497,10 +497,12 @@ class _GenerationPreviewScreenState
                   ),
                 ),
               // §5 задания 7.20: фактически созданное количество и причина
-              // недобора — материал исчерпан, а не «бюджет модели».
+              // недобора — материал исчерпан, а не «бюджет модели». Причиной
+              // считается только исчерпание (`shortfallCards`/`skippedBatches`);
+              // недобор из-за сбоев партий объясняется баннером частичного
+              // успеха и материалом НЕ называется.
               if (_result.requestedCards > 0 &&
-                  (_result.shortfallCards > 0 ||
-                      _result.cards.length < _result.requestedCards))
+                  (_result.shortfallCards > 0 || _result.skippedBatches > 0))
                 Padding(
                   padding: const EdgeInsets.only(bottom: 8),
                   child: Text(

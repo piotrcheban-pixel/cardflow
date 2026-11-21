@@ -137,11 +137,12 @@ class GenerationPlanDetails extends StatelessWidget {
             label: l10n.generationPlanDetailsBatchSizes,
             value: _batchSizes(l10n),
           ),
-        _DetailRow(
-          id: 'plan-detail-material-capacity',
-          label: l10n.generationPlanDetailsMaterialCapacity,
-          value: _materialCapacity(l10n),
-        ),
+        if (!plan.isPromptOnly)
+          _DetailRow(
+            id: 'plan-detail-material-capacity',
+            label: l10n.generationPlanDetailsMaterialCapacity,
+            value: _materialCapacity(l10n),
+          ),
         _DetailRow(
           id: 'plan-detail-requests',
           label: l10n.generationPlanDetailsRequests,

@@ -164,21 +164,32 @@ final class OutputBatchPlanner {
   ///
   /// Нужен, когда число партий задаёт не только бюджет ответа, но и раскладка
   /// изображений по запросам (`GenerationChunkPlanner`): каждая партия всё
-  /// равно остаётся не больше [cap].
+  /// равно остаётся не больше [cap]. Если [count] меньше минимально нужного
+  /// `⌈total / cap⌉`, число партий поднимается до него — иначе сумма размеров
+  /// была бы меньше [total] и карточки заказа потерялись бы.
   static List<int> batchSizesFor(int total, int count, int cap) {
     if (total <= 0) return const <int>[];
     final int safeCap = math.max(1, cap);
-    final int safeCount = math.max(1, math.min(count, total));
-    final List<int> sizes = <int>[];
-    var left = total;
-    for (var index = 0; index < safeCount; index++) {
-      final int remainingBatches = safeCount - index - 1;
-      int take = math.min(safeCap, left - remainingBatches);
-      if (take < 1) take = 1;
-      sizes.add(take);
-      left -= take;
+    final int minCount = batchCount(total, safeCap);
+    final int effectiveCount = math.max(
+      math.max(1, math.min(count, total)),
+      minCount,
+    );
+    if (effectiveCount == minCount) {
+      // Минимальное число партий: заполнение до вместимости, остаток последней.
+      return <int>[
+        for (var index = 0; index < effectiveCount - 1; index++) safeCap,
+        total - safeCap * (effectiveCount - 1),
+      ];
     }
-    return sizes;
+    // Здесь count > minCount: размеры сбалансированы в пределах вместимости
+    // (остаток распределяется по одной карточке первым партиям).
+    final int base = total ~/ effectiveCount;
+    final int remainder = total % effectiveCount;
+    return <int>[
+      for (var index = 0; index < effectiveCount; index++)
+        base + (index < remainder ? 1 : 0),
+    ];
   }
 
   /// Карточек на ответ: `min(ceiling, cardsFor(maxTokens − резерв), cap)`, но

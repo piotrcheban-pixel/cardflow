@@ -1212,6 +1212,18 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
               border: _fieldBorder,
             ),
           ),
+          // §4 задания 7.20: пользовательское значение не меняется и видно
+          // строкой «Запрошено: N карточек» сразу под полем.
+          if (_requestedCards case final int requested) ...<Widget>[
+            const SizedBox(height: AppSpacing.xxs),
+            Text(
+              l10n.generationPlanRequestedCount(requested),
+              key: const ValueKey<String>('generation-plan-requested'),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+          ],
           const SizedBox(height: AppSpacing.md),
           TextField(
             key: const ValueKey<String>('generation-wishes'),
@@ -1319,18 +1331,6 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
               ],
             ),
             const SizedBox(height: 2),
-            // §4 задания 7.20: заказ пользователя виден отдельной строкой и не
-            // подменяется числом, которое помещается в один ответ.
-            if (planPreview.requestedCards > 0) ...<Widget>[
-              Text(
-                l10n.generationPlanRequestedCount(planPreview.requestedCards),
-                key: const ValueKey<String>('generation-plan-requested'),
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: scheme.onSurface,
-                ),
-              ),
-              const SizedBox(height: 2),
-            ],
             Text(
               _planSummary(l10n, planPreview),
               key: const ValueKey<String>('generation-plan-preview'),

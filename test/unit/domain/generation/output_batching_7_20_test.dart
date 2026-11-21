@@ -200,6 +200,40 @@ void main() {
         expect(total(batches), 12 * multiplier);
       }
     });
+
+    test(
+      'batchSizesFor: карточки не теряются при недостаточном числе партий',
+      () {
+        // Ревью 7.20 (R1): если число партий меньше ⌈total / cap⌉, размеры
+        // поднимаются до минимально нужного — сумма остаётся равной заказу.
+        expect(OutputBatchPlanner.batchSizesFor(10, 2, 3), <int>[
+          3,
+          3,
+          3,
+          1,
+        ], reason: 'две партии по 3 не вмещают 10 карточек — нужно четыре');
+        expect(
+          OutputBatchPlanner.batchSizesFor(
+            10,
+            2,
+            3,
+          ).fold<int>(0, (int sum, int value) => sum + value),
+          10,
+        );
+        // Больше партий, чем нужно по бюджету (раскладка изображений): сумма
+        // сохраняется, каждая партия не больше вместимости.
+        for (final int count in <int>[5, 7, 12]) {
+          final List<int> sizes = OutputBatchPlanner.batchSizesFor(
+            23,
+            count,
+            5,
+          );
+          expect(sizes.length, count);
+          expect(sizes.fold<int>(0, (int sum, int value) => sum + value), 23);
+          expect(sizes.every((int size) => size >= 1 && size <= 5), isTrue);
+        }
+      },
+    );
   });
 
   group('изменение бюджета меняет партии, но не заказ', () {

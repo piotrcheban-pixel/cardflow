@@ -11,6 +11,7 @@ import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/generation/card_allocator.dart';
 import 'package:cardflow/domain/generation/document_gateway.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
+import 'package:cardflow/domain/generation/generation_error.dart';
 import 'package:cardflow/domain/generation/generation_job.dart';
 import 'package:cardflow/domain/generation/generation_plan.dart';
 import 'package:cardflow/domain/generation/generation_run.dart';
@@ -143,14 +144,23 @@ void main() {
     final Finder requested = find.byKey(
       const ValueKey<String>('generation-plan-requested'),
     );
+    // Строка у поля (ревью 7.20, R3): значение пользователя видно сразу.
     await tester.scrollUntilVisible(
       requested,
-      -300,
+      300,
       scrollable: find.byType(Scrollable).first,
     );
     expect(
       textOf(tester, 'generation-plan-requested'),
       'Запрошено: 40 карточек',
+    );
+    final Finder previewFinder = find.byKey(
+      const ValueKey<String>('generation-plan-preview'),
+    );
+    await tester.scrollUntilVisible(
+      previewFinder,
+      -300,
+      scrollable: find.byType(Scrollable).first,
     );
     final String preview = textOf(tester, 'generation-plan-preview');
     expect(preview, contains('запрошено — 40'));
@@ -273,6 +283,83 @@ void main() {
       );
     },
   );
+
+  testWidgets('сбой партии не выдаётся за исчерпание материала', (
+    WidgetTester tester,
+  ) async {
+    // Ревью 7.20 (R2): недобор из-за упавших партий (failures) не должен
+    // показываться как «материал исчерпан» — причиной считается только
+    // shortfallCards/skippedBatches.
+    final GenerationPlan plan = const GenerationPlanBuilder().build(
+      documents: <ParsedDocument>[
+        ParsedDocument(
+          format: DocumentFormat.txt,
+          fileName: 'лекция.txt',
+          text: lectureText(1200),
+          sections: <ParsedSection>[
+            ParsedSection(start: 0, end: lectureText(1200).length),
+          ],
+        ),
+      ],
+      capabilities: const ModelCapabilities(
+        contextWindowTokens: 128000,
+        contextSource: CapabilitySource.officialCatalog,
+        maxOutputTokens: 8192,
+      ),
+      requestedCards: 40,
+    );
+    final GenerationRunResult result = GenerationRunResult(
+      jobId: 'job-2',
+      status: GenerationJobStatus.partial,
+      cards: const <GeneratedCard>[
+        GeneratedCard(
+          front: 'Одна карточка',
+          back: 'Ответ',
+          cardType: CardType.basic,
+        ),
+      ],
+      failures: <GenerationChunkFailure>[
+        GenerationChunkFailure(
+          chunkIndex: 2,
+          code: GenerationErrorCode.network,
+          materialsText: 'материал',
+          limit: 18,
+        ),
+      ],
+      tokensUsed: 100,
+      estimatedTokens: 200,
+      duplicatesRemoved: 0,
+      chunkCount: plan.chunks.length,
+      cancelled: false,
+      plan: plan,
+    );
+    await tester.pumpWidget(
+      appWithHome(
+        overrides: overrides(),
+        home: GenerationPreviewScreen(
+          request: GenerationRunRequest(
+            documents: const <ParsedDocument>[],
+            account: testProviderAccount(modelId: 'deepseek-chat'),
+            deckName: 'Новая колода',
+            requestedCards: 40,
+          ),
+          result: result,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(
+        const ValueKey<String>('generation-preview-material-exhausted'),
+      ),
+      findsNothing,
+      reason: 'сбой сети — не исчерпание материала',
+    );
+    expect(
+      find.byKey(const ValueKey<String>('generation-preview-partial')),
+      findsOneWidget,
+    );
+  });
 
   test('тексты предупреждений не приписывают недобор бюджету модели', () {
     // Проверка ARB-контракта: сообщение об исчерпании материала говорит о

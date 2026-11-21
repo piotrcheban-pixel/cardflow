@@ -1910,14 +1910,7 @@ class GenerationPipeline implements GenerationRunner {
     int? maxLimit,
   }) {
     if (shortfall < 1) return null;
-    final int perBatch =
-        OutputBatchPlanner(config: planBuilder.planner.config.planning)
-            .cardsPerBatch(
-              plan.inputPlan?.maxTokens ?? 0,
-              maxCardsPerRequest: maxLimit,
-              reasoningReserveTokens: plan.reasoningReserveTokens,
-            );
-    final int limit = shortfall < perBatch ? shortfall : perBatch;
+    final int? planMaxTokens = plan.inputPlan?.maxTokens;
     for (final InputPart part in plan.parts) {
       final List<String> allowed = <String>[
         for (final InputSection section in part.sections)
@@ -1934,9 +1927,19 @@ class GenerationPipeline implements GenerationRunner {
         }
       }
       if (base == null) continue;
+      // Без `inputPlan` (план старого пути/теста) ориентир — лимит базовой
+      // партии: просить больше, чем она запрашивала, заведомо нельзя.
+      final int cap = planMaxTokens == null
+          ? base.limit
+          : OutputBatchPlanner(config: planBuilder.planner.config.planning)
+                .cardsPerBatch(
+                  planMaxTokens,
+                  maxCardsPerRequest: maxLimit,
+                  reasoningReserveTokens: plan.reasoningReserveTokens,
+                );
       return base.copyWith(
         index: index,
-        limit: limit,
+        limit: shortfall < cap ? shortfall : cap,
         focusSectionIds: List<String>.unmodifiable(allowed),
         imageParts: const <DocumentImage>[],
         imagePartIds: const <String>[],
