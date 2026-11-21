@@ -1196,6 +1196,12 @@ class AppLocalizationsRu extends AppLocalizations {
   String get generationPlanDetailsTokensLabel => 'Оценка токенов';
 
   @override
+  String get generationPlanDetailsCatalogTokens => 'Каталог изображений';
+
+  @override
+  String get generationPlanDetailsReasoningReserve => 'Резерв на рассуждение';
+
+  @override
   String get generationPlanDetailsCostLabel => 'Стоимость';
 
   @override

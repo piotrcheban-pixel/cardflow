@@ -103,6 +103,19 @@ class GenerationPlanDetails extends StatelessWidget {
           label: l10n.generationPlanDetailsTokensLabel,
           value: '${plan.estimate.totalTokens}',
         ),
+        // §3.4: каталог изображений — часть `D`; резерв рассуждения — часть
+        // `max_tokens`. Оба числа видны, чтобы «Подробнее» сходилось с запросом.
+        _DetailRow(
+          id: 'plan-detail-catalog',
+          label: l10n.generationPlanDetailsCatalogTokens,
+          value: '${plan.estimate.catalogTokens}',
+        ),
+        if (plan.reasoningReserveTokens > 0)
+          _DetailRow(
+            id: 'plan-detail-reasoning',
+            label: l10n.generationPlanDetailsReasoningReserve,
+            value: '${plan.reasoningReserveTokens}',
+          ),
         _DetailRow(
           id: 'plan-detail-cost',
           label: l10n.generationPlanDetailsCostLabel,

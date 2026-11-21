@@ -1940,6 +1940,18 @@ abstract class AppLocalizations {
   /// **'Оценка токенов'**
   String get generationPlanDetailsTokensLabel;
 
+  /// Строка токенов каталога изображений в деталях плана.
+  ///
+  /// In ru, this message translates to:
+  /// **'Каталог изображений'**
+  String get generationPlanDetailsCatalogTokens;
+
+  /// Строка резерва токенов рассуждения reasoning-модели.
+  ///
+  /// In ru, this message translates to:
+  /// **'Резерв на рассуждение'**
+  String get generationPlanDetailsReasoningReserve;
+
   /// Строка стоимости в деталях плана.
   ///
   /// In ru, this message translates to:
