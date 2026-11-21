@@ -26,6 +26,7 @@ import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/cards/content_hash.dart';
 import 'package:cardflow/domain/cards/occlusion.dart';
 import 'package:cardflow/domain/generation/card_image_finder.dart';
+import 'package:cardflow/domain/generation/content_token_estimator.dart';
 import 'package:cardflow/domain/generation/document_image.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
 import 'package:cardflow/domain/generation/generated_card_image.dart';
@@ -395,18 +396,49 @@ class GenerationPipeline implements GenerationRunner {
       diagnostics.tokenCount(source: 'estimate', errorCode: count.errorCode);
       return plan;
     }
-    final String source = 'count_tokens:${request.account.protocol.wireName}';
-    diagnostics.tokenCount(source: source, tokens: count.tokens);
+    // `count_tokens` считает текст запроса (system + user content + схема), а
+    // image-части уходят отдельными блоками и в подсчёт не входят. Стоимость
+    // изображений — консервативная оценка приложения (§3.4, E.4): нулём её
+    // считать нельзя, иначе точный вход занижен на целые изображения.
+    final int imageTokens = _countedImageTokens(plan.chunks.first);
+    final int exactTokens = count.tokens! + imageTokens;
+    final String base =
+        'count_tokens:${request.account.protocol.wireName}';
+    final String source = imageTokens > 0 ? '$base+image_estimate' : base;
+    diagnostics.tokenCount(source: source, tokens: exactTokens);
     return _buildPlan(
       request,
       capabilities,
       hasMaterials: hasMaterials,
       topic: topic,
       builder: builder,
-      exactInputTokens: count.tokens,
+      exactInputTokens: exactTokens,
       inputTokenSource: source,
     );
   }
+
+  /// Токены изображений запроса: image-части плана + вложения чанка.
+  ///
+  /// Считается тем же консервативным оценщиком (`GenerationPlanBuilder` →
+  /// `HeuristicContentTokenEstimator`), что и план: второго оценщика нет.
+  int _countedImageTokens(PlannedChunk chunk) {
+    var tokens = chunk.imageTokens;
+    for (final GenerationAttachment attachment in chunk.attachments) {
+      final int body = _imageEstimator.estimateImage(
+        bytes: attachment.bytes.length,
+      ).tokens;
+      tokens += body;
+      final String? label = attachment.label;
+      if (label != null && label.isNotEmpty) {
+        tokens += _imageEstimator.estimateText(label);
+      }
+    }
+    return tokens;
+  }
+
+  /// Оценщик стоимости изображений (тот же, что у плана).
+  ContentTokenEstimator get _imageEstimator =>
+      planBuilder.estimator;
 
   /// Пользовательское сообщение первого запроса плана — ровно в том виде,
   /// в каком его соберёт `CardGenerationService` (материалы + каталог +
