@@ -265,6 +265,15 @@ ModelLimits modelLimitsFromCapabilities(ModelCapabilities capabilities) {
       source: CapabilitySource.officialCatalog,
       sourceRef: 'provider_protocol',
     ),
+    isReasoningModel: capabilities.isReasoningModel == null
+        ? const Sourced<bool>.absent()
+        : Sourced<bool>(
+            capabilities.isReasoningModel,
+            source: outputSource == CapabilitySource.unknown
+                ? CapabilitySource.assumption
+                : outputSource,
+            sourceRef: 'model_capabilities',
+          ),
     pricing: capabilities.pricing == null
         ? const Sourced<GenerationPricing>.absent()
         : Sourced<GenerationPricing>(

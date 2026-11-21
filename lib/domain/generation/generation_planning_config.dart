@@ -25,6 +25,7 @@ final class GenerationPlanningConfig {
     this.unknownContextOutputTokens = 2048,
     this.defaultOutputTokens = 8192,
     this.jsonBodyOverheadBytes = 1024,
+    this.reasoningReserveTokens = 2048,
   }) : assert(tokensPerCard > 0),
        assert(outputFill > 0 && outputFill <= 1),
        assert(schemaOverheadTokens >= 0),
@@ -34,7 +35,8 @@ final class GenerationPlanningConfig {
        assert(unknownContextMaterialTokens > 0),
        assert(unknownContextOutputTokens > 0),
        assert(defaultOutputTokens > 0),
-       assert(jsonBodyOverheadBytes >= 0);
+       assert(jsonBodyOverheadBytes >= 0),
+       assert(reasoningReserveTokens >= 0);
 
   /// Токены вывода на одну карточку (средняя карточка; калибруется по usage).
   final int tokensPerCard;
@@ -69,6 +71,13 @@ final class GenerationPlanningConfig {
   /// Запас тела запроса (обёртка/JSON), байт.
   final int jsonBodyOverheadBytes;
 
+  /// Явный резерв на токены рассуждения reasoning-модели (§3.4), токенов.
+  ///
+  /// Пока калибровки нет, `max_tokens` включает рассуждение: иначе партия
+  /// карточек обрезается ещё до вывода карточек. После ≥2 замеров `usage`
+  /// `tokensPerCard` уже учитывает рассуждение — планировщик ставит 0.
+  final int reasoningReserveTokens;
+
   /// Копия с изменёнными значениями (калибровка `tokensPerCard`).
   GenerationPlanningConfig copyWith({
     int? tokensPerCard,
@@ -82,6 +91,7 @@ final class GenerationPlanningConfig {
     int? unknownContextOutputTokens,
     int? defaultOutputTokens,
     int? jsonBodyOverheadBytes,
+    int? reasoningReserveTokens,
   }) => GenerationPlanningConfig(
     tokensPerCard: tokensPerCard ?? this.tokensPerCard,
     outputFill: outputFill ?? this.outputFill,
@@ -96,6 +106,8 @@ final class GenerationPlanningConfig {
         unknownContextOutputTokens ?? this.unknownContextOutputTokens,
     defaultOutputTokens: defaultOutputTokens ?? this.defaultOutputTokens,
     jsonBodyOverheadBytes: jsonBodyOverheadBytes ?? this.jsonBodyOverheadBytes,
+    reasoningReserveTokens:
+        reasoningReserveTokens ?? this.reasoningReserveTokens,
   );
 
   /// Запас точности для вида оценки.

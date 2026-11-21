@@ -430,6 +430,7 @@ final class InputPlanner {
     int promptOnlyRequestBytes = 0,
     String? inputTokenSource,
     int fixedBytes = 0,
+    int reasoningReserveTokens = 0,
   }) {
     final double marginRate = config.margin(
       exact: accuracy == InputAccuracy.exact,
@@ -524,7 +525,7 @@ final class InputPlanner {
     final bool wholeCapable =
         !budget.contextExceeded &&
         withinConservativeBudget &&
-        budget.maxTokens >= minBatchTokens;
+        budget.maxTokens >= minBatchTokens + reasoningReserveTokens;
 
     if (contextTokens == null) {
       // Окно не подтверждено: предупреждаем всегда, когда оно влияет на план.
@@ -547,6 +548,7 @@ final class InputPlanner {
         warnings: warnings,
         exactInputTokens: exactInputTokens,
         inputTokenSource: inputTokenSource,
+        reasoningReserveTokens: reasoningReserveTokens,
       );
     }
 
@@ -569,6 +571,7 @@ final class InputPlanner {
       inputTokenSource: exactInputTokens == null
           ? inputTokenSource
           : 'estimate',
+      reasoningReserveTokens: reasoningReserveTokens,
     );
   }
 
@@ -589,6 +592,7 @@ final class InputPlanner {
     required Set<PlanWarningCode> warnings,
     int? exactInputTokens,
     String? inputTokenSource,
+    int reasoningReserveTokens = 0,
   }) {
     final String materialsText = renderMaterials(sections);
     final _ImagePlacement placement = _placeImages(
@@ -668,6 +672,7 @@ final class InputPlanner {
     required int? contextTokens,
     required double marginRate,
     String? inputTokenSource,
+    int reasoningReserveTokens = 0,
   }) {
     final int fixedPart = fixedTokens + outlineReserveTokens;
     final bool inputOnly =
@@ -675,7 +680,7 @@ final class InputPlanner {
     final int outputCap = _outputCapOf(limits);
     final int outputReserve = math.min(
       outputCap,
-      config.tokensFor(config.batchCardsCeiling),
+      config.tokensFor(config.batchCardsCeiling) + reasoningReserveTokens,
     );
     final int? maxInputTokens = limits.maxInputTokens.value;
 

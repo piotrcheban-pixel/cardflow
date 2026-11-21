@@ -65,10 +65,12 @@ final class OutputBatchPlanner {
     required int maxTokensPerBatch,
     int? promptOnlyRequestedCards,
     int? maxCardsPerRequest,
+    int reasoningReserveTokens = 0,
   }) {
     final int perBatch = cardsPerBatch(
       maxTokensPerBatch,
       maxCardsPerRequest: maxCardsPerRequest,
+      reasoningReserveTokens: reasoningReserveTokens,
     );
     if (input.isPromptOnly) {
       final int total = promptOnlyRequestedCards ?? allocation.achievable;
@@ -139,10 +141,18 @@ final class OutputBatchPlanner {
     return List<PlannedBatch>.unmodifiable(batches);
   }
 
-  /// Карточек на ответ: `min(ceiling, cardsFor(maxTokens), maxCardsPerRequest)`,
-  /// но не меньше 1.
-  int cardsPerBatch(int maxTokensPerBatch, {int? maxCardsPerRequest}) {
-    final int byBudget = config.cardsFor(maxTokensPerBatch);
+  /// Карточек на ответ: `min(ceiling, cardsFor(maxTokens − резерв), cap)`, но
+  /// не меньше 1.
+  ///
+  /// [reasoningReserveTokens] — часть `max_tokens`, которую reasoning-модель
+  /// потратит на рассуждение (§3.4): карточки считаются от остатка.
+  int cardsPerBatch(
+    int maxTokensPerBatch, {
+    int? maxCardsPerRequest,
+    int reasoningReserveTokens = 0,
+  }) {
+    final int budget = maxTokensPerBatch - reasoningReserveTokens;
+    final int byBudget = config.cardsFor(budget < 0 ? 0 : budget);
     var cap = math.min(config.batchCardsCeiling, byBudget);
     if (maxCardsPerRequest != null) {
       cap = math.min(cap, math.max(1, maxCardsPerRequest));

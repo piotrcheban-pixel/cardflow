@@ -660,7 +660,9 @@ class GenerationPlan {
     this.promptOnlyPrompt,
     this.inputPlan,
     this.allocation,
+    this.reasoningReserveTokens = 0,
   }) : assert(requestedCards >= 0),
+       assert(reasoningReserveTokens >= 0),
        assert(retryAllowanceRequests >= 0),
        assert(
          mode == GenerationMode.materials ||
@@ -708,6 +710,12 @@ class GenerationPlan {
 
   /// Распределение карточек по разделам (ADR-040 §5); `null` — не строилось.
   final CardAllocation? allocation;
+
+  /// Резерв на токены рассуждения reasoning-модели (§3.4), токенов.
+  ///
+  /// До калибровки `max_tokens` должен вмещать карточки **и** рассуждение;
+  /// после ≥2 замеров `usage` калибровка учитывает их сама и резерв = 0.
+  final int reasoningReserveTokens;
 
   /// Стратегия входа; `null` — план без этой информации.
   InputStrategy? get inputStrategy => inputPlan?.strategy;

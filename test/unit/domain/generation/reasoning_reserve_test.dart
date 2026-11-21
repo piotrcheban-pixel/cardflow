@@ -111,6 +111,12 @@ void main() {
     );
     expect(limits.isReasoningModel.value, isTrue);
     expect(limits.isReasoningModel.source, CapabilitySource.providerApi);
+    expect(
+      modelCapabilitiesFromLimits(limits).isReasoningModel,
+      isTrue,
+      reason: 'проекция в ModelCapabilities не теряет признак',
+    );
+    expect(capabilitiesFor(reasoning: false).isReasoningModel, isFalse);
   });
 
   test('резерв рассуждения вычитается из карточек партии', () {
@@ -124,6 +130,11 @@ void main() {
       (int sum, PlannedChunk chunk) => sum + chunk.limit,
     );
     final int perBatch = largestBatch(plan);
+    expect(
+      plan.reasoningReserveTokens,
+      config.reasoningReserveTokens,
+      reason: 'резерв виден в плане и в «Подробнее»',
+    );
     expect(
       config.tokensFor(perBatch) + expectedReserve,
       lessThanOrEqualTo(maxTokens),

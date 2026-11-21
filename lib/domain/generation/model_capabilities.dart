@@ -59,6 +59,7 @@ class ModelCapabilities {
     this.maxRequestBytes,
     this.supportsVision = false,
     this.supportsPdfDocumentPart = false,
+    this.isReasoningModel,
     this.supportsStrictJsonSchema,
     this.tokenizer = TokenizerKind.unknown,
     this.imageTokens,
@@ -131,6 +132,10 @@ class ModelCapabilities {
 
   /// Принимает ли протокол PDF как документ (факт реализации в приложении).
   final bool supportsPdfDocumentPart;
+
+  /// Модель тратит часть вывода на рассуждение (`reasoning`); `null` —
+  /// неизвестно (тогда резерв рассуждения не добавляется).
+  final bool? isReasoningModel;
 
   /// Принимает ли модель strict JSON-схему; `null` — неизвестно (ADR-021).
   final bool? supportsStrictJsonSchema;
@@ -245,6 +250,7 @@ ModelCapabilities modelCapabilitiesFromLimits(ModelLimits limits) {
     maxRequestBytes: requestBytes,
     supportsVision: vision ?? false,
     supportsPdfDocumentPart: limits.supportsPdfInput.value ?? false,
+    isReasoningModel: limits.isReasoningModel.value,
     supportsStrictJsonSchema: null,
     tokenizer: TokenizerKind.unknown,
     imageTokens: null,

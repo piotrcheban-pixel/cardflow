@@ -50,6 +50,9 @@ GenerationPlanBuilder generationPlanBuilderFor(
   final GenerationPlanningConfig planning = base.planner.config.planning
       .copyWith(
         tokensPerCard: calibration.tokensPerCard.round().clamp(50, 5000),
+        // Калибровка `completion_tokens / принятые карточки` уже включает
+        // токены рассуждения (§3.4): отдельный резерв не добавляется.
+        reasoningReserveTokens: 0,
       );
   return GenerationPlanBuilder(
     planner: GenerationChunkPlanner(

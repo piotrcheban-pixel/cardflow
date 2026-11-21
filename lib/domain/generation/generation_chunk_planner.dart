@@ -198,9 +198,19 @@ final class GenerationChunkPlanner {
       return _emptyPlan(limits: limits, overhead: overhead);
     }
     final int outputCap = planning.outputCapFor(limits);
-    final int desired = planning.desiredOutputTokens(
-      requestedCards: requestedCards,
-      maxOutputTokens: outputCap,
+    // §3.4: reasoning-модель тратит часть `max_tokens` на рассуждение. Резерв
+    // добавляется явно (допущение) и исчезает после калибровки по `usage`.
+    final int reasoningReserve =
+        limits.isReasoningModel.value == true && planning.reasoningReserveTokens > 0
+        ? planning.reasoningReserveTokens
+        : 0;
+    final int desired = math.min(
+      outputCap,
+      planning.desiredOutputTokens(
+            requestedCards: requestedCards,
+            maxOutputTokens: outputCap,
+          ) +
+          reasoningReserve,
     );
 
     final InputPlan inputPlan;
@@ -245,6 +255,7 @@ final class GenerationChunkPlanner {
         exactInputTokens: exactInputTokens,
         promptOnlyRequestBytes: promptBodyBytes,
         inputTokenSource: inputTokenSource ?? 'estimate:${estimator.version}',
+        reasoningReserveTokens: reasoningReserve,
       );
       if (inputPlan.budget.payloadExceeded) {
         return _invalidPlan(
@@ -293,6 +304,7 @@ final class GenerationChunkPlanner {
         fixedTokens: overhead.fixedTokens,
         fixedBytes: overhead.fixedBytes,
         desiredOutputTokens: desired,
+        reasoningReserveTokens: reasoningReserve,
         accuracy: exactInputTokens == null
             ? InputAccuracy.estimated
             : InputAccuracy.exact,
@@ -379,6 +391,7 @@ final class GenerationChunkPlanner {
             inputPlan: inputPlan,
             allocation: allocation,
             planning: planning,
+            reasoningReserveTokens: reasoningReserve,
           )
         : OutputBatchPlanner(config: planning).plan(
             input: inputPlan,
@@ -386,6 +399,7 @@ final class GenerationChunkPlanner {
             maxTokensPerBatch: inputPlan.maxTokens,
             promptOnlyRequestedCards: requestedCards,
             maxCardsPerRequest: limits.maxCardsPerRequest.value,
+            reasoningReserveTokens: reasoningReserve,
           );
 
     final Set<PlanWarningCode> warnings = <PlanWarningCode>{
@@ -542,6 +556,7 @@ final class GenerationChunkPlanner {
       promptOnlyPrompt: promptOnly ? (wishes ?? '') : null,
       inputPlan: inputPlan,
       allocation: allocation,
+      reasoningReserveTokens: reasoningReserve,
     );
   }
 
@@ -1020,12 +1035,14 @@ final class GenerationChunkPlanner {
     required InputPlan inputPlan,
     required CardAllocation allocation,
     required GenerationPlanningConfig planning,
+    required int reasoningReserveTokens,
   }) {
+    final int budget = inputPlan.maxTokens - reasoningReserveTokens;
     final int perBatch = math.max(
       1,
       math.min(
         planning.batchCardsCeiling,
-        planning.cardsFor(inputPlan.maxTokens),
+        planning.cardsFor(budget < 0 ? 0 : budget),
       ),
     );
     final int total = allocation.achievable;
@@ -1239,6 +1256,9 @@ final class GenerationChunkPlanner {
           : null,
       inputPlan: inputPlan,
       unknownFields: _unknownFields(limits, inputPlan),
+      reasoningReserveTokens: limits.isReasoningModel.value == true
+          ? config.planning.reasoningReserveTokens
+          : 0,
     );
   }
 
