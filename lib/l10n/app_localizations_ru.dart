@@ -2600,6 +2600,15 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsCapabilitiesImages => 'Изображений в запросе';
 
   @override
+  String get settingsCapabilitiesImageInput => 'Вход изображений';
+
+  @override
+  String get settingsCapabilitiesImageInputYes => 'поддерживается';
+
+  @override
+  String get settingsCapabilitiesImageInputNo => 'не поддерживается';
+
+  @override
   String get settingsCapabilitiesUnknown => 'неизвестно';
 
   @override

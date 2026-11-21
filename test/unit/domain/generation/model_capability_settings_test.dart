@@ -152,6 +152,36 @@ void main() {
     expect(automatic.capabilitiesConfiguredAt, isNull);
   });
 
+  test('копирование аккаунта не теряет явно заданный Vision', () {
+    final ProviderAccount configured =
+        ProviderAccount.fromPreset(
+          providerPresetById('deepseek')!,
+          id: 'deepseek',
+          modelId: 'deepseek-chat',
+        ).copyWith(supportsVision: true, visionConfigured: true);
+    expect(
+      configured.visionConfigured,
+      isTrue,
+      reason: 'copyWith обязан переносить признак пользовательской настройки',
+    );
+    // Копия, как её делает экран генерации (модель/контекст/Vision).
+    final ProviderAccount copied = configured.copyWith(
+      modelId: 'deepseek-chat',
+      supportsVision: configured.supportsVision,
+    );
+    expect(copied.visionConfigured, isTrue);
+    final ModelLimits limits = resolveModelLimits(
+      account: copied,
+      preset: providerPresetById('deepseek'),
+    );
+    expect(limits.supportsImageInput.value, isTrue);
+    expect(
+      limits.supportsImageInput.source,
+      CapabilitySource.userConfigured,
+      reason: 'каталог не перекрывает явную настройку пользователя',
+    );
+  });
+
   test('пользовательский аккаунт без ручных значений: лимиты неизвестны', () {
     final ModelLimits limits = resolveModelLimits(account: account());
     expect(limits.contextTokens.value, isNull);

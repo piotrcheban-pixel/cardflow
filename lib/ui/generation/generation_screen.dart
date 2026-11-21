@@ -206,7 +206,12 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
     return account.copyWith(
       modelId: modelId,
       contextTokens: model?.contextTokens ?? account.contextTokens,
-      supportsVision: model?.supportsVision ?? account.supportsVision,
+      // §3.10/ADR-039: явная настройка Vision пользователя имеет приоритет над
+      // каталогом. Каталог подставляет значение только если пользователь его
+      // не задавал (`visionConfigured == false`).
+      supportsVision: account.visionConfigured
+          ? account.supportsVision
+          : (model?.supportsVision ?? account.supportsVision),
     );
   }
 

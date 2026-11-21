@@ -177,6 +177,10 @@ class ProviderAccount {
       contextTokens: contextTokens ?? this.contextTokens,
       requiresApiKey: requiresApiKey ?? this.requiresApiKey,
       supportsVision: supportsVision ?? this.supportsVision,
+      // Признак «значение задано пользователем» не теряется при копировании:
+      // иначе `resolveModelLimits` считает явный Vision каталогом и может
+      // перекрыть его (дефект аудита 7.18.2).
+      visionConfigured: visionConfigured ?? this.visionConfigured,
       maxInputTokens: maxInputTokens ?? this.maxInputTokens,
       maxOutputTokens: maxOutputTokens ?? this.maxOutputTokens,
       maxImagesPerRequest: maxImagesPerRequest ?? this.maxImagesPerRequest,

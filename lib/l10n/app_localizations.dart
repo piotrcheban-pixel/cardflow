@@ -4207,6 +4207,24 @@ abstract class AppLocalizations {
   /// **'Изображений в запросе'**
   String get settingsCapabilitiesImages;
 
+  /// Строка поддержки изображений (Vision) моделью.
+  ///
+  /// In ru, this message translates to:
+  /// **'Вход изображений'**
+  String get settingsCapabilitiesImageInput;
+
+  /// Подтверждённая поддержка изображений моделью.
+  ///
+  /// In ru, this message translates to:
+  /// **'поддерживается'**
+  String get settingsCapabilitiesImageInputYes;
+
+  /// Подтверждённое отсутствие поддержки изображений.
+  ///
+  /// In ru, this message translates to:
+  /// **'не поддерживается'**
+  String get settingsCapabilitiesImageInputNo;
+
   /// Значение лимита, которое неизвестно.
   ///
   /// In ru, this message translates to:

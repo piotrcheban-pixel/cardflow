@@ -251,6 +251,19 @@ class _ModelCapabilitySectionState extends State<ModelCapabilitySection> {
               value: limits.maxImagesPerRequest,
               l10n: l10n,
             ),
+            // §3.10: «вход изображений» — отдельная возможность со своим
+            // источником и датой; «неизвестно» не выдаётся за поддержку.
+            _CapabilityRow(
+              label: l10n.settingsCapabilitiesImageInput,
+              value: limits.supportsImageInput,
+              l10n: l10n,
+              text: limits.supportsImageInput.value == null
+                  ? null
+                  : limits.supportsImageInput.value!
+                  ? l10n.settingsCapabilitiesImageInputYes
+                  : l10n.settingsCapabilitiesImageInputNo,
+              rowKey: 'capability-image-input',
+            ),
             const SizedBox(height: AppSpacing.sm),
             if (_message != null)
               Padding(
@@ -303,24 +316,38 @@ class _CapabilityRow extends StatelessWidget {
     required this.label,
     required this.value,
     required this.l10n,
+    this.text,
+    this.rowKey,
   });
 
   final String label;
-  final Sourced<int> value;
+  final Sourced<Object?>? value;
   final AppLocalizations l10n;
+
+  /// Текст значения вместо числового (`поддерживается`/`не поддерживается`).
+  final String? text;
+
+  /// key строки для widget-тестов (по умолчанию — по подписи).
+  final String? rowKey;
 
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final String text = value.value == null
-        ? l10n.settingsCapabilitiesUnknown
-        : _formatTokens(value.value!);
-    final String source = capabilitySourceLabel(l10n, value.source);
-    final DateTime? observed = value.observedAt;
+    final Sourced<Object?>? sourced = value;
+    final Object? raw = sourced?.value;
+    final String? display = text ?? (raw is int ? _formatTokens(raw) : null);
+    final String valueText = display ?? l10n.settingsCapabilitiesUnknown;
+    final CapabilitySource source =
+        sourced?.source ?? CapabilitySource.unknown;
+    final String sourceLabel = capabilitySourceLabel(l10n, source);
+    final DateTime? observed = sourced?.observedAt;
     final String date = observed == null
         ? ''
         : ' · ${l10n.settingsCapabilitiesCheckedAt(_date(observed))}';
-    final String line = '$text — $source$date';
+    final String line = '$valueText — $sourceLabel$date';
+    // Допущение визуально отличается от подтверждённого значения (§3.10):
+    // курсив + «допущение приложения» в подписи источника.
+    final bool assumption = source == CapabilitySource.assumption;
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.xxs),
       child: Row(
@@ -333,11 +360,12 @@ class _CapabilityRow extends StatelessWidget {
           Expanded(
             child: Text(
               line,
-              key: ValueKey<String>('capability-$label'),
+              key: ValueKey<String>(rowKey ?? 'capability-$label'),
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: value.isKnown
+                color: sourced?.isKnown == true
                     ? theme.colorScheme.onSurface
                     : theme.colorScheme.onSurfaceVariant,
+                fontStyle: assumption ? FontStyle.italic : null,
               ),
             ),
           ),
