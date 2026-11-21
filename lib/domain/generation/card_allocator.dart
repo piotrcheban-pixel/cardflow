@@ -319,6 +319,12 @@ final class CardAllocator {
   ///
   /// `requestedCards == null` — «авто»: каждый раздел получает свою ёмкость.
   /// Заказ `≤ 0` — ошибка (невалидный ввод не превращается в 0 молча).
+  ///
+  /// 7.20: мягкая ёмкость (`capacity`) — **предпочтение** распределения, а не
+  /// потолок заказа. Сначала разделы заполняются water-filling'ом до своей
+  /// ёмкости, затем остаток заказа распределяется по весам с точной
+  /// целочисленной раздачей наибольших остатков: `Σ planned == requestedCards`,
+  /// а оценка ёмкости материала показывается отдельно (`estimatedCapacity`).
   CardAllocation allocate({
     required List<AllocationSection> sections,
     int? requestedCards,
@@ -447,6 +453,18 @@ final class CardAllocator {
       }
     }
 
+    // 7.20: остаток заказа сверх мягкой ёмкости не теряется. Он распределяется
+    // по весам разделов с точной целочисленной раздачей (наибольшие остатки),
+    // поэтому Σ planned == requested даже при заказе больше ёмкости материала.
+    final int distributed = planned.values.fold<int>(
+      0,
+      (int sum, int value) => sum + value,
+    );
+    final int surplus = requested - distributed;
+    if (surplus > 0) {
+      _distributeSurplus(items, planned, surplus);
+    }
+
     final int achievable = planned.values.fold<int>(0, (int a, int b) => a + b);
     return CardAllocation(
       planned: planned,
@@ -457,6 +475,56 @@ final class CardAllocator {
       materialLimited:
           estimatedCapacity != null && requested > estimatedCapacity,
     );
+  }
+
+  /// Раздаёт [surplus] карточек по весам разделов без учёта ёмкости.
+  ///
+  /// Точная арифметика: вес масштабируется до `int`, произведение «остаток ×
+  /// вес» считается через [BigInt] (заказ может быть любым `int`), раздача
+  /// остатка от деления — по наибольшим остаткам, при равенстве — по порядку
+  /// разделов. Мягкая ёмкость здесь не ограничивает: она уже учтена первым
+  /// проходом и показывается отдельной оценкой.
+  void _distributeSurplus(
+    List<AllocationSection> items,
+    Map<String, int> planned,
+    int surplus,
+  ) {
+    final List<BigInt> scaled = <BigInt>[
+      for (final AllocationSection section in items)
+        BigInt.from(math.max(1, (section.weight * 1000).round())),
+    ];
+    final BigInt totalWeight = scaled.fold<BigInt>(
+      BigInt.zero,
+      (BigInt sum, BigInt value) => sum + value,
+    );
+    if (totalWeight <= BigInt.zero) return;
+    final BigInt big = BigInt.from(surplus);
+    final List<BigInt> products = <BigInt>[
+      for (final BigInt value in scaled) big * value,
+    ];
+    final List<int> shares = <int>[
+      for (final BigInt product in products) (product ~/ totalWeight).toInt(),
+    ];
+    var left =
+        surplus - shares.fold<int>(0, (int sum, int value) => sum + value);
+    final List<int> order =
+        List<int>.generate(items.length, (int index) => index)
+          ..sort((int a, int b) {
+            final int byRemainder = (products[b] % totalWeight).compareTo(
+              products[a] % totalWeight,
+            );
+            if (byRemainder != 0) return byRemainder;
+            return a.compareTo(b);
+          });
+    for (final int index in order) {
+      if (left <= 0) break;
+      shares[index]++;
+      left--;
+    }
+    for (var index = 0; index < items.length; index++) {
+      if (shares[index] <= 0) continue;
+      planned[items[index].id] = planned[items[index].id]! + shares[index];
+    }
   }
 
   AllocationSection _sectionOf(List<AllocationSection> items, String id) =>

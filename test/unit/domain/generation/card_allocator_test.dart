@@ -51,14 +51,23 @@ void main() {
       ], reason: 'остаток после фиксации ёмкости перераспределяется по весам');
     });
 
-    test('ёмкости 3/6/5/6/2, заказ 50 → achievable 22, предупреждение', () {
+    test('ёмкости 3/6/5/6/2, заказ 50 → в плане 50, ёмкость 22 отдельно', () {
       final CardAllocation allocation = allocator.allocate(
         sections: five(capacities: const <int?>[3, 6, 5, 6, 2]),
         requestedCards: 50,
       );
-      expect(allocation.achievable, 22);
-      expect(allocation.belowRequested, isTrue);
-      expect(values(allocation), <int>[3, 6, 5, 6, 2]);
+      // 7.20: мягкая ёмкость больше не режет заказ (было 22 из 50).
+      expect(allocation.achievable, 50);
+      expect(allocation.belowRequested, isFalse);
+      expect(allocation.estimatedCapacity, 22);
+      expect(allocation.materialLimited, isTrue);
+      expect(values(allocation), <int>[
+        6,
+        14,
+        11,
+        14,
+        5,
+      ], reason: 'остаток сверх ёмкости распределён по весам 1:3:2:3:1');
     });
 
     test('служебный раздел → 0, маленький насыщенный не теряется', () {
@@ -99,8 +108,8 @@ void main() {
         );
         expect(
           first.achievable,
-          requested < 83 ? requested : 83,
-          reason: 'Σ = min(requested, Σcapacity)',
+          requested,
+          reason: '7.20: Σ = заказ; ёмкость материала — в estimatedCapacity',
         );
         expect(first.planned, second.planned, reason: 'детерминизм');
         for (final int value in first.planned.values) {
@@ -109,7 +118,7 @@ void main() {
       });
     }
 
-    test('заказ больше ёмкостей → сумма равна сумме ёмкостей', () {
+    test('заказ больше ёмкостей → сумма равна заказу, ёмкость отдельно', () {
       final List<AllocationSection> sections = five(
         capacities: const <int?>[3, 6, 5, 6, 2],
       );
@@ -117,8 +126,12 @@ void main() {
         sections: sections,
         requestedCards: 1000000,
       );
-      expect(allocation.achievable, 22);
-      expect(allocation.belowRequested, isTrue);
+      // 7.20: потолок — только технический (`GenerationChunkPlanner`), а не
+      // мягкая ёмкость материала.
+      expect(allocation.achievable, 1000000);
+      expect(allocation.belowRequested, isFalse);
+      expect(allocation.estimatedCapacity, 22);
+      expect(allocation.materialLimited, isTrue);
     });
 
     test('«авто» (null) → каждый раздел получает ёмкость', () {

@@ -36,7 +36,7 @@ void main() {
   group('7.20: заказ не обрезается мягкой ёмкостью', () {
     test('заказ 40 при ёмкости 32 → в плане 40, ёмкость 32 отдельно', () {
       final CardAllocation allocation = allocator.allocate(
-        sections: five(capacities: const <int?>[8, 8, 8, 8, 8]),
+        sections: five(capacities: const <int?>[7, 7, 6, 6, 6]),
         requestedCards: 40,
       );
       expect(allocation.achievable, 40);
