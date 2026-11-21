@@ -23,32 +23,39 @@ import 'package:cardflow/domain/text/parsed_document.dart';
 
 import '../helpers/generation_fakes.dart';
 
-/// 7.18.1 §2.2: нативный подсчёт входа (Anthropic/Gemini) подключён к
-/// конвейеру: один подсчёт на план, кэш по хэшу содержимого, деградация к
-/// оценке при ошибке, тела запросов не логируются.
+/// 7.18.3 §2: нативный подсчёт входа получает **тот же** мультимодальный
+/// материал, что и production-запрос; изображения не учитываются дважды;
+/// кэш зависит от байтов; число провайдера отделено от планового бюджета.
 class _FakeTokenCounter implements RequestTokenCounter {
-  _FakeTokenCounter({this.result = const ExactTokenCount.exact(1234)});
+  _FakeTokenCounter({
+    this.result = const ExactTokenCount.exact(1234),
+    this.protocol = ProviderProtocol.anthropicMessages,
+  });
 
   ExactTokenCount result;
+  final ProviderProtocol protocol;
 
   int calls = 0;
 
   @override
-  bool supports(ProviderAccount account) =>
-      account.protocol == ProviderProtocol.anthropicMessages;
+  bool supports(ProviderAccount account) => account.protocol == protocol;
 
   final List<String> systemPrompts = <String>[];
   final List<String> userContents = <String>[];
+  final List<List<GenerationAttachment>> attachments =
+      <List<GenerationAttachment>>[];
 
   @override
   Future<ExactTokenCount> count(
     ProviderAccount account, {
     required String systemPrompt,
     required String userContent,
+    List<GenerationAttachment> attachments = const <GenerationAttachment>[],
   }) async {
     calls++;
     systemPrompts.add(systemPrompt);
     userContents.add(userContent);
+    this.attachments.add(attachments);
     return result;
   }
 }
@@ -72,6 +79,18 @@ GenerationResult resultWithCard() => GenerationResult(
   ),
 );
 
+DocumentImage imageOf({int seed = 1}) => DocumentImage(
+  fileName: 'схема.png',
+  bytes: Uint8List.fromList(
+    List<int>.generate(64 * 1024, (int i) => (i * 31 + seed) % 251),
+  ),
+  mediaType: AttachmentMediaType.png,
+  width: 800,
+  height: 600,
+  caption: 'Схема',
+  context: 'Схема из текста',
+);
+
 void main() {
   late FakeGenerationCaller caller;
   late FakeGenerationJobRepository jobs;
@@ -85,6 +104,18 @@ void main() {
     baseUrl: 'https://api.anthropic.com',
     modelId: 'claude-test',
     contextTokens: 200000,
+    requiresApiKey: true,
+    supportsVision: true,
+    visionConfigured: true,
+  );
+
+  ProviderAccount geminiAccount() => ProviderAccount(
+    id: 'gemini',
+    label: 'Gemini',
+    protocol: ProviderProtocol.geminiGenerateContent,
+    baseUrl: 'https://generativelanguage.googleapis.com',
+    modelId: 'gemini-test',
+    contextTokens: 128000,
     requiresApiKey: true,
   );
 
@@ -111,15 +142,18 @@ void main() {
     );
   }
 
-  GenerationRunRequest requestFor(ProviderAccount account) =>
-      GenerationRunRequest(
-        documents: <ParsedDocument>[
-          docOf('лекция.txt', 'Фотосинтез — процесс преобразования света.'),
-        ],
-        account: account,
-        deckName: 'Точный подсчёт',
-        wishes: '3 карточки',
-      );
+  GenerationRunRequest requestFor(
+    ProviderAccount account, {
+    List<DocumentImage> documentImages = const <DocumentImage>[],
+  }) => GenerationRunRequest(
+    documents: <ParsedDocument>[
+      docOf('лекция.txt', 'Фотосинтез — процесс преобразования света.'),
+    ],
+    documentImages: documentImages,
+    account: account,
+    deckName: 'Точный подсчёт',
+    wishes: '3 карточки',
+  );
 
   test('один нативный подсчёт на план: точность и источник в плане', () async {
     counter = _FakeTokenCounter();
@@ -138,6 +172,12 @@ void main() {
     expect(inputPlan.inputTokenSource, contains('count_tokens'));
     // 1234 точных токенов + запас 3 % (ceil(37.02) = 38).
     expect(inputPlan.inputTokens, 1234 + 38);
+    expect(inputPlan.nativeInputTokens, 1234, reason: 'число провайдера');
+    expect(
+      inputPlan.effectiveBudgetTokens,
+      1234 + 38,
+      reason: 'плановый бюджет = native + резерв, а не число провайдера',
+    );
     expect(counter.systemPrompts.single, contains('ПЛАНИРОВАНИЕ ВЫДАЧИ'));
     expect(counter.userContents.single, contains('Фотосинтез'));
   });
@@ -170,6 +210,7 @@ void main() {
     final InputPlan inputPlan = result.plan!.inputPlan!;
     expect(inputPlan.accuracy, InputAccuracy.estimated);
     expect(inputPlan.inputTokenSource, contains('estimate'));
+    expect(inputPlan.nativeInputTokens, isNull);
     expect(result.status, GenerationJobStatus.done);
     expect(
       diagnostics.any((String line) => line.contains('count_tokens')),
@@ -206,49 +247,148 @@ void main() {
     expect(all, isNot(contains('sk-ant')));
   });
 
-  test('exact-режим не обнуляет стоимость изображений', () async {
-    counter = _FakeTokenCounter(result: const ExactTokenCount.exact(1000));
+  test(
+    'Anthropic: изображения уходят в count_tokens и не считаются дважды',
+    () async {
+      counter = _FakeTokenCounter(result: const ExactTokenCount.exact(1000));
+      final runner = pipeline(tokenCounter: counter);
+      caller.onGenerate = (GenerationRequest request, int call) async =>
+          resultWithCard();
+
+      final GenerationRunResult result = await runner.run(
+        requestFor(
+          anthropicAccount(),
+          documentImages: <DocumentImage>[imageOf()],
+        ),
+      );
+
+      expect(counter.calls, 1);
+      expect(counter.attachments.single, hasLength(1));
+      expect(
+        counter.attachments.single.single.bytes,
+        orderedEquals(imageOf().bytes),
+        reason: 'нативный подсчёт видит то же изображение, что и запрос',
+      );
+      final InputPlan inputPlan = result.plan!.inputPlan!;
+      expect(inputPlan.accuracy, InputAccuracy.exact);
+      expect(
+        inputPlan.estimatedExtraTokens,
+        0,
+        reason: 'изображение посчитано',
+      );
+      expect(inputPlan.marginTokens, 30, reason: '3 % exact');
+      expect(
+        inputPlan.inputTokens,
+        1030,
+        reason: 'стоимость изображения (256 токенов) не прибавлена повторно',
+      );
+      expect(inputPlan.inputTokenSource, isNot(contains('image_estimate')));
+    },
+  );
+
+  test(
+    'кэш учитывает изменение байтов изображения при том же тексте',
+    () async {
+      counter = _FakeTokenCounter(result: const ExactTokenCount.exact(1000));
+      final runner = pipeline(tokenCounter: counter);
+      caller.onGenerate = (GenerationRequest request, int call) async =>
+          resultWithCard();
+
+      await runner.run(
+        requestFor(
+          anthropicAccount(),
+          documentImages: <DocumentImage>[imageOf(seed: 1)],
+        ),
+      );
+      expect(counter.calls, 1);
+
+      // Тот же текст и имя файла, другие байты — старый результат неприменим.
+      await runner.run(
+        requestFor(
+          anthropicAccount(),
+          documentImages: <DocumentImage>[imageOf(seed: 2)],
+        ),
+      );
+      expect(
+        counter.calls,
+        2,
+        reason: 'ключ кэша обязан включать digest бинарного содержимого',
+      );
+
+      // Тот же запрос ещё раз — снова кэш.
+      await runner.run(
+        requestFor(
+          anthropicAccount(),
+          documentImages: <DocumentImage>[imageOf(seed: 2)],
+        ),
+      );
+      expect(counter.calls, 2);
+    },
+  );
+
+  test(
+    'Gemini: native + schemaOverhead = mixed, бюджет не выдан за native',
+    () async {
+      counter = _FakeTokenCounter(
+        protocol: ProviderProtocol.geminiGenerateContent,
+        result: const ExactTokenCount.exact(1000),
+      );
+      final runner = pipeline(tokenCounter: counter);
+      caller.onGenerate = (GenerationRequest request, int call) async =>
+          resultWithCard();
+
+      final GenerationRunResult result = await runner.run(
+        requestFor(geminiAccount()),
+      );
+
+      final InputPlan inputPlan = result.plan!.inputPlan!;
+      final int schemaTokens = result.plan!.estimate.schemaTokens;
+      expect(schemaTokens, greaterThan(0));
+      expect(
+        inputPlan.accuracy,
+        InputAccuracy.estimated,
+        reason: 'responseSchema не подтверждён в totalTokens — не exact',
+      );
+      expect(inputPlan.nativeInputTokens, 1000);
+      expect(inputPlan.estimatedExtraTokens, schemaTokens);
+      expect(inputPlan.estimatedComponents, contains('response_schema'));
+      final int counted = 1000 + schemaTokens;
+      expect(inputPlan.marginTokens, (counted * 0.10).ceil());
+      expect(
+        inputPlan.effectiveBudgetTokens,
+        counted + (counted * 0.10).ceil(),
+      );
+      expect(
+        result.plan!.inputPlan!.inputTokenSource,
+        contains('count_tokens'),
+      );
+    },
+  );
+
+  test('ошибка подсчёта с изображением: оценка, без двойного учёта', () async {
+    counter = _FakeTokenCounter(
+      result: const ExactTokenCount.unknown('timeout'),
+    );
     final runner = pipeline(tokenCounter: counter);
     caller.onGenerate = (GenerationRequest request, int call) async =>
         resultWithCard();
-    // 64 КБ изображение: байтовая эвристика 256 байт/токен → 256 токенов.
-    final DocumentImage image = DocumentImage(
-      fileName: 'схема.png',
-      id: 'img1',
-      bytes: Uint8List.fromList(
-        List<int>.generate(64 * 1024, (int i) => (i * 31) % 251),
+
+    final GenerationRunResult result = await runner.run(
+      requestFor(
+        anthropicAccount(),
+        documentImages: <DocumentImage>[imageOf()],
       ),
-      mediaType: AttachmentMediaType.png,
-      caption: 'Схема',
-      context: 'Схема из текста',
-    );
-    final GenerationRunRequest request = GenerationRunRequest(
-      documents: <ParsedDocument>[
-        docOf('лекция.txt', 'Фотосинтез — процесс преобразования света.'),
-      ],
-      documentImages: <DocumentImage>[image],
-      account: anthropicAccount().copyWith(
-        supportsVision: true,
-        visionConfigured: true,
-      ),
-      deckName: 'Точный подсчёт',
-      wishes: '3 карточки',
     );
 
-    final GenerationRunResult result = await runner.run(request);
     final InputPlan inputPlan = result.plan!.inputPlan!;
-    expect(inputPlan.accuracy, InputAccuracy.exact);
-    expect(
-      inputPlan.inputTokens,
-      1256 + 38,
-      reason:
-          'count_tokens посчитал только текст (1000); изображение (256 '
-          'токенов) добавляется оценкой, а не нулём',
-    );
+    expect(inputPlan.accuracy, InputAccuracy.estimated);
+    expect(inputPlan.nativeInputTokens, isNull);
+    expect(inputPlan.estimatedExtraTokens, 0);
     expect(
       inputPlan.inputTokenSource,
-      contains('image_estimate'),
-      reason: 'источник честно говорит, что часть входа — оценка',
+      contains('estimate'),
+      reason: 'источник честно говорит об оценке',
     );
+    expect(result.status, GenerationJobStatus.done);
   });
 }

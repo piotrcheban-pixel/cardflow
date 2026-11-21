@@ -279,6 +279,24 @@ final class InputPlan {
   /// Токены каталога `<images>` плана (`D` включает каталог, §3.4).
   final int catalogTokens;
 
+  /// Фактическое число токенов, возвращённое `count_tokens` (7.18.3).
+  ///
+  /// Показывается отдельно от планового бюджета: бюджет включает запас, и
+  /// выдавать его за число провайдера запрещено.
+  int? get nativeInputTokens => budget.nativeInputTokens;
+
+  /// Дополнительно оценённые токены (нативный подсчёт их не видел).
+  int get estimatedExtraTokens => budget.estimatedExtraTokens;
+
+  /// Компоненты, оценённые дополнительно (`response_schema`, …).
+  List<String> get estimatedComponents => budget.estimatedComponents;
+
+  /// Резерв безопасности бюджета (запас точности).
+  int get marginTokens => budget.marginTokens;
+
+  /// Итоговый плановый бюджет входа (не результат провайдера).
+  int get effectiveBudgetTokens => budget.inputTokens;
+
   /// Число частей материала.
   int get partCount => parts.length;
 

@@ -11,6 +11,7 @@ import 'package:dio/dio.dart';
 
 import 'package:cardflow/api/generation/provider_schema.dart';
 import 'package:cardflow/api/models/model_discovery.dart' show ApiKeyReader;
+import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/generation/provider_account.dart';
 import 'package:cardflow/domain/generation/provider_protocol.dart';
 
@@ -38,10 +39,15 @@ abstract interface class RequestTokenCounter {
   bool supports(ProviderAccount account);
 
   /// Считает вход запроса; ошибки возвращаются как [ExactTokenCount.unknown].
+  ///
+  /// [attachments] — мультимодальные части (изображения/PDF) в том же виде,
+  /// в каком они уйдут в production-запрос: счётчик обязан передавать их
+  /// провайдеру, иначе «точный» вход занижен на целые изображения.
   Future<ExactTokenCount> count(
     ProviderAccount account, {
     required String systemPrompt,
     required String userContent,
+    List<GenerationAttachment> attachments = const <GenerationAttachment>[],
   });
 }
 
@@ -133,6 +139,7 @@ class AnthropicRequestTokenCounter extends _HttpCounter
     ProviderAccount account, {
     required String systemPrompt,
     required String userContent,
+    List<GenerationAttachment> attachments = const <GenerationAttachment>[],
   }) async {
     try {
       final int tokens = await post(
@@ -186,6 +193,7 @@ class GeminiRequestTokenCounter extends _HttpCounter
     ProviderAccount account, {
     required String systemPrompt,
     required String userContent,
+    List<GenerationAttachment> attachments = const <GenerationAttachment>[],
   }) async {
     try {
       final String model = account.modelId.trim();
@@ -237,6 +245,7 @@ class NoopRequestTokenCounter implements RequestTokenCounter {
     ProviderAccount account, {
     required String systemPrompt,
     required String userContent,
+    List<GenerationAttachment> attachments = const <GenerationAttachment>[],
   }) async => const ExactTokenCount.unknown('unsupported');
 }
 
@@ -266,11 +275,13 @@ class ProtocolRequestTokenCounter implements RequestTokenCounter {
     ProviderAccount account, {
     required String systemPrompt,
     required String userContent,
-  }) => requestTokenCounterFor(
+    List<GenerationAttachment> attachments = const <GenerationAttachment>[],
+  }) => requestTokenCounterFor(account, dio, readApiKey: readApiKey).count(
     account,
-    dio,
-    readApiKey: readApiKey,
-  ).count(account, systemPrompt: systemPrompt, userContent: userContent);
+    systemPrompt: systemPrompt,
+    userContent: userContent,
+    attachments: attachments,
+  );
 }
 
 /// Выбирает счётчик по протоколу (только там, где он документирован).

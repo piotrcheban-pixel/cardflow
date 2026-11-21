@@ -96,6 +96,14 @@ class ModelCapabilities {
   /// Ключ [unknownFields]: лимиты изображений неизвестны.
   static const String unknownImageLimits = 'image_limits';
 
+  /// Ключ [unknownFields]: поддержка изображений моделью неизвестна (7.18.3):
+  /// это не то же самое, что подтверждённое «не поддерживает».
+  static const String unknownImageInput = 'supports_image_input';
+
+  /// Ключ [unknownFields]: размер тела запроса не подтверждён провайдером;
+  /// 32 МБ — консервативное допущение приложения, а не характеристика модели.
+  static const String unknownMaxRequestBytes = 'max_request_bytes';
+
   /// Ключ [unknownFields]: цены неизвестны (полностью или частично).
   static const String unknownPricing = 'pricing';
 

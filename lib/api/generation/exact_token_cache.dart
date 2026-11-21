@@ -11,18 +11,29 @@ import 'dart:convert';
 import 'package:crypto/crypto.dart';
 
 import 'package:cardflow/api/generation/request_token_counter.dart';
+import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/generation/provider_account.dart';
+
+/// Версия формы запроса подсчёта: при изменении набора частей ключ меняется.
+///
+/// Кэш живёт в памяти и не сериализуется, но версия защитывает случай
+/// переиспользования экземпляра приложения после обновления кода.
+const String exactTokenRequestVersion = 'multimodal-1';
 
 /// Стабильный ключ кэша подсчёта: хэш содержимого запроса.
 ///
 /// Включает протокол, адрес, модель и аккаунт: у разных моделей/провайдеров
 /// один и тот же текст токенизируется по-разному. Ключ API не участвует.
+/// [attachments] входят **дайджестами байтов** и MIME-типами: изменение
+/// изображения при том же тексте обязано дать другой ключ.
 String exactTokenCacheKey({
   required ProviderAccount account,
   required String systemPrompt,
   required String userContent,
+  List<GenerationAttachment> attachments = const <GenerationAttachment>[],
 }) {
   final String payload = <String>[
+    exactTokenRequestVersion,
     account.id,
     account.protocol.wireName,
     account.baseUrl.trim(),

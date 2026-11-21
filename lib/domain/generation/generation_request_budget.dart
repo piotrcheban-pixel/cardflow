@@ -21,6 +21,50 @@ enum InputAccuracy {
   estimated,
 }
 
+/// Результат нативного подсчёта и добавка, которую он не видит.
+///
+/// [tokens] — ровно то число, что вернул провайдер (с мультимодальными
+/// частями). [estimatedExtraTokens] — части запроса, которые провайдер в
+/// подсчёт не включил (например, схема ответа Gemini, вхождение которой в
+/// `totalTokens` не подтверждено документацией). Такая добавка — оценка, а
+/// значит результат уже **не** полностью точный.
+final class NativeInputCount {
+  /// Создаёт результат подсчёта.
+  const NativeInputCount({
+    required this.tokens,
+    this.estimatedExtraTokens = 0,
+    this.estimatedComponents = const <String>[],
+    required this.source,
+  }) : assert(tokens >= 0, 'Токены не могут быть отрицательными'),
+       assert(estimatedExtraTokens >= 0),
+       assert(source != '', 'У подсчёта обязан быть источник');
+
+  /// Число токенов, возвращённое провайдером.
+  final int tokens;
+
+  /// Дополнительно оценённые токены (провайдер их не посчитал).
+  final int estimatedExtraTokens;
+
+  /// Какие компоненты оценены дополнительно (`images`, `response_schema`, …).
+  final List<String> estimatedComponents;
+
+  /// Источник (`count_tokens:anthropic-messages`, …).
+  final String source;
+
+  /// true, если все учитываемые компоненты посчитаны нативно.
+  bool get isFullyNative =>
+      estimatedExtraTokens == 0 && estimatedComponents.isEmpty;
+
+  /// Точность по этому подсчёту.
+  InputAccuracy get accuracy =>
+      isFullyNative ? InputAccuracy.exact : InputAccuracy.estimated;
+
+  @override
+  String toString() =>
+      'NativeInputCount($tokens, extra: $estimatedExtraTokens, '
+      '${estimatedComponents.join(',')}, $source)';
+}
+
 /// Бюджет одного запроса: числа и сработавшие ограничения.
 final class RequestBudget {
   /// Создаёт бюджет с готовыми числами.
@@ -38,6 +82,9 @@ final class RequestBudget {
     this.roomTokens,
     this.maxInputTokensLimit,
     this.maxRequestBytesLimit,
+    this.nativeInputTokens,
+    this.estimatedExtraTokens = 0,
+    this.estimatedComponents = const <String>[],
   });
 
   /// Считает бюджет запроса.
@@ -53,14 +100,16 @@ final class RequestBudget {
     GenerationPlanningConfig config = const GenerationPlanningConfig(),
     int requestBytes = 0,
     int? countedInputTokens,
+    NativeInputCount? nativeCount,
   }) {
     final int fixed = math.max(0, fixedTokens);
     final int material = math.max(0, materialTokens);
-    final bool exactCount = countedInputTokens != null;
+    final bool exactCount = countedInputTokens != null || nativeCount != null;
     final double marginRate = config.margin(
       exact: accuracy == InputAccuracy.exact || exactCount,
     );
-    final int counted = countedInputTokens ?? (fixed + material);
+    final int counted =
+        nativeCount?.tokens ?? countedInputTokens ?? (fixed + material);
     final int marginTokens = (counted * marginRate).ceil();
     final int inputTokens = counted + marginTokens;
 
@@ -123,6 +172,8 @@ final class RequestBudget {
       roomTokens: roomTokens,
       maxInputTokensLimit: maxInputTokens,
       maxRequestBytesLimit: maxRequestBytes,
+      nativeInputTokens: counted,
+      estimatedExtraTokens: 0,
     );
   }
 
@@ -158,6 +209,21 @@ final class RequestBudget {
 
   /// Лимит тела запроса (`null` — не задан).
   final int? maxRequestBytesLimit;
+
+  /// Фактическое число токенов, возвращённое `count_tokens` (`null` — не было).
+  final int? nativeInputTokens;
+
+  /// Дополнительно оценённые токены, которых нативный подсчёт не видел.
+  final int estimatedExtraTokens;
+
+  /// Компоненты, оценённые дополнительно (`response_schema`, …).
+  final List<String> estimatedComponents;
+
+  /// Плановый бюджет входа (`inputTokens`) — не число провайдера.
+  int get effectiveBudgetTokens => inputTokens;
+
+  /// true, если результат провайдера виден отдельно от бюджета.
+  bool get hasNativeCount => nativeInputTokens != null;
 
   /// Вход превышает окно/отдельный лимит входа.
   final bool contextExceeded;
