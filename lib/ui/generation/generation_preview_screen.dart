@@ -502,7 +502,8 @@ class _GenerationPreviewScreenState
               // недобор из-за сбоев партий объясняется баннером частичного
               // успеха и материалом НЕ называется.
               if (_result.requestedCards > 0 &&
-                  (_result.shortfallCards > 0 || _result.skippedBatches > 0))
+                  (_result.exhaustedSectionIds.isNotEmpty ||
+                      _result.skippedBatches > 0))
                 Padding(
                   padding: const EdgeInsets.only(bottom: 8),
                   child: Text(
@@ -513,6 +514,25 @@ class _GenerationPreviewScreenState
                     key: const ValueKey<String>(
                       'generation-preview-material-exhausted',
                     ),
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.tertiary,
+                    ),
+                  ),
+                ),
+              // Цель не достигнута без исчерпания материала и без отказов
+              // партий: честно сообщаем недобор, не называя его материалом.
+              if (_result.requestedCards > 0 &&
+                  _result.cards.length < _result.requestedCards &&
+                  _result.exhaustedSectionIds.isEmpty &&
+                  _result.failures.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(
+                    l10n.generationPreviewShortfall(
+                      _result.cards.length,
+                      _result.requestedCards,
+                    ),
+                    key: const ValueKey<String>('generation-preview-shortfall'),
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: theme.colorScheme.tertiary,
                     ),

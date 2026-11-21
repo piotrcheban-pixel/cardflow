@@ -1340,6 +1340,11 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String generationPreviewShortfall(int created, int requested) {
+    return 'Создано $created карточек из $requested: цель не достигнута, но материал ещё не исчерпан. Можно повторить генерацию, чтобы добрать оставшиеся.';
+  }
+
+  @override
   String generationPreviewFatal(String message) {
     return 'Генерация остановлена: $message';
   }

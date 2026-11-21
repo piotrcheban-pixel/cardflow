@@ -2162,6 +2162,12 @@ abstract class AppLocalizations {
   /// **'Материал исчерпан: создано {created} карточек из {requested}. Оставшиеся партии остановлены — карточки не выдумывались.'**
   String generationPreviewMaterialExhausted(int created, int requested);
 
+  /// Честный итог: цель не достигнута без исчерпания материала и без отказов партий.
+  ///
+  /// In ru, this message translates to:
+  /// **'Создано {created} карточек из {requested}: цель не достигнута, но материал ещё не исчерпан. Можно повторить генерацию, чтобы добрать оставшиеся.'**
+  String generationPreviewShortfall(int created, int requested);
+
   /// Постоянное сообщение о fatal-ошибке в предпросмотре (TASK 03).
   ///
   /// In ru, this message translates to:

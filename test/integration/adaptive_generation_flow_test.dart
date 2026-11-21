@@ -67,6 +67,29 @@ void main() {
     );
   }
 
+  GenerationResult resultWithCards(int call, int limit, {int tokens = 10}) {
+    return GenerationResult(
+      provider: GenerationProvider.openai,
+      model: 'test',
+      promptVersion: 'test',
+      cards: <GeneratedCard>[
+        for (var index = 0; index < limit; index++)
+          GeneratedCard(
+            front: 'Вопрос $call-$index',
+            back: 'Ответ $call-$index',
+            cardType: CardType.basic,
+          ),
+      ],
+      usage: TokenUsage(
+        promptTokens: tokens,
+        completionTokens: tokens,
+        totalTokens: tokens * 2,
+      ),
+    );
+  }
+
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   late FakeGenerationCaller caller;
   late FakeGenerationJobRepository jobs;
   late FakeGenerationCardStore store;
@@ -109,7 +132,7 @@ void main() {
     final GenerationPipeline runner = pipeline();
     caller.onGenerate = (GenerationRequest request, int call) async {
       expect(request.limit, 5);
-      return resultWithCard(call);
+      return resultWithCards(call, request.limit);
     };
     final GenerationRunResult result = await runner.run(
       requestFor(
@@ -129,13 +152,13 @@ void main() {
     expect(result.plan!.chunks, hasLength(1));
     expect(result.plan!.requestedCards, 5);
     expect(result.plan!.plannedCards, 5);
-    expect(result.cards, hasLength(1));
+    expect(result.cards, hasLength(5));
   });
 
   test('большой запрос: план до запросов, заказ достигнут без среза', () async {
     final GenerationPipeline runner = pipeline();
     caller.onGenerate = (GenerationRequest request, int call) async =>
-        resultWithCard(call);
+        resultWithCards(call, request.limit);
     final GenerationRunResult result = await runner.run(
       requestFor(
         documents: <ParsedDocument>[
@@ -170,7 +193,8 @@ void main() {
       ),
       plan.plannedCards,
     );
-    expect(result.cards, hasLength(caller.calls));
+    expect(result.cards, hasLength(150));
+    expect(result.status, GenerationJobStatus.done);
   });
 
   test('мало материала: заказ сохранён, нехватка материала — отдельным '
@@ -213,7 +237,7 @@ void main() {
   test('несколько документов: порядок и заголовки файлов сохранены', () async {
     final GenerationPipeline runner = pipeline();
     caller.onGenerate = (GenerationRequest request, int call) async =>
-        resultWithCard(call);
+        resultWithCards(call, request.limit);
     await runner.run(
       requestFor(
         documents: <ParsedDocument>[
@@ -244,7 +268,7 @@ void main() {
     caller.onGenerate = (GenerationRequest request, int call) async {
       expect(request.documentImages, isNotEmpty);
       expect(request.documentImages.first.id, 'img1');
-      return resultWithCard(call);
+      return resultWithCards(call, request.limit);
     };
     final GenerationRunResult result = await runner.run(
       requestFor(
@@ -266,7 +290,7 @@ void main() {
   test('prompt-only 500 карточек: несколько запросов без материалов', () async {
     final GenerationPipeline runner = pipeline();
     caller.onGenerate = (GenerationRequest request, int call) async =>
-        resultWithCard(call);
+        resultWithCards(call, request.limit);
     final GenerationRunResult result = await runner.run(
       requestFor(
         wishes: 'Создай 500 карточек по теме фотосинтеза',
@@ -291,64 +315,63 @@ void main() {
       500,
     );
     expect(result.promptOnly, isTrue);
-    expect(result.cards, hasLength(caller.calls));
+    expect(result.cards, hasLength(500));
+    expect(result.status, GenerationJobStatus.done);
   });
 
-  test(
-    'частичный успех: успешные фрагменты сохраняются, повтор — только сбой',
-    () async {
-      final GenerationPipeline runner = pipeline();
-      caller.onGenerate = (GenerationRequest request, int call) async {
-        if (call == 1) {
-          throw const GenerationException(GenerationErrorCode.network);
-        }
-        return resultWithCard(call);
-      };
-      final GenerationRunResult first = await runner.run(
-        requestFor(
-          documents: <ParsedDocument>[
-            for (var doc = 0; doc < 2; doc++)
-              docOf('p$doc.txt', <String>[
-                for (var section = 0; section < 6; section++)
-                  'Раздел $section. ${words(1800)}',
-              ]),
-          ],
-          wishes: '40 карточек',
-        ),
-      );
-      expect(first.failures, hasLength(1));
-      expect(first.failures.single.retryable, isTrue);
-      expect(first.status, GenerationJobStatus.partial);
-      expect(first.cards, hasLength(first.chunkCount - 1));
+  test('частичный успех: успешные фрагменты сохраняются, повтор — только сбой', () async {
+    final GenerationPipeline runner = pipeline();
+    caller.onGenerate = (GenerationRequest request, int call) async {
+      if (call == 1) {
+        throw const GenerationException(GenerationErrorCode.network);
+      }
+      return resultWithCard(call);
+    };
+    final GenerationRunResult first = await runner.run(
+      requestFor(
+        documents: <ParsedDocument>[
+          for (var doc = 0; doc < 2; doc++)
+            docOf('p$doc.txt', <String>[
+              for (var section = 0; section < 6; section++)
+                'Раздел $section. ${words(1800)}',
+            ]),
+        ],
+        wishes: '40 карточек',
+      ),
+    );
+    expect(first.failures, hasLength(1));
+    expect(first.failures.single.retryable, isTrue);
+    expect(first.status, GenerationJobStatus.partial);
+    expect(first.cards, hasLength(first.chunkCount - 1));
 
-      final FakeGenerationCaller retry = FakeGenerationCaller();
-      retry.onGenerate = (request, call) async => resultWithCard(call + 100);
-      final GenerationPipeline retryRunner = GenerationPipeline(
-        caller: retry,
-        jobRepository: jobs,
-        cardStore: store,
-        now: () => DateTime.utc(2026, 11, 19, 10),
-        jobIdFactory: () => 'job-adaptive',
-      );
-      final GenerationRunResult second = await retryRunner.retryFailed(
-        requestFor(
-          documents: <ParsedDocument>[
-            for (var doc = 0; doc < 2; doc++)
-              docOf('p$doc.txt', <String>[
-                for (var section = 0; section < 6; section++)
-                  'Раздел $section. ${words(1800)}',
-              ]),
-          ],
-          wishes: '40 карточек',
-        ),
-        first,
-      );
-      expect(retry.calls, 1, reason: 'повторяется только упавший фрагмент');
-      expect(second.failures, isEmpty);
-      expect(second.cards, hasLength(first.cards.length + 1));
-      expect(second.status, GenerationJobStatus.done);
-    },
-  );
+    final FakeGenerationCaller retry = FakeGenerationCaller();
+    retry.onGenerate = (request, call) async => resultWithCard(call + 100);
+    final GenerationPipeline retryRunner = GenerationPipeline(
+      caller: retry,
+      jobRepository: jobs,
+      cardStore: store,
+      now: () => DateTime.utc(2026, 11, 19, 10),
+      jobIdFactory: () => 'job-adaptive',
+    );
+    final GenerationRunResult second = await retryRunner.retryFailed(
+      requestFor(
+        documents: <ParsedDocument>[
+          for (var doc = 0; doc < 2; doc++)
+            docOf('p$doc.txt', <String>[
+              for (var section = 0; section < 6; section++)
+                'Раздел $section. ${words(1800)}',
+            ]),
+        ],
+        wishes: '40 карточек',
+      ),
+      first,
+    );
+    expect(retry.calls, 1, reason: 'повторяется только упавший фрагмент');
+    expect(second.failures, isEmpty);
+    expect(second.cards, hasLength(first.cards.length + 1));
+    // Цель 40 карточек не достигнута (фейк отдаёт по одной) — честный partial.
+    expect(second.status, GenerationJobStatus.partial);
+  });
 
   test('rate limit: без дробления материалов, ошибка фрагмента', () async {
     final GenerationPipeline runner = pipeline();

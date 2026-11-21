@@ -1564,6 +1564,18 @@
       }
     }
   },
+  "generationPreviewShortfall": "Создано {created} карточек из {requested}: цель не достигнута, но материал ещё не исчерпан. Можно повторить генерацию, чтобы добрать оставшиеся.",
+  "@generationPreviewShortfall": {
+    "description": "Честный итог: цель не достигнута без исчерпания материала и без отказов партий.",
+    "placeholders": {
+      "created": {
+        "type": "int"
+      },
+      "requested": {
+        "type": "int"
+      }
+    }
+  },
   "generationPreviewFatal": "Генерация остановлена: {message}",
   "@generationPreviewFatal": {
     "description": "Постоянное сообщение о fatal-ошибке в предпросмотре (TASK 03).",

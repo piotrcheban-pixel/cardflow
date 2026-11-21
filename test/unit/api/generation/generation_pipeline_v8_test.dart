@@ -310,6 +310,22 @@ void main() {
     expect(result.status, GenerationJobStatus.partial);
     expect(result.cards.length, lessThan(5));
   });
+
+  for (final int count in <int>[10, 20, 32, 40, 80, 150]) {
+    test('цель $count карточек достигается при полной отдаче модели', () async {
+      final GenerationPipeline runner = pipeline();
+      caller.onGenerate = (GenerationRequest request, int call) async =>
+          resultOf(<String>[
+            for (var index = 0; index < request.limit; index++)
+              'Вопрос $call-$index',
+          ]);
+      final GenerationRunResult result = await runner.run(
+        requestFor(docOf(40, 1000), requestedCards: count),
+      );
+      expect(result.status, GenerationJobStatus.done);
+      expect(result.cards, hasLength(count));
+    });
+  }
 }
 
 class _FakeCalibrationStore implements TokenCalibrationStore {

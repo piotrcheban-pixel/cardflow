@@ -989,11 +989,6 @@ class GenerationPipeline implements GenerationRunner {
       }
       final int deficit = chunk.limit - acceptedInChunk;
       if (deficit > 0) shortfall += deficit;
-      // Состояние продолжения prompt-only: только принятые карточки, чтобы
-      // сводка не включала дубли и не раздувалась.
-      if (promptOnly && imageStart < cards.length) {
-        continuity.addAll(cards.sublist(imageStart));
-      }
       onProgress?.call(
         GenerationProgress(
           phase: GenerationProgressPhase.receiving,
@@ -1023,6 +1018,11 @@ class GenerationPipeline implements GenerationRunner {
             imagesPending: imageIndex + 1 < cards.length,
           ),
         );
+      }
+      // Состояние продолжения prompt-only: принятые карточки уже с догруженными
+      // картинками (сводка не включает дубли и не раздувается).
+      if (promptOnly && imageStart < cards.length) {
+        continuity.addAll(cards.sublist(imageStart));
       }
       await _saveProgress(job, processed, cards.length, tokensUsed);
       if (cancellation?.isCancelled ?? false) {
