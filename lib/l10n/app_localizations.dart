@@ -1390,6 +1390,18 @@ abstract class AppLocalizations {
   /// **'Получаем карточки…'**
   String get generationProgressReceiving;
 
+  /// Живой счётчик прогресса: сколько карточек уже принято из цели.
+  ///
+  /// In ru, this message translates to:
+  /// **'Принято карточек: {accepted} из {requested}'**
+  String generationProgressCardsCount(int accepted, int requested);
+
+  /// Живой счётчик прогресса: сколько карточек ещё нужно.
+  ///
+  /// In ru, this message translates to:
+  /// **'Осталось добрать: {remaining}'**
+  String generationProgressCardsRemaining(int remaining);
+
   /// Сообщение после отмены генерации.
   ///
   /// In ru, this message translates to:

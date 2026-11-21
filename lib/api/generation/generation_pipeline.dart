@@ -756,6 +756,7 @@ class GenerationPipeline implements GenerationRunner {
           phase: GenerationProgressPhase.sending,
           chunkIndex: index + 1,
           chunkCount: queue.length,
+          requestedCards: activePlan?.requestedCards,
         ),
       );
 
@@ -994,6 +995,7 @@ class GenerationPipeline implements GenerationRunner {
           phase: GenerationProgressPhase.receiving,
           chunkIndex: index + 1,
           chunkCount: queue.length,
+          requestedCards: activePlan?.requestedCards,
           cards: List<GeneratedCard>.unmodifiable(cards),
           imagesPending: imageStart < cards.length,
         ),
@@ -1014,6 +1016,7 @@ class GenerationPipeline implements GenerationRunner {
             phase: GenerationProgressPhase.receiving,
             chunkIndex: index + 1,
             chunkCount: queue.length,
+            requestedCards: activePlan?.requestedCards,
             cards: List<GeneratedCard>.unmodifiable(cards),
             imagesPending: imageIndex + 1 < cards.length,
           ),

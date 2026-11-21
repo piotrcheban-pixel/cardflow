@@ -1692,6 +1692,26 @@ class _ProgressView extends StatelessWidget {
         const LinearProgressIndicator(),
         const SizedBox(height: 8),
         Text(text, textAlign: TextAlign.center),
+        if (value != null && (value.requestedCards ?? 0) > 0) ...<Widget>[
+          const SizedBox(height: 4),
+          Text(
+            l10n.generationProgressCardsCount(
+              value.cards.length,
+              value.requestedCards!,
+            ),
+            key: const ValueKey<String>('generation-progress-count'),
+            textAlign: TextAlign.center,
+          ),
+          if (value.cards.length < value.requestedCards!)
+            Text(
+              l10n.generationProgressCardsRemaining(
+                value.requestedCards! - value.cards.length,
+              ),
+              key: const ValueKey<String>('generation-progress-remaining'),
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+        ],
       ],
     );
   }

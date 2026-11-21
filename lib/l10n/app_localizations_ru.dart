@@ -826,6 +826,16 @@ class AppLocalizationsRu extends AppLocalizations {
   String get generationProgressReceiving => 'Получаем карточки…';
 
   @override
+  String generationProgressCardsCount(int accepted, int requested) {
+    return 'Принято карточек: $accepted из $requested';
+  }
+
+  @override
+  String generationProgressCardsRemaining(int remaining) {
+    return 'Осталось добрать: $remaining';
+  }
+
+  @override
   String get generationCancelled => 'Генерация отменена';
 
   @override

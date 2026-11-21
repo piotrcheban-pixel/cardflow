@@ -1016,6 +1016,27 @@
   "@generationProgressReceiving": {
     "description": "Индикатор прогресса: получение и разбор карточек (SPEC A6.8)."
   },
+  "generationProgressCardsCount": "Принято карточек: {accepted} из {requested}",
+  "@generationProgressCardsCount": {
+    "description": "Живой счётчик прогресса: сколько карточек уже принято из цели.",
+    "placeholders": {
+      "accepted": {
+        "type": "int"
+      },
+      "requested": {
+        "type": "int"
+      }
+    }
+  },
+  "generationProgressCardsRemaining": "Осталось добрать: {remaining}",
+  "@generationProgressCardsRemaining": {
+    "description": "Живой счётчик прогресса: сколько карточек ещё нужно.",
+    "placeholders": {
+      "remaining": {
+        "type": "int"
+      }
+    }
+  },
   "generationCancelled": "Генерация отменена",
   "@generationCancelled": {
     "description": "Сообщение после отмены генерации."

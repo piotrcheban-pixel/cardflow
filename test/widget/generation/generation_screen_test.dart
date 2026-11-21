@@ -311,6 +311,46 @@ void main() {
     await tester.pumpAndSettle();
   });
 
+  testWidgets('живой счётчик: принято из цели и сколько осталось', (
+    tester,
+  ) async {
+    runner.pending = Completer<GenerationRunResult>();
+    runner.result = resultWith(const <GeneratedCard>[]);
+    await pumpScreen(tester);
+    await attachTextFile(tester);
+
+    await tester.tap(find.byKey(const ValueKey<String>('generation-start')));
+    await tester.pump();
+
+    final l10n = l10nOf(tester);
+    runner.lastProgress!(
+      GenerationProgress(
+        phase: GenerationProgressPhase.receiving,
+        chunkIndex: 1,
+        chunkCount: 1,
+        requestedCards: 5,
+        cards: <GeneratedCard>[
+          GeneratedCard(
+            front: 'Вопрос',
+            back: 'Ответ',
+            cardType: CardType.basic,
+          ),
+        ],
+      ),
+    );
+    await tester.pump();
+
+    expect(
+      find.byKey(const ValueKey<String>('generation-progress-count')),
+      findsOneWidget,
+    );
+    expect(find.text(l10n.generationProgressCardsCount(1, 5)), findsOneWidget);
+    expect(find.text(l10n.generationProgressCardsRemaining(4)), findsOneWidget);
+
+    runner.pending!.complete(runner.result!);
+    await tester.pumpAndSettle();
+  });
+
   testWidgets('живая карточка не показывает изображение ответа (7.19)', (
     tester,
   ) async {
