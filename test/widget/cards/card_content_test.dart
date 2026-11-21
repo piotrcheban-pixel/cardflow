@@ -23,7 +23,8 @@ void main() {
     String back = 'Ответ',
     CardType type = CardType.basic,
     String? occlusionJson,
-    List<String> mediaIds = const <String>[],
+    List<String> questionMediaIds = const <String>[],
+    List<String> answerMediaIds = const <String>[],
   }) => Card(
     id: 'card-1',
     deckId: 'deck-1',
@@ -34,7 +35,8 @@ void main() {
     createdAt: now,
     updatedAt: now,
     occlusionJson: occlusionJson,
-    mediaIds: mediaIds,
+    questionMediaIds: questionMediaIds,
+    answerMediaIds: answerMediaIds,
   );
 
   Future<void> pumpClassic(
@@ -157,7 +159,7 @@ void main() {
         '{"id":"m1","shape":"rectangle","x":0,"y":0,"width":1,"height":1}]}';
     await pumpClassic(
       tester,
-      card(occlusionJson: raw, mediaIds: const <String>['media-1']),
+      card(occlusionJson: raw, questionMediaIds: const <String>['media-1']),
       image: png,
       revealed: true,
     );
@@ -180,7 +182,7 @@ void main() {
         '{"id":"m1","shape":"rectangle","x":0,"y":0,"width":1,"height":1}]}';
     await pumpClassic(
       tester,
-      card(occlusionJson: raw, mediaIds: const <String>['media-1']),
+      card(occlusionJson: raw, questionMediaIds: const <String>['media-1']),
       image: png,
     );
     await tester.pump();
@@ -204,12 +206,12 @@ void main() {
   ) async {
     await pumpClassic(
       tester,
-      card(mediaIds: const <String>['media-1']),
+      card(questionMediaIds: const <String>['media-1']),
       image: png,
     );
     await tester.pump();
 
-    expect(find.byKey(const ValueKey('card-image')), findsOneWidget);
+    expect(find.byKey(const ValueKey('card-image-media-1')), findsOneWidget);
     expect(find.text('Вопрос'), findsOneWidget);
   });
 
@@ -217,6 +219,6 @@ void main() {
     await pumpClassic(tester, card());
     await tester.pump();
 
-    expect(find.byKey(const ValueKey('card-image')), findsNothing);
+    expect(find.byKey(const ValueKey('card-image-media-1')), findsNothing);
   });
 }

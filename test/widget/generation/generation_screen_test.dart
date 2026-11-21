@@ -5,15 +5,16 @@ import 'dart:typed_data';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image/image.dart' as img;
 import 'package:material_ui/material_ui.dart';
 
-import 'package:cardflow/api/images/placeholder_image_generator.dart';
 import 'package:cardflow/api/parsers/document_parser.dart';
 import 'package:cardflow/api/parsers/file_parsing_service.dart';
 import 'package:cardflow/api/parsers/pdf_scan_pages.dart';
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/decks/deck_summary.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
+import 'package:cardflow/domain/generation/generated_card_image.dart';
 import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
 import 'package:cardflow/domain/generation/generation_job.dart';
@@ -259,14 +260,16 @@ void main() {
 
   // Итерация 7.14: колода видна сразу, картинки догружаются, UI обновляется.
   testWidgets('живые карточки и картинки во время генерации', (tester) async {
-    final placeholder = const PlaceholderImageGenerator().generate(
-      seed: 'live-card',
+    final Uint8List png = Uint8List.fromList(
+      img.encodePng(img.Image(width: 40, height: 30)),
     );
     final GeneratedCard card = GeneratedCard(
       front: 'Какой тип моста состоит из треугольных ячеек?',
       back: 'Ферменный мост.',
       cardType: CardType.basic,
-      image: placeholder,
+      questionImages: <GeneratedCardImage>[
+        makeCardImage(bytes: png.toList(), mediaType: AttachmentMediaType.png),
+      ],
     );
     runner.pending = Completer<GenerationRunResult>();
     runner.result = resultWith(<GeneratedCard>[card]);
@@ -298,7 +301,10 @@ void main() {
       findsOneWidget,
       reason: 'показываем, что картинки ещё догружаются',
     );
-    expect(find.byKey(const ValueKey<String>('card-image')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey<String>('card-image-attempt-0')),
+      findsOneWidget,
+    );
 
     runner.pending!.complete(runner.result!);
     await tester.pumpAndSettle();

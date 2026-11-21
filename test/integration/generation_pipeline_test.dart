@@ -120,7 +120,7 @@ void main() {
       expect(result.cards, hasLength(1));
       expect(result.cards.single.front, 'Что такое FSRS?');
       expect(result.usage.totalTokens, 30);
-      expect(result.promptVersion, 'gen-ru-v8');
+      expect(result.promptVersion, 'gen-ru-v9');
 
       expect(adapter.requests, hasLength(1));
       final sent = adapter.requests.single;

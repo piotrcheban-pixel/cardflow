@@ -59,7 +59,7 @@ void main() {
     await pumpForm(tester);
 
     expect(
-      find.byKey(const ValueKey('card-form-pick-image')),
+      find.byKey(const ValueKey('card-form-add-question-image')),
       findsOneWidget,
       reason: 'изображение можно прикрепить к карточке любого типа',
     );
@@ -83,14 +83,16 @@ void main() {
     final cards = await pumpForm(tester, imageGateway: gateway);
 
     await tester.ensureVisible(
-      find.byKey(const ValueKey('card-form-pick-image')),
+      find.byKey(const ValueKey('card-form-add-question-image')),
     );
-    await tester.tap(find.byKey(const ValueKey('card-form-pick-image')));
+    await tester.tap(
+      find.byKey(const ValueKey('card-form-add-question-image')),
+    );
     await tester.pumpAndSettle();
 
     expect(gateway.calls, 1);
     expect(
-      find.byKey(const ValueKey('card-form-image-preview')),
+      find.byKey(const ValueKey('card-form-question-image-0')),
       findsOneWidget,
     );
     expect(
@@ -113,7 +115,7 @@ void main() {
 
     expect(cards.createdDrafts, hasLength(1));
     final draft = cards.createdDrafts.single;
-    expect(draft.imageUpload, same(gateway.result));
+    expect(draft.questionUploads.single, same(gateway.result));
     expect(draft.occlusionJson, isNull);
     expect(draft.cardType, CardType.basic);
   });
@@ -135,9 +137,11 @@ void main() {
     await tester.tap(find.text('С пропусками'));
     await tester.pumpAndSettle();
     await tester.ensureVisible(
-      find.byKey(const ValueKey('card-form-pick-image')),
+      find.byKey(const ValueKey('card-form-add-question-image')),
     );
-    await tester.tap(find.byKey(const ValueKey('card-form-pick-image')));
+    await tester.tap(
+      find.byKey(const ValueKey('card-form-add-question-image')),
+    );
     await tester.pumpAndSettle();
     await tester.enterText(
       find.byKey(const ValueKey('card-form-front')),
@@ -150,7 +154,7 @@ void main() {
     expect(cards.createdDrafts, hasLength(1));
     final draft = cards.createdDrafts.single;
     expect(draft.cardType, CardType.cloze);
-    expect(draft.imageUpload, same(gateway.result));
+    expect(draft.questionUploads.single, same(gateway.result));
     expect(draft.occlusionJson, isNull);
     expect(
       find.byKey(const ValueKey('card-form-occlusion-toggle')),
@@ -175,9 +179,11 @@ void main() {
     final cards = await pumpForm(tester, imageGateway: gateway);
 
     await tester.ensureVisible(
-      find.byKey(const ValueKey('card-form-pick-image')),
+      find.byKey(const ValueKey('card-form-add-question-image')),
     );
-    await tester.tap(find.byKey(const ValueKey('card-form-pick-image')));
+    await tester.tap(
+      find.byKey(const ValueKey('card-form-add-question-image')),
+    );
     await tester.pumpAndSettle();
     expect(gateway.calls, 1);
     expect(find.byKey(const ValueKey('occlusion-editor-canvas')), findsNothing);
@@ -230,7 +236,7 @@ void main() {
 
     expect(cards.createdDrafts, hasLength(1));
     final draft = cards.createdDrafts.single;
-    expect(draft.imageUpload, same(gateway.result));
+    expect(draft.questionUploads.single, same(gateway.result));
     expect(draft.occlusionJson, isNotNull);
     expect(draft.occlusionJson, contains('"masks":[{'));
     expect(draft.occlusionJson, contains('"shape":"rectangle"'));
@@ -344,7 +350,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('occlusion-editor-canvas')), findsNothing);
     expect(
-      find.byKey(const ValueKey('card-form-image-preview')),
+      find.byKey(const ValueKey('card-form-question-image-0')),
       findsOneWidget,
       reason: 'картинка остаётся на карточке',
     );
@@ -387,20 +393,23 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.byKey(const ValueKey('card-form-image-preview')),
+      find.byKey(const ValueKey('card-form-question-image-0')),
       findsOneWidget,
     );
     await tester.ensureVisible(
-      find.byKey(const ValueKey('card-form-remove-image')),
+      find.byKey(const ValueKey('card-form-remove-question-0')),
     );
-    await tester.tap(find.byKey(const ValueKey('card-form-remove-image')));
+    await tester.tap(find.byKey(const ValueKey('card-form-remove-question-0')));
     await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('card-form-image-preview')), findsNothing);
+    expect(
+      find.byKey(const ValueKey('card-form-question-image-0')),
+      findsNothing,
+    );
     await tester.tap(find.byKey(const ValueKey('card-form-save')));
     await tester.pumpAndSettle();
 
     final draft = cards.updatedDrafts.single;
     expect(draft.mediaIds, isEmpty);
-    expect(draft.imageUpload, isNull);
+    expect(draft.questionUploads, isEmpty);
   });
 }

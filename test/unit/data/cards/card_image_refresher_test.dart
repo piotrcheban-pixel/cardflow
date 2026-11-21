@@ -153,66 +153,6 @@ void main() {
       CardImageRefreshResult.notFound,
     );
   });
-
-  test('фоновый ретрай: обновляет только заглушки и до limit', () async {
-    await _insertMedia(
-      db,
-      store,
-      id: 'media-2',
-      path: 'media/media-0.png',
-      bytes: Uint8List.fromList(<int>[4]),
-      metadata: const MediaMetadata(
-        provider: 'placeholder',
-        isPlaceholder: true,
-        query: 'map of france',
-      ),
-    );
-    await _insertMedia(
-      db,
-      store,
-      id: 'media-3',
-      path: 'media/media-3.png',
-      bytes: Uint8List.fromList(<int>[5]),
-      metadata: const MediaMetadata(
-        provider: 'wikimedia',
-        isPlaceholder: false,
-        query: 'real photo',
-      ),
-    );
-    final finder = FakeCardImageFinder(
-      byQuery: <String, GeneratedCardImage?>{
-        'truss bridge': makeCardImage(query: 'truss bridge'),
-        'map of france': makeCardImage(
-          query: 'map of france',
-          bytes: jpeg.toList(),
-        ),
-      },
-    );
-    final refresher = CardImageRefresher(
-      database: db,
-      mediaStore: store,
-      imageFinder: finder,
-    );
-
-    expect(await refresher.retryPlaceholders(limit: 1), 1);
-    expect(finder.queries, <String>['map of france']);
-
-    expect(await refresher.retryPlaceholders(limit: 5), 1);
-    expect(finder.queries, <String>['map of france', 'truss bridge']);
-    // Настоящая картинка не переискивается.
-    expect(finder.queries, isNot(contains('real photo')));
-  });
-
-  test('фоновый ретрай с limit ≤ 0 ничего не делает', () async {
-    final finder = FakeCardImageFinder();
-    final refresher = CardImageRefresher(
-      database: db,
-      mediaStore: store,
-      imageFinder: finder,
-    );
-    expect(await refresher.retryPlaceholders(limit: 0), 0);
-    expect(finder.queries, isEmpty);
-  });
 }
 
 Future<void> _insertMedia(

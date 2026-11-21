@@ -20,6 +20,7 @@ void main() {
     String front = 'При каком условии две силы уравновешены?',
     String? imageId,
     String? imageQuery,
+    List<String> questionImageIds = const <String>[],
   }) {
     return <String, Object?>{
       'front': front,
@@ -31,6 +32,9 @@ void main() {
       'source_file': null,
       'image_id': imageId,
       'image_query': imageQuery,
+      'question_image_ids': <String>[...questionImageIds, ?imageId],
+      'answer_image_ids': const <String>[],
+      'image': null,
     };
   }
 
@@ -89,7 +93,7 @@ void main() {
           'Аксиома о равновесии двух сил',
         ),
       );
-      expect(result.cards.single.imageId, 'img1');
+      expect(result.cards.single.questionImageIds, <String>['img1']);
       expect(result.rejectedCards, 0);
     },
   );
@@ -97,7 +101,10 @@ void main() {
   test('image_id не из каталога обнуляется, карточка остаётся', () async {
     final adapter = FakeProviderAdapter(
       cardsJson: cardsJson(<Map<String, Object?>>[
-        cardJson(imageId: 'img9', imageQuery: 'ball physics'),
+        cardJson(
+          questionImageIds: const <String>['img9'],
+          imageQuery: 'ball physics',
+        ),
       ]),
     );
     final transport = FakeGenerationTransport(
@@ -115,7 +122,7 @@ void main() {
     );
 
     expect(result.cards, hasLength(1));
-    expect(result.cards.single.imageId, isNull);
+    expect(result.cards.single.questionImageIds, isEmpty);
     expect(result.cards.single.issues, contains(CardIssueCode.imageIdUnknown));
     // Запрос сохраняется: изображение из файла не найдено, внешний поиск — можно.
     expect(result.cards.single.imageQuery, 'ball physics');

@@ -24,6 +24,8 @@ void main() {
     String? imageId,
     String? imageQuery,
     Map<String, Object?>? image,
+    List<String> questionImageIds = const <String>[],
+    List<String> answerImageIds = const <String>[],
   }) => <String, Object?>{
     'front': front,
     'back': back,
@@ -34,6 +36,9 @@ void main() {
     'source_file': sourceFile,
     'image_id': imageId,
     if (image != null) 'image': image else 'image_query': imageQuery,
+    'question_image_ids': <String>[...questionImageIds, ?imageId],
+    'answer_image_ids': answerImageIds,
+    'image': image,
   };
 
   Map<String, Object?> imageSpec({
@@ -265,16 +270,18 @@ void main() {
     'image_id из каталога: неизвестный обнуляется, image остаётся запасным',
     () {
       final known = validate(
-        <Map<String, Object?>>[card(imageId: 'img1', image: imageSpec())],
+        <Map<String, Object?>>[
+          card(questionImageIds: <String>['img1'], image: imageSpec()),
+        ],
         imageIds: <String>{'img1'},
       ).single;
-      expect(known.imageId, 'img1');
+      expect(known.questionImageIds, <String>['img1']);
       expect(known.imageQuery, 'truss bridge structure engineering');
       expect(known.issues, isNot(contains(CardIssueCode.imageQueryAdjusted)));
 
       final unknown = validate(<Map<String, Object?>>[card(imageId: 'img9')])
           .single;
-      expect(unknown.imageId, isNull);
+      expect(unknown.questionImageIds, isEmpty);
       expect(unknown.issues, contains(CardIssueCode.imageIdUnknown));
     },
   );

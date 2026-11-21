@@ -177,7 +177,7 @@ void main() {
       const draft = CardDraft(
         front: 'Что это?',
         back: 'Московский Кремль',
-        mediaIds: <String>['media-1'],
+        questionMediaIds: <String>['media-1'],
       );
 
       expect(draft.validate(), isEmpty);
@@ -191,7 +191,7 @@ void main() {
         front: 'Столица Франции — {{c1::Париж}}',
         back: '',
         cardType: CardType.cloze,
-        mediaIds: <String>['media-1'],
+        questionMediaIds: <String>['media-1'],
       );
 
       expect(draft.validate(), isEmpty);
@@ -208,7 +208,7 @@ void main() {
         front: 'Термин',
         back: 'Определение',
         cardType: CardType.basicReversed,
-        imageUpload: upload,
+        questionUploads: <CardImageUpload>[upload],
       );
 
       expect(draft.validate(), isEmpty);
@@ -229,13 +229,13 @@ void main() {
       final draft = CardDraft(
         front: ' Вопрос ',
         back: ' Ответ ',
-        mediaIds: const <String>['media-1'],
-        imageUpload: upload,
+        questionMediaIds: const <String>['media-1'],
+        questionUploads: <CardImageUpload>[upload],
       );
 
       final normalized = draft.normalized();
       expect(normalized.mediaIds, <String>['media-1']);
-      expect(normalized.imageUpload, same(upload));
+      expect(normalized.questionUploads.single, same(upload));
     });
 
     test('occlusion без изображения остаётся ошибкой', () {

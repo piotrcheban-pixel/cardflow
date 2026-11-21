@@ -1,0 +1,22 @@
+00:00 +0: loading C:/Users/piotr/OneDrive/Desktop/CardFlow/test/integration/image_placeholder_red_7_19_test.dart
+00:00 +0: поиск не дал результата: карточка без изображения, заглушек нет
+Генерация: count_tokens: источник=estimate, ошибка=unsupported
+Генерация: план: стратегия=wholeDocument, частей=1, партий=1, заказ=1, достижимо=1, калибровка=нет
+Генерация: ответ модели: {"cards":[{"front":"В чём сущность метода конечных разностей?","back":"В замене непрерывного процесса дискретной сеткой.","hint":null,"tags":["теплопроводность"],"card_type":"basic","source_excerpt":null,"source_file":null,"image_id":null,"image_query":"finite difference method grid diagram"}],"source_exhausted":true}
+Генерация: калибровка токенов: TokenCalibrationReport(samples: 1, facts: 1/1, withoutUsage: 0, failed: 0, inputRatio: 0.00)
+  фрагмент 1, попытка 1: план 7475, запрос 7471, факт 10 (x0.00)
+00:00 +0 -1: поиск не дал результата: карточка без изображения, заглушек нет [E]
+  Expected: empty
+    Actual: [
+              MediaRow:MediaRow(id: 2977f311-c2be-4c69-9a0c-ce8b3ae466c4, cardId: e9d98afa-e34f-4309-84a5-c73973b8ab75, path: media/2977f311-c2be-4c69-9a0c-ce8b3ae466c4.png, mimeType: image/png, size: 22906)
+            ]
+  ненайденная картинка не должна подменяться нарисованным PNG
+  
+  package:matcher                                              expect
+  package:flutter_test/src/widget_tester.dart 473:18           expect
+  test\integration\image_placeholder_red_7_19_test.dart 143:5  main.<fn>
+  
+00:00 +0 -1: Some tests failed.
+
+Failing tests:
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/integration/image_placeholder_red_7_19_test.dart: поиск не дал результата: карточка без изображения, заглушек нет

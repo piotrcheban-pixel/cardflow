@@ -74,7 +74,7 @@ void main() {
             hint: 'Подсказка',
             cardType: CardType.basicReversed,
             tags: const <String>['тег1', 'тег2'],
-            mediaIds: const <String>['media-1', 'media-2'],
+            questionMediaIds: const <String>['media-1', 'media-2'],
             latex: r'$x^2$',
             occlusionJson: '{"masks":[]}',
             sourceDocId: 'doc-1',

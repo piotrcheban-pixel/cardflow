@@ -19,7 +19,20 @@ void main() {
   late MediaStore store;
   late DriftCardRepository repository;
   final now = DateTime.utc(2026, 11, 14, 12);
-  final bytes = Uint8List.fromList(<int>[1, 2, 3, 4]);
+  final bytes = Uint8List.fromList(<int>[
+    0x89,
+    0x50,
+    0x4E,
+    0x47,
+    0x0D,
+    0x0A,
+    0x1A,
+    0x0A,
+    1,
+    2,
+    3,
+    4,
+  ]);
   const occlusion = OcclusionDocument(
     masks: <OcclusionMask>[
       OcclusionMask(
@@ -68,7 +81,7 @@ void main() {
           back: 'Подпись',
           latex: r'x^2',
           occlusionJson: occlusion.encode(),
-          imageUpload: upload(),
+          questionUploads: <CardImageUpload>[upload()],
         ),
         now: now,
       )).single;
@@ -98,7 +111,7 @@ void main() {
         front: 'Вопрос',
         back: 'Ответ',
         occlusionJson: occlusion.encode(),
-        imageUpload: upload(),
+        questionUploads: <CardImageUpload>[upload()],
       ),
       now: now,
     )).single;
@@ -120,7 +133,7 @@ void main() {
       draft: CardDraft(
         front: 'Новый вопрос',
         back: 'Новый ответ',
-        mediaIds: original.mediaIds,
+        questionMediaIds: original.mediaIds,
         latex: r'y^3',
         occlusionJson: changed.encode(),
       ),
@@ -140,7 +153,7 @@ void main() {
         front: 'Вопрос',
         back: 'Ответ',
         occlusionJson: occlusion.encode(),
-        imageUpload: upload(),
+        questionUploads: <CardImageUpload>[upload()],
       ),
       now: now,
     )).single;
@@ -167,7 +180,7 @@ void main() {
           front: 'Вопрос',
           back: 'Ответ',
           occlusionJson: occlusion.encode(),
-          imageUpload: upload(),
+          questionUploads: <CardImageUpload>[upload()],
         ),
         now: now,
       ),
@@ -184,7 +197,7 @@ void main() {
       draft: CardDraft(
         front: 'Что это?',
         back: 'Московский Кремль',
-        imageUpload: upload(),
+        questionUploads: <CardImageUpload>[upload()],
       ),
       now: now,
     )).single;
@@ -205,7 +218,7 @@ void main() {
         front: 'Столица Франции — {{c1::Париж}}',
         back: '',
         cardType: CardType.cloze,
-        imageUpload: upload(),
+        questionUploads: <CardImageUpload>[upload()],
       ),
       now: now,
     )).single;
@@ -219,7 +232,11 @@ void main() {
   test('updateCard: очистка mediaIds удаляет строку media и файл', () async {
     final original = (await repository.createCards(
       deckId: 'deck-1',
-      draft: CardDraft(front: 'Что это?', back: 'Ответ', imageUpload: upload()),
+      draft: CardDraft(
+        front: 'Что это?',
+        back: 'Ответ',
+        questionUploads: <CardImageUpload>[upload()],
+      ),
       now: now,
     )).single;
     final path = (await db.select(db.media).get()).single.path;

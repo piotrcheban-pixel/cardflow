@@ -11,7 +11,7 @@ import 'package:cardflow/api/prompts/system_prompt.dart';
 void main() {
   group('системный промпт gen-ru-v5', () {
     test('v5 сохранён: текст не пустой и без подстановок Dart', () {
-      expect(systemPromptVersion, 'gen-ru-v8');
+      expect(systemPromptVersion, 'gen-ru-v9');
       expect(systemPromptGenRuV5.trim(), isNotEmpty);
       expect(systemPromptGenRuV5, isNot(contains(r'${')));
     });
@@ -264,20 +264,35 @@ void main() {
     });
   });
 
-  group('системный промпт gen-ru-v8 (итерация 7.18, ADR-040)', () {
-    test('константа совпадает с docs/prompts/gen-ru-v8.txt байт в байт', () {
-      final File file = File('docs/prompts/gen-ru-v8.txt');
+  group('системный промпт gen-ru-v9 (итерация 7.19, ADR-042)', () {
+    test('константа совпадает с docs/prompts/gen-ru-v9.txt байт в байт', () {
+      final File file = File('docs/prompts/gen-ru-v9.txt');
       expect(file.existsSync(), isTrue, reason: 'Копия промпта потеряна');
       expect(
-        systemPromptGenRuV8,
+        systemPromptGenRuV9,
         file.readAsStringSync(),
         reason: 'Промпт в коде должен быть дословной копией файла',
       );
     });
 
-    test('v8 содержит весь текст v7 без изменений', () {
-      expect(systemPromptGenRuV8, startsWith(systemPromptGenRuV7));
-      expect(systemPromptVersion, 'gen-ru-v8');
+    test('v9 содержит весь текст v8 без изменений', () {
+      expect(systemPromptGenRuV9, startsWith(systemPromptGenRuV8));
+      expect(systemPromptVersion, 'gen-ru-v9');
+    });
+
+    test('v9 задаёт изображения обеих сторон', () {
+      for (final fragment in <String>[
+        'question_image_ids',
+        'answer_image_ids',
+        'ИЗОБРАЖЕНИЯ ОБЕИХ СТОРОН',
+        'Внешний поиск изображения',
+        '"side"',
+        'question',
+        'answer',
+        'none',
+      ]) {
+        expect(systemPromptGenRuV9, contains(fragment));
+      }
     });
 
     test(

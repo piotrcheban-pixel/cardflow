@@ -27,12 +27,14 @@ void main() {
     'card_type': 'basic',
     'source_excerpt': 'FSRS — алгоритм интервального повторения.',
     'source_file': 'лекция.docx',
-    'image_id': null,
     'section_id': null,
+    'question_image_ids': <String>['img1'],
+    'answer_image_ids': <String>['img2'],
     'image': <String, Object?>{
       'query': 'fsrs algorithm memory',
       'fallback_query': 'fsrs memory',
       'kind': 'diagram',
+      'side': 'question',
     },
   };
 
@@ -65,8 +67,9 @@ void main() {
         'card_type',
         'source_excerpt',
         'source_file',
-        'image_id',
         'section_id',
+        'question_image_ids',
+        'answer_image_ids',
         'image',
       });
       expect(
@@ -87,8 +90,13 @@ void main() {
         'string',
       );
       final image = cardProperties()['image']! as Map<String, Object?>;
-      expect(image['type'], 'object');
-      expect(image['required'], <String>['query', 'fallback_query', 'kind']);
+      expect(image['type'], <String>['object', 'null']);
+      expect(image['required'], <String>[
+        'query',
+        'fallback_query',
+        'kind',
+        'side',
+      ]);
       expect(image['additionalProperties'], isFalse);
     });
 
@@ -97,7 +105,7 @@ void main() {
         'hint',
         'source_excerpt',
         'source_file',
-        'image_id',
+        'section_id',
       ]) {
         expect(
           (cardProperties()[field]! as Map<String, Object?>)['type'],
@@ -110,6 +118,13 @@ void main() {
             as Map<String, Object?>)['type'],
         'string',
       );
+      // Массивы id обязательны, но допускают пустое значение (v9).
+      for (final field in <String>['question_image_ids', 'answer_image_ids']) {
+        final Map<String, Object?> property =
+            cardProperties()[field]! as Map<String, Object?>;
+        expect(property['type'], 'array');
+        expect((property['items']! as Map<String, Object?>)['type'], 'string');
+      }
     });
 
     test('copyCanonicalCardsResponseSchema возвращает независимую копию', () {
@@ -184,7 +199,9 @@ void main() {
         ..['hint'] = null
         ..['source_excerpt'] = null
         ..['source_file'] = null
-        ..['image_id'] = null;
+        ..['question_image_ids'] = <String>[]
+        ..['answer_image_ids'] = <String>[]
+        ..['image'] = null;
       expect(
         schema.isValid(<String, Object?>{
           'source_exhausted': false,
@@ -291,8 +308,9 @@ void main() {
         'card_type',
         'source_excerpt',
         'source_file',
-        'image_id',
         'section_id',
+        'question_image_ids',
+        'answer_image_ids',
         'image',
       ]);
       final naming = properties['card_type']! as Map<String, Object?>;
@@ -304,8 +322,13 @@ void main() {
       ]);
       final image = properties['image']! as Map<String, Object?>;
       expect(image['type'], 'OBJECT');
-      expect(image['nullable'], isNull);
-      expect(image['required'], <String>['query', 'fallback_query', 'kind']);
+      expect(image['nullable'], isTrue);
+      expect(image['required'], <String>[
+        'query',
+        'fallback_query',
+        'kind',
+        'side',
+      ]);
       expect(
         properties['tags']! as Map<String, Object?>,
         containsPair('items', isA<Map<String, Object?>>()),

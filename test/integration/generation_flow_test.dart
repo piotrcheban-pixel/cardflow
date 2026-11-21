@@ -13,6 +13,7 @@ import 'package:cardflow/data/generation/drift_generation_card_store.dart';
 import 'package:cardflow/data/generation/drift_generation_job_repository.dart';
 import 'package:cardflow/data/transfer/media_store.dart';
 import 'package:cardflow/domain/cards/card.dart';
+import 'package:cardflow/domain/cards/card_media_json.dart';
 import 'package:cardflow/domain/cards/card_scheduling.dart';
 import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/generation/card_image_kind.dart';
@@ -213,7 +214,7 @@ void main() {
       final CardRow row = (await database.select(database.cards).get()).single;
       expect(row.cardType, 'basic');
       expect(row.occlusionJson, card.occlusionJson);
-      expect(jsonDecode(row.mediaJson), hasLength(1));
+      expect(CardMediaSides.decode(row.mediaJson).question, hasLength(1));
 
       final MediaRow mediaRow =
           (await database.select(database.media).get()).single;
@@ -248,7 +249,7 @@ void main() {
       expect(job.cardsCount, 1);
       expect(job.chunkCount, 1);
       expect(job.files, <String>['лекция.txt']);
-      expect(job.promptVersion, 'gen-ru-v8');
+      expect(job.promptVersion, 'gen-ru-v9');
 
       final imported = await container
           .read(generationCardStoreProvider)
@@ -576,7 +577,7 @@ void main() {
           .jobById(result.jobId))!;
       expect(job.status, GenerationJobStatus.done);
       expect(job.files, isEmpty);
-      expect(job.promptVersion, 'gen-ru-v8');
+      expect(job.promptVersion, 'gen-ru-v9');
       expect(job.cardsCount, 1);
     },
   );
@@ -694,7 +695,7 @@ void main() {
           now: DateTime.now(),
         );
     final CardRow row = (await database.select(database.cards).get()).single;
-    expect(jsonDecode(row.mediaJson), hasLength(1));
+    expect(CardMediaSides.decode(row.mediaJson).question, hasLength(1));
     final MediaRow mediaRow =
         (await database.select(database.media).get()).single;
     expect(

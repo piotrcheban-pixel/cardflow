@@ -7,6 +7,7 @@ import 'package:material_ui/material_ui.dart';
 
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
+import 'package:cardflow/domain/generation/generated_card_image.dart';
 import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
 import 'package:cardflow/domain/generation/generation_failure_reason.dart';
@@ -202,20 +203,28 @@ void main() {
     final GeneratedCard card = makeGeneratedCard(
       front: 'Что на схеме?',
       back: 'Ферма.',
-      image: makeCardImage(mediaType: AttachmentMediaType.png, bytes: png),
+      questionImages: <GeneratedCardImage>[
+        makeCardImage(mediaType: AttachmentMediaType.png, bytes: png),
+      ],
     );
     await pumpPreview(tester, resultWith(cards: <GeneratedCard>[card]));
 
     expect(
-      find.byKey(const ValueKey<String>('generation-preview-image-0')),
+      find.byKey(
+        const ValueKey<String>('generation-preview-question-image-0-0'),
+      ),
       findsOneWidget,
     );
     await tester.tap(
-      find.byKey(const ValueKey<String>('generation-preview-remove-image-0')),
+      find.byKey(
+        const ValueKey<String>('generation-preview-remove-question-0-0'),
+      ),
     );
     await tester.pumpAndSettle();
     expect(
-      find.byKey(const ValueKey<String>('generation-preview-image-0')),
+      find.byKey(
+        const ValueKey<String>('generation-preview-question-image-0-0'),
+      ),
       findsNothing,
     );
 

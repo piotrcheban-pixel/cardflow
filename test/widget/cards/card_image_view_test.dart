@@ -2,10 +2,10 @@ import 'dart:typed_data';
 
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image/image.dart' as img;
 import 'package:material_ui/material_ui.dart' hide Card;
 
 import 'package:cardflow/api/images/image_dimensions.dart';
-import 'package:cardflow/api/images/placeholder_image_generator.dart';
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/cards/media_metadata.dart';
 import 'package:cardflow/domain/generation/card_image_kind.dart';
@@ -17,9 +17,9 @@ import '../../helpers/pump_app.dart';
 
 /// Картинка карточки: вид, полноэкранный просмотр с атрибуцией, overflow (7.14).
 void main() {
-  final Uint8List png = const PlaceholderImageGenerator()
-      .generate(seed: 'test-image')
-      .bytes;
+  final Uint8List png = Uint8List.fromList(
+    img.encodePng(img.Image(width: 800, height: 600)),
+  );
 
   const MediaMetadata photoMetadata = MediaMetadata(
     provider: 'wikimedia',
@@ -104,29 +104,24 @@ void main() {
     );
     expect(aspect.aspectRatio, closeTo(4 / 3, 0.01));
     final image = tester.widget<Image>(
-      find.byKey(const ValueKey<String>('card-image')),
+      find.byKey(const ValueKey<String>('card-image-attempt-0')),
     );
     expect(image.fit, BoxFit.contain);
   });
 
-  testWidgets('заглушка помечена для screen reader', (tester) async {
-    final semantics = tester.ensureSemantics();
+  testWidgets('ошибка декодирования: явное состояние и повтор (7.19)', (
+    tester,
+  ) async {
     await pumpContent(
       tester,
-      child: contentView(
-        cardWithImage(),
-        metadata: const MediaMetadata(
-          provider: 'placeholder',
-          isPlaceholder: true,
-        ),
+      child: CardImageView(
+        bytes: Uint8List.fromList(<int>[1, 2, 3, 4, 5]),
+        onRetry: () {},
       ),
     );
-    final l10n = l10nOf(tester);
-    expect(
-      find.bySemanticsLabel(l10n.cardImagePlaceholderSemantics),
-      findsOneWidget,
-    );
-    semantics.dispose();
+    await tester.pump();
+    expect(find.byKey(kCardImageErrorKey), findsOneWidget);
+    expect(find.byKey(kCardImageRetryKey), findsOneWidget);
   });
 
   testWidgets('карточка без картинки — CardImageView нет', (tester) async {
@@ -241,7 +236,7 @@ void main() {
     expect(find.byType(CardImageView), findsNothing);
   });
 
-  test('картинка-заглушка имеет валидный размер', () {
+  test('изображение имеет валидный размер', () {
     final dimensions = ImageDimensions.read(png);
     expect(dimensions, isNotNull);
     expect(dimensions!.isUsable, isTrue);

@@ -42,16 +42,16 @@ void main() {
     final draft = CardDraft(
       front: '  Вопрос ',
       back: ' Ответ ',
-      mediaIds: const <String>['old-media'],
+      questionMediaIds: const <String>['old-media'],
       latex: r'x^2',
       occlusionJson: validOcclusion.encode(),
-      imageUpload: upload,
+      questionUploads: <CardImageUpload>[upload],
     ).normalized();
 
     expect(draft.mediaIds, <String>['old-media']);
     expect(draft.latex, r'x^2');
     expect(draft.occlusionJson, validOcclusion.encode());
-    expect(draft.imageUpload, same(upload));
+    expect(draft.questionUploads.single, same(upload));
   });
 
   test('occlusion требует изображение, хотя бы одну маску и валидный JSON', () {
@@ -64,7 +64,7 @@ void main() {
     const withoutMasks = CardDraft(
       front: 'В',
       back: 'О',
-      mediaIds: <String>['media-1'],
+      questionMediaIds: <String>['media-1'],
       occlusionJson: '{"version":1,"masks":[]}',
     );
     expect(
@@ -75,7 +75,7 @@ void main() {
     const broken = CardDraft(
       front: 'В',
       back: 'О',
-      mediaIds: <String>['media-1'],
+      questionMediaIds: <String>['media-1'],
       occlusionJson: '{broken',
     );
     expect(
@@ -88,7 +88,7 @@ void main() {
     final draft = CardDraft(
       front: 'Вопрос',
       back: 'Ответ',
-      mediaIds: const <String>['media-1'],
+      questionMediaIds: const <String>['media-1'],
       occlusionJson: validOcclusion.encode(),
     );
     expect(draft.validate(), isEmpty);

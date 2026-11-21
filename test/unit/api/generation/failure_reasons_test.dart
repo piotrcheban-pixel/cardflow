@@ -123,18 +123,27 @@ void main() {
       expect(outcome.rejectedCards, 2);
     });
 
-    test('канон схемы содержит image_id (ADR-029)', () {
+    test('канон схемы содержит изображения сторон (ADR-042)', () {
       final properties =
           ((canonicalCardsResponseSchema['properties']!
                       as Map<String, Object?>)['cards']!
                   as Map<String, Object?>)['items']!
               as Map<String, Object?>;
+      final Map<String, Object?> fields =
+          properties['properties']! as Map<String, Object?>;
       expect(
-        (properties['properties']! as Map<String, Object?>).keys,
-        contains('image_id'),
+        fields.keys,
+        containsAll(<String>[
+          'question_image_ids',
+          'answer_image_ids',
+          'image',
+        ]),
       );
-      expect((properties['required']! as List<Object?>), contains('image_id'));
-      expect(jsonEncode(properties), contains('image_id'));
+      expect(
+        properties['required']! as List<Object?>,
+        containsAll(<String>['question_image_ids', 'answer_image_ids']),
+      );
+      expect(jsonEncode(properties), contains('question_image_ids'));
     });
   });
 }

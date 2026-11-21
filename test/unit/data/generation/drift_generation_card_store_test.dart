@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -10,10 +9,13 @@ import 'package:cardflow/data/generation/drift_generation_card_store.dart';
 import 'package:cardflow/data/generation/drift_generation_job_repository.dart';
 import 'package:cardflow/data/transfer/media_store.dart';
 import 'package:cardflow/domain/cards/card.dart';
+import 'package:cardflow/domain/cards/card_media_json.dart';
 import 'package:cardflow/domain/cards/content_hash.dart';
 import 'package:cardflow/domain/cards/occlusion.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
+import 'package:cardflow/domain/generation/card_image_kind.dart';
 import 'package:cardflow/domain/generation/generated_card_image.dart';
+import 'package:cardflow/domain/generation/generated_card_image_side.dart';
 import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/generation/generation_job.dart';
 
@@ -309,13 +311,17 @@ void main() {
         back: 'Фотосинтез',
         cardType: CardType.basic,
         imageQuery: query,
+        imageKind: GeneratedCardImageKind.photo,
+        imageSide: GeneratedCardImageSide.question,
         isOcclusion: isOcclusion,
         occlusionJson: occlusionJson,
-        image: GeneratedCardImage(
-          bytes: Uint8List.fromList(<int>[0xFF, 0xD8, 0xFF, 0xE0, 1, 2, 3]),
-          mediaType: AttachmentMediaType.jpeg,
-          query: query,
-        ),
+        questionImages: <GeneratedCardImage>[
+          GeneratedCardImage(
+            bytes: Uint8List.fromList(<int>[0xFF, 0xD8, 0xFF, 0xE0, 1, 2, 3]),
+            mediaType: AttachmentMediaType.jpeg,
+            query: query,
+          ),
+        ],
       );
     }
 
@@ -341,7 +347,9 @@ void main() {
       expect(stored, card.image!.bytes);
 
       final CardRow cardRow = (await db.select(db.cards).get()).single;
-      expect(jsonDecode(cardRow.mediaJson), <Object?>[row.id]);
+      final CardMediaSides sides = CardMediaSides.decode(cardRow.mediaJson);
+      expect(sides.question, <String>[row.id]);
+      expect(sides.answer, isEmpty);
       expect(cardRow.occlusionJson, isNull);
       expect(row.cardId, cardRow.id);
     });
@@ -362,7 +370,9 @@ void main() {
       final CardRow cardRow = (await db.select(db.cards).get()).single;
       expect(cardRow.cardType, 'basic');
       expect(cardRow.occlusionJson, masks);
-      expect(jsonDecode(cardRow.mediaJson), hasLength(1));
+      final CardMediaSides occluded = CardMediaSides.decode(cardRow.mediaJson);
+      expect(occluded.question, hasLength(1));
+      expect(occluded.answer, isEmpty);
       expect(await db.select(db.media).get(), hasLength(1));
     });
 
@@ -376,10 +386,10 @@ void main() {
         now: now,
       );
       expect(await db.select(db.media).get(), isEmpty);
-      expect(
-        jsonDecode((await db.select(db.cards).get()).single.mediaJson),
-        isEmpty,
+      final CardMediaSides empty = CardMediaSides.decode(
+        (await db.select(db.cards).get()).single.mediaJson,
       );
+      expect(empty.isEmpty, isTrue);
     });
 
     test('картинка без MediaStore — StateError и откат', () async {

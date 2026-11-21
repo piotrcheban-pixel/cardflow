@@ -532,12 +532,12 @@ void main() {
         // ignore: avoid_print
         print(
           'LIVE statics card: front="${card.front}" | '
-          'back="${card.back}" | image_id=${card.imageId}, '
+          'back="${card.back}" | question_ids=${card.questionImageIds}, '
           'image_query=${card.imageQuery}, '
           'issues=${card.issues.map((issue) => issue.name).toList()}',
         );
       }
-      expect(result.promptVersion, 'gen-ru-v8');
+      expect(result.promptVersion, 'gen-ru-v9');
     },
     skip: liveSkip,
     timeout: const Timeout(Duration(minutes: 5)),
@@ -614,7 +614,7 @@ void main() {
           .where((card) => card.image != null)
           .length;
       final int withImageId = result.cards
-          .where((card) => (card.imageId ?? '').isNotEmpty)
+          .where((card) => card.questionImageIds.isNotEmpty)
           .length;
       // ignore: avoid_print — evidence без ключа и тел ответа.
       print(

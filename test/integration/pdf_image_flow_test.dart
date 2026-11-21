@@ -9,6 +9,7 @@ import 'package:pdfrx/pdfrx.dart';
 import 'package:cardflow/api/parsers/pdf_parser.dart';
 import 'package:cardflow/data/db/app_database.dart';
 import 'package:cardflow/data/transfer/media_store.dart';
+import 'package:cardflow/domain/cards/card_media_json.dart';
 import 'package:cardflow/domain/generation/document_image.dart';
 import 'package:cardflow/domain/generation/generation_card_store.dart';
 import 'package:cardflow/domain/generation/generation_job.dart';
@@ -121,7 +122,7 @@ void main() {
         );
 
     expect(result.cards, hasLength(1));
-    expect(result.cards.single.imageId, 'img1');
+    expect(result.cards.single.questionImageIds, <String>['img1']);
     expect(result.cards.single.image, isNotNull);
     expect(result.cards.single.image!.bytes, image.bytes);
 
@@ -170,8 +171,9 @@ void main() {
     expect(imported.importedCards, 1);
 
     final CardRow row = (await database.select(database.cards).get()).single;
-    final List<Object?> mediaIds = jsonDecode(row.mediaJson) as List<Object?>;
-    expect(mediaIds, hasLength(1));
+    final CardMediaSides sides = CardMediaSides.decode(row.mediaJson);
+    expect(sides.question, hasLength(1));
+    expect(sides.answer, isEmpty);
 
     final MediaRow media = (await database.select(database.media).get()).single;
     final File file = File(
@@ -184,6 +186,6 @@ void main() {
         .read(generationJobRepositoryProvider)
         .jobById(result.jobId))!;
     expect(job.status, GenerationJobStatus.done);
-    expect(job.promptVersion, 'gen-ru-v8');
+    expect(job.promptVersion, 'gen-ru-v9');
   });
 }

@@ -124,7 +124,7 @@ void main() {
               front: 'При каком условии две силы уравновешены?',
               back: 'Когда равны и противоположны.',
               cardType: CardType.basic,
-              imageId: 'img1',
+              questionImageIds: <String>['img1'],
             ),
           ]);
         };
@@ -138,7 +138,7 @@ void main() {
         expect(finder.queries, isEmpty, reason: 'внешний поиск не нужен');
         expect(result.cards.single.image, isNotNull);
         expect(result.cards.single.image!.bytes, image.bytes);
-        expect(result.cards.single.imageId, 'img1');
+        expect(result.cards.single.questionImageIds, <String>['img1']);
       },
     );
 
@@ -158,7 +158,7 @@ void main() {
               front: 'Вопрос?',
               back: 'Ответ.',
               cardType: CardType.basic,
-              imageId: 'img9',
+              questionImageIds: <String>['img9'],
             ),
           ]);
 

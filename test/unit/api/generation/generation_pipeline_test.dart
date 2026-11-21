@@ -6,7 +6,6 @@ import 'package:cardflow/api/generation/generation_cancellation.dart';
 import 'package:cardflow/api/generation/generation_diagnostics.dart';
 import 'package:cardflow/api/generation/generation_pipeline.dart';
 import 'package:cardflow/api/generation/system_prompt.dart';
-import 'package:cardflow/api/images/placeholder_image_generator.dart';
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/cards/content_hash.dart';
 import 'package:cardflow/domain/cards/occlusion.dart';
@@ -103,7 +102,6 @@ void main() {
   GenerationPipeline pipelineWith(
     List<GenerationChunk> chunks, {
     FakeCardImageFinder? imageFinder,
-    PlaceholderImageGenerator? placeholderGenerator,
   }) {
     caller = FakeGenerationCaller();
     jobs = FakeGenerationJobRepository();
@@ -116,7 +114,6 @@ void main() {
       now: () => DateTime.utc(2026, 11, 14, 10),
       jobIdFactory: () => 'job-1',
       imageFinder: imageFinder,
-      placeholderGenerator: placeholderGenerator,
     );
   }
 
@@ -1041,13 +1038,10 @@ void main() {
     Future<GenerationRunResult> runWithCards(
       List<GeneratedCard> cards, {
       FakeCardImageFinder? finder,
-      PlaceholderImageGenerator? placeholderGenerator,
     }) async {
-      final pipeline = pipelineWith(
-        <GenerationChunk>[chunkOf(1, 'материал')],
-        imageFinder: finder,
-        placeholderGenerator: placeholderGenerator,
-      );
+      final pipeline = pipelineWith(<GenerationChunk>[
+        chunkOf(1, 'материал'),
+      ], imageFinder: finder);
       caller.onGenerate = (GenerationRequest request, int call) async =>
           resultWith(cards);
       return pipeline.run(
@@ -1166,49 +1160,30 @@ void main() {
       expect(finder.queries, <String>['inclined plane forces diagram']);
     });
 
-    test('не найдено → детерминированная заглушка с флагом', () async {
-      const generator = PlaceholderImageGenerator();
-      final finder = FakeCardImageFinder();
-      final card = makeGeneratedCard(
-        imageQuery: 'missing picture',
-        imageKind: GeneratedCardImageKind.illustration,
-      );
+    test(
+      'не найдено → карточка без изображения, заглушки нет (7.19)',
+      () async {
+        final finder = FakeCardImageFinder();
+        final card = makeGeneratedCard(
+          imageQuery: 'missing picture',
+          imageKind: GeneratedCardImageKind.illustration,
+        );
 
-      final result = await runWithCards(
-        <GeneratedCard>[card],
-        finder: finder,
-        placeholderGenerator: generator,
-      );
+        final result = await runWithCards(<GeneratedCard>[
+          card,
+        ], finder: finder);
 
-      final GeneratedCardImage? placeholder = result.cards.single.image;
-      expect(placeholder, isNotNull);
-      expect(placeholder!.isPlaceholder, isTrue);
-      expect(placeholder.provider, 'placeholder');
-      expect(placeholder.kind, GeneratedCardImageKind.illustration);
-      expect(result.cards.single.issues, contains(CardIssueCode.imageNotFound));
-      expect(
-        placeholder.bytes,
-        generator
-            .generate(
-              seed: contentHashOf(front: card.front, back: card.back),
-              kind: card.imageKind,
-              query: card.imageQuery,
-            )
-            .bytes,
-        reason: 'одна карточка — всегда одна и та же заглушка',
-      );
-    });
+        final GeneratedCard enriched = result.cards.single;
+        expect(enriched.image, isNull, reason: 'нарисованный PNG не создаётся');
+        expect(enriched.questionImages, isEmpty);
+        expect(enriched.issues, contains(CardIssueCode.imageNotFound));
+      },
+    );
 
-    test('карточка без поля image тоже получает заглушку', () async {
-      const generator = PlaceholderImageGenerator();
-      final card = makeGeneratedCard();
+    test('карточка без запроса изображения остаётся без него', () async {
+      final result = await runWithCards(<GeneratedCard>[makeGeneratedCard()]);
 
-      final result = await runWithCards(<GeneratedCard>[
-        card,
-      ], placeholderGenerator: generator);
-
-      expect(result.cards.single.image, isNotNull);
-      expect(result.cards.single.image!.isPlaceholder, isTrue);
+      expect(result.cards.single.image, isNull);
       // Без поиска пометки imageNotFound нет: запроса не было.
       expect(
         result.cards.single.issues,
@@ -1216,11 +1191,8 @@ void main() {
       );
     });
 
-    test('пожелание «без картинок» отключает и заглушку', () async {
-      const generator = PlaceholderImageGenerator();
-      final pipeline = pipelineWith(<GenerationChunk>[
-        chunkOf(1, 'материал'),
-      ], placeholderGenerator: generator);
+    test('пожелание «без картинок» отключает изображения', () async {
+      final pipeline = pipelineWith(<GenerationChunk>[chunkOf(1, 'материал')]);
       caller.onGenerate = (GenerationRequest request, int call) async =>
           resultWith(<GeneratedCard>[makeGeneratedCard()]);
       final result = await pipeline.run(

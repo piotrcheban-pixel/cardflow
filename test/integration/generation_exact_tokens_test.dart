@@ -70,7 +70,7 @@ ParsedDocument docOf(String fileName, String text) => ParsedDocument(
 GenerationResult resultWithCard() => GenerationResult(
   provider: GenerationProvider.anthropic,
   model: 'claude-test',
-  promptVersion: 'gen-ru-v8',
+  promptVersion: 'gen-ru-v9',
   cards: <GeneratedCard>[makeGeneratedCard()],
   usage: const TokenUsage(
     promptTokens: 100,

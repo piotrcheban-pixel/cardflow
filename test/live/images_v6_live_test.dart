@@ -23,7 +23,6 @@ import 'package:cardflow/api/http/generation_http_client.dart';
 import 'package:cardflow/api/http/retry_policy.dart';
 import 'package:cardflow/api/images/image_providers.dart';
 import 'package:cardflow/api/images/image_search_service.dart';
-import 'package:cardflow/api/images/placeholder_image_generator.dart';
 import 'package:cardflow/api/providers/generation_provider_adapter.dart';
 import 'package:cardflow/api/providers/openai_compatible_adapter.dart';
 import 'package:cardflow/domain/generation/card_image_finder.dart';
@@ -92,7 +91,6 @@ void main() {
           jobRepository: FakeGenerationJobRepository(),
           cardStore: FakeGenerationCardStore(),
           imageFinder: finder,
-          placeholderGenerator: const PlaceholderImageGenerator(),
           diagnostics: diag,
         );
         final Stopwatch total = Stopwatch()..start();
@@ -307,19 +305,12 @@ class DeckReport {
     for (var index = 0; index < cards.length; index++) {
       final GeneratedCard card = cards[index];
       final GeneratedCardImage? image = card.image;
-      final String status;
-      if (image == null) {
-        status = 'нет';
-      } else if (image.isPlaceholder) {
-        status = 'заглушка';
-      } else {
-        status = 'настоящая';
-      }
+      final String status = image == null ? 'нет' : 'настоящая';
       if (index < searchCalls.length) {
         times.add(searchCalls[index].elapsed.inMilliseconds);
       }
       String? imagePath;
-      if (image != null && !image.isPlaceholder) {
+      if (image != null) {
         imageDirectory.createSync(recursive: true);
         final File file = File(
           '${imageDirectory.path}${Platform.pathSeparator}'

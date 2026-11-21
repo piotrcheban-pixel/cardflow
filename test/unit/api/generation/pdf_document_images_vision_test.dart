@@ -119,7 +119,7 @@ void main() {
       // Каталог в тексте запроса остаётся.
       expect(adapter.buildArgs!.userContent, contains('<images>'));
       expect(adapter.buildArgs!.userContent, contains('стр. 2'));
-      expect(result.cards.single.imageId, 'img1');
+      expect(result.cards.single.questionImageIds, <String>['img1']);
     },
   );
 
@@ -144,7 +144,7 @@ void main() {
       expect(adapter.buildArgs!.images, isEmpty);
       expect(adapter.buildArgs!.userContent, contains('img1 | лекция.pdf'));
       // image_id валиден и для каталожного изображения: байты найдутся при импорте.
-      expect(result.cards.single.imageId, 'img1');
+      expect(result.cards.single.questionImageIds, <String>['img1']);
     },
   );
 
@@ -227,7 +227,7 @@ void main() {
     );
 
     expect(result.cards, hasLength(1));
-    expect(result.cards.single.imageId, isNull);
+    expect(result.cards.single.questionImageIds, isEmpty);
     expect(result.cards.single.issues, contains(CardIssueCode.imageIdUnknown));
   });
 

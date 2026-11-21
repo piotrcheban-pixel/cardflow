@@ -81,11 +81,16 @@ Card makeCard({
   bool suspended = false,
   bool flagged = false,
   DateTime? buriedUntil,
-  List<String> mediaIds = const <String>[],
+  List<String> questionMediaIds = const <String>[],
+  List<String> answerMediaIds = const <String>[],
+
+  /// Устаревший синоним стороны вопроса (тесты до 7.19).
+  List<String>? mediaIds,
   String? latex,
   String? occlusionJson,
 }) {
   final DateTime created = createdAt ?? fixturesNow;
+  final List<String> question = <String>[...questionMediaIds, ...?mediaIds];
   return Card(
     id: id,
     deckId: deckId,
@@ -95,7 +100,8 @@ Card makeCard({
     cardType: cardType,
     state: state,
     tags: tags,
-    mediaIds: mediaIds,
+    questionMediaIds: question,
+    answerMediaIds: answerMediaIds,
     latex: latex,
     occlusionJson: occlusionJson,
     due: due,
@@ -353,7 +359,8 @@ class FakeCardRepository implements CardRepository {
       hint: draft.hint,
       cardType: card.cardType,
       tags: draft.tags,
-      mediaIds: card.mediaIds,
+      questionMediaIds: draft.questionMediaIds,
+      answerMediaIds: draft.answerMediaIds,
       latex: card.latex,
       occlusionJson: card.occlusionJson,
       sourceDocId: card.sourceDocId,

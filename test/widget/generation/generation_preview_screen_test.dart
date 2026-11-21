@@ -8,6 +8,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/cards/occlusion.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
+import 'package:cardflow/domain/generation/generated_card_image.dart';
 import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/generation/generation_chunker.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
@@ -370,14 +371,18 @@ void main() {
       imageQuery: 'plant cell diagram',
       isOcclusion: true,
       occlusionJson: defaultOcclusionDocumentJson(),
-      image: makeCardImage(mediaType: AttachmentMediaType.png, bytes: png),
+      questionImages: <GeneratedCardImage>[
+        makeCardImage(mediaType: AttachmentMediaType.png, bytes: png),
+      ],
     );
     await pumpPreview(tester, resultWith(cards: <GeneratedCard>[card]));
     final l10n = l10nOf(tester);
 
     expect(find.text(l10n.cardTypeOcclusion), findsOneWidget);
     expect(
-      find.byKey(const ValueKey<String>('generation-preview-image-0')),
+      find.byKey(
+        const ValueKey<String>('generation-preview-question-image-0-0'),
+      ),
       findsOneWidget,
     );
 
@@ -403,12 +408,16 @@ void main() {
       front: 'Какая органелла изображена?',
       back: 'Хлоропласт',
       imageQuery: 'chloroplast diagram',
-      image: makeCardImage(mediaType: AttachmentMediaType.png, bytes: png),
+      questionImages: <GeneratedCardImage>[
+        makeCardImage(mediaType: AttachmentMediaType.png, bytes: png),
+      ],
     );
     await pumpPreview(tester, resultWith(cards: <GeneratedCard>[card]));
 
     expect(
-      find.byKey(const ValueKey<String>('generation-preview-image-0')),
+      find.byKey(
+        const ValueKey<String>('generation-preview-question-image-0-0'),
+      ),
       findsOneWidget,
     );
     expect(find.byType(Image), findsOneWidget);
@@ -435,7 +444,7 @@ void main() {
     final GeneratedCard found = makeGeneratedCard(
       front: 'Что на фото?',
       back: 'Кремль',
-      image: makeCardImage(),
+      questionImages: <GeneratedCardImage>[makeCardImage()],
     );
     await pumpPreview(
       tester,
@@ -449,8 +458,16 @@ void main() {
     );
     expect(find.text(l10n.generationImageSearchFailed(1)), findsOneWidget);
     expect(find.text(l10n.generationIssueImageNotFound), findsOneWidget);
+    final Finder downloaded = find.byKey(
+      const ValueKey<String>('generation-preview-question-image-1-0'),
+    );
+    await tester.scrollUntilVisible(
+      downloaded,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(
-      find.byKey(const ValueKey<String>('generation-preview-image-1')),
+      downloaded,
       findsOneWidget,
       reason: 'скачанная картинка всё равно видна',
     );
@@ -470,7 +487,7 @@ void main() {
     final GeneratedCard found = makeGeneratedCard(
       front: 'Что на фото?',
       back: 'Кремль',
-      image: makeCardImage(),
+      questionImages: <GeneratedCardImage>[makeCardImage()],
     );
     await pumpPreview(tester, resultWith(cards: <GeneratedCard>[found]));
 

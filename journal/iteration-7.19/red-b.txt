@@ -1,0 +1,35 @@
+00:00 +0: loading C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/cards/card_sides_red_7_19_test.dart
+00:00 +0: обратная сторона не показывает изображение вопроса
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following TestFailure was thrown running a test:
+Expected: no matching candidates
+  Actual: _TypeWidgetFinder:<Found 1 widget with type "CardImageView": [
+            CardImageView(dependencies: [InheritedCupertinoTheme, _InheritedTheme,
+_LocalizationsScope-[GlobalKey#e82cd]]),
+          ]>
+   Which: means one was found but none were expected
+изображение вопроса не должно раскрывать ответ на обороте
+
+When the exception was thrown, this was the stack:
+#4      main.<anonymous closure> (file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/cards/card_sides_red_7_19_test.dart:56:5)
+<asynchronous suspension>
+#5      testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#6      TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1953:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided one frame from package:stack_trace)
+
+This was caught by the test expectation on the following line:
+  file:///C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/cards/card_sides_red_7_19_test.dart line 56
+The test description was:
+  обратная сторона не показывает изображение вопроса
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:00 +0 -1: обратная сторона не показывает изображение вопроса [E]
+  Test failed. See exception logs above.
+  The test description was: обратная сторона не показывает изображение вопроса
+  
+00:00 +0 -1: Some tests failed.
+
+Failing tests:
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/cards/card_sides_red_7_19_test.dart: обратная сторона не показывает изображение вопроса

@@ -1,9 +1,9 @@
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image/image.dart' as img;
 import 'package:material_ui/material_ui.dart' hide Card;
 
-import 'package:cardflow/api/images/placeholder_image_generator.dart';
 import 'package:cardflow/data/cards/card_image_refresher.dart';
 import 'package:cardflow/data/db/app_database.dart';
 import 'package:cardflow/data/transfer/media_store.dart';
@@ -17,9 +17,9 @@ import '../../helpers/pump_app.dart';
 
 /// «Найти картинку заново» в редакторе карточки (7.14, шаг 3).
 void main() {
-  final Uint8List png = const PlaceholderImageGenerator()
-      .generate(seed: 'card-form-image')
-      .bytes;
+  final Uint8List png = Uint8List.fromList(
+    img.encodePng(img.Image(width: 40, height: 30)),
+  );
 
   Card card() => makeCard(
     id: 'card-1',
@@ -120,7 +120,7 @@ void main() {
 
     expect(find.text(l10nOf(tester).cardImageRetryNotFound), findsOneWidget);
     expect(
-      find.byKey(const ValueKey<String>('card-form-image-preview')),
+      find.byKey(const ValueKey<String>('card-form-question-image-0')),
       findsOneWidget,
     );
   });
@@ -174,7 +174,4 @@ class _FakeRefresher implements CardImageRefresher {
     lastMediaId = mediaId;
     return result;
   }
-
-  @override
-  Future<int> retryPlaceholders({int limit = 5}) async => 0;
 }

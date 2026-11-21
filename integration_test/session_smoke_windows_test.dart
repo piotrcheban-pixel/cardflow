@@ -20,9 +20,9 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:material_ui/material_ui.dart' hide Card;
+import 'package:image/image.dart' as img;
 import 'package:path/path.dart' as p;
 
-import 'package:cardflow/api/images/placeholder_image_generator.dart';
 import 'package:cardflow/data/db/app_database.dart';
 import 'package:cardflow/data/db/database_opener.dart';
 import 'package:cardflow/data/db/epoch.dart';
@@ -66,9 +66,9 @@ void main() {
       );
       // 7.14: цепочка картинок отбрасывает изображения < 400 px по короткой
       // стороне, поэтому «настоящая» найденная картинка — валидный PNG 800×450.
-      final Uint8List foundPng = const PlaceholderImageGenerator()
-          .generate(seed: 'smoke-found-image')
-          .bytes;
+      final Uint8List foundPng = Uint8List.fromList(
+        img.encodePng(img.Image(width: 800, height: 450)),
+      );
       final DateTime now = DateTime.now();
       final int epochNow = toEpochMs(now.toUtc());
 
@@ -379,7 +379,6 @@ void main() {
           );
       expect(generated.cards, hasLength(2));
       expect(generated.cards.first.image, isNotNull);
-      expect(generated.cards.first.image!.isPlaceholder, isFalse);
       expect(generated.cards.first.image!.provider, 'wikimedia');
       expect(generated.cards.first.image!.bytes, foundPng);
       // Вторая карточка ищет «Kremlin tower» — тот же fake-ответ Commons;

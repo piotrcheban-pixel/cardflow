@@ -39,6 +39,8 @@ void main() {
     required String back,
     String? imageId,
     String? imageQuery,
+    List<String> questionImageIds = const <String>[],
+    List<String> answerImageIds = const <String>[],
   }) {
     return <String, Object?>{
       'front': front,
@@ -50,6 +52,9 @@ void main() {
       'source_file': null,
       'image_id': imageId,
       'image_query': imageQuery,
+      'question_image_ids': <String>[...questionImageIds, ?imageId],
+      'answer_image_ids': answerImageIds,
+      'image': null,
     };
   }
 
@@ -102,12 +107,12 @@ void main() {
       card(
         front: 'Каким соотношением связаны число стержней и узлов фермы?',
         back: r'$s = 2n - 3$',
-        imageId: 'img1',
+        questionImageIds: <String>['img1'],
       ),
       card(
         front: 'При каком условии две силы уравновешивают друг друга?',
         back: 'Когда они равны по модулю и направлены противоположно.',
-        imageId: 'img1',
+        questionImageIds: <String>['img1'],
         imageQuery: 'physics free body diagram inclined plane',
       ),
       card(front: 'Шкала геометрической неизменяемости', back: 's = 2n - 3'),
@@ -116,9 +121,9 @@ void main() {
     final cards = evaluate(raw, source: source, imageIds: <String>{'img1'});
     expect(cards, hasLength(3));
     // 7.14: image_id в приоритете, а image остаётся запасным вариантом.
-    expect(cards[0].imageId, 'img1');
+    expect(cards[0].questionImageIds, <String>['img1']);
     expect(cards[0].imageQuery, isNull);
-    expect(cards[1].imageId, 'img1');
+    expect(cards[1].questionImageIds, <String>['img1']);
     expect(cards[1].imageQuery, 'physics free body diagram inclined plane');
     // Заголовок вместо вопроса — мягкая пометка.
     expect(cards[2].issues, contains(CardIssueCode.frontLooksLikeHeading));

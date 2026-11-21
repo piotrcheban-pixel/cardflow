@@ -165,7 +165,7 @@ void main() {
         back: 'Ответ',
         cardType: CardType.basic,
         tags: const <String>[],
-        mediaIds: const <String>['media-1'],
+        questionMediaIds: const <String>['media-1'],
         state: CardState.newCard,
         createdAt: DateTime.utc(2026, 11, 12, 10),
         updatedAt: DateTime.utc(2026, 11, 12, 10),

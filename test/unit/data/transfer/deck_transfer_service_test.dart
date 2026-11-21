@@ -8,6 +8,7 @@ import 'package:cardflow/data/transfer/drift_deck_transfer_service.dart';
 import 'package:cardflow/data/transfer/media_store.dart';
 import 'package:cardflow/data/transfer/zip_deck_archive_codec.dart';
 import 'package:cardflow/domain/cards/card.dart';
+import 'package:cardflow/domain/cards/card_media_json.dart';
 import 'package:cardflow/domain/cards/content_hash.dart';
 import 'package:cardflow/domain/scheduling/scheduling_card.dart';
 import 'package:cardflow/domain/transfer/deck_archive.dart';
@@ -73,7 +74,7 @@ Card _basicCard({
   hint: 'Глагол движения',
   cardType: CardType.basic,
   tags: const <String>['глагол', 'испанский'],
-  mediaIds: mediaIds,
+  questionMediaIds: mediaIds,
   latex: r'\text{hablar}',
   occlusionJson: '{"masks":[{"x":1}]}',
   sourceDocId: 'doc-1',
@@ -102,7 +103,7 @@ Card _clozeCard({String id = 'card-2'}) => Card(
   back: 'ответ',
   cardType: CardType.cloze,
   tags: const <String>['cloze'],
-  mediaIds: const <String>['m-2'],
+  questionMediaIds: const <String>['m-2'],
   state: CardState.newCard,
   createdAt: _cardCreatedAt,
   updatedAt: _cardUpdatedAt,
@@ -377,6 +378,10 @@ void main() {
     );
   }
 
+  /// Стороны `media_json` карточки (v2 или legacy-массив).
+  CardMediaSides sidesFromRow(CardRow row) =>
+      CardMediaSides.decode(row.mediaJson);
+
   /// Карточка из строки БД (локальный маппинг, чтобы не зависеть от репозитория).
   Card cardFromRow(CardRow row) => Card(
     id: row.id,
@@ -386,7 +391,8 @@ void main() {
     hint: row.hint,
     cardType: CardType.fromWire(row.cardType),
     tags: (jsonDecode(row.tagsJson) as List<dynamic>).cast<String>(),
-    mediaIds: (jsonDecode(row.mediaJson) as List<dynamic>).cast<String>(),
+    questionMediaIds: sidesFromRow(row).question,
+    answerMediaIds: sidesFromRow(row).answer,
     latex: row.latex,
     occlusionJson: row.occlusionJson,
     sourceDocId: row.sourceDocId,
@@ -933,7 +939,7 @@ void main() {
         back: 'Карточка',
         cardType: CardType.basic,
         state: CardState.newCard,
-        mediaIds: const <String>['m-2'],
+        questionMediaIds: const <String>['m-2'],
         createdAt: _cardCreatedAt,
         updatedAt: _cardUpdatedAt,
       );

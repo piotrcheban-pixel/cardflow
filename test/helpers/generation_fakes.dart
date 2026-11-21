@@ -15,6 +15,7 @@ import 'package:cardflow/domain/generation/card_image_kind.dart';
 import 'package:cardflow/domain/generation/document_gateway.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
 import 'package:cardflow/domain/generation/generated_card_image.dart';
+import 'package:cardflow/domain/generation/generated_card_image_side.dart';
 import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/generation/generation_card_store.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
@@ -353,7 +354,11 @@ GeneratedCard makeGeneratedCard({
   String? imageQuery,
   String? imageFallbackQuery,
   GeneratedCardImageKind imageKind = GeneratedCardImageKind.photo,
-  GeneratedCardImage? image,
+  GeneratedCardImageSide imageSide = GeneratedCardImageSide.question,
+  List<String> questionImageIds = const <String>[],
+  List<String> answerImageIds = const <String>[],
+  List<GeneratedCardImage> questionImages = const <GeneratedCardImage>[],
+  List<GeneratedCardImage> answerImages = const <GeneratedCardImage>[],
   bool isOcclusion = false,
   String? occlusionJson,
 }) {
@@ -367,7 +372,11 @@ GeneratedCard makeGeneratedCard({
     imageQuery: imageQuery,
     imageFallbackQuery: imageFallbackQuery,
     imageKind: imageKind,
-    image: image,
+    imageSide: imageSide,
+    questionImageIds: questionImageIds,
+    answerImageIds: answerImageIds,
+    questionImages: questionImages,
+    answerImages: answerImages,
     isOcclusion: isOcclusion,
     occlusionJson: occlusionJson,
   );
@@ -443,7 +452,6 @@ GeneratedCardImage makeCardImage({
   String? sourceUrl = 'https://example.test/image.jpg',
   String? author,
   String? license,
-  bool isPlaceholder = false,
 }) {
   return GeneratedCardImage(
     bytes: Uint8List.fromList(bytes),
@@ -454,7 +462,6 @@ GeneratedCardImage makeCardImage({
     sourceUrl: sourceUrl,
     author: author,
     license: license,
-    isPlaceholder: isPlaceholder,
   );
 }
 

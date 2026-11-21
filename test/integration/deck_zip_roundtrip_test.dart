@@ -21,6 +21,22 @@ import 'package:cardflow/ui/state/app_providers.dart';
 ///
 /// Проверяет A6.9/A5: экспорт → импорт → экспорт без потерь, дедупликацию
 /// по `content_hash` и перенос медиафайлов.
+/// Валидная PNG-сигнатура + данные (9 байт достаточно для проверки MIME).
+final Uint8List pngBytes = Uint8List.fromList(<int>[
+  0x89,
+  0x50,
+  0x4E,
+  0x47,
+  0x0D,
+  0x0A,
+  0x1A,
+  0x0A,
+  1,
+  2,
+  3,
+  4,
+]);
+
 void main() {
   late AppDatabase database;
   late Directory mediaDirectory;
@@ -62,7 +78,7 @@ void main() {
       hint: 'глагол',
       cardType: CardType.basic,
       tags: const <String>['глаголы'],
-      mediaIds: mediaIds,
+      questionMediaIds: mediaIds,
       state: CardState.newCard,
       contentHash: contentHashOf(front: front, back: back),
       createdAt: DateTime.utc(2026, 11, 12, 10),
@@ -132,7 +148,7 @@ void main() {
 
   test('медиафайлы переносятся без потерь', () async {
     final codec = container.read(deckArchiveCodecProvider);
-    final bytes = Uint8List.fromList(<int>[0x89, 0x50, 0x4E, 0x47, 1, 2, 3]);
+    final bytes = pngBytes;
     final card = buildCard(mediaIds: const <String>['media-1']);
     final archive = buildArchive(
       cards: <Card>[card],
@@ -164,7 +180,7 @@ void main() {
     final deck = await container
         .read(deckRepositoryProvider)
         .createDeck(name: 'Анатомия');
-    final bytes = Uint8List.fromList(<int>[0x89, 0x50, 0x4E, 0x47, 1, 2, 3]);
+    final bytes = pngBytes;
     const document = OcclusionDocument(
       masks: <OcclusionMask>[
         OcclusionMask(
@@ -186,11 +202,13 @@ void main() {
             back: 'Подпись',
             occlusionJson: document.encode(),
             latex: r'x^2',
-            imageUpload: CardImageUpload(
-              fileName: 'scheme.png',
-              mimeType: 'image/png',
-              bytes: bytes,
-            ),
+            questionUploads: <CardImageUpload>[
+              CardImageUpload(
+                fileName: 'scheme.png',
+                mimeType: 'image/png',
+                bytes: bytes,
+              ),
+            ],
           ),
           now: DateTime.utc(2026, 11, 14, 12),
         );
