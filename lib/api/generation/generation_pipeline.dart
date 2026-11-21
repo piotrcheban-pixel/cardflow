@@ -813,6 +813,7 @@ class GenerationPipeline implements GenerationRunner {
               ),
           ];
           var replaceEnd = index + 1;
+          _ReplannedPart? pendingReplan;
           final int? replanBudget = recovery.replanBudgetTokens;
           if (replanBudget != null) {
             final GenerationPlanSplitter prepared = splitter.withContext(
@@ -832,7 +833,7 @@ class GenerationPipeline implements GenerationRunner {
                     in parts ?? <PlannedChunk>[pending])
                   _QueueItem(
                     planned,
-                    attempts: pendingItem.attempts + 1,
+                    attempts: pendingItem.attempts,
                     limitReduced: pendingItem.limitReduced,
                     outputBoosted: pendingItem.outputBoosted,
                   ),
@@ -848,18 +849,13 @@ class GenerationPipeline implements GenerationRunner {
                   for (final _QueueItem item in replacement) item.chunk,
                 ],
               );
-              activePlan = replanned.plan;
+              pendingReplan = replanned;
               for (var child = 0; child < replacement.length; child++) {
                 replacement[child] = replacement[child].withChunk(
                   replanned.chunks[child],
                 );
               }
             }
-            diagnostics.recovery(
-              errorCode: error.code.name,
-              parts: replacement.length,
-              budgetTokens: replanBudget,
-            );
           }
           // Одиночный повтор той же партии тоже расходует одну операцию;
           // при дроблении — число дополнительных запросов.
@@ -868,6 +864,16 @@ class GenerationPipeline implements GenerationRunner {
               ? 1
               : replacement.length - replacedCount;
           if (recoveryRequests + extra <= recoveryBudget) {
+            if (pendingReplan != null) {
+              activePlan = pendingReplan.plan;
+            }
+            if (replanBudget != null) {
+              diagnostics.recovery(
+                errorCode: error.code.name,
+                parts: replacement.length,
+                budgetTokens: replanBudget,
+              );
+            }
             recoveryRequests += extra < 0 ? 0 : extra;
             queue.replaceRange(index, replaceEnd, replacement);
             _renumber(queue);
