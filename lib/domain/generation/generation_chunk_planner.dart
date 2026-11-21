@@ -201,7 +201,8 @@ final class GenerationChunkPlanner {
     // §3.4: reasoning-модель тратит часть `max_tokens` на рассуждение. Резерв
     // добавляется явно (допущение) и исчезает после калибровки по `usage`.
     final int reasoningReserve =
-        limits.isReasoningModel.value == true && planning.reasoningReserveTokens > 0
+        limits.isReasoningModel.value == true &&
+            planning.reasoningReserveTokens > 0
         ? planning.reasoningReserveTokens
         : 0;
     final int desired = math.min(
@@ -695,7 +696,8 @@ final class GenerationChunkPlanner {
       desiredOutputTokens: desired,
       accuracy: InputAccuracy.estimated,
       config: config.planning,
-      requestBytes: bytes + overhead.fixedBytes + config.planning.jsonBodyOverheadBytes,
+      requestBytes:
+          bytes + overhead.fixedBytes + config.planning.jsonBodyOverheadBytes,
     );
     final bool whole =
         !budget.contextExceeded &&
@@ -706,7 +708,8 @@ final class GenerationChunkPlanner {
       sections: const <InputSection>[],
       materialsText: '',
       tokens: 0,
-      bytes: bytes + overhead.fixedBytes + config.planning.jsonBodyOverheadBytes,
+      bytes:
+          bytes + overhead.fixedBytes + config.planning.jsonBodyOverheadBytes,
       images: List<InputImage>.unmodifiable(data.orphanImages),
       catalogTokens: catalogTokens,
     );

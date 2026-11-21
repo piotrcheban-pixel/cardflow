@@ -153,12 +153,11 @@ void main() {
   });
 
   test('копирование аккаунта не теряет явно заданный Vision', () {
-    final ProviderAccount configured =
-        ProviderAccount.fromPreset(
-          providerPresetById('deepseek')!,
-          id: 'deepseek',
-          modelId: 'deepseek-chat',
-        ).copyWith(supportsVision: true, visionConfigured: true);
+    final ProviderAccount configured = ProviderAccount.fromPreset(
+      providerPresetById('deepseek')!,
+      id: 'deepseek',
+      modelId: 'deepseek-chat',
+    ).copyWith(supportsVision: true, visionConfigured: true);
     expect(
       configured.visionConfigured,
       isTrue,

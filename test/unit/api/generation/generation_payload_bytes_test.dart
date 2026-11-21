@@ -12,7 +12,6 @@ import 'package:cardflow/api/providers/generation_provider_adapter.dart';
 import 'package:cardflow/api/providers/openai_compatible_adapter.dart';
 import 'package:cardflow/domain/generation/document_image.dart';
 import 'package:cardflow/domain/generation/generation_attachment.dart';
-import 'package:cardflow/domain/generation/generation_chunk_planner.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
 import 'package:cardflow/domain/generation/generation_plan.dart';
 import 'package:cardflow/domain/generation/generation_request.dart';
@@ -91,84 +90,90 @@ void main() {
   int serializedBytes(ProviderRequest request) =>
       utf8.encode(jsonEncode(request.body)).length;
 
-  test('payload включает промпт, схему, каталог и base64 — не только текст', () {
-    final String materials = 'Текст раздела про фотосинтез.';
-    final DocumentImage image = documentImage(bytes: 60000);
-    final GenerationPlan plan = const GenerationPlanBuilder().build(
-      documents: <ParsedDocument>[docOf(materials)],
-      capabilities: const ModelCapabilities(
-        contextWindowTokens: 128000,
-        contextSource: CapabilitySource.userConfigured,
-        maxOutputTokens: 8192,
-        supportsVision: true,
-      ),
-      documentImages: <DocumentImage>[image],
-    );
-    final PlannedChunk chunk = plan.chunks.single;
-    final String userContent = buildGenerationUserContent(
-      materialsText: chunk.materialsText,
-      limit: chunk.limit,
-      imagesCatalog: 'img1 | a.docx | Схема | Схема из документа',
-    );
-    final ProviderRequest request = adapter.buildRequest(
-      apiKey: 'test-key',
-      model: 'test-model',
-      systemPrompt: systemPromptGenRuV8,
-      userContent: userContent,
-      maxOutputTokens: 4096,
-      baseUrl: 'https://api.example.com/v1',
-      images: <GenerationAttachment>[
-        GenerationAttachment(
-          fileName: image.fileName,
-          mediaType: image.mediaType,
-          bytes: image.bytes,
-          label: 'img1 | a.docx | Схема | Схема из документа',
+  test(
+    'payload включает промпт, схему, каталог и base64 — не только текст',
+    () {
+      final String materials = 'Текст раздела про фотосинтез.';
+      final DocumentImage image = documentImage(bytes: 60000);
+      final GenerationPlan plan = const GenerationPlanBuilder().build(
+        documents: <ParsedDocument>[docOf(materials)],
+        capabilities: const ModelCapabilities(
+          contextWindowTokens: 128000,
+          contextSource: CapabilitySource.userConfigured,
+          maxOutputTokens: 8192,
+          supportsVision: true,
         ),
-      ],
-    );
-    final int actual = serializedBytes(request);
-    expect(
-      chunk.bodyBytes,
-      greaterThanOrEqualTo(actual - 4096),
-      reason:
-          'requestBytes плана обязан учитывать обвязку протокола: промпт, '
-          'схему ответа и JSON-ключи (запас — 4 КБ на экранирование)',
-    );
-    expect(
-      chunk.bodyBytes,
-      lessThanOrEqualTo(actual + 4096),
-      reason: 'план не завышает тело на порядки: оценка близка к фактической',
-    );
-  });
+        documentImages: <DocumentImage>[image],
+      );
+      final PlannedChunk chunk = plan.chunks.single;
+      final String userContent = buildGenerationUserContent(
+        materialsText: chunk.materialsText,
+        limit: chunk.limit,
+        imagesCatalog: 'img1 | a.docx | Схема | Схема из документа',
+      );
+      final ProviderRequest request = adapter.buildRequest(
+        apiKey: 'test-key',
+        model: 'test-model',
+        systemPrompt: systemPromptGenRuV8,
+        userContent: userContent,
+        maxOutputTokens: 4096,
+        baseUrl: 'https://api.example.com/v1',
+        images: <GenerationAttachment>[
+          GenerationAttachment(
+            fileName: image.fileName,
+            mediaType: image.mediaType,
+            bytes: image.bytes,
+            label: 'img1 | a.docx | Схема | Схема из документа',
+          ),
+        ],
+      );
+      final int actual = serializedBytes(request);
+      expect(
+        chunk.bodyBytes,
+        greaterThanOrEqualTo(actual - 4096),
+        reason:
+            'requestBytes плана обязан учитывать обвязку протокола: промпт, '
+            'схему ответа и JSON-ключи (запас — 4 КБ на экранирование)',
+      );
+      expect(
+        chunk.bodyBytes,
+        lessThanOrEqualTo(actual + 4096),
+        reason: 'план не завышает тело на порядки: оценка близка к фактической',
+      );
+    },
+  );
 
-  test('превышение лимита тела: payloadTooLarge, запрос не отправлен', () async {
-    final FakeGenerationTransport transport = transportWithResponse();
-    final DocumentImage image = documentImage(bytes: 200 * 1024);
-    await expectLater(
-      serviceOn(transport).generate(
-        GenerationRequest(
-          account: account(maxRequestBytes: 200 * 1024),
-          materialsText: 'Текст раздела.',
-          limit: 3,
-          documentImages: <DocumentImage>[image],
-          documentImageParts: <DocumentImage>[image],
+  test(
+    'превышение лимита тела: payloadTooLarge, запрос не отправлен',
+    () async {
+      final FakeGenerationTransport transport = transportWithResponse();
+      final DocumentImage image = documentImage(bytes: 200 * 1024);
+      await expectLater(
+        serviceOn(transport).generate(
+          GenerationRequest(
+            account: account(maxRequestBytes: 200 * 1024),
+            materialsText: 'Текст раздела.',
+            limit: 3,
+            documentImages: <DocumentImage>[image],
+            documentImageParts: <DocumentImage>[image],
+          ),
         ),
-      ),
-      throwsA(
-        isA<GenerationException>().having(
-          (GenerationException error) => error.code,
-          'code',
-          GenerationErrorCode.payloadTooLarge,
+        throwsA(
+          isA<GenerationException>().having(
+            (GenerationException error) => error.code,
+            'code',
+            GenerationErrorCode.payloadTooLarge,
+          ),
         ),
-      ),
-      reason: 'превышение технического лимита — явная ошибка протокола',
-    );
-    expect(
-      transport.requests,
-      isEmpty,
-      reason: 'гарантированно проваливающийся запрос не тратит токены',
-    );
-  });
+        reason: 'превышение технического лимита — явная ошибка протокола',
+      );
+      expect(
+        transport.requests,
+        isEmpty,
+        reason: 'гарантированно проваливающийся запрос не тратит токены',
+      );
+    },
+  );
 
   test('T5: 13 МБ + каталог в лимите 20 МБ — запрос уходит', () async {
     final FakeGenerationTransport transport = transportWithResponse();
@@ -201,11 +206,9 @@ void main() {
       serializedBytes(sent),
       reason: 'результат несёт измеренные байты тела, а не оценку плана',
     );
-    expect(
-      result.sentDocumentImageIds,
-      <String>['img1'],
-      reason: 'отправлена ровно та картинка, которую выбрал план',
-    );
+    expect(result.sentDocumentImageIds, <String>[
+      'img1',
+    ], reason: 'отправлена ровно та картинка, которую выбрал план');
     expect(
       result.skippedDocumentImageIds,
       isNot(contains('img2')),
@@ -283,11 +286,7 @@ void main() {
   test('схема ответа и системный промпт присутствуют в теле', () async {
     final FakeGenerationTransport transport = transportWithResponse();
     await serviceOn(transport).generate(
-      GenerationRequest(
-        account: account(),
-        materialsText: 'Текст.',
-        limit: 3,
-      ),
+      GenerationRequest(account: account(), materialsText: 'Текст.', limit: 3),
     );
     final String body = jsonEncode(transport.requests.single.body);
     expect(body, contains(cardsResponseSchemaName));

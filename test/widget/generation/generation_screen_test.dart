@@ -1178,40 +1178,38 @@ void main() {
     );
   });
 
-  testWidgets(
-    'явно заданный пользователем Vision не перекрывается каталогом',
-    (WidgetTester tester) async {
-      // §3.10/ADR-039: у `supportsImageInput` есть источник, и источник
-      // «пользователь» приоритетнее каталога. Каталог для `deepseek-chat`
-      // (legacy-имя) говорит «без Vision», пользователь включил его вручную.
-      accountsStore.accounts = ProviderAccounts.empty.withAccount(
-        testProviderAccount(
-          modelId: 'deepseek-chat',
-        ).copyWith(supportsVision: true, visionConfigured: true),
-      );
-      keyStore.keys['deepseek'] = 'sk-deepseek';
-      await pumpScreen(tester);
-      await attachImageFile(tester);
-      runner.result = resultWith(<GeneratedCard>[
-        const GeneratedCard(
-          front: 'Вопрос',
-          back: 'Ответ',
-          cardType: CardType.basic,
-        ),
-      ]);
+  testWidgets('явно заданный пользователем Vision не перекрывается каталогом', (
+    WidgetTester tester,
+  ) async {
+    // §3.10/ADR-039: у `supportsImageInput` есть источник, и источник
+    // «пользователь» приоритетнее каталога. Каталог для `deepseek-chat`
+    // (legacy-имя) говорит «без Vision», пользователь включил его вручную.
+    accountsStore.accounts = ProviderAccounts.empty.withAccount(
+      testProviderAccount(modelId: 'deepseek-chat')
+          .copyWith(supportsVision: true, visionConfigured: true),
+    );
+    keyStore.keys['deepseek'] = 'sk-deepseek';
+    await pumpScreen(tester);
+    await attachImageFile(tester);
+    runner.result = resultWith(<GeneratedCard>[
+      const GeneratedCard(
+        front: 'Вопрос',
+        back: 'Ответ',
+        cardType: CardType.basic,
+      ),
+    ]);
 
-      await tester.tap(find.byKey(const ValueKey<String>('generation-start')));
-      await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey<String>('generation-start')));
+    await tester.pumpAndSettle();
 
-      expect(
-        runner.runCalls,
-        1,
-        reason: 'пользовательская настройка Vision должна разрешить отправку',
-      );
-      expect(runner.lastRequest!.account.supportsVision, isTrue);
-      expect(runner.lastRequest!.account.visionConfigured, isTrue);
-    },
-  );
+    expect(
+      runner.runCalls,
+      1,
+      reason: 'пользовательская настройка Vision должна разрешить отправку',
+    );
+    expect(runner.lastRequest!.account.supportsVision, isTrue);
+    expect(runner.lastRequest!.account.visionConfigured, isTrue);
+  });
 }
 
 /// Парсер PDF, который всегда сообщает «скан» (проводка UI, итерация 7.8).

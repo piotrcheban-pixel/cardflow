@@ -84,13 +84,14 @@ void main() {
 
   /// Текст и отправленные вложения частей — **без** каталога: каталог
   /// проверяется отдельно по независимо посчитанным строкам.
-  int textAndImageTokens(GenerationPlan plan) => plan.inputPlan!.parts.fold<int>(
-    0,
-    (int sum, part) =>
-        sum +
-        part.tokens +
-        part.images.fold<int>(0, (int i, image) => i + image.tokens),
-  );
+  int textAndImageTokens(GenerationPlan plan) =>
+      plan.inputPlan!.parts.fold<int>(
+        0,
+        (int sum, part) =>
+            sum +
+            part.tokens +
+            part.images.fold<int>(0, (int i, image) => i + image.tokens),
+      );
 
   /// `D` плана: сумма материалов частей (текст + каталог + вложения).
   int partTokens(GenerationPlan plan) => plan.inputPlan!.parts.fold<int>(
@@ -98,7 +99,8 @@ void main() {
     (int sum, part) => sum + part.totalMaterialTokens,
   );
 
-  const String material = 'Фотосинтез — процесс преобразования света в энергию.';
+  const String material =
+      'Фотосинтез — процесс преобразования света в энергию.';
 
   test('без изображений: каталог не добавляет токенов', () {
     final GenerationPlan plan = builder.build(
@@ -234,11 +236,10 @@ void main() {
     ];
     final GenerationPlan plan = builder.build(
       documents: <ParsedDocument>[
-        docOf(
-          'лекция.docx',
-          <String>[material, '$material Продолжение описания.'],
-          images: images,
-        ),
+        docOf('лекция.docx', <String>[
+          material,
+          '$material Продолжение описания.',
+        ], images: images),
       ],
       capabilities: const ModelCapabilities(
         // Окно намеренно маленькое: материал не помещается целиком.

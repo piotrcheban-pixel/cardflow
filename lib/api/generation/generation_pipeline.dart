@@ -402,8 +402,7 @@ class GenerationPipeline implements GenerationRunner {
     // считать нельзя, иначе точный вход занижен на целые изображения.
     final int imageTokens = _countedImageTokens(plan.chunks.first);
     final int exactTokens = count.tokens! + imageTokens;
-    final String base =
-        'count_tokens:${request.account.protocol.wireName}';
+    final String base = 'count_tokens:${request.account.protocol.wireName}';
     final String source = imageTokens > 0 ? '$base+image_estimate' : base;
     diagnostics.tokenCount(source: source, tokens: exactTokens);
     return _buildPlan(
@@ -424,9 +423,9 @@ class GenerationPipeline implements GenerationRunner {
   int _countedImageTokens(PlannedChunk chunk) {
     var tokens = chunk.imageTokens;
     for (final GenerationAttachment attachment in chunk.attachments) {
-      final int body = _imageEstimator.estimateImage(
-        bytes: attachment.bytes.length,
-      ).tokens;
+      final int body = _imageEstimator
+          .estimateImage(bytes: attachment.bytes.length)
+          .tokens;
       tokens += body;
       final String? label = attachment.label;
       if (label != null && label.isNotEmpty) {
@@ -437,8 +436,7 @@ class GenerationPipeline implements GenerationRunner {
   }
 
   /// Оценщик стоимости изображений (тот же, что у плана).
-  ContentTokenEstimator get _imageEstimator =>
-      planBuilder.estimator;
+  ContentTokenEstimator get _imageEstimator => planBuilder.estimator;
 
   /// Пользовательское сообщение первого запроса плана — ровно в том виде,
   /// в каком его соберёт `CardGenerationService` (материалы + каталог +

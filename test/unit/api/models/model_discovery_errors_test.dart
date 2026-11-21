@@ -23,7 +23,9 @@ void main() {
 
   Map<String, Object?> decode(String text) {
     final Object? decoded = jsonDecode(text);
-    return decoded is Map ? decoded.cast<String, Object?>() : <String, Object?>{};
+    return decoded is Map
+        ? decoded.cast<String, Object?>()
+        : <String, Object?>{};
   }
 
   Dio dioWith(FakeHttpAdapter adapter) {
@@ -76,11 +78,7 @@ void main() {
   ModelCapabilityDiscovery discoveryFor(
     ProviderAccount account,
     FakeHttpAdapter adapter,
-  ) => discoveryForAccount(
-    account,
-    dioWith(adapter),
-    readApiKey: keyReader,
-  );
+  ) => discoveryForAccount(account, dioWith(adapter), readApiKey: keyReader);
 
   Dio dioAllowing4xx(FakeHttpAdapter adapter) {
     final Dio dio = dioWith(adapter);
@@ -272,9 +270,7 @@ void main() {
           return jsonResponse(decode(fixture('ollama/tags.json')));
         }
         return jsonResponse(<String, Object?>{
-          'model_info': <String, Object?>{
-            'llama.context_length': '8192',
-          },
+          'model_info': <String, Object?>{'llama.context_length': '8192'},
           'capabilities': 'vision',
         });
       });
@@ -295,9 +291,8 @@ void main() {
   group('OpenAI-совместимый: пустой список и неверный тип', () {
     test('пустой data — успех, модель не найдена', () async {
       final FakeHttpAdapter adapter = FakeHttpAdapter(
-        (RequestOptions options) => jsonResponse(<String, Object?>{
-          'data': <Object?>[],
-        }),
+        (RequestOptions options) =>
+            jsonResponse(<String, Object?>{'data': <Object?>[]}),
       );
       final DiscoveryResult result = await discoveryFor(
         compatible(),

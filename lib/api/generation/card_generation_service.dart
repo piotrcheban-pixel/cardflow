@@ -371,7 +371,10 @@ class CardGenerationService implements GenerationCaller {
   /// (`response_format`, JSON-ключи, экранирование), поэтому лимит проверяется
   /// по готовому payload. Превышение — явная ошибка `payloadTooLarge`: запрос
   /// с изображениями не уходит молча с потерянной частью.
-  void _ensurePayloadFits(ProviderRequest request, GenerationRequestLimits limits) {
+  void _ensurePayloadFits(
+    ProviderRequest request,
+    GenerationRequestLimits limits,
+  ) {
     final int bytes = serializedRequestBytes(request);
     _lastRequestBytes = bytes;
     final int limit = limits.maxRequestBytes;

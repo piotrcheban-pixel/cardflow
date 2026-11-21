@@ -337,8 +337,7 @@ class _CapabilityRow extends StatelessWidget {
     final Object? raw = sourced?.value;
     final String? display = text ?? (raw is int ? _formatTokens(raw) : null);
     final String valueText = display ?? l10n.settingsCapabilitiesUnknown;
-    final CapabilitySource source =
-        sourced?.source ?? CapabilitySource.unknown;
+    final CapabilitySource source = sourced?.source ?? CapabilitySource.unknown;
     final String sourceLabel = capabilitySourceLabel(l10n, source);
     final DateTime? observed = sourced?.observedAt;
     final String date = observed == null

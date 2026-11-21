@@ -137,7 +137,9 @@ void main() {
     // §3.4: каталог изображений входит в `D` — его токены видны в «Подробнее».
     expect(
       tester
-          .widget<Text>(find.byKey(const ValueKey<String>('plan-detail-catalog')))
+          .widget<Text>(
+            find.byKey(const ValueKey<String>('plan-detail-catalog')),
+          )
           .data,
       '${plan.estimate.catalogTokens}',
     );
