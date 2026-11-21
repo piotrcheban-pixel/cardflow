@@ -120,9 +120,7 @@ void main() {
     expect(find.byType(CardImageView), findsNWidgets(3));
   });
 
-  testWidgets('старая карточка: единственное изображение — сторона вопроса', (
-    tester,
-  ) async {
+  testWidgets('карточка с изображением только вопроса', (tester) async {
     final Card card = makeCard(
       id: 'card-legacy',
       deckId: 'deck-1',
@@ -162,6 +160,26 @@ void main() {
     );
     expect(find.byType(CardImageView), findsNothing);
     expect(find.text(l10nOf(tester).cardImageUnavailable), findsOneWidget);
+  });
+
+  testWidgets('A5: «Повторить» в состоянии недоступного файла (7.19)', (
+    tester,
+  ) async {
+    final Card card = cardWith();
+    var retried = 0;
+    await pumpContent(
+      tester,
+      CardContentView(
+        card: card,
+        side: card.front,
+        revealed: false,
+        faceKey: const ValueKey<String>('face'),
+        onRetryMedia: () => retried++,
+      ),
+    );
+    await tester.tap(find.byKey(const ValueKey<String>('card-image-retry-q1')));
+    await tester.pump();
+    expect(retried, 1);
   });
 
   testWidgets('A6: повреждённые байты — ошибка декодирования с повтором', (

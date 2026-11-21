@@ -76,6 +76,20 @@ class CardMediaSides {
   /// Сериализует в строку `media_json`.
   String encode() => jsonEncode(toJson());
 
+  /// Стороны для legacy-массива (формат до 7.19 не хранил сторону).
+  ///
+  /// Безопасная политика 7.19: [stimulus] = true — изображение является
+  /// холстом/стимулом вопроса (occlusion, cloze) и остаётся у вопроса; иначе
+  /// сторона неизвестна, и изображение считается стороной **ответа**, чтобы
+  /// не раскрывать ответ до переворота. Пользователь может перенести его в
+  /// редакторе.
+  static CardMediaSides fromLegacy(List<String> ids, {required bool stimulus}) {
+    return CardMediaSides(
+      question: stimulus ? List<String>.unmodifiable(ids) : const <String>[],
+      answer: stimulus ? const <String>[] : List<String>.unmodifiable(ids),
+    );
+  }
+
   /// Читает `media_json` любого поддерживаемого формата.
   ///
   /// Бросает [FormatException], если значение не JSON или не поддерживаемая

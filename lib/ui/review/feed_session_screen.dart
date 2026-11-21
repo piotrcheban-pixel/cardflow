@@ -416,6 +416,15 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
     if (context.canPop()) context.pop();
   }
 
+  /// Повтор чтения медиа карточки после ошибки изображения (7.19).
+  Future<void> _retryMedia(Card card) async {
+    final SessionMedia updated = await reloadSessionMedia(ref, <Card>[
+      card,
+    ], _media);
+    if (!mounted) return;
+    setState(() => _media = updated);
+  }
+
   @override
   Widget build(BuildContext context) {
     final FeedSessionState? state = _engine?.state;
@@ -523,6 +532,7 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
                   card: item.card,
                   mediaBytes: _media.bytes,
                   mediaMetadata: _media.metadata,
+                  onRetryMedia: () => _retryMedia(item.card),
                   revealed: item.revealed,
                   rated: item.rated,
                   rating: item.rating,

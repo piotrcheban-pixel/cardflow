@@ -48,3 +48,32 @@ Future<SessionMedia> loadSessionMedia(
   );
   return SessionMedia(bytes: bytes, metadata: metadata);
 }
+
+/// Перечитывает медиа [cards], объединяя с уже загруженными [previous].
+///
+/// Нужно кнопке «Повторить» в состоянии ошибки изображения: файл мог стать
+/// доступен (внешний диск, синхронизация, повторная запись). Ошибка чтения не
+/// подменяет данные — возвращается [previous].
+Future<SessionMedia> reloadSessionMedia(
+  WidgetRef ref,
+  Iterable<Card> cards,
+  SessionMedia previous,
+) async {
+  final Set<String> mediaIds = <String>{
+    for (final Card card in cards) ...card.mediaIds,
+  };
+  if (mediaIds.isEmpty) return previous;
+  try {
+    final repository = ref.read(cardMediaRepositoryProvider);
+    final Map<String, Uint8List> bytes = await repository.readMedia(mediaIds);
+    final Map<String, MediaMetadata> metadata = await repository.readMetadata(
+      mediaIds,
+    );
+    return SessionMedia(
+      bytes: <String, Uint8List>{...previous.bytes, ...bytes},
+      metadata: <String, MediaMetadata>{...previous.metadata, ...metadata},
+    );
+  } on Object {
+    return previous;
+  }
+}

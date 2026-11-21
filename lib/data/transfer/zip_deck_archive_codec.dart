@@ -731,6 +731,12 @@ class ZipDeckArchiveCodec implements DeckArchiveCodec {
     final bool hasSides =
         json.containsKey('question_media_ids') ||
         json.containsKey('answer_media_ids');
+    // Архив без сторон (до 7.19): безопасная политика ADR-042 — изображение
+    // стимула (occlusion/cloze) у вопроса, остальные — у ответа.
+    final Object? rawOcclusion = json['occlusion'];
+    final bool stimulus =
+        (rawOcclusion is String && rawOcclusion.trim().isNotEmpty) ||
+        cardType == CardType.cloze;
     final List<String> questionMediaIds = hasSides
         ? _sideMediaIds(
             json['question_media_ids'],
@@ -738,7 +744,7 @@ class ZipDeckArchiveCodec implements DeckArchiveCodec {
             code: code,
             path: '$path.question_media_ids',
           )
-        : mediaIds;
+        : (stimulus ? mediaIds : const <String>[]);
     final List<String> answerMediaIds = hasSides
         ? _sideMediaIds(
             json['answer_media_ids'],
@@ -746,7 +752,7 @@ class ZipDeckArchiveCodec implements DeckArchiveCodec {
             code: code,
             path: '$path.answer_media_ids',
           )
-        : const <String>[];
+        : (stimulus ? const <String>[] : mediaIds);
     if (hasSides) {
       final Set<String> union = <String>{
         ...questionMediaIds,

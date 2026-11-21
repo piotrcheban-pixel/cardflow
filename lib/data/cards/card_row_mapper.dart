@@ -14,8 +14,10 @@ import 'package:cardflow/domain/cards/card_media_json.dart';
 
 /// Строка `cards` → доменная карточка.
 Card cardFromRow(CardRow row) {
-  // `media_json` v2: стороны независимы; legacy-массив — сторона вопроса.
-  final CardMediaSides media = CardMediaSides.decode(row.mediaJson);
+  // `media_json` v2: стороны независимы. Legacy-массив не знает стороны:
+  // холст occlusion/cloze — стимул вопроса, остальные изображения — сторона
+  // ответа (безопасная политика, ADR-042; ответ не раскрывается до переворота).
+  final CardMediaSides media = _mediaSidesOf(row);
   return Card(
     id: row.id,
     deckId: row.deckId,
@@ -41,6 +43,16 @@ Card cardFromRow(CardRow row) {
     createdAt: fromEpochMs(row.createdAt),
     updatedAt: fromEpochMs(row.updatedAt),
   );
+}
+
+/// Стороны `media_json` строки: v2 как есть, legacy — по безопасной политике.
+CardMediaSides _mediaSidesOf(CardRow row) {
+  final String raw = row.mediaJson.trimLeft();
+  if (!raw.startsWith('[')) return CardMediaSides.decode(row.mediaJson);
+  final CardMediaSides legacy = CardMediaSides.decode(row.mediaJson);
+  final bool stimulus =
+      row.occlusionJson != null || row.cardType == CardType.cloze.wireName;
+  return CardMediaSides.fromLegacy(legacy.question, stimulus: stimulus);
 }
 
 /// Доменная карточка → companion для вставки/обновления.

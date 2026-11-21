@@ -1,9 +1,14 @@
+import 'dart:typed_data';
+
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cardflow/api/generation/card_content_validator.dart';
 import 'package:cardflow/api/generation/card_response_schema.dart';
 import 'package:cardflow/domain/generation/card_image_kind.dart';
+import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
+import 'package:cardflow/domain/generation/generated_card_image.dart';
+import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/generation/generated_card_image_side.dart';
 
 /// Итерация 7.19, группа B: ИИ независимо выбирает изображения обеим сторонам
@@ -165,6 +170,34 @@ void main() {
       ),
     );
     expect(card.imageSide, GeneratedCardImageSide.none);
+  });
+
+  test('GeneratedCard.image — только изображение вопроса (7.19)', () {
+    final GeneratedCard answerOnly = GeneratedCard(
+      front: 'q',
+      back: 'a',
+      cardType: CardType.basic,
+      answerImages: <GeneratedCardImage>[
+        GeneratedCardImage(
+          bytes: Uint8List.fromList(<int>[0xFF, 0xD8, 0xFF, 1, 2, 3]),
+          mediaType: AttachmentMediaType.jpeg,
+          query: 'formula',
+        ),
+      ],
+    );
+    expect(answerOnly.image, isNull, reason: 'ответ не попадает на лицевую');
+    expect(answerOnly.hasImages, isTrue);
+
+    final GeneratedCard both = answerOnly.copyWith(
+      questionImages: <GeneratedCardImage>[
+        GeneratedCardImage(
+          bytes: Uint8List.fromList(<int>[0xFF, 0xD8, 0xFF, 4, 5, 6]),
+          mediaType: AttachmentMediaType.jpeg,
+          query: 'scheme',
+        ),
+      ],
+    );
+    expect(both.image, same(both.questionImages.single));
   });
 
   test('канон-схема v9: ответ с массивами валиден', () {

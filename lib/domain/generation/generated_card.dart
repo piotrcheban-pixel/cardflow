@@ -164,10 +164,13 @@ class GeneratedCard {
   /// JSON масок occlusion для импорта (итерация 7.9).
   final String? occlusionJson;
 
-  /// Первое изображение карточки (вопрос, иначе ответ); `null` — нет.
-  GeneratedCardImage? get image => questionImages.isNotEmpty
-      ? questionImages.first
-      : (answerImages.isEmpty ? null : answerImages.first);
+  /// Первое изображение **вопроса**; `null` — у вопроса изображений нет.
+  ///
+  /// Сторона ответа намеренно не возвращается: любое «одно изображение
+  /// карточки» — это изображение лицевой стороны. Изображения ответа доступны
+  /// только через [answerImages] и показываются после переворота (ADR-042).
+  GeneratedCardImage? get image =>
+      questionImages.isEmpty ? null : questionImages.first;
 
   /// Есть ли изображения хотя бы у одной стороны.
   bool get hasImages => questionImages.isNotEmpty || answerImages.isNotEmpty;

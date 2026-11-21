@@ -28,10 +28,13 @@ import 'package:cardflow/data/db/database_opener.dart';
 import 'package:cardflow/data/db/epoch.dart';
 import 'package:cardflow/data/transfer/media_store.dart';
 import 'package:cardflow/domain/cards/card_media.dart';
+import 'package:cardflow/domain/cards/card_media_json.dart';
+import 'package:cardflow/domain/generation/generated_card.dart';
 import 'package:cardflow/domain/generation/generation_run.dart';
 import 'package:cardflow/domain/text/parsed_document.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/app.dart';
+import 'package:cardflow/ui/cards/content/card_image_view.dart';
 import 'package:cardflow/ui/generation/generation_preview_screen.dart';
 import 'package:cardflow/ui/review/review_session_screen.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
@@ -272,14 +275,14 @@ void main() {
         'Московский Кремль',
       );
       await tester.ensureVisible(
-        find.byKey(const ValueKey<String>('card-form-pick-image')),
+        find.byKey(const ValueKey<String>('card-form-add-question-image')),
       );
       await tester.tap(
-        find.byKey(const ValueKey<String>('card-form-pick-image')),
+        find.byKey(const ValueKey<String>('card-form-add-question-image')),
       );
       await tester.pumpAndSettle();
       expect(
-        find.byKey(const ValueKey<String>('card-form-image-preview')),
+        find.byKey(const ValueKey<String>('card-form-question-image-0')),
         findsOneWidget,
         reason: 'картинка видна в форме сразу',
       );
@@ -328,9 +331,9 @@ void main() {
       expect(find.byType(ReviewSessionScreen), findsOneWidget);
       expect(find.text('Что это?'), findsOneWidget);
       expect(
-        find.byKey(const ValueKey<String>('card-image')),
+        find.byType(CardImageView),
         findsOneWidget,
-        reason: 'иллюстрация Basic-карточки отрисована',
+        reason: 'иллюстрация Basic-карточки отрисована (7.19: side-рендер)',
       );
       await tester.tap(find.byKey(const ValueKey<String>('review-close')));
       await tester.pumpAndSettle();
@@ -381,9 +384,11 @@ void main() {
       expect(generated.cards.first.image, isNotNull);
       expect(generated.cards.first.image!.provider, 'wikimedia');
       expect(generated.cards.first.image!.bytes, foundPng);
-      // Вторая карточка ищет «Kremlin tower» — тот же fake-ответ Commons;
-      // картинка тоже настоящая.
-      expect(generated.cards[1].image, isNotNull);
+      // Вторая карточка ищет «Kremlin tower» — тот же fake-ответ Commons, но
+      // один URL не дублируется в запуске (7.19): карточка остаётся без
+      // картинки с пометкой, а не получает нарисованную заглушку.
+      expect(generated.cards[1].image, isNull);
+      expect(generated.cards[1].issues, contains(CardIssueCode.imageNotFound));
 
       await tester.pumpWidget(
         appWithHome(
@@ -404,11 +409,15 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(
-        find.byKey(const ValueKey<String>('generation-preview-image-0')),
+        find.byKey(
+          const ValueKey<String>('generation-preview-question-image-0-0'),
+        ),
         findsOneWidget,
         reason: 'скачанная картинка видна в предпросмотре',
       );
-      expect(find.text(l10n.generationImageSearchFailed(1)), findsNothing);
+      // Вторая карточка осталась без картинки (URL не дублируется) — это
+      // видно пользователю честным предупреждением, а не заглушкой (7.19).
+      expect(find.text(l10n.generationImageSearchFailed(1)), findsOneWidget);
 
       await tester.tap(
         find.byKey(const ValueKey<String>('generation-preview-import-all')),
@@ -423,7 +432,8 @@ void main() {
         database.cards,
       )..where((table) => table.deckId.equals(generatedDecks.single.id))).get();
       final CardRow withImage = generatedCards.firstWhere(
-        (CardRow row) => row.mediaJson != '[]',
+        (CardRow row) =>
+            CardMediaSides.decode(row.mediaJson).question.isNotEmpty,
       );
       final MediaRow generatedMedia = await (database.select(
         database.media,

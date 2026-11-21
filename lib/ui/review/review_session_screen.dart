@@ -300,6 +300,15 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
     if (context.canPop()) context.pop();
   }
 
+  /// Повтор чтения медиа карточки после ошибки изображения (7.19).
+  Future<void> _retryMedia(Card card) async {
+    final SessionMedia updated = await reloadSessionMedia(ref, <Card>[
+      card,
+    ], _media);
+    if (!mounted) return;
+    setState(() => _media = updated);
+  }
+
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
@@ -421,6 +430,7 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
                         card: state.current!.card,
                         mediaBytes: _media.bytes,
                         mediaMetadata: _media.metadata,
+                        onRetryMedia: () => _retryMedia(state.current!.card),
                         revealed: state.revealed,
                         spring: settings.motion == MotionPreference.standard
                             ? AppMotion.standardSpring()

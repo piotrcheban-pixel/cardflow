@@ -11,6 +11,7 @@ import 'package:cardflow/domain/cards/content_hash.dart';
 import 'package:cardflow/domain/cards/occlusion.dart';
 import 'package:cardflow/domain/generation/card_image_finder.dart';
 import 'package:cardflow/domain/generation/card_image_kind.dart';
+import 'package:cardflow/domain/generation/document_image.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
 import 'package:cardflow/domain/generation/generated_card_image.dart';
 import 'package:cardflow/domain/generation/generation_attachment.dart';
@@ -1158,6 +1159,84 @@ void main() {
       expect(finder.calls.single.kind, GeneratedCardImageKind.diagram);
       expect(result.cards.single.image, same(image));
       expect(finder.queries, <String>['inclined plane forces diagram']);
+    });
+
+    test('A11: фрагменты используют изображения своего каталога', () async {
+      final DocumentImage first = DocumentImage(
+        fileName: 'first.pdf',
+        bytes: Uint8List.fromList(<int>[
+          0x89,
+          0x50,
+          0x4E,
+          0x47,
+          0x0D,
+          0x0A,
+          0x1A,
+          0x0A,
+          1,
+          2,
+          3,
+          4,
+        ]),
+        mediaType: AttachmentMediaType.png,
+        page: 1,
+      );
+      final DocumentImage second = DocumentImage(
+        fileName: 'second.pdf',
+        bytes: Uint8List.fromList(<int>[
+          0x89,
+          0x50,
+          0x4E,
+          0x47,
+          0x0D,
+          0x0A,
+          0x1A,
+          0x0A,
+          9,
+          8,
+          7,
+          6,
+        ]),
+        mediaType: AttachmentMediaType.png,
+        page: 2,
+      );
+      final pipeline = pipelineWith(<GenerationChunk>[
+        GenerationChunk(
+          index: 1,
+          materialsText: 'первая часть',
+          sourceFiles: const <String>['материал.txt'],
+          limit: 1,
+          imageParts: <DocumentImage>[first],
+          documentImages: <DocumentImage>[first],
+        ),
+        GenerationChunk(
+          index: 2,
+          materialsText: 'вторая часть',
+          sourceFiles: const <String>['материал.txt'],
+          limit: 1,
+          imageParts: <DocumentImage>[second],
+          documentImages: <DocumentImage>[second],
+        ),
+      ]);
+      var call = 0;
+      caller.onGenerate = (GenerationRequest request, int index) async {
+        call++;
+        return resultWith(<GeneratedCard>[
+          makeGeneratedCard(
+            front: 'Вопрос $call',
+            questionImageIds: <String>['img$call'],
+          ),
+        ]);
+      };
+      final result = await pipeline.run(
+        requestWith(<ParsedDocument>[
+          docOf('a.txt', <String>['материал']),
+        ]),
+      );
+
+      expect(result.cards, hasLength(2));
+      expect(result.cards[0].questionImages.single.bytes, first.bytes);
+      expect(result.cards[1].questionImages.single.bytes, second.bytes);
     });
 
     test(

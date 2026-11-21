@@ -254,6 +254,15 @@ class _TypingScreenState extends ConsumerState<TypingScreen> {
     if (confirmed && mounted && context.canPop()) context.pop();
   }
 
+  /// Повтор чтения медиа карточки после ошибки изображения (7.19).
+  Future<void> _retryMedia(Card card) async {
+    final SessionMedia updated = await reloadSessionMedia(ref, <Card>[
+      card,
+    ], _media);
+    if (!mounted) return;
+    setState(() => _media = updated);
+  }
+
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
@@ -343,6 +352,7 @@ class _TypingScreenState extends ConsumerState<TypingScreen> {
                     faceKey: const ValueKey<String>('typing-question-face'),
                     mediaBytes: _media.bytes,
                     mediaMetadata: _media.metadata,
+                    onRetryMedia: () => _retryMedia(card),
                   ),
                 ),
                 const SizedBox(height: 20),

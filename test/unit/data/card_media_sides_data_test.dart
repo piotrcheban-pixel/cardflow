@@ -157,7 +157,7 @@ void main() {
     );
 
     test(
-      'старая строка media_json (массив) читается как сторона вопроса',
+      'старая строка media_json: basic — безопасно на стороне ответа',
       () async {
         await insertCardRow(
           db,
@@ -172,11 +172,31 @@ void main() {
           mediaStore: store,
         );
         final Card card = (await repository.cardById('card-old'))!;
-        expect(card.questionMediaIds, <String>['m1', 'm2']);
-        expect(card.answerMediaIds, isEmpty);
+        // Сторона в старом формате неизвестна: изображение не раскрывает
+        // ответ до переворота (ADR-042).
+        expect(card.questionMediaIds, isEmpty);
+        expect(card.answerMediaIds, <String>['m1', 'm2']);
         expect(card.mediaIds, <String>['m1', 'm2']);
       },
     );
+
+    test('старая occlusion-карточка: холст остаётся у вопроса', () async {
+      await insertCardRow(
+        db,
+        id: 'card-old-occlusion',
+        deckId: 'deck-1',
+        mediaJson: '["canvas"]',
+        occlusionJson: '{"version":1,"masks":[]}',
+        createdAt: 1,
+        updatedAt: 1,
+      );
+      final Card card = (await DriftCardRepository(
+        db,
+        mediaStore: store,
+      ).cardById('card-old-occlusion'))!;
+      expect(card.questionMediaIds, <String>['canvas']);
+      expect(card.answerMediaIds, isEmpty);
+    });
   });
 
   group('GC и импорт генерации', () {
@@ -350,9 +370,10 @@ void main() {
       await PlaceholderMediaPurger(db, store).purge();
       final CardRow row = (await db.select(db.cards).get()).single;
       final Map<String, Object?> sides = sidesOf(row.mediaJson);
-      // Legacy-массив переписывается в v2: настоящий id остаётся у вопроса.
-      expect(sides['question'], <Object?>['real']);
-      expect(sides['answer'], isEmpty);
+      // Legacy-массив переписывается в v2 по безопасной политике:
+      // настоящее изображение basic-карточки — сторона ответа.
+      expect(sides['question'], isEmpty);
+      expect(sides['answer'], <Object?>['real']);
     });
   });
 

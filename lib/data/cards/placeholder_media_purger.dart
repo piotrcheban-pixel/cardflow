@@ -61,8 +61,20 @@ class PlaceholderMediaPurger {
       // убираем id из обеих сторон. Битую карточку не перезаписываем.
       final List<CardRow> cards = await database.select(database.cards).get();
       for (final CardRow card in cards) {
-        final CardMediaSides? sides = CardMediaSides.tryDecode(card.mediaJson);
-        if (sides == null) continue;
+        final CardMediaSides? decoded = CardMediaSides.tryDecode(
+          card.mediaJson,
+        );
+        if (decoded == null) continue;
+        // Legacy-массив не знает стороны: безопасная политика ADR-042
+        // (occlusion/cloze — стимул вопроса, остальное — ответ).
+        final bool legacy = card.mediaJson.trimLeft().startsWith('[');
+        final CardMediaSides sides = legacy
+            ? CardMediaSides.fromLegacy(
+                decoded.question,
+                stimulus:
+                    card.occlusionJson != null || card.cardType == 'cloze',
+              )
+            : decoded;
         final bool changed =
             sides.question.any(removedIds.contains) ||
             sides.answer.any(removedIds.contains);

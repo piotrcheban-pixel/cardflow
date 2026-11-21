@@ -26,6 +26,7 @@ class ReviewCardView extends StatefulWidget {
     this.card,
     this.mediaBytes = const <String, Uint8List>{},
     this.mediaMetadata = const <String, MediaMetadata>{},
+    this.onRetryMedia,
     this.spring,
     super.key,
   });
@@ -50,6 +51,9 @@ class ReviewCardView extends StatefulWidget {
 
   /// Атрибуция и вид иллюстраций по `media.id` (7.14).
   final Map<String, MediaMetadata> mediaMetadata;
+
+  /// Повтор чтения медиа карточки, если файл/байты не нашлись (7.19).
+  final VoidCallback? onRetryMedia;
 
   /// Пружина переворота (A6.6: «Выразительная»/«Стандартная», ADR-019 §2).
   final SpringDescription? spring;
@@ -121,6 +125,7 @@ class _ReviewCardViewState extends State<ReviewCardView>
                       faceKey: const ValueKey<String>('review-card-face'),
                       mediaBytes: widget.mediaBytes,
                       mediaMetadata: widget.mediaMetadata,
+                      onRetryMedia: widget.onRetryMedia,
                     ),
             ),
           ),

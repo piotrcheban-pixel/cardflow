@@ -25,6 +25,7 @@ import 'package:cardflow/domain/generation/provider_protocol.dart';
 import 'package:cardflow/domain/text/document_format.dart';
 import 'package:cardflow/domain/text/parsed_document.dart';
 import 'package:cardflow/domain/text/parser_exception.dart';
+import 'package:cardflow/ui/cards/content/card_image_view.dart';
 import 'package:cardflow/ui/generation/generation_screen.dart';
 import 'package:cardflow/api/models/model_capability_service.dart';
 import 'package:cardflow/domain/generation/model_capability_cache.dart';
@@ -306,6 +307,50 @@ void main() {
       findsOneWidget,
     );
 
+    runner.pending!.complete(runner.result!);
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('живая карточка не показывает изображение ответа (7.19)', (
+    tester,
+  ) async {
+    final Uint8List png = Uint8List.fromList(
+      img.encodePng(img.Image(width: 800, height: 600)),
+    );
+    final GeneratedCard card = GeneratedCard(
+      front: 'Какой формулой рассчитывают воздухопроницаемость?',
+      back: 'G = A·ΔP^0.67 / R',
+      cardType: CardType.basic,
+      answerImages: <GeneratedCardImage>[
+        makeCardImage(bytes: png.toList(), mediaType: AttachmentMediaType.png),
+      ],
+    );
+    runner.pending = Completer<GenerationRunResult>();
+    runner.result = resultWith(<GeneratedCard>[card]);
+    await pumpScreen(tester);
+    await attachTextFile(tester);
+
+    await tester.tap(find.byKey(const ValueKey<String>('generation-start')));
+    await tester.pump();
+    runner.lastProgress!(
+      GenerationProgress(
+        phase: GenerationProgressPhase.receiving,
+        chunkIndex: 1,
+        chunkCount: 1,
+        cards: <GeneratedCard>[card],
+      ),
+    );
+    await tester.pump();
+
+    expect(
+      find.byKey(const ValueKey<String>('generation-live-cards')),
+      findsOneWidget,
+    );
+    expect(
+      find.byType(CardImageView),
+      findsNothing,
+      reason: 'изображение ответа не показывается на лицевой стороне',
+    );
     runner.pending!.complete(runner.result!);
     await tester.pumpAndSettle();
   });

@@ -33,6 +33,7 @@ class FeedCardView extends StatefulWidget {
     this.card,
     this.mediaBytes = const <String, Uint8List>{},
     this.mediaMetadata = const <String, MediaMetadata>{},
+    this.onRetryMedia,
     this.spring,
     super.key,
   });
@@ -72,6 +73,9 @@ class FeedCardView extends StatefulWidget {
 
   /// Атрибуция и вид иллюстраций по `media.id` (7.14).
   final Map<String, MediaMetadata> mediaMetadata;
+
+  /// Повтор чтения медиа карточки, если файл/байты не нашлись (7.19).
+  final VoidCallback? onRetryMedia;
 
   /// Пружина переворота/возврата карточки (A6.6, ADR-019 §2).
   final SpringDescription? spring;
@@ -226,6 +230,7 @@ class _FeedCardViewState extends State<FeedCardView>
                                 card: widget.card,
                                 mediaBytes: widget.mediaBytes,
                                 mediaMetadata: widget.mediaMetadata,
+                                onRetryMedia: widget.onRetryMedia,
                               ),
                             ),
                             if (widget.rated)
@@ -279,6 +284,7 @@ class _FlipFace extends StatelessWidget {
     required this.card,
     required this.mediaBytes,
     required this.mediaMetadata,
+    this.onRetryMedia,
   });
 
   final Animation<double> controller;
@@ -288,6 +294,7 @@ class _FlipFace extends StatelessWidget {
   final Card? card;
   final Map<String, Uint8List> mediaBytes;
   final Map<String, MediaMetadata> mediaMetadata;
+  final VoidCallback? onRetryMedia;
 
   @override
   Widget build(BuildContext context) {
@@ -331,6 +338,7 @@ class _FlipFace extends StatelessWidget {
                         faceKey: const ValueKey<String>('feed-card-face'),
                         mediaBytes: mediaBytes,
                         mediaMetadata: mediaMetadata,
+                        onRetryMedia: onRetryMedia,
                       ),
               ),
             ),

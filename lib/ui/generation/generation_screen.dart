@@ -35,6 +35,7 @@ import 'package:cardflow/domain/generation/document_image.dart';
 import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/generation/deck_name.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
+import 'package:cardflow/domain/generation/generated_card_image.dart';
 import 'package:cardflow/domain/generation/generation_card_limit.dart';
 import 'package:cardflow/domain/generation/generation_card_store.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
@@ -1735,7 +1736,11 @@ class _LiveCardsStrip extends StatelessWidget {
                   const SizedBox(width: 8),
               itemBuilder: (BuildContext context, int index) {
                 final GeneratedCard card = cards[index];
-                final image = card.image;
+                // Живая карточка — лицевая сторона: изображения ответа здесь
+                // не показываются (ADR-042).
+                final GeneratedCardImage? image = card.questionImages.isEmpty
+                    ? null
+                    : card.questionImages.first;
                 return SizedBox(
                   width: 190,
                   child: Card(

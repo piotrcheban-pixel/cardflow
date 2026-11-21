@@ -250,6 +250,15 @@ class _MultipleChoiceScreenState extends ConsumerState<MultipleChoiceScreen> {
     return KeyEventResult.handled;
   }
 
+  /// Повтор чтения медиа карточки после ошибки изображения (7.19).
+  Future<void> _retryMedia(Card card) async {
+    final SessionMedia updated = await reloadSessionMedia(ref, <Card>[
+      card,
+    ], _media);
+    if (!mounted) return;
+    setState(() => _media = updated);
+  }
+
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
@@ -338,6 +347,7 @@ class _MultipleChoiceScreenState extends ConsumerState<MultipleChoiceScreen> {
                 faceKey: const ValueKey<String>('mc-question-face'),
                 mediaBytes: _media.bytes,
                 mediaMetadata: _media.metadata,
+                onRetryMedia: () => _retryMedia(card),
               ),
             ),
           ),

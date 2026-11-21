@@ -220,6 +220,15 @@ class _TrueFalseScreenState extends ConsumerState<TrueFalseScreen> {
     _answer(velocity > 0 || dx > 0);
   }
 
+  /// Повтор чтения медиа карточки после ошибки изображения (7.19).
+  Future<void> _retryMedia(Card card) async {
+    final SessionMedia updated = await reloadSessionMedia(ref, <Card>[
+      card,
+    ], _media);
+    if (!mounted) return;
+    setState(() => _media = updated);
+  }
+
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
@@ -314,6 +323,7 @@ class _TrueFalseScreenState extends ConsumerState<TrueFalseScreen> {
                       faceKey: const ValueKey<String>('tf-question-face'),
                       mediaBytes: _media.bytes,
                       mediaMetadata: _media.metadata,
+                      onRetryMedia: () => _retryMedia(card),
                     ),
                   ),
                   const SizedBox(height: 16),
