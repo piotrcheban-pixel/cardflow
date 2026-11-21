@@ -174,5 +174,11 @@ smoke — `All tests passed!` (11 с). Живых API-запросов нет.
 - Схема БД/`schemaVersion` и `format_version` не менялись; `SPEC.md` не
   редактировался.
 - Ограничения: L174–L178 (см. `journal/KNOWN_LIMITATIONS.md`), L173 снят.
-- Итерация считается завершённой только после push и зелёного CI: см.
-  `journal/STATE.md` (финальный HEAD, run id, 9/9 job).
+- **Push:** `170a413..df4c29d` (8 коммитов итерации).
+- **CI:** run
+  [`44900761883`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/44900761883)
+  (`df4c29d`) — **9/9 job success**: `format + analyze`, `test` × 3 ОС
+  (ubuntu/macos/windows), `build desktop` × 3 (windows/linux/macos),
+  `build mobile` Android + iOS.
+- Итерация 7.18.2 завершена: все обязательные пункты §1–§6 задания
+  подтверждены кодом, тестами и воротами.

@@ -50,8 +50,11 @@ issues found; полный набор **2340 passed + 16 skipped + 0 failed** (b
 Живых API-запросов нет. Подробно — `verify-7.18.2.md`, архитектура — §5
 `summary-7.18.2.md`, discovery-таблица — `discovery-7.18.2.md`.
 
-**Push и CI:** финальный HEAD и результат прогона — в конце раздела (заполняется
-после push).
+**Push и CI:** `170a413..df4c29d` (8 коммитов) → run
+[`44900761883`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/44900761883)
+(`df4c29d`) — **9/9 job success** (`format + analyze`, `test` × 3 ОС,
+`build desktop` × 3, `build mobile` Android + iOS). Итоговый HEAD фиксируется
+строкой ниже после docs-коммита с этими результатами.
 
 ## Итерация 7.18.1 — закрытие остатков 7.18 (2026-11-21)
 
