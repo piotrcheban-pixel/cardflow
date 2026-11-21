@@ -79,6 +79,21 @@ GenerationResult resultWithCard() => GenerationResult(
   ),
 );
 
+GenerationResult resultWithCards(int limit) => GenerationResult(
+  provider: GenerationProvider.anthropic,
+  model: 'claude-test',
+  promptVersion: 'gen-ru-v9',
+  cards: <GeneratedCard>[
+    for (var index = 0; index < limit; index++)
+      makeGeneratedCard(front: 'Вопрос $index'),
+  ],
+  usage: const TokenUsage(
+    promptTokens: 100,
+    completionTokens: 20,
+    totalTokens: 120,
+  ),
+);
+
 DocumentImage imageOf({int seed = 1}) => DocumentImage(
   fileName: 'схема.png',
   bytes: Uint8List.fromList(
@@ -200,7 +215,7 @@ void main() {
     );
     final runner = pipeline(tokenCounter: counter);
     caller.onGenerate = (GenerationRequest request, int call) async =>
-        resultWithCard();
+        resultWithCards(request.limit);
 
     final GenerationRunResult result = await runner.run(
       requestFor(anthropicAccount()),
@@ -388,7 +403,7 @@ void main() {
     );
     final runner = pipeline(tokenCounter: counter);
     caller.onGenerate = (GenerationRequest request, int call) async =>
-        resultWithCard();
+        resultWithCards(request.limit);
 
     final GenerationRunResult result = await runner.run(
       requestFor(

@@ -1038,6 +1038,7 @@ class GenerationPipeline implements GenerationRunner {
           !cancelled &&
           fatal == null &&
           activePlan != null &&
+          activePlan.requestedCards > 0 &&
           initialCards.isEmpty &&
           (topUpBaseline < 0 || cards.length > topUpBaseline)) {
         final int remaining = activePlan.requestedCards > 0
@@ -1079,6 +1080,10 @@ class GenerationPipeline implements GenerationRunner {
           : GenerationJobStatus.error;
     } else if (requestedTotal == 0 ? failures.isEmpty : targetReached) {
       status = GenerationJobStatus.done;
+    } else if (!hasCards && duplicates > 0) {
+      // Всё, что вернула модель, оказалось дублями: это не ошибка генерации,
+      // но и не достижение цели — честный partial без новых карточек.
+      status = GenerationJobStatus.partial;
     } else if (!hasCards) {
       status = GenerationJobStatus.error;
     } else {

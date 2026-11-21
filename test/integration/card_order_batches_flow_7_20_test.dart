@@ -319,14 +319,15 @@ void main() {
       return replyFor(request, call);
     };
     final GenerationRunResult result = await runner.run(requestFor(40));
-    expect(caller.calls, 3);
+    // 3 исходные партии + раунды добора недостачи после сбоя.
+    expect(caller.calls, greaterThanOrEqualTo(3));
     expect(
       result.cards,
-      hasLength(caller.requests.first.limit + caller.requests.last.limit),
-      reason: 'карточки удачных партий целы, сбойная партия не выдумана',
+      hasLength(40),
+      reason: 'недостача после сбоя добрана раундами top-up',
     );
     expect(result.failures, hasLength(1));
-    expect(result.status, GenerationJobStatus.partial);
+    expect(result.status, GenerationJobStatus.done);
   });
 
   test(
