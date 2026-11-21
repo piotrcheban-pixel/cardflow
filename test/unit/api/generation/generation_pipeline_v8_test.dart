@@ -311,6 +311,21 @@ void main() {
     expect(result.cards.length, lessThan(5));
   });
 
+  test('лишние карточки сверх цели отбрасываются и учитываются', () async {
+    final GenerationPipeline runner = pipeline();
+    caller.onGenerate = (GenerationRequest request, int call) async =>
+        resultOf(<String>[
+          for (var index = 0; index < request.limit + 2; index++)
+            'Вопрос $call-$index',
+        ]);
+    final GenerationRunResult result = await runner.run(
+      requestFor(docOf(3, 400), requestedCards: 5),
+    );
+    expect(result.cards, hasLength(5));
+    expect(result.trimmedCards, greaterThanOrEqualTo(2));
+    expect(result.status, GenerationJobStatus.done);
+  });
+
   for (final int count in <int>[10, 20, 32, 40, 80, 150]) {
     test('цель $count карточек достигается при полной отдаче модели', () async {
       final GenerationPipeline runner = pipeline();

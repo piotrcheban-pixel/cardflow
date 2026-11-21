@@ -538,6 +538,17 @@ class _GenerationPreviewScreenState
                     ),
                   ),
                 ),
+              if (_result.trimmedCards > 0)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(
+                    l10n.generationPreviewTrimmed(_result.trimmedCards),
+                    key: const ValueKey<String>('generation-preview-trimmed'),
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.tertiary,
+                    ),
+                  ),
+                ),
               if (_result.plan != null && _result.plan!.hasOmittedUnits)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 8),

@@ -667,6 +667,7 @@ class GenerationPipeline implements GenerationRunner {
     var processed = initialProcessed;
     var duplicates = initialDuplicates;
     var rejected = initialRejected;
+    var trimmed = 0;
     var recoveryRequests = 0;
     var failedRequests = 0;
     final int recoveryBudget = _recoveryBudgetFor(plan);
@@ -960,7 +961,14 @@ class GenerationPipeline implements GenerationRunner {
       // картинки догружаются следом. UI получает снимок на каждом шаге, поэтому
       // показ колоды не ждёт сетевого поиска.
       final int imageStart = cards.length;
+      final int? requestedTarget = activePlan?.requestedCards;
       for (final GeneratedCard card in result.cards) {
+        if (requestedTarget != null &&
+            requestedTarget > 0 &&
+            cards.length >= requestedTarget) {
+          trimmed++;
+          continue;
+        }
         if (_acceptCard(card, seen, cards)) {
           cards.add(card);
         } else {
@@ -1129,6 +1137,7 @@ class GenerationPipeline implements GenerationRunner {
       chunkCount: processed,
       cancelled: cancelled,
       rejectedCards: rejected,
+      trimmedCards: trimmed,
       fatalErrorCode: fatal?.code,
       fatalProviderReason: fatal?.providerReason,
       plan: activePlan,

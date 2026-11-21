@@ -1355,6 +1355,11 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String generationPreviewTrimmed(int count) {
+    return 'Лишние карточек сверх заказа не добавлено: $count.';
+  }
+
+  @override
   String generationPreviewFatal(String message) {
     return 'Генерация остановлена: $message';
   }

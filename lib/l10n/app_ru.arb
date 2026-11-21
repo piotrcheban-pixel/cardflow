@@ -1597,6 +1597,15 @@
       }
     }
   },
+  "generationPreviewTrimmed": "Лишние карточек сверх заказа не добавлено: {count}.",
+  "@generationPreviewTrimmed": {
+    "description": "Сколько карточек сверх заказанных отброшено (не ложный успех).",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "generationPreviewFatal": "Генерация остановлена: {message}",
   "@generationPreviewFatal": {
     "description": "Постоянное сообщение о fatal-ошибке в предпросмотре (TASK 03).",

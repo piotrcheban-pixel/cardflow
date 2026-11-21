@@ -2180,6 +2180,12 @@ abstract class AppLocalizations {
   /// **'Создано {created} карточек из {requested}: цель не достигнута, но материал ещё не исчерпан. Можно повторить генерацию, чтобы добрать оставшиеся.'**
   String generationPreviewShortfall(int created, int requested);
 
+  /// Сколько карточек сверх заказанных отброшено (не ложный успех).
+  ///
+  /// In ru, this message translates to:
+  /// **'Лишние карточек сверх заказа не добавлено: {count}.'**
+  String generationPreviewTrimmed(int count);
+
   /// Постоянное сообщение о fatal-ошибке в предпросмотре (TASK 03).
   ///
   /// In ru, this message translates to:

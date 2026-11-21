@@ -202,6 +202,7 @@ class GenerationRunResult {
     this.sentDocumentImageIds = const <String>[],
     this.shortfallCards = 0,
     this.skippedBatches = 0,
+    this.trimmedCards = 0,
     this.exhaustedSectionIds = const <String>[],
   });
 
@@ -231,6 +232,9 @@ class GenerationRunResult {
 
   /// Сколько партий не отправлено из-за исчерпания разделов.
   final int skippedBatches;
+
+  /// Сколько карточек сверх заказанных отброшено (не добавлено в результат).
+  final int trimmedCards;
 
   /// Разделы, помеченные исчерпанными (`source_exhausted`/недобор < 50 %).
   final List<String> exhaustedSectionIds;
