@@ -141,8 +141,13 @@ image id. Это **нарисованная заглушка** `PlaceholderImage
 
 ## 9. Итоговый HEAD, push и CI
 
-Фиксируется в `journal/STATE.md` после push: коммиты итерации, `origin/main`,
-ссылка на run, 9/9 job success. Push — по команде владельца в этой итерации.
+Коммиты итерации: `287eb29` (red-тесты + журнал), `6486b28` (feat, ADR-041/042),
+`52b95a6` (fix ревью + legacy-политика), `e63e88e` (docs). Push
+`16766f8..e63e88e`, `origin/main = e63e88e`. Финальный CI-прогон —
+[run 44924253292](https://github.com/piotrcheban-pixel/cardflow/actions/runs/44924253292):
+**9/9 job success** (`format + analyze`, `test` × 3 ОС, `build desktop` × 3,
+`build mobile` × 2). Журнальный коммит с результатами — отдельный push, его
+прогон фиксируется в `STATE.md`.
 
 ## 10. Ворота
 

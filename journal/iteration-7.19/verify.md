@@ -109,6 +109,10 @@ v9 без живого прогона; сторона legacy-карточек о
 
 ## 7. Push и CI
 
-Push и финальный CI-прогон фиксируются после коммита docs. Ожидаемые job'ы
-(`format + analyze`, `test` × 3 ОС, `build desktop` × 3, `build mobile` × 2) —
-9/9.
+Push: `16766f8..e63e88e` (4 коммита итерации: red-тесты, feat, fix ревью,
+docs). Финальный CI-прогон —
+[run 44924253292](https://github.com/piotrcheban-pixel/cardflow/actions/runs/44924253292)
+(`e63e88e`): **9/9 job success** — `format + analyze (ubuntu)`, `test`
+(ubuntu/macOS/Windows), `build desktop` (linux/macOS/Windows), `build mobile`
+(Android/iOS). Журнальный коммит с этими результатами — отдельный push; его
+прогон фиксируется в `STATE.md`.

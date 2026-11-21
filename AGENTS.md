@@ -563,3 +563,16 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   на живом Wikimedia-тесте (сеть, повторный зелёный — L92). Ограничения: L89–L92.
   **Push итерации 7.17:** `4dfe10c..b199dbc`; CI run
   [`43935245725`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/43935245725) — **9/9 job success**.
+
+- **Изображения: стороны и отказ от заглушек (итерация 7.19, 2026-11-21, ADR-041/042):**
+  первопричина повторяющейся картинки — `PlaceholderImageGenerator` (рисованный PNG,
+  80/207 медиа фактической БД, 68 `diagram`); генератор удалён, pipeline не создаёт изображения,
+  `PlaceholderMediaPurger` удаляет старые заглушки при старте, байты проверяются по сигнатуре
+  (`image_bytes.dart`). Стороны: `cards.media_json` v2 `{"version":2,"question":[…],"answer":[…]}`,
+  схема ответа `gen-ru-v9` (`question_image_ids`/`answer_image_ids`/`image.side`, legacy v5–v8
+  принимается), промпт v9 (v8 дословно), редактор двух сторон, `CardContentView` по стороне,
+  явные состояния ошибок с повтором (`onRetryMedia`, `reloadSessionMedia`). Legacy-массив без
+  стороны: occlusion/cloze — вопрос, остальное — ответ (безопасная политика). Гейты:
+  2425 passed + 16 skipped, покрытие 91.5 %, `cardflow.exe` 61,8 с, Windows smoke passed;
+  CI run [`44924253292`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/44924253292) — 9/9.
+  Ограничения L186–L193.
