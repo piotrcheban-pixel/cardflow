@@ -72,7 +72,10 @@ void main() {
   late FakeGenerationJobRepository jobs;
   late FakeGenerationCardStore store;
 
-  GenerationPipeline pipeline({TokenCalibrationStore? calibration}) {
+  GenerationPipeline pipeline({
+    TokenCalibrationStore? calibration,
+    int maxTopUpRounds = 4,
+  }) {
     caller = FakeGenerationCaller();
     jobs = FakeGenerationJobRepository();
     store = FakeGenerationCardStore();
@@ -83,6 +86,7 @@ void main() {
       now: () => DateTime.utc(2026, 11, 20, 10),
       jobIdFactory: () => 'job-v8',
       calibrationStore: calibration,
+      maxTopUpRounds: maxTopUpRounds,
     );
   }
 
@@ -99,7 +103,10 @@ void main() {
   test('whole-режим: focus/part/alreadyCreated и стабильный префикс', () async {
     final GenerationPipeline runner = pipeline();
     caller.onGenerate = (GenerationRequest request, int call) async =>
-        resultOf(<String>['Вопрос $call']);
+        resultOf(<String>[
+          for (var index = 0; index < request.limit; index++)
+            'Вопрос $call-$index',
+        ]);
     final GenerationRunResult result = await runner.run(
       requestFor(docOf(200, 100), requestedCards: 50),
     );
@@ -145,7 +152,10 @@ void main() {
   test('изображения: id и каталог стабильны между партиями', () async {
     final GenerationPipeline runner = pipeline();
     caller.onGenerate = (GenerationRequest request, int call) async =>
-        resultOf(<String>['Вопрос $call']);
+        resultOf(<String>[
+          for (var index = 0; index < request.limit; index++)
+            'Вопрос $call-$index',
+        ]);
     final List<DocumentImage> images = <DocumentImage>[
       for (var index = 0; index < 3; index++)
         DocumentImage(
@@ -244,7 +254,7 @@ void main() {
       requestFor(docOf(3, 400), requestedCards: 3),
     );
     expect(result.cards, hasLength(2));
-    expect(result.duplicatesRemoved, 1);
+    expect(result.duplicatesRemoved, greaterThanOrEqualTo(1));
   });
 
   test('калибровка: наблюдаемые tpc пишутся в store после прогонов', () async {
@@ -257,6 +267,36 @@ void main() {
     expect(calibration.observed, hasLength(2));
     expect(calibration.observed.first, closeTo(300, 1e-9));
     expect(calibration.observed.last, closeTo(300, 1e-9));
+  });
+
+  test(
+    'добор: недобор партий компенсируется раундами top-up до цели',
+    () async {
+      final GenerationPipeline runner = pipeline();
+      caller.onGenerate = (GenerationRequest request, int call) async {
+        final int count = request.limit > 2 ? request.limit - 2 : request.limit;
+        return resultOf(<String>[
+          for (var index = 0; index < count; index++) 'Вопрос $call-$index',
+        ]);
+      };
+      final GenerationRunResult result = await runner.run(
+        requestFor(docOf(3, 400), requestedCards: 10),
+      );
+      expect(result.status, GenerationJobStatus.done);
+      expect(result.cards, hasLength(10));
+      expect(caller.calls, greaterThan(1));
+    },
+  );
+
+  test('статус partial: цель не достигнута без добора', () async {
+    final GenerationPipeline runner = pipeline(maxTopUpRounds: 0);
+    caller.onGenerate = (GenerationRequest request, int call) async =>
+        resultOf(<String>['Вопрос $call']);
+    final GenerationRunResult result = await runner.run(
+      requestFor(docOf(3, 400), requestedCards: 5),
+    );
+    expect(result.status, GenerationJobStatus.partial);
+    expect(result.cards.length, lessThan(5));
   });
 }
 

@@ -99,6 +99,8 @@ abstract interface class GenerationRunner {
 /// Оркестратор генерации по адаптивному плану.
 class GenerationPipeline implements GenerationRunner {
   /// Создаёт пайплайн.
+  final int maxTopUpRounds;
+
   GenerationPipeline({
     required this.caller,
     required this.jobRepository,
@@ -116,6 +118,7 @@ class GenerationPipeline implements GenerationRunner {
     this.now = _defaultNow,
     this.jobIdFactory = _defaultJobId,
     this.maxRecoveryRequests = 12,
+    this.maxTopUpRounds = 4,
   }) : assert(maxRecoveryRequests >= 0);
 
   /// Вызов модели на фрагмент.
@@ -683,7 +686,9 @@ class GenerationPipeline implements GenerationRunner {
     final List<_BatchTokenFact> batchFacts = <_BatchTokenFact>[];
     var shortfall = 0;
     var skippedBatches = 0;
-    var redistributed = false;
+    var topUpRounds = 0;
+    // Стоп добора, если предыдущий раунд не дал ни одной новой карточки.
+    var topUpBaseline = -1;
     while (index < queue.length) {
       if (cancellation?.isCancelled ?? false) {
         cancelled = true;
@@ -869,6 +874,7 @@ class GenerationPipeline implements GenerationRunner {
             continue;
           }
         }
+        shortfall += chunk.limit;
         processed++;
         failures.add(
           _failureOf(
@@ -885,8 +891,13 @@ class GenerationPipeline implements GenerationRunner {
         index++;
         continue;
       } on Object {
+        if (cancellation?.isCancelled ?? false) {
+          cancelled = true;
+          break;
+        }
         // Непредвиденная ошибка адаптера: карточки фрагмента не принимаются,
         // остальные фрагменты продолжаются (A6.8 «частичный успех»).
+        shortfall += chunk.limit;
         failedRequests++;
         processed++;
         failures.add(
@@ -948,9 +959,9 @@ class GenerationPipeline implements GenerationRunner {
           (chunk.limit >= 2 && acceptedInChunk * 2 < chunk.limit);
       if (exhausted && chunkSections.isNotEmpty) {
         exhaustedSections.addAll(chunkSections);
-        final int deficit = chunk.limit - acceptedInChunk;
-        if (deficit > 0) shortfall += deficit;
       }
+      final int deficit = chunk.limit - acceptedInChunk;
+      if (deficit > 0) shortfall += deficit;
       // Состояние продолжения prompt-only: только принятые карточки, чтобы
       // сводка не включала дубли и не раздувалась.
       if (promptOnly && imageStart < cards.length) {
@@ -992,25 +1003,32 @@ class GenerationPipeline implements GenerationRunner {
         break;
       }
       index++;
-      // Однократное перераспределение недостачи на разделы с оставшейся
-      // ёмкостью (ADR-040 §8): не больше одной дополнительной партии.
+      // Раунды добора недостачи на разделы с оставшейся ёмкостью (ADR-040 §8).
+      // Останавливаемся, когда раунд не дал ни одной новой карточки.
       if (index >= queue.length &&
-          !redistributed &&
+          topUpRounds < maxTopUpRounds &&
           shortfall > 0 &&
           !cancelled &&
           fatal == null &&
-          plan != null &&
-          initialCards.isEmpty) {
-        final PlannedChunk? topUp = _topUpChunk(
-          plan,
-          exhaustedSections,
-          shortfall,
-          queue.length + 1,
-          maxLimit: capabilities.maxCardsPerRequest,
-        );
+          activePlan != null &&
+          initialCards.isEmpty &&
+          (topUpBaseline < 0 || cards.length > topUpBaseline)) {
+        final int remaining = activePlan.requestedCards > 0
+            ? activePlan.requestedCards - cards.length
+            : shortfall;
+        final PlannedChunk? topUp = remaining <= 0
+            ? null
+            : _topUpChunk(
+                activePlan,
+                exhaustedSections,
+                shortfall < remaining ? shortfall : remaining,
+                queue.length + 1,
+                maxLimit: capabilities.maxCardsPerRequest,
+              );
         if (topUp != null && recoveryRequests < recoveryBudget) {
           recoveryRequests++;
-          redistributed = true;
+          topUpRounds++;
+          topUpBaseline = cards.length;
           queue.add(_QueueItem(topUp));
           diagnostics.imageParticipation(
             outcome:
@@ -1022,6 +1040,9 @@ class GenerationPipeline implements GenerationRunner {
     }
 
     final bool hasCards = cards.isNotEmpty;
+    final int requestedTotal = activePlan?.requestedCards ?? 0;
+    final bool targetReached =
+        requestedTotal > 0 && cards.length >= requestedTotal;
     final GenerationJobStatus status;
     if (cancelled) {
       status = GenerationJobStatus.cancelled;
@@ -1029,7 +1050,7 @@ class GenerationPipeline implements GenerationRunner {
       status = hasCards
           ? GenerationJobStatus.partial
           : GenerationJobStatus.error;
-    } else if (failures.isEmpty) {
+    } else if (requestedTotal == 0 ? failures.isEmpty : targetReached) {
       status = GenerationJobStatus.done;
     } else if (!hasCards) {
       status = GenerationJobStatus.error;
