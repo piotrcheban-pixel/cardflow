@@ -11,6 +11,7 @@ import 'package:dio/dio.dart';
 
 import 'package:cardflow/api/generation/provider_schema.dart';
 import 'package:cardflow/api/models/model_discovery.dart' show ApiKeyReader;
+import 'package:cardflow/api/providers/attachment_parts.dart';
 import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/generation/provider_account.dart';
 import 'package:cardflow/domain/generation/provider_protocol.dart';
@@ -148,11 +149,18 @@ class AnthropicRequestTokenCounter extends _HttpCounter
         // Схема ответа у Anthropic передаётся инструментом (`tools`), и
         // count_tokens документированно считает её вместе с tools: без неё
         // «точный» вход был бы занижен на размер JSON-схемы.
+        //
+        // Изображения и PDF — base64-блоки в сообщении: документация
+        // `messages/count_tokens` принимает те же входы, что Messages API, но
+        // запрещает `url`/`file`-источники (только base64).
         body: <String, Object?>{
           'model': account.modelId,
           'system': systemPrompt,
           'messages': <Object?>[
-            <String, Object?>{'role': 'user', 'content': userContent},
+            <String, Object?>{
+              'role': 'user',
+              'content': anthropicUserContent(userContent, attachments),
+            },
           ],
           'tools': <Object?>[
             <String, Object?>{
@@ -200,25 +208,28 @@ class GeminiRequestTokenCounter extends _HttpCounter
       final int tokens = await post(
         account,
         _HttpCounter.join(account.baseUrl, '/v1beta/models/$model:countTokens'),
-        // countTokens принимает GenerateContentRequest: системная инструкция
-        // и responseSchema входят в тот же запрос, что и генерация.
+        // Схема CountTokensRequest: либо top-level `contents`, либо полный
+        // `generateContentRequest`. `systemInstruction`/`generationConfig` в
+        // top-level не входят в схему и игнорируются, поэтому системная
+        // инструкция и части контента идут внутри конверта (как в production).
+        //
+        // `generationConfig.responseSchema` намеренно не отправляется:
+        // вхождение токенов схемы в `totalTokens` документацией не
+        // подтверждено; планировщик добавляет schemaOverhead отдельной
+        // оценкой (§7), а не выдаёт её за нативную.
         body: <String, Object?>{
-          'systemInstruction': <String, Object?>{
-            'parts': <Object?>[
-              <String, Object?>{'text': systemPrompt},
-            ],
-          },
-          'contents': <Object?>[
-            <String, Object?>{
-              'role': 'user',
+          'generateContentRequest': <String, Object?>{
+            'systemInstruction': <String, Object?>{
               'parts': <Object?>[
-                <String, Object?>{'text': userContent},
+                <String, Object?>{'text': systemPrompt},
               ],
             },
-          ],
-          'generationConfig': <String, Object?>{
-            'responseMimeType': 'application/json',
-            'responseSchema': geminiCardSchema(),
+            'contents': <Object?>[
+              <String, Object?>{
+                'role': 'user',
+                'parts': geminiParts(userContent, attachments),
+              },
+            ],
           },
         },
         headers: const <String, String>{},

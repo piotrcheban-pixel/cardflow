@@ -424,7 +424,12 @@ void main() {
       runner.run(
         requestFor(
           images: <GenerationAttachment>[image],
-          account: testCustomProviderAccount(),
+          // Подтверждённое отсутствие Vision (пользовательская настройка):
+          // план невыполним до запросов. Неизвестность — отдельный сценарий.
+          account: testCustomProviderAccount().copyWith(
+            supportsVision: false,
+            visionConfigured: true,
+          ),
           wishes: '2 карточки',
         ),
       ),

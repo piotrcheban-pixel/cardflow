@@ -444,23 +444,29 @@ final class InputPlanner {
     InputAccuracy accuracy = InputAccuracy.estimated,
     int outlineReserveTokens = 0,
     List<InputImage> orphanImages = const <InputImage>[],
-    int? exactInputTokens,
+    NativeInputCount? nativeCount,
     int promptOnlyRequestBytes = 0,
     String? inputTokenSource,
     int fixedBytes = 0,
     int reasoningReserveTokens = 0,
   }) {
     final double marginRate = config.margin(
-      exact: accuracy == InputAccuracy.exact,
+      exact: nativeCount == null
+          ? accuracy == InputAccuracy.exact
+          : nativeCount.isFullyNative,
     );
     // Точный подсчёт относится к целому запросу: если по нему материал всё
     // равно не помещается, части планируются консервативной оценкой (иначе
     // запас 3 % применялся бы к неизвестному числу).
-    final InputAccuracy wholeAccuracy = exactInputTokens == null
+    final InputAccuracy wholeAccuracy = nativeCount == null
         ? accuracy
-        : InputAccuracy.exact;
+        : nativeCount.accuracy;
     final Set<PlanWarningCode> warnings = <PlanWarningCode>{};
-    final bool supportsImages = limits.supportsImageInput.value ?? true;
+    // 7.18.3 §4: три состояния, а не «bool с значением false по умолчанию».
+    // Отсутствие подтверждения не блокирует отправку изображений и не
+    // выдаётся за подтверждённую неподдерживаемость.
+    final ImageInputSupport imageSupport = limits.imageInputSupport;
+    final bool sendImages = imageSupport != ImageInputSupport.unsupported;
     final int? maxRequestBytes = limits.maxRequestBytes.value;
     final int textTokens = sections.fold<int>(
       0,
@@ -470,10 +476,13 @@ final class InputPlanner {
       for (final InputSection section in sections) ...section.images,
       ...orphanImages,
     ];
-    if (allImages.isNotEmpty && !supportsImages) {
+    if (allImages.isNotEmpty && imageSupport == ImageInputSupport.unsupported) {
       warnings.add(PlanWarningCode.imagesWithoutVision);
     }
-    final int imageTokens = supportsImages
+    if (allImages.isNotEmpty && imageSupport == ImageInputSupport.unknown) {
+      warnings.add(PlanWarningCode.imagesVisionUnconfirmed);
+    }
+    final int imageTokens = sendImages
         ? allImages.fold<int>(
             0,
             (int sum, InputImage image) => sum + image.tokens,
@@ -490,7 +499,7 @@ final class InputPlanner {
         accuracy: wholeAccuracy,
         config: config,
         requestBytes: promptOnlyRequestBytes,
-        countedInputTokens: exactInputTokens,
+        nativeCount: nativeCount,
       );
       return InputPlan(
         strategy: InputStrategy.promptOnly,
@@ -498,7 +507,7 @@ final class InputPlanner {
         fixedTokens: fixedTokens,
         inputTokens: budget.inputTokens,
         maxTokens: budget.maxTokens,
-        accuracy: wholeAccuracy,
+        accuracy: budget.accuracy,
         budget: budget,
         materialTokens: 0,
         contextTokens: limits.contextTokens.value,
@@ -516,7 +525,7 @@ final class InputPlanner {
       desiredOutputTokens: desiredOutputTokens,
       accuracy: accuracy,
       config: config,
-      countedInputTokens: exactInputTokens,
+      nativeCount: nativeCount,
     );
     bool imagesOmittedByBudget = false;
     if (budget.contextExceeded && imageTokens > 0) {
@@ -534,8 +543,7 @@ final class InputPlanner {
       }
     }
     final int materialTokens =
-        textTokens +
-        (imagesOmittedByBudget || !supportsImages ? 0 : imageTokens);
+        textTokens + (imagesOmittedByBudget || !sendImages ? 0 : imageTokens);
     final int minBatchTokens = config.tokensFor(config.minBatchCards);
     final bool withinConservativeBudget =
         contextTokens != null ||
@@ -559,12 +567,12 @@ final class InputPlanner {
         desiredOutputTokens: desiredOutputTokens,
         accuracy: wholeAccuracy,
         allImages: allImages,
-        supportsImages: supportsImages,
+        supportsImages: sendImages,
         imagesOmittedByBudget: imagesOmittedByBudget,
         maxRequestBytes: maxRequestBytes,
         textTokens: textTokens,
         warnings: warnings,
-        exactInputTokens: exactInputTokens,
+        nativeCount: nativeCount,
         inputTokenSource: inputTokenSource,
         reasoningReserveTokens: reasoningReserveTokens,
       );
@@ -579,16 +587,14 @@ final class InputPlanner {
       accuracy: InputAccuracy.estimated,
       allImages: allImages,
       orphanImages: orphanImages,
-      supportsImages: supportsImages,
+      supportsImages: sendImages,
       imagesOmittedByBudget: imagesOmittedByBudget,
       maxRequestBytes: maxRequestBytes,
       outlineReserveTokens: outlineReserveTokens,
       warnings: warnings,
       contextTokens: contextTokens,
       marginRate: marginRate,
-      inputTokenSource: exactInputTokens == null
-          ? inputTokenSource
-          : 'estimate',
+      inputTokenSource: nativeCount == null ? inputTokenSource : 'estimate',
       reasoningReserveTokens: reasoningReserveTokens,
     );
   }
@@ -608,7 +614,7 @@ final class InputPlanner {
     required int? maxRequestBytes,
     required int textTokens,
     required Set<PlanWarningCode> warnings,
-    int? exactInputTokens,
+    NativeInputCount? nativeCount,
     String? inputTokenSource,
     int reasoningReserveTokens = 0,
   }) {
@@ -632,7 +638,7 @@ final class InputPlanner {
       accuracy: accuracy,
       config: config,
       requestBytes: placement.bytes,
-      countedInputTokens: exactInputTokens,
+      nativeCount: nativeCount,
     );
     final InputPart part = InputPart(
       index: 0,
@@ -654,7 +660,7 @@ final class InputPlanner {
       fixedTokens: fixedTokens,
       inputTokens: budget.inputTokens,
       maxTokens: budget.maxTokens,
-      accuracy: accuracy,
+      accuracy: budget.accuracy,
       budget: budget,
       materialTokens: textTokens + placement.tokens + placement.catalogTokens,
       contextTokens: limits.contextTokens.value,
@@ -894,7 +900,7 @@ final class InputPlanner {
       fixedTokens: fixedTokens,
       inputTokens: maxBudget.inputTokens,
       maxTokens: outputReserve,
-      accuracy: accuracy,
+      accuracy: maxBudget.accuracy,
       budget: maxBudget,
       materialTokens: parts.fold<int>(
         0,

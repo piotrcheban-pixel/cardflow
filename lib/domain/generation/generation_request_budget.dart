@@ -42,6 +42,10 @@ final class NativeInputCount {
   /// Число токенов, возвращённое провайдером.
   final int tokens;
 
+  /// Ключ компонента: схема ответа (Gemini; вхождение в `totalTokens`
+  /// документацией не подтверждено — оценивается отдельно).
+  static const String schemaComponent = 'response_schema';
+
   /// Дополнительно оценённые токены (провайдер их не посчитал).
   final int estimatedExtraTokens;
 
@@ -104,14 +108,28 @@ final class RequestBudget {
   }) {
     final int fixed = math.max(0, fixedTokens);
     final int material = math.max(0, materialTokens);
-    final bool exactCount = countedInputTokens != null || nativeCount != null;
+    // Три источника числа: результат провайдера (+ то, что он не посчитал),
+    // прежний «готовый» подсчёт и оценка P+D. Точность определяется фактом:
+    // mixed-результат (native + оценённая добавка) — не exact (§3).
+    final InputAccuracy effectiveAccuracy;
+    final int counted;
+    final int estimatedExtra;
+    if (nativeCount != null) {
+      counted = math.max(0, nativeCount.tokens);
+      estimatedExtra = math.max(0, nativeCount.estimatedExtraTokens);
+      effectiveAccuracy = nativeCount.isFullyNative
+          ? InputAccuracy.exact
+          : InputAccuracy.estimated;
+    } else {
+      counted = countedInputTokens ?? (fixed + material);
+      estimatedExtra = 0;
+      effectiveAccuracy = accuracy;
+    }
     final double marginRate = config.margin(
-      exact: accuracy == InputAccuracy.exact || exactCount,
+      exact: effectiveAccuracy == InputAccuracy.exact,
     );
-    final int counted =
-        nativeCount?.tokens ?? countedInputTokens ?? (fixed + material);
-    final int marginTokens = (counted * marginRate).ceil();
-    final int inputTokens = counted + marginTokens;
+    final int marginTokens = ((counted + estimatedExtra) * marginRate).ceil();
+    final int inputTokens = counted + estimatedExtra + marginTokens;
 
     final int? contextTokens = limits.contextTokens.value;
     final int? maxInputTokens = limits.maxInputTokens.value;
@@ -165,15 +183,16 @@ final class RequestBudget {
       maxTokens: maxTokens,
       outputCapTokens: outputCapTokens,
       marginTokens: marginTokens,
-      accuracy: accuracy,
+      accuracy: effectiveAccuracy,
       contextExceeded: contextExceeded,
       payloadExceeded: payloadExceeded,
       contextTokens: contextTokens,
       roomTokens: roomTokens,
       maxInputTokensLimit: maxInputTokens,
       maxRequestBytesLimit: maxRequestBytes,
-      nativeInputTokens: counted,
-      estimatedExtraTokens: 0,
+      nativeInputTokens: nativeCount != null ? counted : countedInputTokens,
+      estimatedExtraTokens: estimatedExtra,
+      estimatedComponents: nativeCount?.estimatedComponents ?? const <String>[],
     );
   }
 

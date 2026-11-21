@@ -9,6 +9,7 @@ library;
 import 'package:cardflow/api/generation/generation_plan_builder.dart';
 import 'package:cardflow/domain/generation/generation_card_limit.dart';
 import 'package:cardflow/domain/generation/generation_plan.dart';
+import 'package:cardflow/domain/generation/generation_request_budget.dart';
 import 'package:cardflow/domain/generation/generation_run.dart';
 import 'package:cardflow/domain/generation/model_capabilities.dart';
 import 'package:cardflow/domain/generation/prompt_only_request.dart';
@@ -28,14 +29,14 @@ String? runTopic(String? wishes) {
 /// Строит план запуска; `null` — ни материалов, ни темы (вызывающий покажет
 /// `noMaterials`).
 ///
-/// [exactInputTokens]/[inputTokenSource] передаются, когда провайдер умеет
-/// считать вход (`count_tokens`): тот же builder пересобирает план с точным
-/// значением, второй оценки не появляется.
+/// [nativeCount] передаётся, когда провайдер умеет считать вход
+/// (`count_tokens`): тот же builder пересобирает план с числом провайдера и
+/// оценённой добавкой, второй оценки не появляется.
 GenerationPlan? buildRunPlan({
   required GenerationPlanBuilder builder,
   required GenerationRunRequest request,
   required ModelCapabilities capabilities,
-  int? exactInputTokens,
+  NativeInputCount? nativeCount,
   String? inputTokenSource,
 }) {
   final bool hasMaterials = runHasMaterials(request);
@@ -47,7 +48,7 @@ GenerationPlan? buildRunPlan({
     return builder.buildPromptOnly(
       request: PromptOnlyRequest(prompt: topic, requestedCards: requested),
       capabilities: capabilities,
-      exactInputTokens: exactInputTokens,
+      nativeCount: nativeCount,
       inputTokenSource: inputTokenSource,
     );
   }
@@ -58,7 +59,7 @@ GenerationPlan? buildRunPlan({
     documentImages: request.documentImages,
     wishes: request.wishes,
     requestedCards: requested,
-    exactInputTokens: exactInputTokens,
+    nativeCount: nativeCount,
     inputTokenSource: inputTokenSource,
   );
 }

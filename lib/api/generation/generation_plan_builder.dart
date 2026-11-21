@@ -31,6 +31,7 @@ import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/generation/generation_budget.dart';
 import 'package:cardflow/domain/generation/generation_card_limit.dart';
 import 'package:cardflow/domain/generation/generation_planning_config.dart';
+import 'package:cardflow/domain/generation/generation_request_budget.dart';
 import 'package:cardflow/domain/generation/generation_chunk_planner.dart';
 import 'package:cardflow/domain/generation/generation_plan.dart';
 import 'package:cardflow/domain/generation/model_capabilities.dart';
@@ -155,7 +156,7 @@ class GenerationPlanBuilder {
     Map<String, Object?> responseSchema = canonicalCardsResponseSchema,
     GenerationOverheadTokens? overhead,
     GenerationBudgetConfig budgetConfig = const GenerationBudgetConfig(),
-    int? exactInputTokens,
+    NativeInputCount? nativeCount,
     String? inputTokenSource,
   }) {
     final ContentInventory inventory = inventoryOf(
@@ -198,8 +199,8 @@ class GenerationPlanBuilder {
       budgetConfig: budgetConfig,
       catalogLineBuilder: planner.catalogLineBuilder ?? _catalogLine,
       wishes: wishes,
-      exactInputTokens: exactInputTokens,
-      inputTokenSource: inputTokenSource,
+      nativeCount: nativeCount,
+      inputTokenSource: inputTokenSource ?? nativeCount?.source,
     );
   }
 
@@ -216,7 +217,7 @@ class GenerationPlanBuilder {
     Map<String, Object?> responseSchema = canonicalCardsResponseSchema,
     GenerationOverheadTokens? overhead,
     GenerationBudgetConfig budgetConfig = const GenerationBudgetConfig(),
-    int? exactInputTokens,
+    NativeInputCount? nativeCount,
     String? inputTokenSource,
   }) {
     assert(!request.isEmpty, 'Prompt-only план требует непустую тему');
@@ -253,8 +254,8 @@ class GenerationPlanBuilder {
       wishes: request.prompt,
       budgetConfig: budgetConfig,
       catalogLineBuilder: planner.catalogLineBuilder,
-      exactInputTokens: exactInputTokens,
-      inputTokenSource: inputTokenSource,
+      nativeCount: nativeCount,
+      inputTokenSource: inputTokenSource ?? nativeCount?.source,
     );
   }
 

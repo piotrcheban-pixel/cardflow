@@ -93,8 +93,15 @@ final class ModelLimits {
     if (!contextTokens.isKnown) 'context_window',
     if (!maxOutputTokens.isKnown) 'max_output_tokens',
     if (!supportsImageInput.isKnown) 'supports_image_input',
+    // 32 МБ — консервативное допущение приложения, а не лимит провайдера:
+    // пока провайдер не подтвердил значение, оно остаётся неизвестным (§5).
+    if (!maxRequestBytes.isKnown) 'max_request_bytes',
     if (!pricing.isKnown) 'pricing',
   ]);
+
+  /// Трёхзначная поддержка изображений (7.18.3 §4).
+  ImageInputSupport get imageInputSupport =>
+      imageInputSupportOf(supportsImageInput);
 
   /// Копия с изменениями полей (для слоёв пользователя/API).
   ModelLimits copyWith({
@@ -138,6 +145,36 @@ final class ModelLimits {
 
 /// Ранг источника для слияния (ADR-039 §2).
 int capabilitySourceRank(CapabilitySource source) => source.priority;
+
+/// Трёхзначная поддержка изображений моделью (7.18.3 §4).
+///
+/// Неизвестность — отдельное состояние: её нельзя ни выдавать за
+/// подтверждённое «поддерживает», ни превращать в подтверждённое «нет».
+enum ImageInputSupport {
+  /// Поддержка подтверждена (пользователь, API провайдера или каталог).
+  supported,
+
+  /// Поддержка подтверждённо отсутствует.
+  unsupported,
+
+  /// Подтверждённых данных нет (в том числе допущение приложения).
+  unknown,
+}
+
+/// Восстанавливает трёхзначное состояние из значения с источником.
+///
+/// `assumption` — допущение приложения, а не характеристика провайдера:
+/// «нет изображений» по допущению не блокирует запуск (состояние
+/// `unknown`), «есть изображения» по допущению считается попыткой отправки
+/// (`supported`): это направление безопасно, провайдер отклонит запрос сам.
+ImageInputSupport imageInputSupportOf(Sourced<bool> value) {
+  final bool? known = value.value;
+  if (known == null || !value.isKnown) return ImageInputSupport.unknown;
+  if (value.source == CapabilitySource.assumption) {
+    return known ? ImageInputSupport.supported : ImageInputSupport.unknown;
+  }
+  return known ? ImageInputSupport.supported : ImageInputSupport.unsupported;
+}
 
 /// Слияние слоёв **по каждому полю**: побеждает известное значение с
 /// наибольшим рангом источника; при равенстве — более ранний слой.
@@ -256,9 +293,12 @@ ModelLimits modelLimitsFromCapabilities(ModelCapabilities capabilities) {
     ),
     supportsImageInput: boolField(
       capabilities.supportsVision,
-      imageSource == CapabilitySource.unknown
-          ? CapabilitySource.assumption
-          : imageSource,
+      // Плоский API `ModelCapabilities` без источника означает явно заданную
+      // возможность (каталог приложения), а не неизвестность: неизвестность
+      // передаётся как `supportsVision == null` из проекции лимитов.
+      capabilities.visionSource == CapabilitySource.unknown
+          ? CapabilitySource.officialCatalog
+          : capabilities.visionSource,
     ),
     supportsPdfInput: Sourced<bool>(
       capabilities.supportsPdfDocumentPart,

@@ -139,6 +139,7 @@ void main() {
         contextWindowTokens: 128000,
         contextSource: CapabilitySource.userConfigured,
         supportsVision: false,
+        visionSource: CapabilitySource.officialCatalog,
       ),
       embedded: true,
     );
@@ -161,6 +162,7 @@ void main() {
         contextWindowTokens: 128000,
         contextSource: CapabilitySource.userConfigured,
         supportsVision: false,
+        visionSource: CapabilitySource.officialCatalog,
       ),
       attachment: true,
     );
@@ -174,6 +176,7 @@ void main() {
         contextWindowTokens: 128000,
         contextSource: CapabilitySource.userConfigured,
         supportsVision: true,
+        visionSource: CapabilitySource.officialCatalog,
       ),
     );
     expect(plan.validity.isInvalid, isFalse);

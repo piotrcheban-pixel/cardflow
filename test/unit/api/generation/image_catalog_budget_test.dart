@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cardflow/api/generation/generation_images.dart';
 import 'package:cardflow/api/generation/generation_plan_builder.dart';
+import 'package:cardflow/domain/generation/generation_request_budget.dart';
 import 'package:cardflow/domain/generation/content_token_estimator.dart';
 import 'package:cardflow/domain/generation/document_image.dart';
 import 'package:cardflow/domain/generation/generation_attachment.dart';
@@ -213,8 +214,10 @@ void main() {
         docOf('лекция.docx', <String>[material], images: images),
       ],
       capabilities: caps(),
-      exactInputTokens: 500,
-      inputTokenSource: 'count_tokens:anthropic',
+      nativeCount: const NativeInputCount(
+        tokens: 500,
+        source: 'count_tokens:anthropic',
+      ),
     );
     expect(plan.inputPlan!.inputTokenSource, 'count_tokens:anthropic');
     expect(

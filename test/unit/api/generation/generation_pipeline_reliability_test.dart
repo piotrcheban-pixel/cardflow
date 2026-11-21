@@ -574,6 +574,12 @@ void main() {
             ),
           ],
           wishes: '3 карточки',
+          // Подтверждённое отсутствие Vision — пользовательская настройка:
+          // изображения остаются только каталогом.
+          account: testProviderAccount(
+            presetId: 'deepseek',
+            modelId: 'deepseek-chat',
+          ).copyWith(supportsVision: false, visionConfigured: true),
         ),
       );
       expect(result.plan!.imagesUnsupported, 2);

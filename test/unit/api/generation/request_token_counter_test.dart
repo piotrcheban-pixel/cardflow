@@ -85,9 +85,20 @@ void main() {
     expect(request.uri.path, '/v1beta/models/gemini-test:countTokens');
     expect(request.headers['x-goog-api-key'], 'test-key');
     final Map<String, Object?> body = request.data! as Map<String, Object?>;
-    final Map<String, Object?> config =
-        body['generationConfig']! as Map<String, Object?>;
-    expect(config['responseSchema'], geminiCardSchema());
+    // 7.18.3: полный GenerateContentRequest внутри `generateContentRequest`;
+    // top-level systemInstruction/generationConfig схемой не предусмотрены.
+    final Map<String, Object?> envelope =
+        body['generateContentRequest']! as Map<String, Object?>;
+    expect(
+      ((envelope['systemInstruction']! as Map<String, Object?>)['parts']!
+              as List<Object?>)
+          .single,
+      <String, Object?>{'text': 'sys'},
+    );
+    // responseSchema намеренно не отправляется: его вхождение в totalTokens
+    // не подтверждено, schemaOverhead оценивается планировщиком отдельно.
+    expect(envelope.containsKey('generationConfig'), isFalse);
+    expect(body.containsKey('generationConfig'), isFalse);
   });
 
   test('ошибка HTTP — unknown с машинным кодом, не исключение', () async {

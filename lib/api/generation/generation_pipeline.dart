@@ -26,7 +26,6 @@ import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/cards/content_hash.dart';
 import 'package:cardflow/domain/cards/occlusion.dart';
 import 'package:cardflow/domain/generation/card_image_finder.dart';
-import 'package:cardflow/domain/generation/content_token_estimator.dart';
 import 'package:cardflow/domain/generation/document_image.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
 import 'package:cardflow/domain/generation/generated_card_image.dart';
@@ -49,6 +48,7 @@ import 'package:cardflow/domain/generation/image_query.dart';
 import 'package:cardflow/domain/generation/model_capabilities.dart';
 import 'package:cardflow/domain/generation/model_capability_cache.dart';
 import 'package:cardflow/domain/generation/provider_account.dart';
+import 'package:cardflow/domain/generation/provider_protocol.dart';
 import 'package:cardflow/domain/generation/token_calibration.dart';
 import 'package:cardflow/domain/generation/token_accounting.dart';
 
@@ -326,7 +326,7 @@ class GenerationPipeline implements GenerationRunner {
     required bool hasMaterials,
     required String? topic,
     GenerationPlanBuilder? builder,
-    int? exactInputTokens,
+    NativeInputCount? nativeCount,
     String? inputTokenSource,
   }) {
     final GenerationPlanFactory? factory = planFactory;
@@ -335,7 +335,7 @@ class GenerationPipeline implements GenerationRunner {
       builder: builder ?? planBuilder,
       request: request,
       capabilities: capabilities,
-      exactInputTokens: exactInputTokens,
+      nativeCount: nativeCount,
       inputTokenSource: inputTokenSource,
     );
     if (plan == null) {
@@ -375,68 +375,102 @@ class GenerationPipeline implements GenerationRunner {
       diagnostics.tokenCount(source: 'estimate', errorCode: 'fragmented');
       return plan;
     }
-    final String? userContent = _countedUserContent(plan, request);
-    if (userContent == null) return plan;
+    final _CountedRequest? counted = _countedRequest(plan, request);
+    if (counted == null) return plan;
     final ExactTokenCountCache cache =
         tokenCountCache ?? (_tokenCache ??= ExactTokenCountCache());
     final String key = exactTokenCacheKey(
       account: request.account,
       systemPrompt: systemPromptGenRuV8,
-      userContent: userContent,
+      userContent: counted.userContent,
+      attachments: counted.attachments,
     );
     final ExactTokenCount count = await cache.countOrLoad(
       key: key,
       load: () => counter.count(
         request.account,
         systemPrompt: systemPromptGenRuV8,
-        userContent: userContent,
+        userContent: counted.userContent,
+        attachments: counted.attachments,
       ),
     );
     if (!count.isExact) {
       diagnostics.tokenCount(source: 'estimate', errorCode: count.errorCode);
       return plan;
     }
-    // `count_tokens` считает текст запроса (system + user content + схема), а
-    // image-части уходят отдельными блоками и в подсчёт не входят. Стоимость
-    // изображений — консервативная оценка приложения (§3.4, E.4): нулём её
-    // считать нельзя, иначе точный вход занижен на целые изображения.
-    final int imageTokens = _countedImageTokens(plan.chunks.first);
-    final int exactTokens = count.tokens! + imageTokens;
-    final String base = 'count_tokens:${request.account.protocol.wireName}';
-    final String source = imageTokens > 0 ? '$base+image_estimate' : base;
-    diagnostics.tokenCount(source: source, tokens: exactTokens);
+    // §3: exact — только если нативно посчитаны **все** учитываемые части.
+    // Изображения/PDF теперь уходят в count_tokens base64-блоками и входят в
+    // число провайдера: повторно оценку изображений не прибавляем.
+    final List<String> estimatedComponents = <String>[];
+    var estimatedExtra = 0;
+    if (request.account.protocol == ProviderProtocol.geminiGenerateContent) {
+      // §7: вхождение generationConfig.responseSchema в `totalTokens` не
+      // подтверждено документацией. Схема оценивается отдельно тем же
+      // оценщиком плана, а не выдаётся за нативно посчитанную часть.
+      final int schemaTokens = plan.estimate.schemaTokens;
+      if (schemaTokens > 0) {
+        estimatedExtra = schemaTokens;
+        estimatedComponents.add(NativeInputCount.schemaComponent);
+      }
+    }
+    final NativeInputCount nativeCount = NativeInputCount(
+      tokens: count.tokens!,
+      estimatedExtraTokens: estimatedExtra,
+      estimatedComponents: List<String>.unmodifiable(estimatedComponents),
+      source: 'count_tokens:${request.account.protocol.wireName}',
+    );
+    diagnostics.tokenCount(
+      source: nativeCount.isFullyNative
+          ? nativeCount.source
+          : '${nativeCount.source}+estimate',
+      tokens: nativeCount.tokens + nativeCount.estimatedExtraTokens,
+    );
     return _buildPlan(
       request,
       capabilities,
       hasMaterials: hasMaterials,
       topic: topic,
       builder: builder,
-      exactInputTokens: exactTokens,
-      inputTokenSource: source,
+      nativeCount: nativeCount,
     );
   }
 
-  /// Токены изображений запроса: image-части плана + вложения чанка.
+  /// Запрос подсчёта ровно в том виде, в каком его увидит провайдер.
   ///
-  /// Считается тем же консервативным оценщиком (`GenerationPlanBuilder` →
-  /// `HeuristicContentTokenEstimator`), что и план: второго оценщика нет.
-  int _countedImageTokens(PlannedChunk chunk) {
-    var tokens = chunk.imageTokens;
-    for (final GenerationAttachment attachment in chunk.attachments) {
-      final int body = _imageEstimator
-          .estimateImage(bytes: attachment.bytes.length)
-          .tokens;
-      tokens += body;
-      final String? label = attachment.label;
-      if (label != null && label.isNotEmpty) {
-        tokens += _imageEstimator.estimateText(label);
-      }
-    }
-    return tokens;
+  /// Пользовательское сообщение собирается тем же `buildGenerationUserContent`
+  /// (материалы + каталог + пожелания + хвост `<task>`), мультимодальные части —
+  /// те же, что уйдут в production: вложения первого фрагмента части и все
+  /// image-части плана с id и подписями каталога. В whole-режиме партии делят
+  /// изображения между собой, поэтому подсчёт целого запроса покрывает все
+  /// отправляемые части — бюджет другой партии не окажется занижен.
+  _CountedRequest? _countedRequest(
+    GenerationPlan plan,
+    GenerationRunRequest request,
+  ) {
+    if (plan.chunks.isEmpty) return null;
+    final String? userContent = _countedUserContent(plan, request);
+    if (userContent == null) return null;
+    final Map<String, String> imageIds = _imageIdsFor(plan);
+    final List<GenerationAttachment> attachments = <GenerationAttachment>[
+      for (final PlannedChunk chunk in plan.chunks) ...chunk.attachments,
+      for (final PlannedChunk chunk in plan.chunks)
+        for (final DocumentImage image in chunk.imageParts)
+          if (image.bytes.isNotEmpty)
+            GenerationAttachment(
+              fileName: image.fileName,
+              mediaType: image.mediaType,
+              bytes: image.bytes,
+              pageNumber: image.page,
+              label: imageCatalogLine(
+                image.withId(imageIds[_imageKey(image)] ?? image.id),
+              ),
+            ),
+    ];
+    return _CountedRequest(
+      userContent: userContent,
+      attachments: List<GenerationAttachment>.unmodifiable(attachments),
+    );
   }
-
-  /// Оценщик стоимости изображений (тот же, что у плана).
-  ContentTokenEstimator get _imageEstimator => planBuilder.estimator;
 
   /// Пользовательское сообщение первого запроса плана — ровно в том виде,
   /// в каком его соберёт `CardGenerationService` (материалы + каталог +
@@ -1940,6 +1974,17 @@ class GenerationPipeline implements GenerationRunner {
 }
 
 /// Элемент очереди выполнения с состоянием восстановления.
+/// Запрос нативного подсчёта: сообщение и мультимодальные части (7.18.3 §2).
+///
+/// Тело запроса наружу не отдаётся: числа идут в план, байты — только в
+/// `count_tokens`; в диагностику попадает источник и число, не содержимое.
+class _CountedRequest {
+  const _CountedRequest({required this.userContent, required this.attachments});
+
+  final String userContent;
+  final List<GenerationAttachment> attachments;
+}
+
 class _QueueItem {
   _QueueItem(
     this.chunk, {

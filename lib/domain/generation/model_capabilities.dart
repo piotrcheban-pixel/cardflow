@@ -57,7 +57,7 @@ class ModelCapabilities {
     this.maxImageBytesPerRequest,
     this.maxImageSidePx,
     this.maxRequestBytes,
-    this.supportsVision = false,
+    this.supportsVision,
     this.supportsPdfDocumentPart = false,
     this.isReasoningModel,
     this.supportsStrictJsonSchema,
@@ -68,6 +68,7 @@ class ModelCapabilities {
     this.contextSource = CapabilitySource.unknown,
     this.outputSource = CapabilitySource.unknown,
     this.imageSource = CapabilitySource.unknown,
+    this.visionSource = CapabilitySource.unknown,
     this.pricingSource = CapabilitySource.unknown,
   }) : assert(
          contextWindowTokens == null || contextWindowTokens > 0,
@@ -135,8 +136,12 @@ class ModelCapabilities {
   /// Максимальный размер тела запроса, байт; `null` — неизвестно.
   final int? maxRequestBytes;
 
-  /// Принимает ли модель изображения (настройка/пресет аккаунта).
-  final bool supportsVision;
+  /// Принимает ли модель изображения: `true`/`false` — явно задано,
+  /// `null` (по умолчанию) — поддержка **неизвестна** (7.18.3 §4).
+  ///
+  /// Неизвестность нельзя превращать в подтверждённое `false`: планировщик
+  /// отличает её от явного «не поддерживает».
+  final bool? supportsVision;
 
   /// Принимает ли протокол PDF как документ (факт реализации в приложении).
   final bool supportsPdfDocumentPart;
@@ -169,6 +174,13 @@ class ModelCapabilities {
   /// Источник лимитов изображений.
   final CapabilitySource imageSource;
 
+  /// Источник решения о поддержке изображений (`supportsVision`).
+  ///
+  /// Отделён от [imageSource]: подтверждённое «не поддерживает» должно
+  /// оставаться таковым при обратной проекции в [ModelLimits], а не
+  /// превращаться в допущение/неизвестность.
+  final CapabilitySource visionSource;
+
   /// Источник цен.
   final CapabilitySource pricingSource;
 
@@ -182,11 +194,13 @@ class ModelCapabilities {
   List<String> get unknownFields => List<String>.unmodifiable(<String>[
     if (contextWindowTokens == null) unknownContextWindow,
     if (maxOutputTokens == null) unknownOutputTokens,
+    if (supportsVision == null) unknownImageInput,
     if (maxImagesPerRequest == null ||
         maxImageBytesPerImage == null ||
         maxImageBytesPerRequest == null ||
         maxImageSidePx == null)
       unknownImageLimits,
+    if (maxRequestBytes == null) unknownMaxRequestBytes,
     if (pricing == null || pricing!.state != PricingState.complete)
       unknownPricing,
   ]);
@@ -201,6 +215,7 @@ class ModelCapabilities {
         'context_window': contextSource,
         'max_output_tokens': outputSource,
         'image_limits': imageSource,
+        'supports_image_input': visionSource,
         'pricing': pricingSource,
         // Полей для этих значений в аккаунте/каталоге нет — только unknown.
         'max_cards_per_request': CapabilitySource.unknown,
@@ -246,7 +261,13 @@ ModelCapabilities modelCapabilitiesFromLimits(ModelLimits limits) {
   final int? imageBytes = limits.maxImageBytesPerImage.value;
   final int? imageBytesRequest = limits.maxImageBytesPerRequest.value;
   final int? requestBytes = limits.maxRequestBytes.value;
-  final bool? vision = limits.supportsImageInput.value;
+  // Три состояния, а не «bool с false по умолчанию»: допущение приложения и
+  // отсутствие данных — не подтверждение неподдерживаемости (7.18.3 §4).
+  final bool? decidedVision = switch (limits.imageInputSupport) {
+    ImageInputSupport.supported => true,
+    ImageInputSupport.unsupported => false,
+    ImageInputSupport.unknown => null,
+  };
   return ModelCapabilities(
     contextWindowTokens: context,
     maxInputTokens: limits.maxInputTokens.value,
@@ -256,7 +277,7 @@ ModelCapabilities modelCapabilitiesFromLimits(ModelLimits limits) {
     maxImageBytesPerImage: imageBytes,
     maxImageBytesPerRequest: imageBytesRequest,
     maxRequestBytes: requestBytes,
-    supportsVision: vision ?? false,
+    supportsVision: decidedVision,
     supportsPdfDocumentPart: limits.supportsPdfInput.value ?? false,
     isReasoningModel: limits.isReasoningModel.value,
     supportsStrictJsonSchema: null,
@@ -272,6 +293,9 @@ ModelCapabilities modelCapabilitiesFromLimits(ModelLimits limits) {
         ? limits.maxImagesPerRequest.source
         : imageBytes != null
         ? limits.maxImageBytesPerImage.source
+        : CapabilitySource.unknown,
+    visionSource: limits.supportsImageInput.isKnown
+        ? limits.supportsImageInput.source
         : CapabilitySource.unknown,
     pricingSource: sourceOf(limits.pricing, limits.pricing.value),
   );

@@ -374,8 +374,10 @@ void main() {
         limits: limits(context: 64000, maxOutput: 32000),
         fixedTokens: 3000,
         desiredOutputTokens: desired(100, 32000),
-        accuracy: InputAccuracy.exact,
-        exactInputTokens: 60000,
+        nativeCount: const NativeInputCount(
+          tokens: 60000,
+          source: 'count_tokens:test',
+        ),
       );
       expect(whole.accuracy, InputAccuracy.exact);
       expect(whole.inputTokens, 61800, reason: '60000 + 3 % запаса');
@@ -387,8 +389,10 @@ void main() {
         limits: limits(context: 64000, maxOutput: 32000),
         fixedTokens: 3000,
         desiredOutputTokens: desired(100, 32000),
-        accuracy: InputAccuracy.exact,
-        exactInputTokens: 62000,
+        nativeCount: const NativeInputCount(
+          tokens: 62000,
+          source: 'count_tokens:test',
+        ),
       );
       expect(
         fragmented.strategy,

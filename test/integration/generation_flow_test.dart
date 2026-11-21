@@ -22,6 +22,7 @@ import 'package:cardflow/domain/generation/generation_card_store.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
 import 'package:cardflow/domain/generation/generation_job.dart';
 import 'package:cardflow/domain/generation/generation_run.dart';
+import 'package:cardflow/domain/generation/provider_account.dart';
 import 'package:cardflow/domain/review/review_queue.dart';
 import 'package:cardflow/domain/text/document_format.dart';
 import 'package:cardflow/domain/text/parsed_document.dart';
@@ -113,13 +114,15 @@ void main() {
     bool includeDocument = true,
     String presetId = 'openai',
     String modelId = 'gpt-4o-mini',
+    ProviderAccount? account,
   }) {
     return GenerationRunRequest(
       documents: includeDocument
           ? <ParsedDocument>[document()]
           : const <ParsedDocument>[],
       images: images,
-      account: testProviderAccount(presetId: presetId, modelId: modelId),
+      account:
+          account ?? testProviderAccount(presetId: presetId, modelId: modelId),
       deckName: 'Сгенерированная колода',
       targetDeckId: targetDeckId,
     );
@@ -429,8 +432,12 @@ void main() {
             request(
               includeDocument: false,
               images: <GenerationAttachment>[image],
-              presetId: 'deepseek',
-              modelId: 'deepseek-chat',
+              // Подтверждённое отсутствие Vision — пользовательская настройка;
+              // неизвестность (без visionConfigured) обрабатывается отдельно.
+              account: testProviderAccount(
+                presetId: 'deepseek',
+                modelId: 'deepseek-chat',
+              ).copyWith(supportsVision: false, visionConfigured: true),
             ),
           ),
       throwsA(

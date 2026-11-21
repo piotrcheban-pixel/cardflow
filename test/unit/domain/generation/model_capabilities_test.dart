@@ -87,7 +87,9 @@ void main() {
       expect(capabilities.unknownFields, <String>[
         ModelCapabilities.unknownContextWindow,
         ModelCapabilities.unknownOutputTokens,
+        ModelCapabilities.unknownImageInput,
         ModelCapabilities.unknownImageLimits,
+        ModelCapabilities.unknownMaxRequestBytes,
         ModelCapabilities.unknownPricing,
       ]);
     });

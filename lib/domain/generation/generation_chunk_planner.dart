@@ -180,6 +180,7 @@ final class GenerationChunkPlanner {
     String? wishes,
     bool allowPromptOnly = false,
     int? exactInputTokens,
+    NativeInputCount? nativeCount,
     String? inputTokenSource,
   }) {
     assert(
@@ -250,10 +251,7 @@ final class GenerationChunkPlanner {
         limits: limits,
         fixedTokens: fixedTokens,
         desiredOutputTokens: desired,
-        accuracy: exactInputTokens == null
-            ? InputAccuracy.estimated
-            : InputAccuracy.exact,
-        exactInputTokens: exactInputTokens,
+        nativeCount: nativeCount,
         promptOnlyRequestBytes: promptBodyBytes,
         inputTokenSource: inputTokenSource ?? 'estimate:${estimator.version}',
         reasoningReserveTokens: reasoningReserve,
@@ -297,6 +295,7 @@ final class GenerationChunkPlanner {
         limits: limits,
         overhead: overhead,
         desired: desired,
+        nativeCount: nativeCount,
       );
     } else {
       inputPlan = InputPlanner(config: planning).plan(
@@ -306,17 +305,14 @@ final class GenerationChunkPlanner {
         fixedBytes: overhead.fixedBytes,
         desiredOutputTokens: desired,
         reasoningReserveTokens: reasoningReserve,
-        accuracy: exactInputTokens == null
-            ? InputAccuracy.estimated
-            : InputAccuracy.exact,
+        nativeCount: nativeCount,
         outlineReserveTokens: overhead.outlineTokens,
         orphanImages: data.orphanImages,
-        exactInputTokens: exactInputTokens,
         inputTokenSource: inputTokenSource ?? 'estimate:${estimator.version}',
       );
     }
 
-    if (!capabilities.supportsVision && data.hasVisionPayload) {
+    if (capabilities.supportsVision == false && data.hasVisionPayload) {
       return _invalidPlan(
         PlanInvalidReason.imagesWithoutVision,
         inputPlan: inputPlan,
@@ -424,6 +420,8 @@ final class GenerationChunkPlanner {
           limits.maxOutputTokens.isKnown == false)
         PlanWarningCode.unknownCapabilities,
       if (_assumedImageLimits(capabilities)) PlanWarningCode.assumedImageLimits,
+      if (capabilities.supportsVision == null && data.hasVisionPayload)
+        PlanWarningCode.imagesVisionUnconfirmed,
     };
     final PlanValidity validity = warnings.isEmpty
         ? const PlanValidity.valid()
@@ -682,6 +680,7 @@ final class GenerationChunkPlanner {
     required ModelLimits limits,
     required GenerationOverheadTokens overhead,
     required int desired,
+    NativeInputCount? nativeCount,
   }) {
     final int tokens = data.attachmentPageTokens;
     final int catalogTokens = data.orphanImages.fold<int>(
@@ -694,10 +693,10 @@ final class GenerationChunkPlanner {
       fixedTokens: overhead.fixedTokens,
       materialTokens: tokens + catalogTokens,
       desiredOutputTokens: desired,
-      accuracy: InputAccuracy.estimated,
       config: config.planning,
       requestBytes:
           bytes + overhead.fixedBytes + config.planning.jsonBodyOverheadBytes,
+      nativeCount: nativeCount,
     );
     final bool whole =
         !budget.contextExceeded &&
@@ -719,7 +718,7 @@ final class GenerationChunkPlanner {
       fixedTokens: overhead.fixedTokens,
       inputTokens: budget.inputTokens,
       maxTokens: budget.maxTokens,
-      accuracy: InputAccuracy.estimated,
+      accuracy: budget.accuracy,
       budget: budget,
       materialTokens: tokens + catalogTokens,
       contextTokens: limits.contextTokens.value,
@@ -727,8 +726,12 @@ final class GenerationChunkPlanner {
         if (limits.contextTokens.isKnown == false)
           PlanWarningCode.contextUnconfirmed,
         if (budget.payloadExceeded) PlanWarningCode.payloadLimited,
+        if (data.orphanImages.isNotEmpty &&
+            limits.imageInputSupport == ImageInputSupport.unknown)
+          PlanWarningCode.imagesVisionUnconfirmed,
       ]),
       catalogTokens: catalogTokens,
+      inputTokenSource: nativeCount?.source,
     );
   }
 
@@ -1084,6 +1087,11 @@ final class GenerationChunkPlanner {
     final Set<String> fields = <String>{
       if (!limits.contextTokens.isKnown) 'context_window',
       if (!limits.maxOutputTokens.isKnown) 'max_output_tokens',
+      // §5: 32 МБ — допущение приложения; пока провайдер не подтвердил,
+      // характеристика модели остаётся неизвестной (предупреждение о
+      // фактическом HTTP payload — отдельно, в `assumedImageLimits`).
+      if (!limits.maxRequestBytes.isKnown) 'max_request_bytes',
+      if (!limits.supportsImageInput.isKnown) 'supports_image_input',
     };
     if (inputPlan.images.isNotEmpty &&
         limits.supportsImageInput.source != CapabilitySource.providerApi) {
