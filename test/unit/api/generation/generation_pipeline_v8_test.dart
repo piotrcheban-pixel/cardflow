@@ -75,6 +75,7 @@ void main() {
   GenerationPipeline pipeline({
     TokenCalibrationStore? calibration,
     int maxTopUpRounds = 4,
+    int maxOperationRequests = 0,
   }) {
     caller = FakeGenerationCaller();
     jobs = FakeGenerationJobRepository();
@@ -87,6 +88,7 @@ void main() {
       jobIdFactory: () => 'job-v8',
       calibrationStore: calibration,
       maxTopUpRounds: maxTopUpRounds,
+      maxOperationRequests: maxOperationRequests,
     );
   }
 
@@ -288,6 +290,16 @@ void main() {
     },
   );
 
+  test('бюджет операции: лимит запросов останавливает добор', () async {
+    final GenerationPipeline runner = pipeline(maxOperationRequests: 2);
+    caller.onGenerate = (GenerationRequest request, int call) async =>
+        resultOf(<String>['Вопрос $call']);
+    final GenerationRunResult result = await runner.run(
+      requestFor(docOf(3, 400), requestedCards: 5),
+    );
+    expect(result.status, GenerationJobStatus.partial);
+    expect(caller.calls, 2);
+  });
   test('статус partial: цель не достигнута без добора', () async {
     final GenerationPipeline runner = pipeline(maxTopUpRounds: 0);
     caller.onGenerate = (GenerationRequest request, int call) async =>

@@ -100,6 +100,9 @@ abstract interface class GenerationRunner {
 class GenerationPipeline implements GenerationRunner {
   /// Создаёт пайплайн.
   final int maxTopUpRounds;
+  final int maxOperationRequests;
+  final int maxOperationTokens;
+  final int maxOperationSeconds;
 
   GenerationPipeline({
     required this.caller,
@@ -119,6 +122,9 @@ class GenerationPipeline implements GenerationRunner {
     this.jobIdFactory = _defaultJobId,
     this.maxRecoveryRequests = 12,
     this.maxTopUpRounds = 4,
+    this.maxOperationRequests = 0,
+    this.maxOperationTokens = 0,
+    this.maxOperationSeconds = 0,
   }) : assert(maxRecoveryRequests >= 0);
 
   /// Вызов модели на фрагмент.
@@ -683,15 +689,25 @@ class GenerationPipeline implements GenerationRunner {
     var index = 0;
     // ADR-040 §8: исчерпание материала и однократное перераспределение.
     final Set<String> exhaustedSections = <String>{};
+    // Страйки секций: один недобор не делает раздел исчерпанным, два подряд — делают.
+    final Map<String, int> sectionStrikes = <String, int>{};
     final List<_BatchTokenFact> batchFacts = <_BatchTokenFact>[];
     var shortfall = 0;
     var skippedBatches = 0;
     var topUpRounds = 0;
     // Стоп добора, если предыдущий раунд не дал ни одной новой карточки.
     var topUpBaseline = -1;
+    var requestsSent = 0;
+    final Stopwatch operationWatch = Stopwatch()..start();
     while (index < queue.length) {
       if (cancellation?.isCancelled ?? false) {
         cancelled = true;
+        break;
+      }
+      if ((maxOperationRequests > 0 && requestsSent >= maxOperationRequests) ||
+          (maxOperationTokens > 0 && tokensUsed >= maxOperationTokens) ||
+          (maxOperationSeconds > 0 &&
+              operationWatch.elapsed.inSeconds >= maxOperationSeconds)) {
         break;
       }
       final _QueueItem item = queue[index];
@@ -959,12 +975,17 @@ class GenerationPipeline implements GenerationRunner {
           ),
         );
       }
-      // Исчерпание: явный флаг модели или недобор меньше половины партии.
-      final bool exhausted =
-          result.sourceExhausted ||
-          (chunk.limit >= 2 && acceptedInChunk * 2 < chunk.limit);
-      if (exhausted && chunkSections.isNotEmpty) {
-        exhaustedSections.addAll(chunkSections);
+      // Исчерпание: явный флаг модели даёт два страйка, слабая отдача — один.
+      // Раздел считается исчерпанным только после двух страйков.
+      final bool lowYield =
+          chunk.limit >= 2 && acceptedInChunk * 2 < chunk.limit;
+      if ((result.sourceExhausted || lowYield) && chunkSections.isNotEmpty) {
+        for (final String section in chunkSections) {
+          final int strikes =
+              (sectionStrikes[section] ?? 0) + (result.sourceExhausted ? 2 : 1);
+          sectionStrikes[section] = strikes;
+          if (strikes >= 2) exhaustedSections.add(section);
+        }
       }
       final int deficit = chunk.limit - acceptedInChunk;
       if (deficit > 0) shortfall += deficit;
