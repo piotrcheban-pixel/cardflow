@@ -313,6 +313,16 @@ void main() {
             .data,
         contains('max_output_tokens'),
       );
+      // §5: предполагаемые 32 МБ — не характеристика модели; лимит честно
+      // перечислен как неизвестный (предупреждение о payload — отдельно).
+      expect(
+        tester
+            .widget<Text>(
+              find.byKey(const ValueKey<String>('plan-detail-unknown-limits')),
+            )
+            .data,
+        contains('max_request_bytes'),
+      );
     },
   );
 }

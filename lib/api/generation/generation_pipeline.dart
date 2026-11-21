@@ -482,7 +482,18 @@ class GenerationPipeline implements GenerationRunner {
     if (plan.chunks.isEmpty) return null;
     final PlannedChunk chunk = plan.chunks.first;
     const TextSanitizer sanitizer = TextSanitizer();
-    final String materials = sanitizer.sanitize(chunk.materialsText);
+    String materials = sanitizer.sanitize(chunk.materialsText);
+    if (materials.isEmpty && chunk.attachments.isNotEmpty) {
+      // Ровно как `CardGenerationService`: запрос только из вложений несёт
+      // строки «Файл: <имя>» в материалах, иначе подсчёт видит меньше текста,
+      // чем production-запрос.
+      final List<String> names = <String>[];
+      for (final GenerationAttachment attachment in chunk.attachments) {
+        if (!names.contains(attachment.fileName))
+          names.add(attachment.fileName);
+      }
+      materials = names.map((String name) => 'Файл: $name').join('\n');
+    }
     final String wishes = sanitizer.sanitize(request.wishes ?? '');
     final Map<String, String> imageIds = _imageIdsFor(plan);
     final List<DocumentImage> documentImages = <DocumentImage>[

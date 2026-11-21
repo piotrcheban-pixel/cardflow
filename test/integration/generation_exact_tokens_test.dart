@@ -283,6 +283,23 @@ void main() {
         reason: 'стоимость изображения (256 токенов) не прибавлена повторно',
       );
       expect(inputPlan.inputTokenSource, isNot(contains('image_estimate')));
+      expect(
+        result.plan!.estimate.schemaTokens,
+        greaterThan(0),
+        reason: 'схема есть, но Anthropic документированно считает её в tools',
+      );
+      expect(
+        inputPlan.estimatedExtraTokens,
+        0,
+        reason: 'схема не добавлена повторно: tools входят в native count',
+      );
+      final String allDiagnostics = diagnostics.join('\n');
+      expect(allDiagnostics, isNot(contains('base64')));
+      expect(
+        allDiagnostics,
+        isNot(contains(base64Encode(imageOf().bytes))),
+        reason: 'бинарные материалы в диагностику не попадают',
+      );
     },
   );
 
@@ -391,4 +408,38 @@ void main() {
     );
     expect(result.status, GenerationJobStatus.done);
   });
+
+  test(
+    'запрос только из вложений: count_tokens видит «Файл:» и части',
+    () async {
+      counter = _FakeTokenCounter(result: const ExactTokenCount.exact(500));
+      final runner = pipeline(tokenCounter: counter);
+      caller.onGenerate = (GenerationRequest request, int call) async =>
+          resultWithCard();
+      final GenerationAttachment attachment = GenerationAttachment(
+        fileName: 'схема.png',
+        mediaType: AttachmentMediaType.png,
+        bytes: imageOf().bytes,
+      );
+
+      final GenerationRunResult result = await runner.run(
+        GenerationRunRequest(
+          documents: const <ParsedDocument>[],
+          images: <GenerationAttachment>[attachment],
+          account: anthropicAccount(),
+          deckName: 'Схема',
+        ),
+      );
+
+      expect(counter.calls, 1);
+      expect(
+        counter.userContents.single,
+        contains('Файл: схема.png'),
+        reason: 'тот же текст материалов, что собирает сервис',
+      );
+      expect(counter.attachments.single, hasLength(1));
+      expect(result.plan!.inputPlan!.nativeInputTokens, 500);
+      expect(result.plan!.inputPlan!.accuracy, InputAccuracy.exact);
+    },
+  );
 }

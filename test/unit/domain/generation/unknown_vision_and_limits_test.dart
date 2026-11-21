@@ -203,6 +203,12 @@ void main() {
     );
     final GenerationPlan plan = build(capabilities);
     expect(plan.unknownFields, contains('max_request_bytes'));
+    expect(
+      plan.validity.warnings,
+      contains(PlanWarningCode.assumedImageLimits),
+      reason:
+          'предупреждение о фактическом ограничении HTTP payload — отдельно',
+    );
   });
 
   test('userConfigured Vision приоритетнее провайдера и каталога', () {
