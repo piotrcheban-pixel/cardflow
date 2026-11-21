@@ -80,9 +80,13 @@ fvm flutter test integration_test/session_smoke_windows_test.dart -d windows
 
 ## 9. Финальный CI
 
-Push `0d3c35b..02bf726` → run
-[`44936474031`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/44936474031)
-(`02bf726`) — **9/9 job success**: `format + analyze (ubuntu)`,
-`test` × 3 ОС (ubuntu/windows/macos), `build desktop` × 3 (windows/linux/macos),
-`build mobile` Android + iOS. Живых API-запросов в CI нет (live-тесты под
-тегом `live` и opt-in).
+1. Push `0d3c35b..02bf726` → run
+   [`44936474031`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/44936474031)
+   (`02bf726`) — **9/9 job success**: `format + analyze (ubuntu)`,
+   `test` × 3 ОС (ubuntu/windows/macos), `build desktop` × 3 (windows/linux/macos),
+   `build mobile` Android + iOS.
+2. Журнальный коммит `2196e17` (запись этих результатов) → run
+   [`44937971970`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/44937971970)
+   (`2196e17`) — **9/9 job success** (те же 9 job'ов).
+
+Живых API-запросов в CI нет (live-тесты под тегом `live` и opt-in).
