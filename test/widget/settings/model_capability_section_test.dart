@@ -48,10 +48,95 @@ void main() {
     expect(find.textContaining('128 000'), findsOneWidget);
     expect(find.textContaining('из API провайдера'), findsOneWidget);
     expect(find.textContaining('проверено 20.11.2026'), findsOneWidget);
-    // Неизвестны два значения: лимит входа и лимит вывода (7.18.1 добавил
-    // отдельную строку входа). Остальные строки известны.
-    expect(find.textContaining('неизвестно'), findsNWidgets(2));
+    // Неизвестны три значения: лимит входа, лимит вывода и вход изображений.
+    expect(find.textContaining('неизвестно'), findsNWidgets(3));
     expect(find.textContaining('допущение приложения'), findsOneWidget);
+  });
+
+  testWidgets('вход изображений: значение, источник и дата проверки', (
+    WidgetTester tester,
+  ) async {
+    final DateTime observedAt = DateTime.utc(2026, 11, 21);
+    await tester.pumpWidget(
+      wrap(
+        ModelCapabilitySection(
+          account: testProviderAccount(modelId: 'deepseek-chat'),
+          loadLimits: () async => ModelLimits(
+            supportsImageInput: Sourced<bool>(
+              true,
+              source: CapabilitySource.providerApi,
+              observedAt: observedAt,
+              sourceRef: 'https://api.deepseek.com/models',
+            ),
+          ),
+          refresh: () async => true,
+          reset: () async {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    // §3.10: «вход изображений» — с источником и датой проверки.
+    expect(find.textContaining('Вход изображений'), findsOneWidget);
+    expect(find.textContaining('поддерживается'), findsOneWidget);
+    expect(find.textContaining('из API провайдера'), findsOneWidget);
+    expect(find.textContaining('проверено 21.11.2026'), findsOneWidget);
+  });
+
+  testWidgets('неизвестный вход изображений не показан как поддержка', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      wrap(
+        ModelCapabilitySection(
+          account: testProviderAccount(modelId: 'deepseek-chat'),
+          loadLimits: () async => const ModelLimits.absent(),
+          refresh: () async => true,
+          reset: () async {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final Finder row = find.byKey(
+      const ValueKey<String>('capability-image-input'),
+    );
+    expect(row, findsOneWidget);
+    final Text text = tester.widget<Text>(row);
+    expect(text.data, contains('неизвестно'));
+    expect(
+      text.data,
+      isNot(contains('поддерживается')),
+      reason: 'неизвестное значение нельзя выдавать за подтверждённую поддержку',
+    );
+  });
+
+  testWidgets('допущение визуально отличается от подтверждённого значения', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      wrap(
+        ModelCapabilitySection(
+          account: testProviderAccount(modelId: 'deepseek-chat'),
+          loadLimits: () async => const ModelLimits(
+            supportsImageInput: Sourced<bool>(
+              true,
+              source: CapabilitySource.assumption,
+            ),
+          ),
+          refresh: () async => true,
+          reset: () async {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final Text assumed = tester.widget<Text>(
+      find.byKey(const ValueKey<String>('capability-image-input')),
+    );
+    expect(assumed.data, contains('допущение приложения'));
+    expect(
+      assumed.style?.fontStyle,
+      FontStyle.italic,
+      reason: 'допущение не должно выглядеть как подтверждённое значение',
+    );
   });
 
   testWidgets('обновление и сброс вызывают действия', (

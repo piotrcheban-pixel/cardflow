@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 
@@ -8,6 +9,8 @@ import 'package:cardflow/api/generation/request_token_counter.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
 import 'package:cardflow/domain/generation/generation_job.dart';
 import 'package:cardflow/domain/generation/generation_provider.dart';
+import 'package:cardflow/domain/generation/document_image.dart';
+import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/generation/generation_request.dart';
 import 'package:cardflow/domain/generation/generation_result.dart';
 import 'package:cardflow/domain/generation/generation_run.dart';
@@ -201,5 +204,51 @@ void main() {
     expect(all, isNot(contains('Фотосинтез')));
     expect(all, isNot(contains(jsonEncode(counter.userContents.single))));
     expect(all, isNot(contains('sk-ant')));
+  });
+
+  test('exact-режим не обнуляет стоимость изображений', () async {
+    counter = _FakeTokenCounter(result: const ExactTokenCount.exact(1000));
+    final runner = pipeline(tokenCounter: counter);
+    caller.onGenerate = (GenerationRequest request, int call) async =>
+        resultWithCard();
+    // 64 КБ изображение: байтовая эвристика 256 байт/токен → 256 токенов.
+    final DocumentImage image = DocumentImage(
+      fileName: 'схема.png',
+      id: 'img1',
+      bytes: Uint8List.fromList(
+        List<int>.generate(64 * 1024, (int i) => (i * 31) % 251),
+      ),
+      mediaType: AttachmentMediaType.png,
+      caption: 'Схема',
+      context: 'Схема из текста',
+    );
+    final GenerationRunRequest request = GenerationRunRequest(
+      documents: <ParsedDocument>[
+        docOf('лекция.txt', 'Фотосинтез — процесс преобразования света.'),
+      ],
+      documentImages: <DocumentImage>[image],
+      account: anthropicAccount().copyWith(
+        supportsVision: true,
+        visionConfigured: true,
+      ),
+      deckName: 'Точный подсчёт',
+      wishes: '3 карточки',
+    );
+
+    final GenerationRunResult result = await runner.run(request);
+    final InputPlan inputPlan = result.plan!.inputPlan!;
+    expect(inputPlan.accuracy, InputAccuracy.exact);
+    expect(
+      inputPlan.inputTokens,
+      1256 + 38,
+      reason:
+          'count_tokens посчитал только текст (1000); изображение (256 '
+          'токенов) добавляется оценкой, а не нулём',
+    );
+    expect(
+      inputPlan.inputTokenSource,
+      contains('image_estimate'),
+      reason: 'источник честно говорит, что часть входа — оценка',
+    );
   });
 }

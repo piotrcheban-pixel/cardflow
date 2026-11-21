@@ -138,9 +138,11 @@ class ImageRef {
     required this.tokens,
     this.sectionId,
     this.catalogLineBytes = 0,
+    this.catalogTokens = 0,
   }) : assert(id != '', 'У единицы обязан быть id'),
        assert(tokens >= 0, 'Токены не могут быть отрицательными'),
-       assert(catalogLineBytes >= 0);
+       assert(catalogLineBytes >= 0),
+       assert(catalogTokens >= 0);
 
   /// Стабильный id (`img:<файл>#<номер>`).
   final String id;
@@ -156,6 +158,12 @@ class ImageRef {
 
   /// Длина строки каталога `<images>`, байт UTF-8 (для `requestBytes`).
   final int catalogLineBytes;
+
+  /// Токены строки каталога `<images>` (для `D` в бюджете, §3.4).
+  ///
+  /// Каталог — часть пользовательского сообщения, поэтому его текст обязан
+  /// входить и в оценку токенов, а не только в байты.
+  final int catalogTokens;
 
   /// Имя документа-источника.
   String get documentId => image.fileName;

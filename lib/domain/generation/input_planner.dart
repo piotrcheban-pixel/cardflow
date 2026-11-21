@@ -51,9 +51,11 @@ final class InputImage {
     this.page,
     this.sectionId,
     this.catalogLineBytes = 0,
+    this.catalogTokens = 0,
   }) : assert(id != ''),
        assert(fileName != ''),
-       assert(catalogLineBytes >= 0);
+       assert(catalogLineBytes >= 0),
+       assert(catalogTokens >= 0);
 
   /// Стабильный id (`img1…` или `doc:<файл>#<n>`).
   final String id;
@@ -79,6 +81,12 @@ final class InputImage {
   /// занижался на подписи/контекст (ревью 7.18.1). Считается сборщиком плана
   /// тем же `imageCatalogLine`, что и реальный запрос.
   final int catalogLineBytes;
+
+  /// Токены строки каталога `<images>` (§3.4: каталог — часть `D`).
+  ///
+  /// Считается тем же оценщиком и той же строкой, что уходят в запрос,
+  /// поэтому бюджет входа не занижается подписями и окружающим текстом.
+  final int catalogTokens;
 }
 
 /// Раздел материала для Input Planner.
@@ -141,9 +149,11 @@ final class InputPart {
     this.images = const <InputImage>[],
     this.catalogImages = const <InputImage>[],
     this.contextOnlyText = '',
+    this.catalogTokens = 0,
   }) : assert(index >= 0),
        assert(tokens >= 0),
-       assert(bytes >= 0);
+       assert(bytes >= 0),
+       assert(catalogTokens >= 0);
 
   /// Номер части (с нуля).
   final int index;
@@ -173,6 +183,18 @@ final class InputPart {
   /// Перекрытие с предыдущей частью (`<context_only>`).
   final String contextOnlyText;
 
+  /// Токены каталога `<images>` этой части (§3.4: каталог входит в `D`).
+  ///
+  /// Считается по **всем** изображениям части — и отправленным частями, и
+  /// оставшимся только строкой каталога: текст уходит в запрос в обоих случаях.
+  final int catalogTokens;
+
+  /// Токены материалов части: текст + каталог + отправленные вложения.
+  int get totalMaterialTokens =>
+      tokens +
+      catalogTokens +
+      images.fold<int>(0, (int sum, InputImage image) => sum + image.tokens);
+
   /// Номер части для текста «часть k из n» (с 1).
   int get partNumber => index + 1;
 
@@ -200,6 +222,7 @@ final class InputPlan {
     this.contextTokens,
     this.materialBudgetTokens,
     this.inputTokenSource,
+    this.catalogTokens = 0,
   });
 
   /// Стратегия входа.
@@ -253,6 +276,9 @@ final class InputPlan {
   /// Показывается в «Подробнее» и диагностике; тело запроса сюда не попадает.
   final String? inputTokenSource;
 
+  /// Токены каталога `<images>` плана (`D` включает каталог, §3.4).
+  final int catalogTokens;
+
   /// Число частей материала.
   int get partCount => parts.length;
 
@@ -289,6 +315,7 @@ final class InputPlan {
     contextTokens: contextTokens,
     materialBudgetTokens: materialBudgetTokens ?? this.materialBudgetTokens,
     inputTokenSource: inputTokenSource,
+    catalogTokens: catalogTokens,
   );
 
   /// Копия с другой стратегией входа (перепланирование после overflow).
@@ -308,6 +335,7 @@ final class InputPlan {
     contextTokens: contextTokens,
     materialBudgetTokens: materialBudgetTokens,
     inputTokenSource: inputTokenSource,
+    catalogTokens: catalogTokens,
   );
 
   @override
@@ -366,6 +394,7 @@ final class _ImagePlacement {
     required this.statuses,
     required this.bytes,
     required this.tokens,
+    required this.catalogTokens,
     required this.payloadLimited,
   });
 
@@ -373,6 +402,7 @@ final class _ImagePlacement {
   final List<PlannedImage> statuses;
   final int bytes;
   final int tokens;
+  final int catalogTokens;
   final bool payloadLimited;
 }
 
@@ -571,7 +601,7 @@ final class InputPlanner {
     final RequestBudget budget = RequestBudget.compute(
       limits: limits,
       fixedTokens: fixedTokens,
-      materialTokens: textTokens + placement.tokens,
+      materialTokens: textTokens + placement.tokens + placement.catalogTokens,
       desiredOutputTokens: desiredOutputTokens,
       accuracy: accuracy,
       config: config,
@@ -590,6 +620,7 @@ final class InputPlanner {
           if (!placement.sent.any((InputImage sent) => sent.id == image.id))
             image,
       ]),
+      catalogTokens: placement.catalogTokens,
     );
     return InputPlan(
       strategy: InputStrategy.wholeDocument,
@@ -599,7 +630,7 @@ final class InputPlanner {
       maxTokens: budget.maxTokens,
       accuracy: accuracy,
       budget: budget,
-      materialTokens: textTokens + placement.tokens,
+      materialTokens: textTokens + placement.tokens + placement.catalogTokens,
       contextTokens: limits.contextTokens.value,
       warnings: List<PlanWarningCode>.unmodifiable(warnings),
       images: placement.statuses,
@@ -610,6 +641,7 @@ final class InputPlanner {
         marginRate: config.margin(exact: accuracy == InputAccuracy.exact),
       ),
       inputTokenSource: inputTokenSource,
+      catalogTokens: placement.catalogTokens,
     );
   }
 
@@ -763,6 +795,7 @@ final class InputPlanner {
               if (!placement.sent.any((InputImage sent) => sent.id == image.id))
                 image,
           ]),
+          catalogTokens: placement.catalogTokens,
         ),
       );
     }
@@ -813,7 +846,7 @@ final class InputPlanner {
       final RequestBudget partBudget = RequestBudget.compute(
         limits: limits,
         fixedTokens: fixedPart,
-        materialTokens: part.tokens + partImageTokens,
+        materialTokens: part.tokens + partImageTokens + part.catalogTokens,
         desiredOutputTokens: outputReserve,
         accuracy: accuracy,
         config: config,
@@ -823,6 +856,10 @@ final class InputPlanner {
         maxBudget = partBudget;
       }
     }
+    final int catalogTokens = parts.fold<int>(
+      0,
+      (int sum, InputPart part) => sum + part.catalogTokens,
+    );
     return InputPlan(
       strategy: InputStrategy.fragmented,
       parts: List<InputPart>.unmodifiable(parts),
@@ -833,13 +870,7 @@ final class InputPlanner {
       budget: maxBudget,
       materialTokens: parts.fold<int>(
         0,
-        (int sum, InputPart part) =>
-            sum +
-            part.tokens +
-            part.images.fold<int>(
-              0,
-              (int inner, InputImage image) => inner + image.tokens,
-            ),
+        (int sum, InputPart part) => sum + part.totalMaterialTokens,
       ),
       materialBudgetPerPart: materialBudget,
       outlineReserveTokens: outlineReserveTokens,
@@ -848,6 +879,7 @@ final class InputPlanner {
       contextTokens: contextTokens,
       materialBudgetTokens: materialBudget,
       inputTokenSource: inputTokenSource,
+      catalogTokens: catalogTokens,
     );
   }
 
@@ -908,6 +940,11 @@ final class InputPlanner {
     final int catalogBytes = images.fold<int>(
       0,
       (int sum, InputImage image) => sum + image.catalogLineBytes,
+    );
+    // §3.4: каталог входит и в `D` — токены строк, а не только их байты.
+    final int catalogTokens = images.fold<int>(
+      0,
+      (int sum, InputImage image) => sum + image.catalogTokens,
     );
     int bytes = textBytes + catalogBytes + config.jsonBodyOverheadBytes;
     int tokens = 0;
@@ -1008,6 +1045,7 @@ final class InputPlanner {
       statuses: List<PlannedImage>.unmodifiable(statuses),
       bytes: bytes,
       tokens: tokens,
+      catalogTokens: catalogTokens,
       payloadLimited: payloadLimited,
     );
   }

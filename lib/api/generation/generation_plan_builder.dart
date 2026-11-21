@@ -119,6 +119,7 @@ class GenerationPlanBuilder {
                   )
                   .tokens,
               catalogLineBytes: _catalogLineBytes(images[index], catalogIndex),
+              catalogTokens: _catalogLineTokens(images[index], catalogIndex),
             ),
           ),
         );
@@ -238,6 +239,10 @@ class GenerationPlanBuilder {
   static int _catalogLineBytes(DocumentImage image, int index) =>
       utf8.encode(_catalogLineBody(image, index)).length;
 
+  /// Токены строки каталога (§3.4: каталог входит в `D`).
+  int _catalogLineTokens(DocumentImage image, int index) =>
+      estimator.estimateText(_catalogLineBody(image, index));
+
   /// Тело строки каталога без обёртки `ImageRef`.
   static String _catalogLineBody(DocumentImage image, int index) =>
       imageCatalogLine(image.withId('$kDocumentImageIdPrefix$index'));
@@ -291,6 +296,7 @@ class GenerationPlanBuilder {
               )
               .tokens,
           catalogLineBytes: _catalogLineBytes(images[index], index + 1),
+          catalogTokens: _catalogLineTokens(images[index], index + 1),
         ),
     ];
     final List<SectionUnit> sections = <SectionUnit>[

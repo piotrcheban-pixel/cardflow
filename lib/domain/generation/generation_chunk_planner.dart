@@ -618,6 +618,7 @@ final class GenerationChunkPlanner {
                   page: image.image.page,
                   sectionId: section.id,
                   catalogLineBytes: image.catalogLineBytes,
+                  catalogTokens: image.catalogTokens,
                 ),
             ],
           ),
@@ -633,6 +634,7 @@ final class GenerationChunkPlanner {
           tokens: orphan.image.tokens,
           page: orphan.image.image.page,
           catalogLineBytes: orphan.image.catalogLineBytes,
+          catalogTokens: orphan.image.catalogTokens,
         ),
       );
     }
@@ -653,11 +655,15 @@ final class GenerationChunkPlanner {
     required int desired,
   }) {
     final int tokens = data.attachmentPageTokens;
+    final int catalogTokens = data.orphanImages.fold<int>(
+      0,
+      (int sum, InputImage image) => sum + image.catalogTokens,
+    );
     final int bytes = data.attachmentPageBytes;
     final RequestBudget budget = RequestBudget.compute(
       limits: limits,
       fixedTokens: overhead.fixedTokens,
-      materialTokens: tokens,
+      materialTokens: tokens + catalogTokens,
       desiredOutputTokens: desired,
       accuracy: InputAccuracy.estimated,
       config: config.planning,
@@ -674,6 +680,7 @@ final class GenerationChunkPlanner {
       tokens: 0,
       bytes: bytes + config.planning.jsonBodyOverheadBytes,
       images: List<InputImage>.unmodifiable(data.orphanImages),
+      catalogTokens: catalogTokens,
     );
     return InputPlan(
       strategy: whole ? InputStrategy.wholeDocument : InputStrategy.fragmented,
@@ -683,13 +690,14 @@ final class GenerationChunkPlanner {
       maxTokens: budget.maxTokens,
       accuracy: InputAccuracy.estimated,
       budget: budget,
-      materialTokens: tokens,
+      materialTokens: tokens + catalogTokens,
       contextTokens: limits.contextTokens.value,
       warnings: List<PlanWarningCode>.unmodifiable(<PlanWarningCode>[
         if (limits.contextTokens.isKnown == false)
           PlanWarningCode.contextUnconfirmed,
         if (budget.payloadExceeded) PlanWarningCode.payloadLimited,
       ]),
+      catalogTokens: catalogTokens,
     );
   }
 
@@ -1074,6 +1082,11 @@ final class GenerationChunkPlanner {
             (int inner, InputImage image) => inner + image.tokens,
           ),
     );
+    // §3.4: каталог `<images>` — часть `D`, поэтому входит в оценку входа.
+    final int catalogTokens = inputPlan.parts.fold<int>(
+      0,
+      (int sum, InputPart part) => sum + part.catalogTokens,
+    );
     final int requests = math.max(1, chunks.length);
     final int outputCap = planning.outputCapFor(limits);
     final int reserved;
@@ -1108,6 +1121,7 @@ final class GenerationChunkPlanner {
                   fixedTokens: overhead.fixedTokens + overhead.outlineTokens,
                   materialTokens:
                       part.tokens +
+                      part.catalogTokens +
                       part.images.fold<int>(
                         0,
                         (int inner, InputImage image) => inner + image.tokens,
@@ -1149,7 +1163,7 @@ final class GenerationChunkPlanner {
       schemaTokens: promptOnly
           ? overhead.schemaTokens * requests
           : overhead.schemaTokens,
-      catalogTokens: 0,
+      catalogTokens: catalogTokens,
       reservedOutputTokens: outputTotal,
       expectedOutputTokens: outputTotal,
       totalTokens: totalTokens,
@@ -1228,6 +1242,10 @@ final class GenerationChunkPlanner {
             (int inner, InputImage image) => inner + image.tokens,
           ),
     );
+    final int catalogTokens = inputPlan.parts.fold<int>(
+      0,
+      (int sum, InputPart part) => sum + part.catalogTokens,
+    );
     return BudgetTrace(
       formula: inputPlan.contextTokens == null
           ? GenerationBudget.formulaUnknownContext
@@ -1245,7 +1263,7 @@ final class GenerationChunkPlanner {
       systemPromptTokens: overhead.systemPromptTokens,
       schemaTokens: overhead.schemaTokens,
       wrapperTokens: overhead.wrapperTokens + overhead.taskTailTokens,
-      catalogTokens: 0,
+      catalogTokens: catalogTokens,
       imageTokens: imageTokens,
       safetyMarginTokens: inputPlan.budget.marginTokens,
       minWorkableInputTokens: 0,
