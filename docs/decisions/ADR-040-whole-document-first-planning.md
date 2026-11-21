@@ -84,6 +84,24 @@ inputTokens = ceil((P + D) × (1 + m))
   байты:      requestBytes ≤ maxRequestBytes           // отдельно от токенов
 ```
 
+**Уточнение 7.18.3 — состав входа не смешивается.** Бюджет собирается из трёх
+явно разных величин (`RequestBudget`, `NativeInputCount`):
+
+```
+nativeInputTokens   — ровно то, что вернул count_tokens (с мультимодальными
+                      частями: Anthropic image/document base64, Gemini inlineData)
+estimatedExtraTokens — то, чего провайдер не посчитал (Gemini responseSchema),
+                      оценка тем же оценщиком плана, помечена component'ом
+marginTokens         — запас: 3 % если нативно посчитано ВСЁ, иначе 10 %
+effectiveBudgetTokens = nativeInputTokens + estimatedExtraTokens + marginTokens
+```
+
+`accuracy = exact` только при `estimatedExtraTokens == 0`; «точный текст +
+оценённые изображения/схема» — `estimated`. В UI «Подробнее» число провайдера,
+добавка, резерв и плановый бюджет — отдельные строки; бюджет не выдаётся за
+результат `count_tokens` (§3.5.1). Если нативный подсчёт недоступен/упал —
+`nativeInputTokens = null`, бюджет строится оценкой `P + D` с запасом 10 %.
+
 `room` для whole-document: при `totalInputPlusOutput` — `context − inputTokens`;
 при `inputOnly` — `maxOutputTokens`; при неизвестной семантике — как у total
 (консервативно). `maxTokens = min(desiredOutput, room)`. Если
@@ -97,7 +115,12 @@ inputTokens = ceil((P + D) × (1 + m))
 
 1. Предварительная проверка всего запроса тем же сборщиком; при нативном
    подсчёте (Anthropic `count_tokens`, Gemini `countTokens`) — один вызов на
-   план, кэш по хэшу содержимого; `exact`/`estimated` хранится в плане.
+   план, кэш по хэшу содержимого (текст + дайджесты байтов частей + MIME +
+   подписи каталога); состав точности (`native`/`estimated`/`reserve`) хранится
+   в плане (7.18.3, §3). Мультимодальные части уходят в подсчёт в том же виде,
+   что в production: Anthropic — base64 `image`/`document`-блоки, Gemini —
+   `inlineData` внутри `generateContentRequest`; Gemini `responseSchema` в
+   подсчёт не отправляется и оценивается отдельно (L163).
 2. Сначала уменьшать резерв вывода, а не резать документ (формула выше).
 3. Fragmented: `R = min(maxOutput, tokensFor(batchCardsCeiling))` **не зависит
    от заказа**; `Dmax = floor((limit − R) / (1 + m)) − P_part`, где `limit` —
@@ -118,7 +141,12 @@ inputTokens = ceil((P + D) × (1 + m))
    `unsupportedModel`, `omittedBudget`, `omittedPayload` (существующие, новые не
    вводятся). Изображение не удаляется молча; при нехватке байтов это
    `omittedPayload` + предупреждение плана. При делении и восстановлении
-   изображения переходят вместе со своим разделом.
+   изображения переходят вместе со своим разделом. Поддержка изображений —
+   трёхзначная (7.18.3 §4): `supported`/`unsupported`/`unknown`; только
+   подтверждённое `unsupported` оставляет изображения в каталоге (документные)
+   или делает план невыполнимым (вложения пользователя). `unknown` отправляет
+   части и добавляет предупреждение `imagesVisionUnconfirmed` — отсутствие
+   подтверждённых данных не блокирует запуск.
 7. Ошибки парсинга/нечитаемые PDF/пропущенные страницы попадают в inventory и в
    предупреждения плана (существующие `omitted`/`ParserErrorCode`).
 

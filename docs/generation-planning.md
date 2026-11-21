@@ -71,11 +71,28 @@ Anthropic/Gemini (`request_token_counter.dart`) и передаётся в пл�
   `GenerationPlanningConfig.reasoningReserveTokens` (2048, допущение);
   карточки партии считаются от `max_tokens − резерв`. После ≥2 замеров
   калибровки резерв = 0 (факт `usage` уже содержит рассуждение).
-- **Точный подсчёт и изображения** (7.18.2): `count_tokens` считает текст
-  запроса (system + сообщение + схема); image-части уходят отдельными блоками,
-  поэтому их стоимость добавляется консервативной оценкой, а источник точности
-  помечается `count_tokens:<протокол>+image_estimate` — ноль вместо оценки не
-  подставляется.
+- **Точный подсчёт и изображения** (7.18.3): `RequestTokenCounter` получает
+  `attachments` в том же виде, что production: Anthropic — base64
+  `image`/`document`-блоки (`anthropicUserContent`), Gemini — `inlineData` в
+  `CountTokensRequest.generateContentRequest` (`geminiParts`). Повторная оценка
+  изображений не добавляется; кэш (`exactTokenCacheKey`) включает digest байтов,
+  MIME и подпись каталога.
+- **Состав бюджета** (7.18.3): `RequestBudget` хранит `nativeInputTokens`
+  (число `count_tokens`), `estimatedExtraTokens` + `estimatedComponents`
+  (например, `response_schema` Gemini, вхождение которого в `totalTokens` не
+  подтверждено), `marginTokens` (3 % — только если нативно посчитано всё, иначе
+  10 %) и `effectiveBudgetTokens`. `InputAccuracy.exact` — только при нулевой
+  добавке; смешанный результат — `estimated`, в «Подробнее» показывается
+  составом (число провайдера / добавка / резерв / бюджет).
+- **Неизвестный Vision** (7.18.3): `ModelLimits.imageInputSupport`
+  (`supported`/`unsupported`/`unknown`) — допущение приложения и отсутствие
+  данных не превращаются в `false`; `unknown` + изображения = предупреждение
+  `imagesVisionUnconfirmed` и отправка частей, подтверждённое `false` —
+  прежнее поведение (каталог/невыполнимый план).
+- **`max_request_bytes`** (7.18.3): входит в `ModelLimits.unknownFields`,
+  `ModelCapabilities.unknownFields` и блок «Неизвестные лимиты»; 32 МБ —
+  допущение приложения, предупреждение о фактическом HTTP payload — отдельное
+  (`assumedImageLimits` + проверка сериализованного тела).
 
 ## 4. Input Planner (ADR-040 §3)
 
@@ -156,7 +173,16 @@ Anthropic/Gemini (`request_token_counter.dart`) и передаётся в пл�
   политика для OpenAI-совместимого и Anthropic), `reasoning_reserve_test.dart`
   (резерв рассуждения и снятие калибровкой), `generation_exact_tokens_test.dart`
   (exact + изображения).
-- Ограничения: `journal/KNOWN_LIMITATIONS.md` L154–L161, L174–L178.
+- 7.18.3: `request_token_counter_multimodal_test.dart` (Anthropic image/document
+  base64, Gemini inlineData + `generateContentRequest`, несколько изображений,
+  ключ кэша по дайджесту/MIME/подписи), `token_breakdown_test.dart`
+  (native/estimated/reserve/budget, 3 %/10 %), `unknown_vision_and_limits_test.dart`
+  (три состояния Vision, `max_request_bytes`), обновлённые
+  `generation_exact_tokens_test.dart` (нет двойного учёта, кэш по байтам,
+  mixed Gemini, вложения без текста), `generation_plan_details_test.dart`
+  (состав бюджета, unknown Vision, неизвестные лимиты), `generation_screen_test.dart`
+  (запуск при неизвестном Vision и блок при подтверждённом false).
+- Ограничения: `journal/KNOWN_LIMITATIONS.md` L154–L163, L173–L185.
 
 
 ## 9. Характеристики моделей: что известно (7.18.1, 2026-11-21)

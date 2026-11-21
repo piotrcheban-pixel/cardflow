@@ -1,16 +1,78 @@
 # STATE — текущее состояние CardFlow
 
-**Дата:** 2026-11-21 · **Итерация:** `7.18.2` «Финальный аудит 7.18»
-(`journal/iteration-7.18/summary-7.18.2.md`) — **завершена локально, push/CI
-ниже**: каталог изображений в token accounting (§3.4), реальные байты HTTP и T5,
-полнота discovery (§3.3), настройки поддержки изображений (§3.10), резерв
-рассуждения, ворота §6. Предыдущие: `7.18.1`, `7.18` — исторические записи
-ниже. Схема БД и `schemaVersion` не менялись.
+**Дата:** 2026-11-21 · **Итерация:** `7.18.3` «Мультимодальный count_tokens и
+финальные исправления» (`journal/iteration-7.18/summary-7.18.3.md`) —
+**завершена локально, push/CI ниже**: изображения/PDF в нативном подсчёте
+(§2), раздельная семантика native/estimated/reserve/budget (§3), честный
+unknown Vision (§4), `max_request_bytes` в unknown (§5), ворота §6.
+Предыдущие: `7.18.2`, `7.18.1`, `7.18` — исторические записи ниже. Схема БД и
+`schemaVersion` не менялись.
 **Режим:** ИТЕРАЦИИ.
 
-**Следующий шаг:** итерация 7.18.2 закрыта; открытые ограничения —
-L154 (частично), L155, L158, L162–L172, L174–L178 (живые прогоны, точность
-подсчёта изображений, UI лимитов тела, калибровка reasoning-токенов).
+**Следующий шаг:** итерация 7.18.3 закрыта; открытые ограничения —
+L154 (частично), L155, L158, L162–L172, L177–L185 (живые прогоны, точность
+изображений/схемы, предпросмотр без exact, неизвестный `max_request_bytes`).
+
+## Итерация 7.18.3 — мультимодальный подсчёт и честный бюджет (2026-11-21)
+
+**Задача:** закрыть блокирующий дефект 7.18 — `count_tokens` не видел
+мультимодальный материал; развести число провайдера, оценку и резерв; не
+превращать неизвестный Vision в `false`; честно показывать неизвестный
+`max_request_bytes`. Без новой архитектуры.
+
+**Факты старта:** `git status --porcelain` → пусто; ветка `main`;
+`HEAD = origin/main = 8332df2`; baseline **2340 passed + 16 skipped**,
+`analyze` 0. Красная фаза `cac4586` — 16 assertion-level падений
+(`red-7.18.3.md`).
+
+**Найдено и исправлено (каждая — отдельным коммитом с регрессионным тестом):**
+1. F1 (high) — Gemini-конверт `generateContentRequest` без `model` в форме
+   `models/<id>`: endpoint отвечает 400, любой Gemini exact-подсчёт молча
+   деградировал к оценке `72d8e3e`;
+2. F2 (medium) — запрос только из вложений: `_countedUserContent` без строк
+   «Файл: <имя>» → native-число занижено `cf3a741`;
+3. F3 (medium) — предпросмотр и production получали разные аккаунты по
+   Vision (`copyWith` только при запуске) `72d8e3e`;
+4. F4 (medium) — `KNOWN_LIMITATIONS.md`: блок L173–L178 стоял **до** заголовка
+   и слипался с ним — структура исправлена, L174 снят, L163/L176 обновлены,
+   добавлены L179–L185.
+
+**Реализация (§2–§5):**
+- `RequestTokenCounter.count(..., attachments)`; Anthropic — base64
+  `image`/`document`-блоки, Gemini — `generateContentRequest` c
+  `model`/`systemInstruction`/`contents[].parts.inlineData`; тела собираются
+  теми же `anthropicUserContent`/`geminiParts`, что production. PDF —
+  document/inlineData `application/pdf`.
+- `exactTokenCacheKey` включает digest байтов, MIME, подпись части, версию
+  формы; изменённая картинка → новый ключ. `_countedImageTokens` удалён:
+  изображения входят в число провайдера.
+- `NativeInputCount` + `RequestBudget`: `nativeInputTokens`,
+  `estimatedExtraTokens`/`components`, `marginTokens`, `effectiveBudgetTokens`;
+  `exact` только при нулевой добавке (Gemini `responseSchema` — отдельная
+  оценка, mixed → `estimated`, запас 10 %). 3 %/10 % не менялись.
+- UI «Подробнее»: отдельные строки «Число провайдера», «Оценка добавки»,
+  «Резерв бюджета», «Плановый бюджет»; предупреждения плана локализованы.
+- `ModelLimits.imageInputSupport` (3 состояния), `ModelCapabilities.supportsVision`
+  стал `bool?` + `visionSource`; unknown → отправка + `imagesVisionUnconfirmed`,
+  подтверждённое false — прежнее поведение; `max_request_bytes` в
+  `unknownFields`/«Неизвестные лимиты».
+
+**Новые тесты (+25):** `request_token_counter_multimodal_test.dart` (5),
+`token_breakdown_test.dart` (5), `unknown_vision_and_limits_test.dart` (8),
+`generation_exact_tokens_test.dart` (10, из них +4 и 1 новый сценарий),
+`generation_plan_details_test.dart` (+3), `generation_screen_test.dart` (+1),
+`request_token_counter_test.dart`, `model_capabilities_test.dart` и
+интеграционные Vision-сценарии — обновлены под новый контракт.
+
+**Гейты (2026-11-21):** `gen-l10n` ок; `dart format` 550/0; `analyze` — No
+issues; полный набор **2365 passed + 16 skipped + 0 failed**; покрытие
+**92,1 % (19743/21437)**; `build windows --release` → `cardflow.exe` (66,2 с);
+Windows smoke — **All tests passed!** (11 с). Живых API-запросов нет.
+Подробно — `verify-7.18.3.md`, ревью — `review-7.18.3.md`, семантика
+провайдеров — `discovery-7.18.3.md`.
+
+**Push и CI:** `8332df2..<итоговый docs-коммит>` → CI run — см. строку ниже
+после прогона.
 
 ## Итерация 7.18.2 — финальный аудит 7.18 (2026-11-21)
 
