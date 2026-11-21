@@ -59,7 +59,12 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   Три независимых решения — `input_planner.dart`, `card_allocator.dart`,
   `output_batch_planner.dart`; фасад — `generation_chunk_planner.dart`; конвейер
   шлёт focus/part/already_created, обрабатывает исчерпание и калибрует
-  `tokensPerCard` (`generation.calibration` v1). Prompt-only строится той же
+  `tokensPerCard` (`generation.calibration` v1). **Заказ карточек не ограничен
+  бюджетом одного ответа (7.20, ADR-043):** мягкая ёмкость материала —
+  предпочтение распределения (`Σ planned == requested`), партии заполняются до
+  `cardsPerBatch` (`OutputBatchPlanner.batchCount/batchSizes`), нехватка
+  материала показывается отдельно (`PlanWarningCode.materialCapacityBelowRequested`),
+  технический предел — число партий (`maxChunks`). Prompt-only строится той же
   машинерией (7.18.1). Нативный `count_tokens` (Anthropic/Gemini) —
   `request_token_counter.dart` + `exact_token_cache.dart`: один подсчёт на план,
   ошибка → оценка, точность/источник в `InputPlan`. 413 или подтверждённый 400

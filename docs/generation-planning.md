@@ -113,18 +113,33 @@ Anthropic/Gemini (`request_token_counter.dart`) и передаётся в пл�
 `partCount`. Изменение заказа карточек не меняет разбиение входа — это
 проверяется тестом `planning_independence_test.dart`.
 
-## 5. Card Allocator (ADR-040 §3.3)
+## 5. Card Allocator (ADR-040 §3.3, 7.20)
 
 `SectionFeatures.of`: число слов, фактов, формул, определений, вопросов,
-изображений → плотность и вес. Ёмкость раздела — от токенов, плотности и
-веса; распределение — water-filling до ёмкости, недостижимый избыток
-распределяется largest remainder. Сумма `achievableCards` ≤ достижимого
-материала; заказ выше — `requestedAbovePlan`, а не «срез».
+изображений → плотность и вес. Ёмкость раздела — от слов, плотности и веса и
+**мягкая**: это оценка содержательной насыщенности материала.
 
-## 6. Output Batch Planner и сообщение (ADR-040 §7)
+- Заказ распределяется **целиком**: сначала water-filling до мягкой ёмкости,
+  затем остаток — по весам разделов (точная целочисленная раздача наибольших
+  остатков, `Σ planned == requestedCards`, ADR-043).
+- Оценка ёмкости материала (`estimatedCapacity`) и признак `materialLimited`
+  показываются **отдельно** — «материала хватает примерно на M карточек из N»
+  (`PlanWarningCode.materialCapacityBelowRequested`). К бюджету модели это
+  отношение не имеет.
+- `PlanWarningCode.requestedAbovePlan` остаётся только для невыполнимого плана:
+  в материалах нет ни одного содержательного раздела.
+- Тихая обрезка заказа запрещена; технический предел — число партий
+  (`maxChunks`), а не ёмкость материала.
 
-- Партии: `cardsPerBatch = min(batchCardsCeiling, cardsFor(maxTokens),
-  maxCardsPerRequest)`; `<= maxCardsPerRequest` всегда.
+## 6. Output Batch Planner и сообщение (ADR-040 §7, 7.20)
+
+- Партии: `cardsPerBatch = min(batchCardsCeiling, cardsFor(maxTokens −
+  reasoningReserve), maxCardsPerRequest)`; вместимость ограничивает **одну**
+  партию, не заказ.
+- `batchCount = ⌈total / cardsPerBatch⌉` (целочисленно, без переполнения);
+  распределение — заполнение до вместимости и остаток последней партии
+  (`OutputBatchPlanner.batchSizes`, ADR-043). Лишний запрос не создаётся, если
+  заказ помещается в уже существующие партии.
 - `focus` партии — разделы с положительной аллокацией, сгруппированные по
   порядку; разделы, попавшие в соседние партии, не дублируются (кроме
   перекрытия `sN` на границе).
@@ -182,7 +197,23 @@ Anthropic/Gemini (`request_token_counter.dart`) и передаётся в пл�
   mixed Gemini, вложения без текста), `generation_plan_details_test.dart`
   (состав бюджета, unknown Vision, неизвестные лимиты), `generation_screen_test.dart`
   (запуск при неизвестном Vision и блок при подтверждённом false).
-- Ограничения: `journal/KNOWN_LIMITATIONS.md` L154–L163, L173–L185.
+- 7.20 (ADR-043): `card_allocator_soft_capacity_test.dart` (мягкая ёмкость не
+  режет заказ: 40/32, 12/100, 20/200, свойства 1…500 и 10^6, «авто»),
+  `output_batching_7_20_test.dart` (40/16 → 3 партии [16,16,8], 100/12 → 9
+  партий [12×8,4], 200/20 → 10, 1/16 и 16/16 → 1 запрос, 17/16 → 2 партии,
+  свойство «сумма = заказ, ни одна не больше вместимости» на сетке заказов и
+  бюджетов, 512 партий = технический максимум), `card_order_plan_7_20_test.dart`
+  (wholeDocument и fragmented обслуживают партии, число партий не выводится из
+  числа частей, изменение `maxOutputTokens`/`reasoningReserveTokens`/
+  `batchCardsCeiling` меняет партии, но не сумму; `materialCapacityBelowRequested`
+  отдельно от `requestedAbovePlan`; `int.max` → `tooManyChunks` без зависания),
+  `card_order_batches_flow_7_20_test.dart` (production: 3 партии и 40 карточек,
+  предпросмотр == конвейер, `source_exhausted` останавливает очередь, сбой
+  партии не теряет предыдущее, recovery без дублей, fragmented), 
+  `order_batches_7_20_test.dart` (UI: «Запрошено: N карточек», «Подробнее» с
+  числом карточек/максимумом партии/распределением/ёмкостью материала,
+  предпросмотр показывает созданное количество и причину недобора).
+- Ограничения: `journal/KNOWN_LIMITATIONS.md` L154–L163, L173–L185, L194–L196.
 
 
 ## 9. Характеристики моделей: что известно (7.18.1, 2026-11-21)
