@@ -71,8 +71,11 @@ Windows smoke — **All tests passed!** (11 с). Живых API-запросов
 Подробно — `verify-7.18.3.md`, ревью — `review-7.18.3.md`, семантика
 провайдеров — `discovery-7.18.3.md`.
 
-**Push и CI:** `8332df2..<итоговый docs-коммит>` → CI run — см. строку ниже
-после прогона.
+**Push и CI:** `8332df2..1e32ee6` (6 коммитов итерации, включая red-фазу) →
+run [`44909643704`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/44909643704)
+(`1e32ee6`) — **9/9 job success** (`format + analyze`, `test` × 3 ОС,
+`build desktop` × 3, `build mobile` Android + iOS). Итоговый HEAD фиксируется
+строкой ниже после docs-коммита с этими результатами.
 
 ## Итерация 7.18.2 — финальный аудит 7.18 (2026-11-21)
 

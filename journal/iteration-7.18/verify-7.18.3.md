@@ -31,6 +31,7 @@ fvm flutter test --no-pub --exclude-tags golden
 | `fvm dart run tool/coverage_check.dart --min=80` | **92.1 % (19743/21437)**, порог пройден |
 | `fvm flutter build windows --release --no-pub` | `√ Built build\x64\runner\Release\cardflow.exe` (66,2 с) |
 | `fvm flutter test integration_test/session_smoke_windows_test.dart -d windows --no-pub` | **All tests passed!** (11 с) |
+| CI GitHub Actions (push `8332df2..1e32ee6`) | run [`44909643704`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/44909643704) — **9/9 job success** (`format + analyze`, `test` × 3 ОС, `build desktop` × 3, `build mobile` Android + iOS) |
 
 Логи: `full-final-7.18.3.log`, `build-windows-7.18.3.log`, `smoke-7.18.3.log`,
 `full-7.18.3-a.log` (первый прогон полного набора после зелёной фазы, без
