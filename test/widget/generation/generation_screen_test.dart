@@ -706,18 +706,64 @@ void main() {
     await tester.pumpAndSettle();
   });
 
-  testWidgets('картинка: статус «Изображение», модель без Vision — ошибка', (
+  testWidgets(
+    'картинка: статус «Изображение», подтверждённо без Vision — ошибка',
+    (tester) async {
+      // 7.18.3 §4: блокирует только **подтверждённое** отсутствие поддержки.
+      accountsStore.accounts = ProviderAccounts.empty.withAccount(
+        testProviderAccount(modelId: 'deepseek-chat')
+            .copyWith(supportsVision: false, visionConfigured: true),
+      );
+      await pumpScreen(tester);
+      await attachImageFile(tester);
+      final l10n = l10nOf(tester);
+      expect(find.text(l10n.generationFileImage), findsOneWidget);
+
+      await tester.tap(find.byKey(const ValueKey<String>('generation-start')));
+      await tester.pumpAndSettle();
+      expect(runner.runCalls, 0);
+      expect(find.text(l10n.generationErrorVisionUnsupported), findsOneWidget);
+    },
+  );
+
+  testWidgets('неизвестный Vision: запуск не блокируется, есть предупреждение', (
     tester,
   ) async {
+    // Legacy-модель каталога без подтверждённой даты: «нет изображений» —
+    // допущение приложения, а не подтверждённый факт. Запуск разрешён,
+    // изображение уходит, в плане — предупреждение о неизвестной совместимости.
     await pumpScreen(tester);
     await attachImageFile(tester);
     final l10n = l10nOf(tester);
-    expect(find.text(l10n.generationFileImage), findsOneWidget);
+    runner.result = resultWith(<GeneratedCard>[
+      const GeneratedCard(
+        front: 'Вопрос',
+        back: 'Ответ',
+        cardType: CardType.basic,
+      ),
+    ]);
+
+    expect(
+      find.text(l10n.generationPlanVisionUnconfirmed),
+      findsOneWidget,
+      reason: 'неизвестность показывается предупреждением, а не запретом',
+    );
+    expect(
+      find.text(l10n.generationErrorVisionUnsupported),
+      findsNothing,
+      reason: 'нельзя утверждать, что модель не поддерживает изображения',
+    );
 
     await tester.tap(find.byKey(const ValueKey<String>('generation-start')));
     await tester.pumpAndSettle();
-    expect(runner.runCalls, 0);
-    expect(find.text(l10n.generationErrorVisionUnsupported), findsOneWidget);
+
+    expect(runner.runCalls, 1);
+    expect(runner.lastRequest!.images, hasLength(1));
+    expect(
+      runner.lastRequest!.account.supportsVision,
+      isTrue,
+      reason: 'попытка отправки разрешена при неизвестной поддержке',
+    );
   });
 
   testWidgets('картинка + модель Vision: уходит в GenerationRunRequest', (
@@ -748,6 +794,12 @@ void main() {
   });
 
   testWidgets('PDF-скан: статус, без Vision — понятная ошибка', (tester) async {
+    // Подтверждённое отсутствие Vision (пользовательская настройка) — запуск
+    // блокируется; неизвестность обрабатывается отдельным тестом.
+    accountsStore.accounts = ProviderAccounts.empty.withAccount(
+      testProviderAccount(modelId: 'deepseek-chat')
+          .copyWith(supportsVision: false, visionConfigured: true),
+    );
     gateway.picked = <PickedDocument>[
       const PickedDocument(
         path: '/tmp/скан.pdf',
@@ -868,7 +920,8 @@ void main() {
       tester,
     ) async {
       accountsStore.accounts = ProviderAccounts.empty.withAccount(
-        testProviderAccount(modelId: 'deepseek-chat'),
+        testProviderAccount(modelId: 'deepseek-chat')
+            .copyWith(supportsVision: false, visionConfigured: true),
       );
       keyStore.keys['deepseek'] = 'sk-deepseek';
       await attachScan(tester);
@@ -887,6 +940,10 @@ void main() {
     testWidgets('рендер не удался — fallback на PDF и понятная ошибка', (
       tester,
     ) async {
+      accountsStore.accounts = ProviderAccounts.empty.withAccount(
+        testProviderAccount(modelId: 'deepseek-chat')
+            .copyWith(supportsVision: false, visionConfigured: true),
+      );
       gateway.picked = <PickedDocument>[
         const PickedDocument(
           path: '/tmp/битый.pdf',

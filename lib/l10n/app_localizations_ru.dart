@@ -1107,6 +1107,18 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String get generationPlanVisionUnconfirmed =>
+      'Совместимость изображений с моделью не подтверждена: изображения будут отправлены, но провайдер может их отклонить.';
+
+  @override
+  String get generationPlanContextUnconfirmed =>
+      'Окно контекста модели не подтверждено — используются консервативные допущения приложения.';
+
+  @override
+  String get generationPlanPayloadLimited =>
+      'Запрос ограничен допустимым размером тела: часть вложений не отправлена.';
+
+  @override
   String generationPlanInvalid(String reason) {
     return 'План невыполним: $reason';
   }
@@ -1148,13 +1160,54 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String generationPlanDetailsInputExact(int tokens) {
-    return 'точно: $tokens токенов (нативный подсчёт провайдера)';
+    return 'нативный подсчёт: $tokens токенов';
   }
 
   @override
   String generationPlanDetailsInputEstimated(int tokens) {
-    return 'приблизительно: $tokens токенов';
+    return 'приблизительно: $tokens токенов (оценка)';
   }
+
+  @override
+  String generationPlanDetailsInputMixed(int native, int estimated) {
+    return 'смешанный: нативно $native, оценка $estimated';
+  }
+
+  @override
+  String generationPlanDetailsInputEstimatedExtra(
+    int tokens,
+    String components,
+  ) {
+    return 'оценено дополнительно: $tokens токенов ($components)';
+  }
+
+  @override
+  String generationPlanDetailsInputMargin(int tokens) {
+    return 'резерв безопасности: $tokens токенов';
+  }
+
+  @override
+  String generationPlanDetailsInputBudget(int tokens) {
+    return 'плановый бюджет: $tokens токенов';
+  }
+
+  @override
+  String get generationPlanDetailsNativeCountLabel => 'Число провайдера';
+
+  @override
+  String get generationPlanDetailsEstimatedExtraLabel => 'Оценка добавки';
+
+  @override
+  String get generationPlanDetailsMarginLabel => 'Резерв бюджета';
+
+  @override
+  String get generationPlanDetailsBudgetLabel => 'Плановый бюджет';
+
+  @override
+  String get generationPlanDetailsComponentResponseSchema => 'схема ответа';
+
+  @override
+  String get generationPlanDetailsComponentImages => 'изображения';
 
   @override
   String get generationPlanDetailsStrategy => 'Стратегия';

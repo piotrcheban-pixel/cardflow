@@ -1797,6 +1797,24 @@ abstract class AppLocalizations {
   /// **'Модель не принимает изображения: {count} изображений будут только в каталоге, без передачи модели.'**
   String generationPlanNoVisionImages(int count);
 
+  /// Неизвестная поддержка изображений — не блокирует запуск (7.18.3 §4).
+  ///
+  /// In ru, this message translates to:
+  /// **'Совместимость изображений с моделью не подтверждена: изображения будут отправлены, но провайдер может их отклонить.'**
+  String get generationPlanVisionUnconfirmed;
+
+  /// Предупреждение о неподтверждённом окне контекста.
+  ///
+  /// In ru, this message translates to:
+  /// **'Окно контекста модели не подтверждено — используются консервативные допущения приложения.'**
+  String get generationPlanContextUnconfirmed;
+
+  /// Предупреждение об ограничении размера тела запроса.
+  ///
+  /// In ru, this message translates to:
+  /// **'Запрос ограничен допустимым размером тела: часть вложений не отправлена.'**
+  String get generationPlanPayloadLimited;
+
   /// Причина невыполнимости плана до запуска (TASK 03).
   ///
   /// In ru, this message translates to:
@@ -1863,17 +1881,80 @@ abstract class AppLocalizations {
   /// **'Вход'**
   String get generationPlanDetailsInputTokens;
 
-  /// Точный подсчёт входа.
+  /// Число провайдера (count_tokens) отдельно от бюджета.
   ///
   /// In ru, this message translates to:
-  /// **'точно: {tokens} токенов (нативный подсчёт провайдера)'**
+  /// **'нативный подсчёт: {tokens} токенов'**
   String generationPlanDetailsInputExact(int tokens);
 
   /// Приблизительная оценка входа.
   ///
   /// In ru, this message translates to:
-  /// **'приблизительно: {tokens} токенов'**
+  /// **'приблизительно: {tokens} токенов (оценка)'**
   String generationPlanDetailsInputEstimated(int tokens);
+
+  /// Смешанный подсчёт: часть нативно, часть оценкой.
+  ///
+  /// In ru, this message translates to:
+  /// **'смешанный: нативно {native}, оценка {estimated}'**
+  String generationPlanDetailsInputMixed(int native, int estimated);
+
+  /// Дополнительно оценённые токены с составом.
+  ///
+  /// In ru, this message translates to:
+  /// **'оценено дополнительно: {tokens} токенов ({components})'**
+  String generationPlanDetailsInputEstimatedExtra(
+    int tokens,
+    String components,
+  );
+
+  /// Резерв бюджета (запас точности).
+  ///
+  /// In ru, this message translates to:
+  /// **'резерв безопасности: {tokens} токенов'**
+  String generationPlanDetailsInputMargin(int tokens);
+
+  /// Итоговый плановый бюджет входа.
+  ///
+  /// In ru, this message translates to:
+  /// **'плановый бюджет: {tokens} токенов'**
+  String generationPlanDetailsInputBudget(int tokens);
+
+  /// Подпись строки числа нативного подсчёта.
+  ///
+  /// In ru, this message translates to:
+  /// **'Число провайдера'**
+  String get generationPlanDetailsNativeCountLabel;
+
+  /// Подпись строки дополнительно оценённых токенов.
+  ///
+  /// In ru, this message translates to:
+  /// **'Оценка добавки'**
+  String get generationPlanDetailsEstimatedExtraLabel;
+
+  /// Подпись строки резерва безопасности.
+  ///
+  /// In ru, this message translates to:
+  /// **'Резерв бюджета'**
+  String get generationPlanDetailsMarginLabel;
+
+  /// Подпись строки планового бюджета входа.
+  ///
+  /// In ru, this message translates to:
+  /// **'Плановый бюджет'**
+  String get generationPlanDetailsBudgetLabel;
+
+  /// Компонент оценки: схема ответа.
+  ///
+  /// In ru, this message translates to:
+  /// **'схема ответа'**
+  String get generationPlanDetailsComponentResponseSchema;
+
+  /// Компонент оценки: изображения.
+  ///
+  /// In ru, this message translates to:
+  /// **'изображения'**
+  String get generationPlanDetailsComponentImages;
 
   /// Строка стратегии входа.
   ///

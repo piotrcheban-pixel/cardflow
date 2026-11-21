@@ -24,6 +24,7 @@ import 'package:cardflow/domain/generation/model_capability_cache.dart';
 import 'package:cardflow/domain/generation/model_limits.dart';
 import 'package:cardflow/domain/generation/token_calibration.dart';
 import 'package:cardflow/ui/generation/generation_plan_details.dart';
+import 'package:cardflow/ui/generation/plan_warning_message.dart';
 import 'package:cardflow/api/parsers/file_parsing_service.dart';
 import 'package:cardflow/api/parsers/pdf_page_classifier.dart';
 import 'package:cardflow/api/parsers/pdf_scan_pages.dart';
@@ -213,6 +214,32 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
           ? account.supportsVision
           : (model?.supportsVision ?? account.supportsVision),
     );
+  }
+
+  /// Трёхзначная поддержка изображений для выбранной модели (7.18.3 §4).
+  ///
+  /// Источники по приоритету: явная настройка пользователя, разрешённые
+  /// лимиты (кэш discovery/каталог), затем пресет. Неизвестность остаётся
+  /// неизвестностью и запуск не блокирует.
+  ImageInputSupport _visionSupport(ProviderAccount account) {
+    if (account.visionConfigured) {
+      return account.supportsVision
+          ? ImageInputSupport.supported
+          : ImageInputSupport.unsupported;
+    }
+    final ModelLimits? limits = _planLimitsFor(account);
+    if (limits != null) return limits.imageInputSupport;
+    final ProviderPresetModel? model = account.preset?.modelById(
+      account.modelId,
+    );
+    if (model == null) return ImageInputSupport.unknown;
+    return model.sourceRef != null && model.verifiedOn != null
+        ? (model.supportsVision
+              ? ImageInputSupport.supported
+              : ImageInputSupport.unsupported)
+        : (model.supportsVision
+              ? ImageInputSupport.supported
+              : ImageInputSupport.unknown);
   }
 
   /// Провайдеры не настроены.
@@ -666,7 +693,9 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
     final bool hasPdfPages = attachments.any(
       (GenerationAttachment attachment) => attachment.isPdfPage,
     );
-    if (attachments.isNotEmpty && !account.supportsVision) {
+    final ImageInputSupport visionSupport = _visionSupport(account);
+    if (attachments.isNotEmpty &&
+        visionSupport == ImageInputSupport.unsupported) {
       final String message;
       if (hasPdfPages) {
         message = l10n.generationErrorPdfScanVisionRequired;
@@ -700,7 +729,12 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
       documents: documents,
       images: attachments,
       documentImages: _scanDocumentImages,
-      account: account,
+      // §4: неизвестная поддержка изображений не блокирует запуск — части
+      // уходят провайдеру, который сам подтвердит или отклонит модальность.
+      account:
+          attachments.isNotEmpty && visionSupport == ImageInputSupport.unknown
+          ? account.copyWith(supportsVision: true)
+          : account,
       deckName: deckName,
       wishes: wishes.isEmpty ? null : wishes,
       requestedCards: requestedCards,
@@ -1430,32 +1464,7 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
     GenerationPlan plan,
     ThemeData theme,
   ) {
-    final List<String> messages = <String>[
-      if (plan.validity.warnings.contains(PlanWarningCode.unknownCapabilities))
-        l10n.generationPlanUnknownCapabilities,
-      if (plan.validity.warnings.contains(PlanWarningCode.assumedImageLimits))
-        l10n.generationPlanAssumedImageLimits,
-      if (plan.validity.warnings.contains(
-            PlanWarningCode.imagesWithoutVision,
-          ) &&
-          plan.imagesUnsupported > 0)
-        l10n.generationPlanNoVisionImages(plan.imagesUnsupported),
-      if (plan.validity.warnings.contains(PlanWarningCode.catalogOnlyImages) &&
-          plan.imagesCatalogOnly > 0)
-        l10n.generationPlanCatalogOnlyImages(plan.imagesCatalogOnly),
-      if (plan.validity.warnings.contains(PlanWarningCode.omittedUnits))
-        l10n.generationPlanOmittedUnits(plan.omitted.length),
-      if (plan.validity.warnings.contains(PlanWarningCode.requestedAbovePlan))
-        l10n.generationPlanRequestedAboveAchievable(
-          plan.requestedCards,
-          plan.achievableCards,
-        ),
-      if (plan.validity.warnings.contains(PlanWarningCode.cardsAboveRequested))
-        l10n.generationPlanAchievableAboveRequested(
-          plan.requestedCards,
-          plan.achievableCards,
-        ),
-    ];
+    final List<String> messages = planWarningMessages(l10n, plan);
     return <Widget>[
       for (var index = 0; index < messages.length; index++)
         Padding(

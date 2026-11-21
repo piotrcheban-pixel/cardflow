@@ -1382,6 +1382,18 @@
       }
     }
   },
+  "generationPlanVisionUnconfirmed": "Совместимость изображений с моделью не подтверждена: изображения будут отправлены, но провайдер может их отклонить.",
+  "@generationPlanVisionUnconfirmed": {
+    "description": "Неизвестная поддержка изображений — не блокирует запуск (7.18.3 §4)."
+  },
+  "generationPlanContextUnconfirmed": "Окно контекста модели не подтверждено — используются консервативные допущения приложения.",
+  "@generationPlanContextUnconfirmed": {
+    "description": "Предупреждение о неподтверждённом окне контекста."
+  },
+  "generationPlanPayloadLimited": "Запрос ограничен допустимым размером тела: часть вложений не отправлена.",
+  "@generationPlanPayloadLimited": {
+    "description": "Предупреждение об ограничении размера тела запроса."
+  },
   "generationPlanInvalid": "План невыполним: {reason}",
   "@generationPlanInvalid": {
     "description": "Причина невыполнимости плана до запуска (TASK 03).",
@@ -1421,10 +1433,30 @@
   "@generationPlanDetailsContext": {"description": "Строка контекста модели в деталях плана."},
   "generationPlanDetailsInputTokens": "Вход",
   "@generationPlanDetailsInputTokens": {"description": "Строка оценки входных токенов."},
-  "generationPlanDetailsInputExact": "точно: {tokens} токенов (нативный подсчёт провайдера)",
-  "@generationPlanDetailsInputExact": {"description": "Точный подсчёт входа.", "placeholders": {"tokens": {"type": "int"}}},
-  "generationPlanDetailsInputEstimated": "приблизительно: {tokens} токенов",
+  "generationPlanDetailsInputExact": "нативный подсчёт: {tokens} токенов",
+  "@generationPlanDetailsInputExact": {"description": "Число провайдера (count_tokens) отдельно от бюджета.", "placeholders": {"tokens": {"type": "int"}}},
+  "generationPlanDetailsInputEstimated": "приблизительно: {tokens} токенов (оценка)",
   "@generationPlanDetailsInputEstimated": {"description": "Приблизительная оценка входа.", "placeholders": {"tokens": {"type": "int"}}},
+  "generationPlanDetailsInputMixed": "смешанный: нативно {native}, оценка {estimated}",
+  "@generationPlanDetailsInputMixed": {"description": "Смешанный подсчёт: часть нативно, часть оценкой.", "placeholders": {"native": {"type": "int"}, "estimated": {"type": "int"}}},
+  "generationPlanDetailsInputEstimatedExtra": "оценено дополнительно: {tokens} токенов ({components})",
+  "@generationPlanDetailsInputEstimatedExtra": {"description": "Дополнительно оценённые токены с составом.", "placeholders": {"tokens": {"type": "int"}, "components": {"type": "String"}}},
+  "generationPlanDetailsInputMargin": "резерв безопасности: {tokens} токенов",
+  "@generationPlanDetailsInputMargin": {"description": "Резерв бюджета (запас точности).", "placeholders": {"tokens": {"type": "int"}}},
+  "generationPlanDetailsInputBudget": "плановый бюджет: {tokens} токенов",
+  "@generationPlanDetailsInputBudget": {"description": "Итоговый плановый бюджет входа.", "placeholders": {"tokens": {"type": "int"}}},
+  "generationPlanDetailsNativeCountLabel": "Число провайдера",
+  "@generationPlanDetailsNativeCountLabel": {"description": "Подпись строки числа нативного подсчёта."},
+  "generationPlanDetailsEstimatedExtraLabel": "Оценка добавки",
+  "@generationPlanDetailsEstimatedExtraLabel": {"description": "Подпись строки дополнительно оценённых токенов."},
+  "generationPlanDetailsMarginLabel": "Резерв бюджета",
+  "@generationPlanDetailsMarginLabel": {"description": "Подпись строки резерва безопасности."},
+  "generationPlanDetailsBudgetLabel": "Плановый бюджет",
+  "@generationPlanDetailsBudgetLabel": {"description": "Подпись строки планового бюджета входа."},
+  "generationPlanDetailsComponentResponseSchema": "схема ответа",
+  "@generationPlanDetailsComponentResponseSchema": {"description": "Компонент оценки: схема ответа."},
+  "generationPlanDetailsComponentImages": "изображения",
+  "@generationPlanDetailsComponentImages": {"description": "Компонент оценки: изображения."},
   "generationPlanDetailsStrategy": "Стратегия",
   "@generationPlanDetailsStrategy": {"description": "Строка стратегии входа."},
   "generationPlanDetailsStrategyWhole": "весь документ в одном запросе",

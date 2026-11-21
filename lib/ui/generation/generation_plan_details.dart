@@ -14,6 +14,7 @@ import 'package:cardflow/domain/generation/generation_request_budget.dart';
 import 'package:cardflow/domain/generation/input_planner.dart';
 import 'package:cardflow/domain/generation/model_limits.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
+import 'package:cardflow/ui/generation/plan_warning_message.dart';
 import 'package:cardflow/ui/settings/provider_labels.dart';
 import 'package:cardflow/ui/theme/app_tokens.dart';
 
@@ -67,6 +68,35 @@ class GenerationPlanDetails extends StatelessWidget {
           label: l10n.generationPlanDetailsInputTokens,
           value: _inputLine(l10n),
         ),
+        // §3: число провайдера, оценка и резерв — отдельные строки. Плановый
+        // бюджет не выдаётся за результат нативного подсчёта.
+        if (_nativeInputTokens case final int native)
+          _DetailRow(
+            id: 'plan-detail-input-native',
+            label: l10n.generationPlanDetailsNativeCountLabel,
+            value: l10n.generationPlanDetailsInputExact(native),
+          ),
+        if (_estimatedExtraTokens > 0)
+          _DetailRow(
+            id: 'plan-detail-input-extra',
+            label: l10n.generationPlanDetailsEstimatedExtraLabel,
+            value: l10n.generationPlanDetailsInputEstimatedExtra(
+              _estimatedExtraTokens,
+              _componentsLabel(l10n),
+            ),
+          ),
+        if (_nativeInputTokens != null) ...<Widget>[
+          _DetailRow(
+            id: 'plan-detail-input-margin',
+            label: l10n.generationPlanDetailsMarginLabel,
+            value: l10n.generationPlanDetailsInputMargin(_marginTokens),
+          ),
+          _DetailRow(
+            id: 'plan-detail-input-budget',
+            label: l10n.generationPlanDetailsBudgetLabel,
+            value: l10n.generationPlanDetailsInputBudget(_budgetTokens),
+          ),
+        ],
         _DetailRow(
           id: 'plan-detail-strategy',
           label: l10n.generationPlanDetailsStrategy,
@@ -138,9 +168,7 @@ class GenerationPlanDetails extends StatelessWidget {
           _DetailRow(
             id: 'plan-detail-warnings',
             label: l10n.generationPlanDetailsWarningsLabel,
-            value: plan.validity.warnings
-                .map((PlanWarningCode code) => code.name)
-                .join(', '),
+            value: planWarningMessages(l10n, plan).join('; '),
             emphasized: true,
           ),
         const SizedBox(height: AppSpacing.xxs),
@@ -154,13 +182,45 @@ class GenerationPlanDetails extends StatelessWidget {
   }
 
   String _inputLine(AppLocalizations l10n) {
-    final int tokens = plan.plannedInputTokens ?? plan.estimate.totalTokens;
-    final bool exact = plan.inputPlan?.accuracy == InputAccuracy.exact;
-    if (exact) {
-      return l10n.generationPlanDetailsInputExact(tokens);
+    final InputPlan? inputPlan = plan.inputPlan;
+    final int? native = inputPlan?.nativeInputTokens;
+    if (native != null) {
+      final int estimated = inputPlan!.estimatedExtraTokens;
+      if (estimated > 0) {
+        return l10n.generationPlanDetailsInputMixed(native, estimated);
+      }
+      return l10n.generationPlanDetailsInputExact(native);
     }
+    final int tokens =
+        inputPlan?.inputTokens ??
+        plan.plannedInputTokens ??
+        plan.estimate.totalTokens;
     return l10n.generationPlanDetailsInputEstimated(tokens);
   }
+
+  InputPlan? get _inputPlan => plan.inputPlan;
+
+  int? get _nativeInputTokens => _inputPlan?.nativeInputTokens;
+
+  int get _estimatedExtraTokens => _inputPlan?.estimatedExtraTokens ?? 0;
+
+  int get _marginTokens => _inputPlan?.marginTokens ?? 0;
+
+  int get _budgetTokens =>
+      _inputPlan?.effectiveBudgetTokens ??
+      plan.plannedInputTokens ??
+      plan.estimate.totalTokens;
+
+  String _componentsLabel(AppLocalizations l10n) => <String>[
+    for (final String component
+        in _inputPlan?.estimatedComponents ?? <String>[])
+      switch (component) {
+        NativeInputCount.schemaComponent =>
+          l10n.generationPlanDetailsComponentResponseSchema,
+        'images' => l10n.generationPlanDetailsComponentImages,
+        _ => component,
+      },
+  ].join(', ');
 
   String _strategy(AppLocalizations l10n) {
     return switch (plan.inputStrategy) {
