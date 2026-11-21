@@ -47,6 +47,7 @@ import 'package:cardflow/domain/generation/generation_run.dart';
 import 'package:cardflow/domain/generation/image_query.dart';
 import 'package:cardflow/domain/generation/model_capabilities.dart';
 import 'package:cardflow/domain/generation/model_capability_cache.dart';
+import 'package:cardflow/domain/generation/output_batch_planner.dart';
 import 'package:cardflow/domain/generation/provider_account.dart';
 import 'package:cardflow/domain/generation/provider_protocol.dart';
 import 'package:cardflow/domain/generation/token_calibration.dart';
@@ -1897,6 +1898,10 @@ class GenerationPipeline implements GenerationRunner {
   }
 
   /// Дополнительная партия для недостачи (одна, ADR-040 §8).
+  ///
+  /// 7.20: лимит дополнительной партии не больше вместимости одного ответа —
+  /// иначе перераспределение просило бы больше, чем помещается в `max_tokens`
+  /// партии (и упиралось бы в `truncated`/недобор).
   PlannedChunk? _topUpChunk(
     GenerationPlan plan,
     Set<String> exhausted,
@@ -1905,6 +1910,14 @@ class GenerationPipeline implements GenerationRunner {
     int? maxLimit,
   }) {
     if (shortfall < 1) return null;
+    final int perBatch =
+        OutputBatchPlanner(config: planBuilder.planner.config.planning)
+            .cardsPerBatch(
+              plan.inputPlan?.maxTokens ?? 0,
+              maxCardsPerRequest: maxLimit,
+              reasoningReserveTokens: plan.reasoningReserveTokens,
+            );
+    final int limit = shortfall < perBatch ? shortfall : perBatch;
     for (final InputPart part in plan.parts) {
       final List<String> allowed = <String>[
         for (final InputSection section in part.sections)
@@ -1921,7 +1934,6 @@ class GenerationPipeline implements GenerationRunner {
         }
       }
       if (base == null) continue;
-      final int limit = shortfall.clamp(1, maxLimit ?? 40).clamp(1, 40).toInt();
       return base.copyWith(
         index: index,
         limit: limit,
