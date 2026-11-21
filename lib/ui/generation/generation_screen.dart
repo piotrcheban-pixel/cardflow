@@ -199,20 +199,23 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
   }
 
   /// Аккаунт для запроса: выбранная модель с контекстом из каталога.
+  ///
+  /// Vision: явная настройка пользователя главнее каталога; при **неизвестной**
+  /// поддержке запрос всё равно разрешает попытку (7.18.3 §4) — так
+  /// предпросмотр и production строят одинаковый план и отправляют те же части.
   ProviderAccount? get _requestAccount {
     final ProviderAccount? account = _account;
     if (account == null) return null;
     final String modelId = (_modelId ?? account.modelId).trim();
     final ProviderPresetModel? model = account.preset?.modelById(modelId);
+    final bool knownVision = account.visionConfigured
+        ? account.supportsVision
+        : (model?.supportsVision ?? account.supportsVision);
     return account.copyWith(
       modelId: modelId,
       contextTokens: model?.contextTokens ?? account.contextTokens,
-      // §3.10/ADR-039: явная настройка Vision пользователя имеет приоритет над
-      // каталогом. Каталог подставляет значение только если пользователь его
-      // не задавал (`visionConfigured == false`).
-      supportsVision: account.visionConfigured
-          ? account.supportsVision
-          : (model?.supportsVision ?? account.supportsVision),
+      supportsVision:
+          knownVision || _visionSupport(account) == ImageInputSupport.unknown,
     );
   }
 
@@ -729,12 +732,9 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
       documents: documents,
       images: attachments,
       documentImages: _scanDocumentImages,
-      // §4: неизвестная поддержка изображений не блокирует запуск — части
-      // уходят провайдеру, который сам подтвердит или отклонит модальность.
-      account:
-          attachments.isNotEmpty && visionSupport == ImageInputSupport.unknown
-          ? account.copyWith(supportsVision: true)
-          : account,
+      // §4: `_requestAccount` уже разрешает попытку при неизвестной поддержке
+      // изображений, поэтому предпросмотр и production получают один аккаунт.
+      account: account,
       deckName: deckName,
       wishes: wishes.isEmpty ? null : wishes,
       requestedCards: requestedCards,

@@ -216,6 +216,11 @@ void main() {
     expect(body.containsKey('systemInstruction'), isFalse);
     expect(body.containsKey('generationConfig'), isFalse);
     expect(body.containsKey('contents'), isFalse);
+    expect(
+      envelope['model'],
+      'models/gemini-test',
+      reason: 'обёртка требует model в форме models/<id>',
+    );
     final Map<String, Object?> system =
         envelope['systemInstruction']! as Map<String, Object?>;
     expect(

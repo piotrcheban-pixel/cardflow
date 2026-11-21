@@ -219,6 +219,10 @@ class GeminiRequestTokenCounter extends _HttpCounter
         // оценкой (§7), а не выдаёт её за нативную.
         body: <String, Object?>{
           'generateContentRequest': <String, Object?>{
+            // Обёртка требует `model` в форме `models/<id>` (path-модель
+            // главнее); без него endpoint отвечает 400 и подсчёт деградирует
+            // к оценке без причины.
+            'model': 'models/$model',
             'systemInstruction': <String, Object?>{
               'parts': <Object?>[
                 <String, Object?>{'text': systemPrompt},

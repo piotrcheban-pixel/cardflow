@@ -489,8 +489,9 @@ class GenerationPipeline implements GenerationRunner {
       // чем production-запрос.
       final List<String> names = <String>[];
       for (final GenerationAttachment attachment in chunk.attachments) {
-        if (!names.contains(attachment.fileName))
+        if (!names.contains(attachment.fileName)) {
           names.add(attachment.fileName);
+        }
       }
       materials = names.map((String name) => 'Файл: $name').join('\n');
     }
