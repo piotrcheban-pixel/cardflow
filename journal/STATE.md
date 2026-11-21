@@ -12,10 +12,13 @@
 («авто» без разделов = одна партия, эвристичность `estimatedCapacity`,
 сравнение заполненных и сбалансированных партий на живых прогонах).
 
-**Push и CI 7.20:** `0d3c35b..` (audit `1e7a327`, red `…`, feat allocator
-`208ffb7`, feat партии/предупреждения `1f1df1a`, fix top-up `56dc93c`, docs
-`389f358`, fix ревью `6bf7889`, docs журнала) → финальный run фиксируется
-строкой ниже после push.
+**Push и CI 7.20:** `0d3c35b..02bf726` (audit `1e7a327`, red `4952867`, feat
+allocator `208ffb7`, feat партии/предупреждения `1f1df1a`, fix top-up `56dc93c`,
+docs `389f358`, fix ревью `6bf7889`, журнал `02bf726`) → run
+[`44936474031`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/44936474031)
+(`02bf726`) — **9/9 job success** (`format + analyze`, `test` × 3 ОС,
+`build desktop` × 3, `build mobile` Android + iOS). Журнальный коммит с этими
+результатами — отдельный push.
 
 ## Итерация 7.20 — заказ и партии (2026-11-21)
 

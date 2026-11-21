@@ -128,3 +128,13 @@ R5 (fallback `_topUpChunk`). Подробно — `review.md`.
 L194–L196 (`journal/KNOWN_LIMITATIONS.md`): «авто» без разделов = одна партия;
 `estimatedCapacity` — эвристика; заполнение партий до вместимости живыми
 прогонами не сравнивалось со сбалансированным.
+
+## 8. Push и CI
+
+`0d3c35b..02bf726` (audit `1e7a327`, red `4952867`, allocator `208ffb7`,
+партии/предупреждения `1f1df1a`, top-up `56dc93c`, docs `389f358`, ревью
+`6bf7889`, журнал `02bf726`) → run
+[`44936474031`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/44936474031)
+(`02bf726`) — **9/9 job success** (`format + analyze`, `test` × 3 ОС,
+`build desktop` × 3, `build mobile` Android + iOS). Журнальный коммит с этими
+результатами — отдельный push.

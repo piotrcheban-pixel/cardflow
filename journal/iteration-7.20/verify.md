@@ -39,13 +39,15 @@ fvm flutter analyze --no-pub
 fvm flutter test --no-pub --exclude-tags golden
 ```
 
-→ **2534 passed + 16 skipped + 0 failed** (лог: `full-run-1.txt`).
+→ **2532 passed + 16 skipped + 0 failed** (лог: `full-run-1.txt`; прогон до
+fix-коммита ревью).
 
 ```
 fvm flutter test --no-pub --coverage --exclude-tags golden
 ```
 
-→ **2534 passed + 16 skipped** (лог: `coverage-run.txt`).
+→ **2534 passed + 16 skipped + 0 failed** (лог: `coverage-run.txt`; финальный
+снимок с тестами ревью R1/R2 — +2 теста).
 
 ## 5. Покрытие рукописного кода
 
@@ -78,5 +80,9 @@ fvm flutter test integration_test/session_smoke_windows_test.dart -d windows
 
 ## 9. Финальный CI
 
-После push — один прогон GitHub Actions; результат фиксируется в
-`summary.md`/`STATE.md` (цель — 9/9 job success).
+Push `0d3c35b..02bf726` → run
+[`44936474031`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/44936474031)
+(`02bf726`) — **9/9 job success**: `format + analyze (ubuntu)`,
+`test` × 3 ОС (ubuntu/windows/macos), `build desktop` × 3 (windows/linux/macos),
+`build mobile` Android + iOS. Живых API-запросов в CI нет (live-тесты под
+тегом `live` и opt-in).
