@@ -128,7 +128,7 @@ cardflow-deck.zip
 | `card_type` | `basic` \| `basic_reversed` \| `cloze` | да | Иное → `invalidCards`. |
 | `tags` | string[] | да | До 3 (лишние не отбрасываются молча при импорте — валидируется до 3; нарушение → `invalidCards`). |
 | `media` | array объектов `{id, card_id, path, mime_type}` | да | Пустой массив, если медиа нет. |
-| `question_media_ids` | array id из `media` | нет | Изображения лицевой стороны (7.19). Если поля нет — все `media` считаются изображениями вопроса (совместимость со старыми архивами). |
+| `question_media_ids` | array id из `media` | нет | Изображения лицевой стороны (7.19). Если полей нет — безопасная политика 7.19: у occlusion/cloze изображения считаются стороной вопроса, у остальных — стороной ответа. |
 | `answer_media_ids` | array id из `media` | нет | Изображения обратной стороны (7.19); видны только после переворота. |
 | `latex` | string \| null | да | |
 | `occlusion` | string \| null | да | JSON масок (сырая строка SPEC A5). |

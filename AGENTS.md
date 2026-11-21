@@ -70,8 +70,9 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   `lib/ui/generation/generation_plan_details.dart`; ручные характеристики —
   `ProviderAccount.withConfiguredCapabilities` + `model_capability_section.dart`.
   Документация — `docs/generation-planning.md`; сверка discovery 2026-11-21 —
-  ADR-039 §6a. Схема A8.4 содержит `image_id` (изображение из приложенных файлов) и
-  `image_query`; проверка схемы — поштучно (`CardResponseSchema.splitValid`): одна плохая
+  ADR-039 §6a. Схема A8.4 v9 содержит независимые изображения сторон —
+  `question_image_ids`/`answer_image_ids` и необязательный `image` со `side`
+  (ADR-042); `image_id`/`image_query` — только legacy v5–v8; проверка схемы — поштучно (`CardResponseSchema.splitValid`): одна плохая
   карточка не отбрасывает фрагмент. Контентные правила и мягкие проверки качества A8.4/A8.1 —
   `card_content_validator.dart` (пометки `CardIssueCode`, карточка не отбрасывается);
   LaTeX-экранирование ответа восстанавливается до/после разбора JSON
@@ -128,8 +129,9 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   `wishesForbidImages` отключает поиск, неудачный поиск ставит `CardIssueCode.imageNotFound`
   и предупреждение в предпросмотре, а не теряется. Debug-диагностика ADR-024 пишет сырой ответ модели
   в консоль `flutter run` (`generationDiagnosticsProvider`, sink `debugPrint` в debug).
-  Байты `GeneratedCard.image` пишутся в `MediaStore` + `media` только при импорте
-  (`DriftGenerationCardStore`). `card_type: "occlusion"` — wire-формат ответа модели: в БД/экспорте
+  Байты `GeneratedCard.questionImages`/`answerImages` пишутся в `MediaStore` + `media`
+  только при импорте (`DriftGenerationCardStore`); `cards.media_json` v2 хранит стороны
+  (`{"version":2,"question":[…],"answer":[…]}`), `schemaVersion` не менялся (ADR-042). `card_type: "occlusion"` — wire-формат ответа модели: в БД/экспорте
   `basic` + `occlusion_json` + media (SPEC A5); без найденной картинки — `basic` +
   `CardIssueCode.occlusionImageMissing`, с картинкой — базовая маска
   `defaultOcclusionDocumentJson()`. Basic-карточка с media показывает иллюстрацию в
@@ -492,8 +494,8 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   Цепочка `ImageSearchService` + `ImageProvider` (Wikimedia Commons → Wikipedia → Openverse →
   Pixabay/Pexels по ключу): таймаут провайдера 6 с, бюджет карточки 20 с, фильтры JPEG/PNG/WebP,
   короткая сторона ≥ 400 px, пропорции ≤ 3:1, кэш, дедуп URL, ретрай 429/5xx, ≤ 4 загрузки.
-  Заглушки детерминированы от хэша содержимого (8 палитр), метаданные атрибуции — в
-  `<путь>.meta.json` (схема БД не менялась), «Найти картинку заново» + фоновый ретрай.
+  Метаданные атрибуции — в `<путь>.meta.json` (схема БД не менялась), «Найти картинку
+  заново» для настоящих изображений; фоновый ретрай и заглушки удалены в 7.19 (ADR-041).
   UI: `CardImageView` 16:9/4:3, fade-in, скелетон, полноэкранный зум с атрибуцией; карточки
   появляются до догрузки картинок (`GenerationProgress.cards`). Гейты:
   `fvm flutter test --no-pub --coverage --exclude-tags golden` → **1660 passed + 8 skipped**;

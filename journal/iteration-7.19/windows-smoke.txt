@@ -1,0 +1,55 @@
+Resolving dependencies...
+Downloading packages...
+  android_file_picker 2.1.5 (2.2.0 available)
+  archive 4.6.0 (4.7.1 available)
+  built_collection 5.1.2 (6.0.0 available)
+  code_assets 1.2.1 (2.2.0 available)
+  cross_file 0.3.5+5 (0.4.0 available)
+  csv_plus 1.13.0 (1.13.1 available)
+  cupertino_ui 1.1.6 (1.1.7 available)
+  dbus 0.7.15 (0.8.1 available)
+  desktop_drop 0.8.4 (0.9.2 available)
+  equatable 2.1.0 (3.0.0 available)
+  excel_plus 2.29.2 (2.29.3 available)
+  file_picker 13.3.3 (13.4.0 available)
+  file_picker_platform_interface 4.2.0 (4.3.0 available)
+  flutter_svg 2.3.3 (2.5.0 available)
+  image 4.12.0 (4.13.1 available)
+  jni 1.1.2 (1.2.1 available)
+  jni_flutter 1.0.4+1 (1.1.0 available)
+  material_3_expressive 1.2.0 (1.2.3 available)
+  material_color_utilities 0.13.0 (0.13.1 available)
+  material_ui 1.11.0 (1.11.1 available)
+  native_toolchain_c 0.19.2 (0.19.6 available)
+  objective_c 9.5.0 (9.6.4 available)
+  pdfium_dart 0.4.1 (0.4.4 available)
+  pdfium_flutter 0.4.1 (0.4.4 available)
+  pdfrx 2.12.0 (3.1.0 available)
+  pdfrx_engine 0.9.1 (0.9.6 available)
+  petitparser 7.0.2 (7.1.0 available)
+  test_api 0.7.12 (0.7.15 available)
+  url_launcher_android 6.3.33 (6.3.35 available)
+  vector_graphics 1.2.7 (1.3.1 available)
+  vector_graphics_compiler 1.3.5 (1.3.6 available)
+  vector_math 2.4.0 (2.4.4 available)
+  xml 7.0.1 (7.1.0 available)
+Got dependencies!
+33 packages have newer versions incompatible with dependency constraints.
+Try `flutter pub outdated` for more information.
+00:00 +0: loading C:/Users/piotr/OneDrive/Desktop/CardFlow/integration_test/session_smoke_windows_test.dart
+Building Windows application...                                    29,7s
+√ Built build\windows\x64\runner\Debug\cardflow.exe
+00:00 +0: Windows 7.12: картинка Basic без масок, лимит, генерация с картинками
+Генерация: count_tokens: источник=estimate, ошибка=unsupported
+Генерация: план: стратегия=promptOnly, частей=1, партий=1, заказ=0, достижимо=7, калибровка=нет
+Генерация: ответ модели: {"cards":[{"front":"Что это?","back":"Московский Кремль.","hint":null,"tags":["история"],"card_type":"basic","source_excerpt":null,"source_file":null,"image_id":null,"image":{"query":"Moscow Kremlin photo","fallback_query":"Moscow Kremlin","kind":"photo"}},{"front":"В каком году основан Кремль?","back":"В 1156 году.","hint":null,"tags":["история"],"card_type":"basic","source_excerpt":null,"source_file":null,"image_id":null,"image":{"query":"Kremlin tower architecture photo","fallback_query":"Kremlin tower","kind":"photo"}}]}
+Генерация: картинка по запросу "moscow kremlin": wikimedia: скачано 2110 Б, png, 800x450
+Генерация: картинка по запросу "kremlin tower architecture": wikimedia: нет подходящей картинки среди 1 кандидатов
+Генерация: картинка по запросу "kremlin tower architecture": wikipedia: нет подходящей картинки среди 0 кандидатов
+Генерация: картинка по запросу "kremlin tower architecture": openverse: нет подходящей картинки среди 0 кандидатов
+Генерация: картинка по запросу "kremlin tower": wikimedia: нет подходящей картинки среди 1 кандидатов
+Генерация: картинка по запросу "kremlin tower": wikipedia: нет подходящей картинки среди 0 кандидатов
+Генерация: картинка по запросу "kremlin tower": openverse: нет подходящей картинки среди 0 кандидатов
+Генерация: калибровка токенов: TokenCalibrationReport(samples: 1, facts: 0/0, withoutUsage: 1, failed: 0, inputRatio: n/a)
+00:11 +1: (tearDownAll)
+00:11 +1: All tests passed!

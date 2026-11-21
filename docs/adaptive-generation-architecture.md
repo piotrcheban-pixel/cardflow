@@ -133,10 +133,11 @@ GenerationPipeline.run                           (lib/api/generation/generation_
         дедуп: contentHashOf(front, back) (+ обратный для basic_reversed) :454-460, :807
         progress(receiving, cards-снимок)                                :461-469
         для каждой новой карточки: _withCardImage                       :470-490, :571
-           1) image_id → DocumentImage фрагмента → байты (provider='file')
+           1) question_image_ids/answer_image_ids → DocumentImage фрагмента
+              → байты (provider='file'), строго своя сторона (7.19)
            2) иначе image.query / image.fallback_query → CardImageFinder
               (бюджет 90 с суммарного поиска, кэш запроса, дедуп URL)
-           3) иначе PlaceholderImageGenerator | ничего + CardIssueCode
+           3) иначе ничего + CardIssueCode.imageNotFound (заглушек нет, ADR-041)
         _saveProgress(job running, processed, cards, tokens)             :491
 10. статус done|partial|error|cancelled, error_code, сохранение job      :499-528
 11. GenerationRunResult{cards, failures, tokensUsed, estimatedTokens,
@@ -171,7 +172,7 @@ GenerationPipeline.run                           (lib/api/generation/generation_
 | 13 | JSON/схема | текст | `cards_json_extractor.dart`, `card_response_schema.dart` | карточки + `rejectedCards` | `invalidResponse` (`json_parse`, `schema_invalid`) |
 | 14 | Контент-правила | карточки | `card_content_validator.dart` | `GeneratedCard[]` + `issues` | пометки качества, карточка не отбрасывается |
 | 15 | Биллинг-факт | `usage` | адаптеры (`TokenUsage`) | `tokensUsed` | при отсутствии — 0 |
-| 16 | Иллюстрации | `image_id`/`image` | `generation_pipeline.dart:571-692`, `lib/api/images/` | `GeneratedCardImage?` | `imageNotFound`, `occlusionImageMissing` |
+| 16 | Иллюстрации | `question_image_ids`/`answer_image_ids`/`image.side` (v9) | `generation_pipeline.dart`, `lib/api/images/` | `GeneratedCardImage?` | `imageNotFound`, `occlusionImageMissing` |
 | 17 | Журнал | прогресс | `drift_generation_job_repository.dart` | `generation_jobs` | `unexpected` |
 | 18 | Импорт | карточки | `drift_generation_card_store.dart` | `cards`, `media`, `result_deck_id` | транзакция, дедуп |
 
@@ -185,7 +186,7 @@ GenerationPipeline.run                           (lib/api/generation/generation_
 (`lib/ui/state/app_providers.dart:448-457`) →
 `GenerationPipeline(caller: cardGenerationServiceProvider, jobRepository:
 generationJobRepositoryProvider, cardStore: generationCardStoreProvider, imageFinder:
-cardImageFinderProvider, placeholderGenerator: …)`.
+cardImageFinderProvider)` — без генератора заглушек (ADR-041).
 
 `CardGenerationService` (`app_providers.dart:367-374`) получает `generationAdapters`
 (`:321-327`), `apiKeyStoreProvider`, `generationHttpClientProvider` (`:358-364`) →

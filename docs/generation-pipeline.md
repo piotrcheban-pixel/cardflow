@@ -27,7 +27,8 @@ ADR-011/012/013; адаптивное планирование — `docs/adaptiv
   → CardGenerationService (ключ → Vision/PDF → адаптер → HTTP → схема A8.4 →
       контент-правила; оценка собранного запроса тем же оценщиком)
       → GenerationDiagnostics (debug): тело ошибки провайдера, сырой ответ модели
-      → image_query/image_id → ImageSearchService/файл → GeneratedCard.image
+      → question_image_ids/answer_image_ids → файл фрагмента; image.side →
+        ImageSearchService (настоящая картинка; заглушек нет, ADR-041/042)
       → TokenCalibrationSample (план vs запрос vs usage)
   → восстановление: truncated → лимит → резерв вывода → дробление;
       context overflow/413 → GenerationPlanSplitter по единицам;
@@ -133,7 +134,7 @@ inputBudget = окно ? окно − reserved − fixed − safety
 - Иерархия дробления: раздел → абзац → предложение → строка → руна;
   жёсткое деление не рвёт суррогатную пару; жёсткий предел —
   `inputBudget`/`maxRequestBytes`.
-- Изображения — единицы содержимого: сохраняют `image_id`, привязку к
+- Изображения — единицы содержимого: сохраняют id каталога, привязку к
   разделу/странице; не вошедшие в image-части остаются в каталоге
   (`catalogOnly`), всё, что не поместилось, — в `plan.omitted` с причиной.
   `plan.images` хранит статус каждого изображения: `sentToModel`, `catalogOnly`,
