@@ -2,6 +2,8 @@
 /// разбор ответа, без сети и UI.
 library;
 
+import 'dart:convert';
+
 import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/generation/generation_provider.dart';
 import 'package:cardflow/domain/generation/generation_result.dart';
@@ -24,6 +26,14 @@ class ProviderRequest {
   /// JSON-тело запроса.
   final Map<String, Object?> body;
 }
+
+/// Фактические байты тела запроса: UTF-8 сериализованного JSON (§3.4).
+///
+/// Это единственная корректная мера «размера запроса»: адаптер добавляет
+/// системный промпт, JSON-схему ответа, ключи протокола и экранирование,
+/// поэтому оценка «текст + base64» всегда занижена.
+int serializedRequestBytes(ProviderRequest request) =>
+    utf8.encode(jsonEncode(request.body)).length;
 
 /// Ответ провайдера после проверки причины остановки.
 class ProviderRawResponse {

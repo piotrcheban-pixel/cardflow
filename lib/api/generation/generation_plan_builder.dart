@@ -176,6 +176,16 @@ class GenerationPlanBuilder {
           ),
           outlineTokens: estimator.estimateText(_outlineOf(documents)),
           taskTailTokens: estimator.estimateText(_taskTailTemplate),
+          fixedBytes: _fixedBytes(
+            systemPrompt: systemPrompt,
+            responseSchema: responseSchema,
+            envelope: buildGenerationUserContent(
+              materialsText: '',
+              wishes: wishes,
+              limit: 999,
+              imagesCatalog: '',
+            ),
+          ),
         );
     return planner.plan(
       inventory: inventory,
@@ -220,6 +230,16 @@ class GenerationPlanBuilder {
               imagesCatalog: '',
             ),
           ),
+          fixedBytes: _fixedBytes(
+            systemPrompt: systemPrompt,
+            responseSchema: responseSchema,
+            envelope: buildGenerationUserContent(
+              materialsText: '',
+              wishes: null,
+              limit: 999,
+              imagesCatalog: '',
+            ),
+          ),
         );
     return planner.plan(
       inventory: ContentInventory.empty,
@@ -238,6 +258,20 @@ class GenerationPlanBuilder {
   /// Длина строки каталога для изображения (совпадает с `_catalogLine`).
   static int _catalogLineBytes(DocumentImage image, int index) =>
       utf8.encode(_catalogLineBody(image, index)).length;
+
+  /// Байты неподвижной обвязки запроса: промпт + JSON-схема + обёртка.
+  ///
+  /// Именно эти байты уходят в сериализованный payload наряду с материалами и
+  /// base64, поэтому `requestBytes` плана без них занижался (дефект аудита
+  /// 7.18.2: оценка 81 КБ против реальных 110 КБ).
+  static int _fixedBytes({
+    required String systemPrompt,
+    required Map<String, Object?> responseSchema,
+    required String envelope,
+  }) =>
+      utf8.encode(systemPrompt).length +
+      utf8.encode(jsonEncode(responseSchema)).length +
+      utf8.encode(envelope).length;
 
   /// Токены строки каталога (§3.4: каталог входит в `D`).
   int _catalogLineTokens(DocumentImage image, int index) =>

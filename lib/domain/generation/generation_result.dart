@@ -55,6 +55,7 @@ class GenerationResult {
     this.sentDocumentImageIds = const <String>[],
     this.skippedDocumentImageIds = const <String>[],
     this.sourceExhausted = false,
+    this.requestBytes,
   });
 
   /// Провайдер ответа.
@@ -95,6 +96,12 @@ class GenerationResult {
 
   /// Модель сообщила, что материал focus исчерпан (`source_exhausted`, v8).
   final bool sourceExhausted;
+
+  /// Фактический размер сериализованного тела запроса, байт (§3.4).
+  ///
+  /// Это **измерение** готового payload после адаптера (UTF-8 JSON), а не
+  /// оценка плана: по нему проверяется `maxRequestBytes`.
+  final int? requestBytes;
 
   @override
   String toString() =>

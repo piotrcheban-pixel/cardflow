@@ -106,6 +106,9 @@ class CardGenerationService implements GenerationCaller {
   /// Debug-диагностика ответа модели (ADR-024, итерация 7.10).
   final GenerationDiagnostics diagnostics;
 
+  /// Фактические байты последнего отправленного тела (measurement, §3.4).
+  int? _lastRequestBytes;
+
   /// Оценщик собранного запроса (ленивая сборка, если не инжектирован).
   GenerationRequestEstimator get _requestEstimator =>
       requestEstimator ??
@@ -225,6 +228,7 @@ class CardGenerationService implements GenerationCaller {
       maxOutputTokens: maxOutputTokens,
       tolerantFallback: tolerantFallback,
       cancelToken: cancelToken,
+      limits: limits,
     );
 
     // Debug-диагностика (ADR-024): сырой ответ — чтобы видеть поля вроде
@@ -269,6 +273,7 @@ class CardGenerationService implements GenerationCaller {
       sentDocumentImageIds: parts.sentIds,
       skippedDocumentImageIds: parts.skippedIds,
       sourceExhausted: sourceExhausted,
+      requestBytes: _lastRequestBytes,
     );
   }
 
@@ -293,6 +298,7 @@ class CardGenerationService implements GenerationCaller {
     required int maxOutputTokens,
     required bool tolerantFallback,
     required CancelToken? cancelToken,
+    required GenerationRequestLimits limits,
   }) async {
     final List<({bool strictSchema, bool sendMaxTokens})> attempts =
         <({bool strictSchema, bool sendMaxTokens})>[
@@ -314,6 +320,7 @@ class CardGenerationService implements GenerationCaller {
           strictSchema: attempt.strictSchema,
           sendMaxTokens: attempt.sendMaxTokens,
           cancelToken: cancelToken,
+          limits: limits,
         );
       } on GenerationException catch (error) {
         lastError = error;
@@ -337,6 +344,7 @@ class CardGenerationService implements GenerationCaller {
     required bool strictSchema,
     required bool sendMaxTokens,
     required CancelToken? cancelToken,
+    required GenerationRequestLimits limits,
   }) async {
     final providerRequest = adapter.buildRequest(
       apiKey: apiKey,
@@ -349,11 +357,30 @@ class CardGenerationService implements GenerationCaller {
       sendMaxTokens: sendMaxTokens,
       images: images,
     );
+    _ensurePayloadFits(providerRequest, limits);
     final rawJson = await httpClient.postJson(
       providerRequest,
       cancelToken: cancelToken,
     );
     return adapter.parseResponse(rawJson);
+  }
+
+  /// Проверяет **фактический** размер сериализованного тела (T5, §3.4).
+  ///
+  /// `requestBytes` плана — оценка; адаптер добавляет обвязку протокола
+  /// (`response_format`, JSON-ключи, экранирование), поэтому лимит проверяется
+  /// по готовому payload. Превышение — явная ошибка `payloadTooLarge`: запрос
+  /// с изображениями не уходит молча с потерянной частью.
+  void _ensurePayloadFits(ProviderRequest request, GenerationRequestLimits limits) {
+    final int bytes = serializedRequestBytes(request);
+    _lastRequestBytes = bytes;
+    final int limit = limits.maxRequestBytes;
+    if (bytes <= limit) return;
+    throw GenerationException(
+      GenerationErrorCode.payloadTooLarge,
+      details: 'Тело запроса $bytes байт больше лимита $limit байт',
+      failureReason: GenerationFailureReason.payloadTooLarge,
+    );
   }
 
   /// Изображения документов как image-parts запроса (ADR-037, TASK 03).

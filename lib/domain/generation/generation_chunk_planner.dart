@@ -108,6 +108,7 @@ final class GenerationOverheadTokens {
     this.wrapperTokens = 0,
     this.outlineTokens = 0,
     this.taskTailTokens = 0,
+    this.fixedBytes = 0,
   });
 
   /// Пустая обвязка.
@@ -127,6 +128,14 @@ final class GenerationOverheadTokens {
 
   /// Хвост `<task>` (part/focus/cards).
   final int taskTailTokens;
+
+  /// Байты неподвижной обвязки запроса: системный промпт, JSON-схема ответа,
+  /// обёртка сообщения (`<materials>`/`<images>`/`<wishes>`/`<task>`).
+  ///
+  /// Считается сборщиком плана по реальным строкам и входит в `requestBytes`:
+  /// без него оценка тела была ниже сериализованного payload на десятки КБ, и
+  /// лимит `maxRequestBytes` мог быть превышен на реальном запросе.
+  final int fixedBytes;
 
   /// Суммарная служебная часть `P`.
   int get fixedTokens =>
@@ -222,6 +231,7 @@ final class GenerationChunkPlanner {
           overhead.fixedTokens + promptTokens + continuationReserve;
       promptBodyBytes =
           promptBytes +
+          overhead.fixedBytes +
           planning.jsonBodyOverheadBytes +
           (continuationReserve > 0 ? kPromptOnlyContinuationReserveBytes : 0);
       inputPlan = InputPlanner(config: planning).plan(
@@ -281,6 +291,7 @@ final class GenerationChunkPlanner {
         sections: data.sections,
         limits: limits,
         fixedTokens: overhead.fixedTokens,
+        fixedBytes: overhead.fixedBytes,
         desiredOutputTokens: desired,
         accuracy: exactInputTokens == null
             ? InputAccuracy.estimated
@@ -427,6 +438,7 @@ final class GenerationChunkPlanner {
               partCount: inputPlan.partCount,
               data: data,
               config: config,
+              fixedBytes: overhead.fixedBytes,
             ),
           );
         }
@@ -494,6 +506,7 @@ final class GenerationChunkPlanner {
                       firstBatchOfPart: true,
                     ),
               config: config,
+              fixedBytes: overhead.fixedBytes,
               batchImages: batchImages,
               catalogImages: catalogImages,
             ),
@@ -667,7 +680,7 @@ final class GenerationChunkPlanner {
       desiredOutputTokens: desired,
       accuracy: InputAccuracy.estimated,
       config: config.planning,
-      requestBytes: bytes + config.planning.jsonBodyOverheadBytes,
+      requestBytes: bytes + overhead.fixedBytes + config.planning.jsonBodyOverheadBytes,
     );
     final bool whole =
         !budget.contextExceeded &&
@@ -678,7 +691,7 @@ final class GenerationChunkPlanner {
       sections: const <InputSection>[],
       materialsText: '',
       tokens: 0,
-      bytes: bytes + config.planning.jsonBodyOverheadBytes,
+      bytes: bytes + overhead.fixedBytes + config.planning.jsonBodyOverheadBytes,
       images: List<InputImage>.unmodifiable(data.orphanImages),
       catalogTokens: catalogTokens,
     );
@@ -762,6 +775,7 @@ final class GenerationChunkPlanner {
     required GenerationChunkPlannerConfig config,
     required List<InputImage> batchImages,
     required List<InputImage> catalogImages,
+    int fixedBytes = 0,
   }) {
     final RenderedMaterials rendered = renderInputMaterials(part.sections);
     final List<UnitSpan> units = <UnitSpan>[];
@@ -814,6 +828,7 @@ final class GenerationChunkPlanner {
         utf8.encode(rendered.text).length +
         catalogBytes +
         _base64Bytes(batchImages) +
+        fixedBytes +
         config.jsonBodyOverheadBytes;
     final bool hasText = rendered.text.trim().isNotEmpty;
     final bool hasParts = imageParts.isNotEmpty || attachments.isNotEmpty;
@@ -855,6 +870,7 @@ final class GenerationChunkPlanner {
     required int partCount,
     required _InventoryData data,
     required GenerationChunkPlannerConfig config,
+    int fixedBytes = 0,
   }) {
     final List<GenerationAttachment> attachments = data.allAttachmentPages;
     final bool first = batch.index == 0;
@@ -869,7 +885,8 @@ final class GenerationChunkPlanner {
       units: const <UnitSpan>[],
       textTokens: 0,
       imageTokens: data.attachmentPageTokens,
-      bodyBytes: data.attachmentPageBytes + config.jsonBodyOverheadBytes,
+      bodyBytes:
+          data.attachmentPageBytes + fixedBytes + config.jsonBodyOverheadBytes,
       limit: batch.limit,
       materialsText: '',
       partIndex: 0,

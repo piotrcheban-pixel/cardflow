@@ -429,6 +429,7 @@ final class InputPlanner {
     int? exactInputTokens,
     int promptOnlyRequestBytes = 0,
     String? inputTokenSource,
+    int fixedBytes = 0,
   }) {
     final double marginRate = config.margin(
       exact: accuracy == InputAccuracy.exact,
@@ -535,6 +536,7 @@ final class InputPlanner {
         sections: sections,
         limits: limits,
         fixedTokens: fixedTokens,
+        fixedBytes: fixedBytes,
         desiredOutputTokens: desiredOutputTokens,
         accuracy: wholeAccuracy,
         allImages: allImages,
@@ -552,6 +554,7 @@ final class InputPlanner {
       sections: sections,
       limits: limits,
       fixedTokens: fixedTokens,
+      fixedBytes: fixedBytes,
       desiredOutputTokens: desiredOutputTokens,
       accuracy: InputAccuracy.estimated,
       allImages: allImages,
@@ -575,6 +578,7 @@ final class InputPlanner {
     required List<InputSection> sections,
     required ModelLimits limits,
     required int fixedTokens,
+    required int fixedBytes,
     required int desiredOutputTokens,
     required InputAccuracy accuracy,
     required List<InputImage> allImages,
@@ -593,7 +597,7 @@ final class InputPlanner {
       omittedByTokenBudget: imagesOmittedByBudget,
       maxRequestBytes: maxRequestBytes,
       maxImageBytesPerImage: limits.maxImageBytesPerImage.value,
-      textBytes: textBytes(materialsText),
+      textBytes: textBytes(materialsText) + fixedBytes,
     );
     if (placement.payloadLimited) {
       warnings.add(PlanWarningCode.payloadLimited);
@@ -651,6 +655,7 @@ final class InputPlanner {
     required List<InputSection> sections,
     required ModelLimits limits,
     required int fixedTokens,
+    required int fixedBytes,
     required int desiredOutputTokens,
     required InputAccuracy accuracy,
     required List<InputImage> allImages,
@@ -769,7 +774,7 @@ final class InputPlanner {
         maxRequestBytes: maxRequestBytes,
         maxImageBytesPerImage: limits.maxImageBytesPerImage.value,
         seenDigests: seenDigests,
-        textBytes: textBytes(materialsText),
+        textBytes: textBytes(materialsText) + fixedBytes,
         tokenBudget: materialBudget - partTextTokens,
       );
       for (final PlannedImage image in placement.statuses) {

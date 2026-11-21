@@ -129,15 +129,15 @@ void main() {
     final int actual = serializedBytes(request);
     expect(
       chunk.bodyBytes,
-      lessThanOrEqualTo(actual),
-      reason: 'оценка плана — нижняя граница реального тела',
-    );
-    expect(
-      chunk.bodyBytes,
       greaterThanOrEqualTo(actual - 4096),
       reason:
           'requestBytes плана обязан учитывать обвязку протокола: промпт, '
           'схему ответа и JSON-ключи (запас — 4 КБ на экранирование)',
+    );
+    expect(
+      chunk.bodyBytes,
+      lessThanOrEqualTo(actual + 4096),
+      reason: 'план не завышает тело на порядки: оценка близка к фактической',
     );
   });
 
@@ -197,6 +197,11 @@ void main() {
       reason: 'реальный payload укладывается в лимит тела',
     );
     expect(
+      result.requestBytes,
+      serializedBytes(sent),
+      reason: 'результат несёт измеренные байты тела, а не оценку плана',
+    );
+    expect(
       result.sentDocumentImageIds,
       <String>['img1'],
       reason: 'отправлена ровно та картинка, которую выбрал план',
@@ -252,7 +257,7 @@ void main() {
   test('каталог `<images>` входит в сериализованный payload', () async {
     final FakeGenerationTransport transport = transportWithResponse();
     final DocumentImage image = documentImage(caption: 'Очень длинная подпись');
-    await serviceOn(transport).generate(
+    final GenerationResult result = await serviceOn(transport).generate(
       GenerationRequest(
         account: account(),
         materialsText: 'Текст.',
@@ -268,6 +273,11 @@ void main() {
       reason: 'каталог `<images>` — часть тела запроса',
     );
     expect(body, contains('Схема из документа'));
+    expect(
+      result.requestBytes,
+      serializedBytes(transport.requests.single),
+      reason: 'измерение тела совпадает с отправленным JSON',
+    );
   });
 
   test('схема ответа и системный промпт присутствуют в теле', () async {
