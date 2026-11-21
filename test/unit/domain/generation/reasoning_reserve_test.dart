@@ -98,11 +98,12 @@ void main() {
       .map((PlannedChunk chunk) => chunk.limit)
       .reduce((int a, int b) => a > b ? a : b);
 
-  /// Сбалансированный размер партии при [total] карточках и [perBatch].
-  int balancedLargest(int total, int perBatch) {
-    final int count = (total / perBatch).ceil();
-    return (total / count).ceil();
-  }
+  /// Наибольшая партия при [total] карточках и вместимости [perBatch].
+  ///
+  /// 7.20: партии заполняются до вместимости (`total <= perBatch` → одна
+  /// партия на весь заказ), остаток уходит последней.
+  int expectedLargest(int total, int perBatch) =>
+      total < perBatch ? total : perBatch;
 
   test('признак reasoning-модели известен домену (источник API)', () {
     final ModelLimits limits = resolveModelLimits(
@@ -144,7 +145,7 @@ void main() {
     );
     expect(
       perBatch,
-      balancedLargest(order, config.cardsFor(maxTokens - expectedReserve)),
+      expectedLargest(order, config.cardsFor(maxTokens - expectedReserve)),
       reason: 'ёмкость партии считается от остатка после резерва',
     );
   });
@@ -161,7 +162,7 @@ void main() {
     );
     expect(
       largestBatch(plan),
-      balancedLargest(order, config.cardsFor(maxTokens)),
+      expectedLargest(order, config.cardsFor(maxTokens)),
       reason: 'без reasoning-признака ёмкость партии прежняя',
     );
   });

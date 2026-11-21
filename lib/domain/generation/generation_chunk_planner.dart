@@ -360,6 +360,45 @@ final class GenerationChunkPlanner {
       );
     }
 
+    // Вместимость одной партии — одна формула для предохранителя и для самих
+    // партий (7.20): `min(batchCardsCeiling, cardsFor(maxTokens − резерв))`.
+    final int maxCardsPerRequest = promptOnly
+        ? math.min(
+            limits.maxCardsPerRequest.value ?? promptCardsCap,
+            promptCardsCap,
+          )
+        : limits.maxCardsPerRequest.value ?? 0;
+    final int cardsPerBatch = OutputBatchPlanner(config: planning)
+        .cardsPerBatch(
+          inputPlan.maxTokens,
+          maxCardsPerRequest: maxCardsPerRequest > 0
+              ? maxCardsPerRequest
+              : null,
+          reasoningReserveTokens: promptOnly ? 0 : reasoningReserve,
+        );
+    // Технический предохранитель числа **партий**: заказ не ограничивается
+    // бюджетом ответа, но и не превращается в бесконечную очередь запросов.
+    // Проверяется до построения партий — иначе заказ `int.max` дал бы ~10^17
+    // элементов списка вместо явного tooManyChunks.
+    if (requestedCards != null) {
+      final int expectedBatches =
+          OutputBatchPlanner.batchCount(requestedCards, cardsPerBatch) +
+          (promptOnly ? 0 : math.max(0, inputPlan.partCount - 1));
+      if (expectedBatches > config.maxChunks) {
+        return _invalidPlan(
+          PlanInvalidReason.tooManyChunks,
+          inputPlan: inputPlan,
+          limits: limits,
+          overhead: overhead,
+          requestedCards: requestedCards,
+          mode: promptOnly
+              ? GenerationMode.promptOnly
+              : GenerationMode.materials,
+          promptText: promptOnly ? (wishes ?? '') : null,
+        );
+      }
+    }
+
     final CardAllocation allocation = data.sections.isEmpty
         ? _syntheticAllocation(
             requestedCards: requestedCards,
@@ -378,10 +417,9 @@ final class GenerationChunkPlanner {
             // Prompt-only сохраняет прежний консервативный лимит карточек на
             // запрос (`budgetCardsPerRequestCap`): у него нет материалов, а
             // качество партии без фокуса по разделам проверено этим числом.
-            maxCardsPerRequest: math.min(
-              limits.maxCardsPerRequest.value ?? promptCardsCap,
-              promptCardsCap,
-            ),
+            maxCardsPerRequest: maxCardsPerRequest > 0
+                ? maxCardsPerRequest
+                : null,
           )
         : data.sections.isEmpty
         ? _batchesWithoutSections(
@@ -401,6 +439,11 @@ final class GenerationChunkPlanner {
 
     final Set<PlanWarningCode> warnings = <PlanWarningCode>{
       ...inputPlan.warnings,
+      // 7.20: нехватка **материала** — отдельный статус; бюджет одного ответа
+      // здесь не при чём (он компенсируется партиями).
+      if (allocation.materialLimited)
+        PlanWarningCode.materialCapacityBelowRequested,
+      // План невыполним только когда содержательных разделов нет вовсе.
       if (allocation.belowRequested) PlanWarningCode.requestedAbovePlan,
       if (requestedCards != null &&
           allocation.achievable > requestedCards &&
@@ -478,7 +521,15 @@ final class GenerationChunkPlanner {
         if (bins.length > count) {
           count = math.min(bins.length, totalCards);
         }
-        final List<int> sizes = _balancedSizes(totalCards, count);
+        // 7.20: размеры партий — до вместимости ответа, остаток последней.
+        // Пересчёт нужен только когда раскладка изображений добавила партии.
+        final List<int> sizes = count == base.length
+            ? <int>[for (final PlannedBatch batch in base) batch.limit]
+            : OutputBatchPlanner.batchSizesFor(
+                totalCards,
+                count,
+                cardsPerBatch,
+              );
         final List<List<String>> focus = OutputBatchPlanner.focusGroupsFor(
           part.sections,
           allocation,
@@ -962,17 +1013,6 @@ final class GenerationChunkPlanner {
     return bins;
   }
 
-  /// Сбалансированные размеры партий (∑ = [total], каждая ≥ 1).
-  List<int> _balancedSizes(int total, int count) {
-    final int safeCount = math.max(1, math.min(count, total));
-    final int base = total ~/ safeCount;
-    final int remainder = total % safeCount;
-    return <int>[
-      for (var index = 0; index < safeCount; index++)
-        math.max(1, base + (index < remainder ? 1 : 0)),
-    ];
-  }
-
   DocumentImage _documentImageOf(InputImage image) => DocumentImage(
     fileName: image.fileName,
     bytes: image.bytes,
@@ -1053,17 +1093,16 @@ final class GenerationChunkPlanner {
     );
     final int total = allocation.achievable;
     if (total <= 0 || inputPlan.parts.isEmpty) return const <PlannedBatch>[];
-    final int count = (total / perBatch).ceil();
-    final int base = total ~/ count;
-    final int remainder = total % count;
+    // 7.20: партии заполняются до вместимости, остаток — последней.
+    final List<int> sizes = OutputBatchPlanner.batchSizes(total, perBatch);
     return <PlannedBatch>[
-      for (var index = 0; index < count; index++)
+      for (var index = 0; index < sizes.length; index++)
         PlannedBatch(
           index: index,
           partIndex: 0,
           partCount: inputPlan.partCount,
           focusSectionIds: const <String>[],
-          limit: math.max(1, base + (index < remainder ? 1 : 0)),
+          limit: sizes[index],
         ),
     ];
   }
@@ -1144,14 +1183,16 @@ final class GenerationChunkPlanner {
             sum + math.min(outputCap, planning.tokensFor(chunk.limit)),
       );
     } else {
-      reserved = planning.tokensFor(
-        math.min(
-          planning.batchCardsCeiling,
-          chunks.isEmpty
-              ? planning.minBatchCards
-              : chunks.fold<int>(0, (int sum, PlannedChunk c) => sum + c.limit),
-        ),
-      );
+      // 7.20: резерв — по **максимальной** партии (а не по сумме лимитов,
+      // зажатой потолком): сумма описывает весь заказ и завышала оценку в
+      // разы при большом числе партий.
+      final int perBatchCards = chunks.isEmpty
+          ? planning.minBatchCards
+          : chunks.fold<int>(0, (int max, PlannedChunk c) {
+              final int limit = math.min(c.limit, planning.batchCardsCeiling);
+              return limit > max ? limit : max;
+            });
+      reserved = math.min(outputCap, planning.tokensFor(perBatchCards));
     }
     final int batchInput = promptOnly
         ? inputPlan.inputTokens * requests

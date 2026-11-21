@@ -167,15 +167,23 @@ void main() {
       });
     }
 
-    test('мало материала: achievable < requested и честная причина', () {
-      final GenerationPlan plan = planFor(requestedCards: 100, sections: 1);
-      expect(plan.requestedCards, 100);
-      expect(plan.plannedCards, lessThan(100));
-      expect(
-        plan.validity.warnings,
-        contains(PlanWarningCode.requestedAbovePlan),
-      );
-    });
+    test(
+      'мало материала: заказ сохранён, ёмкость материала отдельно (7.20)',
+      () {
+        final GenerationPlan plan = planFor(requestedCards: 100, sections: 1);
+        expect(plan.requestedCards, 100);
+        // 7.20: мягкая ёмкость больше не режет заказ (было plannedCards < 100).
+        expect(plan.plannedCards, 100);
+        expect(
+          plan.validity.warnings,
+          contains(PlanWarningCode.materialCapacityBelowRequested),
+        );
+        expect(
+          plan.validity.warnings,
+          isNot(contains(PlanWarningCode.requestedAbovePlan)),
+        );
+      },
+    );
 
     test('малое окно модели: план невалиден до сети, без клампа', () {
       final GenerationPlan plan = planFor(

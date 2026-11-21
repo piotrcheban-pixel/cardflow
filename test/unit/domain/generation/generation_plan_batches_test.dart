@@ -107,7 +107,7 @@ void main() {
   );
 
   group('T2–T3: весь документ и партии', () {
-    test('T2: 50 карточек, output 8192 → whole, партии 17/17/16', () {
+    test('T2: 50 карточек, output 8192 → whole, партии 22/22/6', () {
       final GenerationPlan plan = build(
         sectionsOf(400, 100),
         capabilities: caps(maxOutput: 8192),
@@ -122,15 +122,17 @@ void main() {
         reason: 'ceil((3000 + 40000) × 1.1); заголовки разделов входят в текст',
       );
       expect(plan.outputReserveTokens, 8192);
+      // 7.20: партии заполняются до вместимости ответа (cardsFor(8192) = 22),
+      // остаток — последней; сбалансированные 17/17/16 больше не используются.
       expect(plan.chunks.map((PlannedChunk c) => c.limit).toList(), <int>[
-        17,
-        17,
-        16,
+        22,
+        22,
+        6,
       ]);
       expect(plan.achievableCards, 50);
     });
 
-    test('T3: inputOnly, output 5530 → whole, партии 15,15,14×5', () {
+    test('T3: inputOnly, output 5530 → whole, партии 15×6, 10', () {
       final GenerationPlan plan = build(
         sectionsOf(500, 200),
         capabilities: caps(
@@ -147,11 +149,11 @@ void main() {
       expect(plan.chunks.map((PlannedChunk c) => c.limit).toList(), <int>[
         15,
         15,
-        14,
-        14,
-        14,
-        14,
-        14,
+        15,
+        15,
+        15,
+        15,
+        10,
       ]);
     });
 
@@ -167,11 +169,11 @@ void main() {
       expect(plan.chunks.map((PlannedChunk c) => c.limit).toList(), <int>[
         15,
         15,
-        14,
-        14,
-        14,
-        14,
-        14,
+        15,
+        15,
+        15,
+        15,
+        10,
       ]);
     });
   });
@@ -306,18 +308,26 @@ void main() {
       });
     }
 
-    test('мало материала: achievable < заказа и причина видна', () {
-      final GenerationPlan plan = build(
-        docOf(<String>['Короткий раздел. Это определение и число 42.']),
-        capabilities: caps(),
-        requestedCards: 100,
-      );
-      expect(plan.achievableCards, lessThan(100));
-      expect(
-        plan.validity.warnings,
-        contains(PlanWarningCode.requestedAbovePlan),
-      );
-    });
+    test(
+      'мало материала: заказ сохранён, нехватка материала отдельно (7.20)',
+      () {
+        final GenerationPlan plan = build(
+          docOf(<String>['Короткий раздел. Это определение и число 42.']),
+          capabilities: caps(),
+          requestedCards: 100,
+        );
+        // 7.20: тихой обрезки нет; ёмкость материала — отдельный статус.
+        expect(plan.plannedCards, 100);
+        expect(
+          plan.validity.warnings,
+          contains(PlanWarningCode.materialCapacityBelowRequested),
+        );
+        expect(
+          plan.validity.warnings,
+          isNot(contains(PlanWarningCode.requestedAbovePlan)),
+        );
+      },
+    );
 
     test('весь заказ помещается в один ответ — ровно один запрос', () {
       final GenerationPlan plan = build(

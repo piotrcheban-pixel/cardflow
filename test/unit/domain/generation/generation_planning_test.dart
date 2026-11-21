@@ -136,7 +136,9 @@ void main() {
           maxTokensPerBatch: plan.maxTokens,
         );
         expect(planned.length, 3);
-        expect(planned.map((PlannedBatch b) => b.limit), <int>[17, 17, 16]);
+        // 7.20: партии заполняются до вместимости (cardsFor(8192) = 22),
+        // остаток — последней; сбалансированные 17/17/16 больше не нужны.
+        expect(planned.map((PlannedBatch b) => b.limit), <int>[22, 22, 6]);
         expect(
           batches.cardsPerBatch(plan.maxTokens),
           22,
@@ -172,14 +174,15 @@ void main() {
           maxTokensPerBatch: plan.maxTokens,
         );
         expect(planned.length, 7);
+        // 7.20: заполнение до вместимости, остаток последней партии.
         expect(planned.map((PlannedBatch b) => b.limit), <int>[
           15,
           15,
-          14,
-          14,
-          14,
-          14,
-          14,
+          15,
+          15,
+          15,
+          15,
+          10,
         ]);
       },
     );
@@ -310,14 +313,15 @@ void main() {
           maxTokensPerBatch: plan.maxTokens,
         );
         expect(planned.length, 7);
+        // 7.20: заполнение до вместимости, остаток последней партии.
         expect(planned.map((PlannedBatch b) => b.limit), <int>[
           15,
           15,
-          14,
-          14,
-          14,
-          14,
-          14,
+          15,
+          15,
+          15,
+          15,
+          10,
         ]);
       },
     );

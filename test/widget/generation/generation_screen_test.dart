@@ -1087,34 +1087,46 @@ void main() {
     expect(runner.runCalls, 0);
   });
 
-  testWidgets('предпросмотр плана показывает недостижимый заказ', (
-    tester,
-  ) async {
-    await pumpScreen(tester);
-    await attachTextFile(tester);
-    final Finder countField = find.byKey(
-      const ValueKey<String>('generation-cards-count'),
-    );
-    await tester.scrollUntilVisible(
-      countField,
-      300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.enterText(countField, '1000');
-    await tester.pump();
-    final Finder preview = find.byKey(
-      const ValueKey<String>('generation-plan-preview'),
-    );
-    await tester.scrollUntilVisible(
-      preview,
-      -300,
-      scrollable: find.byType(Scrollable).first,
-    );
-    expect(preview, findsOneWidget);
-    expect(find.textContaining('запрошено — 1000'), findsOneWidget);
-    expect(find.textContaining('достижимо —'), findsOneWidget);
-    expect(find.textContaining('Запрошено 1000 карточек'), findsOneWidget);
-  });
+  testWidgets(
+    'предпросмотр плана показывает заказ и ёмкость материала (7.20)',
+    (tester) async {
+      await pumpScreen(tester);
+      await attachTextFile(tester);
+      final Finder countField = find.byKey(
+        const ValueKey<String>('generation-cards-count'),
+      );
+      await tester.scrollUntilVisible(
+        countField,
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.enterText(countField, '1000');
+      await tester.pump();
+      final Finder preview = find.byKey(
+        const ValueKey<String>('generation-plan-preview'),
+      );
+      await tester.scrollUntilVisible(
+        preview,
+        -300,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(preview, findsOneWidget);
+      // 7.20: заказ не подменяется вместимостью одного ответа — «в плане» ровно
+      // запрошенное число, а ёмкость материала сообщается отдельно.
+      expect(find.textContaining('запрошено — 1000'), findsOneWidget);
+      expect(find.textContaining('в плане — 1000'), findsOneWidget);
+      expect(find.textContaining('Запрошено: 1000 карточек'), findsOneWidget);
+      expect(
+        find.textContaining('Материала хватает примерно на'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('бюджета модели не хватает'), findsNothing);
+      expect(
+        find.textContaining('Запрошено 1000 карточек, план может выдать'),
+        findsNothing,
+      );
+    },
+  );
 
   testWidgets('предпросмотр и «Подробнее» используют лимиты из кэша discovery', (
     WidgetTester tester,
@@ -1185,7 +1197,7 @@ void main() {
       scrollable: find.byType(Scrollable).first,
     );
     final String previewText = tester.widget<Text>(preview).data!;
-    expect(previewText, contains('запросов — 3'));
+    expect(previewText, contains('партий — 3'));
 
     final Finder details = find.byKey(
       const ValueKey<String>('generation-plan-details'),

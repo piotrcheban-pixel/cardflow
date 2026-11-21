@@ -75,8 +75,7 @@ final class OutputBatchPlanner {
     if (input.isPromptOnly) {
       final int total = promptOnlyRequestedCards ?? allocation.achievable;
       if (total <= 0) return const <PlannedBatch>[];
-      final int count = (total / perBatch).ceil();
-      final List<int> sizes = _balanced(total, count);
+      final List<int> sizes = batchSizes(total, perBatch);
       return List<PlannedBatch>.unmodifiable(<PlannedBatch>[
         for (var index = 0; index < sizes.length; index++)
           PlannedBatch(
@@ -96,8 +95,7 @@ final class OutputBatchPlanner {
       final InputPart part = parts.first;
       final int total = _totalFor(part, allocation);
       if (total <= 0) return const <PlannedBatch>[];
-      final int count = (total / perBatch).ceil();
-      final List<int> sizes = _balanced(total, count);
+      final List<int> sizes = batchSizes(total, perBatch);
       final List<List<String>> focus = _focusGroups(
         part.sections,
         allocation,
@@ -119,8 +117,7 @@ final class OutputBatchPlanner {
     for (final InputPart part in parts) {
       final int total = _totalFor(part, allocation);
       if (total <= 0) continue;
-      final int count = (total / perBatch).ceil();
-      final List<int> sizes = _balanced(total, count);
+      final List<int> sizes = batchSizes(total, perBatch);
       final List<List<String>> focus = _focusGroups(
         part.sections,
         allocation,
@@ -139,6 +136,49 @@ final class OutputBatchPlanner {
       }
     }
     return List<PlannedBatch>.unmodifiable(batches);
+  }
+
+  /// Число партий для [total] карточек при вместимости [perBatch].
+  ///
+  /// `⌈total / perBatch⌉` в целых числах: `(total + perBatch - 1) ~/ perBatch`
+  /// переполняет `int` на больших заказах, поэтому остаток считается отдельно.
+  /// `total ≤ 0` → 0.
+  static int batchCount(int total, int perBatch) {
+    if (total <= 0) return 0;
+    final int safe = math.max(1, perBatch);
+    final int whole = total ~/ safe;
+    return total % safe == 0 ? whole : whole + 1;
+  }
+
+  /// Размеры партий: каждая, кроме последней, заполняется до [perBatch],
+  /// последняя получает остаток. `Σ sizes == total`, ни одна не превышает
+  /// вместимость, лишний запрос не создаётся (7.20).
+  static List<int> batchSizes(int total, int perBatch) {
+    final int safe = math.max(1, perBatch);
+    final int count = batchCount(total, safe);
+    if (count <= 0) return const <int>[];
+    return batchSizesFor(total, count, safe);
+  }
+
+  /// Размеры ровно [count] партий при вместимости [cap], `Σ == total`.
+  ///
+  /// Нужен, когда число партий задаёт не только бюджет ответа, но и раскладка
+  /// изображений по запросам (`GenerationChunkPlanner`): каждая партия всё
+  /// равно остаётся не больше [cap].
+  static List<int> batchSizesFor(int total, int count, int cap) {
+    if (total <= 0) return const <int>[];
+    final int safeCap = math.max(1, cap);
+    final int safeCount = math.max(1, math.min(count, total));
+    final List<int> sizes = <int>[];
+    var left = total;
+    for (var index = 0; index < safeCount; index++) {
+      final int remainingBatches = safeCount - index - 1;
+      int take = math.min(safeCap, left - remainingBatches);
+      if (take < 1) take = 1;
+      sizes.add(take);
+      left -= take;
+    }
+    return sizes;
   }
 
   /// Карточек на ответ: `min(ceiling, cardsFor(maxTokens − резерв), cap)`, но
@@ -166,17 +206,6 @@ final class OutputBatchPlanner {
       total += allocation.forSection(section.id);
     }
     return total;
-  }
-
-  /// Сбалансированные размеры партий: `n` карточек на `count` партий.
-  static List<int> _balanced(int total, int count) {
-    final int safeCount = math.max(1, count);
-    final int base = total ~/ safeCount;
-    final int remainder = total % safeCount;
-    return <int>[
-      for (var index = 0; index < safeCount; index++)
-        math.max(1, base + (index < remainder ? 1 : 0)),
-    ];
   }
 
   /// Непрерывные по порядку документа группы `focus` под размеры партий.

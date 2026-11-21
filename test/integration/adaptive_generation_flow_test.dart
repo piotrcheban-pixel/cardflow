@@ -173,7 +173,8 @@ void main() {
     expect(result.cards, hasLength(caller.calls));
   });
 
-  test('мало материала: заказ недостижим — предупреждение, не срез', () async {
+  test('мало материала: заказ сохранён, нехватка материала — отдельным '
+      'статусом (7.20)', () async {
     final GenerationPipeline runner = pipeline();
     caller.onGenerate = (GenerationRequest request, int call) async =>
         resultWithCard(call);
@@ -187,12 +188,26 @@ void main() {
     );
     final GenerationPlan plan = result.plan!;
     expect(plan.requestedCards, 150);
-    expect(plan.plannedCards, lessThan(150));
+    // 7.20: тихой обрезки заказа нет; нехватка материала показывается отдельно
+    // и не выдаётся за исчерпание бюджета модели (было plannedCards < 150).
+    expect(plan.plannedCards, 150);
     expect(
       plan.validity.warnings,
-      contains(PlanWarningCode.requestedAbovePlan),
+      contains(PlanWarningCode.materialCapacityBelowRequested),
     );
-    expect(caller.calls, plan.chunks.length);
+    expect(
+      plan.validity.warnings,
+      isNot(contains(PlanWarningCode.requestedAbovePlan)),
+    );
+    // Модель вернула по одной карточке на партию — материал исчерпан, поэтому
+    // оставшиеся партии не отправляются (ADR-040 §8, требование §5 задания).
+    expect(
+      caller.calls,
+      lessThanOrEqualTo(plan.chunks.length),
+      reason: 'план не переписывается, но ненужные запросы не выполняются',
+    );
+    expect(result.skippedBatches, greaterThan(0));
+    expect(result.cards, isNotEmpty, reason: 'созданное сохраняется');
   });
 
   test('несколько документов: порядок и заголовки файлов сохранены', () async {
@@ -401,7 +416,16 @@ void main() {
         wishes: '5 карточек',
       ),
     );
-    expect(requests, hasLength(3), reason: 'overflow → две части');
+    // 7.20: заказ 5 карточек больше мягкой ёмкости короткого материала, поэтому
+    // план честно просит весь заказ. Дробление первой партии даёт двух детей с
+    // тем же материалом в сумме; возможная дополнительная партия — однократное
+    // перераспределение недостачи (ADR-040 §8), поэтому проверяются инварианты,
+    // а не точное число запросов.
+    expect(
+      requests.length,
+      greaterThanOrEqualTo(3),
+      reason: 'overflow → части',
+    );
     expect(
       requests[1].materialsText + requests[2].materialsText,
       requests[0].materialsText,
@@ -409,7 +433,11 @@ void main() {
     );
     expect(requests[1].limit + requests[2].limit, requests[0].limit);
     expect(result.failures, isEmpty);
-    expect(result.cards, hasLength(2));
+    expect(
+      result.cards,
+      hasLength(caller.calls - 1),
+      reason: 'успешные запросы дают по карточке, сбойный — нет',
+    );
     expect(result.status, GenerationJobStatus.done);
   });
 
