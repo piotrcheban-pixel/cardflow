@@ -7,7 +7,6 @@ import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/decks/deck_summary.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/cards/card_form_screen.dart';
-import 'package:cardflow/ui/components/app_dialogs.dart';
 import 'package:cardflow/ui/decks/deck_screen.dart';
 import 'package:cardflow/ui/decks/decks_screen.dart';
 import 'package:cardflow/ui/generation/generation_screen.dart';
@@ -394,7 +393,6 @@ void main() {
       WidgetTester tester,
     ) async {
       await pumpApp(tester);
-      final AppLocalizations strings = l10n(tester);
       await tester.tap(
         find.byKey(const ValueKey<String>('decks-new-deck')).hitTestable(),
       );
