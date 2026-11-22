@@ -25,6 +25,7 @@ import 'package:cardflow/domain/generation/model_limits.dart';
 import 'package:cardflow/domain/generation/token_calibration.dart';
 import 'package:cardflow/ui/generation/generation_plan_details.dart';
 import 'package:cardflow/ui/generation/plan_warning_message.dart';
+import 'package:cardflow/ui/components/app_dialogs.dart';
 import 'package:cardflow/api/parsers/file_parsing_service.dart';
 import 'package:cardflow/api/parsers/pdf_page_classifier.dart';
 import 'package:cardflow/api/parsers/pdf_scan_pages.dart';
@@ -870,6 +871,44 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
     _cancellation?.cancel();
   }
 
+  /// Единая точка выхода с экрана (находка N1 аудита).
+  ///
+  /// Во время генерации выход не молчит и не теряет карточки: сначала
+  /// подтверждение «Остановить генерацию?», где безопасное действие —
+  /// продолжить. После подтверждения генерация отменяется и экран закрывается.
+  Future<void> _confirmExit() async {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    if (_generating) {
+      final bool? stop = await showAppDialog<bool>(
+        context: context,
+        title: l10n.generationExitRunningTitle,
+        subtitle: l10n.generationExitRunningMessage,
+        closeLabel: l10n.cancel,
+        bodyBuilder: (BuildContext dialogContext) => const SizedBox.shrink(),
+        actionsBuilder: (BuildContext dialogContext) => <Widget>[
+          TextButton(
+            key: const ValueKey<String>('generation-exit-stop'),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(l10n.generationExitRunningConfirm),
+          ),
+          FilledButton(
+            key: const ValueKey<String>('generation-exit-stay'),
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(l10n.generationExitRunningStay),
+          ),
+        ],
+      );
+      if (stop != true || !mounted) return;
+      _cancellation?.cancel();
+    }
+    _leave();
+  }
+
+  void _leave() {
+    final NavigatorState navigator = Navigator.of(context);
+    if (navigator.canPop()) navigator.pop();
+  }
+
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
@@ -877,15 +916,23 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
         ? null
         : ref.watch(deckProvider(widget.deckId!)).value;
     return PopScope(
-      canPop: !_generating,
+      canPop: false,
       onPopInvokedWithResult: (bool didPop, Object? result) {
-        if (!didPop && _generating) {
-          _cancellation?.cancel();
-        }
+        if (didPop) return;
+        unawaited(_confirmExit());
       },
       child: Scaffold(
-        // Полноэкранный маршрут без AppBar: контент не должен уходить под
-        // системный статус-бар на телефоне.
+        // Закреплённая шапка: выход виден всегда, даже когда форма
+        // прокручена к «3. Модель и параметры» (находка N1).
+        appBar: AppBar(
+          leading: IconButton(
+            key: const ValueKey<String>('generation-back'),
+            tooltip: l10n.generationBackTooltip,
+            icon: const Icon(Icons.arrow_back, size: AppSizes.navIcon),
+            onPressed: _confirmExit,
+          ),
+          title: Text(l10n.navAi),
+        ),
         body: SafeArea(
           bottom: false,
           child: _loading
@@ -1055,9 +1102,6 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
     // «0 токенов» вводил бы в заблуждение.
     final bool showEstimate = (hasContent || _hasWishes) && planPreview != null;
     final int estimate = planPreview?.estimate.totalTokens ?? 0;
-    // Навигатор, а не GoRouter: экран монтируется и в тестах без роутера.
-    final NavigatorState navigator = Navigator.of(context);
-    final bool canPop = navigator.canPop();
 
     final Widget materials = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1300,14 +1344,36 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
                     },
             )
           else
-            InputDecorator(
+            // Находка F8: раньше здесь было серое поле, которое нельзя было
+            // редактировать (мёртвый контрол). Теперь — строка со значением и
+            // рабочей ссылкой «Изменить» в настройки провайдера.
+            Row(
               key: const ValueKey<String>('generation-model-fixed'),
-              decoration: InputDecoration(
-                labelText: l10n.generationModelLabel,
-                helperText: l10n.generationModelProviderHint,
-                border: _fieldBorder,
-              ),
-              child: Text(_account?.modelId ?? ''),
+              children: <Widget>[
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        l10n.generationModelLabel,
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        _account?.modelId ?? '',
+                        style: theme.textTheme.bodyLarge,
+                      ),
+                    ],
+                  ),
+                ),
+                TextButton(
+                  key: const ValueKey<String>('generation-model-change'),
+                  onPressed: _generating ? null : _openSettings,
+                  child: Text(l10n.generationModelChange),
+                ),
+              ],
             ),
           if (showEstimate) ...<Widget>[
             const SizedBox(height: AppSpacing.md),
@@ -1394,21 +1460,6 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
-                Row(
-                  children: <Widget>[
-                    IconButton(
-                      key: const ValueKey<String>('generation-back'),
-                      tooltip: l10n.generationBackTooltip,
-                      icon: const Icon(
-                        Icons.arrow_back,
-                        size: AppSizes.navIcon,
-                      ),
-                      onPressed: _generating || !canPop
-                          ? null
-                          : () => navigator.maybePop(),
-                    ),
-                  ],
-                ),
                 AppPageHeader(
                   title: l10n.generationPageTitle,
                   overline: Row(
@@ -1636,23 +1687,43 @@ class _KeyBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
+    // Находка D15/A1 аудита: ссылка «Открыть настройки» сливалась с фоном
+    // (контраст 1,36:1). Баннер — errorContainer, все элементы — на
+    // onErrorContainer (≥ 4,5:1 в обеих темах).
     return Container(
       key: const ValueKey<String>('generation-key-missing'),
-      padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.sm + 4,
+        AppSpacing.xs,
+        AppSpacing.xs,
+        AppSpacing.xs,
+      ),
       decoration: BoxDecoration(
-        color: theme.colorScheme.tertiaryContainer,
-        borderRadius: BorderRadius.circular(12),
+        color: scheme.errorContainer,
+        borderRadius: BorderRadius.circular(AppRadii.input),
       ),
       child: Row(
         children: <Widget>[
-          Icon(
-            Icons.key_off_outlined,
-            color: theme.colorScheme.onTertiaryContainer,
+          Icon(Icons.key_off_outlined, color: scheme.onErrorContainer),
+          const SizedBox(width: AppSpacing.xs),
+          Expanded(
+            child: Text(
+              message,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: scheme.onErrorContainer,
+              ),
+            ),
           ),
-          const SizedBox(width: 8),
-          Expanded(child: Text(message)),
           TextButton(
             key: const ValueKey<String>('generation-open-settings'),
+            style: TextButton.styleFrom(
+              foregroundColor: scheme.onErrorContainer,
+              textStyle: theme.textTheme.labelLarge?.copyWith(
+                decoration: TextDecoration.underline,
+                decorationColor: scheme.onErrorContainer,
+              ),
+            ),
             onPressed: onAction,
             child: Text(actionLabel),
           ),

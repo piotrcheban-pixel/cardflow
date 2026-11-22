@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart';
 
 import 'package:cardflow/domain/settings/app_settings.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
+import 'package:cardflow/ui/components/escape_to_back.dart';
 import 'package:cardflow/ui/m3e/m3e.dart';
 import 'package:cardflow/ui/router/app_router.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
@@ -77,9 +78,13 @@ class CardFlowApp extends ConsumerStatefulWidget {
 }
 
 class _CardFlowAppState extends ConsumerState<CardFlowApp> {
+  /// Ключ навигатора: [EscapeToBack] стоит выше него и обрабатывает Esc.
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+
   /// Router создаётся один раз: смена темы/настроек перестраивает приложение,
   /// но не должна сбрасывать навигацию (ADR-019).
-  late final GoRouter _router = widget.router ?? createAppRouter();
+  late final GoRouter _router =
+      widget.router ?? createAppRouter(navigatorKey: _navigatorKey);
 
   @override
   void dispose() {
@@ -144,7 +149,14 @@ class _CardFlowAppState extends ConsumerState<CardFlowApp> {
           data: media.copyWith(
             textScaler: TextScaler.linear(settings.textScale),
           ),
-          child: M3ETheme(data: data, child: child ?? const SizedBox.shrink()),
+          // Esc = системный «назад» на всех экранах и диалогах (N3).
+          child: EscapeToBack(
+            navigatorKey: _navigatorKey,
+            child: M3ETheme(
+              data: data,
+              child: child ?? const SizedBox.shrink(),
+            ),
+          ),
         );
       },
     );

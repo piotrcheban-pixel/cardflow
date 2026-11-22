@@ -1,8 +1,10 @@
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/components/app_dialogs.dart';
 import 'package:cardflow/ui/components/app_surfaces.dart';
+import 'package:cardflow/ui/router/app_router.dart';
 import 'package:cardflow/ui/theme/app_tokens.dart';
 import 'package:cardflow/ui/theme/app_typography.dart';
 
@@ -25,6 +27,7 @@ class ReviewSessionAppBar extends StatelessWidget
     required this.onUndo,
     required this.whyExcerpt,
     required this.onClose,
+    this.onHome,
     this.onWhyPressed,
     this.title,
     this.progress,
@@ -43,6 +46,12 @@ class ReviewSessionAppBar extends StatelessWidget
 
   /// Обработчик выхода (диалог открывает вызывающий экран).
   final VoidCallback onClose;
+
+  /// Переход в главное меню («Мои колоды») напрямую.
+  ///
+  /// Находка N3 аудита: из сессии в главное меню должно быть не больше двух
+  /// действий; кнопка спрашивает то же подтверждение, что и «×».
+  final VoidCallback? onHome;
 
   /// Свой обработчик «Почему?» (лента на время sheet останавливает таймер);
   /// если не задан — открывается стандартный bottom sheet с [whyExcerpt].
@@ -83,6 +92,13 @@ class ReviewSessionAppBar extends StatelessWidget
             icon: const Icon(Icons.close, size: AppSizes.navIcon),
             onPressed: onClose,
           ),
+          if (onHome != null)
+            IconButton(
+              key: const ValueKey<String>('review-home'),
+              tooltip: l10n.reviewHomeTooltip,
+              icon: const Icon(Icons.home_outlined, size: AppSizes.navIcon),
+              onPressed: onHome,
+            ),
           Expanded(
             child: Row(
               children: <Widget>[
@@ -165,6 +181,10 @@ class ReviewSessionAppBar extends StatelessWidget
 }
 
 /// Диалог выхода из сессии (SPEC A6.4): «Продолжить» / «Выйти».
+///
+/// Аудит 1.0 (находка N4): опасное действие больше не является главным —
+/// залитая primary-кнопка возвращает в сессию, «Выйти» — текстовая кнопка.
+/// Ошибка по Фиттсу перестаёт приводить к случайному выходу.
 Future<bool> confirmReviewExit(BuildContext context) async {
   final AppLocalizations l10n = AppLocalizations.of(context);
   // AppDialog передаёт действиям контекст диалога — правило ADR-036
@@ -177,18 +197,40 @@ Future<bool> confirmReviewExit(BuildContext context) async {
     bodyBuilder: (BuildContext dialogContext) => const SizedBox.shrink(),
     actionsBuilder: (BuildContext dialogContext) => <Widget>[
       TextButton(
-        key: const ValueKey<String>('review-exit-cancel'),
-        onPressed: () => Navigator.of(dialogContext).pop(false),
-        child: Text(l10n.reviewExitContinue),
-      ),
-      FilledButton(
         key: const ValueKey<String>('review-exit-confirm'),
         onPressed: () => Navigator.of(dialogContext).pop(true),
         child: Text(l10n.reviewExitConfirm),
       ),
+      FilledButton(
+        key: const ValueKey<String>('review-exit-cancel'),
+        onPressed: () => Navigator.of(dialogContext).pop(false),
+        child: Text(l10n.reviewExitContinue),
+      ),
     ],
   );
   return result ?? false;
+}
+
+/// Выход из полноэкранной сессии в главное меню (находка N3 аудита).
+///
+/// Требование «из любого экрана в главное меню не больше двух действий»
+/// выполняется кнопкой «домой» в шапке сессии: одно действие — кнопка, второе
+/// (только если есть незавершённые карточки) — подтверждение в диалоге.
+/// Если подтверждать нечего (сессия завершена/пуста), выход сразу.
+Future<void> confirmLeaveToMainMenu(
+  BuildContext context, {
+  required bool nothingToLose,
+}) async {
+  if (!nothingToLose) {
+    final bool confirmed = await confirmReviewExit(context);
+    if (!confirmed || !context.mounted) return;
+  }
+  if (!context.mounted) return;
+  if (GoRouter.maybeOf(context) != null) {
+    context.go(AppRoutes.decksPath);
+    return;
+  }
+  if (context.canPop()) context.pop();
 }
 
 /// Bottom sheet «Почему эта карточка?» с цитатой исходника (SPEC A6.4).

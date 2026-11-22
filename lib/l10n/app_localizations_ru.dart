@@ -2835,6 +2835,12 @@ class AppLocalizationsRu extends AppLocalizations {
       'Пробел — показать ответ · 1–4 — оценка · ← — отменить';
 
   @override
+  String get reviewHomeTooltip => 'Мои колоды';
+
+  @override
+  String get sessionNoticeDismiss => 'Скрыть сообщение';
+
+  @override
   String get cardFormUnsavedTitle => 'Выйти без сохранения?';
 
   @override

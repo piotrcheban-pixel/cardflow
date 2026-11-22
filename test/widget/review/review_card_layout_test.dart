@@ -6,7 +6,6 @@ import 'package:material_ui/material_ui.dart' hide Card;
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/decks/deck_summary.dart';
 import 'package:cardflow/ui/review/review_card_view.dart';
-import 'package:cardflow/ui/review/review_session_screen.dart';
 import 'package:cardflow/ui/review/review_toolbar.dart';
 import 'package:cardflow/ui/theme/app_tokens.dart';
 

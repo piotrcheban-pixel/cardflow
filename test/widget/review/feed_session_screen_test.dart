@@ -105,6 +105,13 @@ void main() {
     await tester.pump(const Duration(milliseconds: 450));
   }
 
+  /// Раскрывает ответ карточки ленты (F1: оценка до раскрытия запрещена).
+  Future<void> revealCard(WidgetTester tester, ValueKey<String> key) async {
+    await tester.tap(find.byKey(key));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+  }
+
   testWidgets('каркас: Stories, карточка, колода, счётчик, пауза', (
     WidgetTester tester,
   ) async {
@@ -169,6 +176,7 @@ void main() {
     final List<Card> deckCards = twoCards();
     await pumpFeed(tester, overrides: overridesFor(deckCards));
     reviews.previousCard = deckCards.first;
+    await revealCard(tester, firstCardKey);
 
     await tester.fling(find.byKey(firstCardKey), const Offset(140, 0), 1200);
     await pumpAfterGesture(tester);
@@ -183,6 +191,7 @@ void main() {
     final List<Card> deckCards = twoCards();
     await pumpFeed(tester, overrides: overridesFor(deckCards));
     reviews.previousCard = deckCards.first;
+    await revealCard(tester, firstCardKey);
 
     await tester.fling(find.byKey(firstCardKey), const Offset(-140, 0), 1200);
     await pumpAfterGesture(tester);
@@ -198,6 +207,7 @@ void main() {
     await pumpFeed(tester, overrides: overridesFor(deckCards));
 
     reviews.previousCard = deckCards[0];
+    await revealCard(tester, firstCardKey);
     await tester.timedDrag(
       find.byKey(firstCardKey),
       const Offset(600, 0),
@@ -207,6 +217,7 @@ void main() {
     expect(reviews.ratings, <Rating>[Rating.easy]);
 
     reviews.previousCard = deckCards[1];
+    await revealCard(tester, const ValueKey<String>('feed-card-card-2'));
     await tester.timedDrag(
       find.byKey(const ValueKey<String>('feed-card-card-2')),
       const Offset(-600, 0),
@@ -384,6 +395,7 @@ void main() {
     await pumpAfterGesture(tester);
 
     reviews.previousCard = deckCards[1];
+    await revealCard(tester, const ValueKey<String>('feed-card-card-2'));
     await tester.timedDrag(
       find.byKey(const ValueKey<String>('feed-card-card-2')),
       const Offset(600, 0),
@@ -392,6 +404,7 @@ void main() {
     await pumpAfterGesture(tester);
 
     reviews.previousCard = deckCards[2];
+    await revealCard(tester, const ValueKey<String>('feed-card-card-3'));
     await tester.fling(
       find.byKey(const ValueKey<String>('feed-card-card-3')),
       const Offset(-140, 0),
@@ -400,6 +413,7 @@ void main() {
     await pumpAfterGesture(tester);
 
     reviews.previousCard = deckCards[3];
+    await revealCard(tester, const ValueKey<String>('feed-card-card-4'));
     await tester.timedDrag(
       find.byKey(const ValueKey<String>('feed-card-card-4')),
       const Offset(-600, 0),
@@ -407,13 +421,18 @@ void main() {
     );
     await pumpAfterGesture(tester);
 
+    // F1: каждая следующая карточка раскрывается перед оценкой — раскрытие
+    // тоже даёт selectionClick, поэтому событий больше, чем оценок.
     expect(haptics, <Object?>[
-      'HapticFeedbackType.selectionClick',
-      'HapticFeedbackType.lightImpact',
-      'HapticFeedbackType.selectionClick',
-      'HapticFeedbackType.heavyImpact',
-      'HapticFeedbackType.lightImpact',
-      'HapticFeedbackType.mediumImpact',
+      'HapticFeedbackType.selectionClick', // раскрытие 1
+      'HapticFeedbackType.lightImpact', // короткий свайп вправо — «Знаю»
+      'HapticFeedbackType.selectionClick', // раскрытие 2
+      'HapticFeedbackType.selectionClick', // долгий свайп вправо — «Легко»
+      'HapticFeedbackType.selectionClick', // раскрытие 3
+      'HapticFeedbackType.heavyImpact', // короткий свайп влево — «Не знаю»
+      'HapticFeedbackType.selectionClick', // раскрытие 4
+      'HapticFeedbackType.lightImpact', // долгий свайп влево — «Сложно»
+      'HapticFeedbackType.mediumImpact', // завершение ленты
     ]);
   });
 
@@ -423,6 +442,7 @@ void main() {
     final List<Card> deckCards = twoCards();
     await pumpFeed(tester, overrides: overridesFor(deckCards));
     reviews.previousCard = deckCards.first;
+    await revealCard(tester, firstCardKey);
 
     await tester.fling(find.byKey(firstCardKey), const Offset(140, 0), 1200);
     await pumpAfterGesture(tester);
@@ -447,12 +467,13 @@ void main() {
       ..previousCard = deckCards.first
       ..recordError = StateError('БД недоступна');
     final AppLocalizations l10n = l10nOf(tester);
+    await revealCard(tester, firstCardKey);
 
     await tester.fling(find.byKey(firstCardKey), const Offset(140, 0), 1200);
     await tester.pump(const Duration(milliseconds: 500));
 
     expect(find.text(l10n.reviewSaveError), findsOneWidget);
-    expect(find.text('Первый вопрос'), findsOneWidget);
+    expect(find.text('Первый ответ'), findsOneWidget);
     expect(find.textContaining('БД недоступна'), findsNothing);
     expect(reviews.ratings, isEmpty);
   });
@@ -533,10 +554,12 @@ void main() {
     final AppLocalizations l10n = l10nOf(tester);
 
     reviews.previousCard = deckCards.first;
+    await revealCard(tester, firstCardKey);
     await tester.fling(find.byKey(firstCardKey), const Offset(140, 0), 1200);
     await pumpAfterGesture(tester);
 
     reviews.previousCard = deckCards.last;
+    await revealCard(tester, const ValueKey<String>('feed-card-card-2'));
     await tester.fling(
       find.byKey(const ValueKey<String>('feed-card-card-2')),
       const Offset(140, 0),

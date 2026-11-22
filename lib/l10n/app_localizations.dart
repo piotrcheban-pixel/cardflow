@@ -4591,6 +4591,18 @@ abstract class AppLocalizations {
   /// **'Пробел — показать ответ · 1–4 — оценка · ← — отменить'**
   String get reviewKeyboardHints;
 
+  /// Кнопка «в главное меню» на экранах сессий: путь домой не длиннее двух действий (находка N3).
+  ///
+  /// In ru, this message translates to:
+  /// **'Мои колоды'**
+  String get reviewHomeTooltip;
+
+  /// Кнопка закрытия неблокирующего сообщения сессии (находка D4).
+  ///
+  /// In ru, this message translates to:
+  /// **'Скрыть сообщение'**
+  String get sessionNoticeDismiss;
+
   /// Заголовок подтверждения выхода из формы карточки с правками (находка N2).
   ///
   /// In ru, this message translates to:

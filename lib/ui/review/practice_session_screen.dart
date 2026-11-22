@@ -8,7 +8,6 @@ import 'package:material_ui/material_ui.dart' hide Card;
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/scheduling/rating.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
-import 'package:cardflow/ui/decks/deck_actions.dart';
 import 'package:cardflow/ui/review/practice_session_engine.dart';
 import 'package:cardflow/ui/review/review_card_view.dart';
 import 'package:cardflow/ui/review/review_chrome.dart';
@@ -16,6 +15,7 @@ import 'package:cardflow/ui/review/review_session_engine.dart'
     show ReviewHaptic, reviewHapticFor;
 import 'package:cardflow/ui/review/review_toolbar.dart';
 import 'package:cardflow/ui/review/session_keyboard.dart';
+import 'package:cardflow/ui/review/session_notice.dart';
 import 'package:cardflow/ui/review/session_media.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
 import 'package:cardflow/ui/theme/app_tokens.dart';
@@ -37,7 +37,8 @@ class PracticeSessionScreen extends ConsumerStatefulWidget {
       _PracticeSessionScreenState();
 }
 
-class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
+class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen>
+    with SessionNoticeMixin<PracticeSessionScreen> {
   PracticeSessionEngine? _engine;
   bool _loading = true;
   bool _loadFailed = false;
@@ -119,7 +120,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
       }
     } catch (_) {
       if (mounted) {
-        showAppMessage(context, AppLocalizations.of(context).reviewSaveError);
+        showSessionNotice(AppLocalizations.of(context).reviewSaveError);
       }
     }
   }
@@ -131,14 +132,11 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
       final bool undone = await engine.undo();
       if (undone && mounted) {
         _completionHapticPlayed = false;
-        showAppMessage(
-          context,
-          AppLocalizations.of(context).reviewUndoneMessage,
-        );
+        showSessionNotice(AppLocalizations.of(context).reviewUndoneMessage);
       }
     } catch (_) {
       if (mounted) {
-        showAppMessage(context, AppLocalizations.of(context).reviewUndoError);
+        showSessionNotice(AppLocalizations.of(context).reviewUndoError);
       }
     }
   }
@@ -179,12 +177,26 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
   }
 
   Future<void> _confirmExit() async {
+    final PracticeSessionState? state = _engine?.state;
+    // Завершённая/пустая тренировка: выходить сразу, без лишнего диалога.
+    if (state == null || state.isCompleted || state.total == 0 || _loadFailed) {
+      _leave();
+      return;
+    }
     final bool confirmed = await confirmReviewExit(context);
     if (confirmed && mounted) _leave();
   }
 
   void _leave() {
     if (context.canPop()) context.pop();
+  }
+
+  /// Прямой переход в главное меню из тренировки (находка N3).
+  Future<void> _confirmHome() async {
+    final PracticeSessionState? state = _engine?.state;
+    final bool nothingToLose =
+        state == null || state.isCompleted || state.total == 0 || _loadFailed;
+    await confirmLeaveToMainMenu(context, nothingToLose: nothingToLose);
   }
 
   /// Повтор чтения медиа карточки после ошибки изображения (7.19).
@@ -217,6 +229,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
           onUndo: _undo,
           whyExcerpt: excerpt,
           onClose: _confirmExit,
+          onHome: _confirmHome,
         ),
         body: Focus(
           autofocus: true,
@@ -346,6 +359,12 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
             ),
           ),
         ),
+        if (sessionNotice != null)
+          SessionNotice(
+            message: sessionNotice!,
+            onDismiss: dismissSessionNotice,
+            dismissTooltip: l10n.sessionNoticeDismiss,
+          ),
         ReviewToolbar(
           preview: null,
           enabled: !state.busy && state.revealed,

@@ -12,13 +12,13 @@ import 'package:cardflow/domain/review/review_queue.dart';
 import 'package:cardflow/domain/scheduling/rating.dart';
 import 'package:cardflow/domain/session/session_plan.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
-import 'package:cardflow/ui/decks/deck_actions.dart';
 import 'package:cardflow/ui/review/review_card_view.dart';
 import 'package:cardflow/ui/review/review_chrome.dart';
 import 'package:cardflow/ui/review/session_media.dart';
 import 'package:cardflow/ui/review/review_session_engine.dart';
 import 'package:cardflow/ui/review/review_toolbar.dart';
 import 'package:cardflow/ui/review/session_keyboard.dart';
+import 'package:cardflow/ui/review/session_notice.dart';
 import 'package:cardflow/ui/router/app_router.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
 import 'package:cardflow/ui/state/decks_ui_providers.dart';
@@ -61,7 +61,8 @@ class ReviewSessionScreen extends ConsumerStatefulWidget {
       _ReviewSessionScreenState();
 }
 
-class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
+class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen>
+    with SessionNoticeMixin<ReviewSessionScreen> {
   ReviewSessionEngine? _engine;
   Timer? _budgetTimer;
   bool _timeExpired = false;
@@ -213,7 +214,7 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
       }
     } catch (_) {
       if (mounted) {
-        showAppMessage(context, AppLocalizations.of(context).reviewSaveError);
+        showSessionNotice(AppLocalizations.of(context).reviewSaveError);
       }
     }
   }
@@ -225,14 +226,11 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
       final bool undone = await engine.undo();
       if (undone && mounted) {
         _completionHapticPlayed = false;
-        showAppMessage(
-          context,
-          AppLocalizations.of(context).reviewUndoneMessage,
-        );
+        showSessionNotice(AppLocalizations.of(context).reviewUndoneMessage);
       }
     } catch (_) {
       if (mounted) {
-        showAppMessage(context, AppLocalizations.of(context).reviewUndoError);
+        showSessionNotice(AppLocalizations.of(context).reviewUndoError);
       }
     }
   }
@@ -276,6 +274,18 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
   }
 
   Future<void> _confirmExit() async {
+    final ReviewSessionState? state = _engine?.state;
+    // Завершённая/пустая сессия и истёкший лимит: терять нечего, диалог —
+    // лишний барьер (находка N7 аудита).
+    if (state == null ||
+        state.isCompleted ||
+        state.total == 0 ||
+        _timeExpired ||
+        _planMissing ||
+        _loadFailed) {
+      _leave();
+      return;
+    }
     final bool confirmed = await confirmReviewExit(context);
     if (confirmed && mounted) _leave();
   }
@@ -294,6 +304,20 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
 
   void _leave() {
     if (context.canPop()) context.pop();
+  }
+
+  /// Прямой переход в главное меню из сессии (находка N3: не больше двух
+  /// действий). Спрашивает то же подтверждение, что и «×».
+  Future<void> _confirmHome() async {
+    final ReviewSessionState? state = _engine?.state;
+    final bool nothingToLose =
+        state == null ||
+        state.isCompleted ||
+        state.total == 0 ||
+        _timeExpired ||
+        _planMissing ||
+        _loadFailed;
+    await confirmLeaveToMainMenu(context, nothingToLose: nothingToLose);
   }
 
   /// Повтор чтения медиа карточки после ошибки изображения (7.19).
@@ -331,6 +355,7 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
           onUndo: _undo,
           whyExcerpt: excerpt,
           onClose: _confirmExit,
+          onHome: _confirmHome,
         ),
         body: Focus(
           autofocus: true,
@@ -464,6 +489,12 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen> {
             ),
           ),
         ),
+        if (sessionNotice != null)
+          SessionNotice(
+            message: sessionNotice!,
+            onDismiss: dismissSessionNotice,
+            dismissTooltip: l10n.sessionNoticeDismiss,
+          ),
         ReviewToolbar(
           preview: state.preview,
           enabled: !state.busy && state.revealed,

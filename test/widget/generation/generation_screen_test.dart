@@ -767,7 +767,7 @@ void main() {
     );
   });
 
-  testWidgets('системный Back во время генерации отменяет запрос', (
+  testWidgets('системный Back во время генерации: подтверждение и отмена', (
     tester,
   ) async {
     await pumpScreen(tester);
@@ -776,8 +776,38 @@ void main() {
     await tester.tap(find.byKey(const ValueKey<String>('generation-start')));
     await tester.pump();
 
+    // Находка N1: выход во время работы не молчит — сначала подтверждение.
+    // Идёт индикатор прогресса (бесконечная анимация) — pump, не pumpAndSettle.
     await tester.binding.handlePopRoute();
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(
+      find.text(l10nOf(tester).generationExitRunningTitle),
+      findsOneWidget,
+    );
+    expect(
+      runner.lastCancellation,
+      anyOf(isNull, predicate((dynamic c) => !c.isCancelled)),
+      reason: 'до подтверждения генерация продолжается',
+    );
+
+    // Безопасное действие — продолжить генерацию.
+    await tester.tap(
+      find.byKey(const ValueKey<String>('generation-exit-stay')),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.byType(GenerationScreen), findsOneWidget);
+
+    // Повторный выход + «Остановить и выйти» отменяет запрос.
+    await tester.binding.handlePopRoute();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.tap(
+      find.byKey(const ValueKey<String>('generation-exit-stop')),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
     expect(runner.lastCancellation, isNotNull);
     expect(runner.lastCancellation!.isCancelled, isTrue);
 

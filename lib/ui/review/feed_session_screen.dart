@@ -13,12 +13,14 @@ import 'package:cardflow/domain/scheduling/rating.dart';
 import 'package:cardflow/domain/session/session_plan.dart';
 import 'package:cardflow/domain/settings/app_settings.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
-import 'package:cardflow/ui/decks/deck_actions.dart';
 import 'package:cardflow/ui/motion.dart';
 import 'package:cardflow/ui/review/feed_card_view.dart';
 import 'package:cardflow/ui/review/feed_progress_bar.dart';
 import 'package:cardflow/ui/review/feed_session_engine.dart';
 import 'package:cardflow/ui/review/review_chrome.dart';
+import 'package:cardflow/ui/review/review_toolbar.dart';
+import 'package:cardflow/ui/review/session_keyboard.dart';
+import 'package:cardflow/ui/review/session_notice.dart';
 import 'package:cardflow/ui/review/session_media.dart';
 import 'package:cardflow/ui/review/review_session_engine.dart';
 import 'package:cardflow/ui/router/app_router.dart';
@@ -65,7 +67,7 @@ class FeedSessionScreen extends ConsumerStatefulWidget {
 }
 
 class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
-    with WidgetsBindingObserver {
+    with WidgetsBindingObserver, SessionNoticeMixin<FeedSessionScreen> {
   final PageController _pageController = PageController();
   FeedSessionEngine? _engine;
   Deck? _deck;
@@ -308,6 +310,10 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
   Future<void> _rate(Rating rating) async {
     final FeedSessionEngine? engine = _engine;
     if (engine == null || _timeExpired || engine.state.busy) return;
+    // Оценка без показанного ответа запрещена и в ленте (находка F1):
+    // свайп/кнопка не должны писать в FSRS ответ, которого пользователь не
+    // видел. Свайп остаётся доступным, но сначала раскройте карточку.
+    if (!(engine.state.current?.revealed ?? false)) return;
     try {
       final bool rated = await engine.rate(rating);
       if (!rated) {
@@ -327,7 +333,7 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
     } catch (_) {
       if (!mounted) return;
       setState(() => _resetToken++);
-      showAppMessage(context, AppLocalizations.of(context).reviewSaveError);
+      showSessionNotice(AppLocalizations.of(context).reviewSaveError);
     }
   }
 
@@ -341,10 +347,10 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
         _completionHapticPlayed = false;
         _resetToken++;
       });
-      showAppMessage(context, AppLocalizations.of(context).reviewUndoneMessage);
+      showSessionNotice(AppLocalizations.of(context).reviewUndoneMessage);
     } catch (_) {
       if (!mounted) return;
-      showAppMessage(context, AppLocalizations.of(context).reviewUndoError);
+      showSessionNotice(AppLocalizations.of(context).reviewUndoError);
     }
   }
 
@@ -361,22 +367,20 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
   }
 
   KeyEventResult _handleKey(FocusNode node, KeyEvent event) {
-    if (event is! KeyDownEvent) return KeyEventResult.ignored;
-    final LogicalKeyboardKey key = event.logicalKey;
-    if (key == LogicalKeyboardKey.space) {
-      _toggleReveal();
-      return KeyEventResult.handled;
-    }
-    final Rating? rating = switch (key) {
-      LogicalKeyboardKey.digit1 || LogicalKeyboardKey.numpad1 => Rating.again,
-      LogicalKeyboardKey.digit2 || LogicalKeyboardKey.numpad2 => Rating.hard,
-      LogicalKeyboardKey.digit3 || LogicalKeyboardKey.numpad3 => Rating.good,
-      LogicalKeyboardKey.digit4 || LogicalKeyboardKey.numpad4 => Rating.easy,
-      _ => null,
-    };
-    if (rating == null) return KeyEventResult.ignored;
-    unawaited(_rate(rating));
-    return KeyEventResult.handled;
+    final FeedSessionEngine? engine = _engine;
+    if (engine == null) return KeyEventResult.ignored;
+    final bool canUndo =
+        engine.state.undoCount > 0 &&
+        !engine.state.busy &&
+        !engine.state.isCompleted;
+    return handleReviewSessionKey(
+      event: event,
+      revealed: engine.state.current?.revealed ?? false,
+      canUndo: canUndo,
+      onReveal: _toggleReveal,
+      onRate: (Rating rating) => unawaited(_rate(rating)),
+      onUndo: () => unawaited(_undo()),
+    );
   }
 
   Future<void> _showWhy(String excerpt) async {
@@ -391,13 +395,18 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
   Future<void> _confirmExit() async {
     _autoAdvanceTimer?.cancel();
     _autoAdvanceTimer = null;
+    final FeedSessionEngine? engine = _engine;
+    // Завершённая/пустая лента: диалог — лишний барьер (N7).
+    if (engine == null || engine.state.isCompleted || engine.state.total == 0) {
+      _leave();
+      return;
+    }
     final bool confirmed = await confirmReviewExit(context);
     if (!mounted) return;
     if (confirmed) {
       _leave();
     } else {
-      final FeedSessionEngine? engine = _engine;
-      if (engine != null) _scheduleAutoAdvance(engine.state);
+      _scheduleAutoAdvance(engine.state);
     }
   }
 
@@ -414,6 +423,16 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
 
   void _leave() {
     if (context.canPop()) context.pop();
+  }
+
+  /// Прямой переход в главное меню из ленты (находка N3).
+  Future<void> _confirmHome() async {
+    _autoAdvanceTimer?.cancel();
+    _autoAdvanceTimer = null;
+    final FeedSessionEngine? engine = _engine;
+    final bool nothingToLose =
+        engine == null || engine.state.isCompleted || engine.state.total == 0;
+    await confirmLeaveToMainMenu(context, nothingToLose: nothingToLose);
   }
 
   /// Повтор чтения медиа карточки после ошибки изображения (7.19).
@@ -447,6 +466,7 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
               ? null
               : () => unawaited(_showWhy(excerpt)),
           onClose: _confirmExit,
+          onHome: _confirmHome,
         ),
         body: Focus(
           autofocus: true,
@@ -547,6 +567,45 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
               );
             },
           ),
+        ),
+        if (sessionNotice != null)
+          SessionNotice(
+            message: sessionNotice!,
+            onDismiss: dismissSessionNotice,
+            dismissTooltip: l10n.sessionNoticeDismiss,
+          ),
+        // Находки F11/F14: в ленте не было ни подсказки о свайпах, ни кнопок
+        // оценки, ни клавиатурных эквивалентов для видимых действий.
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.md,
+            AppSpacing.xs,
+            AppSpacing.md,
+            0,
+          ),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                maxWidth: AppSizes.studyCardMaxWidth,
+              ),
+              child: Text(
+                l10n.feedRateHint,
+                key: const ValueKey<String>('feed-rate-hint'),
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+          ),
+        ),
+        ReviewToolbar(
+          preview: null,
+          enabled: !state.busy && (state.current?.revealed ?? false),
+          hint: (state.current?.revealed ?? false)
+              ? null
+              : l10n.reviewRevealRequiredHint,
+          onRating: (Rating rating) => unawaited(_rate(rating)),
         ),
         _FeedBottomBar(
           deckName: _deck?.name,

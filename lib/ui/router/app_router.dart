@@ -169,9 +169,16 @@ bool _ignoresDailyLimits(GoRouterState state) =>
 ///
 /// Функция (а не глобальный синглтон) — чтобы widget-тесты создавали чистый
 /// экземпляр без общего состояния между тестами.
-GoRouter createAppRouter({String initialLocation = AppRoutes.decksPath}) {
+///
+/// [navigatorKey] — ключ навигатора для глобального обработчика `Esc`
+/// (`EscapeToBack`, находка N3): он стоит выше навигатора в дереве.
+GoRouter createAppRouter({
+  String initialLocation = AppRoutes.decksPath,
+  GlobalKey<NavigatorState>? navigatorKey,
+}) {
   return GoRouter(
     initialLocation: initialLocation,
+    navigatorKey: navigatorKey,
     routes: <RouteBase>[
       StatefulShellRoute.indexedStack(
         builder: (

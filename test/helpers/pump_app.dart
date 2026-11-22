@@ -19,6 +19,7 @@ import 'package:cardflow/domain/transfer/deck_transfer_service.dart';
 import 'package:cardflow/domain/transfer/file_gateway.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/cards/card_form_screen.dart';
+import 'package:cardflow/ui/components/escape_to_back.dart';
 import 'package:cardflow/ui/decks/deck_screen.dart';
 import 'package:cardflow/ui/decks/decks_screen.dart';
 import 'package:cardflow/ui/m3e/m3e.dart';
@@ -54,10 +55,28 @@ import 'settings_fakes.dart';
 /// `builder` с M3E-темой, спроецированной из Material-темы приложения —
 /// ровно как в `lib/ui/app.dart` (ADR-019 §2): иначе M3E перекрывает шрифт,
 /// типографику и dynamic color, и widget-тесты проверяют не продовый вид.
+///
+/// Сюда же входит [EscapeToBack] — глобальный `Esc` = «назад» (находка N3):
+/// тесты навигации проверяют ту же обвязку, что и приложение.
 Widget m3eThemeBuilder(BuildContext context, Widget? child) {
   return M3ETheme(
     data: M3EThemeData.fromMaterial(Theme.of(context)),
     child: child!,
+  );
+}
+
+/// Продовая обвязка `builder` с глобальным обработчиком `Esc` и M3E-темой.
+Widget appBuilderWith(
+  BuildContext context,
+  Widget? child,
+  GlobalKey<NavigatorState> navigatorKey,
+) {
+  return EscapeToBack(
+    navigatorKey: navigatorKey,
+    child: M3ETheme(
+      data: M3EThemeData.fromMaterial(Theme.of(context)),
+      child: child!,
+    ),
   );
 }
 
@@ -74,9 +93,11 @@ Widget appWithRouter({
   required List<GoRoute> routes,
   String initialLocation = '/',
 }) {
+  final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
   final GoRouter router = GoRouter(
     initialLocation: initialLocation,
     routes: routes,
+    navigatorKey: navigatorKey,
   );
   return ProviderScope(
     overrides: overrides,
@@ -87,7 +108,35 @@ Widget appWithRouter({
       localizationsDelegates: ruLocalizationDelegates,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
-      builder: m3eThemeBuilder,
+      builder: (BuildContext context, Widget? child) =>
+          appBuilderWith(context, child, navigatorKey),
+      routerConfig: router,
+    ),
+  );
+}
+
+/// Собирает приложение с **продовым** маршрутизатором [createAppRouter] —
+/// так тесты навигации проверяют те же маршруты и оболочку, что и приложение.
+Widget appWithAppRouter({
+  required List<Override> overrides,
+  String initialLocation = AppRoutes.decksPath,
+}) {
+  final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+  final GoRouter router = createAppRouter(
+    initialLocation: initialLocation,
+    navigatorKey: navigatorKey,
+  );
+  return ProviderScope(
+    overrides: overrides,
+    child: MaterialApp.router(
+      debugShowCheckedModeBanner: false,
+      locale: const Locale('ru'),
+      supportedLocales: AppLocalizations.supportedLocales,
+      localizationsDelegates: ruLocalizationDelegates,
+      theme: AppTheme.light(),
+      darkTheme: AppTheme.dark(),
+      builder: (BuildContext context, Widget? child) =>
+          appBuilderWith(context, child, navigatorKey),
       routerConfig: router,
     ),
   );
@@ -95,6 +144,7 @@ Widget appWithRouter({
 
 /// Собирает приложение без роутера (один экран — `home`).
 Widget appWithHome({required List<Override> overrides, required Widget home}) {
+  final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
   return ProviderScope(
     overrides: overrides,
     child: MaterialApp(
@@ -104,7 +154,9 @@ Widget appWithHome({required List<Override> overrides, required Widget home}) {
       localizationsDelegates: ruLocalizationDelegates,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
-      builder: m3eThemeBuilder,
+      navigatorKey: navigatorKey,
+      builder: (BuildContext context, Widget? child) =>
+          appBuilderWith(context, child, navigatorKey),
       home: home,
     ),
   );

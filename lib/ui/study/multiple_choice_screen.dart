@@ -223,8 +223,24 @@ class _MultipleChoiceScreenState extends ConsumerState<MultipleChoiceScreen> {
   }
 
   Future<void> _confirmExit() async {
+    // Итоги и пустая очередь: терять нечего — выходим без диалога (N7).
+    final bool nothingToLose =
+        (_controller?.state.isCompleted ?? true) ||
+        (_controller?.state.total ?? 0) == 0;
+    if (nothingToLose) {
+      if (mounted && context.canPop()) context.pop();
+      return;
+    }
     final bool confirmed = await confirmReviewExit(context);
     if (confirmed && mounted && context.canPop()) context.pop();
+  }
+
+  /// Выход в главное меню (N3): не больше двух действий.
+  Future<void> _confirmHome() async {
+    final bool nothingToLose =
+        (_controller?.state.isCompleted ?? true) ||
+        (_controller?.state.total ?? 0) == 0;
+    await confirmLeaveToMainMenu(context, nothingToLose: nothingToLose);
   }
 
   KeyEventResult _handleKey(FocusNode node, KeyEvent event) {
@@ -278,6 +294,7 @@ class _MultipleChoiceScreenState extends ConsumerState<MultipleChoiceScreen> {
           onUndo: _undo,
           whyExcerpt: excerpt,
           onClose: _confirmExit,
+          onHome: _confirmHome,
         ),
         body: Focus(
           autofocus: true,
