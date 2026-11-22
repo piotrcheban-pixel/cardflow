@@ -14,6 +14,7 @@ import 'package:cardflow/domain/generation/provider_account.dart';
 import 'package:cardflow/domain/generation/provider_preset.dart';
 import 'package:cardflow/domain/generation/provider_protocol.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
+import 'package:cardflow/ui/theme/app_tokens.dart';
 
 import 'provider_labels.dart';
 
@@ -95,34 +96,36 @@ class _ProviderDialogChrome extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Находка D13: диалог прокручивается целиком (вместе с кнопками), а не
+    // обрезается по высоте окна — последнее поле и «Сохранить» всегда видны.
     return AlertDialog(
+      scrollable: true,
+      insetPadding: const EdgeInsets.all(AppSpacing.lg),
       content: SizedBox(
         width: 420,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              ...fields,
-              if (hasStoredKey)
-                Align(
-                  alignment: AlignmentDirectional.centerStart,
-                  child: TextButton.icon(
-                    key: const ValueKey<String>('provider-delete-key'),
-                    onPressed: onDeleteKey,
-                    icon: Icon(
-                      deleteKey ? Icons.undo : Icons.delete_outline,
-                      size: 18,
-                    ),
-                    label: Text(
-                      deleteKey
-                          ? l10n.providersKeyUndoDelete
-                          : l10n.settingsKeyDelete,
-                    ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            ...fields,
+            if (hasStoredKey)
+              Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: TextButton.icon(
+                  key: const ValueKey<String>('provider-delete-key'),
+                  onPressed: onDeleteKey,
+                  icon: Icon(
+                    deleteKey ? Icons.undo : Icons.delete_outline,
+                    size: 18,
+                  ),
+                  label: Text(
+                    deleteKey
+                        ? l10n.providersKeyUndoDelete
+                        : l10n.settingsKeyDelete,
                   ),
                 ),
-            ],
-          ),
+              ),
+          ],
         ),
       ),
       actions: <Widget>[

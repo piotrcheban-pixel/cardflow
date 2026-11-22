@@ -27,11 +27,19 @@ String providerAccountLabel(AppLocalizations l10n, ProviderAccount account) {
   return account.label.trim().isEmpty ? l10n.providersAddCustom : account.label;
 }
 
-/// Сводка аккаунта одной строкой: подпись и модель (если задана).
+/// Сводка аккаунта одной строкой: протокол, адрес и модель.
+///
+/// Находка D14 аудита: раньше сводка начиналась с того же названия, что и
+/// заголовок карточки, и строка дублировалась («Пользовательская модель API» /
+/// «Пользовательская модель API»). Теперь — то, что помогает отличить аккаунты.
 String providerSummary(AppLocalizations l10n, ProviderAccount account) {
-  final String label = providerAccountLabel(l10n, account);
-  final String model = account.modelId.trim();
-  return model.isEmpty ? label : '$label, $model';
+  final List<String> parts = <String>[
+    providerProtocolLabel(l10n, account.protocol),
+    if (account.baseUrl.trim().isNotEmpty) account.baseUrl.trim(),
+    if (account.modelId.trim().isNotEmpty) account.modelId.trim(),
+  ];
+  if (parts.isEmpty) return providerAccountLabel(l10n, account);
+  return parts.join(' · ');
 }
 
 /// Иконка протокола для карточек и списков.

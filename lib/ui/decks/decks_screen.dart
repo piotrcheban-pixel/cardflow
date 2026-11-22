@@ -5,11 +5,13 @@ import 'package:material_ui/material_ui.dart';
 
 import 'package:cardflow/domain/decks/deck_query.dart';
 import 'package:cardflow/domain/decks/deck_summary.dart';
+import 'package:cardflow/domain/generation/provider_account.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/components/app_layout.dart';
 import 'package:cardflow/ui/components/app_surfaces.dart';
 import 'package:cardflow/ui/decks/deck_actions.dart';
 import 'package:cardflow/ui/router/app_router.dart';
+import 'package:cardflow/ui/settings/provider_banner.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
 import 'package:cardflow/ui/state/decks_ui_providers.dart';
 import 'package:cardflow/ui/theme/app_tokens.dart';
@@ -66,6 +68,13 @@ class DecksScreen extends ConsumerWidget {
         query.normalizedSearch.isEmpty &&
         query.filter == DeckFilter.all;
     final bool showChrome = !firstLaunch;
+    // Находка F7: «основной провайдер не настроен» виден уже на главной.
+    final ProviderAccount? activeProvider = ref
+        .watch(providerAccountsProvider)
+        .value
+        ?.active;
+    final bool providerBroken =
+        activeProvider != null && !activeProvider.isConfigured;
 
     return Scaffold(
       body: AppPageScaffold(
@@ -95,6 +104,7 @@ class DecksScreen extends ConsumerWidget {
           ],
         ),
         slivers: <Widget>[
+          if (providerBroken) const PrimaryProviderBanner(),
           // Находка D16: на низком окне (800×600) четыре KPI-плитки съедали
           // экран, и пустое состояние/первая колода уходили под сгиб. На
           // низком окне KPI сжимаются в одну строку, а на первом запуске

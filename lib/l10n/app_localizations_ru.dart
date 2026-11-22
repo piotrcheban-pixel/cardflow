@@ -2987,6 +2987,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get settingsProvidersFixAction => 'Исправить';
 
   @override
+  String get settingsProvidersCannotBePrimary =>
+      'Сначала заполните адрес и модель — такой провайдер не может быть основным.';
+
+  @override
   String get generationExitRunningTitle => 'Остановить генерацию?';
 
   @override

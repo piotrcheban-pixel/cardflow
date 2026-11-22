@@ -21,6 +21,7 @@ import 'package:cardflow/ui/components/app_surfaces.dart';
 import 'package:cardflow/ui/decks/deck_actions.dart';
 import 'package:cardflow/ui/router/app_router.dart';
 import 'package:cardflow/ui/settings/about_links.dart';
+import 'package:cardflow/ui/settings/provider_banner.dart';
 import 'package:cardflow/ui/settings/provider_labels.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
 import 'package:cardflow/ui/theme/app_tokens.dart';
@@ -42,6 +43,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   final GlobalKey _aiKey = GlobalKey();
   final GlobalKey _aboutKey = GlobalKey();
 
+  /// Активный раздел (находка D22): чипы и список показывают, где пользователь.
+  GlobalKey? _activeSection;
+
+  /// Разделы последнего построения — для подсветки при прокрутке.
+  List<_SettingsNavItem>? _lastItems;
+
+  /// Синхронизация активного раздела уже запланирована на конец кадра.
+  bool _scrollSyncScheduled = false;
+
   Future<void> _update(AppSettings settings) async {
     try {
       await ref.read(appSettingsProvider.notifier).save(settings);
@@ -53,6 +63,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   void _scrollTo(GlobalKey key) {
+    setState(() => _activeSection = key);
     final BuildContext? target = key.currentContext;
     if (target == null) return;
     Scrollable.ensureVisible(
@@ -63,93 +74,140 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
+  /// Ближайший к верху области раздел — подсвечивается при прокрутке.
+  void _syncActiveSectionFromScroll(
+    List<_SettingsNavItem> items,
+    ScrollNotification notification,
+  ) {
+    if (notification.depth != 0) return;
+    GlobalKey? nearest;
+    double nearestDistance = double.infinity;
+    for (final _SettingsNavItem item in items) {
+      final BuildContext? context = item.key.currentContext;
+      if (context == null) continue;
+      final RenderObject? box = context.findRenderObject();
+      if (box is! RenderBox || !box.attached) continue;
+      final double top = box.localToGlobal(Offset.zero).dy;
+      final double distance = top < 0 ? -top + 200 : top;
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nearest = item.key;
+      }
+    }
+    if (nearest != null && nearest != _activeSection) {
+      setState(() => _activeSection = nearest);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
     final AsyncValue<AppSettings> settings = ref.watch(appSettingsProvider);
     return Scaffold(
-      body: AppPageScaffold(
-        header: AppPageHeader(
-          title: l10n.settingsScreenTitle,
-          // Вторые «хлебные крошки» не дублируем: раздел уже показан в шапке
-          // оболочки, здесь — только контекст страницы.
-          overline: Text(l10n.settingsOverline.toUpperCase()),
-          subtitle: Text(l10n.settingsSubtitle),
-        ),
-        slivers: <Widget>[
-          settings.when(
-            loading: () => const Padding(
-              padding: EdgeInsets.symmetric(vertical: AppSpacing.huge),
-              child: Center(child: CircularProgressIndicator()),
-            ),
-            error: (Object error, StackTrace stackTrace) => AppErrorState(
-              message: l10n.settingsLoadError,
-              retryLabel: l10n.retry,
-              onRetry: () => ref.invalidate(appSettingsProvider),
-            ),
-            data: (AppSettings value) => LayoutBuilder(
-              builder: (BuildContext context, BoxConstraints constraints) {
-                final bool wide = constraints.maxWidth >= 1024;
-                final List<_SettingsNavItem> items = <_SettingsNavItem>[
-                  _SettingsNavItem(
-                    label: l10n.settingsNavLearning,
-                    icon: Icons.psychology_outlined,
-                    key: _learningKey,
-                  ),
-                  _SettingsNavItem(
-                    label: l10n.settingsNavAppearance,
-                    icon: Icons.palette_outlined,
-                    key: _appearanceKey,
-                  ),
-                  _SettingsNavItem(
-                    label: l10n.settingsNavAccessibility,
-                    icon: Icons.accessibility_new,
-                    key: _accessibilityKey,
-                  ),
-                  _SettingsNavItem(
-                    label: l10n.settingsNavAi,
-                    icon: Icons.auto_awesome_outlined,
-                    key: _aiKey,
-                  ),
-                  _SettingsNavItem(
-                    label: l10n.settingsNavAbout,
-                    icon: Icons.info_outline,
-                    key: _aboutKey,
-                  ),
-                ];
-                final Widget nav = _SettingsSubNav(
-                  items: items,
-                  onSelect: _scrollTo,
-                  horizontal: !wide,
-                );
-                final Widget sections = _buildSections(
-                  context,
-                  l10n,
-                  value,
-                  items,
-                );
-                if (!wide) {
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
+      body: NotificationListener<ScrollNotification>(
+        onNotification: (ScrollNotification notification) {
+          if (notification.depth != 0) return false;
+          if (notification is! ScrollUpdateNotification &&
+              notification is! ScrollEndNotification) {
+            return false;
+          }
+          final List<_SettingsNavItem>? sections = _lastItems;
+          if (sections == null || _scrollSyncScheduled) return false;
+          // Читать позиции RenderBox нельзя во время layout — только после
+          // кадра, иначе Flutter падает на sizeAccessAllowed.
+          _scrollSyncScheduled = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _scrollSyncScheduled = false;
+            if (!mounted) return;
+            _syncActiveSectionFromScroll(sections, notification);
+          });
+          return false;
+        },
+        child: AppPageScaffold(
+          header: AppPageHeader(
+            title: l10n.settingsScreenTitle,
+            // Вторые «хлебные крошки» не дублируем: раздел уже показан в шапке
+            // оболочки, здесь — только контекст страницы.
+            overline: Text(l10n.settingsOverline.toUpperCase()),
+            subtitle: Text(l10n.settingsSubtitle),
+          ),
+          slivers: <Widget>[
+            settings.when(
+              loading: () => const Padding(
+                padding: EdgeInsets.symmetric(vertical: AppSpacing.huge),
+                child: Center(child: CircularProgressIndicator()),
+              ),
+              error: (Object error, StackTrace stackTrace) => AppErrorState(
+                message: l10n.settingsLoadError,
+                retryLabel: l10n.retry,
+                onRetry: () => ref.invalidate(appSettingsProvider),
+              ),
+              data: (AppSettings value) => LayoutBuilder(
+                builder: (BuildContext context, BoxConstraints constraints) {
+                  final bool wide = constraints.maxWidth >= 1024;
+                  final List<_SettingsNavItem> items = <_SettingsNavItem>[
+                    _SettingsNavItem(
+                      label: l10n.settingsNavLearning,
+                      icon: Icons.psychology_outlined,
+                      key: _learningKey,
+                    ),
+                    _SettingsNavItem(
+                      label: l10n.settingsNavAppearance,
+                      icon: Icons.palette_outlined,
+                      key: _appearanceKey,
+                    ),
+                    _SettingsNavItem(
+                      label: l10n.settingsNavAccessibility,
+                      icon: Icons.accessibility_new,
+                      key: _accessibilityKey,
+                    ),
+                    _SettingsNavItem(
+                      label: l10n.settingsNavAi,
+                      icon: Icons.auto_awesome_outlined,
+                      key: _aiKey,
+                    ),
+                    _SettingsNavItem(
+                      label: l10n.settingsNavAbout,
+                      icon: Icons.info_outline,
+                      key: _aboutKey,
+                    ),
+                  ];
+                  final Widget nav = _SettingsSubNav(
+                    items: items,
+                    onSelect: _scrollTo,
+                    horizontal: !wide,
+                    activeKey: _activeSection,
+                  );
+                  _lastItems = items;
+                  final Widget sections = _buildSections(
+                    context,
+                    l10n,
+                    value,
+                    items,
+                  );
+                  if (!wide) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: <Widget>[
+                        nav,
+                        const SizedBox(height: AppSpacing.md),
+                        sections,
+                      ],
+                    );
+                  }
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      nav,
-                      const SizedBox(height: AppSpacing.md),
-                      sections,
+                      SizedBox(width: 260, child: nav),
+                      const SizedBox(width: AppSpacing.xxl),
+                      Expanded(child: sections),
                     ],
                   );
-                }
-                return Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    SizedBox(width: 260, child: nav),
-                    const SizedBox(width: AppSpacing.xxl),
-                    Expanded(child: sections),
-                  ],
-                );
-              },
+                },
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -558,27 +616,37 @@ class _SettingsSubNav extends StatelessWidget {
     required this.items,
     required this.onSelect,
     required this.horizontal,
+    this.activeKey,
   });
 
   final List<_SettingsNavItem> items;
   final ValueChanged<GlobalKey> onSelect;
   final bool horizontal;
 
+  /// Активный раздел (находка D22).
+  final GlobalKey? activeKey;
+
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
     final ColorScheme scheme = theme.colorScheme;
+    bool selected(_SettingsNavItem item) => activeKey == item.key;
     final Widget content = horizontal
         ? Wrap(
             spacing: AppSpacing.xs,
             runSpacing: AppSpacing.xs,
             children: <Widget>[
               for (final _SettingsNavItem item in items)
-                ActionChip(
+                ChoiceChip(
                   key: ValueKey<String>('settings-nav-${item.label}'),
-                  avatar: Icon(item.icon, size: 16, color: scheme.primary),
+                  avatar: Icon(
+                    item.icon,
+                    size: 16,
+                    color: selected(item) ? scheme.onPrimary : scheme.primary,
+                  ),
                   label: Text(item.label),
-                  onPressed: () => onSelect(item.key),
+                  selected: selected(item),
+                  onSelected: (_) => onSelect(item.key),
                 ),
             ],
           )
@@ -592,35 +660,50 @@ class _SettingsSubNav extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
                 for (final _SettingsNavItem item in items)
-                  InkWell(
-                    key: ValueKey<String>('settings-nav-${item.label}'),
-                    onTap: () => onSelect(item.key),
-                    borderRadius: BorderRadius.circular(AppRadii.sm),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.sm,
-                        vertical: AppSpacing.sm - 2,
-                      ),
-                      child: Row(
-                        children: <Widget>[
-                          Icon(
-                            item.icon,
-                            size: AppSizes.icon,
-                            color: scheme.onSurfaceVariant,
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 2),
+                    child: Material(
+                      color: selected(item)
+                          ? scheme.surfaceContainerHigh
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(AppRadii.sm),
+                      child: InkWell(
+                        key: ValueKey<String>('settings-nav-${item.label}'),
+                        onTap: () => onSelect(item.key),
+                        borderRadius: BorderRadius.circular(AppRadii.sm),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.sm,
+                            vertical: AppSpacing.sm - 2,
                           ),
-                          const SizedBox(width: AppSpacing.xs),
-                          Expanded(
-                            child: Text(
-                              item.label,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                fontWeight: FontWeight.w500,
-                                color: scheme.onSurfaceVariant,
+                          child: Row(
+                            children: <Widget>[
+                              Icon(
+                                item.icon,
+                                size: AppSizes.icon,
+                                color: selected(item)
+                                    ? scheme.primary
+                                    : scheme.onSurfaceVariant,
                               ),
-                            ),
+                              const SizedBox(width: AppSpacing.xs),
+                              Expanded(
+                                child: Text(
+                                  item.label,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    fontWeight: selected(item)
+                                        ? FontWeight.w600
+                                        : FontWeight.w500,
+                                    color: selected(item)
+                                        ? scheme.primary
+                                        : scheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
                     ),
                   ),
@@ -831,9 +914,16 @@ class _ApiSection extends ConsumerWidget {
               );
             }
             final ProviderAccount? active = value.active;
+            // Находка F7: невалидный основной аккаунт — видимое предупреждение
+            // с прямым переходом к исправлению, а не зелёный чип «Основной».
+            final bool activeBroken = active != null && !active.isConfigured;
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
+                if (activeBroken) ...<Widget>[
+                  const PrimaryProviderBanner(),
+                  const SizedBox(height: AppSpacing.xs),
+                ],
                 for (final ProviderAccount account in value.accounts)
                   Padding(
                     padding: const EdgeInsets.symmetric(
@@ -859,7 +949,9 @@ class _ApiSection extends ConsumerWidget {
                         if (active?.id == account.id)
                           AppStatusChip(
                             label: l10n.providersActive,
-                            tone: AppStatusTone.success,
+                            tone: account.isConfigured
+                                ? AppStatusTone.success
+                                : AppStatusTone.danger,
                             dense: true,
                           ),
                       ],

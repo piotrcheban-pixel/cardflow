@@ -271,6 +271,12 @@ class _GenerationSettingsScreenState
 
   Future<void> _setActive(ProviderAccount account) async {
     final AppLocalizations l10n = AppLocalizations.of(context);
+    // Находка F7: невалидный аккаунт (пустой адрес/модель) не может стать
+    // основным — иначе генерация недоступна без видимой причины.
+    if (!account.isConfigured) {
+      showAppMessage(context, l10n.settingsProvidersCannotBePrimary);
+      return;
+    }
     final ProviderAccounts updated = _accounts.withActive(account.id);
     try {
       await ref.read(providerAccountsProvider.notifier).save(updated);
@@ -541,12 +547,6 @@ class _ProviderCard extends StatelessWidget {
                     ),
                     Text(
                       providerSummary(l10n, account),
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    Text(
-                      account.baseUrl,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),

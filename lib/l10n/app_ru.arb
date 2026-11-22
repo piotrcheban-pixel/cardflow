@@ -3577,6 +3577,8 @@
   "@settingsProvidersPrimaryBroken": {"description": "Невалидный основной аккаунт (находка F7)."},
   "settingsProvidersFixAction": "Исправить",
   "@settingsProvidersFixAction": {"description": "Переход к исправлению основного аккаунта."},
+  "settingsProvidersCannotBePrimary": "Сначала заполните адрес и модель — такой провайдер не может быть основным.",
+  "@settingsProvidersCannotBePrimary": {"description": "Отказ сделать невалидный аккаунт основным (находка F7)."},
 
   "generationExitRunningTitle": "Остановить генерацию?",
   "@generationExitRunningTitle": {"description": "Подтверждение выхода во время генерации (находка N1)."},

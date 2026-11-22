@@ -4843,6 +4843,12 @@ abstract class AppLocalizations {
   /// **'Исправить'**
   String get settingsProvidersFixAction;
 
+  /// Отказ сделать невалидный аккаунт основным (находка F7).
+  ///
+  /// In ru, this message translates to:
+  /// **'Сначала заполните адрес и модель — такой провайдер не может быть основным.'**
+  String get settingsProvidersCannotBePrimary;
+
   /// Подтверждение выхода во время генерации (находка N1).
   ///
   /// In ru, this message translates to:
