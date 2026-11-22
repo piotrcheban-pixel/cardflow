@@ -339,7 +339,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen>
                         ),
                         child: Text(l10n.reviewRevealAction),
                       ),
-                    ] else
+                    ] else if (MediaQuery.sizeOf(context).height >= 500)
                       Padding(
                         padding: const EdgeInsets.only(top: AppSpacing.xs),
                         child: Text(
@@ -366,6 +366,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen>
             dismissTooltip: l10n.sessionNoticeDismiss,
           ),
         ReviewToolbar(
+          compact: MediaQuery.sizeOf(context).height < 500,
           preview: null,
           enabled: !state.busy && state.revealed,
           hint: state.revealed

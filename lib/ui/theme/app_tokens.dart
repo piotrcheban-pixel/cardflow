@@ -61,7 +61,8 @@ abstract final class AppColors {
   // --- Тёмная палитра ------------------------------------------------------
   static const Color darkPrimary = Color(0xFF818CF8);
   static const Color darkOnPrimary = Color(0xFF14122B);
-  static const Color darkPrimaryContainer = Color(0xFF6366F1);
+  // A6: контейнер затемнён, чтобы onPrimaryContainer давал ≥ 4,5:1.
+  static const Color darkPrimaryContainer = Color(0xFF4F46E5);
   static const Color darkOnPrimaryContainer = Color(0xFFEEF2FF);
   static const Color darkPrimaryFixed = Color(0xFF282463);
   static const Color darkPrimaryFixedDim = Color(0xFF4F46E5);
@@ -76,7 +77,8 @@ abstract final class AppColors {
 
   static const Color darkTertiary = Color(0xFFFB7185);
   static const Color darkOnTertiary = Color(0xFF4C0519);
-  static const Color darkTertiaryContainer = Color(0xFFE11D48);
+  // A6: контейнер затемнён, чтобы onTertiaryContainer давал ≥ 4,5:1.
+  static const Color darkTertiaryContainer = Color(0xFF9F1239);
   static const Color darkOnTertiaryContainer = Color(0xFFFFE4E6);
   static const Color darkTertiaryFixed = Color(0xFF4C0519);
   static const Color darkOnTertiaryFixed = Color(0xFFFFDADB);

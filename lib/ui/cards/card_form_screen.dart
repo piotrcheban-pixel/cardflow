@@ -19,6 +19,8 @@ import 'package:cardflow/ui/components/app_dialogs.dart';
 import 'package:cardflow/ui/components/app_layout.dart';
 import 'package:cardflow/ui/components/app_surfaces.dart';
 import 'package:cardflow/ui/theme/app_tokens.dart';
+import 'package:cardflow/ui/theme/app_typography.dart';
+import 'package:cardflow/ui/cards/content/card_content_view.dart';
 import 'package:cardflow/ui/cards/content/card_image_view.dart';
 import 'package:cardflow/ui/cards/occlusion_mask_editor.dart';
 import 'package:cardflow/ui/decks/deck_actions.dart';
@@ -752,7 +754,8 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
                     : null,
                 minLines: 1,
                 maxLines: 2,
-                autofocus: true,
+                // Находка D12: авт фокус прокручивал поле под шапку и срезал
+                // плавающую подпись — форму открываем без авт фокуса.
               ),
             ),
             const SizedBox(height: 12),
@@ -802,9 +805,105 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
             _buildTypeSection(l10n),
             const SizedBox(height: 20),
             _buildMediaSection(l10n),
+            const SizedBox(height: 20),
+            _buildPreview(l10n),
           ],
         ),
       ),
+    );
+  }
+
+  /// Живой предпросмотр карточки (находка F4 аудита).
+  ///
+  /// LaTeX, cloze и изображения видно до сохранения: панель показывает вопрос и
+  /// ответ через тот же `CardContentView`, что и сессия, и обновляется при
+  /// вводе без пересборки всей формы.
+  Widget _buildPreview(AppLocalizations l10n) {
+    return AnimatedBuilder(
+      animation: Listenable.merge(<Listenable>[_front, _back]),
+      builder: (BuildContext context, Widget? child) {
+        if (_front.text.trim().isEmpty && _back.text.trim().isEmpty) {
+          return const SizedBox.shrink();
+        }
+        final Map<String, Uint8List> bytes = <String, Uint8List>{};
+        for (final _MediaItem item in <_MediaItem>[
+          ..._questionImages,
+          ..._answerImages,
+        ]) {
+          final String? id = item.mediaId;
+          final Uint8List? data = item.bytes ?? item.uploadBytes;
+          if (id != null && data != null) bytes[id] = data;
+        }
+        List<String> idsOf(List<_MediaItem> items) => <String>[
+          for (final _MediaItem item in items)
+            if (item.mediaId != null && bytes.containsKey(item.mediaId))
+              item.mediaId!,
+        ];
+        final Card draft = Card(
+          id: 'preview',
+          deckId: widget.deckId,
+          front: _front.text,
+          back: _back.text,
+          cardType: _cardType,
+          state: CardState.newCard,
+          createdAt: DateTime(2000),
+          updatedAt: DateTime(2000),
+          tags: CardDraft.parseTags(_tags.text),
+          questionMediaIds: idsOf(_questionImages),
+          answerMediaIds: idsOf(_answerImages),
+          occlusionJson: _useOcclusion
+              ? (_occlusion ?? const OcclusionDocument()).encode()
+              : null,
+        );
+        final ThemeData theme = Theme.of(context);
+        return AppPanel(
+          key: const ValueKey<String>('card-form-preview'),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              Text(
+                l10n.cardFormPreviewTitle,
+                style: theme.textTheme.titleMedium,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                l10n.reviewQuestionLabel.toUpperCase(),
+                style: AppTypography.overline(context),
+              ),
+              const SizedBox(height: AppSpacing.xxs),
+              CardContentView(
+                card: draft,
+                side: draft.front,
+                revealed: false,
+                faceKey: const ValueKey<String>('card-form-preview-front'),
+                mediaBytes: bytes,
+                imageMaxHeight: 220,
+                imageMaxWidth: 560,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Divider(color: theme.colorScheme.outlineVariant),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                l10n.reviewAnswerLabel.toUpperCase(),
+                style: AppTypography.overline(
+                  context,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xxs),
+              CardContentView(
+                card: draft,
+                side: draft.back,
+                revealed: true,
+                faceKey: const ValueKey<String>('card-form-preview-back'),
+                mediaBytes: bytes,
+                imageMaxHeight: 220,
+                imageMaxWidth: 560,
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 

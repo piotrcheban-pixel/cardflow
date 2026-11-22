@@ -149,6 +149,24 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('D2: 800×600 при масштабе 150 % (533×400) — карточка читаема', (
+    WidgetTester tester,
+  ) async {
+    // Аудит снимал 800×600 физических пикселей при DPI 150 % — это 533×400
+    // логических. Прежняя карточка там обрезалась панелью оценок; теперь панель
+    // переходит в компактный вид, а карточка остаётся видимой.
+    await pumpAt(tester, const Size(533, 400), reveal: true);
+
+    final Rect card = tester.getRect(
+      find.byKey(const ValueKey<String>('review-card')),
+    );
+    final Rect toolbar = tester.getRect(find.byType(ReviewToolbar));
+    expect(card.height, greaterThanOrEqualTo(140));
+    expect(card.bottom, lessThanOrEqualTo(toolbar.top));
+    expect(find.textContaining('Сила тока на участке'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('переворот длится 250–350 мс (SPEC A7.2 / D1)', (
     WidgetTester tester,
   ) async {

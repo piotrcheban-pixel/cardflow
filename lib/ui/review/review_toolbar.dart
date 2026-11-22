@@ -30,6 +30,7 @@ class ReviewToolbar extends StatelessWidget {
     required this.enabled,
     required this.onRating,
     this.hint,
+    this.compact = false,
     super.key,
   });
 
@@ -46,6 +47,11 @@ class ReviewToolbar extends StatelessWidget {
   /// ответа оценка не ставится).
   final String? hint;
 
+  /// Компактный вид для низких окон (находка D2: 800×600 — логические 533×400
+  /// при масштабе 150 %): одна строка кнопок без прогноза интервалов и
+  /// клавиатурных подсказок, чтобы карточка не сжималась до полоски.
+  final bool compact;
+
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
@@ -53,11 +59,11 @@ class ReviewToolbar extends StatelessWidget {
     return SafeArea(
       top: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(
+        padding: EdgeInsets.fromLTRB(
           AppSpacing.md,
-          AppSpacing.xs,
+          compact ? AppSpacing.xxs : AppSpacing.xs,
           AppSpacing.md,
-          AppSpacing.md,
+          compact ? AppSpacing.xs : AppSpacing.md,
         ),
         child: Center(
           child: ConstrainedBox(
@@ -82,8 +88,9 @@ class ReviewToolbar extends StatelessWidget {
                   ),
                 LayoutBuilder(
                   builder: (BuildContext context, BoxConstraints constraints) {
-                    final int columns = constraints.maxWidth < 520 ? 2 : 4;
-                    final double gap = AppSpacing.sm;
+                    final int columns =
+                        (constraints.maxWidth < (compact ? 400 : 520)) ? 2 : 4;
+                    final double gap = compact ? AppSpacing.xs : AppSpacing.sm;
                     final double width =
                         (constraints.maxWidth - gap * (columns - 1)) / columns;
                     return Wrap(
@@ -95,8 +102,9 @@ class ReviewToolbar extends StatelessWidget {
                             width: width,
                             child: _RatingButton(
                               rating: rating,
-                              interval: preview?[rating],
+                              interval: compact ? null : preview?[rating],
                               enabled: enabled,
+                              compact: compact,
                               onPressed: () => onRating(rating),
                             ),
                           ),
@@ -119,12 +127,14 @@ class _RatingButton extends StatelessWidget {
     required this.interval,
     required this.enabled,
     required this.onPressed,
+    this.compact = false,
   });
 
   final Rating rating;
   final Duration? interval;
   final bool enabled;
   final VoidCallback onPressed;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -189,10 +199,10 @@ class _RatingButton extends StatelessWidget {
             foregroundColor: foreground,
             disabledBackgroundColor: background.withValues(alpha: 0.5),
             disabledForegroundColor: foreground.withValues(alpha: 0.6),
-            minimumSize: const Size(0, 52),
+            minimumSize: Size(0, compact ? AppSizes.minTouchTarget : 52),
             padding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.xs,
-              vertical: AppSpacing.xs,
+              vertical: AppSpacing.xxs,
             ),
             elevation: 0,
             shape: const RoundedRectangleBorder(
@@ -207,21 +217,24 @@ class _RatingButton extends StatelessWidget {
               Text(
                 label,
                 textAlign: TextAlign.center,
-                maxLines: 2,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              const SizedBox(height: 1),
-              Text(
-                keyHint,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontFeatures: AppTypography.tabularFigures,
-                  color: foreground.withValues(alpha: 0.7),
+              if (!compact) ...<Widget>[
+                const SizedBox(height: 1),
+                Text(
+                  keyHint,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontFeatures: AppTypography.tabularFigures,
+                    color: foreground.withValues(alpha: 0.7),
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
         ),

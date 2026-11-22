@@ -1,4 +1,5 @@
 import 'package:flutter/services.dart';
+import 'package:flutter_math_fork/flutter_math.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart' hide Card;
 
@@ -384,5 +385,29 @@ void main() {
         reason: 'между AppBar и полем есть отступ для плавающей подписи',
       );
     });
+  });
+  testWidgets('F4: живой предпросмотр показывает LaTeX и cloze до сохранения', (
+    WidgetTester tester,
+  ) async {
+    await pumpDeckScreen(tester);
+    await openCreateForm(tester);
+
+    await tester.enterText(field('card-form-front'), r'Формула $E=mc^2$');
+    await tester.enterText(field('card-form-back'), 'Энергия покоя');
+    await tester.pumpAndSettle();
+
+    final Finder preview = find.byKey(
+      const ValueKey<String>('card-form-preview'),
+    );
+    expect(preview, findsOneWidget);
+    expect(
+      find.descendant(of: preview, matching: find.byType(Math)),
+      findsOneWidget,
+      reason: 'формула отрендерена, а не показана сырым текстом',
+    );
+    expect(
+      find.descendant(of: preview, matching: find.textContaining('Энергия')),
+      findsWidgets,
+    );
   });
 }

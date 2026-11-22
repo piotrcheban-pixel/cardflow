@@ -2857,6 +2857,9 @@ class AppLocalizationsRu extends AppLocalizations {
       'Проверьте отмеченные поля: есть ошибки.';
 
   @override
+  String get cardFormPreviewTitle => 'Предпросмотр';
+
+  @override
   String cardFormClozeHint(String example) {
     return 'Пометьте пропуск в тексте: $example — часть в скобках скроется до показа ответа. Номер можно не указывать.';
   }

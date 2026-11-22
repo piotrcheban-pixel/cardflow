@@ -1183,31 +1183,34 @@ class _MetricsLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
-    return Wrap(
-      spacing: AppSpacing.md,
-      runSpacing: AppSpacing.xs,
-      children: <Widget>[
-        _MetricValue(
-          key: const ValueKey<String>('decks-kpi-total'),
-          label: l10n.decksMetricTotal,
-          value: totalCards,
-        ),
-        _MetricValue(
-          key: const ValueKey<String>('decks-kpi-due'),
-          label: l10n.decksMetricDue,
-          value: dueCards,
-        ),
-        _MetricValue(
-          key: const ValueKey<String>('decks-kpi-studied'),
-          label: l10n.decksMetricStudied,
-          value: studiedCards,
-        ),
-        _MetricValue(
-          key: const ValueKey<String>('decks-kpi-decks'),
-          label: l10n.decksMetricDecks,
-          value: decks,
-        ),
-      ],
+    return Align(
+      alignment: AlignmentDirectional.centerStart,
+      child: Wrap(
+        spacing: AppSpacing.md,
+        runSpacing: AppSpacing.xs,
+        children: <Widget>[
+          _MetricValue(
+            key: const ValueKey<String>('decks-kpi-total'),
+            label: l10n.decksMetricTotal,
+            value: totalCards,
+          ),
+          _MetricValue(
+            key: const ValueKey<String>('decks-kpi-due'),
+            label: l10n.decksMetricDue,
+            value: dueCards,
+          ),
+          _MetricValue(
+            key: const ValueKey<String>('decks-kpi-studied'),
+            label: l10n.decksMetricStudied,
+            value: studiedCards,
+          ),
+          _MetricValue(
+            key: const ValueKey<String>('decks-kpi-decks'),
+            label: l10n.decksMetricDecks,
+            value: decks,
+          ),
+        ],
+      ),
     );
   }
 }

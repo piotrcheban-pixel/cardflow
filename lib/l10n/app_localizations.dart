@@ -4633,6 +4633,12 @@ abstract class AppLocalizations {
   /// **'Проверьте отмеченные поля: есть ошибки.'**
   String get cardFormValidationSummary;
 
+  /// Заголовок живой панели предпросмотра карточки (находка F4).
+  ///
+  /// In ru, this message translates to:
+  /// **'Предпросмотр'**
+  String get cardFormPreviewTitle;
+
   /// Подсказка о синтаксисе cloze-разметки (находка F2).
   ///
   /// In ru, this message translates to:

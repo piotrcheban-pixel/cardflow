@@ -3502,6 +3502,8 @@
   "cardFormUnsavedDiscard": "Не сохранять",
   "@cardFormUnsavedDiscard": {"description": "Действие «выйти, потеряв правки»."},
   "cardFormValidationSummary": "Проверьте отмеченные поля: есть ошибки.",
+  "cardFormPreviewTitle": "Предпросмотр",
+  "@cardFormPreviewTitle": {"description": "Заголовок живой панели предпросмотра карточки (находка F4)."},
   "@cardFormValidationSummary": {"description": "Сводка об ошибках валидации формы (находка F3)."},
   "cardFormClozeHint": "Пометьте пропуск в тексте: {example} — часть в скобках скроется до показа ответа. Номер можно не указывать.",
   "@cardFormClozeHint": {"description": "Подсказка о синтаксисе cloze-разметки (находка F2).", "placeholders": {"example": {"type": "String"}}},

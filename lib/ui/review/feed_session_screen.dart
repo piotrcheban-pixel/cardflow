@@ -600,6 +600,7 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
           ),
         ),
         ReviewToolbar(
+          compact: MediaQuery.sizeOf(context).height < 500,
           preview: null,
           enabled: !state.busy && (state.current?.revealed ?? false),
           hint: (state.current?.revealed ?? false)

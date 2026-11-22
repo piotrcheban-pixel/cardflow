@@ -46,6 +46,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   /// Активный раздел (находка D22): чипы и список показывают, где пользователь.
   GlobalKey? _activeSection;
 
+  @override
+  void initState() {
+    super.initState();
+    // Первый раздел активен по умолчанию — подсветка видна сразу.
+    _activeSection = _learningKey;
+  }
+
   /// Разделы последнего построения — для подсветки при прокрутке.
   List<_SettingsNavItem>? _lastItems;
 
