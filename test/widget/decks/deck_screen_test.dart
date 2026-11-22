@@ -351,7 +351,10 @@ void main() {
       await tester.tap(find.text(l10n.reviewStartSession));
       await tester.pumpAndSettle();
 
-      expect(find.text(l10n.reviewStartEmptyMessage), findsOneWidget);
+      // Находка F6: на пустой колоде кнопка выглядит неактивной, подпись
+      // объясняет причину, а сообщение говорит про отсутствие карточек.
+      expect(find.text(l10n.deckStartNeedsCards), findsOneWidget);
+      expect(find.text(l10n.deckEmptySnack), findsOneWidget);
       expect(find.byType(ReviewSessionScreen), findsNothing);
     });
 
@@ -601,9 +604,20 @@ void main() {
       );
       expect(matchTile.enabled, isFalse);
       expect(trueFalseTile.enabled, isFalse);
-      expect(find.text(l10n.studyModeNotEnough), findsNWidgets(2));
-      expect(find.text(l10n.studyModeMatchNotEnough), findsOneWidget);
-      expect(find.text(l10n.studyModeTrueFalseNotEnough), findsOneWidget);
+      expect(l10n.studyModeTestNotEnough(0), isNotEmpty);
+      expect(
+        find.textContaining(l10n.studyModeTestNotEnough(0)),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining(l10n.studyModeTypingNotEnough(0)),
+        findsOneWidget,
+      );
+      expect(find.textContaining(l10n.studyModeMatchNotEnough), findsOneWidget);
+      expect(
+        find.textContaining(l10n.studyModeTrueFalseNotEnough),
+        findsOneWidget,
+      );
     });
 
     // 7.17, ADR-034: «Тест» — выбор варианта, поэтому формульные ответы
@@ -657,7 +671,10 @@ void main() {
       );
       expect(testTile.enabled, isTrue);
       expect(typingTile.enabled, isFalse);
-      expect(find.text(l10n.studyModeNotEnough), findsOneWidget);
+      expect(
+        find.textContaining(l10n.studyModeTypingNotEnough(0)),
+        findsOneWidget,
+      );
     });
 
     testWidgets('лист режимов: «Ввод ответа» открывает экран ввода', (
@@ -772,7 +789,11 @@ void main() {
       final AppLocalizations l10n = l10nOf(tester);
       await tester.tap(find.text(l10n.reviewStartSession));
       await tester.pumpAndSettle();
-      await tester.tap(find.text(l10n.reviewModeTrueFalse));
+      final Finder trueFalseMode = find.text(l10n.reviewModeTrueFalse);
+      // Лист режимов прокручивается внутри (D21): последние пункты не за сгибом.
+      await tester.ensureVisible(trueFalseMode);
+      await tester.pumpAndSettle();
+      await tester.tap(trueFalseMode);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
       expect(find.byType(TrueFalseScreen), findsOneWidget);
@@ -819,8 +840,8 @@ void main() {
         await tester.tap(find.text(l10n.reviewModeClassic));
         await tester.pumpAndSettle();
 
-        expect(find.text(l10n.reviewDailyLimitTitle), findsOneWidget);
-        expect(find.text(l10n.reviewDailyLimitContinueMessage), findsOneWidget);
+        expect(find.text(l10n.reviewDailyLimitTitle), findsWidgets);
+        expect(find.text(l10n.deckDailyLimitNotice), findsWidgets);
         expect(find.byType(ReviewSessionScreen), findsNothing);
 
         await tester.tap(

@@ -9,10 +9,26 @@ import 'package:cardflow/ui/cards/content/inline_latex_text.dart';
 /// Формулы внутри и вокруг пропусков рендерятся LaTeX-ом (fix-gen, Д4):
 /// `{{c1::$2n - 3$}}` показывает формулу, а не сырой `$…$`.
 class ClozeText extends StatefulWidget {
-  const ClozeText({required this.source, required this.revealed, super.key});
+  const ClozeText({
+    required this.source,
+    required this.revealed,
+    this.maxLines,
+    this.overflow,
+    this.textAlign,
+    super.key,
+  });
 
   final String source;
   final bool revealed;
+
+  /// Ограничение строк (список карточек колоды не должен расти в высоту).
+  final int? maxLines;
+
+  /// Как обрезать длинный cloze-текст в списке.
+  final TextOverflow? overflow;
+
+  /// Выравнивание текста; `null` — центр (карточка сессии).
+  final TextAlign? textAlign;
 
   @override
   State<ClozeText> createState() => _ClozeTextState();
@@ -77,6 +93,11 @@ class _ClozeTextState extends State<ClozeText> {
         ),
       );
     }
-    return Text.rich(TextSpan(children: spans), textAlign: TextAlign.center);
+    return Text.rich(
+      TextSpan(children: spans),
+      textAlign: widget.textAlign ?? TextAlign.center,
+      maxLines: widget.maxLines,
+      overflow: widget.overflow ?? TextOverflow.clip,
+    );
   }
 }

@@ -287,4 +287,46 @@ void main() {
       expect(find.text(l10nOf(tester).trueFalseEmptyTitle), findsOneWidget);
     });
   });
+  testWidgets('F9: верный ответ не улетает сам — ждёт «Далее»', (tester) async {
+    final state = await pumpScreen(
+      tester,
+      location: '/decks/deck-1/true-false',
+      deck: cards(),
+    );
+    final l10n = l10nOf(tester);
+    final String statement = plainTextUnder(
+      tester,
+      find.byKey(const ValueKey<String>('tf-statement')),
+    );
+    final bool isTrue = statement.contains(answers.first);
+    await tester.tap(
+      find.byKey(ValueKey<String>(isTrue ? 'tf-true' : 'tf-false')),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    expect(state.reviews.ratings, <Rating>[Rating.good]);
+    expect(find.text(l10n.trueFalseCorrect), findsOneWidget);
+
+    // Раньше через 0,9 с карточка улетала без подтверждения (находка F9).
+    await tester.pump(const Duration(seconds: 2));
+    expect(find.text(l10n.trueFalseCorrect), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey<String>('tf-next')),
+      findsOneWidget,
+      reason: 'пользователь сам подтверждает переход',
+    );
+  });
+
+  testWidgets('D20: счётчик вопросов начинается с 1, а не с 0', (tester) async {
+    await pumpScreen(
+      tester,
+      location: '/decks/deck-1/true-false',
+      deck: cards(),
+    );
+    final l10n = l10nOf(tester);
+
+    expect(find.text(l10n.testProgressSemantics(1, 6)), findsOneWidget);
+    expect(find.text(l10n.testProgressSemantics(0, 6)), findsNothing);
+  });
 }

@@ -2451,7 +2451,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get decksMetricTotal => 'Всего карточек';
 
   @override
-  String get decksMetricDue => 'Готовы к тесту';
+  String get decksMetricDue => 'К повторению сегодня';
 
   @override
   String get decksMetricStudied => 'Изучено';
@@ -2506,7 +2506,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String decksFilterDueCount(int count) {
-    return 'Просроченные ($count)';
+    return 'Срок наступил ($count)';
   }
 
   @override
@@ -2882,6 +2882,15 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get decksSearchResetAction => 'Сбросить поиск';
+
+  @override
+  String get decksFilterEmptyHint => 'Измените запрос или сбросьте фильтр.';
+
+  @override
+  String get deckImportPickerTitle => 'Выберите ZIP-архив колоды';
+
+  @override
+  String get deckImportCancelled => 'Импорт отменён';
 
   @override
   String get deckSearchCardsHint => 'Поиск по карточкам';

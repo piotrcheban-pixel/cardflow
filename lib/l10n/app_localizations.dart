@@ -3934,7 +3934,7 @@ abstract class AppLocalizations {
   /// KPI-плитка: карточки к повторению.
   ///
   /// In ru, this message translates to:
-  /// **'Готовы к тесту'**
+  /// **'К повторению сегодня'**
   String get decksMetricDue;
 
   /// KPI-плитка: карточки не в состоянии «новая».
@@ -4030,7 +4030,7 @@ abstract class AppLocalizations {
   /// Чип фильтра «Просроченные» со счётчиком.
   ///
   /// In ru, this message translates to:
-  /// **'Просроченные ({count})'**
+  /// **'Срок наступил ({count})'**
   String decksFilterDueCount(int count);
 
   /// Статус новой колоды без повторений.
@@ -4674,6 +4674,24 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Сбросить поиск'**
   String get decksSearchResetAction;
+
+  /// Подсказка в пустом результате поиска колод (находка D17).
+  ///
+  /// In ru, this message translates to:
+  /// **'Измените запрос или сбросьте фильтр.'**
+  String get decksFilterEmptyHint;
+
+  /// Заголовок системного выбора файла для импорта (находка F12).
+  ///
+  /// In ru, this message translates to:
+  /// **'Выберите ZIP-архив колоды'**
+  String get deckImportPickerTitle;
+
+  /// Реакция на отмену выбора файла (находка F13).
+  ///
+  /// In ru, this message translates to:
+  /// **'Импорт отменён'**
+  String get deckImportCancelled;
 
   /// Поле поиска внутри колоды (находка F5).
   ///

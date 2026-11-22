@@ -54,8 +54,12 @@ class AppDialog extends StatelessWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.all(Radius.circular(AppRadii.panel)),
       ),
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: maxWidth),
+      child: SizedBox(
+        key: const ValueKey<String>('app-dialog-surface'),
+        // Находка D23: диалог фиксированной ширины (по умолчанию 512), а не
+        // на всю ширину окна: раньше `ConstrainedBox` не ограничивал, потому
+        // что растянутый Column занимал максимум доступной ширины.
+        width: maxWidth,
         child: Builder(
           builder: (BuildContext dialogContext) {
             final List<Widget> actions = actionsBuilder(dialogContext);

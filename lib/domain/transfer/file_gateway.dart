@@ -13,7 +13,10 @@ import 'dart:typed_data';
 abstract interface class FileGateway {
   /// Открывает системный пикер и возвращает путь к выбранному `.zip`
   /// (или `null`, если пользователь отменил выбор).
-  Future<String?> pickZipToImport();
+  ///
+  /// [dialogTitle] — локализованный заголовок системного диалога (находка F12
+  /// аудита: на Windows диалог показывал английский «Select File»).
+  Future<String?> pickZipToImport({String? dialogTitle});
 
   /// Предлагает сохранить zip под именем [suggestedFileName] с содержимым
   /// [bytes]; возвращает `true`, если файл сохранён, `false` — при отмене.

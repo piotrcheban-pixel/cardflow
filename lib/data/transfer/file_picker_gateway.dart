@@ -39,8 +39,9 @@ class FilePickerGateway implements FileGateway {
   final int maxFileBytes;
 
   @override
-  Future<String?> pickZipToImport() async {
+  Future<String?> pickZipToImport({String? dialogTitle}) async {
     final file = await FilePicker.pickFile(
+      dialogTitle: dialogTitle,
       type: FileType.custom,
       allowedExtensions: const <String>['zip'],
     );

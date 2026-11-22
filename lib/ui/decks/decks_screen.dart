@@ -138,12 +138,17 @@ class DecksScreen extends ConsumerWidget {
                     query.normalizedSearch.isNotEmpty ||
                     query.filter != DeckFilter.all;
                 if (filtered) {
+                  // Находка D17: пустой результат поиска говорит про поиск,
+                  // а не про «создайте колоду вручную».
+                  final String search = query.normalizedSearch;
                   return AppEmptyState(
                     icon: Icons.search_off,
-                    title: l10n.decksNoResults,
-                    message: l10n.decksEmptyMessage,
+                    title: search.isNotEmpty
+                        ? l10n.decksNoResultsForQuery(search)
+                        : l10n.decksNoResults,
+                    message: l10n.decksFilterEmptyHint,
                     actions: <Widget>[
-                      OutlinedButton(
+                      FilledButton(
                         key: const ValueKey<String>('decks-reset-filters'),
                         onPressed: () {
                           ref.read(decksQueryProvider.notifier).clearSearch();
@@ -151,31 +156,16 @@ class DecksScreen extends ConsumerWidget {
                               .read(decksQueryProvider.notifier)
                               .setFilter(DeckFilter.all);
                         },
-                        child: Text(l10n.cancel),
+                        child: Text(l10n.decksSearchResetAction),
                       ),
-                      FilledButton(
+                      OutlinedButton(
                         onPressed: () => createDeckManually(context, ref),
                         child: Text(l10n.decksCreateButton),
                       ),
                     ],
                   );
                 }
-                return AppEmptyState(
-                  icon: Icons.style_outlined,
-                  title: l10n.decksEmptyTitle,
-                  message: l10n.decksEmptyMessage,
-                  actions: <Widget>[
-                    FilledButton(
-                      key: const ValueKey<String>('decks-empty-create'),
-                      onPressed: () => createDeckManually(context, ref),
-                      child: Text(l10n.decksCreateButton),
-                    ),
-                    OutlinedButton(
-                      onPressed: () => context.push(AppRoutes.generationPath),
-                      child: Text(l10n.decksCreateGenerate),
-                    ),
-                  ],
-                );
+                return _FirstLaunchEmptyState();
               }
               return _DeckCollection(
                 summaries: _sortDecks(loadedDecks, sort),
@@ -984,7 +974,11 @@ class _DeckTile extends StatelessWidget {
                 onPressed: onMenu,
                 style: IconButton.styleFrom(
                   foregroundColor: scheme.outline,
-                  minimumSize: const Size(32, 32),
+                  // Находка A4: цель не меньше 44×44, а не 32 px.
+                  minimumSize: const Size(
+                    AppSizes.minTouchTarget,
+                    AppSizes.minTouchTarget,
+                  ),
                   padding: EdgeInsets.zero,
                 ),
               ),
@@ -996,7 +990,15 @@ class _DeckTile extends StatelessWidget {
             runSpacing: AppSpacing.xxs,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: <Widget>[
-              if (summary.dueCards > 0)
+              if (summary.totalCards == 0)
+                // Находка D18: одно сообщение нейтрального тона вместо чипа
+                // «В колоде пока нет карточек» + текста «Нет карточек».
+                AppStatusChip(
+                  label: l10n.deckCardsEmpty,
+                  tone: AppStatusTone.neutral,
+                  dense: true,
+                )
+              else if (summary.dueCards > 0)
                 AppStatusChip(
                   label: l10n.deckDueCount(summary.dueCards),
                   tone: AppStatusTone.danger,
@@ -1014,19 +1016,14 @@ class _DeckTile extends StatelessWidget {
                   tone: AppStatusTone.success,
                   icon: Icons.check_circle,
                   dense: true,
-                )
-              else
-                AppStatusChip(
-                  label: l10n.deckCardsEmpty,
-                  tone: AppStatusTone.neutral,
-                  dense: true,
                 ),
-              Text(
-                l10n.deckCardCount(summary.totalCards),
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: scheme.onSurfaceVariant,
+              if (summary.totalCards > 0)
+                Text(
+                  l10n.deckCardCount(summary.totalCards),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
-              ),
             ],
           ),
           const SizedBox(height: AppSpacing.md),
@@ -1220,6 +1217,33 @@ class _MetricValue extends StatelessWidget {
         ),
         const SizedBox(width: AppSpacing.xxs + 2),
         Text(label, style: AppTypography.overline(context)),
+      ],
+    );
+  }
+}
+
+/// Пустое состояние первого запуска (находка D16).
+///
+/// Функциональный виджет, а не литерал в дереве: действия «Создать» и
+/// «Сгенерировать» должны работать, а не быть заглушкой.
+class _FirstLaunchEmptyState extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    return AppEmptyState(
+      icon: Icons.style_outlined,
+      title: l10n.decksEmptyTitle,
+      message: l10n.decksEmptyMessage,
+      actions: <Widget>[
+        FilledButton(
+          key: const ValueKey<String>('decks-empty-create'),
+          onPressed: () => createDeckManually(context, ref),
+          child: Text(l10n.decksCreateButton),
+        ),
+        OutlinedButton(
+          onPressed: () => context.push(AppRoutes.generationPath),
+          child: Text(l10n.decksCreateGenerate),
+        ),
       ],
     );
   }

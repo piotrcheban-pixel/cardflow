@@ -159,7 +159,10 @@ void main() {
       expect(find.text('Испанский'), findsOneWidget);
       expect(find.text('История'), findsOneWidget);
       expect(find.text(l10n.deckCardCount(12)), findsOneWidget);
-      expect(find.text(l10n.deckCardCount(0)), findsOneWidget);
+      // Находка D18: у пустой колоды одно нейтральное сообщение вместо
+      // дубля «В колоде пока нет карточек» + «Нет карточек».
+      expect(find.text(l10n.deckCardsEmpty), findsOneWidget);
+      expect(find.text(l10n.deckCardCount(0)), findsNothing);
       expect(find.text(l10n.deckDueCount(4)), findsOneWidget);
       expect(
         find.text(l10n.deckDueCount(0)),

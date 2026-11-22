@@ -161,8 +161,14 @@ Future<void> exportDeckZip(
 Future<void> importDeckZip(BuildContext context, WidgetRef ref) async {
   final AppLocalizations l10n = AppLocalizations.of(context);
   try {
-    final String? path = await ref.read(fileGatewayProvider).pickZipToImport();
-    if (path == null || !context.mounted) return;
+    final String? path = await ref
+        .read(fileGatewayProvider)
+        .pickZipToImport(dialogTitle: l10n.deckImportPickerTitle);
+    if (path == null || !context.mounted) {
+      // Находка F13: отмена выбора файла больше не «молчит».
+      if (context.mounted) showAppMessage(context, l10n.deckImportCancelled);
+      return;
+    }
     final bytes = await ref.read(fileGatewayProvider).readFile(path);
     final ImportPreview preview = await ref
         .read(deckTransferServiceProvider)

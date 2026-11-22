@@ -33,3 +33,27 @@ Future<RemainingReviewLimits> readRemainingReviewLimits(
     usage: usage,
   );
 }
+
+/// Остаток дневных лимитов для экранов, которые читают его декларативно.
+///
+/// Находка N8 аудита: экран колоды должен предупреждать об исчерпанном
+/// дневном лимите **до** выбора режима, а не после. Семейство по id колоды
+/// (пересоздаётся при смене колоды), ошибки хранилища не ломают экран:
+/// предупреждение просто не показывается.
+final deckRemainingLimitsProvider =
+    FutureProvider.family<RemainingReviewLimits, String>((ref, deckId) async {
+      AppSettings settings;
+      try {
+        settings = await ref.watch(appSettingsProvider.future);
+      } on Object {
+        settings = AppSettings.defaults;
+      }
+      final DailyReviewUsage usage = await ref
+          .read(dailyUsageRepositoryProvider)
+          .usageOnDay(DateTime.now());
+      return RemainingReviewLimits.of(
+        newLimit: settings.dailyNewLimit,
+        reviewLimit: settings.dailyReviewLimit,
+        usage: usage,
+      );
+    });

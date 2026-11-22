@@ -588,7 +588,7 @@ class FakeFileGateway implements FileGateway {
   Uint8List? lastSavedBytes;
 
   @override
-  Future<String?> pickZipToImport() async {
+  Future<String?> pickZipToImport({String? dialogTitle}) async {
     pickImportCalls++;
     return importPath;
   }

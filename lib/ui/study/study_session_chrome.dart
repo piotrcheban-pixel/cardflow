@@ -28,8 +28,11 @@ class StudyProgressBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
+    // Находка D20: счётчик «Вопрос 0 из 4» → «Вопрос 1 из 4». На итогах этот
+    // виджет уже не рисуется, поэтому последняя карточка показывает total.
+    final int current = total == 0 ? 0 : (answered + 1).clamp(1, total);
     return SessionProgressStrip(
-      label: l10n.testProgressSemantics(answered, total),
+      label: l10n.testProgressSemantics(current, total),
       value: total == 0 ? 0 : answered / total,
     );
   }

@@ -3037,7 +3037,7 @@
   "@decksMetricTotal": {
     "description": "KPI-плитка: всего карточек."
   },
-  "decksMetricDue": "Готовы к тесту",
+  "decksMetricDue": "К повторению сегодня",
   "@decksMetricDue": {
     "description": "KPI-плитка: карточки к повторению."
   },
@@ -3116,7 +3116,7 @@
       }
     }
   },
-  "decksFilterDueCount": "Просроченные ({count})",
+  "decksFilterDueCount": "Срок наступил ({count})",
   "@decksFilterDueCount": {
     "description": "Чип фильтра «Просроченные» со счётчиком.",
     "placeholders": {
@@ -3518,6 +3518,12 @@
   "@decksNoResultsForQuery": {"description": "Пустой результат поиска колод по запросу (находка D17).", "placeholders": {"query": {"type": "String"}}},
   "decksSearchResetAction": "Сбросить поиск",
   "@decksSearchResetAction": {"description": "Кнопка сброса фильтра поиска (находка D17)."},
+  "decksFilterEmptyHint": "Измените запрос или сбросьте фильтр.",
+  "deckImportPickerTitle": "Выберите ZIP-архив колоды",
+  "@deckImportPickerTitle": {"description": "Заголовок системного выбора файла для импорта (находка F12)."},
+  "deckImportCancelled": "Импорт отменён",
+  "@deckImportCancelled": {"description": "Реакция на отмену выбора файла (находка F13)."},
+  "@decksFilterEmptyHint": {"description": "Подсказка в пустом результате поиска колод (находка D17)."},
   "deckSearchCardsHint": "Поиск по карточкам",
   "@deckSearchCardsHint": {"description": "Поле поиска внутри колоды (находка F5)."},
   "deckFilterAll": "Все",

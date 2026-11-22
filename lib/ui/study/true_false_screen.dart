@@ -47,7 +47,6 @@ class _TrueFalseScreenState extends ConsumerState<TrueFalseScreen> {
   bool? _userSaysTrue;
   bool? _wasCorrect;
   Card? _answeredCard;
-  Timer? _autoNext;
 
   bool get _hapticsEnabled => ref.read(effectiveAppSettingsProvider).haptics;
 
@@ -59,7 +58,6 @@ class _TrueFalseScreenState extends ConsumerState<TrueFalseScreen> {
 
   @override
   void dispose() {
-    _autoNext?.cancel();
     _controller?.removeListener(_onChanged);
     _controller?.dispose();
     super.dispose();
@@ -125,8 +123,6 @@ class _TrueFalseScreenState extends ConsumerState<TrueFalseScreen> {
   }
 
   void _resetAnswer() {
-    _autoNext?.cancel();
-    _autoNext = null;
     _userSaysTrue = null;
     _wasCorrect = null;
     _answeredCard = null;
@@ -153,11 +149,9 @@ class _TrueFalseScreenState extends ConsumerState<TrueFalseScreen> {
       );
     }
     unawaited(_record(correct));
-    final bool reduceMotion =
-        MediaQuery.maybeDisableAnimationsOf(context) ?? false;
-    if (correct && !reduceMotion) {
-      _autoNext = Timer(const Duration(milliseconds: 900), _next);
-    }
+    // Находка F9: правильный ответ больше не улетает через 0,9 с — плашка
+    // результата остаётся до явного «Далее», как и у ошибки. Единый паттерн
+    // обратной связи в обоих случаях.
   }
 
   Future<void> _record(bool correct) async {

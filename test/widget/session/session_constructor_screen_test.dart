@@ -260,9 +260,13 @@ void main() {
       find.byKey(const ValueKey<String>('constructor-deck-deck-2')),
     );
     await tester.pumpAndSettle();
-    await tester.tap(
-      find.byKey(const ValueKey<String>('constructor-type-cloze')),
+    final Finder clozeChip = find.byKey(
+      const ValueKey<String>('constructor-type-cloze'),
     );
+    // Тип карточки идёт ниже сгиба на 800×600 — прокручиваем, как пользователь.
+    await tester.ensureVisible(clozeChip);
+    await tester.pumpAndSettle();
+    await tester.tap(clozeChip);
     await tester.pumpAndSettle();
 
     expect(find.text(l10n.constructorAvailableCount(1)), findsOneWidget);

@@ -43,7 +43,13 @@ class CardText extends StatelessWidget {
       return DefaultTextStyle.merge(
         style: style,
         textAlign: textAlign ?? TextAlign.start,
-        child: ClozeText(source: source, revealed: revealed),
+        child: ClozeText(
+          source: source,
+          revealed: revealed,
+          maxLines: maxLines,
+          overflow: overflow,
+          textAlign: textAlign ?? TextAlign.start,
+        ),
       );
     }
     return InlineLatexText(
