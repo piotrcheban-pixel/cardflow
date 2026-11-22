@@ -1,10 +1,18 @@
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cardflow/domain/statistics/statistics.dart';
 import 'package:cardflow/ui/statistics/statistics_charts.dart';
 
-/// A6.5/ADR-019: подписи месяцев карты не перекрывают друг друга.
+/// A6.5/ADR-019: подписи месяцев карты и геометрия недельного графика.
 void main() {
+  setUpAll(() async {
+    // Подписи дней недели берутся из CLDR через `intl` (см.
+    // `statisticsWeekdayLabel`); в приложении эти данные грузит делегат
+    // Material-локализации, в чистом тесте — явно.
+    await initializeDateFormatting('ru');
+  });
+
   test('подписи месяцев — только чётные месяцы и с зазором по колонкам', () {
     final DateTime start = DateTime(2025, 11, 15);
     final List<DayCount> days = <DayCount>[
@@ -52,5 +60,28 @@ void main() {
     );
     expect(labels.where((String label) => label.isNotEmpty), isNotEmpty);
     expect(labels.firstWhere((String label) => label.isNotEmpty), 'M2');
+  });
+
+  test('ширина столбца недельного графика — 12–20 px на любой ширине (D5)', () {
+    for (final double columnWidth in <double>[0, 20, 30, 45, 80, 172, 400]) {
+      expect(
+        statisticsWeekBarWidth(columnWidth),
+        inInclusiveRange(12.0, 20.0),
+        reason: 'columnWidth=$columnWidth',
+      );
+    }
+    expect(statisticsWeekBarWidth(172), 20.0);
+    expect(statisticsWeekBarWidth(20), 12.0);
+  });
+
+  test('подписи дней недели — краткая форма ru, а не одна буква (D7)', () {
+    // 23.11.2026 — понедельник, далее по календарю до воскресенья.
+    expect(statisticsWeekdayLabel(DateTime(2026, 11, 23)), 'Пн');
+    expect(statisticsWeekdayLabel(DateTime(2026, 11, 24)), 'Вт');
+    expect(statisticsWeekdayLabel(DateTime(2026, 11, 25)), 'Ср');
+    expect(statisticsWeekdayLabel(DateTime(2026, 11, 26)), 'Чт');
+    expect(statisticsWeekdayLabel(DateTime(2026, 11, 27)), 'Пт');
+    expect(statisticsWeekdayLabel(DateTime(2026, 11, 28)), 'Сб');
+    expect(statisticsWeekdayLabel(DateTime(2026, 11, 29)), 'Вс');
   });
 }

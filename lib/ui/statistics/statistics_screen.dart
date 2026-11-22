@@ -5,6 +5,11 @@
 /// конструктор по тегу и прогноз нагрузки на 7 дней. Все значения — из
 /// `StatisticsSnapshot` и настроек пользователя; сырые ошибки пользователю не
 /// показываются (только ARB).
+///
+/// Находки D5–D7 аудита: недельный график живёт ровно в одном месте (карточка
+/// «Недельный прогресс»), удержание показывается только при выборке не меньше
+/// [_retentionMinSample] повторений за 30 дней, а прогноз подписывает дни
+/// полными сокращениями и заменяет ряд нулей пустым сообщением.
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -69,6 +74,12 @@ class StatisticsScreen extends ConsumerWidget {
   }
 }
 
+/// Минимальная выборка удержания: столько повторений за 30 дней (D6).
+///
+/// До порога процент статистически бессмысленен («100 %» по одному ответу),
+/// поэтому показывается размер выборки, а не доля.
+const int _retentionMinSample = 20;
+
 class _StatisticsContent extends StatelessWidget {
   const _StatisticsContent({required this.statistics, required this.settings});
 
@@ -81,12 +92,18 @@ class _StatisticsContent extends StatelessWidget {
     final List<int> weekCounts = <int>[
       for (final DayCount day in statistics.week) day.count,
     ];
+    final List<String> weekLabels = <String>[
+      for (final DayCount day in statistics.week)
+        statisticsWeekdayLabel(day.day),
+    ];
     final int weekTotal = weekCounts.fold<int>(0, (int a, int b) => a + b);
     final int activeDays = statistics.heatmap
         .where((DayCount day) => day.count > 0)
         .length;
     final int streak = _streakDays(statistics.heatmap);
     final double? retention = statistics.retention30;
+    final int retentionSample = statistics.reviews30;
+    final bool retentionMeasurable = retentionSample >= _retentionMinSample;
     final int retentionPercent = retention == null
         ? 0
         : (retention * 100).round();
@@ -126,16 +143,22 @@ class _StatisticsContent extends StatelessWidget {
               child: AppStatTile(
                 key: const ValueKey<String>('statistics-kpi-retention'),
                 label: l10n.statisticsKpiRetention,
-                value: retention == null
-                    ? l10n.statisticsRetentionNoData
-                    : '$retentionPercent',
-                unit: retention == null ? null : '%',
+                // D6: без минимальной выборки процент не показываем — «100 %»
+                // по одному повторению выглядел уверенным KPI.
+                value: retentionMeasurable
+                    ? '$retentionPercent'
+                    : l10n.statisticsRetentionNoData,
+                unit: retentionMeasurable ? '%' : null,
                 icon: Icons.verified_outlined,
                 iconColor: scheme.secondary,
                 helper: Text(
-                  l10n.statisticsGoal(goalPercent),
+                  retentionMeasurable
+                      ? l10n.statisticsRetentionBasedOn(retentionSample)
+                      : l10n.statisticsRetentionThreshold,
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: scheme.secondary,
+                    color: retentionMeasurable
+                        ? scheme.secondary
+                        : scheme.onSurfaceVariant,
                   ),
                 ),
               ),
@@ -233,19 +256,25 @@ class _StatisticsContent extends StatelessWidget {
       ),
     );
 
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
     final Widget retentionPanel = AppSectionCard(
+      key: const ValueKey<String>('statistics-retention-panel'),
       title: l10n.statisticsRetentionTitle,
       subtitle: l10n.statisticsRetentionWindow,
       icon: Icons.show_chart,
-      accentColor: Theme.of(context).colorScheme.secondary,
-      trailing: AppStatusChip(
-        label: l10n.statisticsGoal(goalPercent),
-        tone: AppStatusTone.success,
-        dense: true,
-      ),
+      accentColor: scheme.secondary,
+      // D6: цель и зелёный чип — только когда выборки хватает для процента.
+      trailing: retentionMeasurable
+          ? AppStatusChip(
+              label: l10n.statisticsGoal(goalPercent),
+              tone: AppStatusTone.success,
+              dense: true,
+            )
+          : null,
       contentPadding: const EdgeInsets.fromLTRB(
         AppSpacing.lg,
-        0,
+        AppSpacing.md,
         AppSpacing.lg,
         AppSpacing.lg,
       ),
@@ -253,23 +282,42 @@ class _StatisticsContent extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Text(
-            retention == null
-                ? l10n.statisticsRetentionNoData
+            !retentionMeasurable
+                ? retentionSample == 0
+                      ? l10n.statisticsRetentionNoData
+                      : l10n.statisticsRetentionLowSample(retentionSample)
                 : l10n.statisticsRetentionValue(retentionPercent),
             key: const ValueKey<String>('statistics-retention'),
-            style: retention == null
-                ? Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  )
-                : AppTypography.kpiLarge(context)
-                      .copyWith(color: Theme.of(context).colorScheme.secondary),
+            style: retentionMeasurable
+                ? AppTypography.kpiLarge(context)
+                      .copyWith(color: scheme.secondary)
+                : theme.textTheme.titleMedium?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
           ),
-          const SizedBox(height: AppSpacing.md),
-          StatisticsWaveform(
-            values: weekCounts,
-            semanticsLabel: l10n.statisticsWeekSemantics(weekTotal),
-            height: 96,
-          ),
+          const SizedBox(height: AppSpacing.sm),
+          if (retentionMeasurable) ...<Widget>[
+            Text(
+              l10n.statisticsRetentionBasedOn(retentionSample),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            AppProgressBar(
+              key: const ValueKey<String>('statistics-retention-progress'),
+              value: retention == null
+                  ? 0
+                  : (retention / settings.desiredRetention).clamp(0.0, 1.0),
+              color: scheme.secondary,
+            ),
+          ] else
+            Text(
+              l10n.statisticsRetentionThreshold,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
         ],
       ),
     );
@@ -302,8 +350,9 @@ class _StatisticsContent extends StatelessWidget {
     );
 
     final Widget weekPanel = AppSectionCard(
+      key: const ValueKey<String>('statistics-week-panel'),
       title: l10n.statisticsWeekTitle,
-      subtitle: l10n.statisticsWeekSemantics(weekTotal),
+      subtitle: l10n.statisticsWeekTotal(weekTotal),
       icon: Icons.bar_chart,
       contentPadding: const EdgeInsets.fromLTRB(
         AppSpacing.lg,
@@ -311,12 +360,26 @@ class _StatisticsContent extends StatelessWidget {
         AppSpacing.lg,
         AppSpacing.md,
       ),
-      child: StatisticsWaveform(
-        key: const ValueKey<String>('statistics-week'),
-        values: weekCounts,
-        semanticsLabel: l10n.statisticsWeekSemantics(weekTotal),
-        height: 72,
-      ),
+      // D5: недельный график — ровно в одном месте (карточка недели);
+      // пустая неделя объясняется текстом, а не рядом нулей.
+      child: weekTotal == 0
+          ? Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+              child: Text(
+                l10n.statisticsWeekEmpty,
+                key: const ValueKey<String>('statistics-week-empty'),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+            )
+          : StatisticsWaveform(
+              key: const ValueKey<String>('statistics-week'),
+              values: weekCounts,
+              labels: weekLabels,
+              semanticsLabel: l10n.statisticsWeekSemantics(weekTotal),
+              height: 120,
+            ),
     );
 
     return LayoutBuilder(
@@ -488,15 +551,32 @@ class _ForecastChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
-    final MaterialLocalizations localizations = MaterialLocalizations.of(
-      context,
-    );
-    final ColorScheme scheme = Theme.of(context).colorScheme;
-    final int maxDue = forecast.isEmpty
-        ? 0
-        : forecast
-              .map((ForecastDay day) => day.due)
-              .reduce((int a, int b) => a > b ? a : b);
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
+    final bool empty = forecast.every((ForecastDay day) => day.due == 0);
+    if (empty) {
+      // D7: ряд нулей не несёт информации — показываем пустое сообщение.
+      return SizedBox(
+        key: const ValueKey<String>('statistics-forecast'),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+          child: Text(
+            l10n.statisticsForecastEmpty,
+            key: const ValueKey<String>('statistics-forecast-empty'),
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+      );
+    }
+    final int maxDue = forecast
+        .map((ForecastDay day) => day.due)
+        .reduce((int a, int b) => a > b ? a : b);
+    final List<String> labels = <String>[
+      for (int index = 0; index < forecast.length; index++)
+        _label(l10n, forecast[index].day, index),
+    ];
     return SizedBox(
       key: const ValueKey<String>('statistics-forecast'),
       height: 168,
@@ -508,9 +588,9 @@ class _ForecastChart extends StatelessWidget {
               child: _ForecastBar(
                 index: index,
                 day: forecast[index],
-                label: _label(l10n, localizations, forecast[index].day, index),
+                label: labels[index],
                 semantics: l10n.statisticsForecastSemantics(
-                  _label(l10n, localizations, forecast[index].day, index),
+                  labels[index],
                   forecast[index].due,
                 ),
                 fraction: maxDue == 0 ? 0 : forecast[index].due / maxDue,
@@ -522,16 +602,11 @@ class _ForecastChart extends StatelessWidget {
     );
   }
 
-  static String _label(
-    AppLocalizations l10n,
-    MaterialLocalizations localizations,
-    DateTime day,
-    int index,
-  ) {
+  static String _label(AppLocalizations l10n, DateTime day, int index) {
     if (index == 0) return l10n.statisticsForecastToday;
     if (index == 1) return l10n.statisticsForecastTomorrow;
-    // narrowWeekdays идут с воскресенья; DateTime.weekday — с понедельника.
-    return localizations.narrowWeekdays[day.weekday % 7];
+    // D7: краткая форма ru (Пн…Вс); `narrowWeekdays` для ru — одна буква.
+    return statisticsWeekdayLabel(day);
   }
 }
 
@@ -569,35 +644,55 @@ class _ForecastBar extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.xxs),
             Expanded(
-              child: day.due == 0
-                  ? const SizedBox.shrink()
-                  : Align(
+              child: Stack(
+                alignment: Alignment.bottomCenter,
+                children: <Widget>[
+                  // D7: тонкая базовая линия видна и у нулевых дней; столбик
+                  // рисуется только для ненулевой нагрузки.
+                  SizedBox(
+                    key: ValueKey<String>(
+                      'statistics-forecast-baseline-$index',
+                    ),
+                    height: 2,
+                    width: double.infinity,
+                    child: ColoredBox(color: scheme.outlineVariant),
+                  ),
+                  if (day.due > 0)
+                    Align(
                       alignment: Alignment.bottomCenter,
                       child: FractionallySizedBox(
                         heightFactor: fraction.clamp(0.04, 1.0),
+                        widthFactor: 1,
                         child: Container(
                           key: ValueKey<String>(
                             'statistics-forecast-bar-$index',
                           ),
-                          width: double.infinity,
                           decoration: BoxDecoration(
                             color: color,
                             borderRadius: const BorderRadius.vertical(
-                              top: Radius.circular(6),
+                              top: Radius.circular(AppRadii.xs),
                             ),
                           ),
                         ),
                       ),
                     ),
+                ],
+              ),
             ),
             const SizedBox(height: AppSpacing.xxs + 2),
-            Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: index == 0 ? scheme.primary : scheme.onSurfaceVariant,
-                fontWeight: FontWeight.w600,
+            // D7: подпись не обрезается до одной буквы — FittedBox сохраняет
+            // всё слово, уменьшая кегль под ширину колонки.
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                label,
+                key: ValueKey<String>('statistics-forecast-label-$index'),
+                maxLines: 1,
+                softWrap: false,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: index == 0 ? scheme.primary : scheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ],

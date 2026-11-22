@@ -1,8 +1,8 @@
 /// Графики экрана статистики (SPEC A6.5, ADR-019 §4).
 ///
-/// Без сторонних библиотек: waveform, годовая тепловая карта и недельный
-/// прогресс рисуются `CustomPainter` на токенах темы. Значения — данные
-/// калькулятора, подписи дат — `MaterialLocalizations` (локаль ru).
+/// Без сторонних библиотек: недельный бар-чарт и годовая тепловая карта
+/// собираются на токенах темы. Значения — данные калькулятора, подписи дат —
+/// краткие формы CLDR через `intl` (локаль ru).
 library;
 
 import 'dart:math' as math;
@@ -11,72 +11,213 @@ import 'package:intl/intl.dart' show DateFormat;
 import 'package:material_ui/material_ui.dart';
 
 import 'package:cardflow/domain/statistics/statistics.dart';
+import 'package:cardflow/l10n/app_localizations.dart';
+import 'package:cardflow/ui/theme/app_tokens.dart';
 
-/// Waveform-индикатор на токенах темы (удержание/недельный прогресс).
+/// Ширина столбца недельного графика при любой ширине колонки.
+///
+/// Находка D5 аудита: столбец растягивался на всю ячейку (≈153 px), и максимум
+/// выглядел «кляксой». Ширина ограничена 12–20 px — на экране 390 px и на
+/// широком мониторе столбик остаётся узким.
+@visibleForTesting
+double statisticsWeekBarWidth(double columnWidth) =>
+    (columnWidth * 0.45).clamp(12.0, 20.0);
+
+/// Толщина базовой линии под нулевым днём (D5/D7).
+const double _baselineHeight = 2;
+
+/// Минимальная высота ненулевого столбца: он должен быть заметно выше
+/// базовой линии, иначе одно повторение не отличить от нуля.
+const double _minBarHeight = 4;
+
+/// Максимальная ширина недельного графика: на широком экране 7 столбцов
+/// не растягиваются на всю карточку, а остаются компактной группой.
+const double _maxWeekChartWidth = 480;
+
+final DateFormat _weekdayFormat = DateFormat('E', 'ru');
+
+/// Краткая подпись дня недели для графиков (Пн, Вт, …, Вс).
+///
+/// `MaterialLocalizations` в `material_ui` даёт только `narrowWeekdays`, а для
+/// локали `ru` это одна буква (В/П/В/С/Ч/П/С) — ровно находка D7 аудита.
+/// Поэтому берём краткую форму CLDR через `intl` (та же локаль ru, что и у
+/// подписей месяцев карты) и поднимаем регистр первой буквы.
+String statisticsWeekdayLabel(DateTime day) {
+  final String label = _weekdayFormat.format(day);
+  if (label.isEmpty) return label;
+  return label.substring(0, 1).toUpperCase() + label.substring(1);
+}
+
+/// Недельный бар-чарт: 7 узких столбцов с подписями дней и значений (D5).
+///
+/// Столбцы стоят на общей базовой линии: нулевой день виден тонкой линией, а
+/// не 4-пиксельной чёрточкой; значения — над столбцами, подписи дней — под
+/// ними. Высота 96–120 px, ширина столбца 12–20 px (`statisticsWeekBarWidth`).
 class StatisticsWaveform extends StatelessWidget {
-  /// Создаёт waveform.
+  /// Создаёт недельный график.
   const StatisticsWaveform({
     required this.values,
+    required this.labels,
     this.semanticsLabel,
-    this.height = 56,
+    this.height = 120,
     super.key,
   });
 
-  /// Значения столбцов (ноль допустим).
+  /// Значения столбцов (ноль допустим), старые → сегодня.
   final List<int> values;
 
-  /// Семантика для screen-reader.
+  /// Подписи дней под столбцами (`labels[i]` для `values[i]`).
+  final List<String> labels;
+
+  /// Семантика графика для screen-reader.
   final String? semanticsLabel;
 
-  /// Высота графика.
+  /// Высота всего графика вместе с подписями значений и дней.
   final double height;
 
   @override
   Widget build(BuildContext context) {
-    final Color color = Theme.of(context).colorScheme.primary;
-    final Widget canvas = CustomPaint(
-      size: Size(double.infinity, height),
-      painter: _WaveformPainter(values: values, color: color),
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    final int maxValue = values.isEmpty ? 0 : values.reduce(math.max);
+    final Widget chart = Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: _maxWeekChartWidth),
+        child: SizedBox(
+          height: height,
+          child: LayoutBuilder(
+            builder: (BuildContext context, BoxConstraints constraints) {
+              final int columns = math.max(1, values.length);
+              final double columnWidth = constraints.maxWidth / columns;
+              final double barWidth = statisticsWeekBarWidth(columnWidth);
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  for (int index = 0; index < values.length; index++)
+                    Expanded(
+                      child: _WeekBarColumn(
+                        index: index,
+                        value: values[index],
+                        maxValue: maxValue,
+                        label: index < labels.length ? labels[index] : '',
+                        barWidth: barWidth,
+                        barColor: scheme.primary,
+                        baselineColor: scheme.outlineVariant,
+                        isToday: index == values.length - 1,
+                        semantics: l10n.statisticsChartBarSemantics(
+                          index < labels.length ? labels[index] : '',
+                          values[index],
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
+        ),
+      ),
     );
-    if (semanticsLabel == null) return canvas;
-    return Semantics(label: semanticsLabel, image: true, child: canvas);
+    if (semanticsLabel == null) return chart;
+    return Semantics(label: semanticsLabel, image: true, child: chart);
   }
 }
 
-class _WaveformPainter extends CustomPainter {
-  _WaveformPainter({required this.values, required this.color});
+class _WeekBarColumn extends StatelessWidget {
+  const _WeekBarColumn({
+    required this.index,
+    required this.value,
+    required this.maxValue,
+    required this.label,
+    required this.barWidth,
+    required this.barColor,
+    required this.baselineColor,
+    required this.isToday,
+    required this.semantics,
+  });
 
-  final List<int> values;
-  final Color color;
+  final int index;
+  final int value;
+  final int maxValue;
+  final String label;
+  final double barWidth;
+  final Color barColor;
+  final Color baselineColor;
+  final bool isToday;
+  final String semantics;
 
   @override
-  void paint(Canvas canvas, Size size) {
-    if (values.isEmpty || size.width <= 0 || size.height <= 0) return;
-    final int maxValue = values.reduce(math.max);
-    final double gap = 4;
-    final double barWidth =
-        (size.width - gap * (values.length - 1)) / values.length;
-    if (barWidth <= 0) return;
-    final Paint paint = Paint()..color = color;
-    for (int index = 0; index < values.length; index++) {
-      final double fraction = maxValue == 0 ? 0 : values[index] / maxValue;
-      final double barHeight = math.max(4, size.height * fraction);
-      final RRect bar = RRect.fromRectAndRadius(
-        Rect.fromLTWH(
-          index * (barWidth + gap),
-          size.height - barHeight,
-          barWidth,
-          barHeight,
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
+    return Semantics(
+      label: semantics,
+      child: ExcludeSemantics(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: <Widget>[
+            Text(
+              value.toString(),
+              key: ValueKey<String>('statistics-week-value-$index'),
+              maxLines: 1,
+              softWrap: false,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: scheme.onSurface,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xxs),
+            Expanded(
+              child: LayoutBuilder(
+                builder: (BuildContext context, BoxConstraints constraints) {
+                  final double areaHeight = constraints.maxHeight;
+                  final double fraction = maxValue == 0 ? 0 : value / maxValue;
+                  final double barHeight = value == 0
+                      ? 0
+                      : math.max(_minBarHeight, areaHeight * fraction);
+                  return Stack(
+                    alignment: Alignment.bottomCenter,
+                    children: <Widget>[
+                      SizedBox(
+                        key: ValueKey<String>(
+                          'statistics-week-baseline-$index',
+                        ),
+                        width: barWidth,
+                        height: _baselineHeight,
+                        child: ColoredBox(color: baselineColor),
+                      ),
+                      if (value > 0)
+                        Container(
+                          key: ValueKey<String>('statistics-week-bar-$index'),
+                          width: barWidth,
+                          height: barHeight,
+                          decoration: BoxDecoration(
+                            color: barColor,
+                            borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(AppRadii.xs),
+                            ),
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xxs),
+            Text(
+              label,
+              key: ValueKey<String>('statistics-week-label-$index'),
+              maxLines: 1,
+              softWrap: false,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: isToday ? scheme.primary : scheme.onSurfaceVariant,
+                fontWeight: isToday ? FontWeight.w600 : FontWeight.w500,
+              ),
+            ),
+          ],
         ),
-        Radius.circular(barWidth / 2),
-      );
-      canvas.drawRRect(bar, paint);
-    }
+      ),
+    );
   }
-
-  @override
-  bool shouldRepaint(_WaveformPainter oldDelegate) =>
-      oldDelegate.values != values || oldDelegate.color != color;
 }
 
 /// Годовая тепловая карта повторений (A6.5).
