@@ -876,6 +876,9 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
   /// Во время генерации выход не молчит и не теряет карточки: сначала
   /// подтверждение «Остановить генерацию?», где безопасное действие —
   /// продолжить. После подтверждения генерация отменяется и экран закрывается.
+  ///
+  /// Аудит v2 (N1): если пользователь уже ввёл тему/пожелания/имя колоды или
+  /// прикрепил файлы, «←»/Esc тоже спрашивает — введённое не пропадает молча.
   Future<void> _confirmExit() async {
     final AppLocalizations l10n = AppLocalizations.of(context);
     if (_generating) {
@@ -900,9 +903,40 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
       );
       if (stop != true || !mounted) return;
       _cancellation?.cancel();
+      _leave();
+      return;
+    }
+    if (_isDirty) {
+      final bool? leave = await showAppDialog<bool>(
+        context: context,
+        title: l10n.generationDiscardTitle,
+        subtitle: l10n.generationDiscardMessage,
+        closeLabel: l10n.cancel,
+        bodyBuilder: (BuildContext dialogContext) => const SizedBox.shrink(),
+        actionsBuilder: (BuildContext dialogContext) => <Widget>[
+          TextButton(
+            key: const ValueKey<String>('generation-discard-exit'),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(l10n.generationDiscardExit),
+          ),
+          FilledButton(
+            key: const ValueKey<String>('generation-discard-stay'),
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(l10n.generationDiscardStay),
+          ),
+        ],
+      );
+      if (leave != true || !mounted) return;
     }
     _leave();
   }
+
+  /// Есть ли в форме введённые данные, которые пропадут при выходе.
+  bool get _isDirty =>
+      _files.isNotEmpty ||
+      _wishesController.text.trim().isNotEmpty ||
+      _deckNameController.text.trim().isNotEmpty ||
+      _cardCountController.text.trim().isNotEmpty;
 
   void _leave() {
     final NavigatorState navigator = Navigator.of(context);

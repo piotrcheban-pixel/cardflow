@@ -458,10 +458,11 @@ class AppNavRail extends StatelessWidget {
         branch: 2,
       ),
     ];
+    final bool expanded = MediaQuery.sizeOf(context).width >= 900;
     return Material(
       color: scheme.surfaceContainerLowest,
       child: SizedBox(
-        width: AppSizes.navRailWidth,
+        width: expanded ? 92 : AppSizes.navRailWidth,
         child: SafeArea(
           child: Column(
             children: <Widget>[
@@ -486,6 +487,9 @@ class AppNavRail extends StatelessWidget {
                           selected:
                               destination.isBranch &&
                               destination.branch == currentBranch,
+                          // Аудит v2 (D2): на 900–1024 лог. px у рейки есть
+                          // подписи — иконки без текста слишком загадочны.
+                          expanded: expanded,
                           onTap: () {
                             final String? route = destination.route;
                             if (route != null) {
@@ -512,11 +516,15 @@ class _RailItem extends StatelessWidget {
     required this.destination,
     required this.selected,
     required this.onTap,
+    this.expanded = false,
   });
 
   final _SidebarDestination destination;
   final bool selected;
   final VoidCallback onTap;
+
+  /// Показывать подпись под иконкой (рейка шире 900 лог. px).
+  final bool expanded;
 
   @override
   Widget build(BuildContext context) {
@@ -530,6 +538,7 @@ class _RailItem extends StatelessWidget {
     return Center(
       child: Tooltip(
         message: destination.label,
+        waitDuration: Duration.zero,
         child: Material(
           color: selected ? scheme.surfaceContainerHigh : Colors.transparent,
           borderRadius: BorderRadius.circular(AppRadii.control),
@@ -540,9 +549,28 @@ class _RailItem extends StatelessWidget {
             onTap: onTap,
             borderRadius: BorderRadius.circular(AppRadii.control),
             child: SizedBox(
-              width: AppSizes.minTouchTarget,
-              height: AppSizes.minTouchTarget,
-              child: icon,
+              width: expanded ? 84 : AppSizes.minTouchTarget,
+              height: expanded ? 56 : AppSizes.minTouchTarget,
+              child: expanded
+                  ? Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: <Widget>[
+                        icon,
+                        const SizedBox(height: 2),
+                        Text(
+                          destination.label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            fontSize: 10,
+                            color: selected
+                                ? scheme.primary
+                                : scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    )
+                  : icon,
             ),
           ),
         ),

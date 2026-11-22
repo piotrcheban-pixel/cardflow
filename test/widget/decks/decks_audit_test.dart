@@ -65,4 +65,53 @@ void main() {
     expect(find.text(l10n.deckCardCount(0)), findsNothing);
     expect(find.text(l10n.deckDueCount(0)), findsNothing);
   });
+  testWidgets('A1 v2: 390×844 при 150 % (260×562) — без переполнения, '
+      'сортировка и вид в меню', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(260, 562);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await pumpDecks(
+      tester,
+      repository: FakeDeckRepository(
+        summaries: <DeckSummary>[makeSummary(id: 'deck-1', name: 'Физика')],
+      ),
+    );
+    expect(tester.takeException(), isNull);
+
+    final Finder menu = find.byKey(
+      const ValueKey<String>('decks-controls-menu'),
+    );
+    expect(menu, findsOneWidget);
+    await tester.ensureVisible(menu);
+    await tester.pumpAndSettle();
+    await tester.tap(find.descendant(of: menu, matching: find.byType(Icon)));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(
+      find.byKey(const ValueKey<String>('decks-sort-due')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey<String>('decks-view-list')),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('A1 v2: 390×844 (логические) — тулбар без переполнения', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await pumpDecks(
+      tester,
+      repository: FakeDeckRepository(
+        summaries: <DeckSummary>[makeSummary(id: 'deck-1', name: 'Физика')],
+      ),
+    );
+    expect(tester.takeException(), isNull);
+    expect(find.text('Физика'), findsOneWidget);
+  });
 }

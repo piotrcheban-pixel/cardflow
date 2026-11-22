@@ -1940,7 +1940,7 @@ class AppLocalizationsRu extends AppLocalizations {
       'Не удалось проверить ключ. Попробуйте ещё раз';
 
   @override
-  String settingsApiTokensWeek(int count) {
+  String settingsApiTokensWeek(String count) {
     return 'Токенов за неделю: $count';
   }
 
@@ -3005,6 +3005,19 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get generationExitRunningStay => 'Продолжить генерацию';
+
+  @override
+  String get generationDiscardTitle => 'Выйти без сохранения?';
+
+  @override
+  String get generationDiscardMessage =>
+      'Введённые материалы и пожелания не сохранены.';
+
+  @override
+  String get generationDiscardStay => 'Продолжить';
+
+  @override
+  String get generationDiscardExit => 'Выйти';
 
   @override
   String generationModelFromSettings(String model) {

@@ -343,7 +343,11 @@ class _CapabilityRow extends StatelessWidget {
     final String date = observed == null
         ? ''
         : ' · ${l10n.settingsCapabilitiesCheckedAt(_date(observed))}';
-    final String line = '$valueText — $sourceLabel$date';
+    // Аудит v2 (D3): «неизвестно — неизвестно» — источник без значения не
+    // дублирует слово «неизвестно» дважды.
+    final String line = sourced?.isKnown == true
+        ? '$valueText — $sourceLabel$date'
+        : valueText;
     // Допущение визуально отличается от подтверждённого значения (§3.10):
     // курсив + «допущение приложения» в подписи источника.
     final bool assumption = source == CapabilitySource.assumption;

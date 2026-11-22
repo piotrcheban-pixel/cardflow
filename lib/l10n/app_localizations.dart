@@ -3085,11 +3085,11 @@ abstract class AppLocalizations {
   /// **'Не удалось проверить ключ. Попробуйте ещё раз'**
   String get settingsApiCheckUnexpected;
 
-  /// Расход токенов за неделю.
+  /// Расход токенов за неделю (число с разделителями разрядов).
   ///
   /// In ru, this message translates to:
   /// **'Токенов за неделю: {count}'**
-  String settingsApiTokensWeek(int count);
+  String settingsApiTokensWeek(String count);
 
   /// Переход к экрану провайдеров (ADR-020).
   ///
@@ -4878,6 +4878,30 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Продолжить генерацию'**
   String get generationExitRunningStay;
+
+  /// Заголовок диалога выхода с заполненной формы генерации (аудит v2, N1).
+  ///
+  /// In ru, this message translates to:
+  /// **'Выйти без сохранения?'**
+  String get generationDiscardTitle;
+
+  /// Пояснение к диалогу выхода с формы генерации.
+  ///
+  /// In ru, this message translates to:
+  /// **'Введённые материалы и пожелания не сохранены.'**
+  String get generationDiscardMessage;
+
+  /// Безопасное действие в диалоге выхода с генерации.
+  ///
+  /// In ru, this message translates to:
+  /// **'Продолжить'**
+  String get generationDiscardStay;
+
+  /// Действие «выйти, потеряв введённое» на генерации.
+  ///
+  /// In ru, this message translates to:
+  /// **'Выйти'**
+  String get generationDiscardExit;
 
   /// Текущая модель строкой вместо мёртвого поля (находка F8).
   ///

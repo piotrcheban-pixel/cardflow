@@ -1,4 +1,5 @@
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart' hide Card;
@@ -201,5 +202,55 @@ void main() {
 
   test('ширина карточки выросла относительно макета 640 (D1)', () {
     expect(AppSizes.studyCardMaxWidth, greaterThanOrEqualTo(880));
+  });
+  testWidgets('D1 v2: 533×400 — длинный вопрос прокручивается клавишами '
+      'и индикатор прокрутки виден', (WidgetTester tester) async {
+    final String longFront = List<String>.filled(
+      18,
+      'Длинный вопрос карточки для проверки прокрутки',
+    ).join(' ');
+    tester.view.physicalSize = const Size(533, 400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      appWithRouter(
+        overrides: decksOverrides(
+          deckRepository: FakeDeckRepository(
+            summaries: <DeckSummary>[
+              makeSummary(id: 'deck-1', name: 'Физика', totalCards: 1),
+            ],
+          ),
+          cardRepository: FakeCardRepository(
+            cards: <Card>[
+              makeCard(id: 'card-1', deckId: 'deck-1', front: longFront),
+            ],
+          ),
+          reviewRepository: FakeReviewRepository(),
+        ),
+        routes: decksRoutes(),
+        initialLocation: '/decks/deck-1/study',
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final Finder card = find.byKey(const ValueKey<String>('review-card'));
+    expect(card, findsOneWidget);
+    // Контент не влезает в карточку — значит, должен быть видимый индикатор.
+    final Scrollbar scrollbar = tester.widget<Scrollbar>(
+      find.descendant(of: card, matching: find.byType(Scrollbar)),
+    );
+    expect(scrollbar.thumbVisibility, isTrue);
+
+    final Finder question = find.textContaining('Длинный вопрос карточки');
+    final double before = tester.getTopLeft(question).dy;
+    await tester.sendKeyEvent(LogicalKeyboardKey.pageDown);
+    await tester.pumpAndSettle();
+    final double after = tester.getTopLeft(question).dy;
+    expect(
+      after,
+      lessThan(before),
+      reason: 'PageDown прокручивает текст карточки (аудит v2, D1)',
+    );
   });
 }

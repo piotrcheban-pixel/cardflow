@@ -45,6 +45,14 @@ abstract final class AppTheme {
     dyslexiaFont: dyslexiaFont,
   );
 
+  /// Аудит v2 (A2): клавиатурный фокус виден не только заливкой 14 %
+  /// (контраст 1,2:1), но и рамкой 2 px цвета onSurface — это ≥ 3:1.
+  static WidgetStateProperty<BorderSide?> _focusSide(Color color) =>
+      WidgetStateProperty.resolveWith((Set<WidgetState> states) {
+        if (!states.contains(WidgetState.focused)) return null;
+        return BorderSide(color: color, width: 2);
+      });
+
   static ThemeData _build(
     Brightness brightness, {
     ColorScheme? scheme,
@@ -129,25 +137,38 @@ abstract final class AppTheme {
             borderRadius: BorderRadius.all(Radius.circular(AppRadii.control)),
           ),
           elevation: 0,
-        ),
+        ).merge(ButtonStyle(side: _focusSide(resolved.onSurface))),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
-        style: OutlinedButton.styleFrom(
-          foregroundColor: resolved.onSurface,
-          minimumSize: const Size(0, AppSizes.buttonHeight),
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md,
-            vertical: AppSpacing.xs,
-          ),
-          textStyle: text.labelLarge,
-          side: BorderSide(
-            color: resolved.outlineVariant,
-            width: AppSizes.borderWidth,
-          ),
-          shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.all(Radius.circular(AppRadii.control)),
-          ),
-        ),
+        // Порядок merge важен: ресивер перекрывает аргумент, поэтому свой
+        // резолвер рамки — ресивер, а не аргумент.
+        style:
+            ButtonStyle(
+              side: WidgetStateProperty.resolveWith((Set<WidgetState> states) {
+                if (states.contains(WidgetState.focused)) {
+                  return BorderSide(color: resolved.onSurface, width: 2);
+                }
+                return BorderSide(
+                  color: resolved.outlineVariant,
+                  width: AppSizes.borderWidth,
+                );
+              }),
+            ).merge(
+              OutlinedButton.styleFrom(
+                foregroundColor: resolved.onSurface,
+                minimumSize: const Size(0, AppSizes.buttonHeight),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md,
+                  vertical: AppSpacing.xs,
+                ),
+                textStyle: text.labelLarge,
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.all(
+                    Radius.circular(AppRadii.control),
+                  ),
+                ),
+              ),
+            ),
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
@@ -161,7 +182,7 @@ abstract final class AppTheme {
           shape: const RoundedRectangleBorder(
             borderRadius: BorderRadius.all(Radius.circular(AppRadii.control)),
           ),
-        ),
+        ).merge(ButtonStyle(side: _focusSide(resolved.onSurface))),
       ),
       iconButtonTheme: IconButtonThemeData(
         style: IconButton.styleFrom(
@@ -174,7 +195,7 @@ abstract final class AppTheme {
           shape: const RoundedRectangleBorder(
             borderRadius: BorderRadius.all(Radius.circular(AppRadii.control)),
           ),
-        ),
+        ).merge(ButtonStyle(side: _focusSide(resolved.onSurface))),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,

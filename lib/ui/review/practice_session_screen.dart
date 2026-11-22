@@ -40,6 +40,9 @@ class PracticeSessionScreen extends ConsumerStatefulWidget {
 class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen>
     with SessionNoticeMixin<PracticeSessionScreen> {
   PracticeSessionEngine? _engine;
+
+  /// Прокрутка содержимого карточки клавиатурой (аудит v2, D1).
+  final ScrollController _cardScroll = ScrollController();
   bool _loading = true;
   bool _loadFailed = false;
   bool _completionHapticPlayed = false;
@@ -58,6 +61,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen>
   void dispose() {
     _engine?.removeListener(_onEngineChanged);
     _engine?.dispose();
+    _cardScroll.dispose();
     super.dispose();
   }
 
@@ -173,6 +177,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen>
       onReveal: _reveal,
       onRate: (Rating rating) => unawaited(_rate(rating)),
       onUndo: () => unawaited(_undo()),
+      scroll: _cardScroll,
     );
   }
 
@@ -316,6 +321,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen>
                         key: const ValueKey<String>('practice-card'),
                         child: ReviewCardView(
                           key: ValueKey<String>(state.current!.id),
+                          scrollController: _cardScroll,
                           front: state.current!.front,
                           back: state.current!.back,
                           card: state.current!,

@@ -417,4 +417,39 @@ void main() {
       expect(find.byType(DeckScreen), findsOneWidget);
     });
   });
+  group('генерация: несохранённый ввод (аудит v2, N1)', () {
+    testWidgets('Esc с введённой темой спрашивает подтверждение', (
+      WidgetTester tester,
+    ) async {
+      await pumpApp(tester);
+      await tester.tap(
+        find.byKey(const ValueKey<String>('decks-generate-action')),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const ValueKey<String>('generation-wishes')),
+        'Тема для генерации',
+      );
+      await tester.pumpAndSettle();
+
+      await pressEsc(tester);
+      expect(find.byType(GenerationScreen), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey<String>('generation-discard-stay')),
+        findsOneWidget,
+      );
+      await tester.tap(
+        find.byKey(const ValueKey<String>('generation-discard-stay')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(GenerationScreen), findsOneWidget);
+
+      await pressEsc(tester);
+      await tester.tap(
+        find.byKey(const ValueKey<String>('generation-discard-exit')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(GenerationScreen), findsNothing);
+    });
+  });
 }

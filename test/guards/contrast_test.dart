@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'package:cardflow/ui/theme/app_contrast.dart';
+import 'package:cardflow/ui/theme/app_theme.dart';
 import 'package:cardflow/ui/theme/app_tokens.dart';
 
 /// Контраст палитры (SPEC A4.1, аудит A6): инвариант AA держит guard-тест.
@@ -115,6 +116,36 @@ void main() {
         expect(
           contrastRatio(scheme.onErrorContainer, scheme.errorContainer),
           greaterThanOrEqualTo(4.5),
+        );
+      });
+
+      // Аудит v2 (A2): индикатор фокуса кнопок — рамка 2 px, ≥ 3:1.
+      test('фокус кнопок: рамка ≥ 3:1 к поверхности', () {
+        final ThemeData theme = entry.name == 'light'
+            ? AppTheme.light()
+            : AppTheme.dark();
+        final List<ButtonStyle?> styles = <ButtonStyle?>[
+          theme.filledButtonTheme.style,
+          theme.textButtonTheme.style,
+          theme.iconButtonTheme.style,
+        ];
+        for (final ButtonStyle? style in styles) {
+          final BorderSide? side = style?.side?.resolve(<WidgetState>{
+            WidgetState.focused,
+          });
+          expect(side, isNotNull, reason: '${entry.name}: нет рамки фокуса');
+          expect(
+            contrastRatio(side!.color, theme.colorScheme.surface),
+            greaterThanOrEqualTo(3),
+            reason: '${entry.name}: контраст рамки фокуса',
+          );
+        }
+        final BorderSide? outlined = theme.outlinedButtonTheme.style?.side
+            ?.resolve(<WidgetState>{WidgetState.focused});
+        expect(outlined, isNotNull);
+        expect(
+          contrastRatio(outlined!.color, theme.colorScheme.surface),
+          greaterThanOrEqualTo(3),
         );
       });
     });

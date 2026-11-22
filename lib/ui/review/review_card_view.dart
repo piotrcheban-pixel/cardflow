@@ -39,6 +39,7 @@ class ReviewCardView extends StatefulWidget {
     this.mediaBytes = const <String, Uint8List>{},
     this.mediaMetadata = const <String, MediaMetadata>{},
     this.onRetryMedia,
+    this.scrollController,
     super.key,
   });
 
@@ -66,6 +67,13 @@ class ReviewCardView extends StatefulWidget {
   /// Повтор чтения медиа карточки, если файл/байты не нашлись (7.19).
   final VoidCallback? onRetryMedia;
 
+  /// Контроллер прокрутки содержимого карточки (клавиатура сессии).
+  ///
+  /// Аудит v2 (D1): на низком окне длинный вопрос не влезает в карточку —
+  /// колесо мыши прокручивает, но клавиатура не могла. Сессия передаёт свой
+  /// контроллер, чтобы PageUp/PageDown/↑/↓/Home/End прокручивали карточку.
+  final ScrollController? scrollController;
+
   @override
   State<ReviewCardView> createState() => _ReviewCardViewState();
 }
@@ -78,7 +86,10 @@ class _ReviewCardViewState extends State<ReviewCardView>
     value: widget.revealed ? 1 : 0,
   );
 
-  final ScrollController _scroll = ScrollController();
+  ScrollController? _internalScroll;
+
+  ScrollController get _scroll =>
+      widget.scrollController ?? (_internalScroll ??= ScrollController());
 
   @override
   void didUpdateWidget(ReviewCardView oldWidget) {
@@ -94,7 +105,7 @@ class _ReviewCardViewState extends State<ReviewCardView>
   @override
   void dispose() {
     _controller.dispose();
-    _scroll.dispose();
+    _internalScroll?.dispose();
     super.dispose();
   }
 
@@ -111,12 +122,22 @@ class _ReviewCardViewState extends State<ReviewCardView>
             ? constraints.maxHeight
             : 420;
         final bool narrow = width < 560;
-        final double questionSize = narrow ? 24 : 28;
-        final double answerSize = narrow ? 18 : 19;
+        // Аудит v2 (D1): на низком окне (800×600 при 150 % = 533×400) карточка
+        // получает 130–220 лог. px — уменьшаем кегль и отступы, чтобы вопрос
+        // читался целиком, а не обрезался краем.
+        final bool tight = height < 320;
+        final double questionSize = tight
+            ? (narrow ? 20 : 22)
+            : (narrow ? 24 : 28);
+        final double answerSize = tight ? 16 : (narrow ? 18 : 19);
         final double imageMaxHeight = math.max(120, height * 0.45);
         final EdgeInsets padding = EdgeInsets.symmetric(
-          horizontal: narrow ? AppSpacing.lg : AppSpacing.xxl,
-          vertical: narrow ? AppSpacing.lg : AppSpacing.xl,
+          horizontal: tight
+              ? AppSpacing.md
+              : (narrow ? AppSpacing.lg : AppSpacing.xxl),
+          vertical: tight
+              ? AppSpacing.xs
+              : (narrow ? AppSpacing.lg : AppSpacing.xl),
         );
         return AnimatedBuilder(
           animation: _controller,
@@ -339,8 +360,9 @@ class _SideLabel extends StatelessWidget {
 }
 
 /// Тело карточки: короткий текст центрируется, длинный — прокручивается
-/// внутри карточки с индикатором (находка D2: ничего не обрезается панелью).
-class _ScrollableCardBody extends StatelessWidget {
+/// внутри карточки с видимым индикатором (находки D2/D1: ничего не обрезается
+/// молча, наличие прокрутки очевидно).
+class _ScrollableCardBody extends StatefulWidget {
   const _ScrollableCardBody({
     required this.scroll,
     required this.padding,
@@ -353,27 +375,50 @@ class _ScrollableCardBody extends StatelessWidget {
   final List<Widget> children;
 
   @override
+  State<_ScrollableCardBody> createState() => _ScrollableCardBodyState();
+}
+
+class _ScrollableCardBodyState extends State<_ScrollableCardBody> {
+  /// Показывать ли постоянно индикатор прокрутки (контент не влезает).
+  bool _canScroll = false;
+
+  @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
-        return Scrollbar(
-          controller: scroll,
-          thumbVisibility: false,
-          child: SingleChildScrollView(
-            controller: scroll,
-            padding: padding,
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                minHeight: math.max(
-                  0,
-                  constraints.maxHeight - padding.vertical,
+        return NotificationListener<ScrollMetricsNotification>(
+          onNotification: (ScrollMetricsNotification notification) {
+            final bool canScroll = notification.metrics.maxScrollExtent > 0.5;
+            if (canScroll != _canScroll) {
+              // Уведомление приходит во время layout — setState только после
+              // кадра, иначе Flutter остановит сборку.
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted && canScroll != _canScroll) {
+                  setState(() => _canScroll = canScroll);
+                }
+              });
+            }
+            return false;
+          },
+          child: Scrollbar(
+            controller: widget.scroll,
+            thumbVisibility: _canScroll,
+            child: SingleChildScrollView(
+              controller: widget.scroll,
+              padding: widget.padding,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: math.max(
+                    0,
+                    constraints.maxHeight - widget.padding.vertical,
+                  ),
                 ),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: children,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: widget.children,
+                ),
               ),
             ),
           ),

@@ -468,6 +468,10 @@ class _DecksToolbar extends ConsumerWidget {
     final double width = MediaQuery.sizeOf(context).width;
     final bool wide = width >= 900;
     final bool compactControls = width < 520;
+    // Аудит v2 (A1): на клиенте 390×844 (260 лог. px при DPI 150 %) четыре
+    // цели по 44 px + сортировка не влезали в строку. Ниже 360 лог. px
+    // сортировка и режим отображения уходят в одно overflow-меню.
+    final bool ultraNarrow = width < 360;
 
     const Widget search = _DecksSearchField();
     final Widget controls = Row(
@@ -560,6 +564,44 @@ class _DecksToolbar extends ConsumerWidget {
       ],
     );
 
+    final Widget overflowMenu = PopupMenuButton<String>(
+      key: const ValueKey<String>('decks-controls-menu'),
+      tooltip: l10n.decksSortTooltip,
+      icon: const Icon(Icons.more_vert, size: AppSizes.navIcon),
+      onSelected: (String value) {
+        if (value.startsWith('sort:')) {
+          ref
+              .read(decksSortProvider.notifier)
+              .set(DecksSort.values.byName(value.substring(5)));
+          return;
+        }
+        ref
+            .read(decksViewModeProvider.notifier)
+            .set(DecksViewMode.values.byName(value.substring(5)));
+      },
+      itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+        for (final DecksSort value in DecksSort.values)
+          CheckedPopupMenuItem<String>(
+            key: ValueKey<String>('decks-sort-${value.name}'),
+            value: 'sort:${value.name}',
+            checked: sort == value,
+            child: Text(_sortLabel(l10n, value)),
+          ),
+        const PopupMenuDivider(),
+        for (final DecksViewMode value in DecksViewMode.values)
+          CheckedPopupMenuItem<String>(
+            key: ValueKey<String>('decks-view-${value.name}'),
+            value: 'view:${value.name}',
+            checked: viewMode == value,
+            child: Text(
+              value == DecksViewMode.grid
+                  ? l10n.decksViewGrid
+                  : l10n.decksViewList,
+            ),
+          ),
+      ],
+    );
+
     final Widget searchRow = Row(
       children: <Widget>[
         if (!wide && !searchVisible) ...<Widget>[
@@ -576,7 +618,7 @@ class _DecksToolbar extends ConsumerWidget {
                 ref.read(decksFiltersVisibleProvider.notifier).toggle(),
           ),
           const Spacer(),
-          controls,
+          if (ultraNarrow) overflowMenu else controls,
         ] else if (!wide) ...<Widget>[
           Expanded(child: search),
           IconButton(
@@ -587,7 +629,7 @@ class _DecksToolbar extends ConsumerWidget {
               ref.read(decksFiltersVisibleProvider.notifier).toggle();
             },
           ),
-          controls,
+          if (ultraNarrow) overflowMenu else controls,
         ] else ...<Widget>[
           Expanded(child: search),
           const SizedBox(width: AppSpacing.xs),
@@ -1073,52 +1115,91 @@ class _DeckTile extends StatelessWidget {
           Divider(height: AppSizes.borderWidth, color: scheme.surfaceContainer),
           Padding(
             padding: const EdgeInsets.only(top: AppSpacing.sm),
-            child: Row(
-              children: <Widget>[
-                Icon(
-                  Icons.schedule,
-                  size: AppSizes.iconSmall,
-                  color: scheme.outline,
-                ),
-                const SizedBox(width: AppSpacing.xxs),
-                Expanded(
-                  child: Text(
-                    l10n.deckUpdated(date),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: scheme.onSurfaceVariant,
+            child: LayoutBuilder(
+              builder: (BuildContext context, BoxConstraints constraints) {
+                final Widget updatedRow = Row(
+                  children: <Widget>[
+                    Icon(
+                      Icons.schedule,
+                      size: AppSizes.iconSmall,
+                      color: scheme.outline,
                     ),
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.xs),
-                if (hasWork)
-                  FilledButton.icon(
-                    key: ValueKey<String>('deck-study-${summary.deck.id}'),
-                    onPressed: onOpen,
-                    icon: const Icon(Icons.play_arrow, size: 16),
-                    label: Text(l10n.deckStudyAction),
-                    style: FilledButton.styleFrom(
-                      minimumSize: const Size(0, 34),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.sm,
+                    const SizedBox(width: AppSpacing.xxs),
+                    Expanded(
+                      child: Text(
+                        l10n.deckUpdated(date),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
                       ),
                     ),
-                  )
-                else
-                  OutlinedButton.icon(
-                    key: ValueKey<String>('deck-study-${summary.deck.id}'),
-                    onPressed: onOpen,
-                    icon: const Icon(Icons.visibility_outlined, size: 16),
-                    label: Text(l10n.deckReviewAction),
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size(0, 34),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.sm,
+                  ],
+                );
+                final Widget action = hasWork
+                    ? FilledButton.icon(
+                        key: ValueKey<String>('deck-study-${summary.deck.id}'),
+                        onPressed: onOpen,
+                        icon: const Icon(Icons.play_arrow, size: 16),
+                        label: Text(l10n.deckStudyAction),
+                        style: FilledButton.styleFrom(
+                          minimumSize: const Size(0, 34),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.sm,
+                          ),
+                        ),
+                      )
+                    : OutlinedButton.icon(
+                        key: ValueKey<String>('deck-study-${summary.deck.id}'),
+                        onPressed: onOpen,
+                        icon: const Icon(Icons.visibility_outlined, size: 16),
+                        label: Text(l10n.deckReviewAction),
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size(0, 34),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.sm,
+                          ),
+                        ),
+                      );
+                // Аудит v2 (A1): на 260 лог. px кнопка и дата не влезали в одну
+                // строку — на узкой карточке кнопка уходит на свою строку.
+                if (constraints.maxWidth < 240) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: <Widget>[
+                      updatedRow,
+                      const SizedBox(height: AppSpacing.xs),
+                      Align(
+                        alignment: AlignmentDirectional.centerEnd,
+                        child: action,
+                      ),
+                    ],
+                  );
+                }
+                return Row(
+                  children: <Widget>[
+                    Icon(
+                      Icons.schedule,
+                      size: AppSizes.iconSmall,
+                      color: scheme.outline,
+                    ),
+                    const SizedBox(width: AppSpacing.xxs),
+                    Expanded(
+                      child: Text(
+                        l10n.deckUpdated(date),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
                       ),
                     ),
-                  ),
-              ],
+                    const SizedBox(width: AppSpacing.xs),
+                    action,
+                  ],
+                );
+              },
             ),
           ),
         ],
@@ -1235,7 +1316,15 @@ class _MetricValue extends StatelessWidget {
           style: AppTypography.numeric(context, color: scheme.onSurface),
         ),
         const SizedBox(width: AppSpacing.xxs + 2),
-        Text(label, style: AppTypography.overline(context)),
+        // Аудит v2 (A1): на 260 лог. px подпись метрики не влезала в строку.
+        Flexible(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTypography.overline(context),
+          ),
+        ),
       ],
     );
   }

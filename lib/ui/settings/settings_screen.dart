@@ -10,6 +10,7 @@
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -984,7 +985,9 @@ class _ApiSection extends ConsumerWidget {
           error: (Object error, StackTrace stackTrace) =>
               const SizedBox.shrink(),
           data: (int count) => Text(
-            l10n.settingsApiTokensWeek(count),
+            l10n.settingsApiTokensWeek(
+              NumberFormat.decimalPattern('ru').format(count),
+            ),
             key: const ValueKey<String>('settings-weekly-tokens'),
             style: theme.textTheme.bodyMedium?.copyWith(
               color: scheme.onSurfaceVariant,

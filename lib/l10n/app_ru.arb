@@ -2353,10 +2353,10 @@
   },
   "settingsApiTokensWeek": "Токенов за неделю: {count}",
   "@settingsApiTokensWeek": {
-    "description": "Расход токенов за неделю.",
+    "description": "Расход токенов за неделю (число с разделителями разрядов).",
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "String"
       }
     }
   },
@@ -3590,6 +3590,14 @@
   "@generationExitRunningConfirm": {"description": "Остановить генерацию и покинуть экран."},
   "generationExitRunningStay": "Продолжить генерацию",
   "@generationExitRunningStay": {"description": "Остаться на экране генерации (безопасное действие)."},
+  "generationDiscardTitle": "Выйти без сохранения?",
+  "@generationDiscardTitle": {"description": "Заголовок диалога выхода с заполненной формы генерации (аудит v2, N1)."},
+  "generationDiscardMessage": "Введённые материалы и пожелания не сохранены.",
+  "@generationDiscardMessage": {"description": "Пояснение к диалогу выхода с формы генерации."},
+  "generationDiscardStay": "Продолжить",
+  "@generationDiscardStay": {"description": "Безопасное действие в диалоге выхода с генерации."},
+  "generationDiscardExit": "Выйти",
+  "@generationDiscardExit": {"description": "Действие «выйти, потеряв введённое» на генерации."},
   "generationModelFromSettings": "Модель: {model}",
   "@generationModelFromSettings": {"description": "Текущая модель строкой вместо мёртвого поля (находка F8).", "placeholders": {"model": {"type": "String"}}},
   "generationModelChange": "Изменить",

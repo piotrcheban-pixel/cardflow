@@ -64,6 +64,9 @@ class ReviewSessionScreen extends ConsumerStatefulWidget {
 class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen>
     with SessionNoticeMixin<ReviewSessionScreen> {
   ReviewSessionEngine? _engine;
+
+  /// Прокрутка содержимого карточки клавиатурой (аудит v2, D1).
+  final ScrollController _cardScroll = ScrollController();
   Timer? _budgetTimer;
   bool _timeExpired = false;
   bool _planMissing = false;
@@ -91,6 +94,7 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen>
     _budgetTimer?.cancel();
     _engine?.removeListener(_onEngineChanged);
     _engine?.dispose();
+    _cardScroll.dispose();
     super.dispose();
   }
 
@@ -270,6 +274,7 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen>
       onReveal: _reveal,
       onRate: (Rating rating) => unawaited(_rate(rating)),
       onUndo: () => unawaited(_undo()),
+      scroll: _cardScroll,
     );
   }
 
@@ -445,6 +450,7 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen>
                         key: const ValueKey<String>('review-card'),
                         child: ReviewCardView(
                           key: ValueKey<String>(state.current!.card.id),
+                          scrollController: _cardScroll,
                           front: state.current!.card.front,
                           back: state.current!.card.back,
                           card: state.current!.card,

@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'package:cardflow/api/generation/api_key_verifier.dart';
@@ -213,7 +214,14 @@ void main() {
       tester,
       find.byKey(const ValueKey<String>('settings-weekly-tokens')),
     );
-    expect(find.text(l10n.settingsApiTokensWeek(1234)), findsOneWidget);
+    expect(
+      find.text(
+        l10n.settingsApiTokensWeek(
+          NumberFormat.decimalPattern('ru').format(1234),
+        ),
+      ),
+      findsOneWidget,
+    );
     expect(
       find.byKey(const ValueKey<String>('settings-provider-deepseek')),
       findsOneWidget,
