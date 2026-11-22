@@ -72,6 +72,10 @@ abstract final class AppTheme {
       dividerColor: resolved.outlineVariant,
       splashFactory: InkSparkle.splashFactory,
       visualDensity: VisualDensity.standard,
+      // Находка A3: у клавиатурного фокуса видимый отклик. `focusColor` —
+      // подсветка InkWell/ListTile, кольцо у панелей рисует `AppPanel`.
+      focusColor: resolved.primary.withValues(alpha: 0.14),
+      hoverColor: resolved.primary.withValues(alpha: 0.06),
     );
 
     final ThemeData themed = base.copyWith(

@@ -65,10 +65,10 @@ class AppPanel extends StatelessWidget {
       ),
       child: onTap == null && onLongPress == null
           ? content
-          : InkWell(
+          : _InteractiveSurface(
               onTap: onTap,
               onLongPress: onLongPress,
-              borderRadius: shape,
+              radius: radius,
               child: content,
             ),
     );
@@ -703,4 +703,62 @@ class _DashedBorderPainter extends CustomPainter {
       oldDelegate.strokeWidth != strokeWidth ||
       oldDelegate.dashLength != dashLength ||
       oldDelegate.gapLength != gapLength;
+}
+
+/// Интерактивная поверхность панели с видимым клавиатурным фокусом.
+///
+/// Находка A3 аудита: `InkWell` без `focusColor` не показывал, где находится
+/// клавиатурный фокус. Здесь фокус рисуется кольцом 2 px поверх панели
+/// (вёрстка не сдвигается: кольцо живёт в `Stack` и не занимает места).
+class _InteractiveSurface extends StatefulWidget {
+  const _InteractiveSurface({
+    required this.child,
+    required this.radius,
+    required this.onTap,
+    required this.onLongPress,
+  });
+
+  final Widget child;
+  final double radius;
+  final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
+
+  @override
+  State<_InteractiveSurface> createState() => _InteractiveSurfaceState();
+}
+
+class _InteractiveSurfaceState extends State<_InteractiveSurface> {
+  bool _focused = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    final BorderRadius shape = BorderRadius.circular(widget.radius);
+    return Stack(
+      children: <Widget>[
+        InkWell(
+          onTap: widget.onTap,
+          onLongPress: widget.onLongPress,
+          borderRadius: shape,
+          onFocusChange: (bool value) {
+            if (_focused == value) return;
+            setState(() => _focused = value);
+          },
+          child: widget.child,
+        ),
+        if (_focused)
+          Positioned.fill(
+            child: IgnorePointer(
+              child: DecoratedBox(
+                key: const ValueKey<String>('app-focus-ring'),
+                decoration: BoxDecoration(
+                  borderRadius: shape,
+                  border: Border.all(color: scheme.primary, width: 2),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
 }

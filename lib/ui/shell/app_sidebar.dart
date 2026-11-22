@@ -155,7 +155,9 @@ class AppSidebar extends ConsumerWidget {
             ),
           ),
           Divider(height: AppSizes.borderWidth, color: scheme.outlineVariant),
-          // Поиск по колодам.
+          // Находка D10: раньше здесь было псевдо-поле ввода, в которое нельзя
+          // было печатать. Теперь это честный пункт навигации: одно действие —
+          // и поиск по колодам открыт на экране колод.
           if (onSearch != null)
             Padding(
               padding: const EdgeInsets.fromLTRB(
@@ -164,20 +166,17 @@ class AppSidebar extends ConsumerWidget {
                 AppSpacing.sm,
                 0,
               ),
-              child: Tooltip(
-                message: l10n.shellSearchTooltip,
+              child: Material(
+                color: scheme.surfaceContainerLow,
+                borderRadius: BorderRadius.circular(AppRadii.control),
                 child: InkWell(
+                  key: const ValueKey<String>('shell-search-action'),
                   onTap: onSearch,
                   borderRadius: BorderRadius.circular(AppRadii.control),
-                  child: Container(
-                    height: 34,
+                  child: Padding(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.xs + 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: scheme.surface,
-                      borderRadius: BorderRadius.circular(AppRadii.control),
-                      border: Border.all(color: scheme.outlineVariant),
+                      horizontal: AppSpacing.sm,
+                      vertical: AppSpacing.xs + 2,
                     ),
                     child: Row(
                       children: <Widget>[
@@ -186,15 +185,29 @@ class AppSidebar extends ConsumerWidget {
                           size: AppSizes.icon,
                           color: scheme.onSurfaceVariant,
                         ),
-                        const SizedBox(width: 6),
+                        const SizedBox(width: AppSpacing.xs + 2),
                         Expanded(
-                          child: Text(
-                            l10n.shellSearchHint,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: scheme.onSurfaceVariant,
-                            ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              Text(
+                                l10n.shellSearchAction,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: scheme.onSurface,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              Text(
+                                l10n.shellSearchActionHint,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: scheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
@@ -377,6 +390,159 @@ class _SidebarItem extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Компактная рейка навигации (640–1024 px): только иконки с tooltip.
+///
+/// Находка N6 аудита: на 800×600 прежняя оболочка прятала разделы в `Drawer`,
+/// и путь «Статистика → Колоды» требовал двух действий и знания, что меню —
+/// за бургером. Рейка держит все разделы видимыми, как на широком экране.
+class AppNavRail extends StatelessWidget {
+  /// Создаёт рейку.
+  const AppNavRail({
+    required this.currentBranch,
+    required this.onSelectBranch,
+    this.onSearch,
+    super.key,
+  });
+
+  /// Текущая ветка оболочки.
+  final int currentBranch;
+
+  /// Переключение ветки оболочки.
+  final ValueChanged<int> onSelectBranch;
+
+  /// Открытие поиска по колодам.
+  final VoidCallback? onSearch;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
+    final List<_SidebarDestination> destinations = <_SidebarDestination>[
+      _SidebarDestination(
+        label: l10n.navDecks,
+        icon: Icons.view_agenda_outlined,
+        selectedIcon: Icons.view_agenda,
+        branch: 0,
+      ),
+      _SidebarDestination(
+        label: l10n.navAi,
+        icon: Icons.auto_awesome_outlined,
+        selectedIcon: Icons.auto_awesome,
+        route: AppRoutes.generationPath,
+      ),
+      _SidebarDestination(
+        label: l10n.navConstructor,
+        icon: Icons.tune_outlined,
+        selectedIcon: Icons.tune,
+        route: AppRoutes.constructorPath,
+      ),
+      _SidebarDestination(
+        label: l10n.navStatistics,
+        icon: Icons.insights_outlined,
+        selectedIcon: Icons.insights,
+        branch: 1,
+      ),
+      _SidebarDestination(
+        label: l10n.navSettings,
+        icon: Icons.settings_outlined,
+        selectedIcon: Icons.settings,
+        branch: 2,
+      ),
+    ];
+    return Material(
+      color: scheme.surfaceContainerLowest,
+      child: SizedBox(
+        width: AppSizes.navRailWidth,
+        child: SafeArea(
+          child: Column(
+            children: <Widget>[
+              const SizedBox(height: AppSpacing.xs),
+              if (onSearch != null)
+                IconButton(
+                  key: const ValueKey<String>('shell-rail-search'),
+                  tooltip: l10n.shellSearchAction,
+                  icon: const Icon(Icons.search, size: AppSizes.navIcon),
+                  onPressed: onSearch,
+                ),
+              const SizedBox(height: AppSpacing.xs),
+              Expanded(
+                child: ListView(
+                  padding: EdgeInsets.zero,
+                  children: <Widget>[
+                    for (final _SidebarDestination destination in destinations)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2),
+                        child: _RailItem(
+                          destination: destination,
+                          selected:
+                              destination.isBranch &&
+                              destination.branch == currentBranch,
+                          onTap: () {
+                            final String? route = destination.route;
+                            if (route != null) {
+                              context.push(route);
+                              return;
+                            }
+                            onSelectBranch(destination.branch!);
+                          },
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RailItem extends StatelessWidget {
+  const _RailItem({
+    required this.destination,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final _SidebarDestination destination;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
+    final Widget icon = Icon(
+      selected ? destination.selectedIcon : destination.icon,
+      size: AppSizes.navIcon,
+      color: selected ? scheme.primary : scheme.onSurfaceVariant,
+    );
+    return Center(
+      child: Tooltip(
+        message: destination.label,
+        child: Material(
+          color: selected ? scheme.surfaceContainerHigh : Colors.transparent,
+          borderRadius: BorderRadius.circular(AppRadii.control),
+          child: InkWell(
+            key: ValueKey<String>(
+              'shell-rail-${destination.route ?? destination.branch}',
+            ),
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(AppRadii.control),
+            child: SizedBox(
+              width: AppSizes.minTouchTarget,
+              height: AppSizes.minTouchTarget,
+              child: icon,
             ),
           ),
         ),

@@ -47,22 +47,23 @@ class AppPageScaffold extends StatelessWidget {
             child: header,
           ),
         ),
-        SliverPadding(
-          padding: EdgeInsets.fromLTRB(
-            _horizontalPadding(context),
-            AppSpacing.xs,
-            _horizontalPadding(context),
-            bottomPadding,
-          ),
-          sliver: SliverList(
-            delegate: SliverChildListDelegate(<Widget>[
-              for (final Widget sliver in slivers)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                  child: sliver,
+        SliverList(
+          delegate: SliverChildListDelegate(<Widget>[
+            // Находка D19: контент ограничен шириной макета и на широких
+            // экранах, а не растянут на всю ширину окна (строки по 1200+ px).
+            for (final Widget sliver in slivers)
+              AppContentWidth(
+                maxWidth: maxWidth,
+                padding: EdgeInsets.fromLTRB(
+                  _horizontalPadding(context),
+                  0,
+                  _horizontalPadding(context),
+                  AppSpacing.md,
                 ),
-            ]),
-          ),
+                child: sliver,
+              ),
+            SizedBox(height: bottomPadding - AppSpacing.md),
+          ]),
         ),
       ],
     );
@@ -140,8 +141,10 @@ class AppPageHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final bool wide =
-        MediaQuery.sizeOf(context).width >= AppSizes.gridBreakpointTablet;
+    // Ниже 900 px действия уходят под заголовок: иначе три кнопки отнимают у
+    // названия половину ширины, и заголовок переносится на две строки
+    // (находка D16: на 800×600 контент уезжал под сгиб).
+    final bool wide = MediaQuery.sizeOf(context).width >= 900;
     final Widget titleBlock = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[

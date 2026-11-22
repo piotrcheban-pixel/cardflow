@@ -154,7 +154,9 @@ void main() {
     await tester.pumpAndSettle();
     final AppLocalizations l10n = l10nOf(tester);
 
-    await tester.tap(find.text(l10n.shellSearchHint));
+    // Находка D10: вместо псевдо-поля ввода — честный пункт навигации.
+    expect(find.text(l10n.shellSearchHint), findsNothing);
+    await tester.tap(find.text(l10n.shellSearchAction));
     await tester.pumpAndSettle();
 
     expect(find.byType(DecksScreen), findsOneWidget);

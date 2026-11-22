@@ -55,6 +55,17 @@ class DecksScreen extends ConsumerWidget {
       (int sum, DeckSummary deck) => sum + deck.totalCards - deck.newCards,
     );
     final bool loaded = summaries.hasValue;
+    final Size window = MediaQuery.sizeOf(context);
+    final bool compactHeight = window.height < 760;
+    // Первый запуск: пустая база без фильтров — KPI и панель фильтров не нужны,
+    // первым видно пустое состояние с действиями (находка D16).
+    final bool firstLaunch =
+        loaded &&
+        (summaries.value ?? const <DeckSummary>[]).isEmpty &&
+        decks.isEmpty &&
+        query.normalizedSearch.isEmpty &&
+        query.filter == DeckFilter.all;
+    final bool showChrome = !firstLaunch;
 
     return Scaffold(
       body: AppPageScaffold(
@@ -84,18 +95,33 @@ class DecksScreen extends ConsumerWidget {
           ],
         ),
         slivers: <Widget>[
-          _MetricsStrip(
-            totalCards: totalCards,
-            dueCards: dueCards,
-            studiedCards: studiedCards,
-            decks: decks.length,
-          ),
-          _DecksToolbar(
-            query: query,
-            sort: sort,
-            viewMode: viewMode,
-            counts: _FilterCounts.fromSummaries(decks),
-          ),
+          // Находка D16: на низком окне (800×600) четыре KPI-плитки съедали
+          // экран, и пустое состояние/первая колода уходили под сгиб. На
+          // низком окне KPI сжимаются в одну строку, а на первом запуске
+          // (пустая база) метрики и панель фильтров не показываются вовсе —
+          // первым видно пустое состояние с действиями.
+          if (showChrome) ...<Widget>[
+            if (compactHeight)
+              _MetricsLine(
+                totalCards: totalCards,
+                dueCards: dueCards,
+                studiedCards: studiedCards,
+                decks: decks.length,
+              )
+            else
+              _MetricsStrip(
+                totalCards: totalCards,
+                dueCards: dueCards,
+                studiedCards: studiedCards,
+                decks: decks.length,
+              ),
+            _DecksToolbar(
+              query: query,
+              sort: sort,
+              viewMode: viewMode,
+              counts: _FilterCounts.fromSummaries(decks),
+            ),
+          ],
           summaries.when(
             loading: () => const Padding(
               padding: EdgeInsets.symmetric(vertical: AppSpacing.huge),
@@ -344,7 +370,7 @@ class _MetricsStrip extends StatelessWidget {
     final NumberFormat number = NumberFormat.decimalPattern('ru');
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
-        final int columns = constraints.maxWidth >= 768 ? 4 : 2;
+        final int columns = constraints.maxWidth >= 620 ? 4 : 2;
         final double gap = AppSpacing.sm;
         final double width =
             (constraints.maxWidth - gap * (columns - 1)) / columns;
@@ -1120,6 +1146,81 @@ class _DeckMonogram extends StatelessWidget {
         letter,
         style: Theme.of(context).textTheme.titleMedium?.copyWith(color: color),
       ),
+    );
+  }
+}
+
+/// Компактная строка KPI для низких окон (находка D16).
+///
+/// Четыре плитки высотой ~100 px на 800×600 съедали экран; в одну строку те же
+/// числа занимают ~40 px, а информация остаётся доступной.
+class _MetricsLine extends StatelessWidget {
+  const _MetricsLine({
+    required this.totalCards,
+    required this.dueCards,
+    required this.studiedCards,
+    required this.decks,
+  });
+
+  final int totalCards;
+  final int dueCards;
+  final int studiedCards;
+  final int decks;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    return Wrap(
+      spacing: AppSpacing.md,
+      runSpacing: AppSpacing.xs,
+      children: <Widget>[
+        _MetricValue(
+          key: const ValueKey<String>('decks-kpi-total'),
+          label: l10n.decksMetricTotal,
+          value: totalCards,
+        ),
+        _MetricValue(
+          key: const ValueKey<String>('decks-kpi-due'),
+          label: l10n.decksMetricDue,
+          value: dueCards,
+        ),
+        _MetricValue(
+          key: const ValueKey<String>('decks-kpi-studied'),
+          label: l10n.decksMetricStudied,
+          value: studiedCards,
+        ),
+        _MetricValue(
+          key: const ValueKey<String>('decks-kpi-decks'),
+          label: l10n.decksMetricDecks,
+          value: decks,
+        ),
+      ],
+    );
+  }
+}
+
+class _MetricValue extends StatelessWidget {
+  const _MetricValue({required this.label, required this.value, super.key});
+
+  final String label;
+  final int value;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.baseline,
+      textBaseline: TextBaseline.alphabetic,
+      children: <Widget>[
+        Text(
+          NumberFormat.decimalPattern('ru').format(value),
+          style: AppTypography.numeric(context, color: scheme.onSurface),
+        ),
+        const SizedBox(width: AppSpacing.xxs + 2),
+        Text(label, style: AppTypography.overline(context)),
+      ],
     );
   }
 }

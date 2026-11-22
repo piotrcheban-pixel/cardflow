@@ -33,6 +33,33 @@ void main() {
     expect(markup.segments.where((segment) => segment.isGap), hasLength(2));
   });
 
+  // Находка F2 аудита: формат без номера — самый естественный для нового
+  // пользователя, и он должен работать как первый пропуск, а не ошибка.
+  test('пропуск без номера принимается как c1 (F2)', () {
+    final markup = ClozeMarkup.parse('Столица Франции — {{Париж}}.');
+
+    expect(markup.hasGaps, isTrue);
+    expect(markup.segments, hasLength(3));
+    expect(markup.segments[1].number, 1);
+    expect(markup.segments[1].answer, 'Париж');
+  });
+
+  test('несколько пропусков без номера — одна группа раскрытия', () {
+    final markup = ClozeMarkup.parse('{{А}} и {{Б}}');
+
+    final numbers = markup.segments
+        .where((segment) => segment.isGap)
+        .map((segment) => segment.number)
+        .toList();
+    expect(numbers, <int?>[1, 1]);
+  });
+
+  test('пример синтаксиса для подсказки разбирается как пропуск (F2)', () {
+    final markup = ClozeMarkup.parse(clozeSyntaxExample);
+    expect(markup.hasGaps, isTrue);
+    expect(markup.segments.single.number, 1);
+  });
+
   group('некорректная разметка остаётся обычным текстом', () {
     for (final source in <String>[
       '{{c1::не закрыто',

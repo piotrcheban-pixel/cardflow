@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,10 +10,12 @@ import 'package:cardflow/domain/cards/card_draft.dart';
 import 'package:cardflow/domain/cards/card_image_refresh_result.dart';
 import 'package:cardflow/domain/cards/card_media.dart';
 import 'package:cardflow/domain/cards/card_repository.dart';
+import 'package:cardflow/domain/cards/cloze_markup.dart';
 import 'package:cardflow/domain/cards/media_metadata.dart';
 import 'package:cardflow/domain/cards/occlusion.dart';
 import 'package:cardflow/domain/generation/card_image_kind.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
+import 'package:cardflow/ui/components/app_dialogs.dart';
 import 'package:cardflow/ui/components/app_layout.dart';
 import 'package:cardflow/ui/components/app_surfaces.dart';
 import 'package:cardflow/ui/theme/app_tokens.dart';
@@ -72,6 +75,15 @@ class _MediaItem {
   Uint8List? get uploadBytes => upload?.bytes;
 }
 
+/// Выбор при выходе с несохранёнными правками (находка N2).
+enum _UnsavedChoice {
+  /// Сохранить правки и выйти.
+  save,
+
+  /// Выйти без сохранения.
+  discard,
+}
+
 /// Экран создания/редактирования карточки (SPEC A6.3, ADR-009).
 ///
 /// Поля: front (обязателен, ≤500), back (обязателен, ≤2000), hint, теги (≤3),
@@ -107,6 +119,8 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
   bool _loadFailed = false;
   bool _saving = false;
   bool _imageLoading = false;
+  bool _showValidationSummary = false;
+  String _initialSignature = '';
   List<_MediaItem> _questionImages = <_MediaItem>[];
   List<_MediaItem> _answerImages = <_MediaItem>[];
   OcclusionDocument? _occlusion;
@@ -115,11 +129,26 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
   Map<CardDraftField, CardValidationError> _errors =
       const <CardDraftField, CardValidationError>{};
 
+  /// Ключи полей для прокрутки к первой ошибке валидации (находка F3).
+  final Map<CardDraftField, GlobalKey> _fieldAnchors =
+      <CardDraftField, GlobalKey>{
+        for (final CardDraftField field in <CardDraftField>[
+          CardDraftField.front,
+          CardDraftField.back,
+          CardDraftField.tags,
+          CardDraftField.sourceExcerpt,
+        ])
+          field: GlobalKey(),
+      };
+
   bool get _isEditing => widget.cardId != null;
 
   @override
   void initState() {
     super.initState();
+    // Подпись «пустой» формы: правки нового пользователя сразу считаются
+    // несохранёнными (находка N2).
+    _initialSignature = _draftSignature();
     if (_isEditing) {
       _loading = true;
       _loadCard();
@@ -176,6 +205,7 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
         // карточка с иллюстрацией — с выключенными (ADR-028).
         _useOcclusion = _occlusion != null;
         _loading = false;
+        _initialSignature = _draftSignature();
       });
     } catch (_) {
       if (!mounted) return;
@@ -416,7 +446,12 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
     );
     final Map<CardDraftField, CardValidationError> errors = draft.validate();
     if (errors.isNotEmpty) {
-      setState(() => _errors = errors);
+      setState(() {
+        _errors = errors;
+        // Находка F3: сводка видна всегда, а не только при прокрутке вверх.
+        _showValidationSummary = true;
+      });
+      _scrollToFirstError(errors);
       return;
     }
     setState(() {
@@ -449,6 +484,95 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
     for (final _MediaItem item in items)
       if (item.mediaId != null) item.mediaId!,
   ];
+
+  /// Отпечаток текущего содержимого формы: по нему определяется, есть ли
+  /// несохранённые правки (находка N2 аудита).
+  String _draftSignature() => <String>[
+    _front.text,
+    _back.text,
+    _hint.text,
+    _tags.text,
+    _sourceExcerpt.text,
+    _cardType.name,
+    _useOcclusion ? (_occlusion?.encode() ?? '') : '',
+    for (final _MediaItem item in _questionImages) 'q:${item.key}',
+    for (final _MediaItem item in _answerImages) 'a:${item.key}',
+  ].join('\u0000');
+
+  /// Есть ли правки относительно загруженного/пустого состояния.
+  bool get _isDirty => _draftSignature() != _initialSignature;
+
+  /// Прокручивает форму к первому невалидному полю (находка F3).
+  void _scrollToFirstError(Map<CardDraftField, CardValidationError> errors) {
+    const List<CardDraftField> order = <CardDraftField>[
+      CardDraftField.front,
+      CardDraftField.back,
+      CardDraftField.tags,
+      CardDraftField.sourceExcerpt,
+      CardDraftField.occlusion,
+    ];
+    final CardDraftField field = order.firstWhere(
+      errors.containsKey,
+      orElse: () => CardDraftField.front,
+    );
+    final BuildContext? anchor = _fieldAnchors[field]?.currentContext;
+    if (anchor == null) return;
+    unawaited(
+      Scrollable.ensureVisible(
+        anchor,
+        alignment: 0.08,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOutCubic,
+      ),
+    );
+  }
+
+  /// Выход с проверкой несохранённых правок (находка N2).
+  ///
+  /// Молчаливой потери данных больше нет: «Сохранить и выйти», «Не сохранять»
+  /// или «Отмена». `Esc`, системный back и стрелка в шапке идут сюда же.
+  Future<void> _confirmExit() async {
+    if (_saving) return;
+    if (!_isDirty) {
+      _leave();
+      return;
+    }
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final _UnsavedChoice? choice = await showAppDialog<_UnsavedChoice>(
+      context: context,
+      title: l10n.cardFormUnsavedTitle,
+      subtitle: l10n.cardFormUnsavedMessage,
+      closeLabel: l10n.cancel,
+      bodyBuilder: (BuildContext dialogContext) => const SizedBox.shrink(),
+      actionsBuilder: (BuildContext dialogContext) => <Widget>[
+        TextButton(
+          key: const ValueKey<String>('card-form-discard'),
+          onPressed: () =>
+              Navigator.of(dialogContext).pop(_UnsavedChoice.discard),
+          child: Text(l10n.cardFormUnsavedDiscard),
+        ),
+        FilledButton(
+          key: const ValueKey<String>('card-form-save-exit'),
+          onPressed: () => Navigator.of(dialogContext).pop(_UnsavedChoice.save),
+          child: Text(l10n.cardFormUnsavedSave),
+        ),
+      ],
+    );
+    if (!mounted) return;
+    switch (choice) {
+      case null:
+        return;
+      case _UnsavedChoice.save:
+        await _save();
+      case _UnsavedChoice.discard:
+        _leave();
+    }
+  }
+
+  void _leave() {
+    final NavigatorState navigator = Navigator.of(context);
+    if (navigator.canPop()) navigator.pop();
+  }
 
   static List<CardImageUpload> _uploadsOf(List<_MediaItem> items) =>
       <CardImageUpload>[
@@ -511,59 +635,67 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          _isEditing ? l10n.cardFormTitleEdit : l10n.cardFormTitleNew,
+    return PopScope(
+      // Находка N2: «назад», Esc и системный back не теряют правки молча.
+      canPop: false,
+      onPopInvokedWithResult: (bool didPop, Object? result) {
+        if (didPop) return;
+        unawaited(_confirmExit());
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(
+            _isEditing ? l10n.cardFormTitleEdit : l10n.cardFormTitleNew,
+          ),
+          actions: _isEditing && _card != null
+              ? <Widget>[
+                  IconButton(
+                    key: const ValueKey<String>('card-form-delete'),
+                    tooltip: l10n.cardDeleteTooltip,
+                    icon: const Icon(Icons.delete_outline),
+                    onPressed: _saving ? null : _confirmDelete,
+                  ),
+                ]
+              : null,
         ),
-        actions: _isEditing && _card != null
-            ? <Widget>[
-                IconButton(
-                  key: const ValueKey<String>('card-form-delete'),
-                  tooltip: l10n.cardDeleteTooltip,
-                  icon: const Icon(Icons.delete_outline),
-                  onPressed: _saving ? null : _confirmDelete,
-                ),
-              ]
-            : null,
-      ),
-      body: _buildBody(context, l10n),
-      bottomNavigationBar:
-          _loading || _loadFailed || (_isEditing && _card == null)
-          ? null
-          : DecoratedBox(
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surfaceContainerLowest,
-                border: Border(
-                  top: BorderSide(
-                    color: Theme.of(context).colorScheme.outlineVariant,
+        body: _buildBody(context, l10n),
+        bottomNavigationBar:
+            _loading || _loadFailed || (_isEditing && _card == null)
+            ? null
+            : DecoratedBox(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceContainerLowest,
+                  border: Border(
+                    top: BorderSide(
+                      color: Theme.of(context).colorScheme.outlineVariant,
+                    ),
                   ),
                 ),
-              ),
-              child: SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.md,
-                    AppSpacing.xs,
-                    AppSpacing.md,
-                    AppSpacing.sm,
-                  ),
-                  child: Center(
-                    heightFactor: 1,
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(
-                        maxWidth: AppSizes.formMaxWidth,
-                      ),
-                      child: FilledButton(
-                        key: const ValueKey<String>('card-form-save'),
-                        onPressed: _saving ? null : _save,
-                        child: Text(l10n.save),
+                child: SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.md,
+                      AppSpacing.xs,
+                      AppSpacing.md,
+                      AppSpacing.sm,
+                    ),
+                    child: Center(
+                      heightFactor: 1,
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(
+                          maxWidth: AppSizes.formMaxWidth,
+                        ),
+                        child: FilledButton(
+                          key: const ValueKey<String>('card-form-save'),
+                          onPressed: _saving ? null : _save,
+                          child: Text(l10n.save),
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
+      ),
     );
   }
 
@@ -590,33 +722,51 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
       maxWidth: AppSizes.formMaxWidth,
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.md,
-        AppSpacing.md,
-        AppSpacing.md,
+        // Находка D12: плавающая подпись первого поля не должна срезаться
+        // верхней границей области прокрутки.
         AppSpacing.xl,
+        AppSpacing.md,
+        AppSpacing.xxl,
       ),
       child: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            _textField(
-              key: const ValueKey<String>('card-form-front'),
-              controller: _front,
-              label: l10n.cardFormFrontLabel,
-              errorText: _errorText(l10n, CardDraftField.front),
-              validationField: CardDraftField.front,
-              minLines: 1,
-              maxLines: 2,
-              autofocus: true,
+            if (_showValidationSummary) ...<Widget>[
+              _ValidationSummary(
+                message: l10n.cardFormValidationSummary,
+                onDismiss: () => setState(() => _showValidationSummary = false),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+            ],
+            KeyedSubtree(
+              key: _fieldAnchors[CardDraftField.front],
+              child: _textField(
+                key: const ValueKey<String>('card-form-front'),
+                controller: _front,
+                label: l10n.cardFormFrontLabel,
+                errorText: _errorText(l10n, CardDraftField.front),
+                validationField: CardDraftField.front,
+                helperText: _cardType == CardType.cloze
+                    ? l10n.cardFormClozeHint(clozeSyntaxExample)
+                    : null,
+                minLines: 1,
+                maxLines: 2,
+                autofocus: true,
+              ),
             ),
             const SizedBox(height: 12),
-            _textField(
-              key: const ValueKey<String>('card-form-back'),
-              controller: _back,
-              label: l10n.cardFormBackLabel,
-              errorText: _errorText(l10n, CardDraftField.back),
-              validationField: CardDraftField.back,
-              minLines: 3,
-              maxLines: 6,
+            KeyedSubtree(
+              key: _fieldAnchors[CardDraftField.back],
+              child: _textField(
+                key: const ValueKey<String>('card-form-back'),
+                controller: _back,
+                label: l10n.cardFormBackLabel,
+                errorText: _errorText(l10n, CardDraftField.back),
+                validationField: CardDraftField.back,
+                minLines: 3,
+                maxLines: 6,
+              ),
             ),
             const SizedBox(height: 12),
             _textField(
@@ -625,22 +775,28 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
               label: l10n.cardFormHintLabel,
             ),
             const SizedBox(height: 12),
-            _textField(
-              key: const ValueKey<String>('card-form-tags'),
-              controller: _tags,
-              label: l10n.cardFormTagsLabel,
-              errorText: _errorText(l10n, CardDraftField.tags),
-              validationField: CardDraftField.tags,
+            KeyedSubtree(
+              key: _fieldAnchors[CardDraftField.tags],
+              child: _textField(
+                key: const ValueKey<String>('card-form-tags'),
+                controller: _tags,
+                label: l10n.cardFormTagsLabel,
+                errorText: _errorText(l10n, CardDraftField.tags),
+                validationField: CardDraftField.tags,
+              ),
             ),
             const SizedBox(height: 12),
-            _textField(
-              key: const ValueKey<String>('card-form-source'),
-              controller: _sourceExcerpt,
-              label: l10n.cardFormSourceExcerptLabel,
-              errorText: _errorText(l10n, CardDraftField.sourceExcerpt),
-              validationField: CardDraftField.sourceExcerpt,
-              minLines: 2,
-              maxLines: 4,
+            KeyedSubtree(
+              key: _fieldAnchors[CardDraftField.sourceExcerpt],
+              child: _textField(
+                key: const ValueKey<String>('card-form-source'),
+                controller: _sourceExcerpt,
+                label: l10n.cardFormSourceExcerptLabel,
+                errorText: _errorText(l10n, CardDraftField.sourceExcerpt),
+                validationField: CardDraftField.sourceExcerpt,
+                minLines: 2,
+                maxLines: 4,
+              ),
             ),
             const SizedBox(height: 16),
             _buildTypeSection(l10n),
@@ -1000,6 +1156,18 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
             ),
           ),
         ],
+        // Находка F2: синтаксис пропусков больше не нужно угадывать — пример
+        // и правило стоят прямо под выбором типа, а не только в ошибке.
+        if (_cardType == CardType.cloze) ...<Widget>[
+          const SizedBox(height: 8),
+          Text(
+            l10n.cardFormClozeHint(clozeSyntaxExample),
+            key: const ValueKey<String>('card-form-cloze-hint'),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -1009,6 +1177,7 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
     required TextEditingController controller,
     required String label,
     String? errorText,
+    String? helperText,
     CardDraftField? validationField,
     int minLines = 1,
     int maxLines = 1,
@@ -1020,6 +1189,8 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
       autofocus: autofocus,
       minLines: minLines,
       maxLines: maxLines,
+      // Прокрутка к полю при фокусе оставляет место для плавающей подписи.
+      scrollPadding: const EdgeInsets.all(AppSpacing.xxl),
       onChanged: (_) => _clearError(validationField),
       textInputAction: maxLines == 1
           ? TextInputAction.next
@@ -1027,6 +1198,8 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
       decoration: InputDecoration(
         labelText: label,
         errorText: errorText,
+        helperText: helperText,
+        helperMaxLines: 3,
         border: const OutlineInputBorder(),
       ),
     );
@@ -1041,6 +1214,7 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
             in _errors.entries)
           if (entry.key != field) entry.key: entry.value,
       };
+      if (_errors.isEmpty) _showValidationSummary = false;
     });
   }
 
@@ -1062,5 +1236,57 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
         l10n.cardFormOcclusionInvalidError,
       null => null,
     };
+  }
+}
+
+/// Сводка ошибок валидации формы (находка F3).
+///
+/// Появляется при неудачном сохранении: раньше ошибка могла оказаться выше
+/// области прокрутки и «ничего не происходило».
+class _ValidationSummary extends StatelessWidget {
+  const _ValidationSummary({required this.message, required this.onDismiss});
+
+  final String message;
+  final VoidCallback onDismiss;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
+    return Container(
+      key: const ValueKey<String>('card-form-validation-summary'),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.sm + 4,
+        AppSpacing.xs,
+        AppSpacing.xxs,
+        AppSpacing.xs,
+      ),
+      decoration: BoxDecoration(
+        color: scheme.errorContainer,
+        borderRadius: BorderRadius.circular(AppRadii.input),
+      ),
+      child: Row(
+        children: <Widget>[
+          Icon(Icons.error_outline, color: scheme.onErrorContainer),
+          const SizedBox(width: AppSpacing.xs),
+          Expanded(
+            child: Text(
+              message,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: scheme.onErrorContainer,
+              ),
+            ),
+          ),
+          IconButton(
+            iconSize: AppSizes.iconSmall,
+            visualDensity: VisualDensity.compact,
+            color: scheme.onErrorContainer,
+            tooltip: AppLocalizations.of(context).sessionNoticeDismiss,
+            onPressed: onDismiss,
+            icon: const Icon(Icons.close),
+          ),
+        ],
+      ),
+    );
   }
 }

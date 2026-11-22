@@ -95,8 +95,9 @@ class AppShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final AppLocalizations l10n = AppLocalizations.of(context);
     final ColorScheme scheme = Theme.of(context).colorScheme;
-    final bool wide =
-        MediaQuery.sizeOf(context).width >= AppSizes.sidebarBreakpoint;
+    final double width = MediaQuery.sizeOf(context).width;
+    final bool wide = width >= AppSizes.sidebarBreakpoint;
+    final bool compactRail = !wide && width >= AppSizes.railBreakpoint;
     final String section = switch (navigationShell.currentIndex) {
       1 => l10n.navStatistics,
       2 => l10n.navSettings,
@@ -131,6 +132,51 @@ class AppShell extends ConsumerWidget {
                     ),
                   ),
                   child: sidebar,
+                ),
+              ),
+              Expanded(
+                child: Column(
+                  children: <Widget>[
+                    AppTopHeader(
+                      section: section,
+                      onNewCard: () => unawaited(_createCard(context, ref)),
+                      onOpenSettings: () => _goBranch(2),
+                    ),
+                    Expanded(child: navigationShell),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // 640–1024 px: постоянная компактная рейка (находка N6) — разделы видны
+    // без «бургера», путь до главного меню остаётся одним действием.
+    if (compactRail) {
+      return Scaffold(
+        body: SafeArea(
+          bottom: false,
+          child: Row(
+            children: <Widget>[
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  border: Border(
+                    right: BorderSide(
+                      color: scheme.outlineVariant,
+                      width: AppSizes.borderWidth,
+                    ),
+                  ),
+                ),
+                child: AppNavRail(
+                  currentBranch: navigationShell.currentIndex,
+                  onSelectBranch: _goBranch,
+                  onSearch: () {
+                    ref.read(decksQueryProvider.notifier).clearSearch();
+                    ref.read(decksSearchVisibleProvider.notifier).open();
+                    _goBranch(0);
+                  },
                 ),
               ),
               Expanded(
