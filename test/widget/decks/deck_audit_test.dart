@@ -165,4 +165,86 @@ void main() {
       reason: 'дублирующий длинный текст заменён короткой формулировкой',
     );
   });
+  testWidgets('F5: поиск по карточкам внутри колоды', (
+    WidgetTester tester,
+  ) async {
+    await pumpDeckScreen(
+      tester,
+      cards: <Card>[
+        makeCard(id: 'card-1', deckId: 'deck-1', front: 'Первый вопрос'),
+        makeCard(id: 'card-2', deckId: 'deck-1', front: 'Второй вопрос'),
+      ],
+    );
+    await tester.tap(
+      find.byKey(const ValueKey<String>('deck-cards-search-toggle')),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const ValueKey<String>('deck-card-search')),
+      'Первый',
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Первый вопрос'), findsOneWidget);
+    expect(find.text('Второй вопрос'), findsNothing);
+  });
+
+  testWidgets('F5: фильтр по состоянию — «К повторению»', (
+    WidgetTester tester,
+  ) async {
+    await pumpDeckScreen(
+      tester,
+      cards: <Card>[
+        makeCard(
+          id: 'card-1',
+          deckId: 'deck-1',
+          front: 'Созрела',
+          state: CardState.review,
+          due: DateTime.now().subtract(const Duration(days: 1)),
+        ),
+        makeCard(id: 'card-2', deckId: 'deck-1', front: 'Новая'),
+      ],
+    );
+    await tester.tap(find.byKey(const ValueKey<String>('deck-cards-filter')));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey<String>('deck-card-filter-due')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Созрела'), findsOneWidget);
+    expect(find.text('Новая'), findsNothing);
+  });
+
+  testWidgets('F5: меню строки удаляет карточку с подтверждением', (
+    WidgetTester tester,
+  ) async {
+    await pumpDeckScreen(
+      tester,
+      cards: <Card>[
+        makeCard(id: 'card-1', deckId: 'deck-1', front: 'Удаляемая'),
+        makeCard(id: 'card-2', deckId: 'deck-1', front: 'Вторая'),
+      ],
+    );
+    final Finder menu = find.byKey(
+      const ValueKey<String>('deck-card-menu-card-1'),
+    );
+    await tester.ensureVisible(menu);
+    await tester.pumpAndSettle();
+    await tester.tap(menu);
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.byKey(const ValueKey<String>('deck-card-menu-delete')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey<String>('deck-card-delete-confirm')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Удаляемая'), findsNothing);
+    expect(find.text('Вторая'), findsOneWidget);
+  });
 }

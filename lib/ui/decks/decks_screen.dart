@@ -672,28 +672,34 @@ class _ViewModeButton extends StatelessWidget {
         onTap: onPressed,
         borderRadius: BorderRadius.circular(AppRadii.sm),
         child: Container(
-          width: 30,
-          height: 30,
-          decoration: BoxDecoration(
-            color: selected
-                ? scheme.surfaceContainerLowest
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(AppRadii.sm),
-            boxShadow: selected
-                ? <BoxShadow>[
-                    BoxShadow(
-                      color: scheme.shadow.withValues(alpha: 0.08),
-                      blurRadius: 2,
-                      offset: const Offset(0, 1),
-                    ),
-                  ]
-                : null,
-          ),
+          // Находка A4: цель 44×44 (было 30×30), визуальный квадрат — внутри.
+          width: AppSizes.minTouchTarget,
+          height: AppSizes.minTouchTarget,
           alignment: Alignment.center,
-          child: Icon(
-            icon,
-            size: AppSizes.iconSmall,
-            color: selected ? scheme.onSurface : scheme.onSurfaceVariant,
+          child: Container(
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(
+              color: selected
+                  ? scheme.surfaceContainerLowest
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(AppRadii.sm),
+              boxShadow: selected
+                  ? <BoxShadow>[
+                      BoxShadow(
+                        color: scheme.shadow.withValues(alpha: 0.08),
+                        blurRadius: 2,
+                        offset: const Offset(0, 1),
+                      ),
+                    ]
+                  : null,
+            ),
+            alignment: Alignment.center,
+            child: Icon(
+              icon,
+              size: AppSizes.iconSmall,
+              color: selected ? scheme.onSurface : scheme.onSurfaceVariant,
+            ),
           ),
         ),
       ),

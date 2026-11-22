@@ -19,6 +19,7 @@ import 'package:cardflow/ui/theme/app_tokens.dart';
 import 'package:cardflow/ui/theme/app_typography.dart';
 import 'package:cardflow/ui/decks/deck_actions.dart';
 import 'package:cardflow/ui/router/app_router.dart';
+import 'package:cardflow/ui/state/app_providers.dart';
 import 'package:cardflow/ui/state/decks_ui_providers.dart';
 import 'package:cardflow/ui/state/review_limits.dart';
 
@@ -40,13 +41,19 @@ enum _SessionModeAction {
 /// Решение в предупреждении об исчерпанном дневном лимите (ADR-028).
 enum _LimitChoice { continueWithoutLimits, practice }
 
+/// Фильтр списка карточек внутри колоды (находка F5 аудита).
+enum _CardFilter { all, due, newCards, learning }
+
 /// Экран «Колода» (SPEC A6.3).
 ///
 /// Заголовок с именем, счётчики (к повторению/новые/в процессе), карточка
 /// «Начать сессию» (bottom sheet режима: классика или лента), список карточек
 /// с переходом в редактирование, FAB «Добавить», меню переименовать/экспорт/
 /// удалить, экспорт/импорт и состояния «не найдена»/ошибка.
-class DeckScreen extends ConsumerWidget {
+///
+/// Аудит 1.0 (F5): в колоде появились поиск, фильтр по состоянию и меню строки
+/// (изменить/удалить) — раньше 71 карточку можно было только прокручивать.
+class DeckScreen extends ConsumerStatefulWidget {
   /// Создаёт экран колоды [deckId].
   const DeckScreen({required this.deckId, super.key});
 
@@ -54,8 +61,122 @@ class DeckScreen extends ConsumerWidget {
   final String deckId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DeckScreen> createState() => _DeckScreenState();
+}
+
+class _DeckScreenState extends ConsumerState<DeckScreen> {
+  /// Поиск по карточкам колоды (F5).
+  final TextEditingController _cardSearch = TextEditingController();
+
+  /// Показано ли поле поиска (по умолчанию строка списка не занимает место).
+  bool _cardSearchVisible = false;
+
+  /// Фильтр по состоянию карточки (F5).
+  _CardFilter _cardFilter = _CardFilter.all;
+
+  @override
+  void dispose() {
+    _cardSearch.dispose();
+    super.dispose();
+  }
+
+  /// Карточки, подходящие под текущий поиск и фильтр.
+  List<Card> _visibleCards(List<Card> cards) {
+    final String query = _cardSearch.text.trim().toLowerCase();
+    final DateTime now = DateTime.now();
+    return <Card>[
+      for (final Card card in cards)
+        if (_matchesFilter(card, now) &&
+            (query.isEmpty ||
+                card.front.toLowerCase().contains(query) ||
+                card.back.toLowerCase().contains(query) ||
+                card.tags.any(
+                  (String tag) => tag.toLowerCase().contains(query),
+                )))
+          card,
+    ];
+  }
+
+  bool _matchesFilter(Card card, DateTime now) {
+    final bool isNew = card.state == CardState.newCard;
+    return switch (_cardFilter) {
+      _CardFilter.all => true,
+      _CardFilter.due => !isNew && card.due != null && !card.due!.isAfter(now),
+      _CardFilter.newCards => isNew,
+      _CardFilter.learning => !isNew,
+    };
+  }
+
+  /// Меню строки карточки: изменить или удалить (F5).
+  Future<void> _showCardMenu(BuildContext context, Card card) async {
     final AppLocalizations l10n = AppLocalizations.of(context);
+    final String? action = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (BuildContext sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            ListTile(
+              key: const ValueKey<String>('deck-card-menu-edit'),
+              leading: const Icon(Icons.edit_outlined),
+              title: Text(l10n.deckCardEdit),
+              onTap: () => Navigator.of(sheetContext).pop('edit'),
+            ),
+            ListTile(
+              key: const ValueKey<String>('deck-card-menu-delete'),
+              leading: Icon(
+                Icons.delete_outline,
+                color: Theme.of(context).colorScheme.error,
+              ),
+              title: Text(l10n.deckCardDelete),
+              onTap: () => Navigator.of(sheetContext).pop('delete'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (!context.mounted || action == null) return;
+    if (action == 'edit') {
+      await _openCardForm(context, deckId: widget.deckId, cardId: card.id);
+      return;
+    }
+    final bool confirmed =
+        (await showAppDialog<bool>(
+          context: context,
+          title: l10n.deckCardDeleteTitle,
+          subtitle: l10n.deckCardDeleteMessage,
+          closeLabel: l10n.cancel,
+          bodyBuilder: (BuildContext dialogContext) => const SizedBox.shrink(),
+          actionsBuilder: (BuildContext dialogContext) => <Widget>[
+            TextButton(
+              key: const ValueKey<String>('deck-card-delete-cancel'),
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton(
+              key: const ValueKey<String>('deck-card-delete-confirm'),
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: Text(l10n.delete),
+            ),
+          ],
+        )) ??
+        false;
+    if (!confirmed || !context.mounted) return;
+    try {
+      await ref.read(cardRepositoryProvider).deleteCard(card.id);
+      if (context.mounted) {
+        showAppMessage(context, l10n.cardDeletedMessage);
+      }
+    } on Object {
+      if (context.mounted) showAppMessage(context, l10n.genericError);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final String deckId = widget.deckId;
     final AsyncValue<Deck?> deckAsync = ref.watch(deckProvider(deckId));
     final AsyncValue<List<Card>> cardsAsync = ref.watch(
       deckCardsProvider(deckId),
@@ -136,6 +257,7 @@ class DeckScreen extends ConsumerWidget {
     AsyncValue<DeckSummary?> summaryAsync,
     bool hasError,
   ) {
+    final String deckId = widget.deckId;
     if (hasError) {
       return _DeckErrorState(
         message: l10n.deckErrorTitle,
@@ -164,6 +286,7 @@ class DeckScreen extends ConsumerWidget {
         .watch(deckRemainingLimitsProvider(deckId))
         .value;
     final bool limitExhausted = _limitBlocksQueue(cards, limits);
+    final List<Card> visibleCards = _visibleCards(cards);
     return CustomScrollView(
       slivers: <Widget>[
         SliverToBoxAdapter(
@@ -228,7 +351,47 @@ class DeckScreen extends ConsumerWidget {
                                     .onSurfaceVariant,
                               ),
                         ),
-                        const SizedBox(width: AppSpacing.xs),
+                        const SizedBox(width: AppSpacing.xxs),
+                        // Находка F5: поиск и фильтр по состоянию внутри
+                        // колоды, не занимая место у списка постоянно.
+                        if (cards.isNotEmpty) ...<Widget>[
+                          IconButton(
+                            key: const ValueKey<String>(
+                              'deck-cards-search-toggle',
+                            ),
+                            tooltip: l10n.deckSearchCardsHint,
+                            icon: const Icon(Icons.search, size: 20),
+                            onPressed: () => setState(() {
+                              _cardSearchVisible = !_cardSearchVisible;
+                              if (!_cardSearchVisible) _cardSearch.clear();
+                            }),
+                          ),
+                          PopupMenuButton<_CardFilter>(
+                            key: const ValueKey<String>('deck-cards-filter'),
+                            tooltip: _cardFilterLabel(l10n, _cardFilter),
+                            icon: Badge(
+                              isLabelVisible: _cardFilter != _CardFilter.all,
+                              child: const Icon(Icons.filter_list, size: 20),
+                            ),
+                            onSelected: (_CardFilter filter) =>
+                                setState(() => _cardFilter = filter),
+                            itemBuilder: (BuildContext context) =>
+                                <PopupMenuEntry<_CardFilter>>[
+                                  for (final _CardFilter filter
+                                      in _CardFilter.values)
+                                    CheckedPopupMenuItem<_CardFilter>(
+                                      key: ValueKey<String>(
+                                        'deck-card-filter-${filter.name}',
+                                      ),
+                                      value: filter,
+                                      checked: _cardFilter == filter,
+                                      child: Text(
+                                        _cardFilterLabel(l10n, filter),
+                                      ),
+                                    ),
+                                ],
+                          ),
+                        ],
                         OutlinedButton.icon(
                           key: const ValueKey<String>('deck-add-card-button'),
                           onPressed: () =>
@@ -238,6 +401,20 @@ class DeckScreen extends ConsumerWidget {
                         ),
                       ],
                     ),
+                    if (cards.isNotEmpty && _cardSearchVisible) ...<Widget>[
+                      const SizedBox(height: AppSpacing.sm),
+                      TextField(
+                        key: const ValueKey<String>('deck-card-search'),
+                        controller: _cardSearch,
+                        autofocus: true,
+                        onChanged: (_) => setState(() {}),
+                        decoration: InputDecoration(
+                          hintText: l10n.deckSearchCardsHint,
+                          prefixIcon: const Icon(Icons.search, size: 18),
+                          isDense: true,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -256,6 +433,23 @@ class DeckScreen extends ConsumerWidget {
               ),
             ),
           )
+        else if (visibleCards.isEmpty)
+          SliverToBoxAdapter(
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 896),
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  child: AppEmptyState(
+                    icon: Icons.search_off,
+                    title: l10n.deckCardsNoMatches,
+                    message: l10n.decksFilterEmptyHint,
+                    compact: true,
+                  ),
+                ),
+              ),
+            ),
+          )
         else
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(
@@ -265,19 +459,34 @@ class DeckScreen extends ConsumerWidget {
               AppSpacing.xxl,
             ),
             sliver: SliverList.separated(
-              itemCount: cards.length,
+              itemCount: visibleCards.length,
               separatorBuilder: (BuildContext context, int index) =>
                   const SizedBox(height: AppSpacing.xs),
               itemBuilder: (BuildContext context, int index) => Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 896),
-                  child: _DeckCardTile(
-                    card: cards[index],
-                    onTap: () => _openCardForm(
-                      context,
-                      deckId: deckId,
-                      cardId: cards[index].id,
-                    ),
+                  child: Row(
+                    children: <Widget>[
+                      Expanded(
+                        child: _DeckCardTile(
+                          card: visibleCards[index],
+                          onTap: () => _openCardForm(
+                            context,
+                            deckId: deckId,
+                            cardId: visibleCards[index].id,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        key: ValueKey<String>(
+                          'deck-card-menu-${visibleCards[index].id}',
+                        ),
+                        tooltip: l10n.deckCardMenuTooltip,
+                        icon: const Icon(Icons.more_vert, size: 18),
+                        onPressed: () =>
+                            _showCardMenu(context, visibleCards[index]),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -286,6 +495,15 @@ class DeckScreen extends ConsumerWidget {
       ],
     );
   }
+
+  /// Подпись фильтра карточек колоды.
+  static String _cardFilterLabel(AppLocalizations l10n, _CardFilter filter) =>
+      switch (filter) {
+        _CardFilter.all => l10n.deckFilterAll,
+        _CardFilter.due => l10n.deckFilterDue,
+        _CardFilter.newCards => l10n.deckFilterNew,
+        _CardFilter.learning => l10n.deckFilterLearning,
+      };
 
   /// Исчерпан ли дневной лимит при непустой очереди (находка N8).
   static bool _limitBlocksQueue(
