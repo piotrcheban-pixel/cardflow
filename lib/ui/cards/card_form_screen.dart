@@ -1289,7 +1289,12 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
       minLines: minLines,
       maxLines: maxLines,
       // Прокрутка к полю при фокусе оставляет место для плавающей подписи.
-      scrollPadding: const EdgeInsets.all(AppSpacing.xxl),
+      // Аудит v3 (D4): больше запаса, чтобы плавающая подпись не срезалась
+      // верхней границей области прокрутки при авто-прокрутке к полю.
+      scrollPadding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.xxl,
+        vertical: AppSpacing.xxl * 2,
+      ),
       onChanged: (_) => _clearError(validationField),
       textInputAction: maxLines == 1
           ? TextInputAction.next
