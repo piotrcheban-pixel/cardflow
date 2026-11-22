@@ -1724,3 +1724,27 @@ User scope, значение не выводилось. Готовность A�
 отдельному разрешению (`journal/task05/readiness-report.md`). Ограничения:
 L143–L148 (биллинг 400/повторов, thinking mode, live-импорт в БД, legacy
 DeepSeek, ручная приёмка).
+
+## Итерация «аудит 1.0 → исправления → повторный аудит» (2026-11-22/23)
+
+**Вход.** Независимый аудит `review/REPORT.md` (снимок `53ead19`): вердикт
+«НЕ ГОТОВО», 2 blocker (F1, N1), 5 critical (N2, D1, D2, D3, D5, F3, D15/A1),
+~30 major/minor.
+
+**Выход.** `review/FIXED.md` — статус каждой находки с доказательством;
+`review/screenshots/after/` — скриншоты живого приложения; `design/PROGRESS.md` —
+этапы, гейты, ограничения.
+
+**Гейты на финальном снимке:** `analyze` — 0; `format --set-exit-if-changed` — 0 changed;
+полный `test --exclude-tags golden` — **2646 passed + 16 skipped**; `build windows --debug` — ок.
+
+**Повторный аудит.** Аудитор v2 (`review/REPORT_v2.md`, снимок `820d095`):
+«УСЛОВНО ГОТОВО», 0 blocker/critical, 2 major (A1 переполнение тулбара на 390×844;
+D1 обрезка вопроса на 800×600) и 5 minor. Все major и 4 minor закрыты
+(`ac4ba2d`), N2 (sticky-якоря настроек) принят как minor. Аудитор v3
+(`review/REPORT_v3.md`, снимок `ac4ba2d`): **«ГОТОВО»**, 0 blocker/critical,
+main-сценарии пройдены, данные профиля не изменены; новая находка — косметический
+minor D4 (подпись первого поля формы), запас прокрутки увеличен (`1a7f074`).
+
+**Ограничения:** реальный платный ИИ-прогон не запускался; Android-специфика
+(нет SDK) и screen-reader не проверялись; golden-тесты — Linux CI.
