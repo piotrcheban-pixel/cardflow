@@ -366,8 +366,12 @@ abstract final class AppSizes {
   /// Ширина формы генерации (макет: `max-w-4xl`).
   static const double formMaxWidth = 896;
 
-  /// Ширина карточки сессии (макет: `max-w-[640px]`).
-  static const double studyCardMaxWidth = 640;
+  /// Ширина карточки сессии (было `max-w-[640px]` макета).
+  ///
+  /// Аудит 1.0 (находка D1): карточка — главный объект экрана, поэтому на ПК
+  /// она занимает до 880 логических px и основную часть высоты области, а не
+  /// 640×240 в верхнем углу.
+  static const double studyCardMaxWidth = 880;
 
   /// Ширина диалога (макет: `max-w-lg`).
   static const double dialogMaxWidth = 512;

@@ -4566,6 +4566,300 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'проверено {date}'**
   String settingsCapabilitiesCheckedAt(String date);
+
+  /// Подсказка над неактивной панелью оценок до раскрытия ответа (находка F1).
+  ///
+  /// In ru, this message translates to:
+  /// **'Оценки откроются после показа ответа'**
+  String get reviewRevealRequiredHint;
+
+  /// Метка стороны вопроса в раскрытой карточке (находка D3).
+  ///
+  /// In ru, this message translates to:
+  /// **'Вопрос'**
+  String get reviewQuestionLabel;
+
+  /// Метка стороны ответа в раскрытой карточке (находка D3).
+  ///
+  /// In ru, this message translates to:
+  /// **'Ответ'**
+  String get reviewAnswerLabel;
+
+  /// Напоминание о клавишах сессии.
+  ///
+  /// In ru, this message translates to:
+  /// **'Пробел — показать ответ · 1–4 — оценка · ← — отменить'**
+  String get reviewKeyboardHints;
+
+  /// Заголовок подтверждения выхода из формы карточки с правками (находка N2).
+  ///
+  /// In ru, this message translates to:
+  /// **'Выйти без сохранения?'**
+  String get cardFormUnsavedTitle;
+
+  /// Пояснение к подтверждению выхода с несохранёнными правками.
+  ///
+  /// In ru, this message translates to:
+  /// **'Изменения в карточке не сохранены.'**
+  String get cardFormUnsavedMessage;
+
+  /// Действие «сохранить правки и выйти».
+  ///
+  /// In ru, this message translates to:
+  /// **'Сохранить и выйти'**
+  String get cardFormUnsavedSave;
+
+  /// Действие «выйти, потеряв правки».
+  ///
+  /// In ru, this message translates to:
+  /// **'Не сохранять'**
+  String get cardFormUnsavedDiscard;
+
+  /// Сводка об ошибках валидации формы (находка F3).
+  ///
+  /// In ru, this message translates to:
+  /// **'Проверьте отмеченные поля: есть ошибки.'**
+  String get cardFormValidationSummary;
+
+  /// Подсказка о синтаксисе cloze-разметки (находка F2).
+  ///
+  /// In ru, this message translates to:
+  /// **'Пометьте пропуск в тексте: {example} — часть в скобках скроется до показа ответа. Номер можно не указывать.'**
+  String cardFormClozeHint(String example);
+
+  /// Подпись неактивной кнопки старта сессии на пустой колоде (находка F6).
+  ///
+  /// In ru, this message translates to:
+  /// **'Сначала добавьте карточки'**
+  String get deckStartNeedsCards;
+
+  /// Сообщение при попытке начать сессию в пустой колоде.
+  ///
+  /// In ru, this message translates to:
+  /// **'В колоде нет карточек'**
+  String get deckEmptySnack;
+
+  /// Предупреждение о дневном лимите прямо на экране колоды (находка N8).
+  ///
+  /// In ru, this message translates to:
+  /// **'Дневной лимит на сегодня исчерпан. Карточки откроются завтра, либо продолжите без лимита.'**
+  String get deckDailyLimitNotice;
+
+  /// Пояснение к счётчикам колоды (находка F10).
+  ///
+  /// In ru, this message translates to:
+  /// **'«В процессе» — все начатые карточки, включая «К повторению».'**
+  String get deckCountersNote;
+
+  /// Пустой результат поиска колод по запросу (находка D17).
+  ///
+  /// In ru, this message translates to:
+  /// **'Ничего не найдено по запросу «{query}»'**
+  String decksNoResultsForQuery(String query);
+
+  /// Кнопка сброса фильтра поиска (находка D17).
+  ///
+  /// In ru, this message translates to:
+  /// **'Сбросить поиск'**
+  String get decksSearchResetAction;
+
+  /// Поле поиска внутри колоды (находка F5).
+  ///
+  /// In ru, this message translates to:
+  /// **'Поиск по карточкам'**
+  String get deckSearchCardsHint;
+
+  /// Фильтр карточек колоды: все.
+  ///
+  /// In ru, this message translates to:
+  /// **'Все'**
+  String get deckFilterAll;
+
+  /// Фильтр карточек колоды: срок наступил.
+  ///
+  /// In ru, this message translates to:
+  /// **'К повторению'**
+  String get deckFilterDue;
+
+  /// Фильтр карточек колоды: новые.
+  ///
+  /// In ru, this message translates to:
+  /// **'Новые'**
+  String get deckFilterNew;
+
+  /// Фильтр карточек колоды: в процессе.
+  ///
+  /// In ru, this message translates to:
+  /// **'В процессе'**
+  String get deckFilterLearning;
+
+  /// Пустой результат поиска/фильтра внутри колоды.
+  ///
+  /// In ru, this message translates to:
+  /// **'Нет карточек, подходящих под фильтр'**
+  String get deckCardsNoMatches;
+
+  /// Меню строки карточки в списке колоды (находка F5).
+  ///
+  /// In ru, this message translates to:
+  /// **'Действия с карточкой'**
+  String get deckCardMenuTooltip;
+
+  /// Пункт меню карточки: открыть форму.
+  ///
+  /// In ru, this message translates to:
+  /// **'Изменить'**
+  String get deckCardEdit;
+
+  /// Пункт меню карточки: удалить.
+  ///
+  /// In ru, this message translates to:
+  /// **'Удалить карточку'**
+  String get deckCardDelete;
+
+  /// Заголовок подтверждения удаления карточки из списка.
+  ///
+  /// In ru, this message translates to:
+  /// **'Удалить карточку?'**
+  String get deckCardDeleteTitle;
+
+  /// Пояснение к удалению карточки из списка.
+  ///
+  /// In ru, this message translates to:
+  /// **'Карточка будет удалена без возможности восстановления.'**
+  String get deckCardDeleteMessage;
+
+  /// Пояснение режима «Классический» в листе режимов (находка D21).
+  ///
+  /// In ru, this message translates to:
+  /// **'По расписанию FSRS: вопрос, ответ и прогноз интервала'**
+  String get reviewModeClassicSubtitle;
+
+  /// Пояснение режима «Лента» в листе режимов (находка D21).
+  ///
+  /// In ru, this message translates to:
+  /// **'Карточки лентой: свайп или кнопка ставит оценку'**
+  String get reviewModeFeedSubtitle;
+
+  /// Причина недоступности «Теста» с числом подходящих карточек (находки N5/F15).
+  ///
+  /// In ru, this message translates to:
+  /// **'Нужна хотя бы одна карточка с вариантами ответа, сейчас {count}'**
+  String studyModeTestNotEnough(int count);
+
+  /// Причина недоступности «Ввода ответа» с числом подходящих карточек.
+  ///
+  /// In ru, this message translates to:
+  /// **'Нужна хотя бы одна карточка с коротким ответом, сейчас {count}'**
+  String studyModeTypingNotEnough(int count);
+
+  /// Подсказка об оценках в ленте (находки F11/F14).
+  ///
+  /// In ru, this message translates to:
+  /// **'Свайп вправо — «Знаю», влево — «Не знаю». Клавиши 1–4 тоже ставят оценку'**
+  String get feedRateHint;
+
+  /// Удержание при недостаточной выборке (находка D6).
+  ///
+  /// In ru, this message translates to:
+  /// **'Мало данных: повторений за 30 дней — {count}'**
+  String statisticsRetentionLowSample(int count);
+
+  /// Размер выборки удержания.
+  ///
+  /// In ru, this message translates to:
+  /// **'на основе {count} повторений за 30 дней'**
+  String statisticsRetentionBasedOn(int count);
+
+  /// Порог показателя удержания (находка D6).
+  ///
+  /// In ru, this message translates to:
+  /// **'Процент показывается от 20 повторений за 30 дней'**
+  String get statisticsRetentionThreshold;
+
+  /// Пустой прогноз нагрузки (находка D7).
+  ///
+  /// In ru, this message translates to:
+  /// **'На ближайшие 7 дней повторений не запланировано'**
+  String get statisticsForecastEmpty;
+
+  /// Пустой недельный график (находка D5).
+  ///
+  /// In ru, this message translates to:
+  /// **'За эту неделю повторений ещё не было'**
+  String get statisticsWeekEmpty;
+
+  /// Итог недели под графиком.
+  ///
+  /// In ru, this message translates to:
+  /// **'Всего за неделю: {count}'**
+  String statisticsWeekTotal(int count);
+
+  /// Семантика столбца графика статистики.
+  ///
+  /// In ru, this message translates to:
+  /// **'{label}: {count}'**
+  String statisticsChartBarSemantics(String label, int count);
+
+  /// Невалидный основной аккаунт (находка F7).
+  ///
+  /// In ru, this message translates to:
+  /// **'Основной провайдер не настроен: укажите адрес и модель.'**
+  String get settingsProvidersPrimaryBroken;
+
+  /// Переход к исправлению основного аккаунта.
+  ///
+  /// In ru, this message translates to:
+  /// **'Исправить'**
+  String get settingsProvidersFixAction;
+
+  /// Подтверждение выхода во время генерации (находка N1).
+  ///
+  /// In ru, this message translates to:
+  /// **'Остановить генерацию?'**
+  String get generationExitRunningTitle;
+
+  /// Пояснение к выходу во время генерации.
+  ///
+  /// In ru, this message translates to:
+  /// **'Карточки ещё генерируются. Если выйти сейчас, несохранённые карточки пропадут.'**
+  String get generationExitRunningMessage;
+
+  /// Остановить генерацию и покинуть экран.
+  ///
+  /// In ru, this message translates to:
+  /// **'Остановить и выйти'**
+  String get generationExitRunningConfirm;
+
+  /// Остаться на экране генерации (безопасное действие).
+  ///
+  /// In ru, this message translates to:
+  /// **'Продолжить генерацию'**
+  String get generationExitRunningStay;
+
+  /// Текущая модель строкой вместо мёртвого поля (находка F8).
+  ///
+  /// In ru, this message translates to:
+  /// **'Модель: {model}'**
+  String generationModelFromSettings(String model);
+
+  /// Переход к настройкам провайдера из строки модели.
+  ///
+  /// In ru, this message translates to:
+  /// **'Изменить'**
+  String get generationModelChange;
+
+  /// Пункт навигации вместо псевдо-поля поиска (находка D10).
+  ///
+  /// In ru, this message translates to:
+  /// **'Найти колоду'**
+  String get shellSearchAction;
+
+  /// Пояснение к пункту «Найти колоду».
+  ///
+  /// In ru, this message translates to:
+  /// **'Откроет поиск в списке колод'**
+  String get shellSearchActionHint;
 }
 
 class _AppLocalizationsDelegate

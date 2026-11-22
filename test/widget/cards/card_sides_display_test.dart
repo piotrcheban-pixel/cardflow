@@ -247,7 +247,11 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    // Находка D3 аудита: раскрытая карточка показывает обе стороны, поэтому
+    // изображения вопроса и ответа видны одновременно. Главный инвариант
+    // ADR-042 сохранён: изображение ответа не видно до раскрытия (проверено
+    // выше), а изображение вопроса больше не «исчезает» при перевороте.
     expect(find.byKey(const ValueKey<String>('card-image-a1')), findsOneWidget);
-    expect(find.byKey(const ValueKey<String>('card-image-q1')), findsNothing);
+    expect(find.byKey(const ValueKey<String>('card-image-q1')), findsOneWidget);
   });
 }

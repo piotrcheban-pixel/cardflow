@@ -84,6 +84,13 @@ void main() {
     ),
   ];
 
+  /// Раскрывает ответ текущей карточки — обязательный шаг перед оценкой
+  /// (находка F1 аудита: оценка без ответа запрещена).
+  Future<void> reveal(WidgetTester tester) async {
+    await tester.tap(find.byKey(const ValueKey<String>('review-card')));
+    await tester.pumpAndSettle();
+  }
+
   testWidgets('каркас: прогресс, первая карточка и 4 кнопки с прогнозом', (
     WidgetTester tester,
   ) async {
@@ -135,8 +142,59 @@ void main() {
     await tester.tap(find.byKey(const ValueKey<String>('review-card')));
     await tester.pumpAndSettle();
 
+    // D3: раскрытая карточка показывает и вопрос, и ответ — проверить, на что
+    // отвечал, можно без возврата на лицевую сторону.
     expect(find.text('Первый ответ'), findsOneWidget);
-    expect(find.text('Первый вопрос'), findsNothing);
+    expect(find.text('Первый вопрос'), findsOneWidget);
+  });
+
+  // Находка F1 (blocker) аудита: оценка до раскрытия ответа запрещена —
+  // иначе расписание FSRS строится по ответам, которых пользователь не видел.
+  testWidgets('оценки недоступны до раскрытия ответа (F1)', (
+    WidgetTester tester,
+  ) async {
+    final deckCards = twoCards();
+    await pumpSession(tester, overrides: overridesFor(deckCards));
+    reviews.previousCard = deckCards.first;
+
+    for (final String name in <String>['again', 'hard', 'good', 'easy']) {
+      final FilledButton button = tester.widget<FilledButton>(
+        find.byKey(ValueKey<String>('review-rating-$name')),
+      );
+      expect(button.onPressed, isNull, reason: 'оценка «$name» заблокирована');
+    }
+    expect(
+      find.byKey(const ValueKey<String>('review-rating-hint')),
+      findsOneWidget,
+      reason: 'подсказка объясняет, почему оценки неактивны',
+    );
+
+    await reveal(tester);
+    for (final String name in <String>['again', 'hard', 'good', 'easy']) {
+      final FilledButton button = tester.widget<FilledButton>(
+        find.byKey(ValueKey<String>('review-rating-$name')),
+      );
+      expect(button.onPressed, isNotNull, reason: 'после раскрытия «$name»');
+    }
+  });
+
+  testWidgets('клавиши 1–4 до раскрытия не пишут оценку (F1)', (
+    WidgetTester tester,
+  ) async {
+    await pumpSession(tester, overrides: overridesFor(twoCards()));
+
+    for (final LogicalKeyboardKey key in <LogicalKeyboardKey>[
+      LogicalKeyboardKey.digit1,
+      LogicalKeyboardKey.digit2,
+      LogicalKeyboardKey.digit3,
+      LogicalKeyboardKey.digit4,
+    ]) {
+      await tester.sendKeyEvent(key);
+      await tester.pumpAndSettle();
+    }
+
+    expect(reviews.ratings, isEmpty);
+    expect(find.text('Первый вопрос'), findsOneWidget);
   });
 
   testWidgets('пробел раскрывает ответ, клавиши 1–4 дают оценки', (
@@ -176,6 +234,10 @@ void main() {
       LogicalKeyboardKey.digit4,
     ]) {
       reviews.previousCard = deckCards.first;
+      // Каждая следующая карточка закрыта: сначала раскрываем ответ (F1),
+      // затем ставим оценку клавишей.
+      await tester.sendKeyEvent(LogicalKeyboardKey.space);
+      await tester.pumpAndSettle();
       await tester.sendKeyEvent(key);
       await tester.pumpAndSettle();
     }
@@ -215,6 +277,8 @@ void main() {
     final deckCards = twoCards();
     await pumpSession(tester, overrides: overridesFor(deckCards));
     reviews.previousCard = deckCards.first;
+    await reveal(tester);
+
     await tester.tap(find.byKey(const ValueKey<String>('review-rating-good')));
     await tester.pumpAndSettle();
     expect(find.text('Второй вопрос'), findsOneWidget);
@@ -235,6 +299,7 @@ void main() {
       ..previousCard = deckCards.first
       ..recordError = StateError('БД недоступна');
     final AppLocalizations l10n = l10nOf(tester);
+    await reveal(tester);
 
     await tester.tap(find.byKey(const ValueKey<String>('review-rating-good')));
     await tester.pumpAndSettle();
@@ -252,9 +317,11 @@ void main() {
     final AppLocalizations l10n = l10nOf(tester);
 
     reviews.previousCard = deckCards.first;
+    await reveal(tester);
     await tester.tap(find.byKey(const ValueKey<String>('review-rating-good')));
     await tester.pumpAndSettle();
     reviews.previousCard = deckCards.last;
+    await reveal(tester);
     await tester.tap(find.byKey(const ValueKey<String>('review-rating-good')));
     await tester.pumpAndSettle();
 
@@ -545,18 +612,32 @@ void main() {
 
         await tester.tap(find.byKey(const ValueKey<String>('review-card')));
         await tester.pumpAndSettle();
-        for (final String name in <String>['again', 'hard', 'good', 'easy']) {
-          await tester.tap(find.byKey(ValueKey<String>('review-rating-$name')));
+        // F1: каждая следующая карточка закрыта — раскрываем её перед оценкой.
+        for (int index = 0; index < 4; index++) {
+          if (index > 0) {
+            await tester.tap(find.byKey(const ValueKey<String>('review-card')));
+            await tester.pumpAndSettle();
+          }
+          await tester.tap(
+            find.byKey(
+              ValueKey<String>(
+                'review-rating-${<String>['again', 'hard', 'good', 'easy'][index]}',
+              ),
+            ),
+          );
           await tester.pumpAndSettle();
         }
 
         expect(haptics, <Object?>[
-          'HapticFeedbackType.selectionClick',
-          'HapticFeedbackType.heavyImpact',
-          'HapticFeedbackType.lightImpact',
-          'HapticFeedbackType.lightImpact',
-          'HapticFeedbackType.selectionClick',
-          'HapticFeedbackType.mediumImpact',
+          'HapticFeedbackType.selectionClick', // раскрытие 1-й карточки
+          'HapticFeedbackType.heavyImpact', // Не знаю
+          'HapticFeedbackType.selectionClick', // раскрытие 2-й
+          'HapticFeedbackType.lightImpact', // Сложно
+          'HapticFeedbackType.selectionClick', // раскрытие 3-й
+          'HapticFeedbackType.lightImpact', // Знаю
+          'HapticFeedbackType.selectionClick', // раскрытие 4-й
+          'HapticFeedbackType.selectionClick', // Легко
+          'HapticFeedbackType.mediumImpact', // завершение сессии
         ]);
       },
     );
@@ -629,6 +710,7 @@ void main() {
           );
       expect(progress().value, 0);
       reviews.previousCard = deckCards.first;
+      await reveal(tester);
       await tester.tap(
         find.byKey(const ValueKey<String>('review-rating-good')),
       );
@@ -729,6 +811,7 @@ void main() {
       final List<Card> planned = planCards();
       await pumpPlan(tester, plan: SessionPlan(cards: planned));
       reviews.previousCard = planned.first;
+      await reveal(tester);
 
       await tester.tap(
         find.byKey(const ValueKey<String>('review-rating-good')),

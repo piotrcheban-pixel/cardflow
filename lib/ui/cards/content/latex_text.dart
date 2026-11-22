@@ -29,6 +29,7 @@ class _LatexTextState extends State<LatexText> {
 
   @override
   Widget build(BuildContext context) {
+    final TextStyle baseStyle = DefaultTextStyle.of(context).style;
     final markup = LatexMarkup.parse(widget.source);
     if (markup.hasUnclosedDelimiter) return _fallback(context);
     if (!markup.hasFormulas) {
@@ -78,9 +79,8 @@ class _LatexTextState extends State<LatexText> {
         mathStyle: segment.kind == LatexSegmentKind.displayFormula
             ? MathStyle.display
             : MathStyle.text,
-        textStyle: Theme.of(context).textTheme.bodyLarge,
-        onErrorFallback: (error) =>
-            Text(widget.source, style: Theme.of(context).textTheme.bodyLarge),
+        textStyle: baseStyle,
+        onErrorFallback: (error) => Text(widget.source, style: baseStyle),
       );
       if (segment.kind == LatexSegmentKind.displayFormula) {
         flushInline();

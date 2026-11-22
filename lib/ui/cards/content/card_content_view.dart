@@ -17,6 +17,11 @@ import 'package:cardflow/ui/cards/content/occlusion_image_view.dart';
 /// переворота видны только `questionMediaIds`, после — только
 /// `answerMediaIds`. Раньше `mediaIds.first` рисовался на обеих сторонах, и
 /// изображение с ответом раскрывало его на лицевой стороне.
+///
+/// Аудит 1.0 (находки D1–D3): раскрытая карточка показывает **обе** стороны —
+/// вопрос приглушённо сверху и ответ ниже. Размер изображения и сетка
+/// нескольких картинок стали параметрами, чтобы экран сессии мог отдать
+/// картинке долю высоты карточки и не ломать пропорции.
 class CardContentView extends StatelessWidget {
   const CardContentView({
     required this.card,
@@ -27,6 +32,12 @@ class CardContentView extends StatelessWidget {
     this.mediaMetadata = const <String, MediaMetadata>{},
     this.onRetryMedia,
     this.showAllFormulas = false,
+    this.questionStyle,
+    this.answerStyle,
+    this.showMedia = true,
+    this.includeClozeFront = true,
+    this.imageMaxHeight = kCardImageMaxHeight,
+    this.imageMaxWidth = kCardImageMaxWidth,
     super.key,
   });
 
@@ -49,6 +60,27 @@ class CardContentView extends StatelessWidget {
   /// Повтор чтения медиа карточки, если файл/байты не нашлись (7.19).
   final VoidCallback? onRetryMedia;
 
+  /// Базовый стиль вопроса; `null` — `headlineMedium` темы.
+  final TextStyle? questionStyle;
+
+  /// Базовый стиль ответа; `null` — `bodyLarge` темы.
+  final TextStyle? answerStyle;
+
+  /// Рисовать ли изображения стороны (в раскрытой карточке ответ для
+  /// occlusion-карточки уже нарисован холстом вопроса).
+  final bool showMedia;
+
+  /// Для cloze-ответа: добавлять ли текст вопроса перед примечанием ответа.
+  ///
+  /// В раскрытой карточке вопрос уже показан выше, поэтому повтор не нужен.
+  final bool includeClozeFront;
+
+  /// Максимальная высота изображения стороны.
+  final double imageMaxHeight;
+
+  /// Максимальная ширина изображения стороны.
+  final double imageMaxWidth;
+
   /// Сторона вопроса (лицевая): `side` — front или неизвестная строка.
   bool get _isQuestionSide => side != card.back || side == card.front;
 
@@ -58,72 +90,58 @@ class CardContentView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final style = side == card.back
-        ? theme.textTheme.bodyLarge?.copyWith(height: 1.6)
-        : theme.textTheme.headlineMedium;
-    final occlusionJson = card.occlusionJson;
+    final ThemeData theme = Theme.of(context);
+    final TextStyle resolvedQuestionStyle =
+        questionStyle ??
+        theme.textTheme.headlineMedium ??
+        const TextStyle(fontSize: 28, height: 1.35);
+    final TextStyle resolvedAnswerStyle =
+        answerStyle ??
+        theme.textTheme.bodyLarge?.copyWith(height: 1.6) ??
+        const TextStyle(fontSize: 19, height: 1.6);
+    final TextStyle style = side == card.back
+        ? resolvedAnswerStyle
+        : resolvedQuestionStyle;
+    final String? occlusionJson = card.occlusionJson;
 
-    final content = <Widget>[];
+    final List<Widget> content = <Widget>[];
     // Occlusion-иллюстрация — общий холст обеих сторон: маски управляются
     // `revealed`, а не выбором стороны (иначе переворот терял бы маски).
     if (occlusionJson != null) {
-      final String? imageId = card.questionMediaIds.isEmpty
-          ? null
-          : card.questionMediaIds.first;
-      final image = imageId == null ? null : mediaBytes[imageId];
-      if (image == null) {
-        content.add(
-          _ImageUnavailable(
-            imageKey: imageId == null
-                ? const ValueKey<String>('occlusion-image-unavailable')
-                : ValueKey<String>('card-image-unavailable-$imageId'),
-            message: AppLocalizations.of(context).occlusionImageUnavailable,
-            onRetry: onRetryMedia,
-            retryKey: imageId == null
-                ? const ValueKey<String>('occlusion-image-retry')
-                : ValueKey<String>('card-image-retry-$imageId'),
-          ),
-        );
-      } else {
-        content.add(
-          OcclusionImageView(
-            bytes: image,
-            occlusionJson: occlusionJson,
-            revealed: revealed,
-          ),
-        );
-      }
-      content.add(const SizedBox(height: 12));
-    } else {
-      for (final String imageId in _sideMediaIds) {
-        final image = mediaBytes[imageId];
-        final metadata = mediaMetadata[imageId];
+      if (showMedia) {
+        final String? imageId = card.questionMediaIds.isEmpty
+            ? null
+            : card.questionMediaIds.first;
+        final Uint8List? image = imageId == null ? null : mediaBytes[imageId];
         if (image == null) {
           content.add(
             _ImageUnavailable(
-              imageKey: ValueKey<String>('card-image-unavailable-$imageId'),
-              message: AppLocalizations.of(context).cardImageUnavailable,
+              imageKey: imageId == null
+                  ? const ValueKey<String>('occlusion-image-unavailable')
+                  : ValueKey<String>('card-image-unavailable-$imageId'),
+              message: AppLocalizations.of(context).occlusionImageUnavailable,
               onRetry: onRetryMedia,
-              retryKey: ValueKey<String>('card-image-retry-$imageId'),
+              retryKey: imageId == null
+                  ? const ValueKey<String>('occlusion-image-retry')
+                  : ValueKey<String>('card-image-retry-$imageId'),
             ),
           );
         } else {
           content.add(
-            CardImageView(
-              key: ValueKey<String>('card-image-$imageId'),
+            OcclusionImageView(
               bytes: image,
-              kind: metadata?.kind ?? GeneratedCardImageKind.photo,
-              metadata: metadata,
-              onRetry: onRetryMedia,
+              occlusionJson: occlusionJson,
+              revealed: revealed,
             ),
           );
         }
         content.add(const SizedBox(height: 12));
       }
+    } else if (showMedia) {
+      content.addAll(_buildMedia(context));
     }
 
-    final text = _displayText();
+    final String text = _displayText();
     if (text.isNotEmpty) {
       if (card.cardType == CardType.cloze && text.contains('{{')) {
         content.add(
@@ -134,8 +152,18 @@ class CardContentView extends StatelessWidget {
           ),
         );
       } else {
+        // Стиль карточки передаётся через DefaultTextStyle: LatexText/Text
+        // наследуют его, поэтому вопрос и ответ имеют кегль сессии, а не
+        // ambient bodyMedium (находки D1/A2 аудита).
         content.add(
-          LatexText(source: text, revealed: revealed || showAllFormulas),
+          DefaultTextStyle.merge(
+            style: style,
+            textAlign: TextAlign.center,
+            child: LatexText(
+              source: text,
+              revealed: revealed || showAllFormulas,
+            ),
+          ),
         );
       }
     }
@@ -149,13 +177,72 @@ class CardContentView extends StatelessWidget {
     );
   }
 
+  /// Изображения стороны: одно — во всю ширину, несколько — сеткой по два.
+  ///
+  /// Находка D1 аудита: картинка должна занимать заметную долю карточки и не
+  /// искажаться; несколько изображений — сетка, а не бесконечная колонка.
+  List<Widget> _buildMedia(BuildContext context) {
+    final List<String> ids = _sideMediaIds;
+    if (ids.isEmpty) return const <Widget>[];
+    final List<Widget> tiles = <Widget>[
+      for (final String imageId in ids)
+        _sideImageTile(context, imageId, ids.length),
+    ];
+    if (ids.length == 1) {
+      return <Widget>[tiles.single, const SizedBox(height: 12)];
+    }
+    return <Widget>[
+      LayoutBuilder(
+        builder: (BuildContext context, BoxConstraints constraints) {
+          final double width = constraints.maxWidth;
+          final double cell = width.isFinite && width > 0
+              ? (width - 8) / 2
+              : imageMaxWidth / 2;
+          return Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            alignment: WrapAlignment.center,
+            children: <Widget>[
+              for (final Widget tile in tiles)
+                SizedBox(width: cell, child: tile),
+            ],
+          );
+        },
+      ),
+      const SizedBox(height: 12),
+    ];
+  }
+
+  Widget _sideImageTile(BuildContext context, String imageId, int count) {
+    final Uint8List? image = mediaBytes[imageId];
+    if (image == null) {
+      return _ImageUnavailable(
+        imageKey: ValueKey<String>('card-image-unavailable-$imageId'),
+        message: AppLocalizations.of(context).cardImageUnavailable,
+        onRetry: onRetryMedia,
+        retryKey: ValueKey<String>('card-image-retry-$imageId'),
+      );
+    }
+    final MediaMetadata? metadata = mediaMetadata[imageId];
+    return CardImageView(
+      key: ValueKey<String>('card-image-$imageId'),
+      bytes: image,
+      kind: metadata?.kind ?? GeneratedCardImageKind.photo,
+      metadata: metadata,
+      onRetry: onRetryMedia,
+      maxWidth: imageMaxWidth,
+      maxHeight: count > 1 ? imageMaxHeight * 0.6 : imageMaxHeight,
+    );
+  }
+
   String _displayText() {
     if (card.cardType == CardType.cloze && side == card.back) {
-      final note = card.back.trim();
-      return note.isEmpty ? card.front : '${card.front}\n\n$note';
+      final String note = card.back.trim();
+      if (note.isEmpty || !includeClozeFront) return note;
+      return '${card.front}\n\n$note';
     }
-    var text = side;
-    final latex = card.latex;
+    String text = side;
+    final String? latex = card.latex;
     if (side == card.back && latex != null && !text.contains(latex)) {
       text = text.isEmpty ? latex : '$text\n\n$latex';
     }

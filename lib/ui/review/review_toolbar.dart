@@ -29,20 +29,27 @@ class ReviewToolbar extends StatelessWidget {
     required this.preview,
     required this.enabled,
     required this.onRating,
+    this.hint,
     super.key,
   });
 
   /// Прогноз интервалов над кнопками; `null` — прогноза нет.
   final Map<Rating, Duration>? preview;
 
-  /// Доступны ли кнопки (не идёт запись в БД).
+  /// Доступны ли кнопки (ответ раскрыт и не идёт запись в БД).
   final bool enabled;
 
   /// Обработчик оценки.
   final ValueChanged<Rating> onRating;
 
+  /// Пояснение над панелью, когда оценки ещё недоступны (F1: до раскрытия
+  /// ответа оценка не ставится).
+  final String? hint;
+
   @override
   Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final String? hintText = enabled ? null : hint;
     return SafeArea(
       top: false,
       child: Padding(
@@ -57,29 +64,47 @@ class ReviewToolbar extends StatelessWidget {
             constraints: const BoxConstraints(
               maxWidth: AppSizes.studyCardMaxWidth,
             ),
-            child: LayoutBuilder(
-              builder: (BuildContext context, BoxConstraints constraints) {
-                final int columns = constraints.maxWidth < 520 ? 2 : 4;
-                final double gap = AppSpacing.sm;
-                final double width =
-                    (constraints.maxWidth - gap * (columns - 1)) / columns;
-                return Wrap(
-                  spacing: gap,
-                  runSpacing: gap,
-                  children: <Widget>[
-                    for (final Rating rating in Rating.values)
-                      SizedBox(
-                        width: width,
-                        child: _RatingButton(
-                          rating: rating,
-                          interval: preview?[rating],
-                          enabled: enabled,
-                          onPressed: () => onRating(rating),
-                        ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                if (hintText != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+                    child: Text(
+                      hintText,
+                      key: const ValueKey<String>('review-rating-hint'),
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
                       ),
-                  ],
-                );
-              },
+                    ),
+                  ),
+                LayoutBuilder(
+                  builder: (BuildContext context, BoxConstraints constraints) {
+                    final int columns = constraints.maxWidth < 520 ? 2 : 4;
+                    final double gap = AppSpacing.sm;
+                    final double width =
+                        (constraints.maxWidth - gap * (columns - 1)) / columns;
+                    return Wrap(
+                      spacing: gap,
+                      runSpacing: gap,
+                      children: <Widget>[
+                        for (final Rating rating in Rating.values)
+                          SizedBox(
+                            width: width,
+                            child: _RatingButton(
+                              rating: rating,
+                              interval: preview?[rating],
+                              enabled: enabled,
+                              onPressed: () => onRating(rating),
+                            ),
+                          ),
+                      ],
+                    );
+                  },
+                ),
+              ],
             ),
           ),
         ),

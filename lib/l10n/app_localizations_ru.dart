@@ -2820,4 +2820,181 @@ class AppLocalizationsRu extends AppLocalizations {
   String settingsCapabilitiesCheckedAt(String date) {
     return 'проверено $date';
   }
+
+  @override
+  String get reviewRevealRequiredHint => 'Оценки откроются после показа ответа';
+
+  @override
+  String get reviewQuestionLabel => 'Вопрос';
+
+  @override
+  String get reviewAnswerLabel => 'Ответ';
+
+  @override
+  String get reviewKeyboardHints =>
+      'Пробел — показать ответ · 1–4 — оценка · ← — отменить';
+
+  @override
+  String get cardFormUnsavedTitle => 'Выйти без сохранения?';
+
+  @override
+  String get cardFormUnsavedMessage => 'Изменения в карточке не сохранены.';
+
+  @override
+  String get cardFormUnsavedSave => 'Сохранить и выйти';
+
+  @override
+  String get cardFormUnsavedDiscard => 'Не сохранять';
+
+  @override
+  String get cardFormValidationSummary =>
+      'Проверьте отмеченные поля: есть ошибки.';
+
+  @override
+  String cardFormClozeHint(String example) {
+    return 'Пометьте пропуск в тексте: $example — часть в скобках скроется до показа ответа. Номер можно не указывать.';
+  }
+
+  @override
+  String get deckStartNeedsCards => 'Сначала добавьте карточки';
+
+  @override
+  String get deckEmptySnack => 'В колоде нет карточек';
+
+  @override
+  String get deckDailyLimitNotice =>
+      'Дневной лимит на сегодня исчерпан. Карточки откроются завтра, либо продолжите без лимита.';
+
+  @override
+  String get deckCountersNote =>
+      '«В процессе» — все начатые карточки, включая «К повторению».';
+
+  @override
+  String decksNoResultsForQuery(String query) {
+    return 'Ничего не найдено по запросу «$query»';
+  }
+
+  @override
+  String get decksSearchResetAction => 'Сбросить поиск';
+
+  @override
+  String get deckSearchCardsHint => 'Поиск по карточкам';
+
+  @override
+  String get deckFilterAll => 'Все';
+
+  @override
+  String get deckFilterDue => 'К повторению';
+
+  @override
+  String get deckFilterNew => 'Новые';
+
+  @override
+  String get deckFilterLearning => 'В процессе';
+
+  @override
+  String get deckCardsNoMatches => 'Нет карточек, подходящих под фильтр';
+
+  @override
+  String get deckCardMenuTooltip => 'Действия с карточкой';
+
+  @override
+  String get deckCardEdit => 'Изменить';
+
+  @override
+  String get deckCardDelete => 'Удалить карточку';
+
+  @override
+  String get deckCardDeleteTitle => 'Удалить карточку?';
+
+  @override
+  String get deckCardDeleteMessage =>
+      'Карточка будет удалена без возможности восстановления.';
+
+  @override
+  String get reviewModeClassicSubtitle =>
+      'По расписанию FSRS: вопрос, ответ и прогноз интервала';
+
+  @override
+  String get reviewModeFeedSubtitle =>
+      'Карточки лентой: свайп или кнопка ставит оценку';
+
+  @override
+  String studyModeTestNotEnough(int count) {
+    return 'Нужна хотя бы одна карточка с вариантами ответа, сейчас $count';
+  }
+
+  @override
+  String studyModeTypingNotEnough(int count) {
+    return 'Нужна хотя бы одна карточка с коротким ответом, сейчас $count';
+  }
+
+  @override
+  String get feedRateHint =>
+      'Свайп вправо — «Знаю», влево — «Не знаю». Клавиши 1–4 тоже ставят оценку';
+
+  @override
+  String statisticsRetentionLowSample(int count) {
+    return 'Мало данных: повторений за 30 дней — $count';
+  }
+
+  @override
+  String statisticsRetentionBasedOn(int count) {
+    return 'на основе $count повторений за 30 дней';
+  }
+
+  @override
+  String get statisticsRetentionThreshold =>
+      'Процент показывается от 20 повторений за 30 дней';
+
+  @override
+  String get statisticsForecastEmpty =>
+      'На ближайшие 7 дней повторений не запланировано';
+
+  @override
+  String get statisticsWeekEmpty => 'За эту неделю повторений ещё не было';
+
+  @override
+  String statisticsWeekTotal(int count) {
+    return 'Всего за неделю: $count';
+  }
+
+  @override
+  String statisticsChartBarSemantics(String label, int count) {
+    return '$label: $count';
+  }
+
+  @override
+  String get settingsProvidersPrimaryBroken =>
+      'Основной провайдер не настроен: укажите адрес и модель.';
+
+  @override
+  String get settingsProvidersFixAction => 'Исправить';
+
+  @override
+  String get generationExitRunningTitle => 'Остановить генерацию?';
+
+  @override
+  String get generationExitRunningMessage =>
+      'Карточки ещё генерируются. Если выйти сейчас, несохранённые карточки пропадут.';
+
+  @override
+  String get generationExitRunningConfirm => 'Остановить и выйти';
+
+  @override
+  String get generationExitRunningStay => 'Продолжить генерацию';
+
+  @override
+  String generationModelFromSettings(String model) {
+    return 'Модель: $model';
+  }
+
+  @override
+  String get generationModelChange => 'Изменить';
+
+  @override
+  String get shellSearchAction => 'Найти колоду';
+
+  @override
+  String get shellSearchActionHint => 'Откроет поиск в списке колод';
 }

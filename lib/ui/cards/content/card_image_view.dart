@@ -15,6 +15,9 @@ const double kCardImageCornerRadius = 16;
 /// Ограничение высоты картинки в карточке: текст и LaTeX не вытесняются.
 const double kCardImageMaxHeight = 220;
 
+/// Ограничение ширины картинки по умолчанию (прежнее поведение карточки).
+const double kCardImageMaxWidth = 640;
+
 /// Ключ явного состояния ошибки декодирования.
 const ValueKey<String> kCardImageErrorKey = ValueKey<String>(
   'card-image-error',
@@ -43,6 +46,7 @@ class CardImageView extends StatefulWidget {
     this.onTap,
     this.onRetry,
     this.maxHeight = kCardImageMaxHeight,
+    this.maxWidth = kCardImageMaxWidth,
     this.semanticsLabel,
     super.key,
   });
@@ -64,6 +68,9 @@ class CardImageView extends StatefulWidget {
 
   /// Максимальная высота на экране.
   final double maxHeight;
+
+  /// Максимальная ширина на экране.
+  final double maxWidth;
 
   /// Подпись для screen reader; `null` — стандартная из ARB.
   final String? semanticsLabel;
@@ -94,7 +101,10 @@ class _CardImageViewState extends State<CardImageView> {
       label: label,
       button: true,
       child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: 640, maxHeight: widget.maxHeight),
+        constraints: BoxConstraints(
+          maxWidth: widget.maxWidth,
+          maxHeight: widget.maxHeight,
+        ),
         child: AspectRatio(
           // Схемы — 4:3 (допустимо правилом), остальное — 16:9.
           aspectRatio: isDiagram ? 4 / 3 : 16 / 9,

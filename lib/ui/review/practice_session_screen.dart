@@ -7,16 +7,15 @@ import 'package:material_ui/material_ui.dart' hide Card;
 
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/scheduling/rating.dart';
-import 'package:cardflow/domain/settings/app_settings.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/decks/deck_actions.dart';
-import 'package:cardflow/ui/motion.dart';
 import 'package:cardflow/ui/review/practice_session_engine.dart';
 import 'package:cardflow/ui/review/review_card_view.dart';
 import 'package:cardflow/ui/review/review_chrome.dart';
 import 'package:cardflow/ui/review/review_session_engine.dart'
     show ReviewHaptic, reviewHapticFor;
 import 'package:cardflow/ui/review/review_toolbar.dart';
+import 'package:cardflow/ui/review/session_keyboard.dart';
 import 'package:cardflow/ui/review/session_media.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
 import 'package:cardflow/ui/theme/app_tokens.dart';
@@ -106,6 +105,8 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
   Future<void> _rate(Rating rating) async {
     final PracticeSessionEngine? engine = _engine;
     if (engine == null) return;
+    // Оценка до раскрытия ответа запрещена (F1): движок — последняя защита.
+    if (!engine.state.revealed) return;
     try {
       final bool rated = await engine.rate(rating);
       if (!rated) return;
@@ -165,22 +166,16 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
   }
 
   KeyEventResult _handleKey(FocusNode node, KeyEvent event) {
-    if (event is! KeyDownEvent) return KeyEventResult.ignored;
-    final LogicalKeyboardKey key = event.logicalKey;
-    if (key == LogicalKeyboardKey.space) {
-      _reveal();
-      return KeyEventResult.handled;
-    }
-    final Rating? rating = switch (key) {
-      LogicalKeyboardKey.digit1 || LogicalKeyboardKey.numpad1 => Rating.again,
-      LogicalKeyboardKey.digit2 || LogicalKeyboardKey.numpad2 => Rating.hard,
-      LogicalKeyboardKey.digit3 || LogicalKeyboardKey.numpad3 => Rating.good,
-      LogicalKeyboardKey.digit4 || LogicalKeyboardKey.numpad4 => Rating.easy,
-      _ => null,
-    };
-    if (rating == null) return KeyEventResult.ignored;
-    unawaited(_rate(rating));
-    return KeyEventResult.handled;
+    final PracticeSessionState? state = _engine?.state;
+    if (state == null) return KeyEventResult.ignored;
+    return handleReviewSessionKey(
+      event: event,
+      revealed: state.revealed,
+      canUndo: state.undoCount > 0 && !state.busy && !state.isCompleted,
+      onReveal: _reveal,
+      onRate: (Rating rating) => unawaited(_rate(rating)),
+      onUndo: () => unawaited(_undo()),
+    );
   }
 
   Future<void> _confirmExit() async {
@@ -254,7 +249,6 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
         onDone: _leave,
       );
     }
-    final AppSettings settings = ref.watch(effectiveAppSettingsProvider);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
@@ -294,32 +288,30 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
           ),
         ),
         Expanded(
-          child: Align(
-            alignment: Alignment.topCenter,
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(
-                  maxWidth: AppSizes.studyCardMaxWidth,
-                ),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                maxWidth: AppSizes.studyCardMaxWidth,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.md),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: <Widget>[
-                    KeyedSubtree(
-                      key: const ValueKey<String>('practice-card'),
-                      child: ReviewCardView(
-                        key: ValueKey<String>(state.current!.id),
-                        front: state.current!.front,
-                        back: state.current!.back,
-                        card: state.current!,
-                        mediaBytes: _media.bytes,
-                        mediaMetadata: _media.metadata,
-                        onRetryMedia: () => _retryMedia(state.current!),
-                        revealed: state.revealed,
-                        spring: settings.motion == MotionPreference.standard
-                            ? AppMotion.standardSpring()
-                            : null,
-                        onTap: _reveal,
+                    Expanded(
+                      child: KeyedSubtree(
+                        key: const ValueKey<String>('practice-card'),
+                        child: ReviewCardView(
+                          key: ValueKey<String>(state.current!.id),
+                          front: state.current!.front,
+                          back: state.current!.back,
+                          card: state.current!,
+                          mediaBytes: _media.bytes,
+                          mediaMetadata: _media.metadata,
+                          onRetryMedia: () => _retryMedia(state.current!),
+                          revealed: state.revealed,
+                          onTap: _reveal,
+                        ),
                       ),
                     ),
                     if (!state.revealed) ...<Widget>[
@@ -327,9 +319,27 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
                       FilledButton(
                         key: const ValueKey<String>('practice-reveal'),
                         onPressed: _reveal,
+                        style: FilledButton.styleFrom(
+                          minimumSize: const Size.fromHeight(
+                            AppSizes.buttonHeightLarge,
+                          ),
+                        ),
                         child: Text(l10n.reviewRevealAction),
                       ),
-                    ],
+                    ] else
+                      Padding(
+                        padding: const EdgeInsets.only(top: AppSpacing.xs),
+                        child: Text(
+                          l10n.reviewKeyboardHints,
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.labelSmall
+                              ?.copyWith(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant,
+                              ),
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -338,7 +348,10 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
         ),
         ReviewToolbar(
           preview: null,
-          enabled: !state.busy,
+          enabled: !state.busy && state.revealed,
+          hint: state.revealed
+              ? null
+              : AppLocalizations.of(context).reviewRevealRequiredHint,
           onRating: (Rating rating) => unawaited(_rate(rating)),
         ),
       ],

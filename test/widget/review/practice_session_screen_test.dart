@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart' hide Card;
@@ -70,6 +71,12 @@ void main() {
     ),
   ];
 
+  /// Раскрывает ответ текущей карточки (F1: без ответа оценка запрещена).
+  Future<void> reveal(WidgetTester tester) async {
+    await tester.tap(find.byKey(const ValueKey<String>('practice-card')));
+    await tester.pumpAndSettle();
+  }
+
   testWidgets('карточка с due в будущем доступна; ответ скрыт до тапа', (
     WidgetTester tester,
   ) async {
@@ -93,6 +100,28 @@ void main() {
     expect(find.text('Первый ответ'), findsOneWidget);
   });
 
+  testWidgets('оценки недоступны до раскрытия ответа (F1)', (
+    WidgetTester tester,
+  ) async {
+    await pumpPractice(tester, overrides: overridesFor(cardsToPractice()));
+
+    for (final String name in <String>['again', 'hard', 'good', 'easy']) {
+      final FilledButton button = tester.widget<FilledButton>(
+        find.byKey(ValueKey<String>('review-rating-$name')),
+      );
+      expect(button.onPressed, isNull, reason: 'тренировка: «$name» закрыта');
+    }
+    await tester.sendKeyEvent(LogicalKeyboardKey.digit3);
+    await tester.pumpAndSettle();
+    expect(practice.ratings, isEmpty);
+
+    await reveal(tester);
+    final FilledButton good = tester.widget<FilledButton>(
+      find.byKey(const ValueKey<String>('review-rating-good')),
+    );
+    expect(good.onPressed, isNotNull);
+  });
+
   testWidgets('оценка пишется как practice и ведёт к следующей карточке', (
     WidgetTester tester,
   ) async {
@@ -107,6 +136,7 @@ void main() {
     expect(practice.ratings, <Rating>[Rating.good]);
     expect(find.text('Второй вопрос'), findsOneWidget);
 
+    await reveal(tester);
     await tester.tap(find.byKey(const ValueKey<String>('review-rating-easy')));
     await tester.pumpAndSettle();
 
@@ -121,6 +151,7 @@ void main() {
   ) async {
     await pumpPractice(tester, overrides: overridesFor(cardsToPractice()));
 
+    await reveal(tester);
     await tester.tap(find.byKey(const ValueKey<String>('review-rating-hard')));
     await tester.pumpAndSettle();
     expect(find.text('Второй вопрос'), findsOneWidget);
@@ -144,6 +175,7 @@ void main() {
     final List<Override> overrides = overridesFor(cardsToPractice());
     await pumpPractice(tester, overrides: overrides);
     practice.recordError = StateError('БД недоступна');
+    await reveal(tester);
 
     await tester.tap(find.byKey(const ValueKey<String>('review-rating-good')));
     await tester.pumpAndSettle();
