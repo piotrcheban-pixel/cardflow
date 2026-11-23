@@ -5,10 +5,11 @@ import 'package:material_ui/material_ui.dart';
 import 'package:cardflow/domain/decks/deck.dart';
 import 'package:cardflow/domain/transfer/deck_archive.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
+import 'package:cardflow/ui/components/app_dialogs.dart';
 import 'package:cardflow/ui/decks/archive_error_message.dart';
 import 'package:cardflow/ui/decks/deck_archive_file_name.dart';
-import 'package:cardflow/ui/m3e/m3e.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
+import 'package:cardflow/ui/theme/app_tokens.dart';
 
 /// Действия над колодами (SPEC A6.2/A6.3/A6.9): диалоги, экспорт, импорт.
 ///
@@ -16,13 +17,12 @@ import 'package:cardflow/ui/state/app_providers.dart';
 /// маппятся в ARB (`archiveErrorMessage`), прочие — в общую строку. Сырые
 /// исключения наружу не выводятся.
 
-/// Показывает короткое сообщение снекбаром (M3 Expressive).
+/// Показывает короткое сообщение снекбаром темы (F23: одна система
+/// уведомлений — тот же inverseSurface и поля, что у `SessionNotice`).
 void showAppMessage(BuildContext context, String message) {
-  M3ESnackbar.show(
-    context,
-    message: message,
-    duration: const Duration(seconds: 4),
-  );
+  ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(SnackBar(content: Text(message)));
 }
 
 /// Диалог создания колоды вручную; возвращает созданную колоду.
@@ -72,25 +72,32 @@ Future<bool> deleteDeckWithConfirmation(
   required Deck deck,
 }) async {
   final AppLocalizations l10n = AppLocalizations.of(context);
+  final ColorScheme scheme = Theme.of(context).colorScheme;
   final bool confirmed =
-      (await showDialog<bool>(
+      (await showAppDialog<bool>(
         context: context,
-        builder: (BuildContext dialogContext) => AlertDialog(
-          title: Text(l10n.deckDeleteDialogTitle),
-          content: Text(l10n.deckDeleteDialogMessage(deck.name)),
-          actions: <Widget>[
-            TextButton(
-              key: const ValueKey<String>('delete-deck-cancel'),
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: Text(l10n.cancel),
+        title: l10n.deckDeleteDialogTitle,
+        subtitle: l10n.deckDeleteDialogMessage(deck.name),
+        bodyBuilder: (BuildContext dialogContext) => const SizedBox.shrink(),
+        // F12/F37: один компонент диалога, опасное действие — error-заливка,
+        // безопасное — нейтральный текст; крестика нет (закрытие — «Отмена»).
+        actionsBuilder: (BuildContext dialogContext) => <Widget>[
+          TextButton(
+            key: const ValueKey<String>('delete-deck-cancel'),
+            style: TextButton.styleFrom(foregroundColor: scheme.onSurface),
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            key: const ValueKey<String>('delete-deck-confirm'),
+            style: FilledButton.styleFrom(
+              backgroundColor: scheme.error,
+              foregroundColor: scheme.onError,
             ),
-            FilledButton(
-              key: const ValueKey<String>('delete-deck-confirm'),
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: Text(l10n.delete),
-            ),
-          ],
-        ),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(l10n.delete),
+          ),
+        ],
       )) ??
       false;
   if (confirmed != true || !context.mounted) return false;
@@ -110,19 +117,24 @@ void showArchivedUndoSnackbar(
   required String deckId,
 }) {
   final AppLocalizations l10n = AppLocalizations.of(context);
-  M3ESnackbar.show(
-    context,
-    message: l10n.deckArchivedMessage,
-    actionLabel: l10n.undo,
-    duration: const Duration(seconds: 8),
-    onAction: () async {
-      try {
-        await ref.read(deckRepositoryProvider).unarchiveDeck(deckId);
-      } catch (_) {
-        if (context.mounted) showAppMessage(context, l10n.genericError);
-      }
-    },
-  );
+  ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(
+      SnackBar(
+        content: Text(l10n.deckArchivedMessage),
+        duration: const Duration(seconds: 8),
+        action: SnackBarAction(
+          label: l10n.undo,
+          onPressed: () async {
+            try {
+              await ref.read(deckRepositoryProvider).unarchiveDeck(deckId);
+            } catch (_) {
+              if (context.mounted) showAppMessage(context, l10n.genericError);
+            }
+          },
+        ),
+      ),
+    );
 }
 
 /// Экспорт колоды: ZIP-байты → системный диалог сохранения (шлюз сам пишет
@@ -250,9 +262,10 @@ class _DeckNameDialogState extends State<_DeckNameDialog> {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
-    return AlertDialog(
-      title: Text(widget.title),
-      content: TextField(
+    final ThemeData theme = Theme.of(context);
+    return AppDialog(
+      title: widget.title,
+      bodyBuilder: (BuildContext dialogContext) => TextField(
         controller: _controller,
         autofocus: true,
         textInputAction: TextInputAction.done,
@@ -262,9 +275,12 @@ class _DeckNameDialogState extends State<_DeckNameDialog> {
           errorText: _errorText,
         ),
       ),
-      actions: <Widget>[
+      actionsBuilder: (BuildContext dialogContext) => <Widget>[
         TextButton(
-          onPressed: () => Navigator.of(context).pop(),
+          style: TextButton.styleFrom(
+            foregroundColor: theme.colorScheme.onSurface,
+          ),
+          onPressed: () => Navigator.of(dialogContext).pop(),
           child: Text(l10n.cancel),
         ),
         FilledButton(
@@ -283,38 +299,38 @@ Future<bool> _showImportPreviewDialog(
   ImportPreview preview,
 ) async {
   final AppLocalizations l10n = AppLocalizations.of(context);
-  final bool? confirmed = await showDialog<bool>(
+  final ColorScheme scheme = Theme.of(context).colorScheme;
+  final bool? confirmed = await showAppDialog<bool>(
     context: context,
-    builder: (BuildContext dialogContext) => AlertDialog(
-      title: Text(l10n.importPreviewTitle),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Text(l10n.importPreviewDeckName(preview.deckName)),
-          const SizedBox(height: 8),
-          Text(l10n.importPreviewFormatVersion(preview.formatVersion)),
-          const SizedBox(height: 8),
-          Text(l10n.importPreviewCards(preview.cardsCount)),
-          const SizedBox(height: 8),
-          Text(l10n.importPreviewDuplicates(preview.duplicatesCount)),
-          const SizedBox(height: 8),
-          Text(l10n.importPreviewMedia(preview.mediaCount)),
-        ],
-      ),
-      actions: <Widget>[
-        TextButton(
-          key: const ValueKey<String>('import-cancel'),
-          onPressed: () => Navigator.of(dialogContext).pop(false),
-          child: Text(l10n.cancel),
-        ),
-        FilledButton(
-          key: const ValueKey<String>('import-confirm'),
-          onPressed: () => Navigator.of(dialogContext).pop(true),
-          child: Text(l10n.importConfirm),
-        ),
+    title: l10n.importPreviewTitle,
+    bodyBuilder: (BuildContext dialogContext) => Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(l10n.importPreviewDeckName(preview.deckName)),
+        const SizedBox(height: AppSpacing.xs),
+        Text(l10n.importPreviewFormatVersion(preview.formatVersion)),
+        const SizedBox(height: AppSpacing.xs),
+        Text(l10n.importPreviewCards(preview.cardsCount)),
+        const SizedBox(height: AppSpacing.xs),
+        Text(l10n.importPreviewDuplicates(preview.duplicatesCount)),
+        const SizedBox(height: AppSpacing.xs),
+        Text(l10n.importPreviewMedia(preview.mediaCount)),
       ],
     ),
+    actionsBuilder: (BuildContext dialogContext) => <Widget>[
+      TextButton(
+        key: const ValueKey<String>('import-cancel'),
+        style: TextButton.styleFrom(foregroundColor: scheme.onSurface),
+        onPressed: () => Navigator.of(dialogContext).pop(false),
+        child: Text(l10n.cancel),
+      ),
+      FilledButton(
+        key: const ValueKey<String>('import-confirm'),
+        onPressed: () => Navigator.of(dialogContext).pop(true),
+        child: Text(l10n.importConfirm),
+      ),
+    ],
   );
   return confirmed ?? false;
 }

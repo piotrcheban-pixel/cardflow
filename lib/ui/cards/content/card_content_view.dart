@@ -231,7 +231,9 @@ class CardContentView extends StatelessWidget {
       metadata: metadata,
       onRetry: onRetryMedia,
       maxWidth: imageMaxWidth,
-      maxHeight: count > 1 ? imageMaxHeight * 0.6 : imageMaxHeight,
+      // F08: в сетке плитка получает большую высоту (75 % бюджета), чтобы
+      // изображение занимало заметную площадь, а пустых полей не было видно.
+      maxHeight: count > 1 ? imageMaxHeight * 0.75 : imageMaxHeight,
     );
   }
 

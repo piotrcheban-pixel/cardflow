@@ -34,8 +34,8 @@ double statisticsWeekBarWidth(double columnWidth) =>
 
 /// Высота графика вместе с числами и подписями дней (V13).
 ///
-/// У «Недельного прогресса» и «Прогноза» одна высота: ряды столбцов визуально
-/// сравнимы, а числа над столбцами и подписи стоят на общей сетке.
+/// F32: на 2K/4K график выше (120 → 174), поэтому столбцы читаются так же,
+/// как на FullHD.
 const double _statisticsChartHeight = 120;
 
 /// Максимальная ширина графика: на широком экране 7 столбцов не растягиваются
@@ -120,6 +120,8 @@ class StatisticsBarChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
+    final double factor = AppAdaptive.factorForContext(context)
+        .clamp(1.0, 1.45);
     final int maxValue = values.isEmpty
         ? 0
         : values.reduce((int a, int b) => a > b ? a : b);
@@ -130,9 +132,9 @@ class StatisticsBarChart extends StatelessWidget {
     );
     final Widget chart = Center(
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: _maxChartWidth),
+        constraints: BoxConstraints(maxWidth: _maxChartWidth * factor),
         child: SizedBox(
-          height: height,
+          height: height * factor,
           child: LayoutBuilder(
             builder: (BuildContext context, BoxConstraints constraints) {
               final int columns = math.max(1, values.length);
@@ -144,6 +146,22 @@ class StatisticsBarChart extends StatelessWidget {
                   Expanded(
                     child: Stack(
                       children: <Widget>[
+                        // F32: тихая сетка 25/50/75 % — столбцы читаются по
+                        // общей шкале, а не «висят» в пустом поле.
+                        for (final double level in <double>[0.25, 0.5, 0.75])
+                          Positioned(
+                            left: 0,
+                            right: 0,
+                            bottom: constraints.maxHeight * level,
+                            child: SizedBox(
+                              height: AppSizes.borderWidth,
+                              child: ColoredBox(
+                                color: scheme.outlineVariant.withValues(
+                                  alpha: 0.5,
+                                ),
+                              ),
+                            ),
+                          ),
                         // Одна общая ось под всеми столбцами (V13).
                         Positioned(
                           left: 0,
@@ -152,7 +170,7 @@ class StatisticsBarChart extends StatelessWidget {
                           child: SizedBox(
                             key: ValueKey<String>('$keyPrefix-axis'),
                             height: _axisHeight,
-                            child: ColoredBox(color: scheme.outlineVariant),
+                            child: ColoredBox(color: scheme.outline),
                           ),
                         ),
                         Row(
@@ -460,19 +478,26 @@ class _StatisticsHeatmapState extends State<StatisticsHeatmap> {
     final double labelHeight =
         textScaler.scale(labelStyle.fontSize ?? 13) *
         (labelStyle.height ?? 1.35);
+    // F31: ячейка и шаг растут вместе с масштабом экрана (16 → 19,8 → 23,2),
+    // пустой день контрастнее (outlineVariant вместо почти белого) — карта
+    // читается как календарь, а не как бледная сетка.
+    final double factor = AppAdaptive.factorForContext(context)
+        .clamp(1.0, 1.45);
+    final double cell = (_heatmapCell * factor).clamp(16.0, 24.0);
+    final double step = cell + (_heatmapStep - _heatmapCell);
     final int columns = math.max(1, (days.length / 7).ceil());
-    final double chartWidth = columns * _heatmapStep;
-    final double chartHeight = labelHeight + AppSpacing.xxs + 7 * _heatmapStep;
+    final double chartWidth = columns * step;
+    final double chartHeight = labelHeight + AppSpacing.xxs + 7 * step;
     final Widget paint = CustomPaint(
       key: const ValueKey<String>('statistics-heatmap'),
       size: Size(chartWidth, chartHeight),
       painter: _HeatmapPainter(
         days: days,
         monthLabels: labels,
-        cell: _heatmapCell,
-        step: _heatmapStep,
+        cell: cell,
+        step: step,
         top: labelHeight + AppSpacing.xxs,
-        emptyColor: scheme.surfaceContainerLow,
+        emptyColor: scheme.outlineVariant,
         color: scheme.primary,
         labelStyle: labelStyle,
         textScaler: textScaler,

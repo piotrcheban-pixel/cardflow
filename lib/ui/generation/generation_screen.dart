@@ -979,7 +979,7 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
         body: SafeArea(
           bottom: false,
           child: _loading
-              ? const Center(child: CircularProgressIndicator())
+              ? _GenerationLoading(width: AppSizes.formWidth(context))
               : _configError
               ? _buildConfigError(context, l10n)
               : _buildBody(context, l10n, targetDeck),
@@ -1098,26 +1098,38 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        FilledButton(
-          key: const ValueKey<String>('generation-start'),
-          onPressed: blocked ? null : _generate,
-          // Отключённое состояние читаемо (V32): заливка surfaceContainerHigh,
-          // подпись onSurfaceVariant — 7,64:1 в светлой и 8,36:1 в тёмной
-          // теме вместо 2,51:1 у умолчания «12 % onSurface» на surface.
-          // Для остальных состояний стиль берётся из темы (null → fallback).
-          style: AppButtons.large(context).copyWith(
-            backgroundColor: WidgetStateProperty.resolveWith<Color?>(
-              (Set<WidgetState> states) => states.contains(WidgetState.disabled)
-                  ? scheme.surfaceContainerHigh
-                  : null,
+        // F30/F17: главное действие — кнопка 240–320, а не полоса на всю
+        // нижнюю панель; на узком окне занимает доступную ширину.
+        Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth:
+                  300 * AppAdaptive.factorForContext(context).clamp(1.0, 1.15),
             ),
-            foregroundColor: WidgetStateProperty.resolveWith<Color?>(
-              (Set<WidgetState> states) => states.contains(WidgetState.disabled)
-                  ? scheme.onSurfaceVariant
-                  : null,
+            child: FilledButton(
+              key: const ValueKey<String>('generation-start'),
+              onPressed: blocked ? null : _generate,
+              // Отключённое состояние читаемо (V32): заливка surfaceContainerHigh,
+              // подпись onSurfaceVariant — 7,64:1 в светлой и 8,36:1 в тёмной
+              // теме вместо 2,51:1 у умолчания «12 % onSurface» на surface.
+              // Для остальных состояний стиль берётся из темы (null → fallback).
+              style: AppButtons.large(context).copyWith(
+                backgroundColor: WidgetStateProperty.resolveWith<Color?>(
+                  (Set<WidgetState> states) =>
+                      states.contains(WidgetState.disabled)
+                      ? scheme.surfaceContainerHigh
+                      : null,
+                ),
+                foregroundColor: WidgetStateProperty.resolveWith<Color?>(
+                  (Set<WidgetState> states) =>
+                      states.contains(WidgetState.disabled)
+                      ? scheme.onSurfaceVariant
+                      : null,
+                ),
+              ),
+              child: Text(l10n.generationStart),
             ),
           ),
-          child: Text(l10n.generationStart),
         ),
         if (blockedReason != null)
           Padding(
@@ -2051,6 +2063,42 @@ class _LiveCardsStrip extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Скелетон экрана генерации: заголовок, зона файлов и группы параметров
+/// вместо голого спиннера (F22).
+class _GenerationLoading extends StatelessWidget {
+  const _GenerationLoading({required this.width});
+
+  final double width;
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(AppSpacing.xl),
+      child: Center(
+        child: SizedBox(
+          width: width,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              const AppSkeleton(width: 320, height: 40),
+              const SizedBox(height: AppSpacing.sm),
+              const AppSkeleton(width: 420, height: 16),
+              const SizedBox(height: AppSpacing.xl),
+              const AppSkeleton(height: 168),
+              const SizedBox(height: AppSpacing.lg),
+              const AppSkeleton(height: 64),
+              const SizedBox(height: AppSpacing.sm),
+              const AppSkeleton(height: 64),
+              const SizedBox(height: AppSpacing.sm),
+              const AppSkeleton(height: 96),
+            ],
+          ),
+        ),
       ),
     );
   }

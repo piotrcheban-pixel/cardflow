@@ -571,7 +571,8 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
           context: context,
           title: l10n.cardFormUnsavedTitle,
           subtitle: l10n.cardFormUnsavedMessage,
-          closeLabel: l10n.cancel,
+          // F13/F37: крестик и «Отмена» не дублируют друг друга — закрытие
+          // диалога только кнопкой.
           bodyBuilder: (BuildContext dialogContext) => const SizedBox.shrink(),
           actionsBuilder: (BuildContext dialogContext) => <Widget>[
             TextButton(
@@ -582,6 +583,7 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
             ),
             TextButton(
               key: const ValueKey<String>('card-form-cancel'),
+              style: TextButton.styleFrom(foregroundColor: scheme.onSurface),
               onPressed: () => Navigator.of(dialogContext).pop(false),
               child: Text(l10n.cancel),
             ),
@@ -605,25 +607,34 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
 
   Future<void> _confirmDelete() async {
     final AppLocalizations l10n = AppLocalizations.of(context);
+    final ThemeData theme = Theme.of(context);
     final bool confirmed =
-        (await showDialog<bool>(
+        (await showAppDialog<bool>(
           context: context,
-          builder: (BuildContext dialogContext) => AlertDialog(
-            title: Text(l10n.cardDeleteDialogTitle),
-            content: Text(l10n.cardDeleteDialogMessage),
-            actions: <Widget>[
-              TextButton(
-                key: const ValueKey<String>('card-delete-cancel'),
-                onPressed: () => Navigator.of(dialogContext).pop(false),
-                child: Text(l10n.cancel),
+          title: l10n.cardDeleteDialogTitle,
+          subtitle: l10n.cardDeleteDialogMessage,
+          bodyBuilder: (BuildContext dialogContext) => const SizedBox.shrink(),
+          // F12/F37: destructive — error-заливка, безопасное — нейтральный
+          // текст; тот же компонент, что у удаления колоды.
+          actionsBuilder: (BuildContext dialogContext) => <Widget>[
+            TextButton(
+              key: const ValueKey<String>('card-delete-cancel'),
+              style: TextButton.styleFrom(
+                foregroundColor: theme.colorScheme.onSurface,
               ),
-              FilledButton(
-                key: const ValueKey<String>('card-delete-confirm'),
-                onPressed: () => Navigator.of(dialogContext).pop(true),
-                child: Text(l10n.delete),
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton(
+              key: const ValueKey<String>('card-delete-confirm'),
+              style: FilledButton.styleFrom(
+                backgroundColor: theme.colorScheme.error,
+                foregroundColor: theme.colorScheme.onError,
               ),
-            ],
-          ),
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: Text(l10n.delete),
+            ),
+          ],
         )) ??
         false;
     if (!confirmed || !mounted) return;
@@ -710,7 +721,10 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
                       heightFactor: 1,
                       child: ConstrainedBox(
                         constraints: BoxConstraints(
-                          maxWidth: AppSizes.formWidth(context),
+                          maxWidth:
+                              320 *
+                              AppAdaptive.factorForContext(context)
+                                  .clamp(1.0, 1.15),
                         ),
                         child: FilledButton(
                           key: const ValueKey<String>('card-form-save'),
@@ -728,7 +742,27 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
   }
 
   Widget _buildBody(BuildContext context, AppLocalizations l10n) {
-    if (_loading) return const Center(child: CircularProgressIndicator());
+    if (_loading) {
+      return AppContentWidth(
+        maxWidth: AppSizes.formWidth(context),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+        child: const Padding(
+          padding: EdgeInsets.only(top: AppSpacing.xl),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              AppSkeleton(height: 56),
+              SizedBox(height: AppSpacing.sm),
+              AppSkeleton(height: 120),
+              SizedBox(height: AppSpacing.sm),
+              AppSkeleton(height: 56),
+              SizedBox(height: AppSpacing.sm),
+              AppSkeleton(height: 56),
+            ],
+          ),
+        ),
+      );
+    }
     if (_loadFailed || (_isEditing && _card == null)) {
       return Center(
         child: Padding(

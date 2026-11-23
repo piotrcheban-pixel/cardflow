@@ -143,7 +143,11 @@ class _CardImageViewState extends State<CardImageView> {
         child: ClipRRect(
           borderRadius: BorderRadius.circular(kCardImageCornerRadius),
           child: Material(
-            color: theme.colorScheme.surfaceContainerHighest,
+            // F08: у изображения нет «палевого» фона-заглушки: вокруг картинки
+            // остаётся поверхность карточки, а не цветная плитка letterbox'а.
+            color: widget.bytes.isEmpty
+                ? theme.colorScheme.surfaceContainerHighest
+                : Colors.transparent,
             child: widget.bytes.isEmpty
                 ? _ImageErrorState(onRetry: _retry)
                 : InkWell(

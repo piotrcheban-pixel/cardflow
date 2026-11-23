@@ -20,6 +20,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:cardflow/domain/generation/provider_account.dart';
 import 'package:cardflow/domain/settings/app_settings.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
+import 'package:cardflow/ui/components/app_dialogs.dart';
 import 'package:cardflow/ui/components/app_layout.dart';
 import 'package:cardflow/ui/components/app_surfaces.dart';
 import 'package:cardflow/ui/decks/deck_actions.dart';
@@ -129,7 +130,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }) {
     return SliverToBoxAdapter(
       child: AppContentWidth(
-        maxWidth: AppSizes.contentMaxWidth,
+        // F09: та же контентная колонка, что у остальных страниц (1280 на
+        // FullHD, до 2600 на 4K).
+        maxWidth: AppSizes.pageWidth(context),
         padding:
             padding ??
             EdgeInsets.fromLTRB(
@@ -334,7 +337,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ),
                   child: const Padding(
                     padding: EdgeInsets.symmetric(vertical: AppSpacing.huge),
-                    child: Center(child: CircularProgressIndicator()),
+                    child: _SettingsLoading(),
                   ),
                 ),
               ],
@@ -567,7 +570,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               return Align(
                 alignment: AlignmentDirectional.centerStart,
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 360),
+                  constraints: const BoxConstraints(maxWidth: 560),
                   child: SegmentedButton<AppThemePreference>(
                     key: const ValueKey<String>('settings-theme'),
                     showSelectedIcon: false,
@@ -642,7 +645,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               return Align(
                 alignment: AlignmentDirectional.centerStart,
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 360),
+                  constraints: const BoxConstraints(maxWidth: 560),
                   child: SegmentedButton<MotionPreference>(
                     key: const ValueKey<String>('settings-motion'),
                     showSelectedIcon: false,
@@ -957,85 +960,87 @@ class _DailyLimitRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
     final ColorScheme scheme = theme.colorScheme;
-    return Align(
-      alignment: AlignmentDirectional.centerStart,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 560),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: AppSpacing.xxs),
-          child: Row(
-            children: <Widget>[
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(title, style: theme.textTheme.bodyLarge),
-                    Text(
-                      hint,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: scheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
+    final double control = AppAdaptive.factorForContext(context)
+        .clamp(1.0, 1.3);
+    // F15: строка использует ширину секции — подпись слева, контрол у правого
+    // края, а не 560 px в левом углу панели на 1280.
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xxs),
+      child: Row(
+        children: <Widget>[
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(title, style: theme.textTheme.bodyLarge),
+                Text(
+                  hint,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Container(
-                height: AppSizes.buttonHeightLarge,
-                decoration: BoxDecoration(
-                  color: scheme.surface,
-                  borderRadius: BorderRadius.circular(AppRadii.control),
-                  border: Border.all(color: scheme.outlineVariant),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    IconButton(
-                      key: ValueKey<String>('settings-$id-minus'),
-                      icon: const Icon(Icons.remove, size: AppSizes.icon),
-                      style: _stepperStyle(isFirst: true),
-                      onPressed: value <= 0 ? null : () => onChanged(value - 1),
-                    ),
-                    SizedBox(
-                      // Три разряда («200 повторений в день») обязаны влезать
-                      // без переноса — аудит v4: «20» и «0» разъезжались.
-                      width: 44,
-                      child: Text(
-                        value.toString(),
-                        key: ValueKey<String>('settings-$id-value'),
-                        textAlign: TextAlign.center,
-                        maxLines: 1,
-                        softWrap: false,
-                        overflow: TextOverflow.visible,
-                        style: AppTypography.numeric(context),
-                      ),
-                    ),
-                    IconButton(
-                      key: ValueKey<String>('settings-$id-plus'),
-                      icon: const Icon(Icons.add, size: AppSizes.icon),
-                      style: _stepperStyle(isFirst: false),
-                      onPressed: value >= AppSettings.maxDailyLimit
-                          ? null
-                          : () => onChanged(value + 1),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
+          const SizedBox(width: AppSpacing.sm),
+          Container(
+            height: (AppSizes.buttonHeightLarge * control).clamp(44.0, 60.0),
+            decoration: BoxDecoration(
+              color: scheme.surface,
+              borderRadius: BorderRadius.circular(AppRadii.control),
+              border: Border.all(
+                color: AppColors.controlBorder(scheme),
+                width: AppSizes.borderWidth,
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                IconButton(
+                  key: ValueKey<String>('settings-$id-minus'),
+                  icon: const Icon(Icons.remove, size: AppSizes.icon),
+                  style: _stepperStyle(isFirst: true, control: control),
+                  onPressed: value <= 0 ? null : () => onChanged(value - 1),
+                ),
+                SizedBox(
+                  // Три разряда («200 повторений в день») обязаны влезать
+                  // без переноса — аудит v4: «20» и «0» разъезжались.
+                  width: 52 * control,
+                  child: Text(
+                    value.toString(),
+                    key: ValueKey<String>('settings-$id-value'),
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    softWrap: false,
+                    overflow: TextOverflow.visible,
+                    style: AppTypography.numeric(context),
+                  ),
+                ),
+                IconButton(
+                  key: ValueKey<String>('settings-$id-plus'),
+                  icon: const Icon(Icons.add, size: AppSizes.icon),
+                  style: _stepperStyle(isFirst: false, control: control),
+                  onPressed: value >= AppSettings.maxDailyLimit
+                      ? null
+                      : () => onChanged(value + 1),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  /// Стиль кнопок степпера: ровно 44×44, без лишних полей — контрол не
+  /// Стиль кнопок степпера: квадрат 44–57, без лишних полей — контрол не
   /// «толще» соседних и даёт зону касания по нижней границе доступности.
-  ButtonStyle _stepperStyle({required bool isFirst}) {
+  ButtonStyle _stepperStyle({required bool isFirst, required double control}) {
     final Radius radius = Radius.circular(AppRadii.control);
+    final double side = (AppSizes.minTouchTarget * control).clamp(44.0, 60.0);
     return IconButton.styleFrom(
       padding: EdgeInsets.zero,
-      minimumSize: const Size(AppSizes.minTouchTarget, AppSizes.minTouchTarget),
-      maximumSize: const Size(AppSizes.minTouchTarget, AppSizes.minTouchTarget),
+      minimumSize: Size(side, side),
+      maximumSize: Size(side, side),
       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.horizontal(
@@ -1324,9 +1329,10 @@ class _LearningStepDialogState extends State<_LearningStepDialog> {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
-    return AlertDialog(
-      title: Text(l10n.settingsLearningStepDialogTitle),
-      content: TextField(
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    return AppDialog(
+      title: l10n.settingsLearningStepDialogTitle,
+      bodyBuilder: (BuildContext dialogContext) => TextField(
         key: const ValueKey<String>('learning-step-input'),
         controller: _controller,
         autofocus: true,
@@ -1337,9 +1343,10 @@ class _LearningStepDialogState extends State<_LearningStepDialog> {
         ),
         onSubmitted: (_) => _submit(),
       ),
-      actions: <Widget>[
+      actionsBuilder: (BuildContext dialogContext) => <Widget>[
         TextButton(
-          onPressed: () => Navigator.of(context).pop(),
+          style: TextButton.styleFrom(foregroundColor: scheme.onSurface),
+          onPressed: () => Navigator.of(dialogContext).pop(),
           child: Text(l10n.cancel),
         ),
         FilledButton(
@@ -1348,6 +1355,41 @@ class _LearningStepDialogState extends State<_LearningStepDialog> {
           child: Text(l10n.save),
         ),
       ],
+    );
+  }
+}
+
+/// Скелетон настроек: разделы-панели вместо голого спиннера (F22).
+class _SettingsLoading extends StatelessWidget {
+  const _SettingsLoading();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          const AppSkeleton(width: 260, height: 34),
+          const SizedBox(height: AppSpacing.md),
+          for (int index = 0; index < 3; index++) ...<Widget>[
+            AppPanel(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  const AppSkeleton(width: 220, height: 22),
+                  const SizedBox(height: AppSpacing.sm),
+                  const AppSkeleton(height: 14),
+                  const SizedBox(height: AppSpacing.sm),
+                  const AppSkeleton(width: 320, height: 14),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+          ],
+        ],
+      ),
     );
   }
 }

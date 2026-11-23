@@ -55,20 +55,21 @@ class StatisticsScreen extends ConsumerWidget {
         ),
         slivers: <Widget>[
           snapshot.when(
-            loading: () => const Padding(
-              padding: EdgeInsets.symmetric(vertical: AppSpacing.huge),
-              child: Center(child: CircularProgressIndicator()),
-            ),
+            loading: () => const _StatisticsLoading(),
             error: (Object error, StackTrace stackTrace) => AppErrorState(
               message: l10n.statisticsErrorTitle,
               retryLabel: l10n.retry,
               onRetry: () => ref.invalidate(statisticsProvider),
             ),
             data: (StatisticsSnapshot statistics) => statistics.isEmpty
-                ? AppEmptyState(
-                    icon: Icons.insights_outlined,
-                    title: l10n.statisticsEmptyTitle,
-                    message: l10n.statisticsEmptyMessage,
+                ? SizedBox(
+                    width: double.infinity,
+                    child: AppEmptyState(
+                      hero: true,
+                      icon: Icons.insights_outlined,
+                      title: l10n.statisticsEmptyTitle,
+                      message: l10n.statisticsEmptyMessage,
+                    ),
                   )
                 : _StatisticsContent(
                     statistics: statistics,
@@ -129,6 +130,9 @@ class _StatisticsContent extends StatelessWidget {
       0,
       (int sum, ForecastDay day) => sum + day.due,
     );
+    // F32: графики выше на 2K/4K — та же шкала, что у остальных размеров.
+    final double chartHeight =
+        120 * AppAdaptive.factorForContext(context).clamp(1.0, 1.45);
 
     // KPI (V13, KPI): одна форма у всех плиток — число + единица (% только у
     // удержания), пояснение не повторяет ни подпись, ни число. Колонок 2 на
@@ -360,7 +364,7 @@ class _StatisticsContent extends StatelessWidget {
         AppSpacing.xs,
         AppSpacing.md,
       ),
-      child: _ForecastChart(forecast: statistics.forecast),
+      child: _ForecastChart(forecast: statistics.forecast, height: chartHeight),
     );
 
     final Widget weakTopics = AppSectionCard(
@@ -407,7 +411,7 @@ class _StatisticsContent extends StatelessWidget {
               values: weekCounts,
               labels: weekLabels,
               semanticsLabel: l10n.statisticsWeekSemantics(weekTotal),
-              height: 120,
+              height: chartHeight,
             ),
     );
 
@@ -418,13 +422,15 @@ class _StatisticsContent extends StatelessWidget {
         // помещаются только так; два графика стоят рядом и читаются одним
         // языком, а удержание и слабые темы образуют вторую пару.
         final Widget charts = wide
-            ? Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Expanded(flex: 3, child: forecastPanel),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(flex: 2, child: weekPanel),
-                ],
+            ? IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    Expanded(flex: 3, child: forecastPanel),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(flex: 2, child: weekPanel),
+                  ],
+                ),
               )
             : Column(
                 children: <Widget>[
@@ -434,13 +440,15 @@ class _StatisticsContent extends StatelessWidget {
                 ],
               );
         final Widget details = wide
-            ? Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Expanded(flex: 2, child: retentionPanel),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(flex: 3, child: weakTopics),
-                ],
+            ? IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    Expanded(flex: 2, child: retentionPanel),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(flex: 3, child: weakTopics),
+                  ],
+                ),
               )
             : Column(
                 children: <Widget>[
@@ -473,6 +481,60 @@ class _StatisticsContent extends StatelessWidget {
       streak++;
     }
     return streak;
+  }
+}
+
+/// Скелетон статистики: панели графиков вместо голого спиннера (F22).
+class _StatisticsLoading extends StatelessWidget {
+  const _StatisticsLoading();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        LayoutBuilder(
+          builder: (BuildContext context, BoxConstraints constraints) {
+            final int columns = constraints.maxWidth >= 1024 ? 4 : 2;
+            final double gap = AppSpacing.md;
+            final double width =
+                (constraints.maxWidth - gap * (columns - 1)) / columns;
+            return Wrap(
+              spacing: gap,
+              runSpacing: gap,
+              children: <Widget>[
+                for (int index = 0; index < 4; index++)
+                  SizedBox(width: width, child: const AppSkeleton(height: 104)),
+              ],
+            );
+          },
+        ),
+        const SizedBox(height: AppSpacing.md),
+        const AppSkeleton(height: 240),
+        const SizedBox(height: AppSpacing.md),
+        LayoutBuilder(
+          builder: (BuildContext context, BoxConstraints constraints) {
+            if (constraints.maxWidth < 1024) {
+              return const Column(
+                children: <Widget>[
+                  AppSkeleton(height: 180),
+                  SizedBox(height: AppSpacing.md),
+                  AppSkeleton(height: 180),
+                ],
+              );
+            }
+            return const Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Expanded(flex: 3, child: AppSkeleton(height: 180)),
+                SizedBox(width: AppSpacing.md),
+                Expanded(flex: 2, child: AppSkeleton(height: 180)),
+              ],
+            );
+          },
+        ),
+      ],
+    );
   }
 }
 
@@ -626,9 +688,12 @@ class _WeakTopicRow extends StatelessWidget {
 /// столбцами, общая ось, одинаковая ширина столбцов; нулевой день — нулевой
 /// столбик с подписью «0».
 class _ForecastChart extends StatelessWidget {
-  const _ForecastChart({required this.forecast});
+  const _ForecastChart({required this.forecast, required this.height});
 
   final List<ForecastDay> forecast;
+
+  /// Высота графика вместе с числами (масштабируется на 2K/4K).
+  final double height;
 
   @override
   Widget build(BuildContext context) {
@@ -665,6 +730,7 @@ class _ForecastChart extends StatelessWidget {
       // Сегодня — акцентный столбец, как у недели крайний правый день.
       keyPrefix: 'statistics-forecast',
       emphasisIndex: 0,
+      height: height,
     );
   }
 

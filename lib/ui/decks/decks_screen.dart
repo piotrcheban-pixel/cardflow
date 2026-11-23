@@ -9,6 +9,7 @@ import 'package:cardflow/domain/decks/deck_summary.dart';
 import 'package:cardflow/domain/generation/provider_account.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/components/app_buttons.dart';
+import 'package:cardflow/ui/motion.dart';
 import 'package:cardflow/ui/components/app_layout.dart';
 import 'package:cardflow/ui/components/app_surfaces.dart';
 import 'package:cardflow/ui/decks/deck_actions.dart';
@@ -107,20 +108,28 @@ class DecksScreen extends ConsumerWidget {
           overline: compactHeight ? null : Text(l10n.decksOverline),
           actions: <Widget>[
             if (narrowHeader) ...<Widget>[
-              IconButton(
-                key: const ValueKey<String>('decks-import'),
-                tooltip: l10n.decksImportButton,
-                onPressed: () => importDeckZip(context, ref),
-                icon: const Icon(Icons.file_download_outlined),
-              ),
-              // Главное действие остаётся подписанным и на узком экране —
-              // без него «+» в шапке не отличить от глобальной «Новой карточки».
               FilledButton.icon(
                 key: const ValueKey<String>('decks-new-deck'),
                 onPressed: () => createDeckManually(context, ref),
                 icon: const Icon(Icons.add),
                 label: Text(l10n.decksNewDeck),
                 style: AppButtons.large(context),
+              ),
+              // F33: на узком окне «Импорт» — пункт меню рядом с главным
+              // действием, а не одинокая иконка, оторванная от «Новой колоды».
+              PopupMenuButton<void>(
+                key: const ValueKey<String>('decks-narrow-actions'),
+                icon: const Icon(Icons.more_horiz_outlined),
+                onSelected: (void _) => importDeckZip(context, ref),
+                itemBuilder: (BuildContext context) => <PopupMenuEntry<void>>[
+                  PopupMenuItem<void>(
+                    child: ListTile(
+                      leading: const Icon(Icons.file_download_outlined),
+                      title: Text(l10n.decksImportButton),
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                ],
               ),
             ] else ...<Widget>[
               OutlinedButton.icon(
@@ -171,10 +180,7 @@ class DecksScreen extends ConsumerWidget {
               veryCompact: veryCompact,
             ),
           summaries.when(
-            loading: () => const Padding(
-              padding: EdgeInsets.symmetric(vertical: AppSpacing.huge),
-              child: Center(child: CircularProgressIndicator()),
-            ),
+            loading: () => const _DecksLoading(),
             error: (Object error, StackTrace stackTrace) => AppErrorState(
               message: l10n.decksErrorTitle,
               retryLabel: l10n.retry,
@@ -189,28 +195,32 @@ class DecksScreen extends ConsumerWidget {
                   // Находка D17: пустой результат поиска говорит про поиск,
                   // а не про «создайте колоду вручную».
                   final String search = query.normalizedSearch;
-                  return AppEmptyState(
-                    icon: Icons.search_off,
-                    title: search.isNotEmpty
-                        ? l10n.decksNoResultsForQuery(search)
-                        : l10n.decksNoResults,
-                    message: l10n.decksFilterEmptyHint,
-                    actions: <Widget>[
-                      FilledButton(
-                        key: const ValueKey<String>('decks-reset-filters'),
-                        onPressed: () {
-                          ref.read(decksQueryProvider.notifier).clearSearch();
-                          ref
-                              .read(decksQueryProvider.notifier)
-                              .setFilter(DeckFilter.all);
-                        },
-                        child: Text(l10n.decksSearchResetAction),
-                      ),
-                      OutlinedButton(
-                        onPressed: () => createDeckManually(context, ref),
-                        child: Text(l10n.decksCreateButton),
-                      ),
-                    ],
+                  return SizedBox(
+                    width: double.infinity,
+                    child: AppEmptyState(
+                      hero: true,
+                      icon: Icons.search_off,
+                      title: search.isNotEmpty
+                          ? l10n.decksNoResultsForQuery(search)
+                          : l10n.decksNoResults,
+                      message: l10n.decksFilterEmptyHint,
+                      actions: <Widget>[
+                        FilledButton(
+                          key: const ValueKey<String>('decks-reset-filters'),
+                          onPressed: () {
+                            ref.read(decksQueryProvider.notifier).clearSearch();
+                            ref
+                                .read(decksQueryProvider.notifier)
+                                .setFilter(DeckFilter.all);
+                          },
+                          child: Text(l10n.decksSearchResetAction),
+                        ),
+                        OutlinedButton(
+                          onPressed: () => createDeckManually(context, ref),
+                          child: Text(l10n.decksCreateButton),
+                        ),
+                      ],
+                    ),
                   );
                 }
                 return _FirstLaunchEmptyState();
@@ -540,8 +550,8 @@ class _DecksToolbar extends ConsumerWidget {
               ),
           ],
           child: Container(
-            height: 34,
-            width: compactControls ? 34 : null,
+            height: 40,
+            width: compactControls ? 40 : null,
             padding: EdgeInsets.symmetric(
               horizontal: compactControls ? 0 : AppSpacing.sm,
             ),
@@ -580,8 +590,8 @@ class _DecksToolbar extends ConsumerWidget {
         ),
         const SizedBox(width: AppSpacing.xs),
         Container(
-          height: 34,
-          padding: const EdgeInsets.all(2),
+          height: 40,
+          padding: const EdgeInsets.all(3),
           decoration: BoxDecoration(
             color: scheme.surfaceContainer,
             borderRadius: BorderRadius.circular(AppRadii.control),
@@ -851,10 +861,10 @@ class _FilterChip extends StatelessWidget {
       // иначе Align/Center растягивается на всю строку и каждый фильтр
       // занимает отдельный ряд (аудит v4, V28/V29). Высота касания — 44 px.
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
+        padding: const EdgeInsets.symmetric(vertical: 4),
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 120),
-          height: 32,
+          duration: AppMotion.duration(context, AppDurations.quick),
+          height: 38,
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
           decoration: BoxDecoration(
             color: background,
@@ -905,8 +915,8 @@ class _DecksSearchFieldState extends ConsumerState<_DecksSearchField> {
       );
     }
     final Widget field = Container(
-      height: 34,
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs + 2),
+      height: 44,
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
       decoration: BoxDecoration(
         color: scheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(AppRadii.control),
@@ -943,7 +953,7 @@ class _DecksSearchFieldState extends ConsumerState<_DecksSearchField> {
             IconButton(
               tooltip: l10n.decksSearchClearTooltip,
               icon: const Icon(Icons.close, size: AppSizes.iconSmall),
-              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+              constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
               padding: EdgeInsets.zero,
               onPressed: () {
                 _controller.clear();
@@ -981,10 +991,16 @@ class _DeckCollection extends StatelessWidget {
       builder: (BuildContext context, BoxConstraints constraints) {
         final int columns = switch (viewMode) {
           DecksViewMode.list => 1,
+          // F34: на 4K сетка использует площадь (5 колонок ≈ 490 px), на
+          // 2K/FullHD — 3; имена колод больше не обрезаются в 400 px.
           DecksViewMode.grid =>
-            constraints.maxWidth >= 1024
+            constraints.maxWidth >= 2200
+                ? 5
+                : constraints.maxWidth >= 1700
+                ? 4
+                : constraints.maxWidth >= 900
                 ? 3
-                : constraints.maxWidth >= 640
+                : constraints.maxWidth >= 600
                 ? 2
                 : 1,
         };
@@ -1034,6 +1050,57 @@ class _ArchiveSwipeBackground extends StatelessWidget {
       alignment: AlignmentDirectional.centerEnd,
       padding: const EdgeInsetsDirectional.only(end: AppSpacing.xl),
       child: Icon(Icons.archive_outlined, color: scheme.onErrorContainer),
+    );
+  }
+}
+
+/// Скелетон списка колод: геометрия карточек вместо голого спиннера (F22).
+class _DecksLoading extends StatelessWidget {
+  const _DecksLoading();
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final int columns = constraints.maxWidth >= 1700
+            ? 4
+            : constraints.maxWidth >= 900
+            ? 3
+            : constraints.maxWidth >= 600
+            ? 2
+            : 1;
+        final double gap = AppSpacing.md;
+        final double width =
+            (constraints.maxWidth - gap * (columns - 1)) / columns;
+        return Padding(
+          padding: const EdgeInsets.only(top: AppSpacing.sm),
+          child: Wrap(
+            spacing: gap,
+            runSpacing: gap,
+            children: <Widget>[
+              for (int index = 0; index < columns * 2; index++)
+                SizedBox(
+                  width: width,
+                  child: AppPanel(
+                    padding: const EdgeInsets.all(AppSpacing.lg),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        const AppSkeleton(width: 160, height: 20),
+                        const SizedBox(height: AppSpacing.sm),
+                        const AppSkeleton(width: 220, height: 16),
+                        const SizedBox(height: AppSpacing.md),
+                        const AppSkeleton(height: 6),
+                        const SizedBox(height: AppSpacing.md),
+                        const AppSkeleton(width: 120, height: 16),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
@@ -1089,11 +1156,19 @@ class _DeckTile extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: AppTypography.overline(context),
                     ),
-                    Text(
-                      summary.deck.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleMedium,
+                    SizedBox(
+                      // F34: два ряда под имя зарезервированы всегда — плитки
+                      // одной строки сетки остаются одной высоты.
+                      height:
+                          (theme.textTheme.titleMedium?.fontSize ?? 18) *
+                          (theme.textTheme.titleMedium?.height ?? 1.45) *
+                          2,
+                      child: Text(
+                        summary.deck.name,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.titleMedium,
+                      ),
                     ),
                   ],
                 ),
@@ -1203,7 +1278,7 @@ class _DeckTile extends StatelessWidget {
                     Expanded(
                       child: Text(
                         l10n.deckUpdated(date),
-                        maxLines: 1,
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: scheme.onSurfaceVariant,
@@ -1280,7 +1355,7 @@ class _DeckTile extends StatelessWidget {
                     Expanded(
                       child: Text(
                         l10n.deckUpdated(date),
-                        maxLines: 1,
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: scheme.onSurfaceVariant,
@@ -1431,21 +1506,29 @@ class _FirstLaunchEmptyState extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final AppLocalizations l10n = AppLocalizations.of(context);
-    return AppEmptyState(
-      icon: Icons.style_outlined,
-      title: l10n.decksEmptyTitle,
-      message: l10n.decksEmptyMessage,
-      actions: <Widget>[
-        FilledButton(
-          key: const ValueKey<String>('decks-empty-create'),
-          onPressed: () => createDeckManually(context, ref),
-          child: Text(l10n.decksCreateButton),
-        ),
-        OutlinedButton(
-          onPressed: () => context.push(AppRoutes.generationPath),
-          child: Text(l10n.decksCreateGenerate),
-        ),
-      ],
+    return SizedBox(
+      width: double.infinity,
+      child: AppEmptyState(
+        hero: true,
+        icon: Icons.style_outlined,
+        title: l10n.decksEmptyTitle,
+        message: l10n.decksEmptyMessage,
+        actions: <Widget>[
+          FilledButton(
+            key: const ValueKey<String>('decks-empty-create'),
+            onPressed: () => createDeckManually(context, ref),
+            child: Text(l10n.decksCreateButton),
+          ),
+          // F35: второй вход — явно другой по смыслу: AI-иконка и outlined,
+          // а не вторая равнозначная кнопка.
+          OutlinedButton.icon(
+            key: const ValueKey<String>('decks-empty-generate'),
+            onPressed: () => context.push(AppRoutes.generationPath),
+            icon: const Icon(Icons.auto_awesome_outlined),
+            label: Text(l10n.decksCreateGenerate),
+          ),
+        ],
+      ),
     );
   }
 }

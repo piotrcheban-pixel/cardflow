@@ -231,14 +231,14 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
       );
     }
     if (deckAsync.isLoading && !deckAsync.hasValue) {
-      return const Center(child: CircularProgressIndicator());
+      return _DeckLoading(width: AppSizes.detailsWidth(context));
     }
     final Deck? deck = deckAsync.value;
     if (deck == null) {
       return Center(child: Text(l10n.deckNotFound));
     }
     if (cardsAsync.isLoading && !cardsAsync.hasValue) {
-      return const Center(child: CircularProgressIndicator());
+      return _DeckLoading(width: AppSizes.detailsWidth(context));
     }
     final DeckSummary? summary = summaryAsync.asData?.value;
     final List<Card> cards = cardsAsync.value ?? const <Card>[];
@@ -967,6 +967,40 @@ class _StartSessionPanel extends StatelessWidget {
   }
 }
 
+/// Скелетон экрана колоды: шапка, панель старта и строки карточек (F22).
+class _DeckLoading extends StatelessWidget {
+  const _DeckLoading({required this.width});
+
+  final double width;
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      child: Center(
+        child: SizedBox(
+          width: width,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              const AppSkeleton(width: 240, height: 34),
+              const SizedBox(height: AppSpacing.md),
+              const AppSkeleton(height: 96),
+              const SizedBox(height: AppSpacing.md),
+              const AppSkeleton(height: 72),
+              const SizedBox(height: AppSpacing.lg),
+              for (int index = 0; index < 5; index++) ...<Widget>[
+                const AppSkeleton(height: 64),
+                const SizedBox(height: AppSpacing.xs),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// Пустое состояние списка карточек колоды.
 class _DeckCardsEmpty extends StatelessWidget {
   @override
@@ -1005,12 +1039,9 @@ class _DeckCardTile extends StatelessWidget {
       radius: AppRadii.input,
       child: Row(
         children: <Widget>[
-          AppIconBadge(
-            icon: Icons.notes_outlined,
-            color: scheme.primary,
-            size: 32,
-          ),
-          const SizedBox(width: AppSpacing.sm),
+          // F14: декоративный «☰» (тип карточки) убран — тип уже написан
+          // надзаголовком; в строке остаются один переход («›») и действия
+          // страницы, а не три «меню» подряд.
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
