@@ -177,8 +177,9 @@ class StudyResultsView extends StatelessWidget {
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(AppSpacing.md),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(
-            maxWidth: AppSizes.studyCardMaxWidth,
+          // Ширина как у карточки сессии (G3/G8): итоги не растягиваются на 2K.
+          constraints: BoxConstraints(
+            maxWidth: AppSizes.studyCardWidth(MediaQuery.sizeOf(context).width),
           ),
           child: AppPanel(
             padding: const EdgeInsets.all(AppSpacing.xl),

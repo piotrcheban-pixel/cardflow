@@ -217,25 +217,18 @@ class _ReviewCardViewState extends State<ReviewCardView>
               child: Transform(
                 alignment: Alignment.center,
                 transform: transform,
-                child: Semantics(
-                  button: true,
-                  excludeSemantics: true,
-                  label: showBack
-                      ? '${widget.front}\n${widget.back}'
-                      : widget.front,
-                  child: Container(
-                    height: height,
-                    decoration: BoxDecoration(
-                      color: scheme.surfaceContainerLowest,
-                      borderRadius: AppRadii.cardRadius,
-                      border: Border.all(
-                        color: scheme.outlineVariant,
-                        width: AppSizes.borderWidth,
-                      ),
-                      boxShadow: AppShadows.card(theme.brightness),
+                child: Container(
+                  height: height,
+                  decoration: BoxDecoration(
+                    color: scheme.surfaceContainerLowest,
+                    borderRadius: AppRadii.cardRadius,
+                    border: Border.all(
+                      color: scheme.outlineVariant,
+                      width: AppSizes.borderWidth,
                     ),
-                    child: face,
+                    boxShadow: AppShadows.card(theme.brightness),
                   ),
+                  child: face,
                 ),
               ),
             );
@@ -268,27 +261,33 @@ class _ReviewCardViewState extends State<ReviewCardView>
           ),
         ),
         Expanded(
-          child: _CardBody(
-            scroll: _scroll,
-            padding: EdgeInsets.fromLTRB(padH, AppSpacing.md, padH, bodyPadV),
-            columnWidth: columnWidth,
-            builder: (double availableHeight) => <Widget>[
-              _content(
-                theme,
-                context,
-                side: widget.front,
-                revealed: false,
-                style: theme.textTheme.headlineMedium?.copyWith(
-                  fontSize: questionSize,
-                  height: 1.35,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: -0.4,
+          // Семантика только текста стороны: кнопки под карточкой (действие,
+          // оценки) остаются отдельными узлами дерева доступности.
+          child: Semantics(
+            label: widget.front,
+            excludeSemantics: true,
+            child: _CardBody(
+              scroll: _scroll,
+              padding: EdgeInsets.fromLTRB(padH, AppSpacing.md, padH, bodyPadV),
+              columnWidth: columnWidth,
+              builder: (double availableHeight) => <Widget>[
+                _content(
+                  theme,
+                  context,
+                  side: widget.front,
+                  revealed: false,
+                  style: theme.textTheme.headlineMedium?.copyWith(
+                    fontSize: questionSize,
+                    height: 1.35,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: -0.4,
+                  ),
+                  media: true,
+                  imageMaxHeight: math.max(160, availableHeight * 0.62),
+                  imageMaxWidth: columnWidth,
                 ),
-                media: true,
-                imageMaxHeight: math.max(160, availableHeight * 0.62),
-                imageMaxWidth: columnWidth,
-              ),
-            ],
+              ],
+            ),
           ),
         ),
         if (footer != null)
@@ -344,55 +343,59 @@ class _ReviewCardViewState extends State<ReviewCardView>
           child: _SideLabel(label: l10n.reviewQuestionLabel),
         ),
         Expanded(
-          child: _CardBody(
-            scroll: _scroll,
-            padding: EdgeInsets.fromLTRB(padH, AppSpacing.xs, padH, bodyPadV),
-            columnWidth: columnWidth,
-            builder: (double availableHeight) => <Widget>[
-              _content(
-                theme,
-                context,
-                side: widget.front,
-                revealed: true,
-                style: mutedQuestion,
-                // Холст occlusion-карточки рисуется на стороне вопроса с уже
-                // раскрытыми масками (revealed: true).
-                media: true,
-                imageMaxHeight: math.max(140, availableHeight * 0.42),
-                imageMaxWidth: columnWidth,
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-                child: Row(
-                  children: <Widget>[
-                    const Expanded(child: Divider(height: 1)),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.sm,
-                      ),
-                      child: _SideLabel(
-                        label: l10n.reviewAnswerLabel,
-                        accent: true,
-                      ),
-                    ),
-                    const Expanded(child: Divider(height: 1)),
-                  ],
+          child: Semantics(
+            label: '${widget.front}\n${widget.back}',
+            excludeSemantics: true,
+            child: _CardBody(
+              scroll: _scroll,
+              padding: EdgeInsets.fromLTRB(padH, AppSpacing.xs, padH, bodyPadV),
+              columnWidth: columnWidth,
+              builder: (double availableHeight) => <Widget>[
+                _content(
+                  theme,
+                  context,
+                  side: widget.front,
+                  revealed: true,
+                  style: mutedQuestion,
+                  // Холст occlusion-карточки рисуется на стороне вопроса с уже
+                  // раскрытыми масками (revealed: true).
+                  media: true,
+                  imageMaxHeight: math.max(140, availableHeight * 0.42),
+                  imageMaxWidth: columnWidth,
                 ),
-              ),
-              _content(
-                theme,
-                context,
-                side: widget.back,
-                revealed: true,
-                style: answerStyle,
-                // Для occlusion холст уже нарисован выше — второй раз не
-                // рисуем; для cloze вопрос показан выше.
-                media: !occlusion,
-                includeClozeFront: false,
-                imageMaxHeight: math.max(180, availableHeight * 0.62),
-                imageMaxWidth: columnWidth,
-              ),
-            ],
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                  child: Row(
+                    children: <Widget>[
+                      const Expanded(child: Divider(height: 1)),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.sm,
+                        ),
+                        child: _SideLabel(
+                          label: l10n.reviewAnswerLabel,
+                          accent: true,
+                        ),
+                      ),
+                      const Expanded(child: Divider(height: 1)),
+                    ],
+                  ),
+                ),
+                _content(
+                  theme,
+                  context,
+                  side: widget.back,
+                  revealed: true,
+                  style: answerStyle,
+                  // Для occlusion холст уже нарисован выше — второй раз не
+                  // рисуем; для cloze вопрос показан выше.
+                  media: !occlusion,
+                  includeClozeFront: false,
+                  imageMaxHeight: math.max(180, availableHeight * 0.62),
+                  imageMaxWidth: columnWidth,
+                ),
+              ],
+            ),
           ),
         ),
         if (footer != null)

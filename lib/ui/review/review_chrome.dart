@@ -440,8 +440,10 @@ class _SessionStateLayout extends StatelessWidget {
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(AppSpacing.lg),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(
-            maxWidth: AppSizes.studyCardMaxWidth,
+          // Та же ширина, что у карточки сессии (G3): состояния «пусто»,
+          // «завершено» и «ошибка» не растягиваются на весь 2K/4K.
+          constraints: BoxConstraints(
+            maxWidth: AppSizes.studyCardWidth(MediaQuery.sizeOf(context).width),
           ),
           child: child,
         ),
