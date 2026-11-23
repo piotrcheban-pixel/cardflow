@@ -11,7 +11,7 @@ class AppTopHeader extends StatelessWidget {
   const AppTopHeader({
     required this.section,
     required this.onNewCard,
-    required this.onOpenSettings,
+    this.showNewCard = true,
     this.onOpenNav,
     super.key,
   });
@@ -22,8 +22,11 @@ class AppTopHeader extends StatelessWidget {
   /// Создать карточку (глобальное действие).
   final VoidCallback onNewCard;
 
-  /// Открыть настройки.
-  final VoidCallback onOpenSettings;
+  /// Показывать ли действие «Новая карточка».
+  ///
+  /// Аудит v4 (V17): глобальное действие имеет смысл только в разделах с
+  /// колодами; на «Статистике» и в «Настройках» оно не по контексту и убрано.
+  final bool showNewCard;
 
   /// Открыть навигацию на узком экране; `null` — панель постоянная.
   final VoidCallback? onOpenNav;
@@ -91,36 +94,33 @@ class AppTopHeader extends StatelessWidget {
             ),
           ),
           const SizedBox(width: AppSpacing.xs),
-          if (compact)
-            IconButton(
-              tooltip: l10n.shellNewCard,
-              icon: const Icon(Icons.add, size: AppSizes.navIcon),
-              onPressed: onNewCard,
-            )
-          else
-            OutlinedButton.icon(
-              key: const ValueKey<String>('shell-new-card'),
-              onPressed: onNewCard,
-              icon: const Icon(Icons.add, size: AppSizes.icon),
-              label: Text(l10n.shellNewCard),
-              style: OutlinedButton.styleFrom(
-                minimumSize: const Size(0, 34),
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-                textStyle: theme.textTheme.bodySmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: scheme.onSurface,
+          if (showNewCard) ...<Widget>[
+            if (compact)
+              IconButton(
+                key: const ValueKey<String>('shell-new-card'),
+                tooltip: l10n.shellNewCard,
+                icon: const Icon(Icons.add, size: AppSizes.navIcon),
+                onPressed: onNewCard,
+              )
+            else
+              OutlinedButton.icon(
+                key: const ValueKey<String>('shell-new-card'),
+                onPressed: onNewCard,
+                icon: const Icon(Icons.add, size: AppSizes.iconSmall),
+                label: Text(l10n.shellNewCard),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(0, AppSizes.buttonHeight),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm,
+                  ),
+                  textStyle: theme.textTheme.labelLarge?.copyWith(
+                    color: scheme.onSurface,
+                  ),
+                  foregroundColor: scheme.onSurface,
+                  backgroundColor: scheme.surface,
                 ),
-                foregroundColor: scheme.onSurface,
-                backgroundColor: scheme.surface,
               ),
-            ),
-          const SizedBox(width: AppSpacing.xxs),
-          IconButton(
-            key: const ValueKey<String>('shell-settings'),
-            tooltip: l10n.shellOpenSettingsTooltip,
-            icon: const Icon(Icons.settings_outlined, size: AppSizes.navIcon),
-            onPressed: onOpenSettings,
-          ),
+          ],
         ],
       ),
     );

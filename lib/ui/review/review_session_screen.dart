@@ -12,6 +12,8 @@ import 'package:cardflow/domain/review/review_queue.dart';
 import 'package:cardflow/domain/scheduling/rating.dart';
 import 'package:cardflow/domain/session/session_plan.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
+import 'package:cardflow/ui/components/app_buttons.dart';
+import 'package:cardflow/ui/motion.dart';
 import 'package:cardflow/ui/review/review_card_view.dart';
 import 'package:cardflow/ui/review/review_chrome.dart';
 import 'package:cardflow/ui/review/session_media.dart';
@@ -311,19 +313,6 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen>
     if (context.canPop()) context.pop();
   }
 
-  /// Прямой переход в главное меню из сессии (находка N3: не больше двух
-  /// действий). Спрашивает то же подтверждение, что и «×».
-  Future<void> _confirmHome() async {
-    final ReviewSessionState? state = _engine?.state;
-    final bool nothingToLose =
-        state == null ||
-        state.isCompleted ||
-        state.total == 0 ||
-        _timeExpired ||
-        _planMissing ||
-        _loadFailed;
-    await confirmLeaveToMainMenu(context, nothingToLose: nothingToLose);
-  }
 
   /// Повтор чтения медиа карточки после ошибки изображения (7.19).
   Future<void> _retryMedia(Card card) async {
@@ -360,7 +349,6 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen>
           onUndo: _undo,
           whyExcerpt: excerpt,
           onClose: _confirmExit,
-          onHome: _confirmHome,
         ),
         body: Focus(
           autofocus: true,
@@ -448,17 +436,41 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen>
                     Expanded(
                       child: KeyedSubtree(
                         key: const ValueKey<String>('review-card'),
-                        child: ReviewCardView(
-                          key: ValueKey<String>(state.current!.card.id),
-                          scrollController: _cardScroll,
-                          front: state.current!.card.front,
-                          back: state.current!.card.back,
-                          card: state.current!.card,
-                          mediaBytes: _media.bytes,
-                          mediaMetadata: _media.metadata,
-                          onRetryMedia: () => _retryMedia(state.current!.card),
-                          revealed: state.revealed,
-                          onTap: _reveal,
+                        // Аудит v4 (A6): смена карточки — короткий fade + сдвиг
+                        // 8 px (220 мс), а не мгновенная подмена.
+                        child: AnimatedSwitcher(
+                          duration: AppMotion.duration(
+                            context,
+                            AppDurations.medium,
+                          ),
+                          switchInCurve: AppMotion.enter,
+                          switchOutCurve: AppMotion.enter,
+                          transitionBuilder: (Widget child, Animation<double> a) {
+                            return FadeTransition(
+                              opacity: a,
+                              child: SlideTransition(
+                                position: Tween<Offset>(
+                                  begin: const Offset(0, 0.015),
+                                  end: Offset.zero,
+                                ).animate(a),
+                                child: child,
+                              ),
+                            );
+                          },
+                          child: ReviewCardView(
+                            key: ValueKey<String>(
+                              'card-${state.current!.card.id}',
+                            ),
+                            scrollController: _cardScroll,
+                            front: state.current!.card.front,
+                            back: state.current!.card.back,
+                            card: state.current!.card,
+                            mediaBytes: _media.bytes,
+                            mediaMetadata: _media.metadata,
+                            onRetryMedia: () => _retryMedia(state.current!.card),
+                            revealed: state.revealed,
+                            onTap: _reveal,
+                          ),
                         ),
                       ),
                     ),
@@ -467,11 +479,7 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen>
                       FilledButton(
                         key: const ValueKey<String>('review-reveal'),
                         onPressed: _reveal,
-                        style: FilledButton.styleFrom(
-                          minimumSize: const Size.fromHeight(
-                            AppSizes.buttonHeightLarge,
-                          ),
-                        ),
+                        style: AppButtons.large(context),
                         child: Text(l10n.reviewRevealAction),
                       ),
                     ] else if (MediaQuery.sizeOf(context).height >= 500)

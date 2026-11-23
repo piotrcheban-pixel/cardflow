@@ -3,13 +3,16 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'package:cardflow/domain/cards/card.dart' as domain;
 import 'package:cardflow/domain/decks/deck_query.dart';
 import 'package:cardflow/domain/decks/deck_summary.dart';
 import 'package:cardflow/domain/generation/provider_account.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
+import 'package:cardflow/ui/components/app_buttons.dart';
 import 'package:cardflow/ui/components/app_layout.dart';
 import 'package:cardflow/ui/components/app_surfaces.dart';
 import 'package:cardflow/ui/decks/deck_actions.dart';
+import 'package:cardflow/ui/decks/deck_modes_sheet.dart';
 import 'package:cardflow/ui/router/app_router.dart';
 import 'package:cardflow/ui/settings/provider_banner.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
@@ -58,7 +61,20 @@ class DecksScreen extends ConsumerWidget {
     );
     final bool loaded = summaries.hasValue;
     final Size window = MediaQuery.sizeOf(context);
-    final bool compactHeight = window.height < 760;
+    // Аудит v4 (V29): на низком окне шапка+метрики+тулбар съедали первый
+    // экран — сворачиваем надзаголовок, оставляя заголовок, подзаголовок,
+    // действия и фильтры.
+    final bool compactHeight = window.height < 820;
+    // Узкая шапка: вместо двух подписанных кнопок — иконки с подсказками
+    // (аудит v4: на 390 px три кнопки в Wrap занимали три строки).
+    final bool narrowHeader = window.width < 720;
+    // Пустой результат поиска/фильтра: KPI-плитки не нужны — экран объясняет
+    // пустоту и предлагает сбросить фильтры (аудит v4, V29).
+    final bool filteredEmpty =
+        loaded &&
+        decks.isNotEmpty &&
+        (query.normalizedSearch.isNotEmpty || query.filter != DeckFilter.all) &&
+        (summaries.value ?? const <DeckSummary>[]).isEmpty;
     // Первый запуск: пустая база без фильтров — KPI и панель фильтров не нужны,
     // первым видно пустое состояние с действиями (находка D16).
     final bool firstLaunch =
@@ -80,27 +96,39 @@ class DecksScreen extends ConsumerWidget {
       body: AppPageScaffold(
         header: AppPageHeader(
           title: l10n.decksTitle,
-          subtitle: Text(l10n.decksSubtitle(decks.length, dueCards)),
-          overline: _DecksOverline(dueCards: loaded ? dueCards : null),
+          // Аудит v4 (V9): число «к повторению» живёт только в KPI и в
+          // сайдбаре — из подзаголовка и бейджа-надзаголовка оно убрано.
+          subtitle: Text(l10n.decksSubtitleDecks(decks.length)),
+          overline: compactHeight ? null : Text(l10n.decksOverline),
           actions: <Widget>[
-            OutlinedButton.icon(
-              key: const ValueKey<String>('decks-import'),
-              onPressed: () => importDeckZip(context, ref),
-              icon: const Icon(Icons.file_download_outlined, size: 18),
-              label: Text(l10n.decksImportButton),
-            ),
-            FilledButton.icon(
-              key: const ValueKey<String>('decks-new-deck'),
-              onPressed: () => createDeckManually(context, ref),
-              icon: const Icon(Icons.add, size: 18),
-              label: Text(l10n.decksNewDeck),
-            ),
-            IconButton(
-              key: const ValueKey<String>('decks-generate-action'),
-              tooltip: l10n.deckGenerateTooltip,
-              icon: const Icon(Icons.auto_awesome_outlined, size: 20),
-              onPressed: () => context.push(AppRoutes.generationPath),
-            ),
+            if (narrowHeader) ...<Widget>[
+              IconButton(
+                key: const ValueKey<String>('decks-import'),
+                tooltip: l10n.decksImportButton,
+                onPressed: () => importDeckZip(context, ref),
+                icon: const Icon(Icons.file_download_outlined),
+              ),
+              IconButton(
+                key: const ValueKey<String>('decks-new-deck'),
+                tooltip: l10n.decksNewDeck,
+                onPressed: () => createDeckManually(context, ref),
+                icon: const Icon(Icons.add),
+              ),
+            ] else ...<Widget>[
+              OutlinedButton.icon(
+                key: const ValueKey<String>('decks-import'),
+                onPressed: () => importDeckZip(context, ref),
+                icon: const Icon(Icons.file_download_outlined),
+                label: Text(l10n.decksImportButton),
+              ),
+              FilledButton.icon(
+                key: const ValueKey<String>('decks-new-deck'),
+                onPressed: () => createDeckManually(context, ref),
+                icon: const Icon(Icons.add),
+                label: Text(l10n.decksNewDeck),
+                style: AppButtons.large(context),
+              ),
+            ],
           ],
         ),
         slivers: <Widget>[
@@ -110,7 +138,7 @@ class DecksScreen extends ConsumerWidget {
           // низком окне KPI сжимаются в одну строку, а на первом запуске
           // (пустая база) метрики и панель фильтров не показываются вовсе —
           // первым видно пустое состояние с действиями.
-          if (showChrome) ...<Widget>[
+          if (showChrome && !filteredEmpty) ...<Widget>[
             if (compactHeight)
               _MetricsLine(
                 totalCards: totalCards,
@@ -125,13 +153,14 @@ class DecksScreen extends ConsumerWidget {
                 studiedCards: studiedCards,
                 decks: decks.length,
               ),
+          ],
+          if (showChrome)
             _DecksToolbar(
               query: query,
               sort: sort,
               viewMode: viewMode,
               counts: _FilterCounts.fromSummaries(decks),
             ),
-          ],
           summaries.when(
             loading: () => const Padding(
               padding: EdgeInsets.symmetric(vertical: AppSpacing.huge),
@@ -182,6 +211,8 @@ class DecksScreen extends ConsumerWidget {
                 viewMode: viewMode,
                 onOpen: (DeckSummary summary) =>
                     context.push('/decks/${summary.deck.id}'),
+                onStudy: (DeckSummary summary) =>
+                    _startStudy(context, ref, summary),
                 onMenu: (DeckSummary summary) =>
                     _showContextMenu(context, ref, summary),
                 onArchive: (DeckSummary summary) =>
@@ -247,6 +278,58 @@ class DecksScreen extends ConsumerWidget {
     }
   }
 
+  /// Запуск сессии из карточки колоды (аудит v4, V5).
+  ///
+  /// Раньше кнопка «Учить» открывала экран колоды — то же, что тап по
+  /// карточке, и не начинала сессию. Теперь она открывает тот же лист режимов,
+  /// что панель «Начать сессию» на экране колоды: путь к действию один.
+  Future<void> _startStudy(
+    BuildContext context,
+    WidgetRef ref,
+    DeckSummary summary,
+  ) async {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    if (summary.totalCards == 0) {
+      showAppMessage(context, l10n.deckEmptySnack);
+      return;
+    }
+    final List<domain.Card> cards;
+    try {
+      cards = await ref
+          .read(cardRepositoryProvider)
+          .watchCards(summary.deck.id)
+          .first;
+    } on Object {
+      if (context.mounted) showAppMessage(context, l10n.genericError);
+      return;
+    }
+    if (!context.mounted) return;
+    final DeckSessionMode? mode = await showDeckModesSheet(
+      context,
+      availability: DeckModeAvailability.fromCards(cards),
+    );
+    if (mode == null || !context.mounted) return;
+    final String deckId = summary.deck.id;
+    switch (mode) {
+      case DeckSessionMode.classic:
+        await context.push(AppRoutes.studyPath(deckId));
+      case DeckSessionMode.feed:
+        await context.push(AppRoutes.feedPath(deckId));
+      case DeckSessionMode.practice:
+        await context.push(AppRoutes.practicePath(deckId));
+      case DeckSessionMode.test:
+        await context.push(AppRoutes.testPath(deckId));
+      case DeckSessionMode.typing:
+        await context.push(AppRoutes.typingPath(deckId));
+      case DeckSessionMode.match:
+        await context.push(AppRoutes.matchPath(deckId));
+      case DeckSessionMode.trueFalse:
+        await context.push(AppRoutes.trueFalsePath(deckId));
+      case DeckSessionMode.constructor:
+        await context.push(AppRoutes.constructorDeckPath(deckId));
+    }
+  }
+
   Future<void> _showContextMenu(
     BuildContext context,
     WidgetRef ref,
@@ -303,51 +386,6 @@ class DecksScreen extends ConsumerWidget {
 }
 
 /// Надзаголовок: реальный остаток повторений и метод планировщика.
-class _DecksOverline extends StatelessWidget {
-  const _DecksOverline({required this.dueCards});
-
-  final int? dueCards;
-
-  @override
-  Widget build(BuildContext context) {
-    final AppLocalizations l10n = AppLocalizations.of(context);
-    final ThemeData theme = Theme.of(context);
-    final int? due = dueCards;
-    // На узком экране точка-разделитель остаётся в одиночестве на строке.
-    final bool showDot = due != null && MediaQuery.sizeOf(context).width >= 420;
-    return Wrap(
-      spacing: AppSpacing.xs,
-      runSpacing: 2,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      children: <Widget>[
-        if (due != null)
-          AppStatusChip(
-            key: const ValueKey<String>('decks-due-chip'),
-            label: l10n.shellDueToday(due),
-            tone: due > 0 ? AppStatusTone.info : AppStatusTone.success,
-            icon: due > 0 ? Icons.schedule : Icons.check_circle,
-            dense: true,
-          ),
-        if (showDot)
-          Container(
-            width: 3,
-            height: 3,
-            decoration: BoxDecoration(
-              color: theme.colorScheme.outline,
-              shape: BoxShape.circle,
-            ),
-          ),
-        Text(
-          l10n.decksOverline,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: AppTypography.overline(context),
-        ),
-      ],
-    );
-  }
-}
-
 /// Полоса KPI-плиток.
 class _MetricsStrip extends StatelessWidget {
   const _MetricsStrip({
@@ -387,9 +425,8 @@ class _MetricsStrip extends StatelessWidget {
             label: l10n.decksMetricDue,
             value: number.format(dueCards),
             icon: Icons.schedule,
-            iconColor: scheme.tertiary,
-            helper: Text(l10n.shellDueLabel),
-            helperColor: scheme.tertiary,
+            // Аудит v4 (V9/V16): хелпер-дубль подписи убран, тон — акцент.
+            iconColor: scheme.primary,
           ),
           AppStatTile(
             key: const ValueKey<String>('decks-kpi-studied'),
@@ -397,7 +434,6 @@ class _MetricsStrip extends StatelessWidget {
             value: number.format(studiedCards),
             icon: Icons.task_alt,
             iconColor: scheme.secondary,
-            helper: Text(l10n.decksProgressLabel),
           ),
           AppStatTile(
             key: const ValueKey<String>('decks-kpi-decks'),
@@ -646,23 +682,22 @@ class _DecksToolbar extends ConsumerWidget {
           searchRow,
           if (filtersVisible) ...<Widget>[
             const SizedBox(height: AppSpacing.xs),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: <Widget>[
-                  for (int index = 0; index < 4; index++) ...<Widget>[
-                    if (index > 0) const SizedBox(width: AppSpacing.xs),
-                    _FilterChip(
-                      label: _filterLabel(l10n, counts, index),
-                      selected: query.filter == DeckFilter.values[index],
-                      danger: index == 3,
-                      onPressed: () => ref
-                          .read(decksQueryProvider.notifier)
-                          .setFilter(DeckFilter.values[index]),
-                    ),
-                  ],
-                ],
-              ),
+            // Аудит v4 (V28): на узком экране ряд чипов обрезался по краю.
+            // `Wrap` переносит их на вторую строку — ни один фильтр не скрыт.
+            Wrap(
+              spacing: AppSpacing.xxs + 2,
+              runSpacing: AppSpacing.xs,
+              children: <Widget>[
+                for (int index = 0; index < 4; index++)
+                  _FilterChip(
+                    label: _filterLabel(l10n, counts, index),
+                    selected: query.filter == DeckFilter.values[index],
+                    danger: index == 3,
+                    onPressed: () => ref
+                        .read(decksQueryProvider.notifier)
+                        .setFilter(DeckFilter.values[index]),
+                  ),
+              ],
             ),
           ],
         ],
@@ -780,25 +815,25 @@ class _FilterChip extends StatelessWidget {
     return InkWell(
       onTap: onPressed,
       borderRadius: BorderRadius.circular(AppRadii.control),
-      child: SizedBox(
-        height: AppSizes.minTouchTarget,
-        child: Center(
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 120),
-            height: 32,
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-            decoration: BoxDecoration(
-              color: background,
-              borderRadius: BorderRadius.circular(AppRadii.control),
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              label,
-              maxLines: 1,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: foreground,
-                fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-              ),
+      // `Padding` + чип по содержимому: в `Wrap` чип сжимается по тексту,
+      // иначе Align/Center растягивается на всю строку и каждый фильтр
+      // занимает отдельный ряд (аудит v4, V28/V29). Высота касания — 44 px.
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 120),
+          height: 32,
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+          decoration: BoxDecoration(
+            color: background,
+            borderRadius: BorderRadius.circular(AppRadii.control),
+          ),
+          child: Text(
+            label,
+            maxLines: 1,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: foreground,
+              fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
             ),
           ),
         ),
@@ -896,6 +931,7 @@ class _DeckCollection extends StatelessWidget {
     required this.summaries,
     required this.viewMode,
     required this.onOpen,
+    required this.onStudy,
     required this.onMenu,
     required this.onArchive,
   });
@@ -903,6 +939,7 @@ class _DeckCollection extends StatelessWidget {
   final List<DeckSummary> summaries;
   final DecksViewMode viewMode;
   final ValueChanged<DeckSummary> onOpen;
+  final ValueChanged<DeckSummary> onStudy;
   final ValueChanged<DeckSummary> onMenu;
   final ValueChanged<DeckSummary> onArchive;
 
@@ -938,6 +975,7 @@ class _DeckCollection extends StatelessWidget {
                   child: _DeckTile(
                     summary: summary,
                     onOpen: () => onOpen(summary),
+                    onStudy: () => onStudy(summary),
                     onMenu: () => onMenu(summary),
                   ),
                 ),
@@ -973,11 +1011,15 @@ class _DeckTile extends StatelessWidget {
   const _DeckTile({
     required this.summary,
     required this.onOpen,
+    required this.onStudy,
     required this.onMenu,
   });
 
   final DeckSummary summary;
   final VoidCallback onOpen;
+
+  /// Запуск сессии: открывает лист режимов (аудит v4, V5).
+  final VoidCallback onStudy;
   final VoidCallback onMenu;
 
   @override
@@ -996,7 +1038,6 @@ class _DeckTile extends StatelessWidget {
     return AppPanel(
       key: ValueKey<String>('deck-tile-${summary.deck.id}'),
       onTap: onOpen,
-      onLongPress: onMenu,
       padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1059,13 +1100,15 @@ class _DeckTile extends StatelessWidget {
               else if (summary.dueCards > 0)
                 AppStatusChip(
                   label: l10n.deckDueCount(summary.dueCards),
-                  tone: AppStatusTone.danger,
+                  // Аудит v4 (V16): «к повторению» — акцент, а не тревога.
+                  tone: AppStatusTone.info,
+                  icon: Icons.schedule,
                   dense: true,
                 )
               else if (summary.newCards > 0)
                 AppStatusChip(
                   label: l10n.deckNewCount(summary.newCards),
-                  tone: AppStatusTone.info,
+                  tone: AppStatusTone.neutral,
                   dense: true,
                 )
               else if (summary.totalCards > 0)
@@ -1140,23 +1183,26 @@ class _DeckTile extends StatelessWidget {
                 final Widget action = hasWork
                     ? FilledButton.icon(
                         key: ValueKey<String>('deck-study-${summary.deck.id}'),
-                        onPressed: onOpen,
-                        icon: const Icon(Icons.play_arrow, size: 16),
+                        // Аудит v4 (V5): кнопка действительно запускает
+                        // сессию — открывает лист режимов, а не экран колоды.
+                        onPressed: onStudy,
+                        icon: const Icon(Icons.play_arrow),
                         label: Text(l10n.deckStudyAction),
-                        style: FilledButton.styleFrom(
-                          minimumSize: const Size(0, 34),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.sm,
-                          ),
-                        ),
+                        style: AppButtons.compact(context),
                       )
                     : OutlinedButton.icon(
                         key: ValueKey<String>('deck-study-${summary.deck.id}'),
                         onPressed: onOpen,
-                        icon: const Icon(Icons.visibility_outlined, size: 16),
+                        icon: const Icon(Icons.visibility_outlined),
                         label: Text(l10n.deckReviewAction),
                         style: OutlinedButton.styleFrom(
-                          minimumSize: const Size(0, 34),
+                          minimumSize: Size(
+                            0,
+                            AppSizes.buttonHeight *
+                                AppAdaptive.factorForContext(
+                                  context,
+                                ).clamp(1.0, 1.3),
+                          ),
                           padding: const EdgeInsets.symmetric(
                             horizontal: AppSpacing.sm,
                           ),
@@ -1208,7 +1254,12 @@ class _DeckTile extends StatelessWidget {
   }
 }
 
-/// Монограмма колоды: детерминированный цвет из имени (без фиктивных данных).
+/// Монограмма колоды: нейтральный токен поверхности (аудит v4, V37/V47).
+///
+/// Раньше цвет выбирался хешем имени из четырёх ролей — в одной сетке
+/// соседствовали красный, зелёный и индиго без смысла, а два оттенка были
+/// визуально неразличимы. Теперь монограмма нейтральная, а цвет колоды несут
+/// её статусные чипы.
 class _DeckMonogram extends StatelessWidget {
   const _DeckMonogram({required this.name});
 
@@ -1216,29 +1267,25 @@ class _DeckMonogram extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ColorScheme scheme = Theme.of(context).colorScheme;
-    final int hash = name.codeUnits.fold<int>(0, (int a, int b) => a + b);
-    final List<Color> palette = <Color>[
-      scheme.primary,
-      scheme.secondary,
-      scheme.tertiary,
-      scheme.primaryContainer,
-    ];
-    final Color color = palette[hash % palette.length];
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
     final String letter = name.trim().isEmpty
         ? '?'
         : name.trim().substring(0, 1).toUpperCase();
     return Container(
-      width: 40,
-      height: 40,
+      width: 44,
+      height: 44,
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
+        color: scheme.surfaceContainerHigh,
         borderRadius: BorderRadius.circular(AppRadii.input),
       ),
       alignment: Alignment.center,
       child: Text(
         letter,
-        style: Theme.of(context).textTheme.titleMedium?.copyWith(color: color),
+        style: theme.textTheme.titleMedium?.copyWith(
+          color: scheme.onSurface,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }
@@ -1356,3 +1403,4 @@ class _FirstLaunchEmptyState extends ConsumerWidget {
     );
   }
 }
+

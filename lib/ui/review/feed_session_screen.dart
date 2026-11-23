@@ -425,15 +425,6 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
     if (context.canPop()) context.pop();
   }
 
-  /// Прямой переход в главное меню из ленты (находка N3).
-  Future<void> _confirmHome() async {
-    _autoAdvanceTimer?.cancel();
-    _autoAdvanceTimer = null;
-    final FeedSessionEngine? engine = _engine;
-    final bool nothingToLose =
-        engine == null || engine.state.isCompleted || engine.state.total == 0;
-    await confirmLeaveToMainMenu(context, nothingToLose: nothingToLose);
-  }
 
   /// Повтор чтения медиа карточки после ошибки изображения (7.19).
   Future<void> _retryMedia(Card card) async {
@@ -466,7 +457,6 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
               ? null
               : () => unawaited(_showWhy(excerpt)),
           onClose: _confirmExit,
-          onHome: _confirmHome,
         ),
         body: Focus(
           autofocus: true,
@@ -576,29 +566,32 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
           ),
         // Находки F11/F14: в ленте не было ни подсказки о свайпах, ни кнопок
         // оценки, ни клавиатурных эквивалентов для видимых действий.
-        Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.md,
-            AppSpacing.xs,
-            AppSpacing.md,
-            0,
-          ),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(
-                maxWidth: AppSizes.studyCardMaxWidth,
-              ),
-              child: Text(
-                l10n.feedRateHint,
-                key: const ValueKey<String>('feed-rate-hint'),
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+        // Аудит v4 (V25): одновременно с подсказкой панели оценок эта строка не
+        // показывается — одна подсказка на состояние.
+        if (state.current?.revealed ?? false)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              AppSpacing.xs,
+              AppSpacing.md,
+              0,
+            ),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  maxWidth: AppSizes.studyCardMaxWidth,
+                ),
+                child: Text(
+                  l10n.feedRateHint,
+                  key: const ValueKey<String>('feed-rate-hint'),
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ),
             ),
           ),
-        ),
         ReviewToolbar(
           compact: MediaQuery.sizeOf(context).height < 500,
           preview: null,

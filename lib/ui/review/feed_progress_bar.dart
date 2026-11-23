@@ -1,12 +1,17 @@
 import 'package:material_ui/material_ui.dart';
 
 import 'package:cardflow/l10n/app_localizations.dart';
+import 'package:cardflow/ui/components/app_surfaces.dart';
+import 'package:cardflow/ui/motion.dart';
+import 'package:cardflow/ui/theme/app_tokens.dart';
+import 'package:cardflow/ui/theme/app_typography.dart';
 
 /// Stories-прогресс ленты (SPEC A7.3): сегмент на карточку, текущий пульсирует.
 ///
-/// Оценённые сегменты заполнены `primary`; текущий пульсирует прозрачностью
-/// (повторяющаяся анимация, поэтому экран ленты в тестах прогоняется
-/// `pump(Duration)`, а не `pumpAndSettle`).
+/// Аудит v4 (V25): на длинной колоде (69 карточек) сегменты превращались в
+/// шум из микро-полосок — теперь сегменты рисуются до 24 карточек, дальше
+/// показывается одна полоса и «N из M». Пульс учитывает reduced motion и
+/// длится 1,4 с вместо 0,9 с.
 class FeedProgressBar extends StatefulWidget {
   /// Создаёт прогресс ленты.
   const FeedProgressBar({
@@ -25,25 +30,47 @@ class FeedProgressBar extends StatefulWidget {
   /// Пульс текущего сегмента (A6.6: «Стандартная» анимация — без пульса).
   final bool animatePulse;
 
+  /// Сколько сегментов рисовать, прежде чем перейти на общую полосу.
+  static const int segmentLimit = 24;
+
   @override
   State<FeedProgressBar> createState() => _FeedProgressBarState();
 }
 
 class _FeedProgressBarState extends State<FeedProgressBar>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _pulse = _createPulse();
+  late final AnimationController _pulse = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1400),
+  );
+  bool _pulsing = false;
 
-  AnimationController _createPulse() {
-    final AnimationController controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 900),
-    );
-    if (widget.animatePulse) {
-      controller.repeat(reverse: true);
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _syncPulse();
+  }
+
+  @override
+  void didUpdateWidget(FeedProgressBar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.animatePulse != widget.animatePulse) _syncPulse();
+  }
+
+  /// Пульс включается только при выразительной анимации и без reduced motion.
+  void _syncPulse() {
+    final bool shouldPulse =
+        widget.animatePulse &&
+        widget.rated.length <= FeedProgressBar.segmentLimit &&
+        !AppMotion.reduce(context);
+    if (shouldPulse == _pulsing) return;
+    _pulsing = shouldPulse;
+    if (shouldPulse) {
+      _pulse.repeat(reverse: true);
     } else {
-      controller.value = 1;
+      _pulse.stop();
+      _pulse.value = 1;
     }
-    return controller;
   }
 
   @override
@@ -57,9 +84,39 @@ class _FeedProgressBarState extends State<FeedProgressBar>
     final AppLocalizations l10n = AppLocalizations.of(context);
     final ColorScheme scheme = Theme.of(context).colorScheme;
     final int ratedCount = widget.rated.where((bool value) => value).length;
+    final int total = widget.rated.length;
+    final String semantics = l10n.feedProgressSemantics(ratedCount, total);
+    if (total > FeedProgressBar.segmentLimit) {
+      final ThemeData theme = Theme.of(context);
+      return Semantics(
+        container: true,
+        label: semantics,
+        child: Row(
+          children: <Widget>[
+            Expanded(
+              child: AppProgressBar(
+                value: total == 0 ? 0 : ratedCount / total,
+                semanticsLabel: semantics,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Text(
+              l10n.reviewCardCounter(
+                (widget.currentIndex + 1).clamp(1, total),
+                total,
+              ),
+              style: AppTypography.numeric(
+                context,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
     return Semantics(
       container: true,
-      label: l10n.feedProgressSemantics(ratedCount, widget.rated.length),
+      label: semantics,
       child: AnimatedBuilder(
         animation: _pulse,
         builder: (BuildContext context, Widget? child) {
@@ -85,7 +142,7 @@ class _FeedProgressBarState extends State<FeedProgressBar>
                           ? pulse
                           : 1,
                       pulse:
-                          widget.animatePulse &&
+                          _pulsing &&
                           !widget.rated[index] &&
                           index == widget.currentIndex,
                     ),

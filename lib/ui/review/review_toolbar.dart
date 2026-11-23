@@ -56,6 +56,9 @@ class ReviewToolbar extends StatelessWidget {
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
     final String? hintText = enabled ? null : hint;
+    // Аудит v4 (V24): прогнозы интервалов не показываются, пока ответ не
+    // раскрыт — иначе пользователь видит числа у недоступных кнопок.
+    final Map<Rating, Duration>? visiblePreview = enabled ? preview : null;
     return SafeArea(
       top: false,
       child: Padding(
@@ -102,7 +105,9 @@ class ReviewToolbar extends StatelessWidget {
                             width: width,
                             child: _RatingButton(
                               rating: rating,
-                              interval: compact ? null : preview?[rating],
+                              interval: compact
+                                  ? null
+                                  : visiblePreview?[rating],
                               enabled: enabled,
                               compact: compact,
                               onPressed: () => onRating(rating),
@@ -183,13 +188,7 @@ class _RatingButton extends StatelessWidget {
             textAlign: TextAlign.center,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 11,
-              height: 1.3,
-              fontWeight: FontWeight.w600,
-              color: intervalColor,
-              fontFeatures: AppTypography.tabularFigures,
-            ),
+            style: AppTypography.caption(context, color: intervalColor),
           ),
         const SizedBox(height: AppSpacing.xxs + 2),
         FilledButton(
@@ -198,8 +197,14 @@ class _RatingButton extends StatelessWidget {
             backgroundColor: background,
             foregroundColor: foreground,
             disabledBackgroundColor: background.withValues(alpha: 0.5),
-            disabledForegroundColor: foreground.withValues(alpha: 0.6),
-            minimumSize: Size(0, compact ? AppSizes.minTouchTarget : 52),
+            disabledForegroundColor: foreground.withValues(alpha: 0.65),
+            minimumSize: Size(
+              0,
+              compact
+                  ? AppSizes.minTouchTarget
+                  : AppSizes.buttonHeightLarge *
+                        AppAdaptive.factorForContext(context).clamp(1.0, 1.3),
+            ),
             padding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.xs,
               vertical: AppSpacing.xxs,
@@ -219,18 +224,16 @@ class _RatingButton extends StatelessWidget {
                 textAlign: TextAlign.center,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  color: foreground,
                 ),
               ),
               if (!compact) ...<Widget>[
                 const SizedBox(height: 1),
                 Text(
                   keyHint,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontFeatures: AppTypography.tabularFigures,
+                  style: AppTypography.caption(
+                    context,
                     color: foreground.withValues(alpha: 0.7),
                   ),
                 ),

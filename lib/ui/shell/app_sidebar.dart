@@ -155,62 +155,50 @@ class AppSidebar extends ConsumerWidget {
             ),
           ),
           Divider(height: AppSizes.borderWidth, color: scheme.outlineVariant),
-          // Находка D10: раньше здесь было псевдо-поле ввода, в которое нельзя
-          // было печатать. Теперь это честный пункт навигации: одно действие —
-          // и поиск по колодам открыт на экране колод.
+          // Находка D10 + аудит v4 (V18/V36): честный пункт навигации без
+          // рамки поля ввода и без обрезанной второй строки — только иконка и
+          // короткая подпись, как у остальных пунктов.
           if (onSearch != null)
             Padding(
               padding: const EdgeInsets.fromLTRB(
                 AppSpacing.sm,
-                AppSpacing.sm,
+                AppSpacing.xs,
                 AppSpacing.sm,
                 0,
               ),
-              child: Material(
-                color: scheme.surfaceContainerLow,
-                borderRadius: BorderRadius.circular(AppRadii.control),
+              child: Tooltip(
+                message: l10n.shellSearchActionHint,
                 child: InkWell(
                   key: const ValueKey<String>('shell-search-action'),
                   onTap: onSearch,
                   borderRadius: BorderRadius.circular(AppRadii.control),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.sm,
-                      vertical: AppSpacing.xs + 2,
-                    ),
-                    child: Row(
-                      children: <Widget>[
-                        Icon(
-                          Icons.search,
-                          size: AppSizes.icon,
-                          color: scheme.onSurfaceVariant,
-                        ),
-                        const SizedBox(width: AppSpacing.xs + 2),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: <Widget>[
-                              Text(
-                                l10n.shellSearchAction,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: scheme.onSurface,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              Text(
-                                l10n.shellSearchActionHint,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: scheme.onSurfaceVariant,
-                                ),
-                              ),
-                            ],
+                  child: SizedBox(
+                    height: AppSizes.minTouchTarget,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.xs + 2,
+                      ),
+                      child: Row(
+                        children: <Widget>[
+                          Icon(
+                            Icons.search,
+                            size: AppSizes.icon,
+                            color: scheme.onSurfaceVariant,
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: AppSpacing.xs + 2),
+                          Expanded(
+                            child: Text(
+                              l10n.shellSearchAction,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: scheme.onSurfaceVariant,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -283,25 +271,15 @@ class AppSidebar extends ConsumerWidget {
                     ),
                     const SizedBox(width: AppSpacing.xs),
                     Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          Text(
-                            l10n.shellDueToday(due),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.labelLarge?.copyWith(
-                              color: scheme.onSurface,
-                            ),
-                          ),
-                          Text(
-                            l10n.shellDueLabel,
-                            style: AppTypography.caption(
-                              context,
-                              color: scheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
+                      child: Text(
+                        // Аудит v4 (V9): подпись «К повторению» убрана —
+                        // число и так читается как остаток повторений.
+                        l10n.shellDueToday(due),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          color: scheme.onSurface,
+                        ),
                       ),
                     ),
                   ],
@@ -331,7 +309,7 @@ class _BrandMark extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadii.control),
       ),
       alignment: Alignment.center,
-      child: Icon(Icons.style_rounded, size: 19, color: scheme.onPrimary),
+      child: Icon(Icons.style_rounded, size: AppSizes.icon, color: scheme.onPrimary),
     );
   }
 }
@@ -562,7 +540,6 @@ class _RailItem extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: theme.textTheme.labelSmall?.copyWith(
-                            fontSize: 10,
                             color: selected
                                 ? scheme.primary
                                 : scheme.onSurfaceVariant,
@@ -578,3 +555,4 @@ class _RailItem extends StatelessWidget {
     );
   }
 }
+

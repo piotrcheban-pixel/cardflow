@@ -7,9 +7,6 @@ import 'package:cardflow/domain/decks/deck.dart';
 import 'package:cardflow/domain/decks/deck_summary.dart';
 import 'package:cardflow/domain/review/daily_limits.dart';
 import 'package:cardflow/domain/review/review_queue.dart';
-import 'package:cardflow/domain/study/answer_type.dart';
-import 'package:cardflow/domain/study/distractor_generator.dart';
-import 'package:cardflow/domain/study/true_false_question.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/cards/card_form_screen.dart';
 import 'package:cardflow/ui/cards/content/card_text.dart';
@@ -18,25 +15,14 @@ import 'package:cardflow/ui/components/app_surfaces.dart';
 import 'package:cardflow/ui/theme/app_tokens.dart';
 import 'package:cardflow/ui/theme/app_typography.dart';
 import 'package:cardflow/ui/decks/deck_actions.dart';
+import 'package:cardflow/ui/decks/deck_modes_sheet.dart';
 import 'package:cardflow/ui/router/app_router.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
 import 'package:cardflow/ui/state/decks_ui_providers.dart';
 import 'package:cardflow/ui/state/review_limits.dart';
 
 /// Действие меню экрана колоды.
-enum _DeckMenuAction { generate, rename, export, delete }
-
-/// Выбранный режим в листе «Начать сессию».
-enum _SessionModeAction {
-  classic,
-  feed,
-  practice,
-  test,
-  typing,
-  match,
-  trueFalse,
-  constructor,
-}
+enum _DeckMenuAction { rename, export, delete }
 
 /// Решение в предупреждении об исчерпанном дневном лимите (ADR-028).
 enum _LimitChoice { continueWithoutLimits, practice }
@@ -195,12 +181,9 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
         actions: deck == null
             ? null
             : <Widget>[
-                IconButton(
-                  key: const ValueKey<String>('deck-add-card'),
-                  tooltip: l10n.deckAddCard,
-                  icon: const Icon(Icons.add),
-                  onPressed: () => _openCardForm(context, deckId: deckId),
-                ),
+                // Аудит v4 (V10/V19): «+» из AppBar убран — добавление
+                // карточки живёт одной кнопкой в строке списка. Генерация —
+                // одной иконкой; пункт меню-дубль удалён.
                 IconButton(
                   key: const ValueKey<String>('deck-generate-action'),
                   tooltip: l10n.deckGenerateTooltip,
@@ -216,10 +199,6 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
                       _handleMenuAction(context, ref, deck, action),
                   itemBuilder: (BuildContext context) =>
                       <PopupMenuEntry<_DeckMenuAction>>[
-                        PopupMenuItem<_DeckMenuAction>(
-                          value: _DeckMenuAction.generate,
-                          child: Text(l10n.deckGenerateTooltip),
-                        ),
                         PopupMenuItem<_DeckMenuAction>(
                           value: _DeckMenuAction.rename,
                           child: Text(l10n.deckRename),
@@ -292,7 +271,7 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
         SliverToBoxAdapter(
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 896),
+              constraints: const BoxConstraints(maxWidth: AppSizes.detailsMaxWidth),
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(
                   AppSpacing.md,
@@ -425,7 +404,7 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
           SliverToBoxAdapter(
             child: Center(
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 896),
+                constraints: const BoxConstraints(maxWidth: AppSizes.detailsMaxWidth),
                 child: Padding(
                   padding: const EdgeInsets.all(AppSpacing.md),
                   child: _DeckCardsEmpty(),
@@ -437,7 +416,7 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
           SliverToBoxAdapter(
             child: Center(
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 896),
+                constraints: const BoxConstraints(maxWidth: AppSizes.detailsMaxWidth),
                 child: Padding(
                   padding: const EdgeInsets.all(AppSpacing.md),
                   child: AppEmptyState(
@@ -464,7 +443,7 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
                   const SizedBox(height: AppSpacing.xs),
               itemBuilder: (BuildContext context, int index) => Center(
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 896),
+                  constraints: const BoxConstraints(maxWidth: AppSizes.detailsMaxWidth),
                   child: Row(
                     children: <Widget>[
                       Expanded(
@@ -582,172 +561,27 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
       newLimit: limits?.newCards,
       reviewLimit: limits?.reviews,
     ).isNotEmpty;
-    // 7.15/7.17: сколько карточек подходит для «Теста» и «Ввода ответа».
-    // «Тест» — выбор варианта: формульные ответы допустимы (ADR-034).
-    final int typingCount = cards
-        .where((Card card) => AnswerTypes.isTypable(card))
-        .length;
-    const DistractorGenerator distractorGenerator = DistractorGenerator();
-    final int testCount = cards
-        .where(
-          (Card card) =>
-              AnswerTypes.isChoice(card) &&
-              distractorGenerator.buildQuestion(card, cards) != null,
-        )
-        .length;
-    final int matchableCount = cards
-        .where(
-          (Card card) =>
-              card.cardType != CardType.cloze &&
-              card.front.trim().isNotEmpty &&
-              card.back.trim().isNotEmpty,
-        )
-        .length;
-    final int trueFalseCount = cards
-        .where((Card card) => hasTrueFalseAlternative(card, cards))
-        .length;
-    final _SessionModeAction?
-    selected = await showModalBottomSheet<_SessionModeAction>(
-      context: context,
-      showDragHandle: true,
-      isScrollControlled: true,
-      builder: (BuildContext sheetContext) {
-        void choose(_SessionModeAction action) {
-          Navigator.of(sheetContext).pop(action);
-        }
-
-        return SafeArea(
-          child: ConstrainedBox(
-            // Находка D21: лист не занимает всю высоту окна; длинный список
-            // прокручивается внутри и не теряет последний пункт.
-            constraints: BoxConstraints(
-              maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.8,
-            ),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
-                    child: Align(
-                      alignment: AlignmentDirectional.centerStart,
-                      child: Text(
-                        l10n.reviewSessionModeTitle,
-                        style: Theme.of(sheetContext).textTheme.titleLarge,
-                      ),
-                    ),
-                  ),
-                  ListTile(
-                    key: const ValueKey<String>('review-mode-classic'),
-                    leading: const Icon(Icons.style_outlined),
-                    title: Text(l10n.reviewModeClassic),
-                    subtitle: Text(l10n.reviewModeClassicSubtitle),
-                    onTap: () => choose(_SessionModeAction.classic),
-                  ),
-                  ListTile(
-                    key: const ValueKey<String>('review-mode-feed'),
-                    leading: const Icon(Icons.view_agenda_outlined),
-                    title: Text(l10n.reviewModeFeed),
-                    subtitle: Text(l10n.reviewModeFeedSubtitle),
-                    onTap: () => choose(_SessionModeAction.feed),
-                  ),
-                  ListTile(
-                    key: const ValueKey<String>('review-mode-practice'),
-                    leading: const Icon(Icons.sports_esports_outlined),
-                    title: Text(l10n.reviewModePractice),
-                    subtitle: Text(l10n.practiceSubtitle),
-                    onTap: () => choose(_SessionModeAction.practice),
-                  ),
-                  ListTile(
-                    key: const ValueKey<String>('review-mode-test'),
-                    enabled: testCount > 0,
-                    leading: const Icon(Icons.quiz_outlined),
-                    title: Text(l10n.reviewModeTest),
-                    subtitle: Text(
-                      testCount > 0
-                          ? '${l10n.studyModeTestSubtitle} · '
-                                '${l10n.studyModeAvailableCount(testCount)}'
-                          : l10n.studyModeTestNotEnough(testCount),
-                    ),
-                    onTap: testCount > 0
-                        ? () => choose(_SessionModeAction.test)
-                        : null,
-                  ),
-                  ListTile(
-                    key: const ValueKey<String>('review-mode-typing'),
-                    enabled: typingCount > 0,
-                    leading: const Icon(Icons.keyboard_outlined),
-                    title: Text(l10n.reviewModeTyping),
-                    subtitle: Text(
-                      typingCount > 0
-                          ? '${l10n.studyModeTypingSubtitle} · '
-                                '${l10n.studyModeAvailableCount(typingCount)}'
-                          : l10n.studyModeTypingNotEnough(typingCount),
-                    ),
-                    onTap: typingCount > 0
-                        ? () => choose(_SessionModeAction.typing)
-                        : null,
-                  ),
-                  ListTile(
-                    key: const ValueKey<String>('review-mode-match'),
-                    enabled: matchableCount >= 6,
-                    leading: const Icon(Icons.grid_view_outlined),
-                    title: Text(l10n.reviewModeMatch),
-                    subtitle: Text(
-                      matchableCount >= 6
-                          ? '${l10n.studyModeMatchSubtitle} · '
-                                '${l10n.studyModeAvailableCount(matchableCount)}'
-                          : '${l10n.studyModeMatchNotEnough} · '
-                                '${l10n.studyModeAvailableCount(matchableCount)}',
-                    ),
-                    onTap: matchableCount >= 6
-                        ? () => choose(_SessionModeAction.match)
-                        : null,
-                  ),
-                  ListTile(
-                    key: const ValueKey<String>('review-mode-true-false'),
-                    enabled: trueFalseCount > 0,
-                    leading: const Icon(Icons.check_circle_outline),
-                    title: Text(l10n.reviewModeTrueFalse),
-                    subtitle: Text(
-                      trueFalseCount > 0
-                          ? '${l10n.studyModeTrueFalseSubtitle} · '
-                                '${l10n.studyModeAvailableCount(trueFalseCount)}'
-                          : '${l10n.studyModeTrueFalseNotEnough} · '
-                                '${l10n.studyModeAvailableCount(trueFalseCount)}',
-                    ),
-                    onTap: trueFalseCount > 0
-                        ? () => choose(_SessionModeAction.trueFalse)
-                        : null,
-                  ),
-                  ListTile(
-                    key: const ValueKey<String>('review-mode-constructor'),
-                    leading: const Icon(Icons.tune),
-                    title: Text(l10n.constructorAction),
-                    onTap: () => choose(_SessionModeAction.constructor),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
+    // Аудит v4 (V3/V5): лист режимов — общий компонент; тот же лист открывает
+    // кнопка «Учить» на карточке колоды, поэтому путь к действию один.
+    final DeckSessionMode? selected = await showDeckModesSheet(
+      context,
+      availability: DeckModeAvailability.fromCards(cards),
     );
     if (selected == null || !context.mounted) return;
     switch (selected) {
-      case _SessionModeAction.practice:
+      case DeckSessionMode.practice:
         await context.push(AppRoutes.practicePath(deckId));
-      case _SessionModeAction.test:
+      case DeckSessionMode.test:
         await context.push(AppRoutes.testPath(deckId));
-      case _SessionModeAction.typing:
+      case DeckSessionMode.typing:
         await context.push(AppRoutes.typingPath(deckId));
-      case _SessionModeAction.match:
+      case DeckSessionMode.match:
         await context.push(AppRoutes.matchPath(deckId));
-      case _SessionModeAction.trueFalse:
+      case DeckSessionMode.trueFalse:
         await context.push(AppRoutes.trueFalsePath(deckId));
-      case _SessionModeAction.constructor:
+      case DeckSessionMode.constructor:
         await context.push(AppRoutes.constructorDeckPath(deckId));
-      case _SessionModeAction.classic:
+      case DeckSessionMode.classic:
         await _openReviewMode(
           context,
           deckId: deckId,
@@ -756,7 +590,7 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
           queueWithoutLimits: queueWithoutLimits,
           limitedByDay: limits != null,
         );
-      case _SessionModeAction.feed:
+      case DeckSessionMode.feed:
         await _openReviewMode(
           context,
           deckId: deckId,
@@ -838,8 +672,6 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
     _DeckMenuAction action,
   ) async {
     switch (action) {
-      case _DeckMenuAction.generate:
-        await context.push(AppRoutes.deckGenerationPath(deck.id));
       case _DeckMenuAction.rename:
         await renameDeck(context, ref, deck: deck);
       case _DeckMenuAction.export:
@@ -866,51 +698,36 @@ class _DeckCounters extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
-    final ThemeData theme = Theme.of(context);
-    final ColorScheme scheme = theme.colorScheme;
     final int due = summary?.dueCards ?? 0;
     final int newCards = summary?.newCards ?? 0;
     final int inProgress = summary?.inProgressCards ?? 0;
     final int total = summary?.totalCards ?? 0;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    // Аудит v4 (V44): пояснение-«костыль» убрано («В процессе» → «Начато»),
+    // поэтому метрики самодостаточны и не требуют сноски.
+    return Wrap(
+      spacing: AppSpacing.xs,
+      runSpacing: AppSpacing.xs,
       children: <Widget>[
-        Wrap(
-          spacing: AppSpacing.xs,
-          runSpacing: AppSpacing.xs,
-          children: <Widget>[
-            AppStatusChip(
-              label: l10n.deckDueCount(due),
-              // Находка D18: на пустой колоде «К повторению: 0» — не тревога.
-              tone: due > 0 ? AppStatusTone.danger : AppStatusTone.neutral,
-              icon: Icons.schedule,
-            ),
-            AppStatusChip(
-              label: l10n.deckNewCount(newCards),
-              tone: AppStatusTone.info,
-              icon: Icons.fiber_new,
-            ),
-            AppStatusChip(
-              label: l10n.deckInProgressCount(inProgress),
-              tone: AppStatusTone.neutral,
-              icon: Icons.autorenew,
-            ),
-            AppStatusChip(
-              label: l10n.deckCardCount(total),
-              tone: AppStatusTone.neutral,
-              icon: Icons.style_outlined,
-            ),
-          ],
+        AppStatusChip(
+          label: l10n.deckDueCount(due),
+          // Находка D18: на пустой колоде «К повторению: 0» — не тревога.
+          tone: due > 0 ? AppStatusTone.info : AppStatusTone.neutral,
+          icon: Icons.schedule,
         ),
-        // Находка F10: «в процессе» пересекается с «к повторению» — без
-        // пояснения суммы не сходились (61 + 9 + 60 при 71 карточке).
-        const SizedBox(height: AppSpacing.xs),
-        Text(
-          l10n.deckCountersNote,
-          key: const ValueKey<String>('deck-counters-note'),
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: scheme.onSurfaceVariant,
-          ),
+        AppStatusChip(
+          label: l10n.deckNewCount(newCards),
+          tone: AppStatusTone.info,
+          icon: Icons.fiber_new,
+        ),
+        AppStatusChip(
+          label: l10n.deckInProgressCount(inProgress),
+          tone: AppStatusTone.neutral,
+          icon: Icons.autorenew,
+        ),
+        AppStatusChip(
+          label: l10n.deckCardCount(total),
+          tone: AppStatusTone.neutral,
+          icon: Icons.style_outlined,
         ),
       ],
     );
@@ -1226,3 +1043,5 @@ class _DeckErrorState extends StatelessWidget {
     );
   }
 }
+
+

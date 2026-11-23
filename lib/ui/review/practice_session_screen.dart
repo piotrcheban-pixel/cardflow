@@ -196,13 +196,6 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen>
     if (context.canPop()) context.pop();
   }
 
-  /// Прямой переход в главное меню из тренировки (находка N3).
-  Future<void> _confirmHome() async {
-    final PracticeSessionState? state = _engine?.state;
-    final bool nothingToLose =
-        state == null || state.isCompleted || state.total == 0 || _loadFailed;
-    await confirmLeaveToMainMenu(context, nothingToLose: nothingToLose);
-  }
 
   /// Повтор чтения медиа карточки после ошибки изображения (7.19).
   Future<void> _retryMedia(Card card) async {
@@ -234,7 +227,8 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen>
           onUndo: _undo,
           whyExcerpt: excerpt,
           onClose: _confirmExit,
-          onHome: _confirmHome,
+          // Аудит v4 (V12): на тренировке FSRS не меняется — бейдж «FSRS» убран.
+          showFsrsBadge: false,
         ),
         body: Focus(
           autofocus: true,

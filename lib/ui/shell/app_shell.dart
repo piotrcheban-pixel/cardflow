@@ -139,8 +139,8 @@ class AppShell extends ConsumerWidget {
                   children: <Widget>[
                     AppTopHeader(
                       section: section,
+                      showNewCard: navigationShell.currentIndex == 0,
                       onNewCard: () => unawaited(_createCard(context, ref)),
-                      onOpenSettings: () => _goBranch(2),
                     ),
                     Expanded(child: navigationShell),
                   ],
@@ -184,8 +184,8 @@ class AppShell extends ConsumerWidget {
                   children: <Widget>[
                     AppTopHeader(
                       section: section,
+                      showNewCard: navigationShell.currentIndex == 0,
                       onNewCard: () => unawaited(_createCard(context, ref)),
-                      onOpenSettings: () => _goBranch(2),
                     ),
                     Expanded(child: navigationShell),
                   ],
@@ -230,8 +230,8 @@ class AppShell extends ConsumerWidget {
             children: <Widget>[
               AppTopHeader(
                 section: section,
+                showNewCard: navigationShell.currentIndex == 0,
                 onNewCard: () => unawaited(_createCard(bodyContext, ref)),
-                onOpenSettings: () => _goBranch(2),
                 onOpenNav: () => Scaffold.of(bodyContext).openDrawer(),
               ),
               Expanded(child: navigationShell),
@@ -242,3 +242,4 @@ class AppShell extends ConsumerWidget {
     );
   }
 }
+
