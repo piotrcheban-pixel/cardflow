@@ -406,7 +406,16 @@ class _SessionConstructorScreenState
                       key: ValueKey<String>(
                         'constructor-deck-${summary.deck.id}',
                       ),
-                      label: Text(summary.deck.name),
+                      // Аудит v4: длинное имя колоды обрезалось краем панели —
+                      // подпись ограничена и заканчивается многоточием.
+                      label: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 260),
+                        child: Text(
+                          summary.deck.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                       selected: _selectedDecks.contains(summary.deck.id),
                       onSelected: (_) => _toggleDeck(summary.deck.id),
                     ),

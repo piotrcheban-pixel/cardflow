@@ -220,7 +220,7 @@ Future<DeckSessionMode?> showDeckModesSheet(
         top: false,
         child: ConstrainedBox(
           constraints: BoxConstraints(maxHeight: maxHeight),
-          child: SingleChildScrollView(
+          child: _SheetScroll(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(
                 AppSpacing.lg,
@@ -257,6 +257,53 @@ Future<DeckSessionMode?> showDeckModesSheet(
       );
     },
   );
+}
+
+/// Прокручиваемое тело листа с видимым индикатором (аудит v4, V3):
+/// на низком окне все восемь режимов достижимы и видно, что список длиннее.
+class _SheetScroll extends StatefulWidget {
+  const _SheetScroll({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_SheetScroll> createState() => _SheetScrollState();
+}
+
+class _SheetScrollState extends State<_SheetScroll> {
+  final ScrollController _controller = ScrollController();
+  bool _canScroll = false;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return NotificationListener<ScrollMetricsNotification>(
+      onNotification: (ScrollMetricsNotification notification) {
+        final bool canScroll = notification.metrics.maxScrollExtent > 0.5;
+        if (canScroll != _canScroll) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && canScroll != _canScroll) {
+              setState(() => _canScroll = canScroll);
+            }
+          });
+        }
+        return false;
+      },
+      child: Scrollbar(
+        controller: _controller,
+        thumbVisibility: _canScroll,
+        child: SingleChildScrollView(
+          controller: _controller,
+          child: widget.child,
+        ),
+      ),
+    );
+  }
 }
 
 /// Группа режимов: подпись и сетка плиток (2 колонки на широком листе).
@@ -302,7 +349,7 @@ class _ModeGroup extends StatelessWidget {
               runSpacing: gap,
               children: <Widget>[
                 for (final Widget tile in tiles)
-                  SizedBox(width: width, height: 68, child: tile),
+                  SizedBox(width: width, height: 80, child: tile),
               ],
             );
           },
@@ -385,7 +432,7 @@ class _ModeTile extends StatelessWidget {
         ),
         subtitle: Text(
           subtitle,
-          maxLines: 1,
+          maxLines: 2,
           overflow: TextOverflow.ellipsis,
           style: theme.textTheme.bodySmall?.copyWith(
             color: enabled ? scheme.onSurfaceVariant : scheme.outline,

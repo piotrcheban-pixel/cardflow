@@ -345,12 +345,18 @@ class _MultipleChoiceScreenState extends ConsumerState<MultipleChoiceScreen> {
           ),
         ),
         Expanded(
-          // Аудит v4 (V6): вопрос — в центре свободной области, а не строкой
-          // у верхней кромки; варианты — вторичные полосы под ним.
+          // Аудит v4 (V6): вопрос и варианты — одна центрированная колонка с
+          // воздухом 32 px, а не вопрос вверху и варианты у нижней кромки с
+          // 300 px пустоты между ними. Длинный вопрос прокручивается.
           child: LayoutBuilder(
             builder: (BuildContext context, BoxConstraints constraints) {
               return SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.xl,
+                  AppSpacing.md,
+                  AppSpacing.xl,
+                  AppSpacing.md,
+                ),
                 child: ConstrainedBox(
                   constraints: BoxConstraints(
                     minHeight: (constraints.maxHeight - 32).clamp(
@@ -359,60 +365,77 @@ class _MultipleChoiceScreenState extends ConsumerState<MultipleChoiceScreen> {
                     ),
                   ),
                   child: Center(
-                    child: CardContentView(
-                      key: ValueKey<String>('mc-question-${card.id}'),
-                      card: card,
-                      side: card.front,
-                      revealed: false,
-                      showAllFormulas: true,
-                      faceKey: const ValueKey<String>('mc-question-face'),
-                      questionStyle: Theme.of(context).textTheme.headlineMedium
-                          ?.copyWith(
-                            fontSize:
-                                AppTypography.reviewQuestionSize *
-                                AppAdaptive.factorForContext(context) *
-                                0.85,
-                            height: 1.35,
-                            fontWeight: FontWeight.w600,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: <Widget>[
+                        CardContentView(
+                          key: ValueKey<String>('mc-question-${card.id}'),
+                          card: card,
+                          side: card.front,
+                          revealed: false,
+                          showAllFormulas: true,
+                          faceKey: const ValueKey<String>('mc-question-face'),
+                          questionStyle: Theme.of(context)
+                              .textTheme
+                              .headlineMedium
+                              ?.copyWith(
+                                fontSize:
+                                    AppTypography.reviewQuestionSize *
+                                    AppAdaptive.factorForContext(context) *
+                                    0.85,
+                                height: 1.35,
+                                fontWeight: FontWeight.w600,
+                              ),
+                          mediaBytes: _media.bytes,
+                          mediaMetadata: _media.metadata,
+                          onRetryMedia: () => _retryMedia(card),
+                        ),
+                        const SizedBox(height: AppSpacing.xxl),
+                        Center(
+                          child: ConstrainedBox(
+                            // Строка варианта не растягивается на 2K: 45–75 знаков.
+                            constraints: const BoxConstraints(maxWidth: 720),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: <Widget>[
+                                for (
+                                  var index = 0;
+                                  index < set.options.length;
+                                  index++
+                                )
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: AppSpacing.xxs,
+                                    ),
+                                    child: _SpringOptionButton(
+                                      key: ValueKey<String>(
+                                        'study-option-$index',
+                                      ),
+                                      label: set.options[index],
+                                      semanticLabel: l10n.testOptionLabel(
+                                        index + 1,
+                                        plainTextOfLatex(set.options[index]),
+                                      ),
+                                      selected:
+                                          answered?.selectedIndex == index,
+                                      state: _optionState(answered, set, index),
+                                      onPressed:
+                                          answered == null && !state.busy
+                                          ? () => _select(index)
+                                          : null,
+                                    ),
+                                  ),
+                              ],
+                            ),
                           ),
-                      mediaBytes: _media.bytes,
-                      mediaMetadata: _media.metadata,
-                      onRetryMedia: () => _retryMedia(card),
+                        ),
+                      ],
                     ),
                   ),
                 ),
               );
             },
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-          child: Center(
-            child: ConstrainedBox(
-              // Строка варианта не растягивается на 2K: 45–75 символов.
-              constraints: const BoxConstraints(maxWidth: 720),
-              child: Column(
-                children: <Widget>[
-                  for (var index = 0; index < set.options.length; index++)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: _SpringOptionButton(
-                        key: ValueKey<String>('study-option-$index'),
-                        label: set.options[index],
-                        semanticLabel: l10n.testOptionLabel(
-                          index + 1,
-                          plainTextOfLatex(set.options[index]),
-                        ),
-                        selected: answered?.selectedIndex == index,
-                        state: _optionState(answered, set, index),
-                        onPressed: answered == null && !state.busy
-                            ? () => _select(index)
-                            : null,
-                      ),
-                    ),
-                ],
-              ),
-            ),
           ),
         ),
         if (answered != null)

@@ -989,11 +989,16 @@ class _DailyLimitRow extends StatelessWidget {
                       onPressed: value <= 0 ? null : () => onChanged(value - 1),
                     ),
                     SizedBox(
-                      width: 32,
+                      // Три разряда («200 повторений в день») обязаны влезать
+                      // без переноса — аудит v4: «20» и «0» разъезжались.
+                      width: 44,
                       child: Text(
                         value.toString(),
                         key: ValueKey<String>('settings-$id-value'),
                         textAlign: TextAlign.center,
+                        maxLines: 1,
+                        softWrap: false,
+                        overflow: TextOverflow.visible,
                         style: AppTypography.numeric(context),
                       ),
                     ),

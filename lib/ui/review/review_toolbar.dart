@@ -196,8 +196,10 @@ class _RatingButton extends StatelessWidget {
           style: FilledButton.styleFrom(
             backgroundColor: background,
             foregroundColor: foreground,
-            disabledBackgroundColor: background.withValues(alpha: 0.5),
-            disabledForegroundColor: foreground.withValues(alpha: 0.65),
+            // Аудит v4 (V24): до раскрытия ответа панель заметно «спит» —
+            // приглушённая заливка и подпись, а не яркие активные кнопки.
+            disabledBackgroundColor: background.withValues(alpha: 0.3),
+            disabledForegroundColor: foreground.withValues(alpha: 0.5),
             minimumSize: Size(
               0,
               compact

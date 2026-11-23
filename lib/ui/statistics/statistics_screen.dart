@@ -151,6 +151,8 @@ class _StatisticsContent extends StatelessWidget {
                 key: const ValueKey<String>('statistics-kpi-streak'),
                 label: l10n.statisticsKpiStreak,
                 value: number.format(streak),
+                // Аудит v4: у KPI есть единица измерения, а не «голое» число.
+                unit: l10n.statisticsDaysUnit(streak),
                 icon: Icons.local_fire_department_outlined,
                 iconColor: scheme.tertiary,
               ),
@@ -194,6 +196,7 @@ class _StatisticsContent extends StatelessWidget {
                 key: const ValueKey<String>('statistics-kpi-active-days'),
                 label: l10n.statisticsKpiActiveDays,
                 value: number.format(activeDays),
+                unit: l10n.statisticsDaysUnit(activeDays),
                 icon: Icons.calendar_month_outlined,
                 iconColor: scheme.primary,
               ),

@@ -3616,8 +3616,7 @@
   "deckModesGroupCustom": "Настройка",
   "@deckModesGroupCustom": {"description": "Группа «настройка сессии» в листе выбора."},
   "constructorSubtitle": "Свои колоды, фильтры и лимит сессии",
-  "@constructorSubtitle": {"description": "Пояснение режима «Конструктор» в листе режимов."}
+  "@constructorSubtitle": {"description": "Пояснение режима «Конструктор» в листе режимов."},
+  "statisticsDaysUnit": "{count, plural, one{день} few{дня} many{дней} other{дня}}",
+  "@statisticsDaysUnit": {"description": "Единица «дни» для KPI статистики (аудит v4).", "placeholders": {"count": {"type": "int"}}}
 }
-
-
-

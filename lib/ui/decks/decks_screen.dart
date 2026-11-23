@@ -65,6 +65,9 @@ class DecksScreen extends ConsumerWidget {
     // экран — сворачиваем надзаголовок, оставляя заголовок, подзаголовок,
     // действия и фильтры.
     final bool compactHeight = window.height < 820;
+    // Очень низкое окно: KPI-строка и подзаголовок сворачиваются целиком,
+    // чтобы первая колода была видна без прокрутки (аудит v4, V29).
+    final bool veryCompact = window.height < 560;
     // Узкая шапка: вместо двух подписанных кнопок — иконки с подсказками
     // (аудит v4: на 390 px три кнопки в Wrap занимали три строки).
     final bool narrowHeader = window.width < 720;
@@ -98,7 +101,9 @@ class DecksScreen extends ConsumerWidget {
           title: l10n.decksTitle,
           // Аудит v4 (V9): число «к повторению» живёт только в KPI и в
           // сайдбаре — из подзаголовка и бейджа-надзаголовка оно убрано.
-          subtitle: Text(l10n.decksSubtitleDecks(decks.length)),
+          subtitle: veryCompact
+              ? null
+              : Text(l10n.decksSubtitleDecks(decks.length)),
           overline: compactHeight ? null : Text(l10n.decksOverline),
           actions: <Widget>[
             if (narrowHeader) ...<Widget>[
@@ -108,11 +113,14 @@ class DecksScreen extends ConsumerWidget {
                 onPressed: () => importDeckZip(context, ref),
                 icon: const Icon(Icons.file_download_outlined),
               ),
-              IconButton(
+              // Главное действие остаётся подписанным и на узком экране —
+              // без него «+» в шапке не отличить от глобальной «Новой карточки».
+              FilledButton.icon(
                 key: const ValueKey<String>('decks-new-deck'),
-                tooltip: l10n.decksNewDeck,
                 onPressed: () => createDeckManually(context, ref),
                 icon: const Icon(Icons.add),
+                label: Text(l10n.decksNewDeck),
+                style: AppButtons.large(context),
               ),
             ] else ...<Widget>[
               OutlinedButton.icon(
@@ -138,7 +146,7 @@ class DecksScreen extends ConsumerWidget {
           // низком окне KPI сжимаются в одну строку, а на первом запуске
           // (пустая база) метрики и панель фильтров не показываются вовсе —
           // первым видно пустое состояние с действиями.
-          if (showChrome && !filteredEmpty) ...<Widget>[
+          if (showChrome && !filteredEmpty && !veryCompact) ...<Widget>[
             if (compactHeight)
               _MetricsLine(
                 totalCards: totalCards,
@@ -160,6 +168,7 @@ class DecksScreen extends ConsumerWidget {
               sort: sort,
               viewMode: viewMode,
               counts: _FilterCounts.fromSummaries(decks),
+              veryCompact: veryCompact,
             ),
           summaries.when(
             loading: () => const Padding(
@@ -487,12 +496,16 @@ class _DecksToolbar extends ConsumerWidget {
     required this.sort,
     required this.viewMode,
     required this.counts,
+    this.veryCompact = false,
   });
 
   final DeckQuery query;
   final DecksSort sort;
   final DecksViewMode viewMode;
   final _FilterCounts counts;
+
+  /// Очень низкое окно (< 560 лог. px): чипы фильтра уходят в меню.
+  final bool veryCompact;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -638,33 +651,53 @@ class _DecksToolbar extends ConsumerWidget {
       ],
     );
 
+    // Аудит v4 (V29): на очень низком окне ряд чипов фильтра не помещается —
+    // фильтр уходит в меню-иконку, экран остаётся однострочным.
+    final Widget filterControl = veryCompact
+        ? PopupMenuButton<int>(
+            key: const ValueKey<String>('decks-filter-compact'),
+            tooltip: l10n.decksFilterTooltip,
+            icon: Badge(
+              isLabelVisible: query.filter != DeckFilter.all,
+              child: const Icon(Icons.filter_list),
+            ),
+            onSelected: (int index) => ref
+                .read(decksQueryProvider.notifier)
+                .setFilter(DeckFilter.values[index]),
+            itemBuilder: (BuildContext context) =>
+                <PopupMenuEntry<int>>[
+                  for (int index = 0; index < 4; index++)
+                    CheckedPopupMenuItem<int>(
+                      value: index,
+                      checked: query.filter == DeckFilter.values[index],
+                      child: Text(_filterLabel(l10n, counts, index)),
+                    ),
+                ],
+          )
+        : IconButton(
+            tooltip: l10n.decksFilterTooltip,
+            icon: const Icon(Icons.filter_list),
+            onPressed: () {
+              ref.read(decksSearchVisibleProvider.notifier).close();
+              ref.read(decksFiltersVisibleProvider.notifier).toggle();
+            },
+          );
+
     final Widget searchRow = Row(
       children: <Widget>[
         if (!wide && !searchVisible) ...<Widget>[
           IconButton(
             tooltip: l10n.decksSearchTooltip,
-            icon: const Icon(Icons.search, size: AppSizes.navIcon),
+            icon: const Icon(Icons.search),
             onPressed: () =>
                 ref.read(decksSearchVisibleProvider.notifier).toggle(),
           ),
-          IconButton(
-            tooltip: l10n.decksFilterTooltip,
-            icon: const Icon(Icons.filter_list, size: AppSizes.navIcon),
-            onPressed: () =>
-                ref.read(decksFiltersVisibleProvider.notifier).toggle(),
-          ),
+          filterControl,
           const Spacer(),
           if (ultraNarrow) overflowMenu else controls,
         ] else if (!wide) ...<Widget>[
           Expanded(child: search),
-          IconButton(
-            tooltip: l10n.decksFilterTooltip,
-            icon: const Icon(Icons.filter_list, size: AppSizes.navIcon),
-            onPressed: () {
-              ref.read(decksSearchVisibleProvider.notifier).close();
-              ref.read(decksFiltersVisibleProvider.notifier).toggle();
-            },
-          ),
+          filterControl,
           if (ultraNarrow) overflowMenu else controls,
         ] else ...<Widget>[
           Expanded(child: search),
@@ -680,7 +713,7 @@ class _DecksToolbar extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           searchRow,
-          if (filtersVisible) ...<Widget>[
+          if (filtersVisible && !veryCompact) ...<Widget>[
             const SizedBox(height: AppSpacing.xs),
             // Аудит v4 (V28): на узком экране ряд чипов обрезался по краю.
             // `Wrap` переносит их на вторую строку — ни один фильтр не скрыт.

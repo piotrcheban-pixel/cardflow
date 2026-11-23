@@ -313,72 +313,108 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
                             ),
                     ),
                     const SizedBox(height: AppSpacing.lg),
-                    Row(
-                      children: <Widget>[
-                        Expanded(
-                          child: Text(
-                            l10n.deckCardsTitle,
-                            style: Theme.of(context).textTheme.titleLarge,
-                          ),
-                        ),
-                        Text(
-                          l10n.deckCardCount(cards.length),
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurfaceVariant,
+                    LayoutBuilder(
+                      builder: (BuildContext context, BoxConstraints c) {
+                        // Аудит v4: на 390 px заголовок «Карточки» сжимался до
+                        // одного символа в строке — на узком экране заголовок
+                        // и действия идут двумя строками.
+                        final bool stacked = c.maxWidth < 560;
+                        final Widget titleRow = Row(
+                          children: <Widget>[
+                            Expanded(
+                              child: Text(
+                                l10n.deckCardsTitle,
+                                maxLines: 1,
+                                softWrap: false,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context).textTheme.titleLarge,
                               ),
-                        ),
-                        const SizedBox(width: AppSpacing.xxs),
-                        // Находка F5: поиск и фильтр по состоянию внутри
-                        // колоды, не занимая место у списка постоянно.
-                        if (cards.isNotEmpty) ...<Widget>[
-                          IconButton(
+                            ),
+                            const SizedBox(width: AppSpacing.xs),
+                            Text(
+                              l10n.deckCardCount(cards.length),
+                              maxLines: 1,
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
+                                  ),
+                            ),
+                          ],
+                        );
+                        final List<Widget> actions = <Widget>[
+                          // Находка F5: поиск и фильтр по состоянию внутри
+                          // колоды, не занимая место у списка постоянно.
+                          if (cards.isNotEmpty) ...<Widget>[
+                            IconButton(
+                              key: const ValueKey<String>(
+                                'deck-cards-search-toggle',
+                              ),
+                              tooltip: l10n.deckSearchCardsHint,
+                              icon: const Icon(Icons.search),
+                              onPressed: () => setState(() {
+                                _cardSearchVisible = !_cardSearchVisible;
+                                if (!_cardSearchVisible) _cardSearch.clear();
+                              }),
+                            ),
+                            PopupMenuButton<_CardFilter>(
+                              key: const ValueKey<String>('deck-cards-filter'),
+                              tooltip: _cardFilterLabel(l10n, _cardFilter),
+                              icon: Badge(
+                                isLabelVisible: _cardFilter != _CardFilter.all,
+                                child: const Icon(Icons.filter_list),
+                              ),
+                              onSelected: (_CardFilter filter) =>
+                                  setState(() => _cardFilter = filter),
+                              itemBuilder: (BuildContext context) =>
+                                  <PopupMenuEntry<_CardFilter>>[
+                                    for (final _CardFilter filter
+                                        in _CardFilter.values)
+                                      CheckedPopupMenuItem<_CardFilter>(
+                                        key: ValueKey<String>(
+                                          'deck-card-filter-${filter.name}',
+                                        ),
+                                        value: filter,
+                                        checked: _cardFilter == filter,
+                                        child: Text(
+                                          _cardFilterLabel(l10n, filter),
+                                        ),
+                                      ),
+                                  ],
+                            ),
+                          ],
+                          OutlinedButton.icon(
                             key: const ValueKey<String>(
-                              'deck-cards-search-toggle',
+                              'deck-add-card-button',
                             ),
-                            tooltip: l10n.deckSearchCardsHint,
-                            icon: const Icon(Icons.search, size: 20),
-                            onPressed: () => setState(() {
-                              _cardSearchVisible = !_cardSearchVisible;
-                              if (!_cardSearchVisible) _cardSearch.clear();
-                            }),
+                            onPressed: () =>
+                                _openCardForm(context, deckId: deckId),
+                            icon: const Icon(Icons.add),
+                            label: Text(l10n.deckAddCard),
                           ),
-                          PopupMenuButton<_CardFilter>(
-                            key: const ValueKey<String>('deck-cards-filter'),
-                            tooltip: _cardFilterLabel(l10n, _cardFilter),
-                            icon: Badge(
-                              isLabelVisible: _cardFilter != _CardFilter.all,
-                              child: const Icon(Icons.filter_list, size: 20),
+                        ];
+                        if (!stacked) {
+                          return Row(
+                            children: <Widget>[
+                              Expanded(child: titleRow),
+                              const SizedBox(width: AppSpacing.xs),
+                              ...actions,
+                            ],
+                          );
+                        }
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: <Widget>[
+                            titleRow,
+                            const SizedBox(height: AppSpacing.xs),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: actions,
                             ),
-                            onSelected: (_CardFilter filter) =>
-                                setState(() => _cardFilter = filter),
-                            itemBuilder: (BuildContext context) =>
-                                <PopupMenuEntry<_CardFilter>>[
-                                  for (final _CardFilter filter
-                                      in _CardFilter.values)
-                                    CheckedPopupMenuItem<_CardFilter>(
-                                      key: ValueKey<String>(
-                                        'deck-card-filter-${filter.name}',
-                                      ),
-                                      value: filter,
-                                      checked: _cardFilter == filter,
-                                      child: Text(
-                                        _cardFilterLabel(l10n, filter),
-                                      ),
-                                    ),
-                                ],
-                          ),
-                        ],
-                        OutlinedButton.icon(
-                          key: const ValueKey<String>('deck-add-card-button'),
-                          onPressed: () =>
-                              _openCardForm(context, deckId: deckId),
-                          icon: const Icon(Icons.add, size: 16),
-                          label: Text(l10n.deckAddCard),
-                        ),
-                      ],
+                          ],
+                        );
+                      },
                     ),
                     if (cards.isNotEmpty && _cardSearchVisible) ...<Widget>[
                       const SizedBox(height: AppSpacing.sm),

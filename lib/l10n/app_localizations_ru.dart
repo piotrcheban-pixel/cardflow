@@ -3057,4 +3057,17 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get constructorSubtitle => 'Свои колоды, фильтры и лимит сессии';
+
+  @override
+  String statisticsDaysUnit(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'дня',
+      many: 'дней',
+      few: 'дня',
+      one: 'день',
+    );
+    return '$_temp0';
+  }
 }

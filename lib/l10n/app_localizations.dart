@@ -4956,6 +4956,12 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Свои колоды, фильтры и лимит сессии'**
   String get constructorSubtitle;
+
+  /// Единица «дни» для KPI статистики (аудит v4).
+  ///
+  /// In ru, this message translates to:
+  /// **'{count, plural, one{день} few{дня} many{дней} other{дня}}'**
+  String statisticsDaysUnit(int count);
 }
 
 class _AppLocalizationsDelegate
