@@ -63,6 +63,10 @@ class AppDialog extends StatelessWidget {
         child: Builder(
           builder: (BuildContext dialogContext) {
             final List<Widget> actions = actionsBuilder(dialogContext);
+            final Widget body = bodyBuilder(dialogContext);
+            // Аудит v4 (V42): у диалога без тела (подтверждение выхода,
+            // удаление) больше нет 44 px пустоты между заголовком и кнопками.
+            final bool hasBody = body is! SizedBox;
             return SingleChildScrollView(
               padding: const EdgeInsets.all(AppSpacing.xl),
               child: Column(
@@ -78,7 +82,7 @@ class AppDialog extends StatelessWidget {
                           children: <Widget>[
                             Text(title, style: theme.textTheme.titleLarge),
                             if (subtitle != null) ...<Widget>[
-                              const SizedBox(height: 2),
+                              const SizedBox(height: AppSpacing.xxs),
                               Text(
                                 subtitle!,
                                 style: theme.textTheme.bodyMedium?.copyWith(
@@ -99,10 +103,12 @@ class AppDialog extends StatelessWidget {
                         ),
                     ],
                   ),
-                  const SizedBox(height: AppSpacing.lg),
-                  bodyBuilder(dialogContext),
+                  if (hasBody) ...<Widget>[
+                    const SizedBox(height: AppSpacing.md),
+                    body,
+                  ],
                   if (actions.isNotEmpty) ...<Widget>[
-                    const SizedBox(height: AppSpacing.xl),
+                    SizedBox(height: hasBody ? AppSpacing.xl : AppSpacing.lg),
                     Wrap(
                       alignment: WrapAlignment.end,
                       spacing: AppSpacing.xs,

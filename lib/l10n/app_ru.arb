@@ -111,7 +111,7 @@
       }
     }
   },
-  "deckInProgressCount": "В процессе: {count}",
+  "deckInProgressCount": "Начато: {count}",
   "@deckInProgressCount": {
     "description": "Счётчик карточек в процессе изучения на экране колоды.",
     "placeholders": {
@@ -432,7 +432,7 @@
   "@reviewExitDialogTitle": {
     "description": "Заголовок диалога выхода из сессии (SPEC A6.4)."
   },
-  "reviewExitDialogMessage": "Оценки сохраняются сразу, прогресс не потеряется.",
+  "reviewExitDialogMessage": "Текущая карточка останется неоценённой и появится в следующий раз.",
   "@reviewExitDialogMessage": {
     "description": "Пояснение в диалоге выхода: каждая оценка уже записана."
   },
@@ -3022,6 +3022,8 @@
     "description": "Надзаголовок экрана «Мои колоды»."
   },
   "decksSubtitle": "{decks, plural, one{{decks} активная колода} few{{decks} активные колоды} many{{decks} активных колод} other{{decks} активные колоды}} · {due, plural, one{{due} карточка} few{{due} карточки} many{{due} карточек} other{{due} карточки}} на повторение сегодня",
+  "decksSubtitleDecks": "{decks, plural, one{{decks} колода} few{{decks} колоды} many{{decks} колод} other{{decks} колоды}} в работе",
+  "@decksSubtitleDecks": {"description": "Подзаголовок экрана колод без дубля счётчика повторений (аудит v4, V9).", "placeholders": {"decks": {"type": "int"}}},
   "@decksSubtitle": {
     "description": "Пояснение под заголовком списка колод.",
     "placeholders": {
@@ -3606,5 +3608,16 @@
   "shellSearchAction": "Найти колоду",
   "@shellSearchAction": {"description": "Пункт навигации вместо псевдо-поля поиска (находка D10)."},
   "shellSearchActionHint": "Откроет поиск в списке колод",
-  "@shellSearchActionHint": {"description": "Пояснение к пункту «Найти колоду»."}
+  "@shellSearchActionHint": {"description": "Пояснение к пункту «Найти колоду»."},
+  "deckModesGroupReview": "Повторение",
+  "@deckModesGroupReview": {"description": "Группа режимов в листе выбора (аудит v4, V3)."},
+  "deckModesGroupCheck": "Проверка",
+  "@deckModesGroupCheck": {"description": "Группа проверочных режимов в листе выбора."},
+  "deckModesGroupCustom": "Настройка",
+  "@deckModesGroupCustom": {"description": "Группа «настройка сессии» в листе выбора."},
+  "constructorSubtitle": "Свои колоды, фильтры и лимит сессии",
+  "@constructorSubtitle": {"description": "Пояснение режима «Конструктор» в листе режимов."}
 }
+
+
+

@@ -1,4 +1,80 @@
+import 'dart:io' show Platform;
+import 'dart:math' as math;
+
 import 'package:material_ui/material_ui.dart';
+
+/// Адаптивная шкала интерфейса под 2K/4K (аудит v4, находки V8/V40).
+///
+/// Логические пиксели зависят от масштаба Windows: монитор 2560×1440 при
+/// масштабе 150 % даёт окно 1707×940 логических px — по логическому размеру
+/// его не отличить от FullHD. Поэтому размерная ступень считается по
+/// **физическому** разрешению экрана (эффективная площадь), а не по логическим
+/// пикселям:
+///
+/// * FullHD и меньше (эффективная площадь ≤ 1920×1080) — множитель 1,0;
+/// * 2560×1440 — 1,24;
+/// * 3840×2160 — 1,45 (верхняя граница шкалы).
+///
+/// Множитель применяется к шкале типографики и высотам контролов в
+/// [AppTheme]; пользовательский масштаб текста (`TextScaler`) действует поверх.
+/// В `flutter test` (`FLUTTER_TEST=true`) множитель всегда 1,0: тесты
+/// проверяют вёрстку на эталонной шкале, а адаптивность подтверждается
+/// измерениями живого приложения и юнит-тестом [factorForPhysical].
+abstract final class AppAdaptive {
+  /// Эталонная эффективная площадь (FullHD): ниже — множитель 1,0.
+  static const double _referenceArea = 1920 * 1080;
+
+  /// Максимальный множитель (4K).
+  static const double maxFactor = 1.45;
+
+  /// Отладочное переопределение (тесты виджетов и измерения).
+  ///
+  /// `null` — ступень считается по размеру экрана.
+  static double? debugOverride;
+
+  /// Идёт ли прогон `flutter test` (там адаптивность отключена).
+  static bool get _isTestEnvironment =>
+      Platform.environment['FLUTTER_TEST'] == 'true';
+
+  /// Множитель для физического размера экрана.
+  ///
+  /// Площадь нормируется на FullHD, затем сжимается коэффициентом 0,72:
+  /// 2K (площадь ×1,78) → 1,24; 4K (×4) → 1,45 (клампится).
+  static double factorForPhysical(Size physicalSize) {
+    final double width = physicalSize.width;
+    final double height = physicalSize.height;
+    if (width <= 0 || height <= 0 || !width.isFinite || !height.isFinite) {
+      return 1;
+    }
+    final double ratio = math.sqrt(width * height / _referenceArea);
+    final double factor = 1 + (ratio - 1) * 0.72;
+    return factor.clamp(1, maxFactor);
+  }
+
+  /// Множитель текущего окна приложения (по физическому размеру экрана).
+  ///
+  /// Используется корнем приложения для сборки темы: тема пересобирается при
+  /// изменении размера окна/монитора.
+  static double factorForCurrentWindow() {
+    final double? override = debugOverride;
+    if (override != null) return override;
+    if (_isTestEnvironment) return 1;
+    final views = WidgetsBinding.instance.platformDispatcher.views;
+    if (views.isEmpty) return 1;
+    return factorForPhysical(views.first.physicalSize);
+  }
+
+  /// Множитель текущего окна: учитывает DPI, поэтому зависит от монитора,
+  /// а не от того, как приложение развёрнуто на экране.
+  static double factorForContext(BuildContext context) {
+    final double? override = debugOverride;
+    if (override != null) return override;
+    if (_isTestEnvironment) return 1;
+    final MediaQueryData? media = MediaQuery.maybeOf(context);
+    if (media == null) return 1;
+    return factorForPhysical(media.size * media.devicePixelRatio);
+  }
+}
 
 /// Дизайн-токены CardFlow (ADR-038).
 ///
@@ -248,6 +324,20 @@ abstract final class AppColors {
   // --- Обратная связь режимов «Тест», «Ввод», «Верно/Неверно» ---------------
   // Единые цвета результата ответа: раньше были литералами в трёх экранах.
 
+  /// Фон статуса «к повторению»: акцент, а не тревога (аудит v4, V16).
+  static Color dueBackground(ColorScheme scheme) => scheme.primaryFixed;
+
+  /// Текст статуса «к повторению».
+  static Color dueForeground(ColorScheme scheme) => scheme.onPrimaryFixed;
+
+  /// Фон статуса «всё повторено».
+  static Color readyBackground(ColorScheme scheme) =>
+      scheme.secondaryContainer;
+
+  /// Текст статуса «всё повторено».
+  static Color readyForeground(ColorScheme scheme) =>
+      scheme.onSecondaryContainer;
+
   /// Фон правильного ответа (режимы проверки ответа).
   static Color feedbackCorrectBackground(ColorScheme scheme) =>
       scheme.brightness == Brightness.dark
@@ -368,30 +458,38 @@ abstract final class AppSizes {
   /// Ширина формы генерации (макет: `max-w-4xl`).
   static const double formMaxWidth = 896;
 
-  /// Ширина карточки сессии (было `max-w-[640px]` макета).
-  ///
-  /// Аудит 1.0 (находка D1): карточка — главный объект экрана, поэтому на ПК
-  /// она занимает до 880 логических px и основную часть высоты области, а не
-  /// 640×240 в верхнем углу.
-  static const double studyCardMaxWidth = 880;
-
   /// Ширина диалога (макет: `max-w-lg`).
   static const double dialogMaxWidth = 512;
 
-  /// Высота основной кнопки.
-  static const double buttonHeight = 40;
+  /// Высота основной кнопки (аудит v4, V38: единая шкала 44–48 px).
+  static const double buttonHeight = 44;
 
   /// Высота крупной кнопки (главное действие страницы).
-  static const double buttonHeightLarge = 44;
+  static const double buttonHeightLarge = 48;
 
-  /// Размер иконки в навигации.
+  /// Высота вложенной страницы-шапки (колода, генерация, конструктор).
+  static const double subpageHeaderHeight = 64;
+
+  /// Ширина контента вложенной страницы: колода, конструктор, форма.
+  ///
+  /// Аудит v4 (V21): было 1280/896/880 — три разные сетки. Вложенные страницы
+  /// используют одну сетку [contentMaxWidth] минус одна ступень поля.
+  static const double detailsMaxWidth = 1120;
+
+  /// Ширина карточки сессии: главный объект экрана на десктопе.
+  static const double studyCardMaxWidth = 960;
+
+  /// Размер иконки в навигации (шкала 16/20/24, аудит v4 V39).
   static const double navIcon = 20;
 
   /// Размер иконки в кнопках и строках.
-  static const double icon = 18;
+  static const double icon = 20;
 
   /// Размер мелкой иконки.
   static const double iconSmall = 16;
+
+  /// Крупная иконка панели/диалога.
+  static const double iconLarge = 24;
 
   /// Минимальная высота интерактивной строки (доступность).
   static const double minTouchTarget = 44;
@@ -449,13 +547,24 @@ abstract final class AppShadows {
 }
 
 /// Длительности коротких переходов (движение — `lib/ui/motion.dart`).
+///
+/// Аудит v4 (A1–A22): одна шкала вместо девяти случайных длительностей.
 abstract final class AppDurations {
-  /// Отклик на нажатие, hover, смена цвета.
+  /// Отклик на нажатие, hover, смена цвета (быстрая).
   static const Duration quick = Duration(milliseconds: 120);
 
-  /// Появление панели/диалога.
+  /// Смена состояния: цвет, фокус, раскрытие подсказки.
   static const Duration base = Duration(milliseconds: 180);
 
-  /// Переход между состояниями экрана.
-  static const Duration slow = Duration(milliseconds: 260);
+  /// Переход между карточками, появление панели, смена шага.
+  static const Duration medium = Duration(milliseconds: 220);
+
+  /// Переход между состояниями экрана, появление диалога.
+  static const Duration slow = Duration(milliseconds: 280);
+
+  /// Переворот карточки: 280 мс — в требованиях 280–350.
+  static const Duration flip = Duration(milliseconds: 300);
+
+  /// Длительность появления списка/панели экрана.
+  static const Duration enter = Duration(milliseconds: 240);
 }

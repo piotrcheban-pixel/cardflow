@@ -26,11 +26,13 @@ abstract final class AppTheme {
     ColorScheme? scheme,
     bool highContrast = false,
     bool dyslexiaFont = false,
+    double scale = 1,
   }) => _build(
     Brightness.light,
     scheme: scheme,
     highContrast: highContrast,
     dyslexiaFont: dyslexiaFont,
+    scale: scale,
   );
 
   /// Тёмная тема.
@@ -38,11 +40,13 @@ abstract final class AppTheme {
     ColorScheme? scheme,
     bool highContrast = false,
     bool dyslexiaFont = false,
+    double scale = 1,
   }) => _build(
     Brightness.dark,
     scheme: scheme,
     highContrast: highContrast,
     dyslexiaFont: dyslexiaFont,
+    scale: scale,
   );
 
   /// Аудит v2 (A2): клавиатурный фокус виден не только заливкой 14 %
@@ -58,16 +62,22 @@ abstract final class AppTheme {
     ColorScheme? scheme,
     required bool highContrast,
     required bool dyslexiaFont,
+    required double scale,
   }) {
     final ColorScheme resolved = _resolveScheme(
       brightness,
       scheme: scheme,
       highContrast: highContrast,
     );
-    final TextTheme text = AppTypography.textTheme().apply(
+    final TextTheme text = AppTypography.textTheme(scale: scale).apply(
       bodyColor: resolved.onSurface,
       displayColor: resolved.onSurface,
     );
+    // Контролы растут вместе с типографикой, но не больше чем в 1,3 раза:
+    // иначе кнопки на 4K выглядят «толстыми» относительно текста.
+    final double control = scale.clamp(1.0, 1.3);
+    final double button = AppSizes.buttonHeight * control;
+    final double iconSize = AppSizes.icon * control;
 
     final ThemeData base = ThemeData(
       useMaterial3: true,
@@ -84,6 +94,18 @@ abstract final class AppTheme {
       // подсветка InkWell/ListTile, кольцо у панелей рисует `AppPanel`.
       focusColor: resolved.primary.withValues(alpha: 0.14),
       hoverColor: resolved.primary.withValues(alpha: 0.06),
+      // Аудит v4 (V39): одна шкала иконок 16/20/24 вместо семи размеров.
+      iconTheme: IconThemeData(
+        size: iconSize,
+        color: resolved.onSurfaceVariant,
+      ),
+      // Единый переход между страницами: короткий fade + сдвиг 12 px.
+      pageTransitionsTheme: PageTransitionsTheme(
+        builders: <TargetPlatform, PageTransitionsBuilder>{
+          for (final TargetPlatform platform in TargetPlatform.values)
+            platform: const _AppPageTransitionsBuilder(),
+        },
+      ),
     );
 
     final ThemeData themed = base.copyWith(
@@ -93,9 +115,9 @@ abstract final class AppTheme {
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
-        toolbarHeight: AppSizes.headerHeight,
+        toolbarHeight: AppSizes.subpageHeaderHeight,
         centerTitle: false,
-        titleTextStyle: text.titleMedium?.copyWith(color: resolved.onSurface),
+        titleTextStyle: text.titleLarge?.copyWith(color: resolved.onSurface),
         shape: Border(
           bottom: BorderSide(
             color: resolved.outlineVariant,
@@ -119,15 +141,16 @@ abstract final class AppTheme {
           ),
         ),
       ),
+      // Аудит v4 (V1): заливка НЕ задаётся в теме. Раньше `backgroundColor`
+      // в `filledButtonTheme` перекрывал вариант `.tonal`, и все варианты
+      // ответа/оценки/плитки пар рисовались сплошным primary — иерархия
+      // исчезала. Теперь M3-умолчания различают primary и secondaryContainer,
+      // а высота/форма/фокус остаются системными.
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: AppColors.primaryAction(resolved),
-          foregroundColor: AppColors.onPrimaryAction(resolved),
           disabledBackgroundColor: resolved.surfaceContainerHigh,
-          disabledForegroundColor: resolved.onSurfaceVariant.withValues(
-            alpha: 0.6,
-          ),
-          minimumSize: const Size(0, AppSizes.buttonHeight),
+          disabledForegroundColor: resolved.onSurfaceVariant,
+          minimumSize: Size(0, button),
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.md,
             vertical: AppSpacing.xs,
@@ -156,7 +179,7 @@ abstract final class AppTheme {
             ).merge(
               OutlinedButton.styleFrom(
                 foregroundColor: resolved.onSurface,
-                minimumSize: const Size(0, AppSizes.buttonHeight),
+                minimumSize: Size(0, button),
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppSpacing.md,
                   vertical: AppSpacing.xs,
@@ -173,7 +196,7 @@ abstract final class AppTheme {
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: resolved.primary,
-          minimumSize: const Size(0, AppSizes.buttonHeight),
+          minimumSize: Size(0, button),
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.sm,
             vertical: AppSpacing.xs,
@@ -188,10 +211,11 @@ abstract final class AppTheme {
         style: IconButton.styleFrom(
           foregroundColor: resolved.onSurfaceVariant,
           highlightColor: resolved.surfaceContainer,
-          minimumSize: const Size(
-            AppSizes.minTouchTarget,
-            AppSizes.minTouchTarget,
+          minimumSize: Size(
+            AppSizes.minTouchTarget * control,
+            AppSizes.minTouchTarget * control,
           ),
+          iconSize: iconSize,
           shape: const RoundedRectangleBorder(
             borderRadius: BorderRadius.all(Radius.circular(AppRadii.control)),
           ),
@@ -201,9 +225,9 @@ abstract final class AppTheme {
         filled: true,
         fillColor: resolved.surfaceContainerLowest,
         isDense: false,
-        contentPadding: const EdgeInsets.symmetric(
+        contentPadding: EdgeInsets.symmetric(
           horizontal: AppSpacing.sm + 4,
-          vertical: AppSpacing.sm + 2,
+          vertical: (AppSpacing.sm + 2) * control,
         ),
         hintStyle: text.bodyLarge?.copyWith(color: resolved.outline),
         labelStyle: text.bodyMedium?.copyWith(color: resolved.onSurfaceVariant),
@@ -299,7 +323,9 @@ abstract final class AppTheme {
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.all(Radius.circular(AppRadii.panel)),
         ),
-        titleTextStyle: text.titleLarge?.copyWith(fontSize: 20),
+        titleTextStyle: text.titleLarge?.copyWith(
+          fontWeight: FontWeight.w600,
+        ),
         contentTextStyle: text.bodyLarge?.copyWith(
           color: resolved.onSurfaceVariant,
         ),
@@ -397,8 +423,8 @@ abstract final class AppTheme {
               borderRadius: BorderRadius.all(Radius.circular(AppRadii.control)),
             ),
           ),
-          minimumSize: const WidgetStatePropertyAll<Size>(
-            Size(0, AppSizes.buttonHeight),
+          minimumSize: WidgetStatePropertyAll<Size>(
+            Size(0, button),
           ),
           padding: const WidgetStatePropertyAll<EdgeInsetsGeometry>(
             EdgeInsets.symmetric(horizontal: AppSpacing.sm),
@@ -448,6 +474,42 @@ abstract final class AppTheme {
       brightness: brightness,
       contrastLevel: 1,
       dynamicSchemeVariant: DynamicSchemeVariant.fidelity,
+    );
+  }
+}
+
+/// Переход между страницами приложения (аудит v4, A20).
+///
+/// Вместо платформенного fade-zoom — короткий fade + сдвиг 12 px по вертикали
+/// с кривой `easeInOutCubic` (280 мс). При включённом reduced motion переход
+/// мгновенный.
+class _AppPageTransitionsBuilder extends PageTransitionsBuilder {
+  const _AppPageTransitionsBuilder();
+
+  @override
+  Widget buildTransitions<T>(
+    PageRoute<T> route,
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    final bool reduce = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+    if (reduce) return child;
+    final CurvedAnimation curved = CurvedAnimation(
+      parent: animation,
+      curve: Curves.easeInOutCubic,
+      reverseCurve: Curves.easeInOutCubic,
+    );
+    return FadeTransition(
+      opacity: curved,
+      child: SlideTransition(
+        position: Tween<Offset>(
+          begin: const Offset(0, 0.014),
+          end: Offset.zero,
+        ).animate(curved),
+        child: child,
+      ),
     );
   }
 }

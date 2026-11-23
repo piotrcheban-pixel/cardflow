@@ -10,6 +10,7 @@ import 'package:cardflow/ui/m3e/m3e.dart';
 import 'package:cardflow/ui/router/app_router.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
 import 'package:cardflow/ui/theme/app_theme.dart';
+import 'package:cardflow/ui/theme/app_tokens.dart';
 
 /// Экран критической ошибки старта (например, если БД не открылась).
 ///
@@ -77,7 +78,8 @@ class CardFlowApp extends ConsumerStatefulWidget {
   ConsumerState<CardFlowApp> createState() => _CardFlowAppState();
 }
 
-class _CardFlowAppState extends ConsumerState<CardFlowApp> {
+class _CardFlowAppState extends ConsumerState<CardFlowApp>
+    with WidgetsBindingObserver {
   /// Ключ навигатора: [EscapeToBack] стоит выше него и обрабатывает Esc.
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
 
@@ -86,8 +88,35 @@ class _CardFlowAppState extends ConsumerState<CardFlowApp> {
   late final GoRouter _router =
       widget.router ?? createAppRouter(navigatorKey: _navigatorKey);
 
+  /// Адаптивная ступень типографики по физическому размеру экрана (2K/4K).
+  ///
+  /// Аудит v4 (V8): шкала была константой, поэтому на 2K приложение выглядело
+  /// как растянутый FullHD. Ступень пересчитывается при изменении метрик окна.
+  double _scale = 1;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _scale = AppAdaptive.factorForCurrentWindow();
+    // Первый кадр: размер окна может появиться только после метрик.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _updateScale());
+  }
+
+  @override
+  void didChangeMetrics() {
+    _updateScale();
+  }
+
+  void _updateScale() {
+    final double next = AppAdaptive.factorForCurrentWindow();
+    if (!mounted || (next - _scale).abs() < 0.005) return;
+    setState(() => _scale = next);
+  }
+
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     if (widget.router == null) _router.dispose();
     super.dispose();
   }
@@ -127,11 +156,13 @@ class _CardFlowAppState extends ConsumerState<CardFlowApp> {
         scheme: lightScheme,
         highContrast: settings.highContrast,
         dyslexiaFont: settings.dyslexiaFont,
+        scale: _scale,
       ),
       darkTheme: AppTheme.dark(
         scheme: darkScheme,
         highContrast: settings.highContrast,
         dyslexiaFont: settings.dyslexiaFont,
+        scale: _scale,
       ),
       themeMode: switch (settings.theme) {
         AppThemePreference.system => ThemeMode.system,
@@ -145,9 +176,14 @@ class _CardFlowAppState extends ConsumerState<CardFlowApp> {
         // (M3EResolvedTheme заменяет textTheme — ADR-019 §2).
         final M3EThemeData data = M3EThemeData.fromMaterial(Theme.of(context));
         final MediaQueryData media = MediaQuery.of(context);
+        // Пользовательский масштаб применяется поверх системного, а не
+        // вместо него: настройка доступности ОС продолжает работать.
+        // Для линейных системных шкал (Windows/десктоп) пересчёт точный.
+        final double probe = media.textScaler.scale(16);
+        final double systemFactor = probe.isFinite && probe > 0 ? probe / 16 : 1;
         return MediaQuery(
           data: media.copyWith(
-            textScaler: TextScaler.linear(settings.textScale),
+            textScaler: TextScaler.linear(systemFactor * settings.textScale),
           ),
           // Esc = системный «назад» на всех экранах и диалогах (N3).
           child: EscapeToBack(

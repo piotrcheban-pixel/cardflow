@@ -1,15 +1,28 @@
 import 'package:material_ui/material_ui.dart';
 
-/// Типографика CardFlow (ADR-038).
+import 'package:cardflow/ui/theme/app_tokens.dart';
+
+/// Типографика CardFlow (ADR-038, аудит v4 V8/V40).
 ///
-/// Шрифт — Inter (переменный, SIL OFL 1.1, `assets/fonts/Inter-Variable.ttf`);
-/// шкала перенесена из макета Gemini/Stitch v2 (tailwind `fontSize`):
-/// display 36/44, headline-lg 24/32, headline-md 20/28, body-md 15/22,
-/// label-md 13/16, label-sm 11/14 + трекинг.
+/// Шрифт — Inter (переменный, SIL OFL 1.1, `assets/fonts/Inter-Variable.ttf`).
+/// Шкала — одна система уровней, а не набор случайных кеглей:
 ///
-/// Аудит 1.0 (находка A2): базовые размеры подняты до комфортного минимума
-/// для ПК — основной текст 16, подписи 13–14, микроподписи 11. Прежние
-/// 10–13 px на подписях KPI и чипах были ниже порога читаемости.
+/// * `displayLarge` 38 — hero-числа, крупные экраны состояния;
+/// * `displayMedium` 30 — заголовок страницы (адаптивно до 37–44 на 2K/4K);
+/// * `displaySmall`/`headlineLarge` 26 — заголовок раздела/диалога;
+/// * `headlineMedium` 22 — вопрос карточки по умолчанию;
+/// * `titleLarge` 21 — заголовок панели;
+/// * `titleMedium` 18 — имя колоды, подзаголовок;
+/// * `titleSmall` 16 — компактный заголовок;
+/// * `bodyLarge` 17 — основной текст (на FullHD не мельче 16);
+/// * `bodyMedium` 15 — вторичный текст;
+/// * `bodySmall` 14 — подписи;
+/// * `labelLarge` 15 — текст кнопок;
+/// * `labelMedium`/`labelSmall` 13 — надзаголовки и микроподписи.
+///
+/// Все размеры умножаются на [scale] — адаптивную ступень экрана
+/// ([AppAdaptive]): на 2K шкала крупнее в 1,24 раза, на 4K — в 1,45.
+/// Пользовательский масштаб текста (`TextScaler`) действует поверх темы.
 ///
 /// Шрифт для дислексии перекрывает семейство (`ThemeData.textTheme.apply`), но
 /// размеры/веса/интерлиньяж остаются те же — переключатель доступности не ломает
@@ -23,8 +36,22 @@ abstract final class AppTypography {
     FontFeature.tabularFigures(),
   ];
 
-  /// Собирает [TextTheme] из шкалы макета.
-  static TextTheme textTheme() {
+  /// Кегль вопроса карточки сессии (лицевая сторона), базовый уровень.
+  static const double reviewQuestionSize = 30;
+
+  /// Кегль ответа карточки сессии (обратная сторона), базовый уровень.
+  ///
+  /// Аудит v4 (V4): ответ — главный текст оборота, он не может быть мельче
+  /// повторённого вопроса. На 2K адаптивный множитель поднимает его до ~27.
+  static const double reviewAnswerSize = 22;
+
+  /// Кегль повторённого вопроса на обороте карточки.
+  static const double reviewQuestionEchoSize = 16;
+
+  /// Собирает [TextTheme] из шкалы.
+  ///
+  /// [scale] — адаптивный множитель размера экрана (1,0 / 1,24 / 1,45).
+  static TextTheme textTheme({double scale = 1}) {
     const FontWeight regular = FontWeight.w400;
     const FontWeight medium = FontWeight.w500;
     const FontWeight semibold = FontWeight.w600;
@@ -37,56 +64,59 @@ abstract final class AppTypography {
       double letterSpacing = 0,
     }) => TextStyle(
       fontFamily: fontFamily,
-      fontSize: size,
+      fontSize: size * scale,
       height: height / size,
       fontWeight: weight,
-      letterSpacing: letterSpacing,
+      letterSpacing: letterSpacing * scale,
     );
 
     return TextTheme(
-      displayLarge: style(36, 44, bold, letterSpacing: -0.9),
-      displayMedium: style(28, 34, bold, letterSpacing: -0.56),
-      displaySmall: style(24, 32, semibold, letterSpacing: -0.48),
-      headlineLarge: style(24, 32, semibold, letterSpacing: -0.48),
-      headlineMedium: style(20, 28, semibold, letterSpacing: -0.3),
-      headlineSmall: style(17, 25, semibold, letterSpacing: -0.16),
-      titleLarge: style(19, 27, semibold, letterSpacing: -0.2),
-      titleMedium: style(17, 25, semibold, letterSpacing: -0.16),
-      titleSmall: style(15, 21, semibold, letterSpacing: -0.1),
-      bodyLarge: style(16, 23, regular),
-      bodyMedium: style(14, 20, regular),
-      bodySmall: style(13, 18, regular),
-      labelLarge: style(14, 18, semibold, letterSpacing: 0.1),
-      labelMedium: style(12, 16, semibold, letterSpacing: 0.33),
-      labelSmall: style(12, 16, medium, letterSpacing: 0.2),
+      displayLarge: style(38, 46, bold, letterSpacing: -0.9),
+      displayMedium: style(30, 38, bold, letterSpacing: -0.6),
+      displaySmall: style(26, 34, semibold, letterSpacing: -0.5),
+      headlineLarge: style(26, 34, semibold, letterSpacing: -0.5),
+      headlineMedium: style(22, 31, semibold, letterSpacing: -0.3),
+      headlineSmall: style(19, 27, semibold, letterSpacing: -0.2),
+      titleLarge: style(21, 29, semibold, letterSpacing: -0.2),
+      titleMedium: style(18, 26, semibold, letterSpacing: -0.15),
+      titleSmall: style(16, 23, semibold, letterSpacing: -0.1),
+      bodyLarge: style(17, 25, regular),
+      bodyMedium: style(15, 22, regular),
+      bodySmall: style(14, 20, regular),
+      labelLarge: style(15, 20, semibold, letterSpacing: 0.1),
+      labelMedium: style(13, 18, semibold, letterSpacing: 0.5),
+      labelSmall: style(13, 18, medium, letterSpacing: 0.2),
     );
   }
 
-  /// Стиль крупной цифры KPI (28/34, tabular).
+  /// Стиль крупной цифры KPI (30/38, tabular).
   static TextStyle kpi(BuildContext context) =>
-      Theme.of(context).textTheme.displayMedium!
-          .copyWith(fontFeatures: tabularFigures, fontWeight: FontWeight.w600);
+      Theme.of(context).textTheme.displayMedium!.copyWith(
+        fontFeatures: tabularFigures,
+        fontWeight: FontWeight.w600,
+      );
 
-  /// Крупная цифра KPI 36 px (статистика).
+  /// Крупная цифра KPI 38 px (статистика).
   static TextStyle kpiLarge(BuildContext context) =>
-      kpi(context).copyWith(fontSize: 36);
+      kpi(context).copyWith(fontSize: 38 * _scaleOf(context));
 
-  /// Микроподпись 11/15 (чипы версий, легенды, подписи в панели).
+  /// Микроподпись 13/18 (чипы версий, легенды, подписи в панели).
+  ///
+  /// Аудит v4 (V40): кеглей меньше 13 в продукте больше нет.
   static TextStyle caption(BuildContext context, {Color? color}) =>
       Theme.of(context).textTheme.labelSmall!.copyWith(
-        fontSize: 11,
         height: 1.35,
         letterSpacing: 0.2,
         color: color,
       );
 
-  /// Стиль мелкой подписи-надзаголовка (11/14, uppercase, 0.03em).
+  /// Стиль мелкой подписи-надзаголовка (13/18, uppercase, 0.05em).
   static TextStyle overline(BuildContext context, {Color? color}) =>
       Theme.of(context).textTheme.labelMedium!.copyWith(
         // Текст, а не граница: outline (#777587) на светлой поверхности
         // даёт 4.27:1 — ниже AA для мелких подписей.
         color: color ?? Theme.of(context).colorScheme.onSurfaceVariant,
-        letterSpacing: 0.66,
+        letterSpacing: 0.6,
       );
 
   /// Стиль цифр в строках/прогрессе (tabular).
@@ -96,4 +126,9 @@ abstract final class AppTypography {
         fontWeight: FontWeight.w600,
         color: color,
       );
+
+  /// Адаптивный множитель текущего окна (тема уже учитывает его).
+  static double _scaleOf(BuildContext context) => AppAdaptive.factorForContext(
+    context,
+  );
 }

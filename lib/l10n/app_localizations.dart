@@ -241,7 +241,7 @@ abstract class AppLocalizations {
   /// Счётчик карточек в процессе изучения на экране колоды.
   ///
   /// In ru, this message translates to:
-  /// **'В процессе: {count}'**
+  /// **'Начато: {count}'**
   String deckInProgressCount(int count);
 
   /// Заголовок диалога создания колоды.
@@ -643,7 +643,7 @@ abstract class AppLocalizations {
   /// Пояснение в диалоге выхода: каждая оценка уже записана.
   ///
   /// In ru, this message translates to:
-  /// **'Оценки сохраняются сразу, прогресс не потеряется.'**
+  /// **'Текущая карточка останется неоценённой и появится в следующий раз.'**
   String get reviewExitDialogMessage;
 
   /// Кнопка диалога выхода: остаться в сессии.
@@ -3925,6 +3925,12 @@ abstract class AppLocalizations {
   /// **'{decks, plural, one{{decks} активная колода} few{{decks} активные колоды} many{{decks} активных колод} other{{decks} активные колоды}} · {due, plural, one{{due} карточка} few{{due} карточки} many{{due} карточек} other{{due} карточки}} на повторение сегодня'**
   String decksSubtitle(int decks, int due);
 
+  /// Подзаголовок экрана колод без дубля счётчика повторений (аудит v4, V9).
+  ///
+  /// In ru, this message translates to:
+  /// **'{decks, plural, one{{decks} колода} few{{decks} колоды} many{{decks} колод} other{{decks} колоды}} в работе'**
+  String decksSubtitleDecks(int decks);
+
   /// KPI-плитка: всего карточек.
   ///
   /// In ru, this message translates to:
@@ -4926,6 +4932,30 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Откроет поиск в списке колод'**
   String get shellSearchActionHint;
+
+  /// Группа режимов в листе выбора (аудит v4, V3).
+  ///
+  /// In ru, this message translates to:
+  /// **'Повторение'**
+  String get deckModesGroupReview;
+
+  /// Группа проверочных режимов в листе выбора.
+  ///
+  /// In ru, this message translates to:
+  /// **'Проверка'**
+  String get deckModesGroupCheck;
+
+  /// Группа «настройка сессии» в листе выбора.
+  ///
+  /// In ru, this message translates to:
+  /// **'Настройка'**
+  String get deckModesGroupCustom;
+
+  /// Пояснение режима «Конструктор» в листе режимов.
+  ///
+  /// In ru, this message translates to:
+  /// **'Свои колоды, фильтры и лимит сессии'**
+  String get constructorSubtitle;
 }
 
 class _AppLocalizationsDelegate

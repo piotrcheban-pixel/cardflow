@@ -1,6 +1,6 @@
-import 'package:flutter/physics.dart';
+import 'package:material_ui/material_ui.dart';
 
-/// Токены движения M3 Expressive (SPEC A4.4).
+/// Токены движения M3 Expressive (SPEC A4.4, аудит v4 A1–A22).
 ///
 /// Физика задаётся парой stiffness + damping ratio, а не абсолютным
 /// коэффициентом затухания: конструктор `SpringDescription(damping: …)`
@@ -46,4 +46,33 @@ abstract final class AppMotion {
         stiffness: stiffness,
         ratio: ratio,
       );
+
+  // --- Единая шкала кривых (аудит v4, A22) ---------------------------------
+
+  /// Кривая появления/раскрытия: плавное замедление.
+  static const Curve enter = Curves.easeOutCubic;
+
+  /// Кривая смены состояния и двусторонних переходов.
+  static const Curve standard = Curves.easeInOutCubic;
+
+  /// Кривая отклика на нажатие/наведение.
+  static const Curve feedback = Curves.easeOut;
+
+  /// Выразительная кривая hero-моментов (переворот карточки).
+  static const Curve expressive = Curves.easeInOutCubicEmphasized;
+
+  /// Пользователь просит уменьшить движение (системная настройка Flutter).
+  ///
+  /// Аудит v4 (A6/A12/A20): reduced motion проверялся в одном месте из
+  /// пятнадцати; теперь это единая точка, которую используют все анимации.
+  static bool reduce(BuildContext context) =>
+      MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+
+  /// Длительность с учётом reduced motion (мгновенно).
+  static Duration duration(BuildContext context, Duration value) =>
+      reduce(context) ? Duration.zero : value;
+
+  /// Кривая с учётом reduced motion (линейная, чтобы не было «пружин»).
+  static Curve curve(BuildContext context, Curve value) =>
+      reduce(context) ? Curves.linear : value;
 }

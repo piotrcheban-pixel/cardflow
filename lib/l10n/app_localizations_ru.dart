@@ -100,7 +100,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String deckInProgressCount(int count) {
-    return 'В процессе: $count';
+    return 'Начато: $count';
   }
 
   @override
@@ -360,7 +360,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get reviewExitDialogMessage =>
-      'Оценки сохраняются сразу, прогресс не потеряется.';
+      'Текущая карточка останется неоценённой и появится в следующий раз.';
 
   @override
   String get reviewExitContinue => 'Продолжить';
@@ -2448,6 +2448,19 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String decksSubtitleDecks(int decks) {
+    String _temp0 = intl.Intl.pluralLogic(
+      decks,
+      locale: localeName,
+      other: '$decks колоды',
+      many: '$decks колод',
+      few: '$decks колоды',
+      one: '$decks колода',
+    );
+    return '$_temp0 в работе';
+  }
+
+  @override
   String get decksMetricTotal => 'Всего карточек';
 
   @override
@@ -3032,4 +3045,16 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get shellSearchActionHint => 'Откроет поиск в списке колод';
+
+  @override
+  String get deckModesGroupReview => 'Повторение';
+
+  @override
+  String get deckModesGroupCheck => 'Проверка';
+
+  @override
+  String get deckModesGroupCustom => 'Настройка';
+
+  @override
+  String get constructorSubtitle => 'Свои колоды, фильтры и лимит сессии';
 }
