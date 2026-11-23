@@ -169,8 +169,10 @@ abstract final class AppTheme {
                 if (states.contains(WidgetState.focused)) {
                   return BorderSide(color: resolved.onSurface, width: 2);
                 }
+                // F25: `outlineVariant` (1,71:1) не читался как граница
+                // контрола — используем `outline` (4,55:1 / 6,6:1).
                 return BorderSide(
-                  color: resolved.outlineVariant,
+                  color: resolved.outline,
                   width: AppSizes.borderWidth,
                 );
               }),
@@ -236,14 +238,14 @@ abstract final class AppTheme {
         border: OutlineInputBorder(
           borderRadius: AppRadii.inputRadius,
           borderSide: BorderSide(
-            color: resolved.outlineVariant,
+            color: resolved.outline,
             width: AppSizes.borderWidth,
           ),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: AppRadii.inputRadius,
           borderSide: BorderSide(
-            color: resolved.outlineVariant,
+            color: resolved.outline,
             width: AppSizes.borderWidth,
           ),
         ),
@@ -300,14 +302,16 @@ abstract final class AppTheme {
         // primary (1,9:1) — теперь цвет текста на primary.
         checkmarkColor: resolved.onPrimary,
         secondarySelectedColor: resolved.primary,
-        side: BorderSide.none,
-        labelStyle: text.labelLarge?.copyWith(color: resolved.onSurface),
-        secondaryLabelStyle: text.labelLarge?.copyWith(
+        side: BorderSide(color: resolved.outline, width: AppSizes.borderWidth),
+        labelStyle: text.bodyMedium?.copyWith(color: resolved.onSurface),
+        secondaryLabelStyle: text.bodyMedium?.copyWith(
           color: resolved.onPrimary,
         ),
+        // F16: визуальная высота чипа — не 32, а ≥38 базовых (44 по цели):
+        // 10+10 полей + строка 19–22. Текст и контрол растут вместе.
         padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.sm,
-          vertical: AppSpacing.xs,
+          horizontal: AppSpacing.sm + 2,
+          vertical: AppSpacing.xs + 2,
         ),
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.all(Radius.circular(AppRadii.control)),
@@ -350,7 +354,14 @@ abstract final class AppTheme {
         ),
         actionTextColor: resolved.inversePrimary,
         elevation: 0,
-        insetPadding: const EdgeInsets.all(AppSpacing.md),
+        // F23: одно уведомление системы — нижняя плавающая панель, один вид;
+        // длительность задаётся вызовом (`SessionNotice` — те же 4 с).
+        insetPadding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          0,
+          AppSpacing.lg,
+          AppSpacing.lg,
+        ),
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.all(Radius.circular(AppRadii.input)),
         ),

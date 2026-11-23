@@ -4,7 +4,7 @@ import 'package:cardflow/ui/theme/app_tokens.dart';
 import 'package:cardflow/ui/theme/app_typography.dart';
 
 /// Каркас страницы: шапка с заголовком и действиями + прокручиваемый контент
-/// одной колонкой с максимальной шириной макета (1280 px).
+/// одной колонкой с адаптивной шириной ([AppSizes.pageWidth]).
 ///
 /// Все основные экраны (колоды, колода, статистика, настройки, генерация,
 /// конструктор) собираются из этих виджетов, поэтому отступы, ширина контента
@@ -14,7 +14,7 @@ class AppPageScaffold extends StatelessWidget {
   const AppPageScaffold({
     required this.header,
     required this.slivers,
-    this.maxWidth = AppSizes.contentMaxWidth,
+    this.maxWidth,
     this.bottomPadding = AppSpacing.xxl,
     super.key,
   });
@@ -25,19 +25,20 @@ class AppPageScaffold extends StatelessWidget {
   /// Прокручиваемое содержимое страницы.
   final List<Widget> slivers;
 
-  /// Максимальная ширина контента.
-  final double maxWidth;
+  /// Максимальная ширина контента; `null` — адаптивная [AppSizes.pageWidth].
+  final double? maxWidth;
 
   /// Нижний отступ списка.
   final double bottomPadding;
 
   @override
   Widget build(BuildContext context) {
+    final double width = maxWidth ?? AppSizes.pageWidth(context);
     return CustomScrollView(
       slivers: <Widget>[
         SliverToBoxAdapter(
           child: AppContentWidth(
-            maxWidth: maxWidth,
+            maxWidth: width,
             padding: const EdgeInsets.fromLTRB(
               AppSpacing.md,
               AppSpacing.xl,
@@ -53,7 +54,7 @@ class AppPageScaffold extends StatelessWidget {
             // экранах, а не растянут на всю ширину окна (строки по 1200+ px).
             for (final Widget sliver in slivers)
               AppContentWidth(
-                maxWidth: maxWidth,
+                maxWidth: width,
                 padding: EdgeInsets.fromLTRB(
                   _horizontalPadding(context),
                   0,
@@ -80,7 +81,7 @@ class AppContentWidth extends StatelessWidget {
   /// Создаёт ограничитель ширины.
   const AppContentWidth({
     required this.child,
-    this.maxWidth = AppSizes.contentMaxWidth,
+    this.maxWidth,
     this.padding = const EdgeInsets.symmetric(horizontal: AppSpacing.md),
     super.key,
   });
@@ -88,8 +89,8 @@ class AppContentWidth extends StatelessWidget {
   /// Содержимое.
   final Widget child;
 
-  /// Максимальная ширина.
-  final double maxWidth;
+  /// Максимальная ширина; `null` — адаптивная [AppSizes.pageWidth].
+  final double? maxWidth;
 
   /// Внутренние отступы.
   final EdgeInsetsGeometry padding;
@@ -98,7 +99,9 @@ class AppContentWidth extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: maxWidth),
+        constraints: BoxConstraints(
+          maxWidth: maxWidth ?? AppSizes.pageWidth(context),
+        ),
         child: Padding(padding: padding, child: child),
       ),
     );
@@ -165,10 +168,13 @@ class AppPageHeader extends StatelessWidget {
                 title,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.displayMedium?.copyWith(
-                  fontSize: wide ? 32 : 28,
-                  height: wide ? 1.2 : 1.21,
-                ),
+                // F10: заголовок страницы — из адаптивной шкалы темы и всегда
+                // крупнее KPI (displayLarge 38 против displayMedium 30).
+                style:
+                    (wide
+                            ? theme.textTheme.displayLarge
+                            : theme.textTheme.displayMedium)
+                        ?.copyWith(height: 1.14, letterSpacing: -0.9),
               ),
             ),
             if (titleTrailing != null) ...<Widget>[

@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/components/app_surfaces.dart';
+import 'package:cardflow/ui/motion.dart';
 import 'package:cardflow/ui/router/app_router.dart';
 import 'package:cardflow/ui/settings/about_links.dart';
 import 'package:cardflow/ui/state/decks_ui_providers.dart';
@@ -103,6 +104,11 @@ class AppSidebar extends ConsumerWidget {
     // На низком окне (400 лог. px) пяти пунктам нужна каждая строка:
     // надзаголовок «Навигация» сворачивается, «Настройки» остаются видны.
     final bool compactHeight = MediaQuery.sizeOf(context).height < 480;
+    // F02/F18: версия в шапке бренда помещается только на панели ≥280 px;
+    // на 240 px она отнимала место у названия («CardFl…»). Версия остаётся
+    // в «О приложении» и в tooltip.
+    final double panelWidth = AppSizes.sidebarWidthFor(context);
+    final bool showVersion = panelWidth >= 280;
 
     return Material(
       color: scheme.surfaceContainerLowest,
@@ -111,7 +117,7 @@ class AppSidebar extends ConsumerWidget {
         children: <Widget>[
           // Логотип и версия.
           SizedBox(
-            height: AppSizes.headerHeight,
+            height: AppSizes.headerHeightFor(context),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
               child: Row(
@@ -128,25 +134,27 @@ class AppSidebar extends ConsumerWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(width: AppSpacing.xxs),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: scheme.surfaceContainer,
-                      borderRadius: BorderRadius.circular(AppRadii.xs),
-                      border: Border.all(color: scheme.outlineVariant),
-                    ),
-                    child: Text(
-                      l10n.shellVersion(appVersion),
-                      style: AppTypography.caption(
-                        context,
-                        color: scheme.onSurfaceVariant,
+                  if (showVersion) ...<Widget>[
+                    const SizedBox(width: AppSpacing.xxs),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: scheme.surfaceContainer,
+                        borderRadius: BorderRadius.circular(AppRadii.xs),
+                        border: Border.all(color: scheme.outlineVariant),
+                      ),
+                      child: Text(
+                        l10n.shellVersion(appVersion),
+                        style: AppTypography.caption(
+                          context,
+                          color: scheme.onSurfaceVariant,
+                        ),
                       ),
                     ),
-                  ),
+                  ],
                   if (onClose != null)
                     IconButton(
                       tooltip: l10n.shellCloseNavTooltip,
@@ -347,7 +355,7 @@ class _SidebarItem extends StatelessWidget {
           onTap: onTap,
           borderRadius: BorderRadius.circular(AppRadii.control),
           child: AnimatedContainer(
-            duration: AppDurations.quick,
+            duration: AppMotion.duration(context, AppDurations.quick),
             height: AppSizes.minTouchTarget,
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs + 2),
             decoration: BoxDecoration(
@@ -444,11 +452,17 @@ class AppNavRail extends StatelessWidget {
         branch: 2,
       ),
     ];
-    final bool expanded = MediaQuery.sizeOf(context).width >= 900;
+    // F18: подписи в компактной рейке (92 px) обрезались («ИИ-генерац…»).
+    // Рейка — только иконки с tooltip: 72 px, путь до раздела по-прежнему
+    // один клик, а подписи всегда полные в подсказке и в `Drawer`.
+    final double railWidth =
+        (AppSizes.navRailWidth *
+                AppAdaptive.factorForContext(context).clamp(1.0, 1.3))
+            .clamp(AppSizes.navRailWidth, 96.0);
     return Material(
       color: scheme.surfaceContainerLowest,
       child: SizedBox(
-        width: expanded ? 92 : AppSizes.navRailWidth,
+        width: railWidth,
         child: SafeArea(
           child: Column(
             children: <Widget>[
@@ -473,9 +487,6 @@ class AppNavRail extends StatelessWidget {
                           selected:
                               destination.isBranch &&
                               destination.branch == currentBranch,
-                          // Аудит v2 (D2): на 900–1024 лог. px у рейки есть
-                          // подписи — иконки без текста слишком загадочны.
-                          expanded: expanded,
                           onTap: () {
                             final String? route = destination.route;
                             if (route != null) {
@@ -502,20 +513,15 @@ class _RailItem extends StatelessWidget {
     required this.destination,
     required this.selected,
     required this.onTap,
-    this.expanded = false,
   });
 
   final _SidebarDestination destination;
   final bool selected;
   final VoidCallback onTap;
 
-  /// Показывать подпись под иконкой (рейка шире 900 лог. px).
-  final bool expanded;
-
   @override
   Widget build(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
-    final ColorScheme scheme = theme.colorScheme;
+    final ColorScheme scheme = Theme.of(context).colorScheme;
     final Widget icon = Icon(
       selected ? destination.selectedIcon : destination.icon,
       size: AppSizes.navIcon,
@@ -534,28 +540,12 @@ class _RailItem extends StatelessWidget {
             ),
             onTap: onTap,
             borderRadius: BorderRadius.circular(AppRadii.control),
+            // Только иконка: подпись живёт в tooltip — раньше в 84 px
+            // она обрезалась («ИИ-генерац…», F18).
             child: SizedBox(
-              width: expanded ? 84 : AppSizes.minTouchTarget,
-              height: expanded ? 56 : AppSizes.minTouchTarget,
-              child: expanded
-                  ? Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: <Widget>[
-                        icon,
-                        const SizedBox(height: 2),
-                        Text(
-                          destination.label,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: selected
-                                ? scheme.primary
-                                : scheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
-                    )
-                  : icon,
+              width: AppSizes.minTouchTarget,
+              height: AppSizes.minTouchTarget,
+              child: icon,
             ),
           ),
         ),

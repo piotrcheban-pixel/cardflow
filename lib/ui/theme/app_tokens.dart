@@ -76,6 +76,24 @@ abstract final class AppAdaptive {
   }
 }
 
+/// Роль оценки в общем тон-ряду панели оценок.
+///
+/// Тема не зависит от домена: `Rating` проецируется в роль на слое UI
+/// (`review_toolbar.dart`), а цвета живут здесь.
+enum RatingRole {
+  /// «Не знаю» — ошибка/забывание.
+  again,
+
+  /// «Сложно» — нейтральный тон.
+  hard,
+
+  /// «Знаю» — успех.
+  good,
+
+  /// «Легко» — акцент.
+  easy,
+}
+
 /// Дизайн-токены CardFlow (ADR-038).
 ///
 /// Единственное место в `lib/ui/`, где живут «сырые» цвета, радиусы, отступы и
@@ -185,6 +203,49 @@ abstract final class AppColors {
   /// Цвет тени карточек в светлой теме (тёмная тема теней не рисует).
   static const Color shadow = Color(0xFF0B1C30);
 
+  /// Граница интерактивного контрола (кнопка, поле, чип, сегмент).
+  ///
+  /// Аудит `review_final` (F25): `outlineVariant` на белом даёт 1,71:1 —
+  /// граница не читается. `outline` даёт 4,55:1 (светлая) и 6,6:1 (тёмная)
+  /// и остаётся спокойной: это тонкая линия, а не рамка.
+  static Color controlBorder(ColorScheme scheme) => scheme.outline;
+
+  /// Фон оценки в общем тон-ряду (светлая тонировка, без кислотных заливок).
+  static Color ratingSurface(ColorScheme scheme, RatingRole role) {
+    final Color tint = switch (role) {
+      RatingRole.again => scheme.error,
+      RatingRole.hard => scheme.onSurface,
+      RatingRole.good => scheme.secondary,
+      RatingRole.easy => scheme.primary,
+    };
+    final double alpha = switch (role) {
+      RatingRole.again => 0.07,
+      RatingRole.hard => 0.04,
+      RatingRole.good => 0.10,
+      RatingRole.easy => 0.08,
+    };
+    return Color.alphaBlend(
+      tint.withValues(alpha: alpha),
+      scheme.surfaceContainerLowest,
+    );
+  }
+
+  /// Цвет подписи оценки в общем тон-ряду.
+  static Color ratingForeground(ColorScheme scheme, RatingRole role) =>
+      switch (role) {
+        RatingRole.again => scheme.error,
+        RatingRole.hard => scheme.onSurface,
+        RatingRole.good =>
+          scheme.brightness == Brightness.dark
+              ? scheme.secondary
+              : scheme.secondary,
+        RatingRole.easy => scheme.primary,
+      };
+
+  /// Единственный вторичный цвет подписей интервалов (F11).
+  static Color intervalForeground(ColorScheme scheme) =>
+      scheme.onSurfaceVariant;
+
   /// Собирает светлую схему ролей Material 3 из палитры макета.
   static ColorScheme lightScheme() => ColorScheme(
     brightness: Brightness.light,
@@ -291,35 +352,37 @@ abstract final class AppColors {
       ? const Color(0xFFFFFFFF)
       : scheme.onPrimary;
 
-  /// Фон карточки-оценки Again.
+  /// Фон карточки-оценки Again (тон-ряд, светло-розовая тонировка).
   static Color ratingAgainBackground(ColorScheme scheme) =>
-      scheme.errorContainer;
+      ratingSurface(scheme, RatingRole.again);
 
   /// Текст карточки-оценки Again.
   static Color ratingAgainForeground(ColorScheme scheme) =>
-      scheme.onErrorContainer;
+      ratingForeground(scheme, RatingRole.again);
 
-  /// Фон карточки-оценки Hard.
+  /// Фон карточки-оценки Hard (нейтральная тонировка).
   static Color ratingHardBackground(ColorScheme scheme) =>
-      scheme.surfaceContainer;
+      ratingSurface(scheme, RatingRole.hard);
 
   /// Текст карточки-оценки Hard.
-  static Color ratingHardForeground(ColorScheme scheme) => scheme.onSurface;
+  static Color ratingHardForeground(ColorScheme scheme) =>
+      ratingForeground(scheme, RatingRole.hard);
 
-  /// Фон карточки-оценки Good.
+  /// Фон карточки-оценки Good (спокойная мятная тонировка).
   static Color ratingGoodBackground(ColorScheme scheme) =>
-      scheme.secondaryContainer;
+      ratingSurface(scheme, RatingRole.good);
 
   /// Текст карточки-оценки Good.
   static Color ratingGoodForeground(ColorScheme scheme) =>
-      scheme.onSecondaryContainer;
+      ratingForeground(scheme, RatingRole.good);
 
-  /// Фон карточки-оценки Easy.
-  static Color ratingEasyBackground(ColorScheme scheme) => scheme.primaryFixed;
+  /// Фон карточки-оценки Easy (спокойная индиго-тонировка).
+  static Color ratingEasyBackground(ColorScheme scheme) =>
+      ratingSurface(scheme, RatingRole.easy);
 
   /// Текст карточки-оценки Easy.
   static Color ratingEasyForeground(ColorScheme scheme) =>
-      scheme.onPrimaryFixed;
+      ratingForeground(scheme, RatingRole.easy);
 
   // --- Обратная связь режимов «Тест», «Ввод», «Верно/Неверно» ---------------
   // Единые цвета результата ответа: раньше были литералами в трёх экранах.
@@ -448,14 +511,28 @@ abstract final class AppSizes {
   /// Ширина постоянной боковой панели (макет: `w-60`).
   static const double sidebarWidth = 240;
 
+  /// Ширина боковой панели с адаптивным множителем (240 → 298 → 312).
+  ///
+  /// Аудит `review_final` (F02/F18): при ×1,45 на 4K бренд и подписи навигации
+  /// не помещались в фиксированные 240 px. Панель растёт вместе с типографикой,
+  /// но не больше 320 px — иначе она съедает контент.
+  static double sidebarWidthFor(BuildContext context) =>
+      (sidebarWidth * AppAdaptive.factorForContext(context).clamp(1.0, 1.3))
+          .clamp(sidebarWidth, 320.0);
+
   /// Высота верхней панели (макет: `h-14`).
   static const double headerHeight = 56;
 
-  /// Ширина контента на широком экране (макет: `max-w-7xl`).
+  /// Высота верхней панели с адаптивным множителем (56 → 64 → 67).
+  static double headerHeightFor(BuildContext context) =>
+      (headerHeight * AppAdaptive.factorForContext(context).clamp(1.0, 1.2))
+          .clamp(headerHeight, 72.0);
+
+  /// Ширина контента на FullHD (эталон): одна колонка для всех страниц.
   static const double contentMaxWidth = 1280;
 
-  /// Ширина формы генерации (макет: `max-w-4xl`).
-  static const double formMaxWidth = 896;
+  /// Ширина формы генерации (эталон): узкая колонка полей ≤ 720.
+  static const double formMaxWidth = 640;
 
   /// Ширина диалога (макет: `max-w-lg`).
   static const double dialogMaxWidth = 512;
@@ -469,31 +546,49 @@ abstract final class AppSizes {
   /// Высота вложенной страницы-шапки (колода, генерация, конструктор).
   static const double subpageHeaderHeight = 64;
 
-  /// Ширина контента вложенной страницы: колода, конструктор, форма.
+  /// Единственная адаптивная ширина контентной колонки (F09/F02).
   ///
-  /// Аудит v4 (V21): было 1280/896/880 — три разные сетки. Вложенные страницы
-  /// используют одну сетку [contentMaxWidth] минус одна ступень поля.
-  static const double detailsMaxWidth = 1120;
+  /// FullHD — 1280 (эталон макета); 2K — 1280 (окно 1707 лог. px, колонка
+  /// 75 %); 4K — до 2600 (68 % окна). Все страницы и вложенные экраны берут
+  /// ширину отсюда, поэтому кромка контента не прыгает при переходе.
+  static double pageWidth(BuildContext context) {
+    final double window = MediaQuery.sizeOf(context).width;
+    if (window <= 0 || !window.isFinite) return contentMaxWidth;
+    final double sidebar = window >= sidebarBreakpoint
+        ? sidebarWidthFor(context)
+        : 0;
+    final double rail = window >= railBreakpoint && window < sidebarBreakpoint
+        ? navRailWidth * AppAdaptive.factorForContext(context).clamp(1.0, 1.3)
+        : 0;
+    final double available = math.max(
+      0,
+      window -
+          sidebar -
+          rail -
+          _horizontalPagePadding(window) * 2 -
+          AppSpacing.xxl,
+    );
+    // 0,9 доступной ширины: колонка занимает основную часть площади, но
+    // сохраняет поля по краям (воздух) и не превращается в «резинку».
+    return (available * 0.9).clamp(contentMaxWidth, 2600.0);
+  }
 
-  /// Адаптивная ширина детальной страницы (колода, конструктор).
-  ///
-  /// Аудит v7 (G8/V7-13): на 2K колода занимала 75,3 % площади, конструктор —
-  /// 75,4 %, справа оставалось 440–465 px пустоты. Ширина растёт с множителем
-  /// экрана, но не безгранично — иначе строки станут нечитаемыми.
-  static double detailsWidth(BuildContext context) =>
-      (detailsMaxWidth * AppAdaptive.factorForContext(context)).clamp(
-        detailsMaxWidth,
-        1600,
-      );
+  /// Горизонтальные поля страницы: 24 на десктопе, 16 на узком.
+  static double _horizontalPagePadding(double windowWidth) =>
+      windowWidth >= sidebarBreakpoint ? AppSpacing.xl : AppSpacing.md;
 
-  /// Адаптивная ширина формы и мастеров (ИИ-генерация, форма карточки).
+  /// Адаптивная ширина детальной страницы — та же колонка, что и у страниц
+  /// (F09: раньше 1120×factor давала прыжок 174 px).
+  static double detailsWidth(BuildContext context) => pageWidth(context);
+
+  /// Адаптивная ширина формы и мастеров: узкая колонка полей внутри страницы.
   ///
-  /// Аудит v7 (G8): генерация занимала 61,1 % площади (609 px справа).
-  static double formWidth(BuildContext context) =>
-      (formMaxWidth * AppAdaptive.factorForContext(context) * 1.25).clamp(
-        formMaxWidth,
-        1400,
-      );
+  /// F30/V4: поля 45–75 знаков. 640 базовых px при кегле 18–19 даёт ~60 знаков;
+  /// адаптивный множитель сохраняет пропорцию на 2K/4K.
+  static double formWidth(BuildContext context) {
+    final double factor = AppAdaptive.factorForContext(context);
+    return (formMaxWidth * factor.clamp(1.0, 1.45)).clamp(formMaxWidth, 980.0);
+  }
 
   /// Ширина карточки сессии: главный объект экрана на десктопе.
   ///
@@ -501,7 +596,7 @@ abstract final class AppSizes {
   /// карточка занимала 54 % ширины окна, на 4K — 24 % (вертикальная полоса).
   /// Теперь ширина считается от окна ([studyCardWidth]); константа — только
   /// верхняя граница на очень широких экранах.
-  static const double studyCardMaxWidth = 2400;
+  static const double studyCardMaxWidth = 2600;
 
   /// Доля ширины окна, которую занимает карточка сессии (аудит v7, G3: ≥60 %).
   static const double studyCardWidthFactor = 0.72;
@@ -540,13 +635,28 @@ abstract final class AppSizes {
   /// Высота главного действия карточки «Показать ответ» (G1: ≥56).
   static const double revealButtonHeight = 56;
 
+  /// Ширина главного действия карточки: не полоса на всю карточку (F17).
+  static const double revealButtonMaxWidth = 360;
+
   /// Минимальная высота карточки сессии, базовый уровень (× адаптивный множитель).
   ///
-  /// Аудит v8 (G3/G8): карточка больше не растягивается на всю рабочую область —
-  /// короткий вопрос не «висит» в белом поле. Карточка принимает высоту
-  /// содержимого, но не ниже этого минимума (на 2K это ~570 лог. px, 62 %
-  /// рабочей области живого окна 1707×940).
+  /// Используется только как запасное значение вне `MediaQuery`
+  /// (см. [studyCardMinHeightFor]); в интерфейсе карточка занимает не меньше
+  /// 62 % рабочей области под шапкой (F01/V3).
   static const double studyCardMinHeight = 430;
+
+  /// Минимальная высота карточки: 62 % рабочей области под шапкой.
+  ///
+  /// Аудит `review_final` (F01): высота считалась от кеглей (430×factor), и на
+  /// 4K@100 % карточка была 29,6 % экрана. Теперь минимум задаёт рабочая
+  /// область: 2K live — ~540 (60,3 % body), 4K — ~1298 (60 %).
+  static double studyCardMinHeightFor(BuildContext context) {
+    final MediaQueryData? media = MediaQuery.maybeOf(context);
+    if (media == null) return studyCardMinHeight;
+    final double bodyHeight = media.size.height - headerHeightFor(context);
+    if (bodyHeight <= 0) return studyCardMinHeight;
+    return math.min(bodyHeight, (bodyHeight * 0.62).clamp(240.0, 1600.0));
+  }
 
   /// Порог «низкого окна» для компактной панели оценок в один ряд.
   static const double compactPanelHeight = 430;
@@ -593,15 +703,24 @@ abstract final class AppSizes {
 
 /// Тени и границы поверхностей.
 abstract final class AppShadows {
-  /// Мягкая тень карточки (светлая тема).
+  /// Мягкая тень карточки (светлая тема): два слоя вместо одного плоского.
+  ///
+  /// Аудит `review_final` (F01/F25): тень 4 % на 6 px не отделяла белую
+  /// карточку от поверхности — глубина достигается двумя слоями (контактный
+  /// 0,05/4 px и рассеянный 0,06/16 px), без «тяжёлой» рамки.
   static List<BoxShadow> card(Brightness brightness) =>
       brightness == Brightness.dark
       ? const <BoxShadow>[]
       : <BoxShadow>[
           BoxShadow(
-            color: AppColors.shadow.withValues(alpha: 0.04),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
+            color: AppColors.shadow.withValues(alpha: 0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
+          ),
+          BoxShadow(
+            color: AppColors.shadow.withValues(alpha: 0.06),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
           ),
         ];
 

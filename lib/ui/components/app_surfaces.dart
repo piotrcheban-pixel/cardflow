@@ -253,7 +253,7 @@ class AppStatTile extends StatelessWidget {
               Expanded(
                 child: Text(
                   label.toUpperCase(),
-                  maxLines: 2,
+                  maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                   style: AppTypography.overline(context),
                 ),
@@ -483,6 +483,11 @@ class AppProgressBar extends StatelessWidget {
 }
 
 /// Состояние «пусто»: иконка, заголовок, пояснение и действия.
+///
+/// [hero] — полноэкранный вариант для состояний сессии (F07): крупная иконка,
+/// заголовок 30–38, метрика/пояснение, одно основное действие и широкие поля.
+/// Панель занимает ширину карточки сессии, поэтому «завершено» и «пусто» —
+/// полноценный экран-итог, а не миниатюра в центре пустого окна.
 class AppEmptyState extends StatelessWidget {
   /// Создаёт пустое состояние.
   const AppEmptyState({
@@ -490,7 +495,9 @@ class AppEmptyState extends StatelessWidget {
     required this.title,
     required this.message,
     this.actions = const <Widget>[],
+    this.metric,
     this.compact = false,
+    this.hero = false,
     super.key,
   });
 
@@ -503,47 +510,75 @@ class AppEmptyState extends StatelessWidget {
   /// Пояснение.
   final String message;
 
+  /// Крупная метрика над заголовком (например, «12 оценено»).
+  final Widget? metric;
+
   /// Кнопки под сообщением.
   final List<Widget> actions;
 
   /// Компактный вариант (меньше отступы).
   final bool compact;
 
+  /// Полноэкранный вариант состояния сессии.
+  final bool hero;
+
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
     final ColorScheme scheme = theme.colorScheme;
+    final EdgeInsets padding = hero
+        ? const EdgeInsets.symmetric(
+            horizontal: AppSpacing.xxxl,
+            vertical: AppSpacing.xxl + AppSpacing.xs,
+          )
+        : EdgeInsets.all(compact ? AppSpacing.lg : AppSpacing.xxl);
     return AppPanel(
-      padding: EdgeInsets.all(compact ? AppSpacing.lg : AppSpacing.xxl),
+      padding: padding,
       child: Column(
         mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: hero
+            ? MainAxisAlignment.center
+            : MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: <Widget>[
+          if (metric != null) ...<Widget>[
+            DefaultTextStyle.merge(
+              style: AppTypography.kpiLarge(context)
+                  .copyWith(color: scheme.primary, fontWeight: FontWeight.w600),
+              child: metric!,
+            ),
+            const SizedBox(height: AppSpacing.xs),
+          ],
           AppIconBadge(
             icon: icon,
             color: scheme.primary,
-            size: compact ? 40 : 48,
+            size: hero ? 72 : (compact ? 44 : 48),
           ),
-          const SizedBox(height: AppSpacing.sm),
+          SizedBox(height: hero ? AppSpacing.lg : AppSpacing.sm),
           Text(
             title,
             textAlign: TextAlign.center,
-            style: theme.textTheme.titleMedium,
+            style: hero
+                ? theme.textTheme.displaySmall?.copyWith(height: 1.2)
+                : theme.textTheme.titleMedium,
           ),
-          const SizedBox(height: AppSpacing.xxs + 2),
+          const SizedBox(height: AppSpacing.xs),
           ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 420),
+            constraints: BoxConstraints(maxWidth: hero ? 560 : 420),
             child: Text(
               message,
               textAlign: TextAlign.center,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: scheme.onSurfaceVariant,
-              ),
+              style:
+                  (hero
+                          ? theme.textTheme.bodyLarge
+                          : theme.textTheme.bodyMedium)
+                      ?.copyWith(color: scheme.onSurfaceVariant),
             ),
           ),
           if (actions.isNotEmpty) ...<Widget>[
-            const SizedBox(height: AppSpacing.md),
+            SizedBox(height: hero ? AppSpacing.xl : AppSpacing.md),
             Wrap(
-              spacing: AppSpacing.xs,
+              spacing: AppSpacing.sm,
               runSpacing: AppSpacing.xs,
               alignment: WrapAlignment.center,
               children: actions,
@@ -562,6 +597,7 @@ class AppErrorState extends StatelessWidget {
     required this.message,
     required this.onRetry,
     required this.retryLabel,
+    this.hero = false,
     super.key,
   });
 
@@ -574,28 +610,127 @@ class AppErrorState extends StatelessWidget {
   /// Подпись кнопки повтора.
   final String retryLabel;
 
+  /// Полноэкранный вариант состояния сессии.
+  final bool hero;
+
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
     final ColorScheme scheme = theme.colorScheme;
     return AppPanel(
-      padding: const EdgeInsets.all(AppSpacing.xxl),
+      padding: EdgeInsets.symmetric(
+        horizontal: hero ? AppSpacing.xxxl : AppSpacing.xxl,
+        vertical: hero ? AppSpacing.xxxl : AppSpacing.xxl,
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget>[
           AppIconBadge(
             icon: Icons.error_outline,
             color: scheme.error,
-            size: 48,
+            size: hero ? 72 : 48,
           ),
-          const SizedBox(height: AppSpacing.sm),
+          const SizedBox(height: AppSpacing.md),
           Text(
             message,
             textAlign: TextAlign.center,
-            style: theme.textTheme.titleMedium,
+            style: (hero
+                ? theme.textTheme.titleLarge
+                : theme.textTheme.titleMedium),
           ),
-          const SizedBox(height: AppSpacing.md),
-          OutlinedButton(onPressed: onRetry, child: Text(retryLabel)),
+          const SizedBox(height: AppSpacing.lg),
+          FilledButton(onPressed: onRetry, child: Text(retryLabel)),
+        ],
+      ),
+    );
+  }
+}
+
+/// Скелетон загрузки: тихий блок геометрии контента вместо голого спиннера.
+///
+/// F22: загрузка показывала только `CircularProgressIndicator` в пустом поле,
+/// после чего контент «прыгал». Скелетон сразу задаёт геометрию будущего
+/// контента (карточка/строки/плитки), поэтому layout не смещается. Появление —
+/// короткий fade (не повторяющаяся анимация: widget-тесты с `pumpAndSettle`
+/// остаются стабильными, reduced motion не нарушается).
+class AppSkeleton extends StatelessWidget {
+  /// Создаёт блок скелетона.
+  const AppSkeleton({
+    this.width = double.infinity,
+    this.height = 16,
+    this.radius = AppRadii.sm,
+    this.opacity = 1,
+    super.key,
+  });
+
+  /// Ширина блока.
+  final double width;
+
+  /// Высота блока.
+  final double height;
+
+  /// Скругление.
+  final double radius;
+
+  /// Множитель непрозрачности (иерархия скелетона).
+  final double opacity;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHigh.withValues(alpha: 0.7 * opacity),
+        borderRadius: BorderRadius.circular(radius),
+      ),
+    );
+  }
+}
+
+/// Скелетон карточки сессии: та же геометрия, что у `ReviewCardView`.
+class AppCardSkeleton extends StatelessWidget {
+  /// Создаёт скелетон карточки.
+  const AppCardSkeleton({required this.width, this.height, super.key});
+
+  /// Ширина карточки.
+  final double width;
+
+  /// Высота; `null` — 62 % рабочей области.
+  final double? height;
+
+  @override
+  Widget build(BuildContext context) {
+    final double cardHeight = height ?? AppSizes.studyCardMinHeightFor(context);
+    final bool compact = cardHeight < 300;
+    return Container(
+      width: width,
+      height: cardHeight,
+      padding: EdgeInsets.all(compact ? AppSpacing.md : AppSpacing.xl),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerLowest,
+        borderRadius: AppRadii.cardRadius,
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+        boxShadow: AppShadows.card(Theme.of(context).brightness),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          AppSkeleton(width: compact ? 64 : 88, height: compact ? 10 : 14),
+          SizedBox(height: compact ? 6 : AppSpacing.xl),
+          AppSkeleton(width: double.infinity, height: compact ? 16 : 28),
+          SizedBox(height: compact ? 6 : AppSpacing.xs),
+          AppSkeleton(width: compact ? 220 : 320, height: compact ? 16 : 28),
+          if (!compact) ...<Widget>[
+            const Spacer(),
+            AppSkeleton(
+              width: AppSizes.revealButtonMaxWidth,
+              height: AppSizes.revealButtonHeight,
+              radius: AppRadii.input,
+            ),
+          ],
         ],
       ),
     );

@@ -38,7 +38,7 @@ class AppTopHeader extends StatelessWidget {
     final ColorScheme scheme = theme.colorScheme;
     final bool compact = MediaQuery.sizeOf(context).width < 520;
     return Container(
-      height: AppSizes.headerHeight,
+      height: AppSizes.headerHeightFor(context),
       padding: EdgeInsets.symmetric(
         horizontal: onOpenNav == null ? AppSpacing.lg : AppSpacing.sm,
       ),
@@ -61,34 +61,18 @@ class AppTopHeader extends StatelessWidget {
             ),
             const SizedBox(width: 2),
           ],
+          // F36: крошки — текст с разделителем, а не поле в рамке. Рамка
+          // читалась как неактивное поле ввода.
           Flexible(
             child: Align(
               alignment: AlignmentDirectional.centerStart,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.xs + 2,
-                  vertical: 3,
-                ),
-                decoration: BoxDecoration(
-                  color: scheme.surface,
-                  borderRadius: BorderRadius.circular(AppRadii.xs),
-                  border: Border.all(color: scheme.outlineVariant),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    Flexible(
-                      child: Text(
-                        l10n.shellBreadcrumb(section),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: scheme.onSurfaceVariant,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ],
+              child: Text(
+                l10n.shellBreadcrumb(section),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
             ),

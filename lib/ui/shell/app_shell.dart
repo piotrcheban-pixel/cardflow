@@ -121,7 +121,7 @@ class AppShell extends ConsumerWidget {
           child: Row(
             children: <Widget>[
               SizedBox(
-                width: AppSizes.sidebarWidth,
+                width: AppSizes.sidebarWidthFor(context),
                 child: DecoratedBox(
                   decoration: BoxDecoration(
                     border: Border(

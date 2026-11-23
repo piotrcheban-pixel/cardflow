@@ -82,10 +82,12 @@ abstract final class AppTypography {
       titleSmall: style(16, 23, semibold, letterSpacing: -0.1),
       bodyLarge: style(17, 25, regular),
       bodyMedium: style(15, 22, regular),
-      bodySmall: style(14, 20, regular),
+      // F04/V4: подписи не мельче 13 даже при пользовательском масштабе 90 %
+      // (14,5 × 0,9 = 13,05); раньше 13 × 0,9 = 11,7.
+      bodySmall: style(14.5, 20, regular),
       labelLarge: style(15, 20, semibold, letterSpacing: 0.1),
-      labelMedium: style(13, 18, semibold, letterSpacing: 0.5),
-      labelSmall: style(13, 18, medium, letterSpacing: 0.2),
+      labelMedium: style(14.5, 19, semibold, letterSpacing: 0.4),
+      labelSmall: style(14.5, 19, medium, letterSpacing: 0.2),
     );
   }
 
