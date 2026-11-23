@@ -189,13 +189,27 @@ void main() {
 
     expect(find.byType(Image), findsOneWidget);
     expect(find.byKey(const ValueKey('occlusion-cover-m1')), findsOneWidget);
+    // Тело карточки прокручивается, если картинка и маски не помещаются:
+    // прокручиваем к видимой области перед тапом.
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('occlusion-cover-m1')),
+    );
+    await tester.pump();
     await tester.tap(find.byKey(const ValueKey('occlusion-cover-m1')));
     await tester.pump();
     expect(find.byKey(const ValueKey('occlusion-cover-m1')), findsNothing);
 
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('occlusion-hide-all')),
+    );
+    await tester.pump();
     await tester.tap(find.byKey(const ValueKey('occlusion-hide-all')));
     await tester.pump();
     expect(find.byKey(const ValueKey('occlusion-cover-m1')), findsOneWidget);
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('occlusion-show-all')),
+    );
+    await tester.pump();
     await tester.tap(find.byKey(const ValueKey('occlusion-show-all')));
     await tester.pump();
     expect(find.byKey(const ValueKey('occlusion-cover-m1')), findsNothing);

@@ -593,7 +593,8 @@ void main() {
     expect(find.textContaining('boom'), findsNothing);
 
     cards.cardsByDeckError = null;
-    await tester.tap(find.widgetWithText(OutlinedButton, l10n.retry));
+    // F07: повтор в состоянии ошибки — основное действие (filled).
+    await tester.tap(find.widgetWithText(FilledButton, l10n.retry));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
     expect(find.text('Первый вопрос'), findsOneWidget);

@@ -230,13 +230,20 @@ void main() {
       });
     }
 
-    testWidgets('высота следует за содержимым (короткий < длинного)', (
+    // F01/V3: карточка — главный объект постоянного размера (62 % рабочей
+    // области); длинный вопрос не растягивает её, а прокручивается внутри.
+    testWidgets('высота карточки ≥62 % рабочей области при любом контенте', (
       WidgetTester tester,
     ) async {
       await pumpSession(tester, const Size(1920, 1080));
       final double shortCard = tester
           .getSize(find.byKey(const ValueKey<String>('review-card')))
           .height;
+      expect(
+        shortCard,
+        greaterThanOrEqualTo((1080 - 56) * 0.62 - 1),
+        reason: 'короткий вопрос: ${shortCard}px < 62 % рабочей области',
+      );
       final List<Card> longCards = <Card>[
         makeCard(
           id: 'long-1',
@@ -257,10 +264,17 @@ void main() {
           .height;
       expect(
         longCard,
-        greaterThan(shortCard),
-        reason:
-            'длинный вопрос занимает больше высоты ($longCard > $shortCard)',
+        shortCard,
+        reason: 'высота не зависит от длины вопроса: $longCard ≠ $shortCard',
       );
+      // Длинный вопрос доступен через прокрутку внутри карточки (F27).
+      final Scrollbar scrollbar = tester.widget<Scrollbar>(
+        find.descendant(
+          of: find.byKey(const ValueKey<String>('review-card')),
+          matching: find.byType(Scrollbar),
+        ),
+      );
+      expect(scrollbar.thumbVisibility, isTrue);
     });
   });
 

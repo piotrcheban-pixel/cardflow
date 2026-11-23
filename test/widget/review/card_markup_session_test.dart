@@ -116,6 +116,12 @@ void main() {
 
     expect(find.byType(Image), findsOneWidget);
     expect(find.byKey(const ValueKey('occlusion-cover-m1')), findsOneWidget);
+    // Карточка сессии имеет постоянную высоту и прокручиваемое тело:
+    // элемент маски прокручиваем к видимой области (F27).
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('occlusion-cover-m1')),
+    );
+    await tester.pump();
     await tester.tap(find.byKey(const ValueKey('occlusion-cover-m1')));
     await tester.pump();
     expect(find.byKey(const ValueKey('occlusion-cover-m1')), findsNothing);

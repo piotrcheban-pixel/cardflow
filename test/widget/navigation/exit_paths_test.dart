@@ -266,29 +266,37 @@ void main() {
       expect(find.byType(DecksScreen), findsOneWidget);
     });
 
-    testWidgets('завершённая сессия: «×» закрывает без диалога (N7)', (
-      WidgetTester tester,
-    ) async {
-      await pumpApp(tester);
-      await openSession(tester);
-      final AppLocalizations strings = l10n(tester);
+    testWidgets(
+      'завершённая сессия: одно действие «Готово», без диалога (N7)',
+      (WidgetTester tester) async {
+        await pumpApp(tester);
+        await openSession(tester);
+        final AppLocalizations strings = l10n(tester);
 
-      for (final String name in <String>['good', 'good']) {
-        // Фейк возвращает снимок карточки в токене undo — иначе запись падает
-        // и сессия не доходит до итогов.
-        reviews.previousCard = allCards.first;
-        await tester.tap(find.byKey(const ValueKey<String>('review-card')));
-        await tester.pumpAndSettle();
-        await tester.tap(find.byKey(ValueKey<String>('review-rating-$name')));
-        await tester.pumpAndSettle();
-      }
-      expect(find.text(strings.reviewCompletedTitle), findsOneWidget);
+        for (final String name in <String>['good', 'good']) {
+          // Фейк возвращает снимок карточки в токене undo — иначе запись падает
+          // и сессия не доходит до итогов.
+          reviews.previousCard = allCards.first;
+          await tester.tap(find.byKey(const ValueKey<String>('review-card')));
+          await tester.pumpAndSettle();
+          await tester.tap(find.byKey(ValueKey<String>('review-rating-$name')));
+          await tester.pumpAndSettle();
+        }
+        expect(find.text(strings.reviewCompletedTitle), findsOneWidget);
+        // F13: в состоянии «завершено» крестика нет — выход один.
+        expect(
+          find.byKey(const ValueKey<String>('review-close')),
+          findsNothing,
+        );
 
-      await tester.tap(find.byKey(const ValueKey<String>('review-close')));
-      await tester.pumpAndSettle();
-      expect(find.text(strings.reviewExitDialogTitle), findsNothing);
-      expect(find.byType(DeckScreen), findsOneWidget);
-    });
+        await tester.tap(
+          find.byKey(const ValueKey<String>('review-completed-done')),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text(strings.reviewExitDialogTitle), findsNothing);
+        expect(find.byType(DeckScreen), findsOneWidget);
+      },
+    );
 
     testWidgets('тренировка: Esc и единственный выход «×» работают', (
       WidgetTester tester,

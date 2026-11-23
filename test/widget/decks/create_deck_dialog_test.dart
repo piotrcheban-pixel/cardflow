@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:cardflow/domain/decks/deck_summary.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/app.dart';
+import 'package:cardflow/ui/components/app_dialogs.dart';
 import 'package:cardflow/ui/decks/decks_screen.dart';
 
 import '../../helpers/decks_fakes.dart';
@@ -50,10 +51,10 @@ void main() {
     await tester.tap(find.byKey(const ValueKey<String>('decks-new-deck')));
     await tester.pumpAndSettle();
     // Заголовок диалога совпадает с подписью кнопки шапки, поэтому ищем его
-    // внутри самого диалога (ADR-036: диалог на оболочке).
+    // внутри самого диалога (ADR-036: диалог на оболочке; F37 — AppDialog).
     expect(
       find.descendant(
-        of: find.byType(AlertDialog),
+        of: find.byType(AppDialog),
         matching: find.text(l10n.deckCreateDialogTitle),
       ),
       findsOneWidget,
@@ -131,7 +132,7 @@ void main() {
 
     await tester.tap(find.text(l10n.cancel));
     await tester.pumpAndSettle();
-    expect(find.byType(AlertDialog), findsNothing);
+    expect(find.byType(AppDialog), findsNothing);
     expect(
       find.byKey(const ValueKey<String>('deck-name-submit')),
       findsNothing,

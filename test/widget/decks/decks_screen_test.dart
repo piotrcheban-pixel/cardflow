@@ -1,6 +1,7 @@
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/decks/deck_summary.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
+import 'package:cardflow/ui/components/app_surfaces.dart';
 import 'package:cardflow/ui/decks/deck_screen.dart';
 import 'package:cardflow/ui/decks/decks_screen.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -47,7 +48,7 @@ void main() {
   }
 
   group('Колоды: состояния загрузки данных', () {
-    testWidgets('loading: индикатор загрузки и заголовок из ARB', (
+    testWidgets('loading: скелетон загрузки и заголовок из ARB', (
       WidgetTester tester,
     ) async {
       final FakeDeckRepository repository = FakeDeckRepository(
@@ -59,7 +60,8 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
 
       final AppLocalizations l10n = l10nOf(tester);
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      // F22: вместо голого спиннера — скелетон геометрии списка.
+      expect(find.byType(AppSkeleton), findsWidgets);
       expect(find.text(l10n.decksTitle), findsOneWidget);
       expect(find.text(l10n.decksErrorTitle), findsNothing);
       expect(find.text(l10n.decksEmptyTitle), findsNothing);
@@ -106,14 +108,14 @@ void main() {
           reason: 'Сырой текст исключения не должен показываться пользователю',
         );
         expect(
-          find.widgetWithText(OutlinedButton, l10n.retry),
+          find.widgetWithText(FilledButton, l10n.retry),
           findsOneWidget,
           reason: 'Должна быть кнопка «Повторить»',
         );
 
         repository.failSummaries = false;
         final Finder retryButton = find.widgetWithText(
-          OutlinedButton,
+          FilledButton,
           l10n.retry,
         );
         await tester.ensureVisible(retryButton);

@@ -13,6 +13,7 @@ import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/decks/deck_screen.dart';
 import 'package:cardflow/ui/review/practice_session_screen.dart';
 import 'package:cardflow/ui/review/review_session_screen.dart';
+import 'package:cardflow/ui/theme/app_tokens.dart';
 
 import '../../helpers/decks_fakes.dart';
 import '../../helpers/pump_app.dart';
@@ -514,7 +515,9 @@ void main() {
     expect(find.textContaining('boom'), findsNothing);
 
     cards.cardsByDeckError = null;
-    await tester.tap(find.widgetWithText(OutlinedButton, l10n.retry));
+    // F07: повтор в состоянии ошибки — основное действие (filled), а не
+    // вторичная outlined-кнопка.
+    await tester.tap(find.widgetWithText(FilledButton, l10n.retry));
     await tester.pumpAndSettle();
     expect(find.text('Первый вопрос'), findsOneWidget);
   });
@@ -737,12 +740,14 @@ void main() {
           .style
           ?.backgroundColor
           ?.resolve(<WidgetState>{});
-      // Цвета ролей дизайн-системы v2 (ADR-038): Again — errorContainer,
-      // Hard — surfaceContainer, Good — secondaryContainer, Easy — primaryFixed.
-      expect(background('again'), scheme.errorContainer);
-      expect(background('hard'), scheme.surfaceContainer);
-      expect(background('good'), scheme.secondaryContainer);
-      expect(background('easy'), scheme.primaryFixed);
+      // Цвета ролей дизайн-системы (F11): один тон-ряд оценок — светлые
+      // тонировки одной светлоты, а не четыре разные заливки. Значения
+      // проверяются по токенам, чтобы палитра оставалась единственным
+      // источником правды.
+      expect(background('again'), AppColors.ratingAgainBackground(scheme));
+      expect(background('hard'), AppColors.ratingHardBackground(scheme));
+      expect(background('good'), AppColors.ratingGoodBackground(scheme));
+      expect(background('easy'), AppColors.ratingEasyBackground(scheme));
 
       await tester.tap(
         find.byKey(const ValueKey<String>('review-rating-good')),

@@ -252,7 +252,7 @@ void main() {
     expect(find.text(l10n.settingsLoadError), findsOneWidget);
     expect(find.textContaining('boom'), findsNothing);
 
-    await tester.tap(find.widgetWithText(OutlinedButton, l10n.retry));
+    await tester.tap(find.widgetWithText(FilledButton, l10n.retry));
     await tester.pumpAndSettle();
     expect(failing.readCalls, 2);
     expect(find.text(l10n.providersEmptyTitle), findsOneWidget);
@@ -602,12 +602,19 @@ void main() {
         .withAccount(testProviderAccount(presetId: 'groq'));
     await pumpScreen(tester);
 
+    await tester.ensureVisible(
+      find.byKey(const ValueKey<String>('provider-activate-groq')),
+    );
+    await tester.pumpAndSettle();
     await tester.tap(
       find.byKey(const ValueKey<String>('provider-activate-groq')),
     );
     await tester.pumpAndSettle();
 
     expect(store.accounts.activeAccountId, 'groq');
+    await tester.ensureVisible(
+      find.byKey(const ValueKey<String>('provider-active-groq')),
+    );
     expect(
       find.byKey(const ValueKey<String>('provider-active-groq')),
       findsOneWidget,
