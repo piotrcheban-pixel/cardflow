@@ -203,4 +203,3 @@ void main() {
     expect(draft.answerMediaIds, <String>['a1']);
   });
 }
-

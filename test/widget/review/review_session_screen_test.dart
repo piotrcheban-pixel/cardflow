@@ -110,10 +110,7 @@ void main() {
     ]) {
       expect(find.text(label), findsNothing, reason: 'нет оценок до ответа');
     }
-    expect(
-      find.byKey(const ValueKey<String>('review-reveal')),
-      findsOneWidget,
-    );
+    expect(find.byKey(const ValueKey<String>('review-reveal')), findsOneWidget);
     // Аудит v4 (V24): до раскрытия прогнозы не показываются.
     expect(find.text(l10n.reviewIntervalMinutes(1)), findsNothing);
     expect(find.text(l10n.reviewIntervalMinutes(6)), findsNothing);
@@ -128,10 +125,7 @@ void main() {
     expect(find.text(l10n.reviewIntervalMinutes(10)), findsOneWidget);
     expect(find.text(l10n.reviewIntervalDays(16)), findsOneWidget);
     // G1: главное действие лицевой стороны исчезает после раскрытия.
-    expect(
-      find.byKey(const ValueKey<String>('review-reveal')),
-      findsNothing,
-    );
+    expect(find.byKey(const ValueKey<String>('review-reveal')), findsNothing);
   });
 
   testWidgets('дневной лимит новых карточек из настроек ограничивает сессию', (
@@ -883,10 +877,7 @@ void main() {
 
       expect(find.text(l10n.reviewTimeUpTitle), findsOneWidget);
       expect(find.text(l10n.reviewTimeUpMessage(0)), findsOneWidget);
-      expect(
-        find.byKey(const ValueKey<String>('review-reveal')),
-        findsNothing,
-      );
+      expect(find.byKey(const ValueKey<String>('review-reveal')), findsNothing);
       expect(reviews.ratings, isEmpty);
     });
 
@@ -929,4 +920,3 @@ void main() {
     });
   });
 }
-

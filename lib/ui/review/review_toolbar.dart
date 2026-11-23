@@ -38,6 +38,7 @@ class ReviewToolbar extends StatelessWidget {
     required this.preview,
     required this.onRating,
     this.enabled = true,
+    this.compact = false,
     super.key,
   });
 
@@ -47,12 +48,21 @@ class ReviewToolbar extends StatelessWidget {
   /// Доступны ли кнопки (в основном — не идёт запись в БД).
   final bool enabled;
 
+  /// Компактный вид для низких окон (аудит v8, G10).
+  ///
+  /// На окне 844×390 физических px (562×260 лог.) панель в сетку 2×2
+  /// переполняла карточку: две оценки уходили за нижнюю кромку. В компактном
+  /// виде — один ряд из четырёх кнопок без подсказки клавиши: панель занимает
+  /// 16 + 56 px вместо 148, и карточка помещается целиком.
+  final bool compact;
+
   /// Обработчик оценки.
   final ValueChanged<Rating> onRating;
 
   /// Множитель контролов окна: 1,0 / 1,24 / 1,45 (клампится 1,0–1,2).
   static double controlScale(BuildContext context) =>
-      AppAdaptive.factorForContext(context).clamp(1.0, AppSizes.ratingButtonMaxScale);
+      AppAdaptive.factorForContext(context)
+          .clamp(1.0, AppSizes.ratingButtonMaxScale);
 
   @override
   Widget build(BuildContext context) {
@@ -65,10 +75,10 @@ class ReviewToolbar extends StatelessWidget {
         final double width = constraints.maxWidth.isFinite
             ? constraints.maxWidth
             : MediaQuery.sizeOf(context).width;
-        // На узком экране четыре кнопки в ряд нечитаемы — сетка 2×2.
-        final int columns = width < 640 ? 2 : 4;
-        final double buttonWidth =
-            (width - gap * (columns - 1)) / columns;
+        // На узком экране четыре кнопки в ряд нечитаемы — сетка 2×2. Но в
+        // низком окне два ряда не помещаются в карточку (G10) — тогда один ряд.
+        final int columns = compact || width >= 640 ? 4 : 2;
+        final double buttonWidth = (width - gap * (columns - 1)) / columns;
         return Wrap(
           spacing: gap,
           runSpacing: gap,
@@ -81,6 +91,7 @@ class ReviewToolbar extends StatelessWidget {
                   interval: previews?[rating],
                   enabled: enabled,
                   scale: scale,
+                  compact: compact,
                   onPressed: () => onRating(rating),
                   textTheme: theme,
                 ),
@@ -100,12 +111,14 @@ class _RatingButton extends StatelessWidget {
     required this.scale,
     required this.onPressed,
     required this.textTheme,
+    this.compact = false,
   });
 
   final Rating rating;
   final Duration? interval;
   final bool enabled;
   final double scale;
+  final bool compact;
   final VoidCallback onPressed;
   final ThemeData textTheme;
 
@@ -201,14 +214,17 @@ class _RatingButton extends StatelessWidget {
                   height: 1.15,
                 ),
               ),
-              const SizedBox(height: 2),
-              Text(
-                keyHint,
-                style: AppTypography.caption(
-                  context,
-                  color: foreground.withValues(alpha: 0.7),
+              // Подсказка клавиши занимает место — в компактном окне её нет.
+              if (!compact) ...<Widget>[
+                const SizedBox(height: 2),
+                Text(
+                  keyHint,
+                  style: AppTypography.caption(
+                    context,
+                    color: foreground.withValues(alpha: 0.7),
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
         ),

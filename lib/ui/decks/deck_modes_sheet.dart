@@ -244,18 +244,9 @@ Future<DeckSessionMode?> showDeckModesSheet(
                     ),
                   ),
                   const SizedBox(height: AppSpacing.xs),
-                  _ModeGroup(
-                    title: l10n.deckModesGroupReview,
-                    tiles: review,
-                  ),
-                  _ModeGroup(
-                    title: l10n.deckModesGroupCheck,
-                    tiles: check,
-                  ),
-                  _ModeGroup(
-                    title: l10n.deckModesGroupCustom,
-                    tiles: setup,
-                  ),
+                  _ModeGroup(title: l10n.deckModesGroupReview, tiles: review),
+                  _ModeGroup(title: l10n.deckModesGroupCheck, tiles: check),
+                  _ModeGroup(title: l10n.deckModesGroupCustom, tiles: setup),
                 ],
               ),
             ),
@@ -449,5 +440,3 @@ class _ModeTile extends StatelessWidget {
     );
   }
 }
-
-

@@ -680,7 +680,9 @@ class _SessionConstructorScreenState
           child: Center(
             heightFactor: 1,
             child: ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: AppSizes.detailsWidth(context)),
+              constraints: BoxConstraints(
+                maxWidth: AppSizes.detailsWidth(context),
+              ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,

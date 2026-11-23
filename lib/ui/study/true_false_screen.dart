@@ -215,7 +215,6 @@ class _TrueFalseScreenState extends ConsumerState<TrueFalseScreen> {
     if (confirmed && mounted && context.canPop()) context.pop();
   }
 
-
   void _onHorizontalDragEnd(DragEndDetails details) {
     final double velocity = details.primaryVelocity ?? 0;
     final double dx = details.localPosition.dx;
@@ -375,10 +374,8 @@ class _TrueFalseScreenState extends ConsumerState<TrueFalseScreen> {
                               foregroundColor: scheme.onSecondaryContainer,
                               minimumSize: Size.fromHeight(
                                 AppSizes.buttonHeightLarge *
-                                    AppAdaptive.factorForContext(context).clamp(
-                                      1.0,
-                                      1.3,
-                                    ),
+                                    AppAdaptive.factorForContext(context)
+                                        .clamp(1.0, 1.3),
                               ),
                             ),
                             icon: const Icon(Icons.check),
@@ -395,10 +392,8 @@ class _TrueFalseScreenState extends ConsumerState<TrueFalseScreen> {
                               foregroundColor: scheme.onErrorContainer,
                               minimumSize: Size.fromHeight(
                                 AppSizes.buttonHeightLarge *
-                                    AppAdaptive.factorForContext(context).clamp(
-                                      1.0,
-                                      1.3,
-                                    ),
+                                    AppAdaptive.factorForContext(context)
+                                        .clamp(1.0, 1.3),
                               ),
                             ),
                             icon: const Icon(Icons.close),

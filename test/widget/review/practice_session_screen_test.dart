@@ -118,34 +118,35 @@ void main() {
     );
   });
 
-  testWidgets('оценок до раскрытия нет в дереве, после раскрытия — четыре (G1)', (
-    WidgetTester tester,
-  ) async {
-    await pumpPractice(tester, overrides: overridesFor(cardsToPractice()));
+  testWidgets(
+    'оценок до раскрытия нет в дереве, после раскрытия — четыре (G1)',
+    (WidgetTester tester) async {
+      await pumpPractice(tester, overrides: overridesFor(cardsToPractice()));
 
-    for (final String name in <String>['again', 'hard', 'good', 'easy']) {
-      expect(
-        find.byKey(ValueKey<String>('review-rating-$name')),
-        findsNothing,
-        reason: 'тренировка: панели оценок до ответа нет («$name»)',
-      );
-    }
-    await tester.sendKeyEvent(LogicalKeyboardKey.digit3);
-    await tester.pumpAndSettle();
-    expect(practice.ratings, isEmpty);
+      for (final String name in <String>['again', 'hard', 'good', 'easy']) {
+        expect(
+          find.byKey(ValueKey<String>('review-rating-$name')),
+          findsNothing,
+          reason: 'тренировка: панели оценок до ответа нет («$name»)',
+        );
+      }
+      await tester.sendKeyEvent(LogicalKeyboardKey.digit3);
+      await tester.pumpAndSettle();
+      expect(practice.ratings, isEmpty);
 
-    await reveal(tester);
-    for (final String name in <String>['again', 'hard', 'good', 'easy']) {
-      final FilledButton button = tester.widget<FilledButton>(
-        find.byKey(ValueKey<String>('review-rating-$name')),
-      );
-      expect(
-        button.onPressed,
-        isNotNull,
-        reason: 'после раскрытия «$name» активна',
-      );
-    }
-  });
+      await reveal(tester);
+      for (final String name in <String>['again', 'hard', 'good', 'easy']) {
+        final FilledButton button = tester.widget<FilledButton>(
+          find.byKey(ValueKey<String>('review-rating-$name')),
+        );
+        expect(
+          button.onPressed,
+          isNotNull,
+          reason: 'после раскрытия «$name» активна',
+        );
+      }
+    },
+  );
 
   testWidgets('оценка пишется как practice и ведёт к следующей карточке', (
     WidgetTester tester,

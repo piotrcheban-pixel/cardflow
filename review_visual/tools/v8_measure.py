@@ -1,11 +1,11 @@
-"""Две метрики пустоты карточки для доказательств аудита v7 (CardFlow).
+"""Замеры карточки сессии CardFlow (аудит v7/v8): пустота тремя метриками.
 
-1. bbox-пустота: доля площади карточки вне bbox пикселей, отличных от белого
-   (метрика, заявленная в review_visual/MEASUREMENTS.md; рамка карточки при этом
-   попадает в bbox, поэтому она дополнительно отсекается по внутренней области).
-2. ink-bbox-пустота: строгая метрика — учитываются только «тёмные» пиксели
-   (контрастный текст и заливки), рамка/пастель не считаются. Она заведомо
-   пессимистичнее, поэтому выдерживать нужно обе.
+1. bbox — заявленная в MEASUREMENTS.md метрика (bbox содержимого / площадь).
+2. ink — доля «чернил» (пикселей, отличных от белого) в карточке.
+3. rows — доля полностью пустых строк и **самая длинная сплошная пустая полоса**
+   в пикселях и в % высоты карточки (строгая метрика независимого аудитора v8).
+
+Рамка карточки и скругления отсекаются полем 12 px.
 
 Запуск: python review_visual/tools/v8_measure.py <png>...
 """
@@ -32,6 +32,15 @@ def bbox_of(mask):
     return int(xs.min()), int(ys.min()), int(xs.max()), int(ys.max())
 
 
+def longest_empty_band(empty_rows):
+    """Самая длинная сплошная серия полностью пустых строк."""
+    best = current = 0
+    for flag in empty_rows:
+        current = current + 1 if flag else 0
+        best = max(best, current)
+    return best
+
+
 def measure(path):
     img = Image.open(path).convert("RGB")
     arr = np.array(img).astype(int)
@@ -46,34 +55,29 @@ def measure(path):
     out["card"] = f"{cw}x{ch}"
     out["card_share_width"] = round(100.0 * cw / w, 1)
     out["card_share_height"] = round(100.0 * ch / h, 1)
-    # Внутренняя область без рамки/скруглений: 12 px по краю.
     inner = arr[y0 + 12 : y1 - 11, x0 + 12 : x1 - 11]
     ih, iw, _ = inner.shape
-
-    # 1. «Отлично от белого» внутри внутренней области.
     diff = np.abs(inner - np.array([255, 255, 255])).max(axis=2)
-    loose = diff > 26
-    lb = bbox_of(loose)
+    content = diff > 26
+
+    # 1. bbox-метрика.
+    lb = bbox_of(content)
     if lb is None:
-        out["empty_loose"] = 100.0
+        out["empty_bbox"] = 100.0
     else:
         bw, bh = lb[2] - lb[0] + 1, lb[3] - lb[1] + 1
-        out["content_loose"] = f"{bw}x{bh}"
-        out["empty_loose"] = round(100.0 * (1 - (bw * bh) / (iw * ih)), 1)
+        out["empty_bbox"] = round(100.0 * (1 - (bw * bh) / (iw * ih)), 1)
 
-    # 2. Строгая метрика: только тёмные пиксели (текст, заливки действий).
-    lum = (
-        0.299 * inner[:, :, 0] + 0.587 * inner[:, :, 1] + 0.114 * inner[:, :, 2]
-    )
-    dark = lum < 200
-    db = bbox_of(dark)
-    if db is None:
-        out["empty_ink"] = 100.0
-    else:
-        bw, bh = db[2] - db[0] + 1, db[3] - db[1] + 1
-        out["content_ink"] = f"{bw}x{bh}"
-        out["empty_ink"] = round(100.0 * (1 - (bw * bh) / (iw * ih)), 1)
-        out["ink_share"] = round(100.0 * dark.mean(), 2)
+    # 2. Чернила.
+    out["ink_share"] = round(100.0 * content.mean(), 2)
+
+    # 3. Строки: доля пустых строк и самая длинная полоса.
+    rows_has = content.any(axis=1)
+    empty_rows = ~rows_has
+    out["empty_rows_share"] = round(100.0 * empty_rows.mean(), 1)
+    band = longest_empty_band(empty_rows)
+    out["longest_empty_band_px"] = int(band)
+    out["longest_empty_band_share"] = round(100.0 * band / ih, 1)
     return out
 
 

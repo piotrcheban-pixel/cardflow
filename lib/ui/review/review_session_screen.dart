@@ -313,7 +313,6 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen>
     if (context.canPop()) context.pop();
   }
 
-
   /// Повтор чтения медиа карточки после ошибки изображения (7.19).
   Future<void> _retryMedia(Card card) async {
     final SessionMedia updated = await reloadSessionMedia(ref, <Card>[
@@ -397,101 +396,99 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen>
     // фиксированные 960 лог. px.
     final double windowWidth = MediaQuery.sizeOf(context).width;
     final double cardWidth = AppSizes.studyCardWidth(windowWidth);
+    // Аудит v8 (G10): в низком окне панель оценок — один ряд (иначе две оценки
+    // уходят за нижнюю кромку карточки).
+    final bool compactPanel =
+        MediaQuery.sizeOf(context).height < AppSizes.compactPanelHeight;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        _cardAligned(
-          width: cardWidth,
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.md,
-            AppSpacing.sm,
-            AppSpacing.md,
-            0,
-          ),
-          child: SessionProgressStrip(
-            label: l10n.reviewCardCounter(displayIndex, state.total),
-            value: state.total == 0 ? 0 : state.ratedCount / state.total,
-            trailing: Text(
-              l10n.reviewRatedCount(state.ratedCount),
-              style: AppTypography.numeric(
-                context,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+        // Совсем низкое окно (844×390 физических при 150 %): строка прогресса
+        // отнимает у карточки высоту, которая нужна вопросу (аудит v8, G10).
+        if (MediaQuery.sizeOf(context).height >= 330)
+          _cardAligned(
+            width: cardWidth,
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              AppSpacing.sm,
+              AppSpacing.md,
+              0,
+            ),
+            child: SessionProgressStrip(
+              label: l10n.reviewCardCounter(displayIndex, state.total),
+              value: state.total == 0 ? 0 : state.ratedCount / state.total,
+              trailing: Text(
+                l10n.reviewRatedCount(state.ratedCount),
+                style: AppTypography.numeric(
+                  context,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
             ),
           ),
-        ),
         Expanded(
           child: Center(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.md,
+                AppSpacing.xs,
+                AppSpacing.md,
+                AppSpacing.xs,
+              ),
               child: SizedBox(
                 width: cardWidth,
-                child: Padding(
-                  padding: const EdgeInsets.only(top: AppSpacing.xs),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: <Widget>[
-                      Expanded(
-                        child: KeyedSubtree(
-                          key: const ValueKey<String>('review-card'),
-                          // Аудит v4 (A6): смена карточки — короткий fade + сдвиг
-                          // 8 px (220 мс), а не мгновенная подмена.
-                          child: AnimatedSwitcher(
-                            duration: AppMotion.duration(
-                              context,
-                              AppDurations.medium,
-                            ),
-                            switchInCurve: AppMotion.enter,
-                            switchOutCurve: AppMotion.enter,
-                            transitionBuilder:
-                                (Widget child, Animation<double> a) {
-                                  return FadeTransition(
-                                    opacity: a,
-                                    child: SlideTransition(
-                                      position: Tween<Offset>(
-                                        begin: const Offset(0, 0.015),
-                                        end: Offset.zero,
-                                      ).animate(a),
-                                      child: child,
-                                    ),
-                                  );
-                                },
-                            child: ReviewCardView(
-                              key: ValueKey<String>(
-                                'card-${state.current!.card.id}',
-                              ),
-                              scrollController: _cardScroll,
-                              front: state.current!.card.front,
-                              back: state.current!.card.back,
-                              card: state.current!.card,
-                              mediaBytes: _media.bytes,
-                              mediaMetadata: _media.metadata,
-                              onRetryMedia: () =>
-                                  _retryMedia(state.current!.card),
-                              revealed: state.revealed,
-                              onTap: _reveal,
-                              // G1: до раскрытия в карточке только одно действие
-                              // «Показать ответ»; оценок нет в дереве вообще.
-                              questionFooter: FilledButton(
-                                key: const ValueKey<String>('review-reveal'),
-                                onPressed: _reveal,
-                                style: AppButtons.cardAction(context),
-                                child: Text(l10n.reviewRevealAction),
-                              ),
-                              // G2/G9: после раскрытия — панель из четырёх
-                              // крупных оценок внутри карточки, с fade/slide.
-                              answerFooter: ReviewToolbar(
-                                key: const ValueKey<String>('review-toolbar'),
-                                preview: state.preview,
-                                enabled: !state.busy,
-                                onRating: (Rating rating) =>
-                                    unawaited(_rate(rating)),
-                              ),
-                            ),
-                          ),
+                // Карточка принимает высоту содержимого (не ниже минимума):
+                // Center даёт свободные ограничения, ReviewCardView сам
+                // ограничивает себя по высоте (аудит v8, G3/G8/G10).
+                child: KeyedSubtree(
+                  key: const ValueKey<String>('review-card'),
+                  // Аудит v4 (A6): смена карточки — короткий fade + сдвиг
+                  // 8 px (220 мс), а не мгновенная подмена.
+                  child: AnimatedSwitcher(
+                    duration: AppMotion.duration(context, AppDurations.medium),
+                    switchInCurve: AppMotion.enter,
+                    switchOutCurve: AppMotion.enter,
+                    transitionBuilder: (Widget child, Animation<double> a) {
+                      return FadeTransition(
+                        opacity: a,
+                        child: SlideTransition(
+                          position: Tween<Offset>(
+                            begin: const Offset(0, 0.015),
+                            end: Offset.zero,
+                          ).animate(a),
+                          child: child,
                         ),
+                      );
+                    },
+                    child: ReviewCardView(
+                      key: ValueKey<String>('card-${state.current!.card.id}'),
+                      scrollController: _cardScroll,
+                      front: state.current!.card.front,
+                      back: state.current!.card.back,
+                      card: state.current!.card,
+                      mediaBytes: _media.bytes,
+                      mediaMetadata: _media.metadata,
+                      onRetryMedia: () => _retryMedia(state.current!.card),
+                      revealed: state.revealed,
+                      onTap: _reveal,
+                      // G1: до раскрытия в карточке только одно действие
+                      // «Показать ответ»; оценок нет в дереве вообще.
+                      questionFooter: FilledButton(
+                        key: const ValueKey<String>('review-reveal'),
+                        onPressed: _reveal,
+                        style: AppButtons.cardAction(context),
+                        child: Text(l10n.reviewRevealAction),
                       ),
-                    ],
+                      // G2/G9: после раскрытия — панель из четырёх крупных
+                      // оценок внутри карточки, с fade/slide.
+                      answerFooter: ReviewToolbar(
+                        key: const ValueKey<String>('review-toolbar'),
+                        preview: state.preview,
+                        enabled: !state.busy,
+                        compact: compactPanel,
+                        onRating: (Rating rating) => unawaited(_rate(rating)),
+                      ),
+                    ),
                   ),
                 ),
               ),

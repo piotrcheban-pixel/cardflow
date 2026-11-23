@@ -49,10 +49,8 @@ abstract final class AppButtons {
         horizontal: AppSpacing.lg,
         vertical: AppSpacing.sm,
       ),
-      textStyle: Theme.of(context).textTheme.titleSmall?.copyWith(
-        fontSize: 17 * factor,
-        fontWeight: FontWeight.w600,
-      ),
+      textStyle: Theme.of(context).textTheme.titleSmall
+          ?.copyWith(fontSize: 17 * factor, fontWeight: FontWeight.w600),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.all(Radius.circular(AppRadii.input)),
       ),

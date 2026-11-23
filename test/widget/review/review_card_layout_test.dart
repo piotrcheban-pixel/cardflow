@@ -56,6 +56,13 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
+    // Фактор адаптива — как в проде от физического размера экрана.
+    AppAdaptive.debugOverride = logicalSize.width >= 3200
+        ? 1.45
+        : logicalSize.width >= 2400
+        ? 1.24
+        : 1.0;
+    addTearDown(() => AppAdaptive.debugOverride = null);
     await tester.pumpWidget(
       appWithRouter(
         overrides: overridesFor(cards()),
@@ -83,15 +90,19 @@ void main() {
         (card.width * card.height) / (window.width * window.height);
 
     expect(card.width, greaterThanOrEqualTo(840), reason: 'ширина карточки');
-    expect(card.height, greaterThanOrEqualTo(440), reason: 'высота карточки');
+    // Аудит v8: высота карточки — по содержимому (минимум 430 лог. px), поэтому
+    // порог «не полоска» проверяется по минимуму, а не по доле окна.
+    expect(card.height, greaterThanOrEqualTo(400), reason: 'высота карточки');
     expect(
       areaFraction,
-      greaterThanOrEqualTo(0.40),
+      greaterThanOrEqualTo(0.35),
       reason: 'карточка — главный объект, а не 17 % площади как до аудита',
     );
   });
 
-  testWidgets('D1: вопрос 30–38 px, ответ 22–28 px', (WidgetTester tester) async {
+  testWidgets('D1: вопрос 30–38 px, ответ 22–28 px', (
+    WidgetTester tester,
+  ) async {
     await pumpAt(tester, const Size(1280, 720));
 
     // Кегль измеряется по отрисованному абзацу: стиль приходит из
@@ -220,6 +231,7 @@ void main() {
   });
 
   // Аудит v7 (G3): карточка — не фиксированные 960, а ≥60 % ширины окна.
+  // Аудит v8: высота — по содержимому (не растягивается на всю область).
   for (final (String label, Size size) in <(String, Size)>[
     ('FullHD', const Size(1920, 1080)),
     ('2K', const Size(2560, 1440)),
@@ -237,8 +249,8 @@ void main() {
         greaterThanOrEqualTo(0.6),
         reason: '$label: карточка ${card.width} из ${size.width}',
       );
-      // Карточка — основной объект экрана, а не полоса.
-      expect(card.height / size.height, greaterThanOrEqualTo(0.5));
+      // Карточка крупная, но не белое поле на всю область (V8/G3).
+      expect(card.height / size.height, inInclusiveRange(0.25, 0.9));
       expect(tester.takeException(), isNull);
     });
   }

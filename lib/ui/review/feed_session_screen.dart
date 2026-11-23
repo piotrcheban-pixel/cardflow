@@ -425,7 +425,6 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
     if (context.canPop()) context.pop();
   }
 
-
   /// Повтор чтения медиа карточки после ошибки изображения (7.19).
   Future<void> _retryMedia(Card card) async {
     final SessionMedia updated = await reloadSessionMedia(ref, <Card>[
@@ -604,6 +603,7 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
             key: const ValueKey<String>('feed-toolbar'),
             preview: null,
             enabled: !state.busy,
+            compact: compactHeight,
             onRating: (Rating rating) => unawaited(_rate(rating)),
           ),
         _FeedBottomBar(

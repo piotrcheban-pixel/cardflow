@@ -226,10 +226,7 @@ void main() {
       await pumpDecks(tester, repository: repository);
       await tester.pumpAndSettle();
 
-      expect(
-        find.text('1 колода в работе'),
-        findsOneWidget,
-      );
+      expect(find.text('1 колода в работе'), findsOneWidget);
     });
 
     testWidgets('узкий экран 360×800: без переполнений, карточка читается', (
@@ -457,37 +454,32 @@ void main() {
       await scrollToDeck(tester, 'Испанский');
       // Аудит v4 (ACTIONS #20): долгое нажатие убрано — меню открывается
       // единственной кнопкой ⋮ карточки.
-      await tester.tap(
-        find.byKey(const ValueKey<String>('deck-menu-deck-1')),
-      );
+      await tester.tap(find.byKey(const ValueKey<String>('deck-menu-deck-1')));
       await tester.pumpAndSettle();
     }
 
-    testWidgets(
-      'меню ⋮: Переименовать / Экспорт / Архивировать / Удалить',
-      (WidgetTester tester) async {
-        final FakeDeckRepository repository = FakeDeckRepository(
-          summaries: <DeckSummary>[
-            makeSummary(id: 'deck-1', name: 'Испанский'),
-          ],
-        );
+    testWidgets('меню ⋮: Переименовать / Экспорт / Архивировать / Удалить', (
+      WidgetTester tester,
+    ) async {
+      final FakeDeckRepository repository = FakeDeckRepository(
+        summaries: <DeckSummary>[makeSummary(id: 'deck-1', name: 'Испанский')],
+      );
 
-        await pumpDecks(tester, repository: repository);
-        await tester.pumpAndSettle();
-        final AppLocalizations l10n = l10nOf(tester);
+      await pumpDecks(tester, repository: repository);
+      await tester.pumpAndSettle();
+      final AppLocalizations l10n = l10nOf(tester);
 
-        await openContextMenu(tester);
-        expect(find.text(l10n.deckRename), findsOneWidget);
-        expect(find.text(l10n.deckExport), findsOneWidget);
-        expect(
-          find.text(l10n.deckActionArchive),
-          findsOneWidget,
-          reason:
-              'Архив должен быть доступен не только свайпом (доступность, M11)',
-        );
-        expect(find.text(l10n.delete), findsOneWidget);
-      },
-    );
+      await openContextMenu(tester);
+      expect(find.text(l10n.deckRename), findsOneWidget);
+      expect(find.text(l10n.deckExport), findsOneWidget);
+      expect(
+        find.text(l10n.deckActionArchive),
+        findsOneWidget,
+        reason:
+            'Архив должен быть доступен не только свайпом (доступность, M11)',
+      );
+      expect(find.text(l10n.delete), findsOneWidget);
+    });
 
     testWidgets('архивирование из контекстного меню: undo возвращает колоду', (
       WidgetTester tester,
@@ -621,4 +613,3 @@ void main() {
     });
   });
 }
-

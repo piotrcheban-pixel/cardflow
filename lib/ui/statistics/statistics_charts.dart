@@ -158,11 +158,7 @@ class StatisticsBarChart extends StatelessWidget {
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: <Widget>[
-                            for (
-                              int index = 0;
-                              index < values.length;
-                              index++
-                            )
+                            for (int index = 0; index < values.length; index++)
                               Expanded(
                                 child: _BarColumn(
                                   index: index,
@@ -348,13 +344,14 @@ class _ChartLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
-    final TextStyle style = AppTypography.caption(
-      context,
-      color: emphasized ? scheme.primary : scheme.onSurfaceVariant,
-    ).copyWith(
-      fontWeight: emphasized ? FontWeight.w600 : FontWeight.w500,
-      letterSpacing: 0,
-    );
+    final TextStyle style =
+        AppTypography.caption(
+          context,
+          color: emphasized ? scheme.primary : scheme.onSurfaceVariant,
+        ).copyWith(
+          fontWeight: emphasized ? FontWeight.w600 : FontWeight.w500,
+          letterSpacing: 0,
+        );
     return FittedBox(
       fit: BoxFit.scaleDown,
       child: Text(
@@ -465,8 +462,7 @@ class _StatisticsHeatmapState extends State<StatisticsHeatmap> {
         (labelStyle.height ?? 1.35);
     final int columns = math.max(1, (days.length / 7).ceil());
     final double chartWidth = columns * _heatmapStep;
-    final double chartHeight =
-        labelHeight + AppSpacing.xxs + 7 * _heatmapStep;
+    final double chartHeight = labelHeight + AppSpacing.xxs + 7 * _heatmapStep;
     final Widget paint = CustomPaint(
       key: const ValueKey<String>('statistics-heatmap'),
       size: Size(chartWidth, chartHeight),

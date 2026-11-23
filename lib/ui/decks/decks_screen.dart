@@ -664,15 +664,14 @@ class _DecksToolbar extends ConsumerWidget {
             onSelected: (int index) => ref
                 .read(decksQueryProvider.notifier)
                 .setFilter(DeckFilter.values[index]),
-            itemBuilder: (BuildContext context) =>
-                <PopupMenuEntry<int>>[
-                  for (int index = 0; index < 4; index++)
-                    CheckedPopupMenuItem<int>(
-                      value: index,
-                      checked: query.filter == DeckFilter.values[index],
-                      child: Text(_filterLabel(l10n, counts, index)),
-                    ),
-                ],
+            itemBuilder: (BuildContext context) => <PopupMenuEntry<int>>[
+              for (int index = 0; index < 4; index++)
+                CheckedPopupMenuItem<int>(
+                  value: index,
+                  checked: query.filter == DeckFilter.values[index],
+                  child: Text(_filterLabel(l10n, counts, index)),
+                ),
+            ],
           )
         : IconButton(
             tooltip: l10n.decksFilterTooltip,
@@ -1230,9 +1229,8 @@ class _DeckTile extends StatelessWidget {
                           minimumSize: Size(
                             0,
                             AppSizes.buttonHeight *
-                                AppAdaptive.factorForContext(
-                                  context,
-                                ).clamp(1.0, 1.3),
+                                AppAdaptive.factorForContext(context)
+                                    .clamp(1.0, 1.3),
                           ),
                           padding: const EdgeInsets.symmetric(
                             horizontal: AppSpacing.sm,
@@ -1248,9 +1246,8 @@ class _DeckTile extends StatelessWidget {
                           minimumSize: Size(
                             0,
                             AppSizes.buttonHeight *
-                                AppAdaptive.factorForContext(
-                                  context,
-                                ).clamp(1.0, 1.3),
+                                AppAdaptive.factorForContext(context)
+                                    .clamp(1.0, 1.3),
                           ),
                           padding: const EdgeInsets.symmetric(
                             horizontal: AppSpacing.sm,
@@ -1452,4 +1449,3 @@ class _FirstLaunchEmptyState extends ConsumerWidget {
     );
   }
 }
-

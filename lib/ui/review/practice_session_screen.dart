@@ -197,7 +197,6 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen>
     if (context.canPop()) context.pop();
   }
 
-
   /// Повтор чтения медиа карточки после ошибки изображения (7.19).
   Future<void> _retryMedia(Card card) async {
     final SessionMedia updated = await reloadSessionMedia(ref, <Card>[
@@ -264,29 +263,38 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen>
     }
     final double windowWidth = MediaQuery.sizeOf(context).width;
     final double cardWidth = AppSizes.studyCardWidth(windowWidth);
+    final bool compactPanel =
+        MediaQuery.sizeOf(context).height < AppSizes.compactPanelHeight;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-            child: SizedBox(
-              width: cardWidth,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.md,
-                  AppSpacing.sm,
-                  AppSpacing.md,
-                  0,
-                ),
-                child: SessionProgressStrip(
-                  label: l10n.practiceRatedLabel(state.ratedCount, state.total),
-                  value: state.total == 0 ? 0 : state.ratedCount / state.total,
+        // Совсем низкое окно: прогресс отнимает высоту у карточки (G10).
+        if (MediaQuery.sizeOf(context).height >= 330)
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+              child: SizedBox(
+                width: cardWidth,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.md,
+                    AppSpacing.sm,
+                    AppSpacing.md,
+                    0,
+                  ),
+                  child: SessionProgressStrip(
+                    label: l10n.practiceRatedLabel(
+                      state.ratedCount,
+                      state.total,
+                    ),
+                    value: state.total == 0
+                        ? 0
+                        : state.ratedCount / state.total,
+                  ),
                 ),
               ),
             ),
           ),
-        ),
         Padding(
           padding: const EdgeInsets.fromLTRB(
             AppSpacing.md,
@@ -306,39 +314,42 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen>
         Expanded(
           child: Center(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.md,
+                AppSpacing.xs,
+                AppSpacing.md,
+                AppSpacing.xs,
+              ),
               child: SizedBox(
                 width: cardWidth,
-                child: Padding(
-                  padding: const EdgeInsets.only(top: AppSpacing.xs),
-                  child: KeyedSubtree(
-                    key: const ValueKey<String>('practice-card'),
-                    child: ReviewCardView(
-                      key: ValueKey<String>(state.current!.id),
-                      scrollController: _cardScroll,
-                      front: state.current!.front,
-                      back: state.current!.back,
-                      card: state.current!,
-                      mediaBytes: _media.bytes,
-                      mediaMetadata: _media.metadata,
-                      onRetryMedia: () => _retryMedia(state.current!),
-                      revealed: state.revealed,
-                      onTap: _reveal,
-                      // G1: оценок до раскрытия в дереве нет — только действие.
-                      questionFooter: FilledButton(
-                        key: const ValueKey<String>('practice-reveal'),
-                        onPressed: _reveal,
-                        style: AppButtons.cardAction(context),
-                        child: Text(l10n.reviewRevealAction),
-                      ),
-                      // Тренировка не меняет расписание: прогноза интервалов нет,
-                      // но кнопки оценок — те же крупные кнопки системы (G2).
-                      answerFooter: ReviewToolbar(
-                        key: const ValueKey<String>('practice-toolbar'),
-                        preview: null,
-                        enabled: !state.busy,
-                        onRating: (Rating rating) => unawaited(_rate(rating)),
-                      ),
+                child: KeyedSubtree(
+                  key: const ValueKey<String>('practice-card'),
+                  child: ReviewCardView(
+                    key: ValueKey<String>(state.current!.id),
+                    scrollController: _cardScroll,
+                    front: state.current!.front,
+                    back: state.current!.back,
+                    card: state.current!,
+                    mediaBytes: _media.bytes,
+                    mediaMetadata: _media.metadata,
+                    onRetryMedia: () => _retryMedia(state.current!),
+                    revealed: state.revealed,
+                    onTap: _reveal,
+                    // G1: оценок до раскрытия в дереве нет — только действие.
+                    questionFooter: FilledButton(
+                      key: const ValueKey<String>('practice-reveal'),
+                      onPressed: _reveal,
+                      style: AppButtons.cardAction(context),
+                      child: Text(l10n.reviewRevealAction),
+                    ),
+                    // Тренировка не меняет расписание: прогноза интервалов нет,
+                    // но кнопки оценок — те же крупные кнопки системы (G2).
+                    answerFooter: ReviewToolbar(
+                      key: const ValueKey<String>('practice-toolbar'),
+                      preview: null,
+                      enabled: !state.busy,
+                      compact: compactPanel,
+                      onRating: (Rating rating) => unawaited(_rate(rating)),
                     ),
                   ),
                 ),

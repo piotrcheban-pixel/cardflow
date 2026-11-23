@@ -69,10 +69,8 @@ abstract final class AppTheme {
       scheme: scheme,
       highContrast: highContrast,
     );
-    final TextTheme text = AppTypography.textTheme(scale: scale).apply(
-      bodyColor: resolved.onSurface,
-      displayColor: resolved.onSurface,
-    );
+    final TextTheme text = AppTypography.textTheme(scale: scale)
+        .apply(bodyColor: resolved.onSurface, displayColor: resolved.onSurface);
     // Контролы растут вместе с типографикой, но не больше чем в 1,3 раза:
     // иначе кнопки на 4K выглядят «толстыми» относительно текста.
     final double control = scale.clamp(1.0, 1.3);
@@ -327,9 +325,7 @@ abstract final class AppTheme {
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.all(Radius.circular(AppRadii.panel)),
         ),
-        titleTextStyle: text.titleLarge?.copyWith(
-          fontWeight: FontWeight.w600,
-        ),
+        titleTextStyle: text.titleLarge?.copyWith(fontWeight: FontWeight.w600),
         contentTextStyle: text.bodyLarge?.copyWith(
           color: resolved.onSurfaceVariant,
         ),
@@ -427,9 +423,7 @@ abstract final class AppTheme {
               borderRadius: BorderRadius.all(Radius.circular(AppRadii.control)),
             ),
           ),
-          minimumSize: WidgetStatePropertyAll<Size>(
-            Size(0, button),
-          ),
+          minimumSize: WidgetStatePropertyAll<Size>(Size(0, button)),
           padding: const WidgetStatePropertyAll<EdgeInsetsGeometry>(
             EdgeInsets.symmetric(horizontal: AppSpacing.sm),
           ),

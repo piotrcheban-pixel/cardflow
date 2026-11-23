@@ -236,7 +236,6 @@ class _MultipleChoiceScreenState extends ConsumerState<MultipleChoiceScreen> {
     if (confirmed && mounted && context.canPop()) context.pop();
   }
 
-
   KeyEventResult _handleKey(FocusNode node, KeyEvent event) {
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
     final LogicalKeyboardKey key = event.logicalKey;
@@ -445,8 +444,7 @@ class _MultipleChoiceScreenState extends ConsumerState<MultipleChoiceScreen> {
                                       selected:
                                           answered?.selectedIndex == index,
                                       state: _optionState(answered, set, index),
-                                      onPressed:
-                                          answered == null && !state.busy
+                                      onPressed: answered == null && !state.busy
                                           ? () => _select(index)
                                           : null,
                                     ),

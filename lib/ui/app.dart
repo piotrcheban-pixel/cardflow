@@ -180,7 +180,9 @@ class _CardFlowAppState extends ConsumerState<CardFlowApp>
         // вместо него: настройка доступности ОС продолжает работать.
         // Для линейных системных шкал (Windows/десктоп) пересчёт точный.
         final double probe = media.textScaler.scale(16);
-        final double systemFactor = probe.isFinite && probe > 0 ? probe / 16 : 1;
+        final double systemFactor = probe.isFinite && probe > 0
+            ? probe / 16
+            : 1;
         return MediaQuery(
           data: media.copyWith(
             textScaler: TextScaler.linear(systemFactor * settings.textScale),

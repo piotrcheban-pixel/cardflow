@@ -235,41 +235,50 @@ class _FeedCardViewState extends State<FeedCardView>
                         child: Stack(
                           children: <Widget>[
                             Positioned.fill(
-                              child: NotificationListener<ScrollMetricsNotification>(
-                                onNotification:
-                                    (ScrollMetricsNotification notification) {
-                                      final bool canScroll =
-                                          notification.metrics.maxScrollExtent >
-                                          0.5;
-                                      if (canScroll != _canScroll) {
-                                        WidgetsBinding.instance
-                                            .addPostFrameCallback((_) {
-                                              if (mounted &&
-                                                  canScroll != _canScroll) {
-                                                setState(
-                                                  () => _canScroll = canScroll,
-                                                );
-                                              }
-                                            });
-                                      }
-                                      return false;
-                                    },
-                                child: Scrollbar(
-                                  controller: _scroll,
-                                  thumbVisibility: _canScroll,
-                                  child: _FlipFace(
-                                    controller: _flip,
-                                    scroll: _scroll,
-                                    front: widget.front,
-                                    back: widget.back,
-                                    revealed: widget.revealed,
-                                    card: widget.card,
-                                    mediaBytes: widget.mediaBytes,
-                                    mediaMetadata: widget.mediaMetadata,
-                                    onRetryMedia: widget.onRetryMedia,
+                              child:
+                                  NotificationListener<
+                                    ScrollMetricsNotification
+                                  >(
+                                    onNotification:
+                                        (
+                                          ScrollMetricsNotification
+                                          notification,
+                                        ) {
+                                          final bool canScroll =
+                                              notification
+                                                  .metrics
+                                                  .maxScrollExtent >
+                                              0.5;
+                                          if (canScroll != _canScroll) {
+                                            WidgetsBinding.instance
+                                                .addPostFrameCallback((_) {
+                                                  if (mounted &&
+                                                      canScroll != _canScroll) {
+                                                    setState(
+                                                      () => _canScroll =
+                                                          canScroll,
+                                                    );
+                                                  }
+                                                });
+                                          }
+                                          return false;
+                                        },
+                                    child: Scrollbar(
+                                      controller: _scroll,
+                                      thumbVisibility: _canScroll,
+                                      child: _FlipFace(
+                                        controller: _flip,
+                                        scroll: _scroll,
+                                        front: widget.front,
+                                        back: widget.back,
+                                        revealed: widget.revealed,
+                                        card: widget.card,
+                                        mediaBytes: widget.mediaBytes,
+                                        mediaMetadata: widget.mediaMetadata,
+                                        onRetryMedia: widget.onRetryMedia,
+                                      ),
+                                    ),
                                   ),
-                                ),
-                              ),
                             ),
                             if (widget.rated)
                               const Positioned(
@@ -410,21 +419,18 @@ class _FlipFace extends StatelessWidget {
                               card: card!,
                               side: front,
                               revealed: true,
-                              faceKey: const ValueKey<String>(
-                                'feed-card-echo',
-                              ),
+                              faceKey: const ValueKey<String>('feed-card-echo'),
                               questionStyle: theme.textTheme.titleSmall
                                   ?.copyWith(
                                     fontSize: math.max(16, 18 * factor),
                                     height: 1.4,
                                     color: scheme.onSurfaceVariant,
                                   ),
-                              answerStyle: theme.textTheme.titleSmall
-                                  ?.copyWith(
-                                    fontSize: math.max(16, 18 * factor),
-                                    height: 1.4,
-                                    color: scheme.onSurfaceVariant,
-                                  ),
+                              answerStyle: theme.textTheme.titleSmall?.copyWith(
+                                fontSize: math.max(16, 18 * factor),
+                                height: 1.4,
+                                color: scheme.onSurfaceVariant,
+                              ),
                               mediaBytes: mediaBytes,
                               mediaMetadata: mediaMetadata,
                               onRetryMedia: onRetryMedia,
@@ -434,10 +440,7 @@ class _FlipFace extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(
                           vertical: AppSpacing.md,
                         ),
-                        child: Divider(
-                          height: 1,
-                          color: scheme.outlineVariant,
-                        ),
+                        child: Divider(height: 1, color: scheme.outlineVariant),
                       ),
                     ],
                     Align(

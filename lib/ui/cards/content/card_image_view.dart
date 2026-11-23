@@ -116,9 +116,8 @@ class _CardImageViewState extends State<CardImageView> {
     final ImageDimensions? dimensions = widget.bytes.isEmpty
         ? null
         : ImageDimensions.read(widget.bytes);
-    final double aspect = dimensions == null ||
-            dimensions.width <= 0 ||
-            dimensions.height <= 0
+    final double aspect =
+        dimensions == null || dimensions.width <= 0 || dimensions.height <= 0
         ? 16 / 9
         : dimensions.width / dimensions.height;
     final double maxWidth = widget.maxWidth > 0
@@ -180,12 +179,11 @@ class _CardImageViewState extends State<CardImageView> {
                                   : SizedBox.expand(child: child),
                             );
                           },
-                      errorBuilder:
-                          (
-                            BuildContext context,
-                            Object error,
-                            StackTrace? stack,
-                          ) => _ImageErrorState(onRetry: _retry),
+                      errorBuilder: (
+                        BuildContext context,
+                        Object error,
+                        StackTrace? stack,
+                      ) => _ImageErrorState(onRetry: _retry),
                     ),
                   ),
           ),
@@ -304,9 +302,7 @@ Future<void> showCardImageFullscreen(
                     children: <Widget>[
                       Positioned.fill(
                         child: InteractiveViewer(
-                          key: const ValueKey<String>(
-                            'card-image-fullscreen',
-                          ),
+                          key: const ValueKey<String>('card-image-fullscreen'),
                           minScale: 1,
                           maxScale: 5,
                           child: Center(

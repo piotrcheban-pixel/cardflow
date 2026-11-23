@@ -66,6 +66,13 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
+    // Фактор адаптива — как в проде от физического размера экрана.
+    AppAdaptive.debugOverride = size.width >= 3200
+        ? 1.45
+        : size.width >= 2400
+        ? 1.24
+        : 1.0;
+    addTearDown(() => AppAdaptive.debugOverride = null);
     final List<Card> source = deckCards ?? cards();
     await tester.pumpWidget(
       ProviderScope(
@@ -76,9 +83,8 @@ void main() {
           localizationsDelegates: ruLocalizationDelegates,
           theme: AppTheme.light(),
           builder: (BuildContext context, Widget? child) => MediaQuery(
-            data: MediaQuery.of(
-              context,
-            ).copyWith(textScaler: TextScaler.linear(textScale)),
+            data: MediaQuery.of(context)
+                .copyWith(textScaler: TextScaler.linear(textScale)),
             child: child!,
           ),
           home: ReviewSessionScreen(deckId: 'deck-1'),
@@ -174,8 +180,7 @@ void main() {
               )
               .first,
         );
-        final double rendered =
-            (label.text.style?.fontSize ?? 0) * scale;
+        final double rendered = (label.text.style?.fontSize ?? 0) * scale;
         expect(
           rendered,
           greaterThanOrEqualTo(16),
@@ -196,7 +201,7 @@ void main() {
     }
   });
 
-  group('G3: карточка ≥60 % ширины на 2K и FullHD', () {
+  group('G3: карточка ≥60 % ширины, высота — по содержимому', () {
     for (final (String label, Size size) in <(String, Size)>[
       ('2K 2560×1440', Size(2560, 1440)),
       ('FullHD 1920×1080', Size(1920, 1080)),
@@ -212,14 +217,51 @@ void main() {
           greaterThanOrEqualTo(0.6),
           reason: 'G3: карточка ${card.width} из ${size.width}',
         );
-        expect(card.height / size.height, greaterThanOrEqualTo(0.6));
+        // Аудит v8: карточка «обнимает» содержимое — она не растягивается на
+        // всю рабочую область (иначе 80 % строк оставались пустыми), но и не
+        // превращается в полоску.
+        expect(card.height / size.height, inInclusiveRange(0.25, 0.9));
         await reveal(tester);
         final Size answered = tester.getSize(
           find.byKey(const ValueKey<String>('review-card')),
         );
         expect(answered.width / size.width, greaterThanOrEqualTo(0.6));
+        expect(answered.height / size.height, inInclusiveRange(0.25, 0.9));
       });
     }
+
+    testWidgets('высота следует за содержимым (короткий < длинного)', (
+      WidgetTester tester,
+    ) async {
+      await pumpSession(tester, const Size(1920, 1080));
+      final double shortCard = tester
+          .getSize(find.byKey(const ValueKey<String>('review-card')))
+          .height;
+      final List<Card> longCards = <Card>[
+        makeCard(
+          id: 'long-1',
+          deckId: 'deck-1',
+          front: List<String>.filled(
+            14,
+            'Длинный вопрос карточки для проверки высоты по содержимому',
+          ).join(' '),
+          back: 'Ответ',
+          createdAt: DateTime.utc(2026, 11, 20),
+        ),
+      ];
+      // Новый экран: иначе State сохранится и останется прежняя карточка.
+      await tester.pumpWidget(const SizedBox());
+      await pumpSession(tester, const Size(1920, 1080), deckCards: longCards);
+      final double longCard = tester
+          .getSize(find.byKey(const ValueKey<String>('review-card')))
+          .height;
+      expect(
+        longCard,
+        greaterThan(shortCard),
+        reason:
+            'длинный вопрос занимает больше высоты ($longCard > $shortCard)',
+      );
+    });
   });
 
   group('G5: недоступные действия скрыты', () {
@@ -227,10 +269,7 @@ void main() {
       WidgetTester tester,
     ) async {
       await pumpSession(tester, const Size(1920, 1080));
-      expect(
-        find.byKey(const ValueKey<String>('review-undo')),
-        findsNothing,
-      );
+      expect(find.byKey(const ValueKey<String>('review-undo')), findsNothing);
       expect(
         find.byKey(const ValueKey<String>('review-keyboard-hints')),
         findsNothing,
@@ -294,10 +333,14 @@ void main() {
   });
 
   group('G10: узкие окна', () {
+    // 562×260 — живое окно 844×390 физических px при масштабе Windows 150 %:
+    // аудит v8 поймал здесь переполнение карточки и две недоступные оценки.
     for (final Size size in <Size>[
       Size(844, 390),
+      Size(562, 260),
       Size(390, 844),
       Size(800, 600),
+      Size(533, 400),
     ]) {
       testWidgets('${size.width.toInt()}×${size.height.toInt()}: без обрезки', (
         WidgetTester tester,
@@ -308,13 +351,25 @@ void main() {
         final Rect card = tester.getRect(
           find.byKey(const ValueKey<String>('review-card')),
         );
-        expect(card.height, greaterThanOrEqualTo(180));
+        expect(card.height, greaterThanOrEqualTo(120));
         await reveal(tester);
         expect(tester.takeException(), isNull);
-        expect(
-          find.byKey(const ValueKey<String>('review-rating-good')),
-          findsOneWidget,
+        // G10: все четыре оценки доступны и лежат внутри карточки.
+        final Rect cardAnswered = tester.getRect(
+          find.byKey(const ValueKey<String>('review-card')),
         );
+        for (final String name in <String>['again', 'hard', 'good', 'easy']) {
+          final Rect button = tester.getRect(
+            find.byKey(ValueKey<String>('review-rating-$name')),
+          );
+          expect(
+            button.bottom,
+            lessThanOrEqualTo(cardAnswered.bottom + 0.5),
+            reason: 'G10: «$name» выходит за нижнюю кромку карточки',
+          );
+          expect(button.top, greaterThanOrEqualTo(cardAnswered.top - 0.5));
+          expect(button.height, greaterThanOrEqualTo(55.5));
+        }
       });
     }
   });

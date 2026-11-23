@@ -79,7 +79,10 @@ void main() {
     final AppLocalizations l10n = l10nOf(tester);
     // Аудит v4 (V44): метрика переименована в «Начато», пояснение-сноска
     // удалено — метрики понятны без «костыля».
-    expect(find.byKey(const ValueKey<String>('deck-counters-note')), findsNothing);
+    expect(
+      find.byKey(const ValueKey<String>('deck-counters-note')),
+      findsNothing,
+    );
     expect(find.text(l10n.deckInProgressCount(0)), findsOneWidget);
   });
 

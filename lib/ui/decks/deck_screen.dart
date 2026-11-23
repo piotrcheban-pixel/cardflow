@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart' hide Card;
@@ -93,36 +95,17 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
     };
   }
 
-  /// Меню строки карточки: изменить или удалить (F5).
-  Future<void> _showCardMenu(BuildContext context, Card card) async {
+  /// Действие контекстного меню строки карточки (аудит v7, V7-16).
+  ///
+  /// Меню — popup у кнопки «⋮» (как у меню колоды в шапке), а не bottom sheet
+  /// внизу экрана: единый паттерн контекстных меню во всём приложении (G11).
+  Future<void> _onCardMenuAction(
+    BuildContext context,
+    Card card,
+    String action,
+  ) async {
     final AppLocalizations l10n = AppLocalizations.of(context);
-    final String? action = await showModalBottomSheet<String>(
-      context: context,
-      showDragHandle: true,
-      builder: (BuildContext sheetContext) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            ListTile(
-              key: const ValueKey<String>('deck-card-menu-edit'),
-              leading: const Icon(Icons.edit_outlined),
-              title: Text(l10n.deckCardEdit),
-              onTap: () => Navigator.of(sheetContext).pop('edit'),
-            ),
-            ListTile(
-              key: const ValueKey<String>('deck-card-menu-delete'),
-              leading: Icon(
-                Icons.delete_outline,
-                color: Theme.of(context).colorScheme.error,
-              ),
-              title: Text(l10n.deckCardDelete),
-              onTap: () => Navigator.of(sheetContext).pop('delete'),
-            ),
-          ],
-        ),
-      ),
-    );
-    if (!context.mounted || action == null) return;
+    if (!context.mounted) return;
     if (action == 'edit') {
       await _openCardForm(context, deckId: widget.deckId, cardId: card.id);
       return;
@@ -271,7 +254,9 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
         SliverToBoxAdapter(
           child: Center(
             child: ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: AppSizes.detailsWidth(context)),
+              constraints: BoxConstraints(
+                maxWidth: AppSizes.detailsWidth(context),
+              ),
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(
                   AppSpacing.md,
@@ -336,9 +321,9 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
                               maxLines: 1,
                               style: Theme.of(context).textTheme.bodySmall
                                   ?.copyWith(
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.onSurfaceVariant,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
                                   ),
                             ),
                           ],
@@ -385,9 +370,7 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
                             ),
                           ],
                           OutlinedButton.icon(
-                            key: const ValueKey<String>(
-                              'deck-add-card-button',
-                            ),
+                            key: const ValueKey<String>('deck-add-card-button'),
                             onPressed: () =>
                                 _openCardForm(context, deckId: deckId),
                             icon: const Icon(Icons.add),
@@ -440,7 +423,9 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
           SliverToBoxAdapter(
             child: Center(
               child: ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: AppSizes.detailsWidth(context)),
+                constraints: BoxConstraints(
+                  maxWidth: AppSizes.detailsWidth(context),
+                ),
                 child: Padding(
                   padding: const EdgeInsets.all(AppSpacing.md),
                   child: _DeckCardsEmpty(),
@@ -452,7 +437,9 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
           SliverToBoxAdapter(
             child: Center(
               child: ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: AppSizes.detailsWidth(context)),
+                constraints: BoxConstraints(
+                  maxWidth: AppSizes.detailsWidth(context),
+                ),
                 child: Padding(
                   padding: const EdgeInsets.all(AppSpacing.md),
                   child: AppEmptyState(
@@ -479,7 +466,9 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
                   const SizedBox(height: AppSpacing.xs),
               itemBuilder: (BuildContext context, int index) => Center(
                 child: ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: AppSizes.detailsWidth(context)),
+                  constraints: BoxConstraints(
+                    maxWidth: AppSizes.detailsWidth(context),
+                  ),
                   child: Row(
                     children: <Widget>[
                       Expanded(
@@ -492,14 +481,41 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
                           ),
                         ),
                       ),
-                      IconButton(
+                      PopupMenuButton<String>(
                         key: ValueKey<String>(
                           'deck-card-menu-${visibleCards[index].id}',
                         ),
                         tooltip: l10n.deckCardMenuTooltip,
                         icon: const Icon(Icons.more_vert, size: 18),
-                        onPressed: () =>
-                            _showCardMenu(context, visibleCards[index]),
+                        onSelected: (String action) => unawaited(
+                          _onCardMenuAction(
+                            context,
+                            visibleCards[index],
+                            action,
+                          ),
+                        ),
+                        itemBuilder: (BuildContext menuContext) =>
+                            <PopupMenuEntry<String>>[
+                              PopupMenuItem<String>(
+                                key: const ValueKey<String>(
+                                  'deck-card-menu-edit',
+                                ),
+                                value: 'edit',
+                                child: Text(l10n.deckCardEdit),
+                              ),
+                              PopupMenuItem<String>(
+                                key: const ValueKey<String>(
+                                  'deck-card-menu-delete',
+                                ),
+                                value: 'delete',
+                                child: Text(
+                                  l10n.deckCardDelete,
+                                  style: TextStyle(
+                                    color: Theme.of(context).colorScheme.error,
+                                  ),
+                                ),
+                              ),
+                            ],
                       ),
                     ],
                   ),
@@ -1079,5 +1095,3 @@ class _DeckErrorState extends StatelessWidget {
     );
   }
 }
-
-

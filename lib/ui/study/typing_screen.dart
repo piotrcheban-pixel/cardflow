@@ -262,7 +262,6 @@ class _TypingScreenState extends ConsumerState<TypingScreen> {
     if (confirmed && mounted && context.canPop()) context.pop();
   }
 
-
   /// Повтор чтения медиа карточки после ошибки изображения (7.19).
   Future<void> _retryMedia(Card card) async {
     final SessionMedia updated = await reloadSessionMedia(ref, <Card>[

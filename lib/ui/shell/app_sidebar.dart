@@ -313,7 +313,11 @@ class _BrandMark extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadii.control),
       ),
       alignment: Alignment.center,
-      child: Icon(Icons.style_rounded, size: AppSizes.icon, color: scheme.onPrimary),
+      child: Icon(
+        Icons.style_rounded,
+        size: AppSizes.icon,
+        color: scheme.onPrimary,
+      ),
     );
   }
 }
@@ -559,4 +563,3 @@ class _RailItem extends StatelessWidget {
     );
   }
 }
-

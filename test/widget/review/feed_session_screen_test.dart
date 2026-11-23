@@ -885,4 +885,3 @@ void main() {
     expect(find.text(l10n.reviewDailyLimitTitle), findsNothing);
   });
 }
-

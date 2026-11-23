@@ -91,10 +91,8 @@ abstract final class AppTypography {
 
   /// Стиль крупной цифры KPI (30/38, tabular).
   static TextStyle kpi(BuildContext context) =>
-      Theme.of(context).textTheme.displayMedium!.copyWith(
-        fontFeatures: tabularFigures,
-        fontWeight: FontWeight.w600,
-      );
+      Theme.of(context).textTheme.displayMedium!
+          .copyWith(fontFeatures: tabularFigures, fontWeight: FontWeight.w600);
 
   /// Крупная цифра KPI 38 px (статистика).
   static TextStyle kpiLarge(BuildContext context) =>
@@ -104,11 +102,8 @@ abstract final class AppTypography {
   ///
   /// Аудит v4 (V40): кеглей меньше 13 в продукте больше нет.
   static TextStyle caption(BuildContext context, {Color? color}) =>
-      Theme.of(context).textTheme.labelSmall!.copyWith(
-        height: 1.35,
-        letterSpacing: 0.2,
-        color: color,
-      );
+      Theme.of(context).textTheme.labelSmall!
+          .copyWith(height: 1.35, letterSpacing: 0.2, color: color);
 
   /// Стиль мелкой подписи-надзаголовка (13/18, uppercase, 0.05em).
   static TextStyle overline(BuildContext context, {Color? color}) =>
@@ -128,7 +123,6 @@ abstract final class AppTypography {
       );
 
   /// Адаптивный множитель текущего окна (тема уже учитывает его).
-  static double _scaleOf(BuildContext context) => AppAdaptive.factorForContext(
-    context,
-  );
+  static double _scaleOf(BuildContext context) =>
+      AppAdaptive.factorForContext(context);
 }

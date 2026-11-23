@@ -127,9 +127,7 @@ void main() {
         revealed: false,
         faceKey: const ValueKey<String>('face'),
         mediaBytes: <String, Uint8List>{'media-1': tall},
-        mediaMetadata: const <String, MediaMetadata>{
-          'media-1': photoMetadata,
-        },
+        mediaMetadata: const <String, MediaMetadata>{'media-1': photoMetadata},
         imageMaxHeight: 400,
         imageMaxWidth: 900,
       ),

@@ -331,8 +331,7 @@ abstract final class AppColors {
   static Color dueForeground(ColorScheme scheme) => scheme.onPrimaryFixed;
 
   /// Фон статуса «всё повторено».
-  static Color readyBackground(ColorScheme scheme) =>
-      scheme.secondaryContainer;
+  static Color readyBackground(ColorScheme scheme) => scheme.secondaryContainer;
 
   /// Текст статуса «всё повторено».
   static Color readyForeground(ColorScheme scheme) =>
@@ -540,6 +539,17 @@ abstract final class AppSizes {
 
   /// Высота главного действия карточки «Показать ответ» (G1: ≥56).
   static const double revealButtonHeight = 56;
+
+  /// Минимальная высота карточки сессии, базовый уровень (× адаптивный множитель).
+  ///
+  /// Аудит v8 (G3/G8): карточка больше не растягивается на всю рабочую область —
+  /// короткий вопрос не «висит» в белом поле. Карточка принимает высоту
+  /// содержимого, но не ниже этого минимума (на 2K это ~570 лог. px, 62 %
+  /// рабочей области живого окна 1707×940).
+  static const double studyCardMinHeight = 430;
+
+  /// Порог «низкого окна» для компактной панели оценок в один ряд.
+  static const double compactPanelHeight = 430;
 
   /// Размер иконки в навигации (шкала 16/20/24, аудит v4 V39).
   static const double navIcon = 20;

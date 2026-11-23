@@ -257,9 +257,7 @@ class _StatisticsContent extends StatelessWidget {
                         height: AppSpacing.sm,
                         decoration: BoxDecoration(
                           color: scheme.primary.withValues(alpha: alpha),
-                          borderRadius: BorderRadius.circular(
-                            AppRadii.xs / 2,
-                          ),
+                          borderRadius: BorderRadius.circular(AppRadii.xs / 2),
                         ),
                       ),
                     ),
@@ -596,10 +594,7 @@ class _WeakTopicRow extends StatelessWidget {
                     l10n.statisticsRetentionValue(
                       (topic.errorRate * 100).round(),
                     ),
-                    style: AppTypography.numeric(
-                      context,
-                      color: percentColor,
-                    ),
+                    style: AppTypography.numeric(context, color: percentColor),
                   ),
                   const SizedBox(height: AppSpacing.xxs),
                   Text(
