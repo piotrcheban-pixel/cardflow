@@ -187,7 +187,13 @@ class _FeedCardViewState extends State<FeedCardView>
           constraints.maxWidth,
           AppSizes.studyCardMaxWidth,
         );
-        final double height = constraints.maxHeight;
+        // Аудит v9 (G3/G8): карточка ленты того же размера, что «Классика»,
+        // — не растягивается на всю область (иначе до 45 % высоты — белое поле).
+        final double factor = AppAdaptive.factorForContext(context);
+        final double height = math.min(
+          constraints.maxHeight,
+          AppSizes.studyCardMinHeight * factor,
+        );
         _width = width;
         return AnimatedBuilder(
           animation: _swipe,
@@ -384,103 +390,138 @@ class _FlipFace extends StatelessWidget {
               key: const ValueKey<String>('feed-card-flip-transform'),
               alignment: Alignment.center,
               transform: transform,
-              child: SingleChildScrollView(
-                controller: scroll,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.xxl,
-                  vertical: AppSpacing.xl,
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: <Widget>[
-                    // Аудит v4 (V22) + v5 (V5-11): оборот сохраняет вопрос-эхо,
-                    // как в «Классике», — контекст не теряется после переворота.
-                    if (showBack) ...<Widget>[
-                      Align(
-                        alignment: AlignmentDirectional.centerStart,
-                        child: Text(
-                          l10n.reviewQuestionLabel.toUpperCase(),
-                          style: AppTypography.overline(context),
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.xs),
-                      card == null
-                          ? Text(
-                              front,
-                              textAlign: TextAlign.center,
-                              style: theme.textTheme.titleSmall?.copyWith(
-                                fontSize: math.max(16, 18 * factor),
-                                height: 1.4,
-                                color: scheme.onSurfaceVariant,
+              // Аудит v9 (G3/G8): свободная высота карточки распределяется
+              // между элементами (spaceEvenly), а не собирается в одну сплошную
+              // белую полосу посередине.
+              child: LayoutBuilder(
+                builder: (BuildContext context, BoxConstraints constraints) {
+                  const EdgeInsets padding = EdgeInsets.symmetric(
+                    horizontal: AppSpacing.xxl,
+                    vertical: AppSpacing.xl,
+                  );
+                  final double minContentHeight = math.max(
+                    0,
+                    constraints.maxHeight - padding.vertical,
+                  );
+                  return SingleChildScrollView(
+                    controller: scroll,
+                    padding: padding,
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(minHeight: minContentHeight),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: <Widget>[
+                          // Аудит v9 (G11): надзаголовок стороны виден и на
+                          // лицевой стороне — как в карточке «Классики», и
+                          // делит пустоту на две части вместо одной (G3/G8).
+                          if (!showBack)
+                            Align(
+                              alignment: AlignmentDirectional.centerStart,
+                              child: Text(
+                                l10n.reviewQuestionLabel.toUpperCase(),
+                                style: AppTypography.overline(context),
                               ),
-                            )
-                          : CardContentView(
-                              card: card!,
-                              side: front,
-                              revealed: true,
-                              faceKey: const ValueKey<String>('feed-card-echo'),
-                              questionStyle: theme.textTheme.titleSmall
-                                  ?.copyWith(
-                                    fontSize: math.max(16, 18 * factor),
-                                    height: 1.4,
-                                    color: scheme.onSurfaceVariant,
-                                  ),
-                              answerStyle: theme.textTheme.titleSmall?.copyWith(
-                                fontSize: math.max(16, 18 * factor),
-                                height: 1.4,
-                                color: scheme.onSurfaceVariant,
-                              ),
-                              mediaBytes: mediaBytes,
-                              mediaMetadata: mediaMetadata,
-                              onRetryMedia: onRetryMedia,
-                              showMedia: false,
                             ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: AppSpacing.md,
-                        ),
-                        child: Divider(height: 1, color: scheme.outlineVariant),
-                      ),
-                    ],
-                    Align(
-                      alignment: AlignmentDirectional.centerStart,
-                      child: Text(
-                        (showBack
-                                ? l10n.reviewAnswerLabel
-                                : l10n.reviewQuestionLabel)
-                            .toUpperCase(),
-                        style: AppTypography.overline(
-                          context,
-                          color: showBack
-                              ? scheme.primary
-                              : scheme.onSurfaceVariant,
-                        ),
+                          // Аудит v4 (V22) + v5 (V5-11): оборот сохраняет вопрос-эхо,
+                          // как в «Классике», — контекст не теряется после переворота.
+                          if (showBack) ...<Widget>[
+                            Align(
+                              alignment: AlignmentDirectional.centerStart,
+                              child: Text(
+                                l10n.reviewQuestionLabel.toUpperCase(),
+                                style: AppTypography.overline(context),
+                              ),
+                            ),
+                            const SizedBox(height: AppSpacing.xs),
+                            card == null
+                                ? Text(
+                                    front,
+                                    textAlign: TextAlign.center,
+                                    style: theme.textTheme.titleSmall?.copyWith(
+                                      fontSize: math.max(16, 18 * factor),
+                                      height: 1.4,
+                                      color: scheme.onSurfaceVariant,
+                                    ),
+                                  )
+                                : CardContentView(
+                                    card: card!,
+                                    side: front,
+                                    revealed: true,
+                                    faceKey: const ValueKey<String>(
+                                      'feed-card-echo',
+                                    ),
+                                    questionStyle: theme.textTheme.titleSmall
+                                        ?.copyWith(
+                                          fontSize: math.max(16, 18 * factor),
+                                          height: 1.4,
+                                          color: scheme.onSurfaceVariant,
+                                        ),
+                                    answerStyle: theme.textTheme.titleSmall
+                                        ?.copyWith(
+                                          fontSize: math.max(16, 18 * factor),
+                                          height: 1.4,
+                                          color: scheme.onSurfaceVariant,
+                                        ),
+                                    mediaBytes: mediaBytes,
+                                    mediaMetadata: mediaMetadata,
+                                    onRetryMedia: onRetryMedia,
+                                    showMedia: false,
+                                  ),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: AppSpacing.md,
+                              ),
+                              child: Divider(
+                                height: 1,
+                                color: scheme.outlineVariant,
+                              ),
+                            ),
+                          ],
+                          Align(
+                            alignment: AlignmentDirectional.centerStart,
+                            child: Text(
+                              (showBack
+                                      ? l10n.reviewAnswerLabel
+                                      : l10n.reviewQuestionLabel)
+                                  .toUpperCase(),
+                              style: AppTypography.overline(
+                                context,
+                                color: showBack
+                                    ? scheme.primary
+                                    : scheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          card == null
+                              ? Text(
+                                  showBack ? back : front,
+                                  key: const ValueKey<String>('feed-card-face'),
+                                  textAlign: TextAlign.center,
+                                  style: showBack ? answerStyle : questionStyle,
+                                )
+                              : CardContentView(
+                                  card: card!,
+                                  side: showBack ? back : front,
+                                  revealed: showBack,
+                                  faceKey: const ValueKey<String>(
+                                    'feed-card-face',
+                                  ),
+                                  questionStyle: questionStyle,
+                                  answerStyle: answerStyle,
+                                  mediaBytes: mediaBytes,
+                                  mediaMetadata: mediaMetadata,
+                                  onRetryMedia: onRetryMedia,
+                                  imageMaxHeight: 340,
+                                  imageMaxWidth: 760,
+                                ),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: AppSpacing.sm),
-                    card == null
-                        ? Text(
-                            showBack ? back : front,
-                            key: const ValueKey<String>('feed-card-face'),
-                            textAlign: TextAlign.center,
-                            style: showBack ? answerStyle : questionStyle,
-                          )
-                        : CardContentView(
-                            card: card!,
-                            side: showBack ? back : front,
-                            revealed: showBack,
-                            faceKey: const ValueKey<String>('feed-card-face'),
-                            questionStyle: questionStyle,
-                            answerStyle: answerStyle,
-                            mediaBytes: mediaBytes,
-                            mediaMetadata: mediaMetadata,
-                            onRetryMedia: onRetryMedia,
-                            imageMaxHeight: 340,
-                            imageMaxWidth: 760,
-                          ),
-                  ],
-                ),
+                  );
+                },
               ),
             ),
           );

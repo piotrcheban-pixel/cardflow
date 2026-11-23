@@ -572,7 +572,11 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
         // оценки, ни клавиатурных эквивалентов для видимых действий.
         // Аудит v4 (V25): одновременно с подсказкой панели оценок эта строка не
         // показывается — одна подсказка на состояние.
-        if (state.current?.revealed ?? false)
+        // Подсказка о свайпах дублировала панель оценок (G5) и вместе с ней
+        // отнимала у карточки место на низком окне (G10) — только одна строка
+        // подсказки и только пока панели нет.
+        if (!(state.current?.revealed ?? false) &&
+            MediaQuery.sizeOf(context).height >= 330)
           Padding(
             padding: const EdgeInsets.fromLTRB(
               AppSpacing.md,
@@ -582,8 +586,10 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
             ),
             child: Center(
               child: ConstrainedBox(
-                constraints: const BoxConstraints(
-                  maxWidth: AppSizes.studyCardMaxWidth,
+                constraints: BoxConstraints(
+                  maxWidth: AppSizes.studyCardWidth(
+                    MediaQuery.sizeOf(context).width,
+                  ),
                 ),
                 child: Text(
                   l10n.feedRateHint,
@@ -606,18 +612,21 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
             compact: compactHeight,
             onRating: (Rating rating) => unawaited(_rate(rating)),
           ),
-        _FeedBottomBar(
-          compact: compactHeight,
-          deckName: _deck?.name,
-          deckCount: _deckCount,
-          position: state.index + 1,
-          total: state.total,
-          intervalSeconds: _autoAdvanceInterval.inSeconds,
-          paused: _autoAdvancePaused,
-          onIntervalChanged: _setAutoAdvance,
-          onTogglePause: _togglePause,
-          l10n: l10n,
-        ),
+        // Совсем низкое окно: нижняя панель ленты отнимает всю высоту у
+        // карточки (аудит v9, G10 — карточка схлопывалась в 0).
+        if (MediaQuery.sizeOf(context).height >= 330)
+          _FeedBottomBar(
+            compact: compactHeight,
+            deckName: _deck?.name,
+            deckCount: _deckCount,
+            position: state.index + 1,
+            total: state.total,
+            intervalSeconds: _autoAdvanceInterval.inSeconds,
+            paused: _autoAdvancePaused,
+            onIntervalChanged: _setAutoAdvance,
+            onTogglePause: _togglePause,
+            l10n: l10n,
+          ),
       ],
     );
   }

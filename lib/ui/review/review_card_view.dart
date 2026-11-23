@@ -277,7 +277,7 @@ class _ReviewCardViewState extends State<ReviewCardView>
     return Column(
       // Свободное место делится между надзаголовком, вопросом и действием —
       // вместо одной сплошной белой полосы (аудит v8, G3/G8).
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
@@ -363,7 +363,7 @@ class _ReviewCardViewState extends State<ReviewCardView>
     );
     final bool occlusion = widget.card?.occlusionJson != null;
     return Column(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
