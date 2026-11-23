@@ -396,9 +396,12 @@ void main() {
       find.byKey(const ValueKey('card-form-question-image-0')),
       findsOneWidget,
     );
-    await tester.ensureVisible(
-      find.byKey(const ValueKey('card-form-remove-question-0')),
-    );
+    // Аудит v4: «Удалить изображение» — пункт меню ⋮ у изображения.
+    final more = find.byKey(const ValueKey('card-form-more-question-0'));
+    await tester.ensureVisible(more);
+    await tester.tap(more);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
     await tester.tap(find.byKey(const ValueKey('card-form-remove-question-0')));
     await tester.pumpAndSettle();
     expect(

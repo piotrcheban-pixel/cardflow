@@ -243,21 +243,27 @@ void main() {
       expect(find.byType(DeckScreen), findsOneWidget);
     });
 
-    testWidgets('сессия → «домой» → колоды (не больше 2 действий, N3)', (
+    testWidgets('сессия → «Выйти» → колода → «Назад» → колоды (2 действия)', (
       WidgetTester tester,
     ) async {
       await pumpApp(tester);
       await openSession(tester);
 
-      await tester.tap(find.byKey(const ValueKey<String>('review-home')));
+      // Аудит v4 (V11): выход из сессии один — «×» → подтверждение «Выйти».
+      // Кнопка «домой», дублировавшая «×», удалена: путь к главному меню —
+      // «Выйти» (колода) → «Назад» (колоды), два действия.
+      await tester.tap(find.byKey(const ValueKey<String>('review-close')));
       await tester.pumpAndSettle();
-      // Первое действие — кнопка «домой», второе — подтверждение выхода.
       await tester.tap(
         find.byKey(const ValueKey<String>('review-exit-confirm')),
       );
       await tester.pumpAndSettle();
-      expect(find.byType(DecksScreen), findsOneWidget);
+      expect(find.byType(DeckScreen), findsOneWidget);
       expect(find.byType(ReviewSessionScreen), findsNothing);
+
+      await tester.tap(find.byType(BackButton));
+      await tester.pumpAndSettle();
+      expect(find.byType(DecksScreen), findsOneWidget);
     });
 
     testWidgets('завершённая сессия: «×» закрывает без диалога (N7)', (
@@ -284,7 +290,7 @@ void main() {
       expect(find.byType(DeckScreen), findsOneWidget);
     });
 
-    testWidgets('тренировка: Esc и кнопка «домой» работают', (
+    testWidgets('тренировка: Esc и единственный выход «×» работают', (
       WidgetTester tester,
     ) async {
       await pumpApp(tester);
@@ -302,13 +308,14 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byKey(const ValueKey<String>('review-home')));
+      // Выход один: «×» с подтверждением (кнопка «домой» удалена — V11).
+      await tester.tap(find.byKey(const ValueKey<String>('review-close')));
       await tester.pumpAndSettle();
       await tester.tap(
         find.byKey(const ValueKey<String>('review-exit-confirm')),
       );
       await tester.pumpAndSettle();
-      expect(find.byType(DecksScreen), findsOneWidget);
+      expect(find.byType(DeckScreen), findsOneWidget);
     });
   });
 
@@ -317,9 +324,9 @@ void main() {
       WidgetTester tester,
     ) async {
       await pumpApp(tester);
-      await tester.tap(
-        find.byKey(const ValueKey<String>('decks-generate-action')),
-      );
+      // Аудит v4 (V17): ✨ в шапке колод удалена — вход в генерацию один,
+      // пункт «ИИ-генерация» в боковой панели.
+      await tester.tap(find.text(l10n(tester).navAi).first);
       await tester.pumpAndSettle();
       expect(find.byType(GenerationScreen), findsOneWidget);
 
@@ -341,9 +348,7 @@ void main() {
       WidgetTester tester,
     ) async {
       await pumpApp(tester);
-      await tester.tap(
-        find.byKey(const ValueKey<String>('decks-generate-action')),
-      );
+      await tester.tap(find.text(l10n(tester).navAi).first);
       await tester.pumpAndSettle();
       await pressEsc(tester);
       expect(find.byType(GenerationScreen), findsNothing);
@@ -378,8 +383,12 @@ void main() {
     ) async {
       await pumpApp(tester);
       await openDeck(tester);
+      // Аудит v4 (V10): «+» из AppBar удалён — добавление карточки живёт
+      // одной кнопкой в строке списка.
       await tester.tap(
-        find.byKey(const ValueKey<String>('deck-add-card')).hitTestable(),
+        find
+            .byKey(const ValueKey<String>('deck-add-card-button'))
+            .hitTestable(),
       );
       await tester.pumpAndSettle();
       expect(find.byType(CardFormScreen), findsOneWidget);
@@ -422,9 +431,7 @@ void main() {
       WidgetTester tester,
     ) async {
       await pumpApp(tester);
-      await tester.tap(
-        find.byKey(const ValueKey<String>('decks-generate-action')),
-      );
+      await tester.tap(find.text(l10n(tester).navAi).first);
       await tester.pumpAndSettle();
       await tester.enterText(
         find.byKey(const ValueKey<String>('generation-wishes')),
@@ -453,3 +460,4 @@ void main() {
     });
   });
 }
+

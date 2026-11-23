@@ -358,7 +358,7 @@ void main() {
       expect(find.byType(ReviewSessionScreen), findsNothing);
     });
 
-    testWidgets('FAB «Добавить» открывает форму новой карточки', (
+    testWidgets('кнопка «Добавить карточку» открывает форму', (
       WidgetTester tester,
     ) async {
       final FakeDeckRepository repository = FakeDeckRepository(
@@ -369,7 +369,10 @@ void main() {
       await tester.pumpAndSettle();
       final AppLocalizations l10n = l10nOf(tester);
 
-      await tester.tap(find.byTooltip(l10n.deckAddCard));
+      // Аудит v4 (V10): «+» из AppBar удалён, действие одно — в строке списка.
+      await tester.tap(
+        find.byKey(const ValueKey<String>('deck-add-card-button')),
+      );
       await tester.pumpAndSettle();
 
       expect(find.byType(CardFormScreen), findsOneWidget);
@@ -957,3 +960,4 @@ void main() {
     );
   });
 }
+

@@ -149,7 +149,9 @@ void main() {
       await tester.pumpAndSettle();
       final AppLocalizations l10n = l10nOf(tester);
 
-      await tester.tap(find.byTooltip(l10n.shellOpenSettingsTooltip));
+      // Аудит v4 (V17): шестерёнка из шапки удалена — в «Настройки» ведёт
+      // единственный путь: пункт постоянной навигации.
+      await tester.tap(find.byTooltip(l10n.navSettings).first);
       await tester.pumpAndSettle();
 
       expect(find.byType(SettingsScreen), findsOneWidget);

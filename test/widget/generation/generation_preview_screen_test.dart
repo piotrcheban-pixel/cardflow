@@ -166,7 +166,7 @@ void main() {
     final l10n = l10nOf(tester);
     expect(find.text(l10n.generationPreviewTitle), findsOneWidget);
     expect(find.text('Первый вопрос'), findsOneWidget);
-    expect(find.text('Второй вопрос'), findsOneWidget);
+    // Сводка и счётчик выбора — в заголовке списка (пока он на экране).
     expect(find.text(l10n.generationPreviewSelected(2, 2)), findsOneWidget);
     expect(find.text(l10n.generationDuplicatesRemoved(2)), findsOneWidget);
     expect(find.text(l10n.generationTokensUsed(42)), findsOneWidget);
@@ -178,17 +178,38 @@ void main() {
       find.byKey(const ValueKey<String>('generation-preview-import-selected')),
       findsOneWidget,
     );
+    // Второй карточки может не быть в первом экране — прокручиваем список.
+    await tester.scrollUntilVisible(
+      find.text('Второй вопрос'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Второй вопрос'), findsOneWidget);
   });
 
   testWidgets('снятие чекбокса: счётчик и импорт только выбранных', (
     tester,
   ) async {
     await pumpPreview(tester, resultWith());
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey<String>('generation-preview-checkbox-1')),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    // Прокручиваем ещё немного: карточка не должна оказаться под нижней панелью.
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -120));
+    await tester.pumpAndSettle();
     await tester.tap(
       find.byKey(const ValueKey<String>('generation-preview-checkbox-1')),
     );
     await tester.pump();
     final l10n = l10nOf(tester);
+    // Счётчик выбора — в заголовке списка; после прокрутки возвращаемся к нему.
+    await tester.scrollUntilVisible(
+      find.text(l10n.generationPreviewSelected(1, 2)),
+      -300,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text(l10n.generationPreviewSelected(1, 2)), findsOneWidget);
 
     await tester.tap(

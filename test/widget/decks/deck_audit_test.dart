@@ -69,15 +69,18 @@ void main() {
     );
   });
 
-  testWidgets('F10: пояснение к счётчикам колоды', (WidgetTester tester) async {
+  testWidgets('F10/V44: счётчики самодостаточны, сноски нет', (
+    WidgetTester tester,
+  ) async {
     await pumpDeckScreen(
       tester,
       cards: <Card>[makeCard(id: 'card-1', deckId: 'deck-1', front: 'Вопрос')],
     );
-    expect(
-      find.byKey(const ValueKey<String>('deck-counters-note')),
-      findsOneWidget,
-    );
+    final AppLocalizations l10n = l10nOf(tester);
+    // Аудит v4 (V44): метрика переименована в «Начато», пояснение-сноска
+    // удалено — метрики понятны без «костыля».
+    expect(find.byKey(const ValueKey<String>('deck-counters-note')), findsNothing);
+    expect(find.text(l10n.deckInProgressCount(0)), findsOneWidget);
   });
 
   testWidgets('N8: предупреждение о дневном лимите видно до выбора режима', (

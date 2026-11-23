@@ -69,16 +69,18 @@ void main() {
     ];
   }
 
-  testWidgets('«Колоды» → Split-меню → «Сгенерировать карточки» → экран', (
+  testWidgets('«Колоды» → «ИИ-генерация» в панели → экран', (
     tester,
   ) async {
+    // Аудит v4 (V17): ✨ из шапки «Колод» удалена — единственный глобальный
+    // вход в генерацию — пункт «ИИ-генерация» постоянной навигации.
     await tester.pumpWidget(
-      appWithRouter(overrides: overrides(), routes: routes()),
+      appWithAppRouter(overrides: overrides(), initialLocation: '/'),
     );
     await tester.pumpAndSettle();
     final l10n = l10nOf(tester);
 
-    await tester.tap(find.byTooltip(l10n.deckGenerateTooltip));
+    await tester.tap(find.byTooltip(l10n.navAi).first);
     await tester.pumpAndSettle();
 
     expect(find.text(l10n.generationPageTitle), findsOneWidget);

@@ -677,15 +677,13 @@ void main() {
     expect(find.text('Первый ответ'), findsOneWidget);
   });
 
-  testWidgets('«Почему?» неактивна без source_excerpt', (
+  testWidgets('«Почему?» скрыта без source_excerpt (аудит v4)', (
     WidgetTester tester,
   ) async {
     await pumpFeed(tester, overrides: overridesFor(twoCards()));
 
-    final IconButton why = tester.widget<IconButton>(
-      find.byKey(const ValueKey<String>('review-why')),
-    );
-    expect(why.onPressed, isNull);
+    // Аудит v4 (ACTIONS #18): кнопки нет, а не disabled-иконка.
+    expect(find.byKey(const ValueKey<String>('review-why')), findsNothing);
   });
 
   testWidgets('выход: диалог, «Продолжить» остаётся в ленте', (
@@ -886,3 +884,4 @@ void main() {
     expect(find.text(l10n.reviewDailyLimitTitle), findsNothing);
   });
 }
+

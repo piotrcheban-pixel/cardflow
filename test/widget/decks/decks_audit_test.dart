@@ -44,8 +44,17 @@ void main() {
     expect(find.text(l10n.decksSearchResetAction), findsOneWidget);
     expect(find.text(l10n.decksEmptyMessage), findsNothing);
 
+    // Пустое состояние может быть ниже сгиба (шапка + баннер провайдера):
+    // прокручиваем к действию, как это сделал бы пользователь.
+    await tester.ensureVisible(find.text(l10n.decksSearchResetAction));
+    await tester.pumpAndSettle();
     await tester.tap(find.text(l10n.decksSearchResetAction));
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('История'),
+      240,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('Ёжики'), findsOneWidget);
     expect(find.text('История'), findsOneWidget);
   });

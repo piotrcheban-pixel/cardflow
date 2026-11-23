@@ -70,6 +70,22 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  /// Аудит v4: действия с изображением (порядок, перенос, замена, удаление)
+  /// живут в меню ⋮ — перед тапом по ключу действие нужно открыть.
+  Future<void> openImageActions(
+    WidgetTester tester,
+    String prefix,
+    int index,
+  ) async {
+    final Finder more = find.byKey(
+      ValueKey<String>('card-form-more-$prefix-$index'),
+    );
+    await scrollTo(tester, more);
+    await tester.tap(more);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+  }
+
   Future<void> tapSave(WidgetTester tester, Finder save) async {
     await scrollTo(tester, save);
     await tester.tap(save);
@@ -139,6 +155,7 @@ void main() {
   testWidgets('C25: перенос изображения на другую сторону', (tester) async {
     final editor = await pumpEditor(tester);
 
+    await openImageActions(tester, 'question', 0);
     await tapAndSave(
       tester,
       find.byKey(const ValueKey<String>('card-form-move-question-0')),
@@ -152,6 +169,7 @@ void main() {
   testWidgets('C26: изменение порядка внутри стороны', (tester) async {
     final editor = await pumpEditor(tester);
 
+    await openImageActions(tester, 'question', 0);
     await tapAndSave(
       tester,
       find.byKey(const ValueKey<String>('card-form-move-down-question-0')),
@@ -164,6 +182,7 @@ void main() {
   testWidgets('C27: удаление изображения стороны ответа', (tester) async {
     final editor = await pumpEditor(tester);
 
+    await openImageActions(tester, 'answer', 0);
     await tapAndSave(
       tester,
       find.byKey(const ValueKey<String>('card-form-remove-answer-0')),
@@ -184,3 +203,4 @@ void main() {
     expect(draft.answerMediaIds, <String>['a1']);
   });
 }
+

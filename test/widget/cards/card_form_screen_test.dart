@@ -43,8 +43,11 @@ void main() {
   }
 
   Future<void> openCreateForm(WidgetTester tester) async {
-    final AppLocalizations l10n = l10nOf(tester);
-    await tester.tap(find.byTooltip(l10n.deckAddCard));
+    // Аудит v4 (V10): «+» из AppBar колоды удалён — форма открывается
+    // единственной кнопкой «Добавить карточку» в строке списка.
+    await tester.tap(
+      find.byKey(const ValueKey<String>('deck-add-card-button')),
+    );
     await tester.pumpAndSettle();
   }
 
@@ -268,25 +271,35 @@ void main() {
       },
     );
 
-    testWidgets('N2: «Сохранить и выйти» сохраняет правки', (
+    testWidgets('N2/V: диалог выхода не дублирует сохранение', (
       WidgetTester tester,
     ) async {
       final FakeCardRepository cards = await openEdit(tester);
-      final AppLocalizations l10n = l10nOf(tester);
 
       await tester.enterText(field('card-form-front'), 'Новый вопрос');
       await tester.pump();
       await tester.tap(find.byType(BackButton));
       await tester.pumpAndSettle();
-      await tester.tap(
-        find.byKey(const ValueKey<String>('card-form-save-exit')),
-      );
-      await tester.pumpAndSettle();
 
-      expect(cards.updatedCards, hasLength(1));
-      expect(cards.updatedDrafts.single.front, 'Новый вопрос');
-      expect(find.byType(DeckScreen), findsOneWidget);
-      expect(find.text(l10n.cardUpdatedMessage), findsOneWidget);
+      // Аудит v4 (ACTIONS #9): «Сохранить и выйти» удалено — это дубль
+      // «Сохранить» + «←». В диалоге только «Не сохранять» и «Отмена».
+      expect(
+        find.byKey(const ValueKey<String>('card-form-save-exit')),
+        findsNothing,
+      );
+      expect(
+        find.byKey(const ValueKey<String>('card-form-discard')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey<String>('card-form-cancel')),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.byKey(const ValueKey<String>('card-form-cancel')));
+      await tester.pumpAndSettle();
+      expect(find.byType(CardFormScreen), findsOneWidget);
+      expect(cards.updatedCards, isEmpty);
     });
 
     testWidgets('N2: без правок «назад» выходит сразу', (

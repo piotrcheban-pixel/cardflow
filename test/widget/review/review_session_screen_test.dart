@@ -105,6 +105,15 @@ void main() {
     expect(find.text(l10n.ratingHard), findsOneWidget);
     expect(find.text(l10n.ratingGood), findsOneWidget);
     expect(find.text(l10n.ratingEasy), findsOneWidget);
+    // Аудит v4 (V24): до раскрытия ответа прогнозы не показываются — числа у
+    // недоступных кнопок только путали.
+    expect(find.text(l10n.reviewIntervalMinutes(1)), findsNothing);
+    expect(find.text(l10n.reviewIntervalMinutes(6)), findsNothing);
+    expect(find.text(l10n.reviewIntervalMinutes(10)), findsNothing);
+    expect(find.text(l10n.reviewIntervalDays(16)), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey<String>('review-card')));
+    await tester.pumpAndSettle();
     expect(find.text(l10n.reviewIntervalMinutes(1)), findsOneWidget);
     expect(find.text(l10n.reviewIntervalMinutes(6)), findsOneWidget);
     expect(find.text(l10n.reviewIntervalMinutes(10)), findsOneWidget);
@@ -486,15 +495,13 @@ void main() {
     expect(find.text('Первый вопрос'), findsOneWidget);
   });
 
-  testWidgets('«Почему?» неактивна без source_excerpt', (
+  testWidgets('«Почему?» скрыта без source_excerpt (аудит v4)', (
     WidgetTester tester,
   ) async {
     await pumpSession(tester, overrides: overridesFor(twoCards()));
 
-    final IconButton why = tester.widget<IconButton>(
-      find.byKey(const ValueKey<String>('review-why')),
-    );
-    expect(why.onPressed, isNull);
+    // Аудит v4 (ACTIONS #18): мёртвая disabled-иконка убрана — кнопки просто нет.
+    expect(find.byKey(const ValueKey<String>('review-why')), findsNothing);
   });
 
   testWidgets('«Почему?» открывает цитату исходника', (
@@ -748,17 +755,14 @@ void main() {
       expect(find.byType(ReviewSessionScreen), findsOneWidget);
     });
 
-    testWidgets('«Почему?» неактивна при пустой цитате (L6)', (
+    testWidgets('«Почему?» скрыта при пустой цитате (L6, аудит v4)', (
       WidgetTester tester,
     ) async {
       await pumpSession(
         tester,
         overrides: overridesFor(twoCards(sourceExcerpt: '   ')),
       );
-      final IconButton why = tester.widget<IconButton>(
-        find.byKey(const ValueKey<String>('review-why')),
-      );
-      expect(why.onPressed, isNull);
+      expect(find.byKey(const ValueKey<String>('review-why')), findsNothing);
     });
   });
 
@@ -885,3 +889,4 @@ void main() {
     });
   });
 }
+

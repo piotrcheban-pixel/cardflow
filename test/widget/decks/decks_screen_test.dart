@@ -227,7 +227,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.text('1 активная колода · 1 карточка на повторение сегодня'),
+        find.text('1 колода в работе'),
         findsOneWidget,
       );
     });
@@ -455,12 +455,16 @@ void main() {
   group('Колоды: контекстное меню', () {
     Future<void> openContextMenu(WidgetTester tester) async {
       await scrollToDeck(tester, 'Испанский');
-      await tester.longPress(find.text('Испанский'));
+      // Аудит v4 (ACTIONS #20): долгое нажатие убрано — меню открывается
+      // единственной кнопкой ⋮ карточки.
+      await tester.tap(
+        find.byKey(const ValueKey<String>('deck-menu-deck-1')),
+      );
       await tester.pumpAndSettle();
     }
 
     testWidgets(
-      'долгое нажатие: Переименовать / Экспорт / Архивировать / Удалить',
+      'меню ⋮: Переименовать / Экспорт / Архивировать / Удалить',
       (WidgetTester tester) async {
         final FakeDeckRepository repository = FakeDeckRepository(
           summaries: <DeckSummary>[
@@ -617,3 +621,4 @@ void main() {
     });
   });
 }
+

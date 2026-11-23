@@ -69,16 +69,22 @@ void main() {
     );
 
     final l10n = l10nOf(tester);
-    final refresh = find.byKey(
-      const ValueKey<String>('card-form-refresh-image'),
+    // Аудит v4: «Повторить поиск» — пункт меню ⋮ у изображения.
+    final more = find.byKey(
+      const ValueKey<String>('card-form-more-question-0'),
     );
-    expect(refresh, findsOneWidget);
+    expect(more, findsOneWidget);
     await tester.scrollUntilVisible(
-      refresh,
+      more,
       300,
       scrollable: find.byType(Scrollable).first,
     );
-    await tester.tap(refresh);
+    await tester.tap(more);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(
+      find.byKey(const ValueKey<String>('card-form-refresh-image')),
+    );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
@@ -106,15 +112,20 @@ void main() {
       refresher: refresher,
     );
 
-    final refresh = find.byKey(
-      const ValueKey<String>('card-form-refresh-image'),
+    final more = find.byKey(
+      const ValueKey<String>('card-form-more-question-0'),
     );
     await tester.scrollUntilVisible(
-      refresh,
+      more,
       300,
       scrollable: find.byType(Scrollable).first,
     );
-    await tester.tap(refresh);
+    await tester.tap(more);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(
+      find.byKey(const ValueKey<String>('card-form-refresh-image')),
+    );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
@@ -135,15 +146,20 @@ void main() {
       refresher: refresher,
     );
 
-    final refresh = find.byKey(
-      const ValueKey<String>('card-form-refresh-image'),
+    final more = find.byKey(
+      const ValueKey<String>('card-form-more-question-0'),
     );
     await tester.scrollUntilVisible(
-      refresh,
+      more,
       300,
       scrollable: find.byType(Scrollable).first,
     );
-    await tester.tap(refresh);
+    await tester.tap(more);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(
+      find.byKey(const ValueKey<String>('card-form-refresh-image')),
+    );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
