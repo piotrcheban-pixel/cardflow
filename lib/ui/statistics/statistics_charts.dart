@@ -422,15 +422,37 @@ class StatisticsWaveform extends StatelessWidget {
 /// Если карточка уже сетки года (узкий экран), карта прокручивается по
 /// горизонтали и открывается на сегодняшней неделе (`reverse`), а не сжимается
 /// до нечитаемых 5–11 px.
-class StatisticsHeatmap extends StatelessWidget {
+class StatisticsHeatmap extends StatefulWidget {
   /// Создаёт карту.
   const StatisticsHeatmap({required this.days, super.key});
 
   /// 365 дней, старые → сегодня.
   final List<DayCount> days;
 
+  /// Подписи месяцев по колонкам карты (см. реализацию в состоянии).
+  @visibleForTesting
+  static List<String> heatmapMonthLabels(
+    List<DayCount> days,
+    String Function(DateTime day) format,
+  ) => _StatisticsHeatmapState.heatmapMonthLabels(days, format);
+
+  @override
+  State<StatisticsHeatmap> createState() => _StatisticsHeatmapState();
+}
+
+class _StatisticsHeatmapState extends State<StatisticsHeatmap> {
+  final ScrollController _scroll = ScrollController();
+  bool _canScroll = false;
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final List<DayCount> days = widget.days;
     final ColorScheme scheme = Theme.of(context).colorScheme;
     final List<String> labels = heatmapMonthLabels(days, _monthName);
     final TextStyle labelStyle = AppTypography.caption(
@@ -473,10 +495,29 @@ class StatisticsHeatmap extends StatelessWidget {
         }
         // Узкий экран: год не помещается — горизонтальная прокрутка от
         // сегодняшней недели (обратный порядок), вместо сжатия ячеек.
-        return SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          reverse: true,
-          child: sized,
+        // Аудит v5 (V5-14): прокрутка имеет видимый индикатор.
+        return NotificationListener<ScrollMetricsNotification>(
+          onNotification: (ScrollMetricsNotification notification) {
+            final bool canScroll = notification.metrics.maxScrollExtent > 0.5;
+            if (canScroll != _canScroll) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted && canScroll != _canScroll) {
+                  setState(() => _canScroll = canScroll);
+                }
+              });
+            }
+            return false;
+          },
+          child: Scrollbar(
+            controller: _scroll,
+            thumbVisibility: _canScroll,
+            child: SingleChildScrollView(
+              controller: _scroll,
+              scrollDirection: Axis.horizontal,
+              reverse: true,
+              child: sized,
+            ),
+          ),
         );
       },
     );

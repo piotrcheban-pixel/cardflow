@@ -3618,5 +3618,9 @@
   "constructorSubtitle": "Свои колоды, фильтры и лимит сессии",
   "@constructorSubtitle": {"description": "Пояснение режима «Конструктор» в листе режимов."},
   "statisticsDaysUnit": "{count, plural, one{день} few{дня} many{дней} other{дня}}",
-  "@statisticsDaysUnit": {"description": "Единица «дни» для KPI статистики (аудит v4).", "placeholders": {"count": {"type": "int"}}}
+  "@statisticsDaysUnit": {"description": "Единица «дни» для KPI статистики (аудит v4).", "placeholders": {"count": {"type": "int"}}},
+  "reviewKeyboardHintsFront": "Пробел — показать ответ · ← — отменить",
+  "@reviewKeyboardHintsFront": {"description": "Подсказка клавиатуры до раскрытия ответа (аудит v5, V5-10)."},
+  "constructorTagsMore": "Ещё {count}",
+  "@constructorTagsMore": {"description": "Развернуть остальные теги (аудит v5, V5-15).", "placeholders": {"count": {"type": "int"}}}
 }

@@ -139,16 +139,18 @@ class _ReviewCardViewState extends State<ReviewCardView>
         // множителем экрана (2K/4K), а не константы: на 2K вопрос ≈32–37,
         // ответ ≈27–30 логических px.
         final double factor = AppAdaptive.factorForContext(context);
+        // Аудит v5 (V5-7): даже в компактном окне кегли не опускаются ниже
+        // читаемого минимума — длинный текст прокручивается внутри карточки.
         final double questionSize = tight
-            ? (narrow ? 20 : 22)
-            : (narrow ? 24 : AppTypography.reviewQuestionSize * factor);
+            ? (narrow ? 26 : 28)
+            : (narrow ? 28 : AppTypography.reviewQuestionSize * factor);
         final double answerSize = tight
-            ? 16
-            : (narrow ? 20 : AppTypography.reviewAnswerSize * factor);
-        // Аудит v4 (V23): иллюстрация — значимая часть ответа: до 45 % высоты
-        // и до 72 % ширины карточки, а не 22 % ширины, как было.
-        final double imageMaxHeight = math.max(120, height * 0.45);
-        final double imageMaxWidth = math.max(220, width * 0.72);
+            ? 20
+            : (narrow ? 22 : AppTypography.reviewAnswerSize * factor);
+        // Аудит v5 (V5-6): иллюстрация ответа — не меньше 45 % высоты карточки
+        // (было 0,45·0,9 = 40,5 %), ширина — до 85 % карточки.
+        final double imageMaxHeight = math.max(140, height * 0.5);
+        final double imageMaxWidth = math.max(240, width * 0.85);
         final Duration flipDuration = AppMotion.duration(
           context,
           kReviewCardFlipDuration,
@@ -306,8 +308,8 @@ class _ReviewCardViewState extends State<ReviewCardView>
           // Холст occlusion-карточки рисуется на стороне вопроса с уже
           // раскрытыми масками (revealed: true).
           media: true,
-          imageMaxHeight: imageMaxHeight * 0.5,
-          imageMaxWidth: imageMaxWidth * 0.6,
+          imageMaxHeight: imageMaxHeight * 0.55,
+          imageMaxWidth: imageMaxWidth * 0.65,
         ),
         Padding(
           padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
@@ -325,7 +327,8 @@ class _ReviewCardViewState extends State<ReviewCardView>
           // для cloze вопрос показан выше, повторять его в ответе не нужно.
           media: !occlusion,
           includeClozeFront: false,
-          imageMaxHeight: imageMaxHeight * 0.9,
+          // Ответ: полный бюджет высоты — иначе сканы упирались в 40,5 %.
+          imageMaxHeight: imageMaxHeight,
           imageMaxWidth: imageMaxWidth,
         ),
       ],

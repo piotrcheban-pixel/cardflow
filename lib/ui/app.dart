@@ -190,7 +190,16 @@ class _CardFlowAppState extends ConsumerState<CardFlowApp>
             navigatorKey: _navigatorKey,
             child: M3ETheme(
               data: data,
-              child: child ?? const SizedBox.shrink(),
+              // Аудит v5 (V5-1): `M3EResolvedTheme` проецирует свою схему на
+              // Material-тему, но в ней нет fixed-ролей (`primaryFixed`,
+              // `onPrimaryFixed`) — Flutter подставлял вместо них `primary`, и
+              // «Легко»/info-чипы заливались основным цветом. Внутренняя
+              // Material-тема возвращает полную схему ролей; M3E-компоненты
+              // продолжают читать свой inherited-тему.
+              child: Theme(
+                data: Theme.of(context),
+                child: child ?? const SizedBox.shrink(),
+              ),
             ),
           ),
         );

@@ -235,6 +235,13 @@ Future<DeckSessionMode?> showDeckModesSheet(
                   AppSheetHeader(
                     title: l10n.reviewSessionModeTitle,
                     subtitle: l10n.deckStudyModesTitle,
+                    // Аудит v5 (V5-12): видимый способ закрыть лист.
+                    trailing: IconButton(
+                      key: const ValueKey<String>('review-modes-close'),
+                      tooltip: l10n.cancel,
+                      onPressed: () => Navigator.of(sheetContext).pop(),
+                      icon: const Icon(Icons.close),
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.xs),
                   _ModeGroup(

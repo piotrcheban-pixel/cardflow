@@ -388,8 +388,8 @@ class AppStatusChip extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: theme.textTheme.labelSmall?.copyWith(
+                // Аудит v5 (V5-13): кегль не ниже минимального 13.
                 color: foreground,
-                fontSize: dense ? 11 : 12,
                 fontWeight: FontWeight.w600,
               ),
             ),

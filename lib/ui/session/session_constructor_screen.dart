@@ -72,6 +72,9 @@ class _SessionConstructorScreenState
   bool _loadError = false;
   bool _starting = false;
 
+  /// Показывать все теги: по умолчанию блок ограничен (аудит v5, V5-15).
+  bool _showAllTags = false;
+
   @override
   void initState() {
     super.initState();
@@ -436,18 +439,41 @@ class _SessionConstructorScreenState
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     )
-                  : Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: <Widget>[
-                        for (final String tag in _availableTags)
-                          FilterChip(
-                            key: ValueKey<String>('constructor-tag-$tag'),
-                            label: Text(tag),
-                            selected: _selectedTags.contains(tag),
-                            onSelected: (_) => _toggleTag(tag),
-                          ),
-                      ],
+                  : Builder(
+                      builder: (BuildContext context) {
+                        // Аудит v5 (V5-15): 40 тегов занимали 8 рядов и
+                        // выталкивали настройки за фолд — показываем первые 18
+                        // и «Ещё N» с разворотом.
+                        const int limit = 18;
+                        final bool hidden =
+                            !_showAllTags && _availableTags.length > limit;
+                        final List<String> visible = hidden
+                            ? _availableTags.take(limit).toList()
+                            : _availableTags;
+                        final int rest = _availableTags.length - visible.length;
+                        return Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: <Widget>[
+                            for (final String tag in visible)
+                              FilterChip(
+                                key: ValueKey<String>('constructor-tag-$tag'),
+                                label: Text(tag),
+                                selected: _selectedTags.contains(tag),
+                                onSelected: (_) => _toggleTag(tag),
+                              ),
+                            if (hidden)
+                              ActionChip(
+                                key: const ValueKey<String>(
+                                  'constructor-tags-more',
+                                ),
+                                label: Text(l10n.constructorTagsMore(rest)),
+                                onPressed: () =>
+                                    setState(() => _showAllTags = true),
+                              ),
+                          ],
+                        );
+                      },
                     ),
             ),
             _Section(

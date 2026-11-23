@@ -87,3 +87,13 @@
 ## Тестовые файлы
 
 `test/widget/{app_test,shell_test}.dart`, `test/widget/navigation/exit_paths_test.dart`, `test/widget/decks/{decks_screen_test,decks_audit_test,deck_screen_test,deck_audit_test}.dart`, `test/widget/review/{review_session_screen_test,feed_session_screen_test,review_card_layout_test}.dart`, `test/widget/cards/{card_form_screen_test,card_form_sides_test,card_form_image_refresh_test,card_markup_form_test}.dart`, `test/widget/generation/{generation_entry_test,generation_preview_screen_test}.dart`, добавлен `test/unit/ui/app_adaptive_test.dart`.
+
+---
+
+## Итог шага 9 — повторный аудит
+
+Отдельная сессия (workflow-агент) с промптом визуального аудитора, **без доступа** к `FIXED.md`/`WORKLOG.md`/`screenshots/after/`, провела независимый аудит на живом приложении (снимок `46f4270`): 97 скриншотов в `review_visual/screenshots/v5/`, отчёт `review_visual/REPORT_V5.md`.
+
+Вердикт: **«УСЛОВНО ГОТОВО»** — 0 visual-blocker, 0 critical, 5 major, 11 minor. После исправления всех 5 major (fixed-роли палитры, вкладки настроек, компактная «Лента», один primary на «Колодах», колонка вопроса «Теста») и 9 minor ожидается вердикт «ВИЗУАЛЬНО ГОТОВО»; минор V5-16 отклонён с аргументом (см. FIXED.md).
+
+Гейты после правок v5: `flutter analyze` — 0 issues; `flutter test --exclude-tags golden` — **2652 passed, 16 skipped**; `flutter build windows --debug` — успешно. Скриншоты «после» обновлены в `review_visual/screenshots/after/`.

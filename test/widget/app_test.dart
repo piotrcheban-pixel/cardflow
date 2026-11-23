@@ -45,6 +45,16 @@ void main() {
         Localizations.localeOf(tester.element(find.byType(Scaffold).first)),
         const Locale('ru'),
       );
+      // Аудит v5 (V5-1): M3E-проекция темы не должна терять fixed-роли —
+      // иначе «Легко» и info-чипы заливаются primary вместо светлого тона.
+      final ThemeData theme = Theme.of(
+        tester.element(find.byType(Scaffold).first),
+      );
+      expect(theme.colorScheme.primaryFixed, isNot(theme.colorScheme.primary));
+      expect(
+        theme.colorScheme.onPrimaryFixed,
+        isNot(theme.colorScheme.onPrimary),
+      );
     });
 
     testWidgets('тап по карточке колоды открывает экран колоды', (

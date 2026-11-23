@@ -4962,6 +4962,18 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'{count, plural, one{день} few{дня} many{дней} other{дня}}'**
   String statisticsDaysUnit(int count);
+
+  /// Подсказка клавиатуры до раскрытия ответа (аудит v5, V5-10).
+  ///
+  /// In ru, this message translates to:
+  /// **'Пробел — показать ответ · ← — отменить'**
+  String get reviewKeyboardHintsFront;
+
+  /// Развернуть остальные теги (аудит v5, V5-15).
+  ///
+  /// In ru, this message translates to:
+  /// **'Ещё {count}'**
+  String constructorTagsMore(int count);
 }
 
 class _AppLocalizationsDelegate

@@ -102,7 +102,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   static double _navBarHeight(BuildContext context) {
     final double control = AppAdaptive.factorForContext(context)
         .clamp(1.0, 1.3);
-    return AppSizes.buttonHeight * control + AppSpacing.md;
+    final double width = MediaQuery.sizeOf(context).width;
+    // Аудит v5 (V5-2): на узком окне ряд из пяти разделов не помещается —
+    // вкладки переносятся (Wrap), панель выше на число рядов.
+    final int rows = width < 480
+        ? 3
+        : width < 900
+        ? 2
+        : 1;
+    return AppSizes.buttonHeight * control * rows +
+        AppSpacing.xs * (rows - 1) +
+        AppSpacing.md;
   }
 
   /// Горизонтальные поля страницы — те же, что у `AppPageScaffold`.
@@ -894,31 +904,29 @@ class _SettingsSubNav extends StatelessWidget {
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
     bool selected(_SettingsNavItem item) => activeKey == item.key;
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          for (final _SettingsNavItem item in items)
-            Padding(
-              padding: const EdgeInsets.only(right: AppSpacing.xs),
-              child: ChoiceChip(
-                key: ValueKey<String>('settings-nav-${item.label}'),
-                avatar: Icon(
-                  item.icon,
-                  size: AppSizes.iconSmall,
-                  color: selected(item) ? scheme.onPrimary : scheme.primary,
-                ),
-                label: Text(item.label),
-                selected: selected(item),
-                // Аватар-иконка уже показывает раздел; галочка не нужна.
-                showCheckmark: false,
-                materialTapTargetSize: MaterialTapTargetSize.padded,
-                onSelected: (_) => onSelect(item.key),
-              ),
+    // Аудит v5 (V5-2): вместо горизонтальной прокрутки без индикатора —
+    // перенос вкладок: все разделы (и выбранный) видны на любой ширине.
+    return Wrap(
+      spacing: AppSpacing.xs,
+      runSpacing: AppSpacing.xs,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: <Widget>[
+        for (final _SettingsNavItem item in items)
+          ChoiceChip(
+            key: ValueKey<String>('settings-nav-${item.label}'),
+            avatar: Icon(
+              item.icon,
+              size: AppSizes.iconSmall,
+              color: selected(item) ? scheme.onPrimary : scheme.primary,
             ),
-        ],
-      ),
+            label: Text(item.label),
+            selected: selected(item),
+            // Аватар-иконка уже показывает раздел; галочка не нужна.
+            showCheckmark: false,
+            materialTapTargetSize: MaterialTapTargetSize.padded,
+            onSelected: (_) => onSelect(item.key),
+          ),
+      ],
     );
   }
 }

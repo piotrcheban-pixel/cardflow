@@ -3070,4 +3070,13 @@ class AppLocalizationsRu extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get reviewKeyboardHintsFront =>
+      'Пробел — показать ответ · ← — отменить';
+
+  @override
+  String constructorTagsMore(int count) {
+    return 'Ещё $count';
+  }
 }

@@ -1214,14 +1214,30 @@ class _DeckTile extends StatelessWidget {
                   ],
                 );
                 final Widget action = hasWork
-                    ? FilledButton.icon(
+                    // Аудит v5 (V5-4): «Учить» — действие уровня карточки,
+                    // поэтому outlined, а не filled: единственное filled-primary
+                    // на экране — «Новая колода».
+                    ? OutlinedButton.icon(
                         key: ValueKey<String>('deck-study-${summary.deck.id}'),
-                        // Аудит v4 (V5): кнопка действительно запускает
-                        // сессию — открывает лист режимов, а не экран колоды.
                         onPressed: onStudy,
                         icon: const Icon(Icons.play_arrow),
                         label: Text(l10n.deckStudyAction),
-                        style: AppButtons.compact(context),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: scheme.primary,
+                          side: BorderSide(
+                            color: scheme.primary.withValues(alpha: 0.55),
+                          ),
+                          minimumSize: Size(
+                            0,
+                            AppSizes.buttonHeight *
+                                AppAdaptive.factorForContext(
+                                  context,
+                                ).clamp(1.0, 1.3),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.sm,
+                          ),
+                        ),
                       )
                     : OutlinedButton.icon(
                         key: ValueKey<String>('deck-study-${summary.deck.id}'),

@@ -498,6 +498,9 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
       return ReviewCompletedView(ratedCount: state.ratedCount, onDone: _leave);
     }
     final AppSettings settings = ref.watch(effectiveAppSettingsProvider);
+    // Аудит v5 (V5-3): на низком окне карточка получала ~140 лог. px —
+    // компактные поля и однострочный футер отдают ей высоту.
+    final bool compactHeight = MediaQuery.sizeOf(context).height < 560;
     final List<bool> ratedFlags = <bool>[
       for (final FeedSessionItem item in state.items) item.rated,
     ];
@@ -534,7 +537,9 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
             itemBuilder: (BuildContext context, int index) {
               final FeedSessionItem item = state.items[index];
               return Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                padding: compactHeight
+                    ? const EdgeInsets.fromLTRB(8, 4, 8, 4)
+                    : const EdgeInsets.fromLTRB(16, 8, 16, 8),
                 child: FeedCardView(
                   key: ValueKey<String>('feed-card-${item.card.id}'),
                   front: item.card.front,
@@ -596,12 +601,15 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
           compact: MediaQuery.sizeOf(context).height < 500,
           preview: null,
           enabled: !state.busy && (state.current?.revealed ?? false),
-          hint: (state.current?.revealed ?? false)
+          // На низком окне строка-подсказка отнимает высоту у карточки:
+          // оценка всё равно недоступна до раскрытия (disabled + приглушены).
+          hint: (state.current?.revealed ?? false) || compactHeight
               ? null
               : l10n.reviewRevealRequiredHint,
           onRating: (Rating rating) => unawaited(_rate(rating)),
         ),
         _FeedBottomBar(
+          compact: compactHeight,
           deckName: _deck?.name,
           deckCount: _deckCount,
           position: state.index + 1,
@@ -619,6 +627,7 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
 
 class _FeedBottomBar extends StatelessWidget {
   const _FeedBottomBar({
+    required this.compact,
     required this.deckName,
     required this.deckCount,
     required this.position,
@@ -629,6 +638,9 @@ class _FeedBottomBar extends StatelessWidget {
     required this.onTogglePause,
     required this.l10n,
   });
+
+  /// Однострочный футер для низких окон.
+  final bool compact;
 
   final String? deckName;
   final int deckCount;
@@ -643,15 +655,18 @@ class _FeedBottomBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
-    final String? label =
-        deckName ??
-        (deckCount > 1 ? l10n.sessionDeckCountLabel(deckCount) : null);
+    final String? label = compact
+        ? null
+        : deckName ??
+              (deckCount > 1 ? l10n.sessionDeckCountLabel(deckCount) : null);
     return Material(
       color: scheme.surfaceContainerLow,
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 12, 12),
+          padding: compact
+              ? const EdgeInsets.fromLTRB(12, 2, 8, 2)
+              : const EdgeInsets.fromLTRB(16, 8, 12, 12),
           child: Row(
             children: <Widget>[
               Expanded(

@@ -100,6 +100,9 @@ class AppSidebar extends ConsumerWidget {
       ),
     ];
     final int due = ref.watch(totalDueCardsProvider).value ?? 0;
+    // На низком окне (400 лог. px) пяти пунктам нужна каждая строка:
+    // надзаголовок «Навигация» сворачивается, «Настройки» остаются видны.
+    final bool compactHeight = MediaQuery.sizeOf(context).height < 480;
 
     return Material(
       color: scheme.surfaceContainerLowest,
@@ -205,21 +208,22 @@ class AppSidebar extends ConsumerWidget {
               ),
             ),
           // Надзаголовок и пункты.
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.md,
-              AppSpacing.md,
-              AppSpacing.md,
-              AppSpacing.xxs,
-            ),
-            child: Text(
-              l10n.shellNavSection.toUpperCase(),
-              style: theme.textTheme.labelMedium?.copyWith(
-                color: scheme.onSurfaceVariant,
-                letterSpacing: 0.6,
+          if (!compactHeight)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.md,
+                AppSpacing.md,
+                AppSpacing.md,
+                AppSpacing.xxs,
+              ),
+              child: Text(
+                l10n.shellNavSection.toUpperCase(),
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                  letterSpacing: 0.6,
+                ),
               ),
             ),
-          ),
           Expanded(
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),

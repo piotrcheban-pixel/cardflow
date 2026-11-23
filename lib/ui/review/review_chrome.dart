@@ -188,29 +188,27 @@ Future<bool> confirmReviewExit(BuildContext context) async {
   final ThemeData theme = Theme.of(context);
   // AppDialog передаёт действиям контекст диалога — правило ADR-036
   // (закрывается маршрут диалога, а не экран-ветка).
-  final bool? result = await showDialog<bool>(
+  // Аудит v5 (V5-9): единый шаблон диалогов — крестик безопасного закрытия
+  // (равен «Продолжить»), одна filled-кнопка безопасного действия.
+  final bool? result = await showAppDialog<bool>(
     context: context,
-    barrierDismissible: false,
-    builder: (BuildContext dialogContext) => AppDialog(
-      title: l10n.reviewExitDialogTitle,
-      subtitle: l10n.reviewExitDialogMessage,
-      bodyBuilder: (BuildContext dialogContext) => const SizedBox.shrink(),
-      actionsBuilder: (BuildContext dialogContext) => <Widget>[
-        TextButton(
-          key: const ValueKey<String>('review-exit-confirm'),
-          onPressed: () => Navigator.of(dialogContext).pop(true),
-          style: TextButton.styleFrom(
-            foregroundColor: theme.colorScheme.error,
-          ),
-          child: Text(l10n.reviewExitConfirm),
-        ),
-        FilledButton(
-          key: const ValueKey<String>('review-exit-cancel'),
-          onPressed: () => Navigator.of(dialogContext).pop(false),
-          child: Text(l10n.reviewExitContinue),
-        ),
-      ],
-    ),
+    title: l10n.reviewExitDialogTitle,
+    subtitle: l10n.reviewExitDialogMessage,
+    closeLabel: l10n.reviewExitContinue,
+    bodyBuilder: (BuildContext dialogContext) => const SizedBox.shrink(),
+    actionsBuilder: (BuildContext dialogContext) => <Widget>[
+      TextButton(
+        key: const ValueKey<String>('review-exit-confirm'),
+        onPressed: () => Navigator.of(dialogContext).pop(true),
+        style: TextButton.styleFrom(foregroundColor: theme.colorScheme.error),
+        child: Text(l10n.reviewExitConfirm),
+      ),
+      FilledButton(
+        key: const ValueKey<String>('review-exit-cancel'),
+        onPressed: () => Navigator.of(dialogContext).pop(false),
+        child: Text(l10n.reviewExitContinue),
+      ),
+    ],
   );
   return result ?? false;
 }

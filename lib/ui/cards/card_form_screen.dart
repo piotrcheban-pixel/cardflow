@@ -1314,28 +1314,57 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
       children: <Widget>[
         Text(l10n.cardFormTypeLabel, style: _fieldLabelStyle(theme)),
         const SizedBox(height: AppSpacing.xs),
-        SegmentedButton<CardType>(
-          key: const ValueKey<String>('card-form-type'),
-          segments: <ButtonSegment<CardType>>[
-            ButtonSegment<CardType>(
-              value: CardType.basic,
-              label: Text(l10n.cardTypeBasic),
-            ),
-            ButtonSegment<CardType>(
-              value: CardType.basicReversed,
-              label: Text(l10n.cardTypeBasicReversed),
-            ),
-            ButtonSegment<CardType>(
-              value: CardType.cloze,
-              label: Text(l10n.cardTypeCloze),
-            ),
-          ],
-          selected: <CardType>{_cardType},
-          onSelectionChanged: editable
-              ? (Set<CardType> selection) {
-                  setState(() => _cardType = selection.first);
-                }
-              : null,
+        // Аудит v5 (V5-8): на узком экране три сегмента не помещаются и
+        // подписи ломаются по буквам — там это переносимые чипы.
+        LayoutBuilder(
+          builder: (BuildContext context, BoxConstraints constraints) {
+            if (constraints.maxWidth >= 520) {
+              return SegmentedButton<CardType>(
+                key: const ValueKey<String>('card-form-type'),
+                segments: <ButtonSegment<CardType>>[
+                  ButtonSegment<CardType>(
+                    value: CardType.basic,
+                    label: Text(l10n.cardTypeBasic),
+                  ),
+                  ButtonSegment<CardType>(
+                    value: CardType.basicReversed,
+                    label: Text(l10n.cardTypeBasicReversed),
+                  ),
+                  ButtonSegment<CardType>(
+                    value: CardType.cloze,
+                    label: Text(l10n.cardTypeCloze),
+                  ),
+                ],
+                selected: <CardType>{_cardType},
+                onSelectionChanged: editable
+                    ? (Set<CardType> selection) {
+                        setState(() => _cardType = selection.first);
+                      }
+                    : null,
+              );
+            }
+            final List<(CardType, String)> types = <(CardType, String)>[
+              (CardType.basic, l10n.cardTypeBasic),
+              (CardType.basicReversed, l10n.cardTypeBasicReversed),
+              (CardType.cloze, l10n.cardTypeCloze),
+            ];
+            return Wrap(
+              key: const ValueKey<String>('card-form-type'),
+              spacing: AppSpacing.xs,
+              runSpacing: AppSpacing.xs,
+              children: <Widget>[
+                for (final (CardType type, String label) in types)
+                  ChoiceChip(
+                    label: Text(label),
+                    selected: _cardType == type,
+                    showCheckmark: false,
+                    onSelected: editable
+                        ? (_) => setState(() => _cardType = type)
+                        : null,
+                  ),
+              ],
+            );
+          },
         ),
         if (_isEditing) ...<Widget>[
           const SizedBox(height: AppSpacing.xxs),

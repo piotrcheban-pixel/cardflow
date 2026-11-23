@@ -298,6 +298,10 @@ abstract final class AppTheme {
         selectedColor: resolved.primary,
         disabledColor: resolved.surfaceContainerLow,
         surfaceTintColor: Colors.transparent,
+        // Аудит v5 (V5-13): галочка выбранного чипа рисовалась onSurface поверх
+        // primary (1,9:1) — теперь цвет текста на primary.
+        checkmarkColor: resolved.onPrimary,
+        secondarySelectedColor: resolved.primary,
         side: BorderSide.none,
         labelStyle: text.labelLarge?.copyWith(color: resolved.onSurface),
         secondaryLabelStyle: text.labelLarge?.copyWith(

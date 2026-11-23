@@ -98,6 +98,11 @@ class _FeedCardViewState extends State<FeedCardView>
   double _width = 0;
   Rating? _commitRating;
 
+  /// Прокрутка содержимого карточки: длинный вопрос не обрезается молча —
+  /// при переполнении показывается индикатор (аудит v5, V5-3).
+  final ScrollController _scroll = ScrollController();
+  bool _canScroll = false;
+
   @override
   void didUpdateWidget(FeedCardView oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -120,6 +125,7 @@ class _FeedCardViewState extends State<FeedCardView>
   void dispose() {
     _swipe.dispose();
     _flip.dispose();
+    _scroll.dispose();
     super.dispose();
   }
 
@@ -229,15 +235,40 @@ class _FeedCardViewState extends State<FeedCardView>
                         child: Stack(
                           children: <Widget>[
                             Positioned.fill(
-                              child: _FlipFace(
-                                controller: _flip,
-                                front: widget.front,
-                                back: widget.back,
-                                revealed: widget.revealed,
-                                card: widget.card,
-                                mediaBytes: widget.mediaBytes,
-                                mediaMetadata: widget.mediaMetadata,
-                                onRetryMedia: widget.onRetryMedia,
+                              child: NotificationListener<ScrollMetricsNotification>(
+                                onNotification:
+                                    (ScrollMetricsNotification notification) {
+                                      final bool canScroll =
+                                          notification.metrics.maxScrollExtent >
+                                          0.5;
+                                      if (canScroll != _canScroll) {
+                                        WidgetsBinding.instance
+                                            .addPostFrameCallback((_) {
+                                              if (mounted &&
+                                                  canScroll != _canScroll) {
+                                                setState(
+                                                  () => _canScroll = canScroll,
+                                                );
+                                              }
+                                            });
+                                      }
+                                      return false;
+                                    },
+                                child: Scrollbar(
+                                  controller: _scroll,
+                                  thumbVisibility: _canScroll,
+                                  child: _FlipFace(
+                                    controller: _flip,
+                                    scroll: _scroll,
+                                    front: widget.front,
+                                    back: widget.back,
+                                    revealed: widget.revealed,
+                                    card: widget.card,
+                                    mediaBytes: widget.mediaBytes,
+                                    mediaMetadata: widget.mediaMetadata,
+                                    onRetryMedia: widget.onRetryMedia,
+                                  ),
+                                ),
                               ),
                             ),
                             if (widget.rated)
@@ -285,6 +316,7 @@ class _FeedCardViewState extends State<FeedCardView>
 class _FlipFace extends StatelessWidget {
   const _FlipFace({
     required this.controller,
+    required this.scroll,
     required this.front,
     required this.back,
     required this.revealed,
@@ -295,6 +327,9 @@ class _FlipFace extends StatelessWidget {
   });
 
   final Animation<double> controller;
+
+  /// Контроллер прокрутки содержимого (индикатор в родителе).
+  final ScrollController scroll;
   final String front;
   final String back;
   final bool revealed;
@@ -341,6 +376,7 @@ class _FlipFace extends StatelessWidget {
               alignment: Alignment.center,
               transform: transform,
               child: SingleChildScrollView(
+                controller: scroll,
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppSpacing.xxl,
                   vertical: AppSpacing.xl,
@@ -349,11 +385,67 @@ class _FlipFace extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: <Widget>[
-                    // Аудит v4 (V22): подписи сторон — как в классике.
+                    // Аудит v4 (V22) + v5 (V5-11): оборот сохраняет вопрос-эхо,
+                    // как в «Классике», — контекст не теряется после переворота.
+                    if (showBack) ...<Widget>[
+                      Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        child: Text(
+                          l10n.reviewQuestionLabel.toUpperCase(),
+                          style: AppTypography.overline(context),
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      card == null
+                          ? Text(
+                              front,
+                              textAlign: TextAlign.center,
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                fontSize: math.max(16, 18 * factor),
+                                height: 1.4,
+                                color: scheme.onSurfaceVariant,
+                              ),
+                            )
+                          : CardContentView(
+                              card: card!,
+                              side: front,
+                              revealed: true,
+                              faceKey: const ValueKey<String>(
+                                'feed-card-echo',
+                              ),
+                              questionStyle: theme.textTheme.titleSmall
+                                  ?.copyWith(
+                                    fontSize: math.max(16, 18 * factor),
+                                    height: 1.4,
+                                    color: scheme.onSurfaceVariant,
+                                  ),
+                              answerStyle: theme.textTheme.titleSmall
+                                  ?.copyWith(
+                                    fontSize: math.max(16, 18 * factor),
+                                    height: 1.4,
+                                    color: scheme.onSurfaceVariant,
+                                  ),
+                              mediaBytes: mediaBytes,
+                              mediaMetadata: mediaMetadata,
+                              onRetryMedia: onRetryMedia,
+                              showMedia: false,
+                            ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: AppSpacing.md,
+                        ),
+                        child: Divider(
+                          height: 1,
+                          color: scheme.outlineVariant,
+                        ),
+                      ),
+                    ],
                     Align(
                       alignment: AlignmentDirectional.centerStart,
                       child: Text(
-                        (showBack ? l10n.reviewAnswerLabel : l10n.reviewQuestionLabel)
+                        (showBack
+                                ? l10n.reviewAnswerLabel
+                                : l10n.reviewQuestionLabel)
                             .toUpperCase(),
                         style: AppTypography.overline(
                           context,
@@ -381,8 +473,8 @@ class _FlipFace extends StatelessWidget {
                             mediaBytes: mediaBytes,
                             mediaMetadata: mediaMetadata,
                             onRetryMedia: onRetryMedia,
-                            imageMaxHeight: 300,
-                            imageMaxWidth: 620,
+                            imageMaxHeight: 340,
+                            imageMaxWidth: 760,
                           ),
                   ],
                 ),

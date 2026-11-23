@@ -369,27 +369,37 @@ class _MultipleChoiceScreenState extends ConsumerState<MultipleChoiceScreen> {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: <Widget>[
-                        CardContentView(
-                          key: ValueKey<String>('mc-question-${card.id}'),
-                          card: card,
-                          side: card.front,
-                          revealed: false,
-                          showAllFormulas: true,
-                          faceKey: const ValueKey<String>('mc-question-face'),
-                          questionStyle: Theme.of(context)
-                              .textTheme
-                              .headlineMedium
-                              ?.copyWith(
-                                fontSize:
-                                    AppTypography.reviewQuestionSize *
-                                    AppAdaptive.factorForContext(context) *
-                                    0.85,
-                                height: 1.35,
-                                fontWeight: FontWeight.w600,
+                        Center(
+                          child: ConstrainedBox(
+                            // Аудит v5 (V5-5): вопрос — в той же колонке, что и
+                            // варианты (≤720), иначе на 2K строка вопроса
+                            // растягивалась до ~90 знаков (1334 лог. px).
+                            constraints: const BoxConstraints(maxWidth: 720),
+                            child: CardContentView(
+                              key: ValueKey<String>('mc-question-${card.id}'),
+                              card: card,
+                              side: card.front,
+                              revealed: false,
+                              showAllFormulas: true,
+                              faceKey: const ValueKey<String>(
+                                'mc-question-face',
                               ),
-                          mediaBytes: _media.bytes,
-                          mediaMetadata: _media.metadata,
-                          onRetryMedia: () => _retryMedia(card),
+                              questionStyle: Theme.of(context)
+                                  .textTheme
+                                  .headlineMedium
+                                  ?.copyWith(
+                                    fontSize:
+                                        AppTypography.reviewQuestionSize *
+                                        AppAdaptive.factorForContext(context) *
+                                        0.85,
+                                    height: 1.35,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                              mediaBytes: _media.bytes,
+                              mediaMetadata: _media.metadata,
+                              onRetryMedia: () => _retryMedia(card),
+                            ),
+                          ),
                         ),
                         const SizedBox(height: AppSpacing.xxl),
                         Center(

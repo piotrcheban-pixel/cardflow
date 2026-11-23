@@ -144,7 +144,8 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
     expect(find.text('Первый ответ'), findsOneWidget);
-    expect(find.text('Первый вопрос'), findsNothing);
+    // Аудит v5 (V5-11): на обороте остаётся вопрос-эхо, как в «Классике».
+    expect(find.text('Первый вопрос'), findsOneWidget);
 
     await tester.tap(find.byKey(firstCardKey));
     await tester.pump();

@@ -482,6 +482,25 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen>
                         style: AppButtons.large(context),
                         child: Text(l10n.reviewRevealAction),
                       ),
+                      // Аудит v5 (V5-10): подсказка есть и до раскрытия —
+                      // именно тогда она объясняет, что Space раскрывает ответ.
+                      if (MediaQuery.sizeOf(context).height >= 500)
+                        Padding(
+                          padding: const EdgeInsets.only(top: AppSpacing.xs),
+                          child: Text(
+                            l10n.reviewKeyboardHintsFront,
+                            key: const ValueKey<String>(
+                              'review-keyboard-hints-front',
+                            ),
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.labelSmall
+                                ?.copyWith(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
+                                ),
+                          ),
+                        ),
                     ] else if (MediaQuery.sizeOf(context).height >= 500)
                       Padding(
                         padding: const EdgeInsets.only(top: AppSpacing.xs),
