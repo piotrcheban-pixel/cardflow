@@ -1,7 +1,9 @@
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:material_ui/material_ui.dart';
 
+import 'package:cardflow/api/images/image_dimensions.dart';
 import 'package:cardflow/domain/cards/media_metadata.dart';
 import 'package:cardflow/domain/generation/card_image_kind.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
@@ -30,12 +32,21 @@ const ValueKey<String> kCardImageRetryKey = ValueKey<String>(
   'card-image-retry',
 );
 
-/// Картинка карточки: пропорции 16:9 или 4:3, скругление, fade-in.
+/// Картинка карточки: пропорции по факту файла, скругление, fade-in.
 ///
-/// `photo`/`illustration` показываются `BoxFit.cover`, `diagram` — `contain`
-/// на нейтральном фоне (схемы нельзя обрезать). Тап открывает полноэкранный
-/// просмотр с зумом и атрибуцией. Картинка ограничена по высоте и ширине,
-/// поэтому длинный вопрос/формула сохраняют место, а прокрутка не ломается.
+/// Аудит v7 (G4/V7-04/G11): раньше рамка была жёстко 16:9 (4:3 для схем), а
+/// `photo`/`illustration` рисовались `BoxFit.cover` — фото 960×720 теряло 25 %
+/// высоты, 960×1371 — 60 %. Теперь:
+///
+/// * **все** виды изображений вписываются целиком (`BoxFit.contain`) —
+///   пользовательскую иллюстрацию нельзя обрезать;
+/// * размер коробки считается из фактических пропорций файла
+///   ([ImageDimensions.read]) и бюджета `maxWidth × maxHeight`, поэтому рамка
+///   не добавляет пустых полей и маленькая картинка не выглядит «маркой»;
+/// * вид изображения (`kind`) больше не меняет геометрию — он остаётся в
+///   метаданных для атрибуции (и в полноэкранном просмотре).
+///
+/// Тап открывает полноэкранный просмотр с зумом и атрибуцией.
 ///
 /// Итерация 7.19 (ADR-041): ошибка декодирования — **явное** состояние с
 /// кнопкой повтора, а не скелетон загрузки и не подмена другой картинкой.
@@ -96,63 +107,87 @@ class _CardImageViewState extends State<CardImageView> {
     final AppLocalizations l10n = AppLocalizations.of(context);
     final ThemeData theme = Theme.of(context);
     final MediaMetadata? meta = widget.metadata;
-    final bool isDiagram = widget.kind == GeneratedCardImageKind.diagram;
     final String label = widget.semanticsLabel ?? l10n.cardImageSemantics;
+    // Аудит v7 (G4): никакой cover-обрезки и рамки 16:9 «на всякий случай».
+    // Пропорции берутся из заголовка файла ([ImageDimensions]), а размер
+    // коробки подбирается так, чтобы изображение целиком влезло в бюджет
+    // `maxWidth × maxHeight` и при этом было крупным (маленький файл
+    // масштабируется до бюджета, а не рисуется «почтовой маркой»).
+    final ImageDimensions? dimensions = widget.bytes.isEmpty
+        ? null
+        : ImageDimensions.read(widget.bytes);
+    final double aspect = dimensions == null ||
+            dimensions.width <= 0 ||
+            dimensions.height <= 0
+        ? 16 / 9
+        : dimensions.width / dimensions.height;
+    final double maxWidth = widget.maxWidth > 0
+        ? widget.maxWidth
+        : kCardImageMaxWidth;
+    final double maxHeight = widget.maxHeight > 0
+        ? widget.maxHeight
+        : kCardImageMaxHeight;
+    final double width = math.min(maxWidth, maxHeight * aspect);
+    final double height = width / aspect;
+    // Появление картинки — из общей шкалы и с учётом reduced motion (G9).
+    final Duration fadeDuration = AppMotion.duration(
+      context,
+      AppDurations.base,
+    );
     return Semantics(
       image: true,
       label: label,
       button: true,
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxWidth: widget.maxWidth,
-          maxHeight: widget.maxHeight,
-        ),
-        child: AspectRatio(
-          // Схемы — 4:3 (допустимо правилом), остальное — 16:9.
-          aspectRatio: isDiagram ? 4 / 3 : 16 / 9,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(kCardImageCornerRadius),
-            child: Material(
-              color: theme.colorScheme.surfaceContainerHighest,
-              child: widget.bytes.isEmpty
-                  ? _ImageErrorState(onRetry: _retry)
-                  : InkWell(
-                      onTap:
-                          widget.onTap ??
-                          () => showCardImageFullscreen(
-                            context,
-                            bytes: widget.bytes,
-                            kind: widget.kind,
-                            metadata: meta,
-                          ),
-                      child: Image.memory(
-                        widget.bytes,
-                        key: ValueKey<String>('card-image-attempt-$_attempt'),
-                        fit: isDiagram ? BoxFit.contain : BoxFit.cover,
-                        gaplessPlayback: true,
-                        frameBuilder:
-                            (
-                              BuildContext context,
-                              Widget child,
-                              int? frame,
-                              bool wasSynchronouslyLoaded,
-                            ) {
-                              if (wasSynchronouslyLoaded) return child;
-                              return AnimatedSwitcher(
-                                duration: const Duration(milliseconds: 300),
-                                child: frame == null
-                                    ? const _ImageSkeleton()
-                                    : SizedBox.expand(child: child),
-                              );
-                            },
-                        errorBuilder: (
-                          BuildContext context,
-                          Object error,
-                          StackTrace? stack,
-                        ) => _ImageErrorState(onRetry: _retry),
-                      ),
+      child: SizedBox(
+        width: width,
+        height: height,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(kCardImageCornerRadius),
+          child: Material(
+            color: theme.colorScheme.surfaceContainerHighest,
+            child: widget.bytes.isEmpty
+                ? _ImageErrorState(onRetry: _retry)
+                : InkWell(
+                    onTap:
+                        widget.onTap ??
+                        () => showCardImageFullscreen(
+                          context,
+                          bytes: widget.bytes,
+                          kind: widget.kind,
+                          metadata: meta,
+                        ),
+                    child: Image.memory(
+                      widget.bytes,
+                      key: ValueKey<String>('card-image-attempt-$_attempt'),
+                      // G4: пользовательское изображение никогда не обрезается.
+                      fit: BoxFit.contain,
+                      gaplessPlayback: true,
+                      frameBuilder:
+                          (
+                            BuildContext context,
+                            Widget child,
+                            int? frame,
+                            bool wasSynchronouslyLoaded,
+                          ) {
+                            if (wasSynchronouslyLoaded ||
+                                fadeDuration == Duration.zero) {
+                              return child;
+                            }
+                            return AnimatedSwitcher(
+                              duration: fadeDuration,
+                              child: frame == null
+                                  ? const _ImageSkeleton()
+                                  : SizedBox.expand(child: child),
+                            );
+                          },
+                      errorBuilder:
+                          (
+                            BuildContext context,
+                            Object error,
+                            StackTrace? stack,
+                          ) => _ImageErrorState(onRetry: _retry),
                     ),
-            ),
+                  ),
           ),
         ),
       ),

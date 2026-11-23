@@ -91,7 +91,7 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('каркас: прогресс, первая карточка и 4 кнопки с прогнозом', (
+  testWidgets('каркас: прогресс, вопрос и крупное действие (G1)', (
     WidgetTester tester,
   ) async {
     await pumpSession(tester, overrides: overridesFor(twoCards()));
@@ -101,12 +101,20 @@ void main() {
     expect(find.text('Первый вопрос'), findsOneWidget);
     expect(find.text('Первый ответ'), findsNothing, reason: 'ответ скрыт');
     expect(find.byType(LinearProgressIndicator), findsOneWidget);
-    expect(find.text(l10n.ratingAgain), findsOneWidget);
-    expect(find.text(l10n.ratingHard), findsOneWidget);
-    expect(find.text(l10n.ratingGood), findsOneWidget);
-    expect(find.text(l10n.ratingEasy), findsOneWidget);
-    // Аудит v4 (V24): до раскрытия ответа прогнозы не показываются — числа у
-    // недоступных кнопок только путали.
+    // Аудит v7 (G1): состояние «вопрос» не содержит панели оценок вообще.
+    for (final String label in <String>[
+      l10n.ratingAgain,
+      l10n.ratingHard,
+      l10n.ratingGood,
+      l10n.ratingEasy,
+    ]) {
+      expect(find.text(label), findsNothing, reason: 'нет оценок до ответа');
+    }
+    expect(
+      find.byKey(const ValueKey<String>('review-reveal')),
+      findsOneWidget,
+    );
+    // Аудит v4 (V24): до раскрытия прогнозы не показываются.
     expect(find.text(l10n.reviewIntervalMinutes(1)), findsNothing);
     expect(find.text(l10n.reviewIntervalMinutes(6)), findsNothing);
     expect(find.text(l10n.reviewIntervalMinutes(10)), findsNothing);
@@ -114,10 +122,16 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey<String>('review-card')));
     await tester.pumpAndSettle();
+    expect(find.text(l10n.ratingGood), findsOneWidget);
     expect(find.text(l10n.reviewIntervalMinutes(1)), findsOneWidget);
     expect(find.text(l10n.reviewIntervalMinutes(6)), findsOneWidget);
     expect(find.text(l10n.reviewIntervalMinutes(10)), findsOneWidget);
     expect(find.text(l10n.reviewIntervalDays(16)), findsOneWidget);
+    // G1: главное действие лицевой стороны исчезает после раскрытия.
+    expect(
+      find.byKey(const ValueKey<String>('review-reveal')),
+      findsNothing,
+    );
   });
 
   testWidgets('дневной лимит новых карточек из настроек ограничивает сессию', (
@@ -157,34 +171,50 @@ void main() {
     expect(find.text('Первый вопрос'), findsOneWidget);
   });
 
-  // Находка F1 (blocker) аудита: оценка до раскрытия ответа запрещена —
-  // иначе расписание FSRS строится по ответам, которых пользователь не видел.
-  testWidgets('оценки недоступны до раскрытия ответа (F1)', (
+  // Находка F1 (blocker) аудита и гейт v7 G1: оценка до раскрытия ответа
+  // запрещена — иначе расписание FSRS строится по ответам, которых пользователь
+  // не видел. После аудита v7 кнопки не «заблокированы», а отсутствуют в дереве.
+  testWidgets('оценок до раскрытия нет в дереве, после — ровно четыре (G1)', (
     WidgetTester tester,
   ) async {
     final deckCards = twoCards();
     await pumpSession(tester, overrides: overridesFor(deckCards));
     reviews.previousCard = deckCards.first;
+    final AppLocalizations l10n = l10nOf(tester);
 
     for (final String name in <String>['again', 'hard', 'good', 'easy']) {
-      final FilledButton button = tester.widget<FilledButton>(
+      expect(
         find.byKey(ValueKey<String>('review-rating-$name')),
+        findsNothing,
+        reason: 'до раскрытия панели оценок нет в дереве («$name»)',
       );
-      expect(button.onPressed, isNull, reason: 'оценка «$name» заблокирована');
     }
+    // Подсказка «Оценки откроются после показа ответа» удалена (G1/V7-17).
     expect(
       find.byKey(const ValueKey<String>('review-rating-hint')),
-      findsOneWidget,
-      reason: 'подсказка объясняет, почему оценки неактивны',
+      findsNothing,
+    );
+    expect(find.text(l10n.reviewRevealRequiredHint), findsNothing);
+    // Клавиатурные подсказки-дубли удалены (G5/V7-17).
+    expect(
+      find.byKey(const ValueKey<String>('review-keyboard-hints-front')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const ValueKey<String>('review-keyboard-hints')),
+      findsNothing,
     );
 
     await reveal(tester);
+    int active = 0;
     for (final String name in <String>['again', 'hard', 'good', 'easy']) {
       final FilledButton button = tester.widget<FilledButton>(
         find.byKey(ValueKey<String>('review-rating-$name')),
       );
       expect(button.onPressed, isNotNull, reason: 'после раскрытия «$name»');
+      active++;
     }
+    expect(active, 4, reason: 'ровно четыре оценки');
   });
 
   testWidgets('клавиши 1–4 до раскрытия не пишут оценку (F1)', (
@@ -697,6 +727,15 @@ void main() {
       );
       final ColorScheme scheme = Theme.of(context).colorScheme;
 
+      LinearProgressIndicator progress() =>
+          tester.widget<LinearProgressIndicator>(
+            find.byType(LinearProgressIndicator),
+          );
+      expect(progress().value, 0);
+      reviews.previousCard = deckCards.first;
+      await reveal(tester);
+
+      // Кнопки существуют только после раскрытия (G1) — цвета проверяются там.
       Color? background(String name) => tester
           .widget<FilledButton>(
             find.byKey(ValueKey<String>('review-rating-$name')),
@@ -711,13 +750,6 @@ void main() {
       expect(background('good'), scheme.secondaryContainer);
       expect(background('easy'), scheme.primaryFixed);
 
-      LinearProgressIndicator progress() =>
-          tester.widget<LinearProgressIndicator>(
-            find.byType(LinearProgressIndicator),
-          );
-      expect(progress().value, 0);
-      reviews.previousCard = deckCards.first;
-      await reveal(tester);
       await tester.tap(
         find.byKey(const ValueKey<String>('review-rating-good')),
       );
@@ -839,14 +871,22 @@ void main() {
         ),
       );
       final AppLocalizations l10n = l10nOf(tester);
-      expect(find.text(l10n.ratingGood), findsOneWidget);
+      // Маркер активной сессии — главное действие лицевой стороны (оценок до
+      // раскрытия в дереве нет, G1).
+      expect(
+        find.byKey(const ValueKey<String>('review-reveal')),
+        findsOneWidget,
+      );
 
       await tester.pump(const Duration(minutes: 1));
       await tester.pump();
 
       expect(find.text(l10n.reviewTimeUpTitle), findsOneWidget);
       expect(find.text(l10n.reviewTimeUpMessage(0)), findsOneWidget);
-      expect(find.text(l10n.ratingGood), findsNothing);
+      expect(
+        find.byKey(const ValueKey<String>('review-reveal')),
+        findsNothing,
+      );
       expect(reviews.ratings, isEmpty);
     });
 

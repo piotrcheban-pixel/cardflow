@@ -312,12 +312,11 @@ class _TrueFalseScreenState extends ConsumerState<TrueFalseScreen> {
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
             onHorizontalDragEnd: answered ? null : _onHorizontalDragEnd,
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+            child: StudyWorkspace(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
-                  Center(
+                  StudyQuestionCard(
                     child: CardContentView(
                       key: ValueKey<String>('tf-question-${card.id}'),
                       card: card,

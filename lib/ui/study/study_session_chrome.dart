@@ -1,6 +1,8 @@
 /// Общие элементы экранов новых режимов: прогресс и итоги (7.15/7.16).
 library;
 
+import 'dart:math' as math;
+
 import 'package:material_ui/material_ui.dart' hide Card;
 
 import 'package:cardflow/domain/cards/card.dart';
@@ -9,6 +11,95 @@ import 'package:cardflow/ui/cards/content/card_text.dart';
 import 'package:cardflow/ui/components/app_surfaces.dart';
 import 'package:cardflow/ui/review/review_chrome.dart';
 import 'package:cardflow/ui/theme/app_tokens.dart';
+import 'package:cardflow/ui/theme/app_typography.dart';
+
+/// Рабочая область режима проверки (аудит v7, G8/G11).
+///
+/// Находки аудита: «Ввод ответа» занимал 11 % высоты экрана с 1155 px пустоты
+/// снизу, «Верно/Неверно» — 19,9 %. Причина — колонка без центрирования в
+/// `SingleChildScrollView`. Теперь контент центрируется по доступной высоте
+/// (короткое содержимое — по центру, длинное — прокручивается), а ширина
+/// колонки берётся из той же формулы, что и карточка сессии (G3).
+class StudyWorkspace extends StatelessWidget {
+  /// Создаёт рабочую область.
+  const StudyWorkspace({required this.child, super.key});
+
+  /// Содержимое (обычно `Column`).
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final double windowWidth = MediaQuery.sizeOf(context).width;
+    // Как карточка сессии, но не уже 720 лог. px: формы и варианты ответа.
+    final double maxWidth = math.max(720, AppSizes.studyCardWidth(windowWidth));
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final double minHeight = math.max(
+          0,
+          constraints.maxHeight - AppSpacing.xl,
+        );
+        return SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg,
+            vertical: AppSpacing.md,
+          ),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: maxWidth,
+                minHeight: minHeight,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[child],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Вопрос режима проверки в единой трактовке (аудит v7, G11).
+///
+/// В «Классике»/«Тренировке»/«Ленте» вопрос — белая карточка, а в «Тесте»,
+/// «Вводе ответа» и «Верно/Неверно» он был строкой на фоне: один и тот же
+/// контент выглядел как два разных продукта. Теперь вопрос всех режимов —
+/// та же поверхность ([AppPanel]), тот же надзаголовок и те же отступы.
+class StudyQuestionCard extends StatelessWidget {
+  /// Создаёт карточку вопроса.
+  const StudyQuestionCard({required this.child, super.key});
+
+  /// Содержимое вопроса (обычно `CardContentView`).
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final double factor = AppAdaptive.factorForContext(context);
+    final double pad = (AppSpacing.xl * factor).clamp(
+      AppSpacing.xl,
+      AppSpacing.xxl,
+    );
+    return AppPanel(
+      padding: EdgeInsets.symmetric(horizontal: pad, vertical: pad),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Text(
+            l10n.reviewQuestionLabel.toUpperCase(),
+            style: AppTypography.overline(context),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Center(child: child),
+        ],
+      ),
+    );
+  }
+}
 
 /// Прогресс сессии нового режима: подпись и полоса дизайн-системы.
 class StudyProgressBar extends StatelessWidget {

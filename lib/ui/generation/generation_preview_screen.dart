@@ -455,7 +455,7 @@ class _GenerationPreviewScreenState
       appBar: AppBar(title: Text(l10n.generationPreviewTitle)),
       body: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: AppSizes.formMaxWidth),
+          constraints: BoxConstraints(maxWidth: AppSizes.formWidth(context)),
           child: ListView(
             padding: const EdgeInsets.fromLTRB(
               AppSpacing.md,
@@ -737,8 +737,8 @@ class _GenerationPreviewScreenState
             child: Center(
               heightFactor: 1,
               child: ConstrainedBox(
-                constraints: const BoxConstraints(
-                  maxWidth: AppSizes.formMaxWidth,
+                constraints: BoxConstraints(
+                  maxWidth: AppSizes.formWidth(context),
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,

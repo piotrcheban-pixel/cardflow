@@ -131,7 +131,16 @@ void main() {
     expect(find.textContaining('Сила тока на участке'), findsOneWidget);
   });
 
-  testWidgets('D2: на 800×600 панель оценок не перекрывает карточку', (
+  testWidgets('G5: undo скрыт, а не серый', (WidgetTester tester) async {
+    await pumpAt(tester, const Size(1280, 720));
+    expect(
+      find.byKey(const ValueKey<String>('review-undo')),
+      findsNothing,
+      reason: 'без истории отката кнопки нет в дереве',
+    );
+  });
+
+  testWidgets('G2/G3: оценки находятся внутри карточки, а не полосой под ней', (
     WidgetTester tester,
   ) async {
     await pumpAt(tester, const Size(800, 600), reveal: true);
@@ -143,28 +152,40 @@ void main() {
 
     expect(card.height, greaterThanOrEqualTo(250));
     expect(
-      card.bottom,
-      lessThanOrEqualTo(toolbar.top),
-      reason: 'между карточкой и панелью оценок нет перекрытия',
+      toolbar.top,
+      greaterThanOrEqualTo(card.top),
+      reason: 'панель оценок — часть карточки (низ), а не отдельный блок',
+    );
+    expect(
+      toolbar.bottom,
+      lessThanOrEqualTo(card.bottom + 0.5),
+      reason: 'панель не выходит за нижнюю кромку карточки',
     );
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('D2: 800×600 при масштабе 150 % (533×400) — карточка читаема', (
+  testWidgets('G2: в 533×400 карточка читаема, оценки ≥56 px', (
     WidgetTester tester,
   ) async {
     // Аудит снимал 800×600 физических пикселей при DPI 150 % — это 533×400
-    // логических. Прежняя карточка там обрезалась панелью оценок; теперь панель
-    // переходит в компактный вид, а карточка остаётся видимой.
+    // логических (800×600 при 150 %). Панель оценок теперь живёт в карточке.
     await pumpAt(tester, const Size(533, 400), reveal: true);
 
     final Rect card = tester.getRect(
       find.byKey(const ValueKey<String>('review-card')),
     );
-    final Rect toolbar = tester.getRect(find.byType(ReviewToolbar));
     expect(card.height, greaterThanOrEqualTo(140));
-    expect(card.bottom, lessThanOrEqualTo(toolbar.top));
     expect(find.textContaining('Сила тока на участке'), findsOneWidget);
+    for (final String name in <String>['again', 'hard', 'good', 'easy']) {
+      final Size button = tester.getSize(
+        find.byKey(ValueKey<String>('review-rating-$name')),
+      );
+      expect(
+        button.height,
+        greaterThanOrEqualTo(AppSizes.ratingButtonHeight),
+        reason: 'G2: «$name» не ниже 56 на 533×400',
+      );
+    }
     expect(tester.takeException(), isNull);
   });
 
@@ -187,21 +208,50 @@ void main() {
   ) async {
     await pumpAt(tester, const Size(390, 844), reveal: true);
 
-    final Size card = tester.getSize(
+    final Rect card = tester.getRect(
       find.byKey(const ValueKey<String>('review-card')),
     );
     expect(card.width, lessThanOrEqualTo(390));
     expect(tester.takeException(), isNull);
+    final Rect toolbar = tester.getRect(find.byType(ReviewToolbar));
     expect(
-      tester.getRect(find.byType(ReviewToolbar)).top,
-      greaterThanOrEqualTo(
-        tester.getRect(find.byKey(const ValueKey<String>('review-card'))).top,
-      ),
+      toolbar.bottom,
+      lessThanOrEqualTo(card.bottom + 0.5),
+      reason: 'панель оценок внутри карточки',
     );
   });
 
+  // Аудит v7 (G3): карточка — не фиксированные 960, а ≥60 % ширины окна.
+  for (final (String label, Size size) in <(String, Size)>[
+    ('FullHD', const Size(1920, 1080)),
+    ('2K', const Size(2560, 1440)),
+    ('4K', const Size(3840, 2160)),
+  ]) {
+    testWidgets('G3: ширина карточки ≥60 % окна на $label', (
+      WidgetTester tester,
+    ) async {
+      await pumpAt(tester, size);
+      final Size card = tester.getSize(
+        find.byKey(const ValueKey<String>('review-card')),
+      );
+      expect(
+        card.width / size.width,
+        greaterThanOrEqualTo(0.6),
+        reason: '$label: карточка ${card.width} из ${size.width}',
+      );
+      // Карточка — основной объект экрана, а не полоса.
+      expect(card.height / size.height, greaterThanOrEqualTo(0.5));
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   test('ширина карточки выросла относительно макета 640 (D1)', () {
     expect(AppSizes.studyCardMaxWidth, greaterThanOrEqualTo(880));
+    // Адаптив G3: доля окна и нижняя граница 60 %.
+    expect(AppSizes.studyCardWidth(1920), greaterThanOrEqualTo(1920 * 0.6));
+    expect(AppSizes.studyCardWidth(2560), greaterThanOrEqualTo(2560 * 0.6));
+    expect(AppSizes.studyCardWidth(3840), greaterThanOrEqualTo(3840 * 0.6));
+    expect(AppSizes.studyCardWidth(390), lessThanOrEqualTo(390));
   });
   testWidgets('D1 v2: 533×400 — длинный вопрос прокручивается клавишами '
       'и индикатор прокрутки виден', (WidgetTester tester) async {

@@ -476,8 +476,70 @@ abstract final class AppSizes {
   /// используют одну сетку [contentMaxWidth] минус одна ступень поля.
   static const double detailsMaxWidth = 1120;
 
+  /// Адаптивная ширина детальной страницы (колода, конструктор).
+  ///
+  /// Аудит v7 (G8/V7-13): на 2K колода занимала 75,3 % площади, конструктор —
+  /// 75,4 %, справа оставалось 440–465 px пустоты. Ширина растёт с множителем
+  /// экрана, но не безгранично — иначе строки станут нечитаемыми.
+  static double detailsWidth(BuildContext context) =>
+      (detailsMaxWidth * AppAdaptive.factorForContext(context)).clamp(
+        detailsMaxWidth,
+        1600,
+      );
+
+  /// Адаптивная ширина формы и мастеров (ИИ-генерация, форма карточки).
+  ///
+  /// Аудит v7 (G8): генерация занимала 61,1 % площади (609 px справа).
+  static double formWidth(BuildContext context) =>
+      (formMaxWidth * AppAdaptive.factorForContext(context) * 1.25).clamp(
+        formMaxWidth,
+        1400,
+      );
+
   /// Ширина карточки сессии: главный объект экрана на десктопе.
-  static const double studyCardMaxWidth = 960;
+  ///
+  /// Аудит v7 (G3/G19): раньше это был **фиксированный** максимум 960 — на 2K
+  /// карточка занимала 54 % ширины окна, на 4K — 24 % (вертикальная полоса).
+  /// Теперь ширина считается от окна ([studyCardWidth]); константа — только
+  /// верхняя граница на очень широких экранах.
+  static const double studyCardMaxWidth = 2400;
+
+  /// Доля ширины окна, которую занимает карточка сессии (аудит v7, G3: ≥60 %).
+  static const double studyCardWidthFactor = 0.72;
+
+  /// Ширина карточки сессии для ширины окна [windowWidth].
+  ///
+  /// На узких экранах (< 900) карточка занимает всю доступную ширину, иначе —
+  /// [studyCardWidthFactor] окна, но не меньше 60 % (требование гейта G3) и не
+  /// больше [studyCardMaxWidth].
+  static double studyCardWidth(double windowWidth) {
+    if (windowWidth <= 0 || !windowWidth.isFinite) return studyCardMaxWidth;
+    final double available = math.max(0, windowWidth - AppSpacing.xxl);
+    if (windowWidth < 900) return available;
+    final double preferred = math.min(
+      windowWidth * studyCardWidthFactor,
+      studyCardMaxWidth,
+    );
+    return math.max(preferred, math.min(available, windowWidth * 0.6));
+  }
+
+  /// Базовый предел ширины текстовой колонки карточки: 45–75 знаков (G7).
+  ///
+  /// Умножается на адаптивный множитель окна: на 2K/4K строки не растягиваются
+  /// на всю ширину карточки, а остаются читаемой колонкой (~60 знаков).
+  static const double studyTextColumnBase = 900;
+
+  /// Высота кнопки оценки (G2: не меньше 56 лог. px на любом размере).
+  static const double ratingButtonHeight = 56;
+
+  /// Предел адаптивного множителя для кнопки оценки (G2: 56–68 px).
+  static const double ratingButtonMaxScale = 1.2;
+
+  /// Кегль подписи оценки (G2: не меньше 16 px при масштабе текста 90 %).
+  static const double ratingLabelBase = 18;
+
+  /// Высота главного действия карточки «Показать ответ» (G1: ≥56).
+  static const double revealButtonHeight = 56;
 
   /// Размер иконки в навигации (шкала 16/20/24, аудит v4 V39).
   static const double navIcon = 20;

@@ -346,12 +346,11 @@ class _TypingScreenState extends ConsumerState<TypingScreen> {
           ),
         ),
         Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+          child: StudyWorkspace(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
-                Center(
+                StudyQuestionCard(
                   child: CardContentView(
                     key: ValueKey<String>('typing-question-${card.id}'),
                     card: card,
@@ -364,7 +363,7 @@ class _TypingScreenState extends ConsumerState<TypingScreen> {
                     onRetryMedia: () => _retryMedia(card),
                   ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: AppSpacing.lg),
                 TextField(
                   key: const ValueKey<String>('typing-input'),
                   controller: _input,

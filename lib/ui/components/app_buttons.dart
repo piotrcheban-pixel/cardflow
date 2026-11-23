@@ -35,4 +35,27 @@ abstract final class AppButtons {
       borderRadius: BorderRadius.all(Radius.circular(AppRadii.control)),
     ),
   );
+
+  /// Главное действие карточки («Показать ответ»): не ниже 56 лог. px (G1).
+  ///
+  /// Аудит v7: главное действие сессии было 48–59 px и визуально терялось
+  /// рядом с четырьмя оценками. Теперь это крупная кнопка на всю ширину
+  /// карточки, с кеглем 17 с адаптивным множителем.
+  static ButtonStyle cardAction(BuildContext context) {
+    final double factor = _control(context);
+    return FilledButton.styleFrom(
+      minimumSize: Size.fromHeight(AppSizes.revealButtonHeight * factor),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.sm,
+      ),
+      textStyle: Theme.of(context).textTheme.titleSmall?.copyWith(
+        fontSize: 17 * factor,
+        fontWeight: FontWeight.w600,
+      ),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(Radius.circular(AppRadii.input)),
+      ),
+    );
+  }
 }

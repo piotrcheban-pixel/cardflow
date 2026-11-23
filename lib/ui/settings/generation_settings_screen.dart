@@ -350,8 +350,8 @@ class _GenerationSettingsScreenState
                   child: Center(
                     heightFactor: 1,
                     child: ConstrainedBox(
-                      constraints: const BoxConstraints(
-                        maxWidth: AppSizes.formMaxWidth,
+                      constraints: BoxConstraints(
+                        maxWidth: AppSizes.formWidth(context),
                       ),
                       child: FilledButton.icon(
                         key: const ValueKey<String>('providers-add'),
@@ -392,7 +392,7 @@ class _GenerationSettingsScreenState
     final ThemeData theme = Theme.of(context);
     return Center(
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: AppSizes.formMaxWidth),
+        constraints: BoxConstraints(maxWidth: AppSizes.formWidth(context)),
         child: ListView(
           padding: const EdgeInsets.fromLTRB(
             AppSpacing.md,

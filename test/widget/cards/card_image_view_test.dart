@@ -69,7 +69,7 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('карточка с фото: картинка 16:9, ограничена по высоте', (
+  testWidgets('фото: пропорции файла, contain, без обрезки и рамки 16:9 (G4)', (
     tester,
   ) async {
     await pumpContent(
@@ -77,18 +77,27 @@ void main() {
       child: contentView(cardWithImage(), metadata: photoMetadata),
     );
     expect(find.byType(CardImageView), findsOneWidget);
-    final aspect = tester.widget<AspectRatio>(
+    // Аудит v7 (G4): рамка 16:9 и cover-обрезка удалены — размер строится из
+    // фактических пропорций файла (PNG 800×600, AR 4:3).
+    expect(
       find.descendant(
         of: find.byType(CardImageView),
         matching: find.byType(AspectRatio),
       ),
+      findsNothing,
     );
-    expect(aspect.aspectRatio, closeTo(16 / 9, 0.01));
-    final size = tester.getSize(find.byType(CardImageView));
+    final Image image = tester.widget<Image>(
+      find.byKey(const ValueKey<String>('card-image-attempt-0')),
+    );
+    expect(image.fit, BoxFit.contain);
+    final Size size = tester.getSize(find.byType(CardImageView));
+    expect(size.width / size.height, closeTo(800 / 600, 0.02));
     expect(size.height, lessThanOrEqualTo(kCardImageMaxHeight));
   });
 
-  testWidgets('схема: пропорции 4:3 и BoxFit.contain', (tester) async {
+  testWidgets('схема: тот же contain и те же пропорции файла (G4)', (
+    tester,
+  ) async {
     await pumpContent(
       tester,
       child: contentView(
@@ -96,17 +105,39 @@ void main() {
         metadata: photoMetadata.copyWith(kind: GeneratedCardImageKind.diagram),
       ),
     );
-    final aspect = tester.widget<AspectRatio>(
-      find.descendant(
-        of: find.byType(CardImageView),
-        matching: find.byType(AspectRatio),
-      ),
-    );
-    expect(aspect.aspectRatio, closeTo(4 / 3, 0.01));
-    final image = tester.widget<Image>(
+    final Image image = tester.widget<Image>(
       find.byKey(const ValueKey<String>('card-image-attempt-0')),
     );
     expect(image.fit, BoxFit.contain);
+    final Size size = tester.getSize(find.byType(CardImageView));
+    expect(size.width / size.height, closeTo(800 / 600, 0.02));
+  });
+
+  testWidgets('высокое изображение 960×1371 вписывается целиком (G4)', (
+    tester,
+  ) async {
+    final Uint8List tall = Uint8List.fromList(
+      img.encodePng(img.Image(width: 960, height: 1371)),
+    );
+    await pumpContent(
+      tester,
+      child: CardContentView(
+        card: cardWithImage(),
+        side: 'Какой органоид синтезирует АТФ?',
+        revealed: false,
+        faceKey: const ValueKey<String>('face'),
+        mediaBytes: <String, Uint8List>{'media-1': tall},
+        mediaMetadata: const <String, MediaMetadata>{
+          'media-1': photoMetadata,
+        },
+        imageMaxHeight: 400,
+        imageMaxWidth: 900,
+      ),
+    );
+    final Size size = tester.getSize(find.byType(CardImageView));
+    // AR сохраняется: 960/1371 — обрезки нет (было 60,6 % по высоте).
+    expect(size.width / size.height, closeTo(960 / 1371, 0.02));
+    expect(size.height, closeTo(400, 1));
   });
 
   testWidgets('ошибка декодирования: явное состояние и повтор (7.19)', (

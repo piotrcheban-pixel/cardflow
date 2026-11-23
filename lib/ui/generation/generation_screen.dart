@@ -1008,8 +1008,8 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
                       // экран (Scaffold даёт нижней панели неограниченную высоту).
                       heightFactor: 1,
                       child: ConstrainedBox(
-                        constraints: const BoxConstraints(
-                          maxWidth: AppSizes.formMaxWidth,
+                        constraints: BoxConstraints(
+                          maxWidth: AppSizes.formWidth(context),
                         ),
                         child: _buildActions(l10n),
                       ),
@@ -1548,7 +1548,7 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
         padding: EdgeInsets.zero,
         children: <Widget>[
           AppContentWidth(
-            maxWidth: AppSizes.formMaxWidth,
+            maxWidth: AppSizes.formWidth(context),
             padding: const EdgeInsets.fromLTRB(
               AppSpacing.md,
               AppSpacing.xs,

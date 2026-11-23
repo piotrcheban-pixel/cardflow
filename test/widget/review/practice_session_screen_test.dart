@@ -88,7 +88,19 @@ void main() {
     expect(find.text(l10n.practiceSubtitle), findsOneWidget);
     expect(find.text('Первый вопрос'), findsOneWidget);
     expect(find.text('Первый ответ'), findsNothing);
-    expect(find.text(l10n.ratingAgain), findsOneWidget);
+    // Аудит v7 (G1): до раскрытия ответа панели оценок нет в дереве вообще —
+    // ни активной, ни серой, ни с подсказкой.
+    expect(find.text(l10n.ratingAgain), findsNothing);
+    expect(find.text(l10n.ratingGood), findsNothing);
+    expect(
+      find.byKey(const ValueKey<String>('review-rating-good')),
+      findsNothing,
+    );
+    expect(
+      find.byKey(const ValueKey<String>('practice-reveal')),
+      findsOneWidget,
+      reason: 'единственное действие лицевой стороны',
+    );
     expect(
       find.byKey(const ValueKey<String>('review-interval-good')),
       findsNothing,
@@ -98,28 +110,41 @@ void main() {
     await tester.tap(find.byKey(const ValueKey<String>('practice-card')));
     await tester.pumpAndSettle();
     expect(find.text('Первый ответ'), findsOneWidget);
+    expect(find.text(l10n.ratingGood), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey<String>('practice-reveal')),
+      findsNothing,
+      reason: 'после раскрытия действие «Показать ответ» исчезает',
+    );
   });
 
-  testWidgets('оценки недоступны до раскрытия ответа (F1)', (
+  testWidgets('оценок до раскрытия нет в дереве, после раскрытия — четыре (G1)', (
     WidgetTester tester,
   ) async {
     await pumpPractice(tester, overrides: overridesFor(cardsToPractice()));
 
     for (final String name in <String>['again', 'hard', 'good', 'easy']) {
-      final FilledButton button = tester.widget<FilledButton>(
+      expect(
         find.byKey(ValueKey<String>('review-rating-$name')),
+        findsNothing,
+        reason: 'тренировка: панели оценок до ответа нет («$name»)',
       );
-      expect(button.onPressed, isNull, reason: 'тренировка: «$name» закрыта');
     }
     await tester.sendKeyEvent(LogicalKeyboardKey.digit3);
     await tester.pumpAndSettle();
     expect(practice.ratings, isEmpty);
 
     await reveal(tester);
-    final FilledButton good = tester.widget<FilledButton>(
-      find.byKey(const ValueKey<String>('review-rating-good')),
-    );
-    expect(good.onPressed, isNotNull);
+    for (final String name in <String>['again', 'hard', 'good', 'easy']) {
+      final FilledButton button = tester.widget<FilledButton>(
+        find.byKey(ValueKey<String>('review-rating-$name')),
+      );
+      expect(
+        button.onPressed,
+        isNotNull,
+        reason: 'после раскрытия «$name» активна',
+      );
+    }
   });
 
   testWidgets('оценка пишется как practice и ведёт к следующей карточке', (

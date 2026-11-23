@@ -8,6 +8,7 @@ import 'package:material_ui/material_ui.dart' hide Card;
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/scheduling/rating.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
+import 'package:cardflow/ui/components/app_buttons.dart';
 import 'package:cardflow/ui/review/practice_session_engine.dart';
 import 'package:cardflow/ui/review/review_card_view.dart';
 import 'package:cardflow/ui/review/review_chrome.dart';
@@ -261,24 +262,27 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen>
         onDone: _leave,
       );
     }
+    final double windowWidth = MediaQuery.sizeOf(context).width;
+    final double cardWidth = AppSizes.studyCardWidth(windowWidth);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              maxWidth: AppSizes.studyCardMaxWidth,
-            ),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.md,
-                AppSpacing.sm,
-                AppSpacing.md,
-                0,
-              ),
-              child: SessionProgressStrip(
-                label: l10n.practiceRatedLabel(state.ratedCount, state.total),
-                value: state.total == 0 ? 0 : state.ratedCount / state.total,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+            child: SizedBox(
+              width: cardWidth,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.md,
+                  AppSpacing.sm,
+                  AppSpacing.md,
+                  0,
+                ),
+                child: SessionProgressStrip(
+                  label: l10n.practiceRatedLabel(state.ratedCount, state.total),
+                  value: state.total == 0 ? 0 : state.ratedCount / state.total,
+                ),
               ),
             ),
           ),
@@ -301,59 +305,42 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen>
         ),
         Expanded(
           child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(
-                maxWidth: AppSizes.studyCardMaxWidth,
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: <Widget>[
-                    Expanded(
-                      child: KeyedSubtree(
-                        key: const ValueKey<String>('practice-card'),
-                        child: ReviewCardView(
-                          key: ValueKey<String>(state.current!.id),
-                          scrollController: _cardScroll,
-                          front: state.current!.front,
-                          back: state.current!.back,
-                          card: state.current!,
-                          mediaBytes: _media.bytes,
-                          mediaMetadata: _media.metadata,
-                          onRetryMedia: () => _retryMedia(state.current!),
-                          revealed: state.revealed,
-                          onTap: _reveal,
-                        ),
-                      ),
-                    ),
-                    if (!state.revealed) ...<Widget>[
-                      const SizedBox(height: AppSpacing.sm),
-                      FilledButton(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+              child: SizedBox(
+                width: cardWidth,
+                child: Padding(
+                  padding: const EdgeInsets.only(top: AppSpacing.xs),
+                  child: KeyedSubtree(
+                    key: const ValueKey<String>('practice-card'),
+                    child: ReviewCardView(
+                      key: ValueKey<String>(state.current!.id),
+                      scrollController: _cardScroll,
+                      front: state.current!.front,
+                      back: state.current!.back,
+                      card: state.current!,
+                      mediaBytes: _media.bytes,
+                      mediaMetadata: _media.metadata,
+                      onRetryMedia: () => _retryMedia(state.current!),
+                      revealed: state.revealed,
+                      onTap: _reveal,
+                      // G1: оценок до раскрытия в дереве нет — только действие.
+                      questionFooter: FilledButton(
                         key: const ValueKey<String>('practice-reveal'),
                         onPressed: _reveal,
-                        style: FilledButton.styleFrom(
-                          minimumSize: const Size.fromHeight(
-                            AppSizes.buttonHeightLarge,
-                          ),
-                        ),
+                        style: AppButtons.cardAction(context),
                         child: Text(l10n.reviewRevealAction),
                       ),
-                    ] else if (MediaQuery.sizeOf(context).height >= 500)
-                      Padding(
-                        padding: const EdgeInsets.only(top: AppSpacing.xs),
-                        child: Text(
-                          l10n.reviewKeyboardHints,
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.labelSmall
-                              ?.copyWith(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurfaceVariant,
-                              ),
-                        ),
+                      // Тренировка не меняет расписание: прогноза интервалов нет,
+                      // но кнопки оценок — те же крупные кнопки системы (G2).
+                      answerFooter: ReviewToolbar(
+                        key: const ValueKey<String>('practice-toolbar'),
+                        preview: null,
+                        enabled: !state.busy,
+                        onRating: (Rating rating) => unawaited(_rate(rating)),
                       ),
-                  ],
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -365,15 +352,6 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen>
             onDismiss: dismissSessionNotice,
             dismissTooltip: l10n.sessionNoticeDismiss,
           ),
-        ReviewToolbar(
-          compact: MediaQuery.sizeOf(context).height < 500,
-          preview: null,
-          enabled: !state.busy && state.revealed,
-          hint: state.revealed
-              ? null
-              : AppLocalizations.of(context).reviewRevealRequiredHint,
-          onRating: (Rating rating) => unawaited(_rate(rating)),
-        ),
       ],
     );
   }

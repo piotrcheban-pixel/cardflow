@@ -393,130 +393,106 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen>
       return ReviewCompletedView(ratedCount: state.ratedCount, onDone: _leave);
     }
     final int displayIndex = (state.ratedCount + 1).clamp(1, state.total);
+    // Аудит v7 (G3/G19): ширина карточки — от окна (≥60 % на 2K/FullHD), а не
+    // фиксированные 960 лог. px.
+    final double windowWidth = MediaQuery.sizeOf(context).width;
+    final double cardWidth = AppSizes.studyCardWidth(windowWidth);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              maxWidth: AppSizes.studyCardMaxWidth,
-            ),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.md,
-                AppSpacing.sm,
-                AppSpacing.md,
-                0,
-              ),
-              child: SessionProgressStrip(
-                label: l10n.reviewCardCounter(displayIndex, state.total),
-                value: state.total == 0 ? 0 : state.ratedCount / state.total,
-                trailing: Text(
-                  l10n.reviewRatedCount(state.ratedCount),
-                  style: AppTypography.numeric(
-                    context,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                ),
+        _cardAligned(
+          width: cardWidth,
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.md,
+            AppSpacing.sm,
+            AppSpacing.md,
+            0,
+          ),
+          child: SessionProgressStrip(
+            label: l10n.reviewCardCounter(displayIndex, state.total),
+            value: state.total == 0 ? 0 : state.ratedCount / state.total,
+            trailing: Text(
+              l10n.reviewRatedCount(state.ratedCount),
+              style: AppTypography.numeric(
+                context,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
           ),
         ),
         Expanded(
           child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(
-                maxWidth: AppSizes.studyCardMaxWidth,
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: <Widget>[
-                    Expanded(
-                      child: KeyedSubtree(
-                        key: const ValueKey<String>('review-card'),
-                        // Аудит v4 (A6): смена карточки — короткий fade + сдвиг
-                        // 8 px (220 мс), а не мгновенная подмена.
-                        child: AnimatedSwitcher(
-                          duration: AppMotion.duration(
-                            context,
-                            AppDurations.medium,
-                          ),
-                          switchInCurve: AppMotion.enter,
-                          switchOutCurve: AppMotion.enter,
-                          transitionBuilder: (Widget child, Animation<double> a) {
-                            return FadeTransition(
-                              opacity: a,
-                              child: SlideTransition(
-                                position: Tween<Offset>(
-                                  begin: const Offset(0, 0.015),
-                                  end: Offset.zero,
-                                ).animate(a),
-                                child: child,
-                              ),
-                            );
-                          },
-                          child: ReviewCardView(
-                            key: ValueKey<String>(
-                              'card-${state.current!.card.id}',
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+              child: SizedBox(
+                width: cardWidth,
+                child: Padding(
+                  padding: const EdgeInsets.only(top: AppSpacing.xs),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: <Widget>[
+                      Expanded(
+                        child: KeyedSubtree(
+                          key: const ValueKey<String>('review-card'),
+                          // Аудит v4 (A6): смена карточки — короткий fade + сдвиг
+                          // 8 px (220 мс), а не мгновенная подмена.
+                          child: AnimatedSwitcher(
+                            duration: AppMotion.duration(
+                              context,
+                              AppDurations.medium,
                             ),
-                            scrollController: _cardScroll,
-                            front: state.current!.card.front,
-                            back: state.current!.card.back,
-                            card: state.current!.card,
-                            mediaBytes: _media.bytes,
-                            mediaMetadata: _media.metadata,
-                            onRetryMedia: () => _retryMedia(state.current!.card),
-                            revealed: state.revealed,
-                            onTap: _reveal,
-                          ),
-                        ),
-                      ),
-                    ),
-                    if (!state.revealed) ...<Widget>[
-                      const SizedBox(height: AppSpacing.sm),
-                      FilledButton(
-                        key: const ValueKey<String>('review-reveal'),
-                        onPressed: _reveal,
-                        style: AppButtons.large(context),
-                        child: Text(l10n.reviewRevealAction),
-                      ),
-                      // Аудит v5 (V5-10): подсказка есть и до раскрытия —
-                      // именно тогда она объясняет, что Space раскрывает ответ.
-                      if (MediaQuery.sizeOf(context).height >= 500)
-                        Padding(
-                          padding: const EdgeInsets.only(top: AppSpacing.xs),
-                          child: Text(
-                            l10n.reviewKeyboardHintsFront,
-                            key: const ValueKey<String>(
-                              'review-keyboard-hints-front',
-                            ),
-                            textAlign: TextAlign.center,
-                            style: Theme.of(context).textTheme.labelSmall
-                                ?.copyWith(
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.onSurfaceVariant,
-                                ),
-                          ),
-                        ),
-                    ] else if (MediaQuery.sizeOf(context).height >= 500)
-                      Padding(
-                        padding: const EdgeInsets.only(top: AppSpacing.xs),
-                        child: Text(
-                          l10n.reviewKeyboardHints,
-                          key: const ValueKey<String>('review-keyboard-hints'),
-                          textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.labelSmall
-                              ?.copyWith(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurfaceVariant,
+                            switchInCurve: AppMotion.enter,
+                            switchOutCurve: AppMotion.enter,
+                            transitionBuilder:
+                                (Widget child, Animation<double> a) {
+                                  return FadeTransition(
+                                    opacity: a,
+                                    child: SlideTransition(
+                                      position: Tween<Offset>(
+                                        begin: const Offset(0, 0.015),
+                                        end: Offset.zero,
+                                      ).animate(a),
+                                      child: child,
+                                    ),
+                                  );
+                                },
+                            child: ReviewCardView(
+                              key: ValueKey<String>(
+                                'card-${state.current!.card.id}',
                               ),
+                              scrollController: _cardScroll,
+                              front: state.current!.card.front,
+                              back: state.current!.card.back,
+                              card: state.current!.card,
+                              mediaBytes: _media.bytes,
+                              mediaMetadata: _media.metadata,
+                              onRetryMedia: () =>
+                                  _retryMedia(state.current!.card),
+                              revealed: state.revealed,
+                              onTap: _reveal,
+                              // G1: до раскрытия в карточке только одно действие
+                              // «Показать ответ»; оценок нет в дереве вообще.
+                              questionFooter: FilledButton(
+                                key: const ValueKey<String>('review-reveal'),
+                                onPressed: _reveal,
+                                style: AppButtons.cardAction(context),
+                                child: Text(l10n.reviewRevealAction),
+                              ),
+                              // G2/G9: после раскрытия — панель из четырёх
+                              // крупных оценок внутри карточки, с fade/slide.
+                              answerFooter: ReviewToolbar(
+                                key: const ValueKey<String>('review-toolbar'),
+                                preview: state.preview,
+                                enabled: !state.busy,
+                                onRating: (Rating rating) =>
+                                    unawaited(_rate(rating)),
+                              ),
+                            ),
+                          ),
                         ),
                       ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -528,16 +504,24 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen>
             onDismiss: dismissSessionNotice,
             dismissTooltip: l10n.sessionNoticeDismiss,
           ),
-        ReviewToolbar(
-          compact: MediaQuery.sizeOf(context).height < 500,
-          preview: state.preview,
-          enabled: !state.busy && state.revealed,
-          hint: state.revealed
-              ? null
-              : AppLocalizations.of(context).reviewRevealRequiredHint,
-          onRating: (Rating rating) => unawaited(_rate(rating)),
-        ),
       ],
+    );
+  }
+
+  /// Строка, выровненная по ширине карточки (прогресс над карточкой).
+  Widget _cardAligned({
+    required double width,
+    required EdgeInsets padding,
+    required Widget child,
+  }) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+        child: SizedBox(
+          width: width,
+          child: Padding(padding: padding, child: child),
+        ),
+      ),
     );
   }
 }

@@ -126,12 +126,15 @@ class ReviewSessionAppBar extends StatelessWidget
               ],
             ),
           ),
-          IconButton(
-            key: const ValueKey<String>('review-undo'),
-            tooltip: l10n.reviewUndoTooltip,
-            icon: const Icon(Icons.undo, size: AppSizes.navIcon),
-            onPressed: undoEnabled ? onUndo : null,
-          ),
+          // Аудит v7 (G5): недоступное действие скрывается, а не показывается
+          // серым. Без истории отката кнопки undo в дереве нет вовсе.
+          if (undoEnabled)
+            IconButton(
+              key: const ValueKey<String>('review-undo'),
+              tooltip: l10n.reviewUndoTooltip,
+              icon: const Icon(Icons.undo, size: AppSizes.navIcon),
+              onPressed: onUndo,
+            ),
           // Аудит v4: «Почему?» скрыта, если цитаты нет, вместо disabled-иконки.
           if (onWhy != null || excerpt != null)
             IconButton(
@@ -183,18 +186,19 @@ class ReviewSessionAppBar extends StatelessWidget
 /// убраны крестик и закрытие по фону — закрыть можно только осознанным
 /// выбором или Esc. Опасное действие — текстовая кнопка цвета ошибки,
 /// залитая primary возвращает в сессию.
+///
+/// Аудит v7 (G5/V7-14): убрано дублирование «остаться» — раньше крестик в
+/// шапке и filled-кнопка «Продолжить» делали одно и то же. Теперь «остаться» —
+/// ровно один вход (кнопка), а Esc/крестик закрытия в диалоге нет.
 Future<bool> confirmReviewExit(BuildContext context) async {
   final AppLocalizations l10n = AppLocalizations.of(context);
   final ThemeData theme = Theme.of(context);
   // AppDialog передаёт действиям контекст диалога — правило ADR-036
   // (закрывается маршрут диалога, а не экран-ветка).
-  // Аудит v5 (V5-9): единый шаблон диалогов — крестик безопасного закрытия
-  // (равен «Продолжить»), одна filled-кнопка безопасного действия.
   final bool? result = await showAppDialog<bool>(
     context: context,
     title: l10n.reviewExitDialogTitle,
     subtitle: l10n.reviewExitDialogMessage,
-    closeLabel: l10n.reviewExitContinue,
     bodyBuilder: (BuildContext dialogContext) => const SizedBox.shrink(),
     actionsBuilder: (BuildContext dialogContext) => <Widget>[
       TextButton(

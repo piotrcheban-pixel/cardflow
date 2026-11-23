@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:material_ui/material_ui.dart';
 
 import 'package:cardflow/domain/scheduling/rating.dart';
@@ -17,111 +19,75 @@ String reviewIntervalLabel(AppLocalizations l10n, Duration interval) {
   };
 }
 
-/// Панель оценок всех режимов сессии (SPEC A7.2, ADR-038).
+/// Панель оценок сессии (SPEC A7.2, ADR-038; аудит v7 — G1/G2/G6/G9).
 ///
-/// Четыре кнопки в порядке [Rating.values]: над каждой — прогноз интервала,
-/// посчитанный планировщиком для текущей карточки. Цвета ролей взяты из
-/// дизайн-системы: Again — errorContainer, Hard — surfaceContainer,
-/// Good — secondaryContainer, Easy — primaryFixed (как в макете Gemini).
+/// Панель **существует только после раскрытия ответа** (G1): вызывающий экран
+/// не строит её в состоянии «вопрос», поэтому здесь нет ни `disabled`-вида, ни
+/// подсказки «оценки откроются…» — недоступное действие скрыто, а не серое (G5).
+///
+/// Размеры из шкалы, а не из компактного режима (G2/G6): кнопка не ниже
+/// [AppSizes.ratingButtonHeight] (56) на любом размере окна, кегль подписи —
+/// [AppSizes.ratingLabelBase] (18) с адаптивным множителем, зазор — не меньше
+/// 12 лог. px (раньше в компактном режиме было 8).
+///
+/// Цвета ролей — дизайн-система: Again — errorContainer, Hard —
+/// surfaceContainer, Good — secondaryContainer, Easy — primaryFixed.
 class ReviewToolbar extends StatelessWidget {
   /// Создаёт панель оценок.
   const ReviewToolbar({
     required this.preview,
-    required this.enabled,
     required this.onRating,
-    this.hint,
-    this.compact = false,
+    this.enabled = true,
     super.key,
   });
 
-  /// Прогноз интервалов над кнопками; `null` — прогноза нет.
+  /// Прогноз интервалов над кнопками; `null` — прогноза нет (тренировка).
   final Map<Rating, Duration>? preview;
 
-  /// Доступны ли кнопки (ответ раскрыт и не идёт запись в БД).
+  /// Доступны ли кнопки (в основном — не идёт запись в БД).
   final bool enabled;
 
   /// Обработчик оценки.
   final ValueChanged<Rating> onRating;
 
-  /// Пояснение над панелью, когда оценки ещё недоступны (F1: до раскрытия
-  /// ответа оценка не ставится).
-  final String? hint;
-
-  /// Компактный вид для низких окон (находка D2: 800×600 — логические 533×400
-  /// при масштабе 150 %): одна строка кнопок без прогноза интервалов и
-  /// клавиатурных подсказок, чтобы карточка не сжималась до полоски.
-  final bool compact;
+  /// Множитель контролов окна: 1,0 / 1,24 / 1,45 (клампится 1,0–1,2).
+  static double controlScale(BuildContext context) =>
+      AppAdaptive.factorForContext(context).clamp(1.0, AppSizes.ratingButtonMaxScale);
 
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
-    final String? hintText = enabled ? null : hint;
-    // Аудит v4 (V24): прогнозы интервалов не показываются, пока ответ не
-    // раскрыт — иначе пользователь видит числа у недоступных кнопок.
-    final Map<Rating, Duration>? visiblePreview = enabled ? preview : null;
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(
-          AppSpacing.md,
-          compact ? AppSpacing.xxs : AppSpacing.xs,
-          AppSpacing.md,
-          compact ? AppSpacing.xs : AppSpacing.md,
-        ),
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              maxWidth: AppSizes.studyCardMaxWidth,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: <Widget>[
-                if (hintText != null)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-                    child: Text(
-                      hintText,
-                      key: const ValueKey<String>('review-rating-hint'),
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ),
-                LayoutBuilder(
-                  builder: (BuildContext context, BoxConstraints constraints) {
-                    final int columns =
-                        (constraints.maxWidth < (compact ? 400 : 520)) ? 2 : 4;
-                    final double gap = compact ? AppSpacing.xs : AppSpacing.sm;
-                    final double width =
-                        (constraints.maxWidth - gap * (columns - 1)) / columns;
-                    return Wrap(
-                      spacing: gap,
-                      runSpacing: gap,
-                      children: <Widget>[
-                        for (final Rating rating in Rating.values)
-                          SizedBox(
-                            width: width,
-                            child: _RatingButton(
-                              rating: rating,
-                              interval: compact
-                                  ? null
-                                  : visiblePreview?[rating],
-                              enabled: enabled,
-                              compact: compact,
-                              onPressed: () => onRating(rating),
-                            ),
-                          ),
-                      ],
-                    );
-                  },
+    final Map<Rating, Duration>? previews = preview;
+    final double scale = controlScale(context);
+    final double gap = math.max(AppSpacing.sm, AppSpacing.sm * scale);
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final double width = constraints.maxWidth.isFinite
+            ? constraints.maxWidth
+            : MediaQuery.sizeOf(context).width;
+        // На узком экране четыре кнопки в ряд нечитаемы — сетка 2×2.
+        final int columns = width < 640 ? 2 : 4;
+        final double buttonWidth =
+            (width - gap * (columns - 1)) / columns;
+        return Wrap(
+          spacing: gap,
+          runSpacing: gap,
+          children: <Widget>[
+            for (final Rating rating in Rating.values)
+              SizedBox(
+                width: buttonWidth,
+                child: _RatingButton(
+                  rating: rating,
+                  interval: previews?[rating],
+                  enabled: enabled,
+                  scale: scale,
+                  onPressed: () => onRating(rating),
+                  textTheme: theme,
                 ),
-              ],
-            ),
-          ),
-        ),
-      ),
+              ),
+          ],
+        );
+      },
     );
   }
 }
@@ -131,20 +97,22 @@ class _RatingButton extends StatelessWidget {
     required this.rating,
     required this.interval,
     required this.enabled,
+    required this.scale,
     required this.onPressed,
-    this.compact = false,
+    required this.textTheme,
   });
 
   final Rating rating;
   final Duration? interval;
   final bool enabled;
+  final double scale;
   final VoidCallback onPressed;
-  final bool compact;
+  final ThemeData textTheme;
 
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
-    final ThemeData theme = Theme.of(context);
+    final ThemeData theme = textTheme;
     final ColorScheme scheme = theme.colorScheme;
     final String label = switch (rating) {
       Rating.again => l10n.ratingAgain,
@@ -176,37 +144,36 @@ class _RatingButton extends StatelessWidget {
       Rating.good => scheme.secondary,
       Rating.easy => scheme.primary,
     };
+    final Duration? intervalValue = interval;
+    // Подсказка клавиши: не пользовательский текст, а обозначение клавиши.
     final String keyHint = '[${rating.index + 1}]';
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        if (interval != null)
-          Text(
-            reviewIntervalLabel(l10n, interval!),
-            key: ValueKey<String>('review-interval-${rating.name}'),
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: AppTypography.caption(context, color: intervalColor),
-          ),
-        const SizedBox(height: AppSpacing.xxs + 2),
+        // Прогноз интервала виден на всех размерах окна (G2, V7-18): раньше в
+        // компактном режиме он исчезал — ключевая функция FSRS пропадала.
+        SizedBox(
+          height: 20 * scale,
+          child: intervalValue == null
+              ? null
+              : FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    reviewIntervalLabel(l10n, intervalValue),
+                    key: ValueKey<String>('review-interval-${rating.name}'),
+                    maxLines: 1,
+                    style: AppTypography.caption(context, color: intervalColor),
+                  ),
+                ),
+        ),
+        const SizedBox(height: AppSpacing.xxs),
         FilledButton(
           key: ValueKey<String>('review-rating-${rating.name}'),
           style: FilledButton.styleFrom(
             backgroundColor: background,
             foregroundColor: foreground,
-            // Аудит v4 (V24): до раскрытия ответа панель заметно «спит» —
-            // приглушённая заливка и подпись, а не яркие активные кнопки.
-            disabledBackgroundColor: background.withValues(alpha: 0.3),
-            disabledForegroundColor: foreground.withValues(alpha: 0.5),
-            minimumSize: Size(
-              0,
-              compact
-                  ? AppSizes.minTouchTarget
-                  : AppSizes.buttonHeightLarge *
-                        AppAdaptive.factorForContext(context).clamp(1.0, 1.3),
-            ),
+            minimumSize: Size(0, AppSizes.ratingButtonHeight * scale),
             padding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.xs,
               vertical: AppSpacing.xxs,
@@ -226,20 +193,22 @@ class _RatingButton extends StatelessWidget {
                 textAlign: TextAlign.center,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
+                // G2: кегль подписи не ниже 16 даже при пользовательском
+                // масштабе текста 90 % (18 × 0,9 = 16,2 на FullHD).
                 style: theme.textTheme.titleSmall?.copyWith(
+                  fontSize: AppSizes.ratingLabelBase * scale,
                   color: foreground,
+                  height: 1.15,
                 ),
               ),
-              if (!compact) ...<Widget>[
-                const SizedBox(height: 1),
-                Text(
-                  keyHint,
-                  style: AppTypography.caption(
-                    context,
-                    color: foreground.withValues(alpha: 0.7),
-                  ),
+              const SizedBox(height: 2),
+              Text(
+                keyHint,
+                style: AppTypography.caption(
+                  context,
+                  color: foreground.withValues(alpha: 0.7),
                 ),
-              ],
+              ),
             ],
           ),
         ),

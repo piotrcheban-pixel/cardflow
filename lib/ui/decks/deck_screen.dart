@@ -271,7 +271,7 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
         SliverToBoxAdapter(
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: AppSizes.detailsMaxWidth),
+              constraints: BoxConstraints(maxWidth: AppSizes.detailsWidth(context)),
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(
                   AppSpacing.md,
@@ -440,7 +440,7 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
           SliverToBoxAdapter(
             child: Center(
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: AppSizes.detailsMaxWidth),
+                constraints: BoxConstraints(maxWidth: AppSizes.detailsWidth(context)),
                 child: Padding(
                   padding: const EdgeInsets.all(AppSpacing.md),
                   child: _DeckCardsEmpty(),
@@ -452,7 +452,7 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
           SliverToBoxAdapter(
             child: Center(
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: AppSizes.detailsMaxWidth),
+                constraints: BoxConstraints(maxWidth: AppSizes.detailsWidth(context)),
                 child: Padding(
                   padding: const EdgeInsets.all(AppSpacing.md),
                   child: AppEmptyState(
@@ -479,7 +479,7 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
                   const SizedBox(height: AppSpacing.xs),
               itemBuilder: (BuildContext context, int index) => Center(
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: AppSizes.detailsMaxWidth),
+                  constraints: BoxConstraints(maxWidth: AppSizes.detailsWidth(context)),
                   child: Row(
                     children: <Widget>[
                       Expanded(

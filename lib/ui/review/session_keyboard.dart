@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
 import 'package:cardflow/domain/scheduling/rating.dart';
+import 'package:cardflow/ui/theme/app_tokens.dart';
 
 /// Клавиатура классической сессии и тренировки (SPEC A7.2, A4.4).
 ///
@@ -78,7 +79,9 @@ bool _scrollByKey(LogicalKeyboardKey key, ScrollController? scroll) {
   unawaited(
     scroll.animateTo(
       target.clamp(0.0, position.maxScrollExtent),
-      duration: const Duration(milliseconds: 160),
+      // Аудит v7 (G9): анимация прокрутки — из общей шкалы токенов, а не
+      // литеральные 160 мс.
+      duration: AppDurations.base,
       curve: Curves.easeOut,
     ),
   );

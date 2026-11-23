@@ -389,7 +389,7 @@ class _SessionConstructorScreenState
     }
     return Center(
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: AppSizes.detailsMaxWidth),
+        constraints: BoxConstraints(maxWidth: AppSizes.detailsWidth(context)),
         child: ListView(
           padding: const EdgeInsets.fromLTRB(
             AppSpacing.md,
@@ -680,7 +680,7 @@ class _SessionConstructorScreenState
           child: Center(
             heightFactor: 1,
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: AppSizes.detailsMaxWidth),
+              constraints: BoxConstraints(maxWidth: AppSizes.detailsWidth(context)),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -774,7 +774,7 @@ class _ConstructorEmptyState extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.xl),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: AppSizes.detailsMaxWidth),
+          constraints: BoxConstraints(maxWidth: AppSizes.detailsWidth(context)),
           child: AppEmptyState(
             icon: Icons.library_books_outlined,
             title: l10n.constructorTitle,
@@ -801,7 +801,7 @@ class _ConstructorErrorState extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.xl),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: AppSizes.detailsMaxWidth),
+          constraints: BoxConstraints(maxWidth: AppSizes.detailsWidth(context)),
           child: AppErrorState(
             message: message,
             retryLabel: l10n.retry,

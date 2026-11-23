@@ -597,17 +597,15 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
               ),
             ),
           ),
-        ReviewToolbar(
-          compact: MediaQuery.sizeOf(context).height < 500,
-          preview: null,
-          enabled: !state.busy && (state.current?.revealed ?? false),
-          // На низком окне строка-подсказка отнимает высоту у карточки:
-          // оценка всё равно недоступна до раскрытия (disabled + приглушены).
-          hint: (state.current?.revealed ?? false) || compactHeight
-              ? null
-              : l10n.reviewRevealRequiredHint,
-          onRating: (Rating rating) => unawaited(_rate(rating)),
-        ),
+        // G1: до раскрытия ответа панели оценок нет в дереве — в ленте она тоже
+        // не «серая», а отсутствует; остаётся только видимая карточка и свайпы.
+        if (state.current?.revealed ?? false)
+          ReviewToolbar(
+            key: const ValueKey<String>('feed-toolbar'),
+            preview: null,
+            enabled: !state.busy,
+            onRating: (Rating rating) => unawaited(_rate(rating)),
+          ),
         _FeedBottomBar(
           compact: compactHeight,
           deckName: _deck?.name,

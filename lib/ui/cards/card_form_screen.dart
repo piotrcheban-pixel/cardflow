@@ -543,7 +543,9 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
       Scrollable.ensureVisible(
         anchor,
         alignment: 0.08,
-        duration: const Duration(milliseconds: 250),
+        // Аудит v7 (G9): прокрутка к ошибке — из общей шкалы токенов (220 мс),
+        // а не литеральные 250 мс.
+        duration: AppDurations.medium,
         curve: Curves.easeOutCubic,
       ),
     );
@@ -707,8 +709,8 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
                     child: Center(
                       heightFactor: 1,
                       child: ConstrainedBox(
-                        constraints: const BoxConstraints(
-                          maxWidth: AppSizes.formMaxWidth,
+                        constraints: BoxConstraints(
+                          maxWidth: AppSizes.formWidth(context),
                         ),
                         child: FilledButton(
                           key: const ValueKey<String>('card-form-save'),
@@ -745,7 +747,7 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
       );
     }
     return AppContentWidth(
-      maxWidth: AppSizes.formMaxWidth,
+      maxWidth: AppSizes.formWidth(context),
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
       child: SingleChildScrollView(
         // Находка V2 (visual-blocker): весь вертикальный отступ — внутри
@@ -849,6 +851,11 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
           return const SizedBox.shrink();
         }
         final Map<String, Uint8List> bytes = <String, Uint8List>{};
+        // Аудит v7 (G4/G11/V7-10): предпросмотр обязан знать вид изображения
+        // (metadata), иначе diagram рисовался бы как photo. Раньше сюда
+        // передавались только байты.
+        final Map<String, MediaMetadata> previewMetadata =
+            <String, MediaMetadata>{};
         for (final _MediaItem item in <_MediaItem>[
           ..._questionImages,
           ..._answerImages,
@@ -856,6 +863,8 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
           final String? id = item.mediaId;
           final Uint8List? data = item.bytes ?? item.uploadBytes;
           if (id != null && data != null) bytes[id] = data;
+          final MediaMetadata? meta = item.metadata;
+          if (id != null && meta != null) previewMetadata[id] = meta;
         }
         List<String> idsOf(List<_MediaItem> items) => <String>[
           for (final _MediaItem item in items)
@@ -900,6 +909,7 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
                 revealed: false,
                 faceKey: const ValueKey<String>('card-form-preview-front'),
                 mediaBytes: bytes,
+                mediaMetadata: previewMetadata,
                 imageMaxHeight: kCardImageMaxHeight,
                 imageMaxWidth: _previewImageMaxWidth,
               ),
@@ -920,6 +930,7 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
                 revealed: true,
                 faceKey: const ValueKey<String>('card-form-preview-back'),
                 mediaBytes: bytes,
+                mediaMetadata: previewMetadata,
                 imageMaxHeight: kCardImageMaxHeight,
                 imageMaxWidth: _previewImageMaxWidth,
               ),
