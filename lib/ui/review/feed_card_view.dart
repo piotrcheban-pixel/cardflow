@@ -485,7 +485,10 @@ class _FlipFace extends StatelessWidget {
                               ),
                             ),
                           ),
-                          const SizedBox(height: AppSpacing.sm),
+                          // Аудит v11 (G8): отдельный SizedBox был невидимым
+                          // ребёнком spaceEvenly и склеивал два промежутка в
+                          // одну полосу 32,7 % высоты. Расстояние между
+                          // элементами задаёт сам spaceEvenly.
                           card == null
                               ? Text(
                                   showBack ? back : front,
