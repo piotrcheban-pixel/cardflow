@@ -1,0 +1,459 @@
+00:00 +0: loading C:/Users/piotr/OneDrive/Desktop/CardFlow/review_final/tools/render_screens_test.dart
+00:00 +0: (setUpAll)
+00:00 +0: decks 2k150
+FONTS decks|2k150|18.0x14 20.1x13 14.5x25 16.7x22 13.9x1 15.6x19 14.4x11 28.8x1 19.0x1 16.2x8 15.8x4 33.5x4 10.8x6
+PAGE decks|2k150|viewport=1707 columns=1280@333,1280@333,1280@333 share=75.0%
+OVERFLOW decks|2k150|ЛРЗ_Трехфазная_цепь_
+SMALLBTN decks|2k150|none
+RECT decks|2k150|decks-kpi-total=299x108@357,195 decks-new-deck=182x60@1415,119 decks-import=124x55@1283,119 deck-start-session=absent deck-add-card-button=absent review-mode-classic=absent
+SHOT screen_decks_2k150 1707x940
+00:01 +1: deck 2k150
+FONTS deck|2k150|12.6x4 14.5x22 17.9x1 16.7x2 21.8x1 23.4x3 15.6x2 22.3x11 16.2x7 15.8x6 19.0x6
+PAGE deck|2k150|viewport=1707 columns= share=n/a%
+OVERFLOW deck|2k150|none
+SMALLBTN deck|2k150|none
+RECT deck|2k150|decks-kpi-total=absent decks-new-deck=absent decks-import=absent deck-start-session=1357x88@175,210 deck-add-card-button=223x55@1308,318 review-mode-classic=absent
+SHOT screen_deck_2k150 1707x940
+00:01 +2: settings 2k150
+FONTS settings|2k150|18.0x16 20.1x1 14.5x3 16.7x32 13.9x1 15.6x11 28.8x1 19.0x10 14.4x9 23.4x5 17.9x6 22.3x2
+PAGE settings|2k150|viewport=1707 columns=1280@333,1280@333,1280@333 share=75.0%
+OVERFLOW settings|2k150|none
+SMALLBTN settings|2k150|none
+RECT settings|2k150|decks-kpi-total=absent decks-new-deck=absent decks-import=absent deck-start-session=absent deck-add-card-button=absent review-mode-classic=absent
+SHOT screen_settings_2k150 1707x940
+00:02 +3: statistics 2k150
+FONTS statistics|2k150|18.0x7 20.1x2 14.5x3 16.7x8 13.9x1 15.6x1 28.8x1 19.0x1 23.8x1
+PAGE statistics|2k150|viewport=1707 columns=1280@333,586@680 share=75.0%
+OVERFLOW statistics|2k150|none
+SMALLBTN statistics|2k150|none
+RECT statistics|2k150|decks-kpi-total=absent decks-new-deck=absent decks-import=absent deck-start-session=absent deck-add-card-button=absent review-mode-classic=absent
+SHOT screen_statistics_2k150 1707x940
+00:02 +4: generation 2k150
+FONTS generation|2k150|14.4x2 14.5x1 28.8x1 19.0x5 23.4x4 16.7x12 21.6x2 18.0x1 15.6x1
+PAGE generation|2k150|viewport=1707 columns=1389@159 share=81.4%
+OVERFLOW generation|2k150|none
+SMALLBTN generation|2k150|none
+RECT generation|2k150|decks-kpi-total=absent decks-new-deck=absent decks-import=absent deck-start-session=absent deck-add-card-button=absent review-mode-classic=absent
+SHOT screen_generation_2k150 1707x940
+00:02 +5: constructor 2k150
+FONTS constructor|2k150|23.4x6 16.7x18 16.2x2 14.5x1
+PAGE constructor|2k150|viewport=1707 columns= share=n/a%
+OVERFLOW constructor|2k150|ЛРЗ_Трехфазная_цепь_
+SMALLBTN constructor|2k150|none
+RECT constructor|2k150|decks-kpi-total=absent decks-new-deck=absent decks-import=absent deck-start-session=absent deck-add-card-button=absent review-mode-classic=absent
+SHOT screen_constructor_2k150 1707x940
+00:02 +6: test 2k150
+FONTS test|2k150|16.7x1 14.5x2 30.4x1 19.0x4 18.0x1 20.1x1
+PAGE test|2k150|viewport=1707 columns= share=n/a%
+OVERFLOW test|2k150|none
+SMALLBTN test|2k150|none
+RECT test|2k150|decks-kpi-total=absent decks-new-deck=absent decks-import=absent deck-start-session=absent deck-add-card-button=absent review-mode-classic=absent
+SHOT screen_test_2k150 1707x940
+00:02 +7: typing 2k150
+FONTS typing|2k150|16.7x4 14.5x2 24.6x1 18.0x1 20.1x1
+PAGE typing|2k150|viewport=1707 columns= share=n/a%
+OVERFLOW typing|2k150|none
+SMALLBTN typing|2k150|none
+RECT typing|2k150|decks-kpi-total=absent decks-new-deck=absent decks-import=absent deck-start-session=absent deck-add-card-button=absent review-mode-classic=absent
+SHOT screen_typing_2k150 1707x940
+00:02 +8: match 2k150
+FONTS match|2k150|20.1x1 16.7x1 19.0x12 23.4x1 22.3x1
+PAGE match|2k150|viewport=1707 columns= share=n/a%
+OVERFLOW match|2k150|none
+SMALLBTN match|2k150|none
+RECT match|2k150|decks-kpi-total=absent decks-new-deck=absent decks-import=absent deck-start-session=absent deck-add-card-button=absent review-mode-classic=absent
+SHOT screen_match_2k150 1707x940
+00:03 +9: truefalse 2k150
+FONTS truefalse|2k150|16.7x3 14.5x2 24.6x1 20.1x2 15.6x1 16.2x2 18.0x1
+PAGE truefalse|2k150|viewport=1707 columns= share=n/a%
+OVERFLOW truefalse|2k150|none
+SMALLBTN truefalse|2k150|none
+RECT truefalse|2k150|decks-kpi-total=absent decks-new-deck=absent decks-import=absent deck-start-session=absent deck-add-card-button=absent review-mode-classic=absent
+SHOT screen_truefalse_2k150 1707x940
+00:03 +10: cardform 2k150
+FONTS cardform|2k150|16.7x12 16.2x1 20.1x1 15.6x4 17.9x2 18.0x4 19.0x1 23.4x1
+PAGE cardform|2k150|viewport=1707 columns=1389@159 share=81.4%
+OVERFLOW cardform|2k150|none
+SMALLBTN cardform|2k150|none
+RECT cardform|2k150|decks-kpi-total=absent decks-new-deck=absent decks-import=absent deck-start-session=absent deck-add-card-button=absent review-mode-classic=absent
+SHOT screen_cardform_2k150 1707x940
+00:03 +11: practice 2k150
+FONTS practice|2k150|16.7x1 14.5x2 35.7x1 19.0x1 18.0x1 20.1x1
+PAGE practice|2k150|viewport=1707 columns= share=n/a%
+OVERFLOW practice|2k150|none
+SMALLBTN practice|2k150|none
+RECT practice|2k150|decks-kpi-total=absent decks-new-deck=absent decks-import=absent deck-start-session=absent deck-add-card-button=absent review-mode-classic=absent
+SHOT screen_practice_2k150 1707x940
+00:03 +12: decks 4k100
+FONTS decks|4k100|20.0x14 26.1x13 18.8x25 21.8x22 15.4x1 20.3x19 16.0x11 32.0x1 24.6x1 18.0x8 17.6x4 43.5x4 12.0x6
+PAGE decks|4k100|viewport=3840 columns=1280@1400,1280@1400,1280@1400 share=33.3%
+OVERFLOW decks|4k100|CardFlow;Обновлена 12 нояб. 2;Обновлена 12 нояб. 2;ЛРЗ_Трехфазная_цепь_;Обновлена 12 нояб. 2;Вопросы для подготов;Обновлена 12 нояб. 2;Обновлена 12 нояб. 2;Обновлена 12 нояб. 2
+SMALLBTN decks|4k100|none
+RECT decks|4k100|decks-kpi-total=299x121@1424,212 decks-new-deck=216x62@2448,134 decks-import=143x57@2297,134 deck-start-session=absent deck-add-card-button=absent review-mode-classic=absent
+SHOT screen_decks_4k100 3840x2160
+00:04 +13: deck 4k100
+FONTS deck|4k100|14.0x4 18.8x28 23.2x1 21.8x2 24.2x1 30.4x3 20.3x2 26.0x13 18.0x9 17.6x8 24.6x8
+PAGE deck|4k100|viewport=3840 columns= share=n/a%
+OVERFLOW deck|4k100|none
+SMALLBTN deck|4k100|none
+RECT deck|4k100|decks-kpi-total=absent decks-new-deck=absent decks-import=absent deck-start-session=1568x105@1136,223 deck-add-card-button=273x57@2431,348 review-mode-classic=absent
+SHOT screen_deck_4k100 3840x2160
+00:04 +14: settings 4k100
+FONTS settings|4k100|20.0x16 26.1x1 18.8x3 21.8x32 15.4x1 20.3x11 32.0x1 24.6x10 16.0x9 30.4x5 23.2x6 26.0x2
+PAGE settings|4k100|viewport=3840 columns=1280@1400,1280@1400,1280@1400 share=33.3%
+OVERFLOW settings|4k100|CardFlow
+SMALLBTN settings|4k100|none
+RECT settings|4k100|decks-kpi-total=absent decks-new-deck=absent decks-import=absent deck-start-session=absent deck-add-card-button=absent review-mode-classic=absent
+SHOT screen_settings_4k100 3840x2160
+00:04 +15: statistics 4k100
+FONTS statistics|4k100|20.0x7 26.1x2 18.8x3 21.8x8 15.4x1 20.3x1 32.0x1 24.6x1 26.4x1
+PAGE statistics|4k100|viewport=3840 columns=1280@1400,729@1675 share=33.3%
+OVERFLOW statistics|4k100|CardFlow
+SMALLBTN statistics|4k100|none
+RECT statistics|4k100|decks-kpi-total=absent decks-new-deck=absent decks-import=absent deck-start-session=absent deck-add-card-button=absent review-mode-classic=absent
+SHOT screen_statistics_4k100 3840x2160
+00:05 +16: generation 4k100
+FONTS generation|4k100|16.0x2 18.8x1 32.0x1 24.6x5 30.4x4 21.8x12 24.0x2 20.0x1 20.3x1
+PAGE generation|4k100|viewport=3840 columns=1400@1220 share=36.5%
+OVERFLOW generation|4k100|none
+SMALLBTN generation|4k100|none
+RECT generation|4k100|decks-kpi-total=absent decks-new-deck=absent decks-import=absent deck-start-session=absent deck-add-card-button=absent review-mode-classic=absent
+SHOT screen_generation_4k100 3840x2160
+00:05 +17: constructor 4k100
+FONTS constructor|4k100|30.4x9 21.8x21 18.0x2 26.1x1 24.0x1 24.6x3 20.3x3 18.8x1
+PAGE constructor|4k100|viewport=3840 columns= share=n/a%
+OVERFLOW constructor|4k100|ЛРЗ_Трехфазная_цепь_;Вопросы для подготов
+SMALLBTN constructor|4k100|none
+RECT constructor|4k100|decks-kpi-total=absent decks-new-deck=absent decks-import=absent deck-start-session=absent deck-add-card-button=absent review-mode-classic=absent
+SHOT screen_constructor_4k100 3840x2160
+00:06 +18: test 4k100
+FONTS test|4k100|21.8x1 18.8x2 39.4x1 24.6x4 20.0x1 26.1x1
+PAGE test|4k100|viewport=3840 columns= share=n/a%
+OVERFLOW test|4k100|none
+SMALLBTN test|4k100|none
+RECT test|4k100|decks-kpi-total=absent decks-new-deck=absent decks-import=absent deck-start-session=absent deck-add-card-button=absent review-mode-classic=absent
+SHOT screen_test_4k100 3840x2160
+00:06 +19: typing 4k100
+FONTS typing|4k100|21.8x4 18.8x2 31.9x1 20.0x1 26.1x1
+PAGE typing|4k100|viewport=3840 columns= share=n/a%
+OVERFLOW typing|4k100|none
+SMALLBTN typing|4k100|none
+RECT typing|4k100|decks-kpi-total=absent decks-new-deck=absent decks-import=absent deck-start-session=absent deck-add-card-button=absent review-mode-classic=absent
+SHOT screen_typing_4k100 3840x2160
+00:06 +20: match 4k100
+FONTS match|4k100|26.1x1 21.8x1 24.6x12 30.4x1 26.0x1
+PAGE match|4k100|viewport=3840 columns= share=n/a%
+OVERFLOW match|4k100|none
+SMALLBTN match|4k100|none
+RECT match|4k100|decks-kpi-total=absent decks-new-deck=absent decks-import=absent deck-start-session=absent deck-add-card-button=absent review-mode-classic=absent
+SHOT screen_match_4k100 3840x2160
+00:06 +21: truefalse 4k100
+FONTS truefalse|4k100|21.8x3 18.8x2 31.9x1 26.1x2 20.3x1 18.0x2 20.0x1
+PAGE truefalse|4k100|viewport=3840 columns= share=n/a%
+OVERFLOW truefalse|4k100|none
+SMALLBTN truefalse|4k100|none
+RECT truefalse|4k100|decks-kpi-total=absent decks-new-deck=absent decks-import=absent deck-start-session=absent deck-add-card-button=absent review-mode-classic=absent
+SHOT screen_truefalse_4k100 3840x2160
+00:07 +22: cardform 4k100
+FONTS cardform|4k100|21.8x12 18.0x1 26.1x1 20.3x4 23.2x2 20.0x4 24.6x1 30.4x1
+PAGE cardform|4k100|viewport=3840 columns=1400@1220 share=36.5%
+OVERFLOW cardform|4k100|none
+SMALLBTN cardform|4k100|none
+RECT cardform|4k100|decks-kpi-total=absent decks-new-deck=absent decks-import=absent deck-start-session=absent deck-add-card-button=absent review-mode-classic=absent
+SHOT screen_cardform_4k100 3840x2160
+00:07 +23: practice 4k100
+FONTS practice|4k100|21.8x1 18.8x2 46.4x1 22.1x1 20.0x1 26.1x1
+PAGE practice|4k100|viewport=3840 columns= share=n/a%
+OVERFLOW practice|4k100|none
+SMALLBTN practice|4k100|none
+RECT practice|4k100|decks-kpi-total=absent decks-new-deck=absent decks-import=absent deck-start-session=absent deck-add-card-button=absent review-mode-classic=absent
+SHOT screen_practice_4k100 3840x2160
+00:07 +24: decks fhd150
+FONTS decks|fhd150|18.0x14 16.2x21 11.7x24 13.5x26 13.9x1 12.6x19 14.4x11 28.8x1 15.3x1 10.8x6
+PAGE decks|fhd150|viewport=1280 columns=1040@240,1040@240,1040@240 share=81.3%
+OVERFLOW decks|fhd150|ЛРЗ_Трехфазная_цепь_
+SMALLBTN decks|fhd150|none
+RECT decks|fhd150|decks-kpi-total=131x20@264,161 decks-new-deck=160x48@1104,97 decks-import=111x48@985,97 deck-start-session=absent deck-add-card-button=absent review-mode-classic=absent
+SHOT screen_decks_fhd150 1280x720
+00:08 +25: deck fhd150
+FONTS deck|fhd150|12.6x6 11.7x19 14.4x1 13.5x2 21.8x1 18.9x3 18.0x10 16.2x6 15.8x5 15.3x5
+PAGE deck|fhd150|viewport=1280 columns= share=n/a%
+OVERFLOW deck|fhd150|none
+SMALLBTN deck|fhd150|none
+RECT deck|fhd150|decks-kpi-total=absent decks-new-deck=absent decks-import=absent deck-start-session=1088x78@96,201 deck-add-card-button=191x48@993,299 review-mode-classic=absent
+SHOT screen_deck_fhd150 1280x720
+00:08 +26: settings fhd150
+FONTS settings|fhd150|18.0x18 16.2x1 11.7x3 13.5x32 13.9x1 12.6x11 28.8x1 15.3x10 14.4x15 18.9x5
+PAGE settings|fhd150|viewport=1280 columns=1040@240,1040@240,1040@240 share=81.3%
+OVERFLOW settings|fhd150|none
+SMALLBTN settings|fhd150|none
+RECT settings|fhd150|decks-kpi-total=absent decks-new-deck=absent decks-import=absent deck-start-session=absent deck-add-card-button=absent review-mode-classic=absent
+SHOT screen_settings_fhd150 1280x720
+00:08 +27: statistics fhd150
+FONTS statistics|fhd150|18.0x7 16.2x2 11.7x3 13.5x8 13.9x1 12.6x1 28.8x1 15.3x1 23.8x1
+PAGE statistics|fhd150|viewport=1280 columns=1040@240,532@494 share=81.3%
+OVERFLOW statistics|fhd150|none
+SMALLBTN statistics|fhd150|none
+RECT statistics|fhd150|decks-kpi-total=absent decks-new-deck=absent decks-import=absent deck-start-session=absent deck-add-card-button=absent review-mode-classic=absent
+SHOT screen_statistics_fhd150 1280x720
+00:08 +28: generation fhd150
+FONTS generation|fhd150|14.4x2 11.7x1 28.8x1 15.3x5 18.9x4 13.5x12 21.6x2 18.0x1 12.6x1
+PAGE generation|fhd150|viewport=1280 columns=1120@80 share=87.5%
+OVERFLOW generation|fhd150|none
+SMALLBTN generation|fhd150|none
+RECT generation|fhd150|decks-kpi-total=absent decks-new-deck=absent decks-import=absent deck-start-session=absent deck-add-card-button=absent review-mode-classic=absent
+SHOT screen_generation_fhd150 1280x720
+00:08 +29: constructor fhd150
+FONTS constructor|fhd150|18.9x5 13.5x16 11.7x1
+PAGE constructor|fhd150|viewport=1280 columns= share=n/a%
+OVERFLOW constructor|fhd150|ЛРЗ_Трехфазная_цепь_
+SMALLBTN constructor|fhd150|none
+RECT constructor|fhd150|decks-kpi-total=absent decks-new-deck=absent decks-import=absent deck-start-session=absent deck-add-card-button=absent review-mode-classic=absent
+SHOT screen_constructor_fhd150 1280x720
+00:08 +30: test fhd150
+FONTS test|fhd150|13.5x1 11.7x2 24.5x1 15.3x4 18.0x1 16.2x1
+PAGE test|fhd150|viewport=1280 columns= share=n/a%
+OVERFLOW test|fhd150|none
+SMALLBTN test|fhd150|none
+RECT test|fhd150|decks-kpi-total=absent decks-new-deck=absent decks-import=absent deck-start-session=absent deck-add-card-button=absent review-mode-classic=absent
+SHOT screen_test_fhd150 1280x720
+00:09 +31: typing fhd150
+FONTS typing|fhd150|13.5x4 11.7x2 19.8x1 18.0x1 16.2x1
+PAGE typing|fhd150|viewport=1280 columns= share=n/a%
+OVERFLOW typing|fhd150|none
+SMALLBTN typing|fhd150|none
+RECT typing|fhd150|decks-kpi-total=absent decks-new-deck=absent decks-import=absent deck-start-session=absent deck-add-card-button=absent review-mode-classic=absent
+SHOT screen_typing_fhd150 1280x720
+00:09 +32: match fhd150
+FONTS match|fhd150|16.2x1 13.5x1 15.3x12 18.9x1 18.0x1
+PAGE match|fhd150|viewport=1280 columns= share=n/a%
+OVERFLOW match|fhd150|none
+SMALLBTN match|fhd150|none
+RECT match|fhd150|decks-kpi-total=absent decks-new-deck=absent decks-import=absent deck-start-session=absent deck-add-card-button=absent review-mode-classic=absent
+SHOT screen_match_fhd150 1280x720
+00:09 +33: truefalse fhd150
+FONTS truefalse|fhd150|13.5x3 11.7x2 19.8x1 16.2x4 12.6x1 18.0x1
+PAGE truefalse|fhd150|viewport=1280 columns= share=n/a%
+OVERFLOW truefalse|fhd150|none
+SMALLBTN truefalse|fhd150|none
+RECT truefalse|fhd150|decks-kpi-total=absent decks-new-deck=absent decks-import=absent deck-start-session=absent deck-add-card-button=absent review-mode-classic=absent
+SHOT screen_truefalse_fhd150 1280x720
+00:09 +34: cardform fhd150
+FONTS cardform|fhd150|13.5x12 16.2x2 12.6x4 14.4x2 18.0x4 15.3x1 18.9x1
+PAGE cardform|fhd150|viewport=1280 columns=1120@80 share=87.5%
+OVERFLOW cardform|fhd150|none
+SMALLBTN cardform|fhd150|none
+RECT cardform|fhd150|decks-kpi-total=absent decks-new-deck=absent decks-import=absent deck-start-session=absent deck-add-card-button=absent review-mode-classic=absent
+SHOT screen_cardform_fhd150 1280x720
+00:09 +35: practice fhd150
+FONTS practice|fhd150|13.5x1 11.7x2 28.8x1 15.3x1 18.0x1 16.2x1
+PAGE practice|fhd150|viewport=1280 columns= share=n/a%
+OVERFLOW practice|fhd150|none
+SMALLBTN practice|fhd150|none
+RECT practice|fhd150|decks-kpi-total=absent decks-new-deck=absent decks-import=absent deck-start-session=absent deck-add-card-button=absent review-mode-classic=absent
+SHOT screen_practice_fhd150 1280x720
+00:09 +36: decks 1024
+FONTS decks|1024|20.0x15 14.0x14 16.0x11 15.0x14 28.0x1 18.0x19 13.0x18 12.0x6
+PAGE decks|1024|viewport=683 columns=611@72,611@72,611@72 share=89.5%
+OVERFLOW decks|1024|none
+SMALLBTN decks|1024|none
+RECT decks|1024|decks-kpi-total=absent decks-new-deck=170x48@144,130 decks-import=48x48@88,130 deck-start-session=absent deck-add-card-button=absent review-mode-classic=absent
+SHOT screen_decks_1024 683x512
+00:09 +37: deck 1024
+FONTS deck|1024|14.0x6 13.0x10 16.0x1 15.0x2 24.2x1 21.0x3 20.0x7 18.0x3 17.6x2 17.0x2
+PAGE deck|1024|viewport=683 columns= share=n/a%
+OVERFLOW deck|1024|none
+SMALLBTN deck|1024|none
+RECT deck|1024|decks-kpi-total=absent decks-new-deck=absent decks-import=absent deck-start-session=651x83@16,205 deck-add-card-button=206x48@461,308 review-mode-classic=absent
+SHOT screen_deck_1024 683x512
+00:09 +38: settings 1024
+FONTS settings|1024|20.0x17 14.0x11 13.0x1 28.0x1 17.0x10 15.0x25 16.0x15 21.0x5
+PAGE settings|1024|viewport=683 columns=611@72,611@72,611@72 share=89.5%
+OVERFLOW settings|1024|none
+SMALLBTN settings|1024|none
+RECT settings|1024|decks-kpi-total=absent decks-new-deck=absent decks-import=absent deck-start-session=absent deck-add-card-button=absent review-mode-classic=absent
+SHOT screen_settings_1024 683x512
+00:09 +39: statistics 1024
+FONTS statistics|1024|20.0x6 14.0x1 13.0x1 28.0x1 17.0x1 26.4x1 18.0x1 15.0x1
+PAGE statistics|1024|viewport=683 columns=611@72,522@117 share=89.5%
+OVERFLOW statistics|1024|none
+SMALLBTN statistics|1024|none
+RECT statistics|1024|decks-kpi-total=absent decks-new-deck=absent decks-import=absent deck-start-session=absent deck-add-card-button=absent review-mode-classic=absent
+SHOT screen_statistics_1024 683x512
+00:09 +40: generation 1024
+FONTS generation|1024|16.0x2 13.0x1 28.0x1 17.0x5 21.0x4 15.0x12 24.0x2 20.0x1 14.0x1
+PAGE generation|1024|viewport=683 columns=683@0 share=100.0%
+OVERFLOW generation|1024|none
+SMALLBTN generation|1024|none
+RECT generation|1024|decks-kpi-total=absent decks-new-deck=absent decks-import=absent deck-start-session=absent deck-add-card-button=absent review-mode-classic=absent
+SHOT screen_generation_1024 683x512
+00:09 +41: constructor 1024
+FONTS constructor|1024|21.0x3 15.0x9 13.0x1
+PAGE constructor|1024|viewport=683 columns= share=n/a%
+OVERFLOW constructor|1024|ЛРЗ_Трехфазная_цепь_
+SMALLBTN constructor|1024|none
+RECT constructor|1024|decks-kpi-total=absent decks-new-deck=absent decks-import=absent deck-start-session=absent deck-add-card-button=absent review-mode-classic=absent
+SHOT screen_constructor_1024 683x512
+00:10 +42: test 1024
+FONTS test|1024|15.0x1 13.0x2 27.2x1 17.0x4 20.0x1 18.0x1
+PAGE test|1024|viewport=683 columns= share=n/a%
+OVERFLOW test|1024|none
+SMALLBTN test|1024|none
+RECT test|1024|decks-kpi-total=absent decks-new-deck=absent decks-import=absent deck-start-session=absent deck-add-card-button=absent review-mode-classic=absent
+SHOT screen_test_1024 683x512
+00:10 +43: typing 1024
+FONTS typing|1024|15.0x4 13.0x2 22.0x1 20.0x1 18.0x1
+PAGE typing|1024|viewport=683 columns= share=n/a%
+OVERFLOW typing|1024|none
+SMALLBTN typing|1024|none
+RECT typing|1024|decks-kpi-total=absent decks-new-deck=absent decks-import=absent deck-start-session=absent deck-add-card-button=absent review-mode-classic=absent
+SHOT screen_typing_1024 683x512
+00:10 +44: match 1024
+FONTS match|1024|18.0x1 15.0x1 17.0x12 21.0x1 20.0x1
+PAGE match|1024|viewport=683 columns= share=n/a%
+OVERFLOW match|1024|Чему равен ток нейтр;Вопрос 5 по электрот;Вопрос 6 по электрот;Вопрос 4 по электрот;Вопрос 3 по электрот;Вопрос 2 по электрот
+SMALLBTN match|1024|none
+RECT match|1024|decks-kpi-total=absent decks-new-deck=absent decks-import=absent deck-start-session=absent deck-add-card-button=absent review-mode-classic=absent
+SHOT screen_match_1024 683x512
+00:10 +45: truefalse 1024
+FONTS truefalse|1024|15.0x3 13.0x2 22.0x1 18.0x4 14.0x1 20.0x1
+PAGE truefalse|1024|viewport=683 columns= share=n/a%
+OVERFLOW truefalse|1024|none
+SMALLBTN truefalse|1024|none
+RECT truefalse|1024|decks-kpi-total=absent decks-new-deck=absent decks-import=absent deck-start-session=absent deck-add-card-button=absent review-mode-classic=absent
+SHOT screen_truefalse_1024 683x512
+00:10 +46: cardform 1024
+FONTS cardform|1024|15.0x12 18.0x2 14.0x4 16.0x2 20.0x4 17.0x1 21.0x1
+PAGE cardform|1024|viewport=683 columns=683@0 share=100.0%
+OVERFLOW cardform|1024|none
+SMALLBTN cardform|1024|none
+RECT cardform|1024|decks-kpi-total=absent decks-new-deck=absent decks-import=absent deck-start-session=absent deck-add-card-button=absent review-mode-classic=absent
+SHOT screen_cardform_1024 683x512
+00:10 +47: practice 1024
+FONTS practice|1024|15.0x1 13.0x2 32.0x1 17.0x1 20.0x1 18.0x1
+PAGE practice|1024|viewport=683 columns= share=n/a%
+OVERFLOW practice|1024|none
+SMALLBTN practice|1024|none
+RECT practice|1024|decks-kpi-total=absent decks-new-deck=absent decks-import=absent deck-start-session=absent deck-add-card-button=absent review-mode-classic=absent
+SHOT screen_practice_1024 683x512
+00:10 +48: decks 800
+FONTS decks|800|20.0x10 14.0x14 16.0x11 15.0x14 28.0x1 18.0x19 13.0x18 12.0x6
+PAGE decks|800|viewport=533 columns=533@0,533@0,533@0 share=99.9%
+OVERFLOW decks|800|ЛРЗ_Трехфазная_цепь_
+SMALLBTN decks|800|none
+RECT decks|800|decks-kpi-total=absent decks-new-deck=170x48@72,130 decks-import=48x48@16,130 deck-start-session=absent deck-add-card-button=absent review-mode-classic=absent
+SHOT screen_decks_800 534x400
+00:10 +49: deck 800
+FONTS deck|800|14.0x6 13.0x4 16.0x1 15.0x2 24.2x1 21.0x3 20.0x5 18.0x1
+PAGE deck|800|viewport=533 columns= share=n/a%
+OVERFLOW deck|800|none
+SMALLBTN deck|800|none
+RECT deck|800|decks-kpi-total=absent decks-new-deck=absent decks-import=absent deck-start-session=501x83@16,237 deck-add-card-button=206x48@311,377 review-mode-classic=absent
+SHOT screen_deck_800 534x400
+00:10 +50: settings 800
+FONTS settings|800|20.0x12 14.0x11 13.0x1 28.0x1 17.0x10 15.0x25 16.0x15 21.0x5
+PAGE settings|800|viewport=533 columns=533@0,533@0,533@0 share=99.9%
+OVERFLOW settings|800|none
+SMALLBTN settings|800|none
+RECT settings|800|decks-kpi-total=absent decks-new-deck=absent decks-import=absent deck-start-session=absent deck-add-card-button=absent review-mode-classic=absent
+SHOT screen_settings_800 534x400
+00:10 +51: generation 800
+FONTS generation|800|16.0x2 13.0x1 28.0x1 17.0x5 21.0x4 15.0x12 24.0x2 20.0x1 14.0x1
+PAGE generation|800|viewport=533 columns=533@0 share=99.9%
+OVERFLOW generation|800|none
+SMALLBTN generation|800|none
+RECT generation|800|decks-kpi-total=absent decks-new-deck=absent decks-import=absent deck-start-session=absent deck-add-card-button=absent review-mode-classic=absent
+SHOT screen_generation_800 534x400
+00:10 +52: test 800
+FONTS test|800|15.0x1 13.0x2 27.2x1 17.0x4 20.0x1 18.0x1
+PAGE test|800|viewport=533 columns= share=n/a%
+OVERFLOW test|800|none
+SMALLBTN test|800|none
+RECT test|800|decks-kpi-total=absent decks-new-deck=absent decks-import=absent deck-start-session=absent deck-add-card-button=absent review-mode-classic=absent
+SHOT screen_test_800 534x400
+00:10 +53: decks m390
+FONTS decks|m390|20.0x11 14.0x17 13.0x23 28.0x1 17.0x1 18.0x19 15.0x13 17.6x4 30.0x4 16.0x9 12.0x6
+PAGE decks|m390|viewport=390 columns=390@0,390@0,390@0 share=100.0%
+OVERFLOW decks|m390|К ПОВТОРЕНИЮ СЕГОДНЯ;ЛРЗ_Трехфазная_цепь_;Вопросы для подготов
+SMALLBTN decks|m390|none
+RECT decks|m390|decks-kpi-total=173x108@16,253 decks-new-deck=170x48@72,189 decks-import=48x48@16,189 deck-start-session=absent deck-add-card-button=absent review-mode-classic=absent
+SHOT screen_decks_m390 390x844
+00:11 +54: deck m390
+FONTS deck|m390|14.0x6 13.0x16 16.0x1 15.0x2 24.2x1 21.0x3 20.0x9 18.0x5 17.6x4 17.0x4
+PAGE deck|m390|viewport=390 columns= share=n/a%
+OVERFLOW deck|m390|Чему равен ток нейтр;Теги: ##трёхфазные ц;Вопрос 2 по электрот;Теги: ##трёхфазные ц;Вопрос 3 по электрот;Теги: ##трёхфазные ц;Вопрос 4 по электрот;Теги: ##трёхфазные ц
+SMALLBTN deck|m390|none
+RECT deck|m390|decks-kpi-total=absent decks-new-deck=absent decks-import=absent deck-start-session=358x83@16,237 deck-add-card-button=206x48@168,377 review-mode-classic=absent
+SHOT screen_deck_m390 390x844
+00:11 +55: settings m390
+FONTS settings|m390|20.0x12 14.0x11 13.0x1 28.0x1 17.0x10 15.0x25 16.0x15 21.0x5
+PAGE settings|m390|viewport=390 columns=390@0,390@0,390@0 share=100.0%
+OVERFLOW settings|m390|none
+SMALLBTN settings|m390|none
+RECT settings|m390|decks-kpi-total=absent decks-new-deck=absent decks-import=absent deck-start-session=absent deck-add-card-button=absent review-mode-classic=absent
+SHOT screen_settings_m390 390x844
+00:11 +56: statistics m390
+FONTS statistics|m390|20.0x1 14.0x1 13.0x1 28.0x1 17.0x1 26.4x1 18.0x1 15.0x1
+PAGE statistics|m390|viewport=390 columns=390@0,390@0 share=100.0%
+OVERFLOW statistics|m390|none
+SMALLBTN statistics|m390|none
+RECT statistics|m390|decks-kpi-total=absent decks-new-deck=absent decks-import=absent deck-start-session=absent deck-add-card-button=absent review-mode-classic=absent
+SHOT screen_statistics_m390 390x844
+00:11 +57: test m390
+FONTS test|m390|15.0x1 13.0x2 27.2x1 17.0x4 20.0x1 18.0x1
+PAGE test|m390|viewport=390 columns= share=n/a%
+OVERFLOW test|m390|none
+SMALLBTN test|m390|none
+RECT test|m390|decks-kpi-total=absent decks-new-deck=absent decks-import=absent deck-start-session=absent deck-add-card-button=absent review-mode-classic=absent
+SHOT screen_test_m390 390x844
+00:11 +58: decks m844
+FONTS decks|m844|20.0x14 14.0x14 16.0x11 15.0x15 28.0x1 18.0x20 13.0x18 12.0x6
+PAGE decks|m844|viewport=844 columns=772@72,772@72,772@72 share=91.5%
+OVERFLOW decks|m844|ЛРЗ_Трехфазная_цепь_;Вопросы для подготов
+SMALLBTN decks|m844|none
+RECT decks|m844|decks-kpi-total=absent decks-new-deck=170x48@213,130 decks-import=117x48@88,130 deck-start-session=absent deck-add-card-button=absent review-mode-classic=absent
+SHOT screen_decks_m844 844x390
+00:11 +59: deck m844
+FONTS deck|m844|14.0x6 13.0x7 16.0x1 15.0x2 24.2x1 21.0x3 20.0x6 18.0x2 17.6x1 17.0x1
+PAGE deck|m844|viewport=844 columns= share=n/a%
+OVERFLOW deck|m844|none
+SMALLBTN deck|m844|none
+RECT deck|m844|decks-kpi-total=absent decks-new-deck=absent decks-import=absent deck-start-session=812x83@16,205 deck-add-card-button=206x48@622,308 review-mode-classic=absent
+SHOT screen_deck_m844 844x390
+00:11 +60: settings m844
+FONTS settings|m844|20.0x17 14.0x11 13.0x1 28.0x1 17.0x10 15.0x25 16.0x15 21.0x5
+PAGE settings|m844|viewport=844 columns=772@72,772@72,772@72 share=91.5%
+OVERFLOW settings|m844|none
+SMALLBTN settings|m844|none
+RECT settings|m844|decks-kpi-total=absent decks-new-deck=absent decks-import=absent deck-start-session=absent deck-add-card-button=absent review-mode-classic=absent
+SHOT screen_settings_m844 844x390
+00:11 +61: generation m844
+FONTS generation|m844|16.0x2 13.0x1 28.0x1 17.0x5 21.0x4 15.0x12 24.0x2 20.0x1 14.0x1
+PAGE generation|m844|viewport=844 columns=844@0 share=100.0%
+OVERFLOW generation|m844|none
+SMALLBTN generation|m844|none
+RECT generation|m844|decks-kpi-total=absent decks-new-deck=absent decks-import=absent deck-start-session=absent deck-add-card-button=absent review-mode-classic=absent
+SHOT screen_generation_m844 844x390
+00:11 +62: test m844
+FONTS test|m844|15.0x1 13.0x2 27.2x1 17.0x4 20.0x1 18.0x1
+PAGE test|m844|viewport=844 columns= share=n/a%
+OVERFLOW test|m844|none
+SMALLBTN test|m844|none
+RECT test|m844|decks-kpi-total=absent decks-new-deck=absent decks-import=absent deck-start-session=absent deck-add-card-button=absent review-mode-classic=absent
+SHOT screen_test_m844 844x390
+00:11 +63: exit dialog 2k
+RECT exitDialog|2k150|review-exit-confirm=78x55@860,496 review-exit-cancel=140x55@946,496
+FONTS exitDialog|2k150|23.4x1 16.7x3
+PAGE exitDialog|2k150|viewport=1707 columns= share=n/a%
+SHOT screen_exit_dialog_2k150 1707x940
+00:11 +64: modes sheet 2k
+RECT modesSheet|2k150|review-mode-classic=356x80@493,440 review-mode-feed=356x80@857,440 review-mode-practice=356x80@493,528 review-mode-test=356x80@493,640 review-mode-typing=356x80@857,640 review-mode-match=356x80@493,728 review-mode-true-false=356x80@857,728 review-mode-constructor=356x80@493,840
+SHOT screen_modes_sheet_2k150 1707x940
+00:12 +65: delete deck dialog 2k
+SHOT screen_deck_overflow_2k150 1707x940
+00:12 +66: decks dark 2k
+SHOT screen_decks_dark_2k150 1707x940
+00:12 +67: settings appearance dark 2k
+SHOT screen_settings_dark_2k150 1707x940
+00:12 +68: (tearDownAll)
+00:13 +68: All tests passed!

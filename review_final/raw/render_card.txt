@@ -1,0 +1,223 @@
+00:00 +0: loading C:/Users/piotr/OneDrive/Desktop/CardFlow/review_final/tools/render_card_test.dart
+00:00 +0: (setUpAll)
+00:00 +0: classic Q 4k100
+MEAS classicQ|4k100|viewport=3840.0x2160.0 factor=1.45 text=1.0 card=2400x624 shareW=62.5% shareBodyH=29.6% empty=77.7% reveal=2328x73 rating=none gap=none fonts=[18.8:"ВОПРОС";46.4:"Между какими проводниками …";22.1:"Показать ответ"]
+RECT classicQ|4k100|review-reveal=2328x73@756,1270 review-rating-again=absent review-rating-good=absent review-close=57x56@4,0
+FONTS classicQ|4k100|21.8x2 18.8x2 46.4x1 22.1x1 20.0x1 26.1x1
+SHOT card_classic_Q_4k100 3840x2160
+00:01 +1: classic A 4k100
+MEAS classicA|4k100|viewport=3840.0x2160.0 factor=1.45 text=1.0 card=2400x624 shareW=62.5% shareBodyH=29.6% empty=85.5% reveal=none rating=571x67 gap=14 fonts=[18.8:"ВОПРОС";22.3:"Между какими проводниками …";18.8:"ОТВЕТ";34.8:"Между линейными проводами.";18.8:"1 мин";21.6:"Не знаю";18.8:"[1]";18.8:"6 мин";21.6:"Сложно";18.8:"[2]";18.8:"10 мин";21.6:"Знаю";18.8:"[3]";18.8:"16 д";21.6:"Легко";18.8:"[4]"]
+RECT classicA|4k100|review-reveal=absent review-rating-again=571x67@756,1283 review-rating-easy=571x67@2513,1283
+SHOT card_classic_A_4k100 3840x2160
+00:01 +2: classic Q 4k150
+MEAS classicQ|4k150|viewport=2560.0x1440.0 factor=1.45 text=1.0 card=1843x624 shareW=72.0% shareBodyH=45.1% empty=74.4% reveal=1772x73 rating=none gap=none fonts=[18.8:"ВОПРОС";46.4:"Между какими проводниками …";22.1:"Показать ответ"]
+RECT classicQ|4k150|review-reveal=1772x73@394,910 review-rating-again=absent review-rating-good=absent review-close=57x56@4,0
+FONTS classicQ|4k150|21.8x2 18.8x2 46.4x1 22.1x1 20.0x1 26.1x1
+SHOT card_classic_Q_4k150 2560x1440
+00:01 +3: classic A 4k150
+MEAS classicA|4k150|viewport=2560.0x1440.0 factor=1.45 text=1.0 card=1843x624 shareW=72.0% shareBodyH=45.1% empty=84.4% reveal=none rating=432x67 gap=14 fonts=[18.8:"ВОПРОС";22.3:"Между какими проводниками …";18.8:"ОТВЕТ";34.8:"Между линейными проводами.";18.8:"1 мин";21.6:"Не знаю";18.8:"[1]";18.8:"6 мин";21.6:"Сложно";18.8:"[2]";18.8:"10 мин";21.6:"Знаю";18.8:"[3]";18.8:"16 д";21.6:"Легко";18.8:"[4]"]
+RECT classicA|4k150|review-reveal=absent review-rating-again=432x67@394,923 review-rating-easy=432x67@1734,923
+SHOT card_classic_A_4k150 2560x1440
+00:01 +4: classic Q 2k100
+MEAS classicQ|2k100|viewport=2560.0x1440.0 factor=1.24 text=1.0 card=1843x533 shareW=72.0% shareBodyH=38.5% empty=75.1% reveal=1782x69 rating=none gap=none fonts=[16.1:"ВОПРОС";39.7:"Между какими проводниками …";21.1:"Показать ответ"]
+RECT classicQ|2k100|review-reveal=1782x69@389,883 review-rating-again=absent review-rating-good=absent review-close=55x55@4,1
+FONTS classicQ|2k100|18.6x2 16.1x2 39.7x1 21.1x1 20.0x1 22.3x1
+SHOT card_classic_Q_2k100 2560x1440
+00:02 +5: classic A 2k100
+MEAS classicA|2k100|viewport=2560.0x1440.0 factor=1.24 text=1.0 card=1843x533 shareW=72.0% shareBodyH=38.5% empty=84.0% reveal=none rating=435x67 gap=14 fonts=[16.1:"ВОПРОС";19.0:"Между какими проводниками …";16.1:"ОТВЕТ";29.8:"Между линейными проводами.";16.1:"1 мин";21.6:"Не знаю";16.1:"[1]";16.1:"6 мин";21.6:"Сложно";16.1:"[2]";16.1:"10 мин";21.6:"Знаю";16.1:"[3]";16.1:"16 д";21.6:"Легко";16.1:"[4]"]
+RECT classicA|2k100|review-reveal=absent review-rating-again=435x67@389,894 review-rating-easy=435x67@1736,894
+SHOT card_classic_A_2k100 2560x1440
+00:02 +6: classic Q 2k150
+MEAS classicQ|2k150|viewport=1706.7x940.0 factor=1.24 text=0.9 card=1229x533 shareW=72.0% shareBodyH=60.3% empty=71.2% reveal=1167x69 rating=none gap=none fonts=[14.5:"ВОПРОС";35.7:"Между какими проводниками …";19.0:"Показать ответ"]
+RECT classicQ|2k150|review-reveal=1167x69@270,629 review-rating-again=absent review-rating-good=absent review-close=55x55@4,1
+FONTS classicQ|2k150|16.7x2 14.5x2 35.7x1 19.0x1 18.0x1 20.1x1
+SHOT card_classic_Q_2k150 1707x940
+00:02 +7: classic A 2k150
+MEAS classicA|2k150|viewport=1706.7x940.0 factor=1.24 text=0.9 card=1229x533 shareW=72.0% shareBodyH=60.3% empty=83.4% reveal=none rating=281x67 gap=14 fonts=[14.5:"ВОПРОС";17.1:"Между какими проводниками …";14.5:"ОТВЕТ";26.8:"Между линейными проводами.";14.5:"1 мин";19.4:"Не знаю";14.5:"[1]";14.5:"6 мин";19.4:"Сложно";14.5:"[2]";14.5:"10 мин";19.4:"Знаю";14.5:"[3]";14.5:"16 д";19.4:"Легко";14.5:"[4]"]
+RECT classicA|2k150|review-reveal=absent review-rating-again=281x67@270,640 review-rating-easy=281x67@1156,640
+SHOT card_classic_A_2k150 1707x940
+00:02 +8: classic Q fhd100
+MEAS classicQ|fhd100|viewport=1920.0x1080.0 factor=1.0 text=1.0 card=1382x430 shareW=72.0% shareBodyH=42.0% empty=74.7% reveal=1332x56 rating=none gap=none fonts=[13.0:"ВОПРОС";32.0:"Между какими проводниками …";17.0:"Показать ответ"]
+RECT classicQ|fhd100|review-reveal=1332x56@294,680 review-rating-again=absent review-rating-good=absent review-close=48x48@4,4
+FONTS classicQ|fhd100|15.0x2 13.0x2 32.0x1 17.0x1 20.0x1 18.0x1
+SHOT card_classic_Q_fhd100 1920x1080
+00:02 +9: classic A fhd100
+MEAS classicA|fhd100|viewport=1920.0x1080.0 factor=1.0 text=1.0 card=1382x430 shareW=72.0% shareBodyH=42.0% empty=81.9% reveal=none rating=324x56 gap=12 fonts=[13.0:"ВОПРОС";18.0:"Между какими проводниками …";13.0:"ОТВЕТ";24.0:"Между линейными проводами.";13.0:"1 мин";18.0:"Не знаю";13.0:"[1]";13.0:"6 мин";18.0:"Сложно";13.0:"[2]";13.0:"10 мин";18.0:"Знаю";13.0:"[3]";13.0:"16 д";18.0:"Легко";13.0:"[4]"]
+RECT classicA|fhd100|review-reveal=absent review-rating-again=324x56@294,690 review-rating-easy=324x56@1302,690
+SHOT card_classic_A_fhd100 1920x1080
+00:02 +10: classic Q fhd150
+MEAS classicQ|fhd150|viewport=1280.0x720.0 factor=1.0 text=0.9 card=922x430 shareW=72.0% shareBodyH=64.8% empty=70.4% reveal=872x56 rating=none gap=none fonts=[11.7:"ВОПРОС";28.8:"Между какими проводниками …";15.3:"Показать ответ"]
+RECT classicQ|fhd150|review-reveal=872x56@204,497 review-rating-again=absent review-rating-good=absent review-close=48x48@4,4
+FONTS classicQ|fhd150|13.5x2 11.7x2 28.8x1 15.3x1 18.0x1 16.2x1
+SHOT card_classic_Q_fhd150 1280x720
+00:03 +11: classic A fhd150
+MEAS classicA|fhd150|viewport=1280.0x720.0 factor=1.0 text=0.9 card=922x430 shareW=72.0% shareBodyH=64.8% empty=81.1% reveal=none rating=209x56 gap=12 fonts=[11.7:"ВОПРОС";16.2:"Между какими проводниками …";11.7:"ОТВЕТ";21.6:"Между линейными проводами.";11.7:"1 мин";16.2:"Не знаю";11.7:"[1]";11.7:"6 мин";16.2:"Сложно";11.7:"[2]";11.7:"10 мин";16.2:"Знаю";11.7:"[3]";11.7:"16 д";16.2:"Легко";11.7:"[4]"]
+RECT classicA|fhd150|review-reveal=absent review-rating-again=209x56@204,507 review-rating-easy=209x56@867,507
+SHOT card_classic_A_fhd150 1280x720
+00:03 +12: classic Q wuxga
+MEAS classicQ|wuxga|viewport=1280.0x1024.0 factor=1.0 text=1.0 card=922x430 shareW=72.0% shareBodyH=44.4% empty=69.0% reveal=872x56 rating=none gap=none fonts=[13.0:"ВОПРОС";32.0:"Между какими проводниками …";17.0:"Показать ответ"]
+RECT classicQ|wuxga|review-reveal=872x56@204,652 review-rating-again=absent review-rating-good=absent review-close=48x48@4,4
+FONTS classicQ|wuxga|15.0x2 13.0x2 32.0x1 17.0x1 20.0x1 18.0x1
+SHOT card_classic_Q_wuxga 1280x1024
+00:03 +13: classic A wuxga
+MEAS classicA|wuxga|viewport=1280.0x1024.0 factor=1.0 text=1.0 card=922x430 shareW=72.0% shareBodyH=44.4% empty=79.8% reveal=none rating=209x56 gap=12 fonts=[13.0:"ВОПРОС";18.0:"Между какими проводниками …";13.0:"ОТВЕТ";24.0:"Между линейными проводами.";13.0:"1 мин";18.0:"Не знаю";13.0:"[1]";13.0:"6 мин";18.0:"Сложно";13.0:"[2]";13.0:"10 мин";18.0:"Знаю";13.0:"[3]";13.0:"16 д";18.0:"Легко";13.0:"[4]"]
+RECT classicA|wuxga|review-reveal=absent review-rating-again=209x56@204,662 review-rating-easy=209x56@867,662
+SHOT card_classic_A_wuxga 1280x1024
+00:03 +14: classic Q xga
+MEAS classicQ|xga|viewport=853.3x682.7 factor=1.0 text=1.0 card=821x430 shareW=96.2% shareBodyH=68.6% empty=69.1% reveal=771x56 rating=none gap=none fonts=[13.0:"ВОПРОС";32.0:"Между какими проводниками …";17.0:"Показать ответ"]
+RECT classicQ|xga|review-reveal=771x56@41,481 review-rating-again=absent review-rating-good=absent review-close=48x48@4,4
+FONTS classicQ|xga|15.0x2 13.0x2 32.0x1 17.0x1 20.0x1 18.0x1
+SHOT card_classic_Q_xga 854x683
+00:03 +15: classic A xga
+MEAS classicA|xga|viewport=853.3x682.7 factor=1.0 text=1.0 card=821x430 shareW=96.2% shareBodyH=68.6% empty=78.7% reveal=none rating=184x56 gap=12 fonts=[13.0:"ВОПРОС";18.0:"Между какими проводниками …";13.0:"ОТВЕТ";24.0:"Между линейными проводами.";13.0:"1 мин";18.0:"Не знаю";13.0:"[1]";13.0:"6 мин";18.0:"Сложно";13.0:"[2]";13.0:"10 мин";18.0:"Знаю";13.0:"[3]";13.0:"16 д";18.0:"Легко";13.0:"[4]"]
+RECT classicA|xga|review-reveal=absent review-rating-again=184x56@41,491 review-rating-easy=184x56@628,491
+SHOT card_classic_A_xga 854x683
+00:03 +16: classic Q 1680
+MEAS classicQ|1680|viewport=1120.0x700.0 factor=1.0 text=1.0 card=806x430 shareW=72.0% shareBodyH=66.8% empty=69.1% reveal=756x56 rating=none gap=none fonts=[13.0:"ВОПРОС";32.0:"Между какими проводниками …";17.0:"Показать ответ"]
+RECT classicQ|1680|review-reveal=756x56@182,490 review-rating-again=absent review-rating-good=absent review-close=48x48@4,4
+FONTS classicQ|1680|15.0x2 13.0x2 32.0x1 17.0x1 20.0x1 18.0x1
+SHOT card_classic_Q_1680 1120x700
+00:03 +17: classic A 1680
+MEAS classicA|1680|viewport=1120.0x700.0 factor=1.0 text=1.0 card=806x430 shareW=72.0% shareBodyH=66.8% empty=78.6% reveal=none rating=180x56 gap=12 fonts=[13.0:"ВОПРОС";18.0:"Между какими проводниками …";13.0:"ОТВЕТ";24.0:"Между линейными проводами.";13.0:"1 мин";18.0:"Не знаю";13.0:"[1]";13.0:"6 мин";18.0:"Сложно";13.0:"[2]";13.0:"10 мин";18.0:"Знаю";13.0:"[3]";13.0:"16 д";18.0:"Легко";13.0:"[4]"]
+RECT classicA|1680|review-reveal=absent review-rating-again=180x56@182,500 review-rating-easy=180x56@758,500
+SHOT card_classic_A_1680 1120x700
+00:03 +18: classic Q 1440
+MEAS classicQ|1440|viewport=960.0x600.0 factor=1.0 text=1.0 card=691x430 shareW=72.0% shareBodyH=79.0% empty=69.4% reveal=641x56 rating=none gap=none fonts=[13.0:"ВОПРОС";32.0:"Между какими проводниками …";17.0:"Показать ответ"]
+RECT classicQ|1440|review-reveal=641x56@159,440 review-rating-again=absent review-rating-good=absent review-close=48x48@4,4
+FONTS classicQ|1440|15.0x2 13.0x2 32.0x1 17.0x1 20.0x1 18.0x1
+SHOT card_classic_Q_1440 960x600
+00:03 +19: classic A 1440
+MEAS classicA|1440|viewport=960.0x600.0 factor=1.0 text=1.0 card=691x430 shareW=72.0% shareBodyH=79.0% empty=77.7% reveal=none rating=151x56 gap=12 fonts=[13.0:"ВОПРОС";18.0:"Между какими проводниками …";13.0:"ОТВЕТ";24.0:"Между линейными проводами.";13.0:"1 мин";18.0:"Не знаю";13.0:"[1]";13.0:"6 мин";18.0:"Сложно";13.0:"[2]";13.0:"10 мин";18.0:"Знаю";13.0:"[3]";13.0:"16 д";18.0:"Легко";13.0:"[4]"]
+RECT classicA|1440|review-reveal=absent review-rating-again=151x56@159,450 review-rating-easy=151x56@649,450
+SHOT card_classic_A_1440 960x600
+00:03 +20: classic Q 1366
+MEAS classicQ|1366|viewport=910.7x512.0 factor=1.0 text=1.0 card=656x394 shareW=72.0% shareBodyH=86.4% empty=66.7% reveal=606x56 rating=none gap=none fonts=[13.0:"ВОПРОС";32.0:"Между какими проводниками …";17.0:"Показать ответ"]
+RECT classicQ|1366|review-reveal=606x56@152,387 review-rating-again=absent review-rating-good=absent review-close=48x48@4,4
+FONTS classicQ|1366|15.0x2 13.0x2 32.0x1 17.0x1 20.0x1 18.0x1
+SHOT card_classic_Q_1366 911x512
+00:04 +21: classic A 1366
+MEAS classicA|1366|viewport=910.7x512.0 factor=1.0 text=1.0 card=656x394 shareW=72.0% shareBodyH=86.4% empty=61.1% reveal=none rating=297x56 gap=12 fonts=[13.0:"ВОПРОС";18.0:"Между какими проводниками …";13.0:"ОТВЕТ";24.0:"Между линейными проводами.";13.0:"1 мин";18.0:"Не знаю";13.0:"[1]";13.0:"6 мин";18.0:"Сложно";13.0:"[2]";13.0:"10 мин";18.0:"Знаю";13.0:"[3]";13.0:"16 д";18.0:"Легко";13.0:"[4]"]
+RECT classicA|1366|review-reveal=absent review-rating-again=297x56@152,328 review-rating-easy=297x56@461,420
+SHOT card_classic_A_1366 911x512
+00:04 +22: classic Q 1024
+MEAS classicQ|1024|viewport=682.7x512.0 factor=1.0 text=1.0 card=651x394 shareW=95.3% shareBodyH=86.4% empty=66.8% reveal=601x56 rating=none gap=none fonts=[13.0:"ВОПРОС";32.0:"Между какими проводниками …";17.0:"Показать ответ"]
+RECT classicQ|1024|review-reveal=601x56@41,387 review-rating-again=absent review-rating-good=absent review-close=48x48@4,4
+FONTS classicQ|1024|15.0x2 13.0x2 32.0x1 17.0x1 20.0x1 18.0x1
+SHOT card_classic_Q_1024 683x512
+00:04 +23: classic A 1024
+MEAS classicA|1024|viewport=682.7x512.0 factor=1.0 text=1.0 card=651x394 shareW=95.3% shareBodyH=86.4% empty=61.1% reveal=none rating=294x56 gap=12 fonts=[13.0:"ВОПРОС";18.0:"Между какими проводниками …";13.0:"ОТВЕТ";24.0:"Между линейными проводами.";13.0:"1 мин";18.0:"Не знаю";13.0:"[1]";13.0:"6 мин";18.0:"Сложно";13.0:"[2]";13.0:"10 мин";18.0:"Знаю";13.0:"[3]";13.0:"16 д";18.0:"Легко";13.0:"[4]"]
+RECT classicA|1024|review-reveal=absent review-rating-again=294x56@41,328 review-rating-easy=294x56@347,420
+SHOT card_classic_A_1024 683x512
+00:04 +24: classic Q 800
+MEAS classicQ|800|viewport=533.3x400.0 factor=1.0 text=1.0 card=501x282 shareW=94.0% shareBodyH=82.0% empty=57.3% reveal=459x56 rating=none gap=none fonts=[13.0:"ВОПРОС";26.0:"Между какими проводниками …";17.0:"Показать ответ"]
+RECT classicQ|800|review-reveal=459x56@37,305 review-rating-again=absent review-rating-good=absent review-close=48x48@4,4
+FONTS classicQ|800|15.0x2 13.0x2 26.0x1 17.0x1 20.0x1 18.0x1
+SHOT card_classic_Q_800 534x400
+00:04 +25: classic A 800
+MEAS classicA|800|viewport=533.3x400.0 factor=1.0 text=1.0 card=501x282 shareW=94.0% shareBodyH=82.0% empty=58.8% reveal=none rating=106x56 gap=12 fonts=[13.0:"ВОПРОС";17.0:"Между какими проводниками …";13.0:"ОТВЕТ";20.0:"Между линейными проводами.";13.0:"1 мин";18.0:"Не знаю";13.0:"6 мин";18.0:"Сложно";13.0:"10 мин";18.0:"Знаю";13.0:"16 д";18.0:"Легко"]
+RECT classicA|800|review-reveal=absent review-rating-again=106x56@37,323 review-rating-easy=106x56@390,323
+SHOT card_classic_A_800 534x400
+00:04 +26: classic Q w21x9
+MEAS classicQ|w21x9|viewport=1706.7x720.0 factor=1.11 text=1.0 card=1229x477 shareW=72.0% shareBodyH=71.9% empty=71.0% reveal=1174x62 rating=none gap=none fonts=[14.4:"ВОПРОС";35.5:"Между какими проводниками …";18.9:"Показать ответ"]
+RECT classicQ|w21x9|review-reveal=1174x62@267,511 review-rating-again=absent review-rating-good=absent review-close=49x49@4,4
+FONTS classicQ|w21x9|16.7x2 14.4x2 35.5x1 18.9x1 20.0x2
+SHOT card_classic_Q_w21x9 1707x720
+00:04 +27: classic A w21x9
+MEAS classicA|w21x9|viewport=1706.7x720.0 factor=1.11 text=1.0 card=1229x477 shareW=72.0% shareBodyH=71.9% empty=81.7% reveal=none rating=283x62 gap=13 fonts=[14.4:"ВОПРОС";18.0:"Между какими проводниками …";14.4:"ОТВЕТ";26.6:"Между линейными проводами.";14.4:"1 мин";20.0:"Не знаю";14.4:"[1]";14.4:"6 мин";20.0:"Сложно";14.4:"[2]";14.4:"10 мин";20.0:"Знаю";14.4:"[3]";14.4:"16 д";20.0:"Легко";14.4:"[4]"]
+RECT classicA|w21x9|review-reveal=absent review-rating-again=283x62@267,520 review-rating-easy=283x62@1157,520
+SHOT card_classic_A_w21x9 1707x720
+00:04 +28: classic Q m390
+MEAS classicQ|m390|viewport=390.0x844.0 factor=1.0 text=1.0 card=358x430 shareW=91.8% shareBodyH=54.6% empty=57.0% reveal=316x56 rating=none gap=none fonts=[13.0:"ВОПРОС";28.0:"Между какими проводниками …";17.0:"Показать ответ"]
+RECT classicQ|m390|review-reveal=316x56@37,577 review-rating-again=absent review-rating-good=absent review-close=48x48@4,4
+FONTS classicQ|m390|15.0x2 13.0x2 28.0x1 17.0x1 20.0x1 18.0x1
+SHOT card_classic_Q_m390 390x844
+00:04 +29: classic A m390
+MEAS classicA|m390|viewport=390.0x844.0 factor=1.0 text=1.0 card=358x430 shareW=91.8% shareBodyH=54.6% empty=52.5% reveal=none rating=152x56 gap=12 fonts=[13.0:"ВОПРОС";17.0:"Между какими проводниками …";13.0:"ОТВЕТ";22.0:"Между линейными проводами.";13.0:"1 мин";18.0:"Не знаю";13.0:"[1]";13.0:"6 мин";18.0:"Сложно";13.0:"[2]";13.0:"10 мин";18.0:"Знаю";13.0:"[3]";13.0:"16 д";18.0:"Легко";13.0:"[4]"]
+RECT classicA|m390|review-reveal=absent review-rating-again=152x56@37,514 review-rating-easy=152x56@201,606
+SHOT card_classic_A_m390 390x844
+00:04 +30: classic Q m844
+MEAS classicQ|m844|viewport=844.0x390.0 factor=1.0 text=1.0 card=812x272 shareW=96.2% shareBodyH=81.4% empty=53.3% reveal=794x56 rating=none gap=none fonts=[13.0:"ВОПРОС";28.0:"Между какими проводниками …";17.0:"Показать ответ"]
+RECT classicQ|m844|review-reveal=794x56@25,297 review-rating-again=absent review-rating-good=absent review-close=48x48@4,4
+FONTS classicQ|m844|15.0x2 13.0x2 28.0x1 17.0x1 20.0x1 18.0x1
+SHOT card_classic_Q_m844 844x390
+00:04 +31: classic A m844
+MEAS classicA|m844|viewport=844.0x390.0 factor=1.0 text=1.0 card=812x272 shareW=96.2% shareBodyH=81.4% empty=68.4% reveal=none rating=190x56 gap=12 fonts=[13.0:"ВОПРОС";18.0:"Между какими проводниками …";13.0:"ОТВЕТ";20.0:"Между линейными проводами.";13.0:"1 мин";18.0:"Не знаю";13.0:"6 мин";18.0:"Сложно";13.0:"10 мин";18.0:"Знаю";13.0:"16 д";18.0:"Легко"]
+RECT classicA|m844|review-reveal=absent review-rating-again=190x56@25,308 review-rating-easy=190x56@630,308
+SHOT card_classic_A_m844 844x390
+00:04 +32: feed Q 2k150
+MEAS feedQ|2k150|card=absent
+FEEDRECT feedQ|2k150|card=1675x775@16,82
+RECT feedQ|2k150|feed-rate-hint=1611x22@48,572 feed-toolbar=absent feed-pause=108x55@1587,873
+SHOT card_feed_Q_2k150 1707x940
+00:05 +33: feed A 2k150
+FEEDTOOLBAR feedA|2k150|toolbar=1707x95@0,770 again=416x67@0
+MEAS feedA|2k150|card=absent
+SHOT card_feed_A_2k150 1707x940
+00:05 +34: feed Q fhd150
+MEAS feedQ|fhd150|card=absent
+FEEDRECT feedQ|fhd150|card=1248x562@16,82
+RECT feedQ|fhd150|feed-rate-hint=1184x18@48,443 feed-toolbar=absent feed-pause=98x48@1170,660
+SHOT card_feed_Q_fhd150 1280x720
+00:05 +35: feed A fhd150
+FEEDTOOLBAR feedA|fhd150|toolbar=1280x80@0,572 again=311x56@0
+MEAS feedA|fhd150|card=absent
+SHOT card_feed_A_fhd150 1280x720
+00:05 +36: feed Q xga
+MEAS feedQ|xga|card=absent
+FEEDRECT feedQ|xga|card=821x525@16,82
+RECT feedQ|xga|feed-rate-hint=757x20@48,435 feed-toolbar=absent feed-pause=103x48@738,623
+SHOT card_feed_Q_xga 854x683
+00:05 +37: feed A xga
+FEEDTOOLBAR feedA|xga|toolbar=853x80@0,535 again=204x56@0
+MEAS feedA|xga|card=absent
+SHOT card_feed_A_xga 854x683
+00:05 +38: feed Q 1440
+MEAS feedQ|1440|card=absent
+FEEDRECT feedQ|1440|card=928x442@16,82
+RECT feedQ|1440|feed-rate-hint=864x20@48,393 feed-toolbar=absent feed-pause=103x48@845,540
+SHOT card_feed_Q_1440 960x600
+00:05 +39: feed A 1440
+FEEDTOOLBAR feedA|1440|toolbar=960x80@0,452 again=231x56@0
+MEAS feedA|1440|card=absent
+SHOT card_feed_A_1440 960x600
+00:05 +40: feed Q 1366
+MEAS feedQ|1366|card=absent
+FEEDRECT feedQ|1366|card=895x378@8,78
+RECT feedQ|1366|feed-rate-hint=831x20@40,357 feed-toolbar=absent feed-pause=103x48@800,462
+SHOT card_feed_Q_1366 911x512
+00:06 +41: feed A 1366
+FEEDTOOLBAR feedA|1366|toolbar=911x80@0,380 again=219x56@0
+MEAS feedA|1366|card=absent
+SHOT card_feed_A_1366 911x512
+00:06 +42: feed Q 1024
+MEAS feedQ|1024|card=absent
+FEEDRECT feedQ|1024|card=667x378@8,78
+RECT feedQ|1024|feed-rate-hint=603x20@40,357 feed-toolbar=absent feed-pause=103x48@572,462
+SHOT card_feed_Q_1024 683x512
+00:06 +43: feed A 1024
+FEEDTOOLBAR feedA|1024|toolbar=683x80@0,380 again=162x56@0
+MEAS feedA|1024|card=absent
+SHOT card_feed_A_1024 683x512
+00:06 +44: feed Q w21x9
+MEAS feedQ|w21x9|card=absent
+FEEDRECT feedQ|w21x9|card=1675x561@16,82
+RECT feedQ|w21x9|feed-rate-hint=1611x22@48,452 feed-toolbar=absent feed-pause=108x49@1587,659
+SHOT card_feed_Q_w21x9 1707x720
+00:06 +45: feed A w21x9
+FEEDTOOLBAR feedA|w21x9|toolbar=1707x88@0,563 again=417x62@0
+MEAS feedA|w21x9|card=absent
+SHOT card_feed_A_w21x9 1707x720
+00:06 +46: feed Q m390
+MEAS feedQ|m390|card=absent
+FEEDRECT feedQ|m390|card=358x686@16,82
+RECT feedQ|m390|feed-rate-hint=294x40@48,533 feed-toolbar=absent feed-pause=103x48@275,784
+SHOT card_feed_Q_m390 390x844
+00:06 +47: feed A m390
+FEEDTOOLBAR feedA|m390|toolbar=390x172@0,604 again=189x56@0
+MEAS feedA|m390|card=absent
+SHOT card_feed_A_m390 390x844
+00:06 +48: classic A dark 2k150
+MEAS classicA-dark|2k150|viewport=1706.7x940.0 factor=1.24 text=0.9 card=1229x533 shareW=72.0% shareBodyH=60.3% empty=83.4% reveal=none rating=281x67 gap=14 fonts=[14.5:"ВОПРОС";17.1:"Между какими проводниками …";14.5:"ОТВЕТ";26.8:"Между линейными проводами.";14.5:"1 мин";19.4:"Не знаю";14.5:"[1]";14.5:"6 мин";19.4:"Сложно";14.5:"[2]";14.5:"10 мин";19.4:"Знаю";14.5:"[3]";14.5:"16 д";19.4:"Легко";14.5:"[4]"]
+SHOT card_classic_A_dark_2k150 1707x940
+00:06 +49: (tearDownAll)
+00:06 +49: All tests passed!

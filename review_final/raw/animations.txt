@@ -1,0 +1,67 @@
+lib/ui/cards/content/card_image_view.dart:132: final Duration fadeDuration = AppMotion.duration(
+lib/ui/cards/content/card_image_view.dart:175: return AnimatedSwitcher(
+lib/ui/cards/content/card_image_view.dart:271: final Duration duration = AppMotion.reduce(context)
+lib/ui/cards/content/card_image_view.dart:288: final CurvedAnimation curved = CurvedAnimation(
+lib/ui/cards/content/card_image_view.dart:290: curve: AppMotion.enter,
+lib/ui/cards/content/card_image_view.dart:291: reverseCurve: AppMotion.enter,
+lib/ui/cards/content/card_image_view.dart:293: return FadeTransition(
+lib/ui/cards/content/card_image_view.dart:295: child: ScaleTransition(
+lib/ui/decks/decks_screen.dart:855: child: AnimatedContainer(
+lib/ui/decks/decks_screen.dart:856: duration: const Duration(milliseconds: 120),
+lib/ui/review/feed_card_view.dart:91: late final AnimationController _swipe = AnimationController.unbounded(
+lib/ui/review/feed_card_view.dart:94: late final AnimationController _flip = AnimationController.unbounded(
+lib/ui/review/feed_card_view.dart:114: SpringSimulation(
+lib/ui/review/feed_card_view.dart:115: widget.spring ?? AppMotion.expressiveSpring(),
+lib/ui/review/feed_card_view.dart:161: SpringSimulation(
+lib/ui/review/feed_card_view.dart:162: widget.spring ?? AppMotion.expressiveSpring(),
+lib/ui/review/feed_card_view.dart:173: _swipe.animateTo(
+lib/ui/review/feed_card_view.dart:175: duration: const Duration(milliseconds: 180),
+lib/ui/review/feed_progress_bar.dart:42: late final AnimationController _pulse = AnimationController(
+lib/ui/review/feed_progress_bar.dart:44: duration: const Duration(milliseconds: 1400),
+lib/ui/review/feed_progress_bar.dart:65: !AppMotion.reduce(context);
+lib/ui/review/feed_session_screen.dart:253: _pageController.animateToPage(
+lib/ui/review/feed_session_screen.dart:255: duration: const Duration(milliseconds: 300),
+lib/ui/review/feed_session_screen.dart:556: ? AppMotion.standardSpring()
+lib/ui/review/review_card_view.dart:15: const Duration kReviewCardFlipDuration = Duration(milliseconds: 300);
+lib/ui/review/review_card_view.dart:92: late final AnimationController _controller = AnimationController(
+lib/ui/review/review_card_view.dart:100: late final Animation<double> _curved = CurvedAnimation(
+lib/ui/review/review_card_view.dart:182: final Duration flipDuration = AppMotion.duration(
+lib/ui/review/review_card_view.dart:499: /// ��������� reduced motion ([AppMotion.reduce]): ��� ��������� ���������
+lib/ui/review/review_card_view.dart:508: final Duration duration = AppMotion.duration(context, AppDurations.medium);
+lib/ui/review/review_card_view.dart:510: return TweenAnimationBuilder<double>(
+lib/ui/review/review_card_view.dart:513: curve: AppMotion.enter,
+lib/ui/review/review_session_screen.dart:447: child: AnimatedSwitcher(
+lib/ui/review/review_session_screen.dart:448: duration: AppMotion.duration(context, AppDurations.medium),
+lib/ui/review/review_session_screen.dart:449: switchInCurve: AppMotion.enter,
+lib/ui/review/review_session_screen.dart:450: switchOutCurve: AppMotion.enter,
+lib/ui/review/review_session_screen.dart:452: return FadeTransition(
+lib/ui/review/review_session_screen.dart:454: child: SlideTransition(
+lib/ui/review/session_keyboard.dart:80: scroll.animateTo(
+lib/ui/settings/settings_screen.dart:183: .animateTo(
+lib/ui/shell/app_sidebar.dart:349: child: AnimatedContainer(
+lib/ui/study/match_screen.dart:95: _ticker = Timer.periodic(const Duration(milliseconds: 100), (_) {
+lib/ui/study/match_screen.dart:111: Timer(const Duration(milliseconds: 450), () {
+lib/ui/study/match_screen.dart:311: child: AnimatedOpacity(
+lib/ui/study/match_screen.dart:315: duration: AppMotion.duration(
+lib/ui/study/match_screen.dart:383: late final AnimationController _controller = AnimationController(
+lib/ui/study/match_screen.dart:392: if (widget.shake && !oldWidget.shake && !AppMotion.reduce(context)) {
+lib/ui/study/multiple_choice_screen.dart:171: _autoAdvance = Timer(const Duration(milliseconds: 1200), _next);
+lib/ui/study/multiple_choice_screen.dart:518: late final AnimationController _scale = AnimationController.unbounded(
+lib/ui/study/multiple_choice_screen.dart:532: SpringSimulation(AppMotion.standardSpring(), 0.92, 1, 0),
+lib/ui/study/multiple_choice_screen.dart:560: child: ScaleTransition(
+lib/ui/theme/app_theme.dart:102: builders: <TargetPlatform, PageTransitionsBuilder>{
+lib/ui/theme/app_theme.dart:104: platform: const _AppPageTransitionsBuilder(),
+lib/ui/theme/app_theme.dart:377: waitDuration: const Duration(milliseconds: 400),
+lib/ui/theme/app_theme.dart:484: class _AppPageTransitionsBuilder extends PageTransitionsBuilder {
+lib/ui/theme/app_theme.dart:485: const _AppPageTransitionsBuilder();
+lib/ui/theme/app_theme.dart:497: final CurvedAnimation curved = CurvedAnimation(
+lib/ui/theme/app_theme.dart:502: return FadeTransition(
+lib/ui/theme/app_theme.dart:504: child: SlideTransition(
+lib/ui/theme/app_tokens.dart:626: static const Duration quick = Duration(milliseconds: 120);
+lib/ui/theme/app_tokens.dart:629: static const Duration base = Duration(milliseconds: 180);
+lib/ui/theme/app_tokens.dart:632: static const Duration medium = Duration(milliseconds: 220);
+lib/ui/theme/app_tokens.dart:635: static const Duration slow = Duration(milliseconds: 280);
+lib/ui/theme/app_tokens.dart:638: static const Duration flip = Duration(milliseconds: 300);
+lib/ui/theme/app_tokens.dart:641: static const Duration enter = Duration(milliseconds: 240);
+
+TOTAL 65

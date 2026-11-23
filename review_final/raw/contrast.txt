@@ -1,0 +1,35 @@
+OK  17.17 (need 4.5)  light body on card: #0B1C30 on #FFFFFF
+OK   9.36 (need 4.5)  light muted text (onSurfaceVariant) on card: #464555 on #FFFFFF
+OK   9.36 (need 4.5)  light overline on card: #464555 on #FFFFFF
+OK   8.70 (need 4.5)  light primary text on surface: #3525CD on #F8F9FF
+OK   9.14 (need 4.5)  light onPrimary on primary (filled btn): #FFFFFF on #3525CD
+OK   7.24 (need 4.5)  rating Again text: #93000A on #FFDAD6
+OK  14.72 (need 4.5)  rating Hard text: #0B1C30 on #E5EEFF
+OK   4.55 (need 4.5)  rating Good text: #00714D on #6CF8BB
+OK  13.26 (need 4.5)  rating Easy text: #0F0069 on #E2DFFF
+OK   9.08 (need 4.5)  interval again (tertiary) on card: #95002B on #FFFFFF
+OK   9.36 (need 4.5)  interval hard (onSurfaceVariant) on card: #464555 on #FFFFFF
+OK   6.48 (need 4.5)  interval good (secondary) on card: #006C49 on #FFFFFF
+OK   9.14 (need 4.5)  interval easy (primary) on card: #3525CD on #FFFFFF
+OK   5.67 (need 4.5)  danger chip text on errorContainer/2 over white: #BA1A1A on #FFECEA
+OK  13.26 (need 4.5)  info chip on primaryFixed: #0F0069 on #E2DFFF
+OK   4.55 (need 4.5)  success chip on secondaryContainer: #00714D on #6CF8BB
+FAIL  4.49 (need 4.5)  light outline (#777587) on white (helper): #777587 on #FFFFFF
+FAIL  1.71 (need 3.0)  light outlineVariant border on white (non-text): #C7C4D8 on #FFFFFF
+OK   1.62 (need 1.2)  card border on surface (visibility): #C7C4D8 on #F8F9FF
+OK  16.19 (need 4.5)  dark body on card: #F1F5F9 on #111827
+OK  11.95 (need 4.5)  dark muted on card: #CBD5E1 on #111827
+OK  11.95 (need 4.5)  dark overline on card: #CBD5E1 on #111827
+OK   6.46 (need 4.5)  dark primary text on surface: #818CF8 on #090E1A
+OK   6.29 (need 4.5)  dark filled btn white on #4F46E5: #FFFFFF on #4F46E5
+OK  11.16 (need 4.5)  dark rating Again: #FECACA on #450A0A
+OK  13.35 (need 4.5)  dark rating Hard: #F1F5F9 on #1E293B
+OK   5.99 (need 4.5)  dark rating Good: #A7F3D0 on #065F46
+OK  10.66 (need 4.5)  dark rating Easy: #E2DFFF on #282463
+FAIL  1.21 (need 1.3)  dark Hard fill vs card surface (button affordance): #1E293B on #111827
+OK   1.56 (need 1.3)  dark card border vs background: #293548 on #090E1A
+OK   6.59 (need 4.5)  dark interval again on card: #FB7185 on #111827
+OK   9.23 (need 4.5)  dark interval good on card: #34D399 on #111827
+OK   5.62 (need 4.5)  dark onPrimaryContainer: #EEF2FF on #4F46E5
+
+33 pairs, 3 below requirement
