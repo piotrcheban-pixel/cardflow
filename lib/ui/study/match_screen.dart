@@ -15,6 +15,7 @@ import 'package:cardflow/ui/review/review_chrome.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
 
 import 'package:cardflow/ui/theme/app_tokens.dart';
+import 'package:cardflow/ui/theme/app_typography.dart';
 
 /// Игровой режим «Подбор пар» (7.16).
 ///
@@ -174,26 +175,27 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
+    // F20: «Подбор пар» — тот же каркас сессии, что у остальных режимов:
+    // выход слева, один заголовок, никаких отдельных AppBar-действий.
+    final bool playable = _game?.isPlayable ?? false;
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.matchTitle),
-        actions: <Widget>[
-          IconButton(
-            key: const ValueKey<String>('match-close'),
-            tooltip: l10n.reviewCloseTooltip,
-            icon: const Icon(Icons.close),
-            onPressed: () {
-              if (context.canPop()) context.pop();
-            },
-          ),
-        ],
+      appBar: ReviewSessionAppBar(
+        title: l10n.matchTitle,
+        undoEnabled: false,
+        onUndo: () {},
+        whyExcerpt: null,
+        showFsrsBadge: false,
+        showClose: _loading || _loadFailed || playable,
+        onClose: () {
+          if (context.canPop()) context.pop();
+        },
       ),
       body: _buildBody(context, l10n),
     );
   }
 
   Widget _buildBody(BuildContext context, AppLocalizations l10n) {
-    if (_loading) return const Center(child: CircularProgressIndicator());
+    if (_loading) return const ReviewLoadingView();
     if (_loadFailed) {
       return ReviewLoadErrorView(onRetry: () => unawaited(_load()));
     }
@@ -208,35 +210,45 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
       );
     }
     final ThemeData theme = Theme.of(context);
+    final double contentWidth = AppSizes.pageWidth(context);
+    final Widget stats = Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.md,
+        AppSpacing.lg,
+        AppSpacing.xs,
+      ),
+      child: Wrap(
+        spacing: AppSpacing.sm,
+        runSpacing: AppSpacing.xs,
+        children: <Widget>[
+          // F20: служебные числа режима — аккуратные плашки, а не голый текст.
+          _MatchStat(
+            key: const ValueKey<String>('match-timer'),
+            icon: Icons.timer_outlined,
+            label: l10n.matchTimer(_formatMs(_elapsedMs)),
+          ),
+          _MatchStat(
+            key: const ValueKey<String>('match-moves'),
+            icon: Icons.touch_app_outlined,
+            label: l10n.matchMoves(game.moves),
+          ),
+          if (_bestMs != null)
+            _MatchStat(
+              key: const ValueKey<String>('match-best'),
+              icon: Icons.emoji_events_outlined,
+              label: l10n.matchBest(_formatMs(_bestMs!)),
+            ),
+        ],
+      ),
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-          child: Wrap(
-            spacing: 16,
-            runSpacing: 4,
-            alignment: WrapAlignment.spaceBetween,
-            children: <Widget>[
-              Text(
-                l10n.matchTimer(_formatMs(_elapsedMs)),
-                key: const ValueKey<String>('match-timer'),
-                style: theme.textTheme.titleMedium,
-              ),
-              Text(
-                l10n.matchMoves(game.moves),
-                key: const ValueKey<String>('match-moves'),
-                style: theme.textTheme.bodyMedium,
-              ),
-              if (_bestMs != null)
-                Text(
-                  l10n.matchBest(_formatMs(_bestMs!)),
-                  key: const ValueKey<String>('match-best'),
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-            ],
+        Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: contentWidth),
+            child: stats,
           ),
         ),
         if (_completed)
@@ -288,81 +300,131 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
           )
         else
           Expanded(
-            child: LayoutBuilder(
-              builder: (BuildContext context, BoxConstraints constraints) {
-                final int columns = constraints.maxWidth >= 640 ? 4 : 3;
-                return GridView.builder(
-                  padding: const EdgeInsets.all(12),
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: columns,
-                    mainAxisSpacing: 8,
-                    crossAxisSpacing: 8,
-                    childAspectRatio: 1.15,
-                  ),
-                  itemCount: game.tiles.length,
-                  itemBuilder: (BuildContext context, int index) {
-                    final MatchTile tile = game.tiles[index];
-                    final bool matched = game.matched.contains(index);
-                    final bool selected = game.selected == index;
-                    final bool mismatch = game.mismatch.contains(index);
-                    return _ShakeTile(
-                      key: ValueKey<String>('match-tile-$index'),
-                      shake: mismatch,
-                      child: AnimatedOpacity(
-                        opacity: matched ? 0 : 1,
-                        // Аудит v7 (G9): длительность из общей шкалы и с учётом
-                        // reduced motion.
-                        duration: AppMotion.duration(
-                          context,
-                          AppDurations.medium,
-                        ),
-                        child: IgnorePointer(
-                          ignoring: matched,
-                          child: FilledButton(
-                            onPressed: matched ? null : () => _select(index),
-                            style: FilledButton.styleFrom(
-                              padding: const EdgeInsets.all(AppSpacing.xs),
-                              backgroundColor: selected
-                                  ? theme.colorScheme.primaryContainer
-                                  : mismatch
-                                  ? theme.colorScheme.errorContainer
-                                  : theme.colorScheme.surfaceContainerLow,
-                              foregroundColor: selected
-                                  ? theme.colorScheme.onPrimaryContainer
-                                  : mismatch
-                                  ? theme.colorScheme.onErrorContainer
-                                  : theme.colorScheme.onSurface,
-                              disabledBackgroundColor:
-                                  theme.colorScheme.surfaceContainerLow,
-                              disabledForegroundColor:
-                                  theme.colorScheme.onSurfaceVariant,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: AppRadii.inputRadius,
-                                side: BorderSide(
-                                  color: selected
-                                      ? theme.colorScheme.primary
-                                      : theme.colorScheme.outlineVariant,
+            child: Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: contentWidth),
+                child: LayoutBuilder(
+                  builder: (BuildContext context, BoxConstraints constraints) {
+                    final int columns = constraints.maxWidth >= 1600
+                        ? 6
+                        : constraints.maxWidth >= 560
+                        ? 4
+                        : constraints.maxWidth >= 380
+                        ? 3
+                        : 2;
+                    return GridView.builder(
+                      padding: const EdgeInsets.all(AppSpacing.sm),
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: columns,
+                        mainAxisSpacing: AppSpacing.xs,
+                        crossAxisSpacing: AppSpacing.xs,
+                        childAspectRatio: 1.35,
+                      ),
+                      itemCount: game.tiles.length,
+                      itemBuilder: (BuildContext context, int index) {
+                        final MatchTile tile = game.tiles[index];
+                        final bool matched = game.matched.contains(index);
+                        final bool selected = game.selected == index;
+                        final bool mismatch = game.mismatch.contains(index);
+                        return _ShakeTile(
+                          key: ValueKey<String>('match-tile-$index'),
+                          shake: mismatch,
+                          child: AnimatedOpacity(
+                            opacity: matched ? 0 : 1,
+                            // Аудит v7 (G9): длительность из общей шкалы и с
+                            // учётом reduced motion.
+                            duration: AppMotion.duration(
+                              context,
+                              AppDurations.medium,
+                            ),
+                            child: IgnorePointer(
+                              ignoring: matched,
+                              child: FilledButton(
+                                onPressed: matched
+                                    ? null
+                                    : () => _select(index),
+                                style: FilledButton.styleFrom(
+                                  padding: const EdgeInsets.all(AppSpacing.sm),
+                                  backgroundColor: selected
+                                      ? theme.colorScheme.primaryContainer
+                                      : mismatch
+                                      ? theme.colorScheme.errorContainer
+                                      : theme.colorScheme.surfaceContainerLow,
+                                  foregroundColor: selected
+                                      ? theme.colorScheme.onPrimaryContainer
+                                      : mismatch
+                                      ? theme.colorScheme.onErrorContainer
+                                      : theme.colorScheme.onSurface,
+                                  disabledBackgroundColor:
+                                      theme.colorScheme.surfaceContainerLow,
+                                  disabledForegroundColor:
+                                      theme.colorScheme.onSurfaceVariant,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: AppRadii.inputRadius,
+                                    side: BorderSide(
+                                      color: selected
+                                          ? theme.colorScheme.primary
+                                          : AppColors.controlBorder(
+                                              theme.colorScheme,
+                                            ),
+                                    ),
+                                  ),
+                                  elevation: 0,
+                                  textStyle: theme.textTheme.titleSmall,
+                                ),
+                                child: CardText(
+                                  source: tile.text,
+                                  maxLines: 4,
+                                  overflow: TextOverflow.ellipsis,
+                                  textAlign: TextAlign.center,
                                 ),
                               ),
-                              elevation: 0,
-                              textStyle: theme.textTheme.bodyLarge,
-                            ),
-                            child: CardText(
-                              source: tile.text,
-                              maxLines: 4,
-                              overflow: TextOverflow.ellipsis,
-                              textAlign: TextAlign.center,
                             ),
                           ),
-                        ),
-                      ),
+                        );
+                      },
                     );
                   },
-                );
-              },
+                ),
+              ),
             ),
           ),
       ],
+    );
+  }
+}
+
+/// Плашка служебного значения режима («Время», «Ходов», «Лучшее»).
+class _MatchStat extends StatelessWidget {
+  const _MatchStat({required this.icon, required this.label, super.key});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm + 2,
+        vertical: AppSpacing.xs,
+      ),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(AppRadii.control),
+        border: Border.all(color: scheme.outlineVariant),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Icon(icon, size: AppSizes.iconSmall, color: scheme.onSurfaceVariant),
+          const SizedBox(width: AppSpacing.xxs + 2),
+          Text(
+            label,
+            style: AppTypography.numeric(context, color: scheme.onSurface),
+          ),
+        ],
+      ),
     );
   }
 }

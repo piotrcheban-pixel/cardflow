@@ -302,7 +302,7 @@ class _MultipleChoiceScreenState extends ConsumerState<MultipleChoiceScreen> {
     AppLocalizations l10n,
     StudySessionState? state,
   ) {
-    if (_loading) return const Center(child: CircularProgressIndicator());
+    if (_loading) return const ReviewLoadingView();
     if (_loadFailed || state == null) {
       return ReviewLoadErrorView(onRetry: _retry);
     }
@@ -336,13 +336,8 @@ class _MultipleChoiceScreenState extends ConsumerState<MultipleChoiceScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-          child: StudyProgressBar(
-            answered: state.answeredCount,
-            total: state.total,
-          ),
-        ),
+        const Padding(padding: EdgeInsets.only(top: AppSpacing.xs)),
+        StudyProgressBar(answered: state.answeredCount, total: state.total),
         Expanded(
           // Аудит v4 (V6): вопрос и варианты — одна центрированная колонка с
           // воздухом 32 px, а не вопрос вверху и варианты у нижней кромки с
@@ -462,15 +457,11 @@ class _MultipleChoiceScreenState extends ConsumerState<MultipleChoiceScreen> {
           ),
         ),
         if (answered != null)
-          SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-              child: FilledButton(
-                key: const ValueKey<String>('test-next'),
-                onPressed: _next,
-                child: Text(l10n.testNext),
-              ),
+          StudyFooterAction(
+            child: FilledButton(
+              key: const ValueKey<String>('test-next'),
+              onPressed: _next,
+              child: Text(l10n.testNext),
             ),
           ),
       ],

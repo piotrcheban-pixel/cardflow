@@ -110,14 +110,18 @@ class _FeedCardViewState extends State<FeedCardView>
       _resetSwipe();
     }
     if (oldWidget.revealed != widget.revealed) {
-      _flip.animateWith(
-        SpringSimulation(
-          widget.spring ?? AppMotion.expressiveSpring(),
-          _flip.value,
-          widget.revealed ? 1 : 0,
-          0,
-        ),
-      );
+      if (AppMotion.reduce(context)) {
+        _flip.value = widget.revealed ? 1 : 0;
+      } else {
+        _flip.animateWith(
+          SpringSimulation(
+            widget.spring ?? AppMotion.expressiveSpring(),
+            _flip.value,
+            widget.revealed ? 1 : 0,
+            0,
+          ),
+        );
+      }
     }
   }
 
@@ -157,6 +161,10 @@ class _FeedCardViewState extends State<FeedCardView>
       width: _width,
     );
     if (rating == null) {
+      if (AppMotion.reduce(context)) {
+        _swipe.value = 0;
+        return;
+      }
       _swipe.animateWith(
         SpringSimulation(
           widget.spring ?? AppMotion.expressiveSpring(),
@@ -170,9 +178,13 @@ class _FeedCardViewState extends State<FeedCardView>
     setState(() => _commitRating = rating);
     widget.onRate(rating);
     final double target = (_swipe.value >= 0 ? 1 : -1) * _width * 1.2;
+    if (AppMotion.reduce(context)) {
+      _swipe.value = target;
+      return;
+    }
     _swipe.animateTo(
       target,
-      duration: const Duration(milliseconds: 180),
+      duration: AppMotion.duration(context, const Duration(milliseconds: 180)),
       curve: Curves.easeOutCubic,
     );
   }
@@ -181,20 +193,16 @@ class _FeedCardViewState extends State<FeedCardView>
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
-        // Аудит v4 (V22): карточка ленты той же ширины, что и классика, —
-        // 960 лог. px вместо 640, иначе режимы выглядят как два приложения.
+        // F04/F06: карточка ленты — та же ширина и та же высотная политика,
+        // что у «Классики» (72 % окна, не меньше 62 % рабочей области).
+        final double windowWidth = MediaQuery.sizeOf(context).width;
         final double width = math.min(
           constraints.maxWidth,
-          AppSizes.studyCardMaxWidth,
+          AppSizes.studyCardWidth(windowWidth),
         );
-        // Аудит v9 (G3/G8): карточка ленты того же размера, что «Классика»,
-        // — не растягивается на всю область (иначе до 45 % высоты — белое поле).
-        final double factor = AppAdaptive.factorForContext(context);
         final double height = math.min(
           constraints.maxHeight,
-          // Карточка ленты чуть ниже классики: подсказка о свайпах и короткий
-          // вопрос не должны оставлять сплошную белую полосу >30 % (G8).
-          AppSizes.studyCardMinHeight * factor * 0.85,
+          AppSizes.studyCardMinHeightFor(context),
         );
         _width = width;
         return AnimatedBuilder(
@@ -205,7 +213,9 @@ class _FeedCardViewState extends State<FeedCardView>
             final double fraction = width <= 0
                 ? 0
                 : (dx.abs() / (width * feedLongSwipeFraction)).clamp(0.0, 1.0);
-            final double radius = committing ? 999 : 16 - 6 * fraction;
+            final double radius = committing
+                ? 999
+                : AppRadii.card - 6 * fraction;
             final Rating? preview =
                 _commitRating ?? _directionRating(dx, width);
             final Color cardColor = _cardColor(
@@ -222,79 +232,84 @@ class _FeedCardViewState extends State<FeedCardView>
                   offset: Offset(dx, 0),
                   child: Transform.rotate(
                     angle: width <= 0 ? 0 : (dx / width) * 0.04,
-                    child: Material(
-                      color: cardColor,
-                      elevation: 0,
-                      clipBehavior: Clip.antiAlias,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(radius),
-                        side: BorderSide(
-                          color: Theme.of(context).colorScheme.outlineVariant,
+                    child: MouseRegion(
+                      // F26: карточка кликабельна — курсор-указатель.
+                      cursor: SystemMouseCursors.click,
+                      child: Material(
+                        color: cardColor,
+                        elevation: 0,
+                        clipBehavior: Clip.antiAlias,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(radius),
+                          side: BorderSide(
+                            color: Theme.of(context).colorScheme.outlineVariant,
+                          ),
                         ),
-                      ),
-                      child: GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: committing || !widget.enabled
-                            ? null
-                            : widget.onTap,
-                        onHorizontalDragStart: _onDragStart,
-                        onHorizontalDragUpdate: _onDragUpdate,
-                        onHorizontalDragEnd: _onDragEnd,
-                        child: Stack(
-                          children: <Widget>[
-                            Positioned.fill(
-                              child:
-                                  NotificationListener<
-                                    ScrollMetricsNotification
-                                  >(
-                                    onNotification:
-                                        (
-                                          ScrollMetricsNotification
-                                          notification,
-                                        ) {
-                                          final bool canScroll =
-                                              notification
-                                                  .metrics
-                                                  .maxScrollExtent >
-                                              0.5;
-                                          if (canScroll != _canScroll) {
-                                            WidgetsBinding.instance
-                                                .addPostFrameCallback((_) {
-                                                  if (mounted &&
-                                                      canScroll != _canScroll) {
-                                                    setState(
-                                                      () => _canScroll =
-                                                          canScroll,
-                                                    );
-                                                  }
-                                                });
-                                          }
-                                          return false;
-                                        },
-                                    child: Scrollbar(
-                                      controller: _scroll,
-                                      thumbVisibility: _canScroll,
-                                      child: _FlipFace(
-                                        controller: _flip,
-                                        scroll: _scroll,
-                                        front: widget.front,
-                                        back: widget.back,
-                                        revealed: widget.revealed,
-                                        card: widget.card,
-                                        mediaBytes: widget.mediaBytes,
-                                        mediaMetadata: widget.mediaMetadata,
-                                        onRetryMedia: widget.onRetryMedia,
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: committing || !widget.enabled
+                              ? null
+                              : widget.onTap,
+                          onHorizontalDragStart: _onDragStart,
+                          onHorizontalDragUpdate: _onDragUpdate,
+                          onHorizontalDragEnd: _onDragEnd,
+                          child: Stack(
+                            children: <Widget>[
+                              Positioned.fill(
+                                child:
+                                    NotificationListener<
+                                      ScrollMetricsNotification
+                                    >(
+                                      onNotification:
+                                          (
+                                            ScrollMetricsNotification
+                                            notification,
+                                          ) {
+                                            final bool canScroll =
+                                                notification
+                                                    .metrics
+                                                    .maxScrollExtent >
+                                                0.5;
+                                            if (canScroll != _canScroll) {
+                                              WidgetsBinding.instance
+                                                  .addPostFrameCallback((_) {
+                                                    if (mounted &&
+                                                        canScroll !=
+                                                            _canScroll) {
+                                                      setState(
+                                                        () => _canScroll =
+                                                            canScroll,
+                                                      );
+                                                    }
+                                                  });
+                                            }
+                                            return false;
+                                          },
+                                      child: Scrollbar(
+                                        controller: _scroll,
+                                        thumbVisibility: _canScroll,
+                                        child: _FlipFace(
+                                          controller: _flip,
+                                          scroll: _scroll,
+                                          front: widget.front,
+                                          back: widget.back,
+                                          revealed: widget.revealed,
+                                          card: widget.card,
+                                          mediaBytes: widget.mediaBytes,
+                                          mediaMetadata: widget.mediaMetadata,
+                                          onRetryMedia: widget.onRetryMedia,
+                                        ),
                                       ),
                                     ),
-                                  ),
-                            ),
-                            if (widget.rated)
-                              const Positioned(
-                                top: 12,
-                                right: 12,
-                                child: _RatedBadge(),
                               ),
-                          ],
+                              if (widget.rated)
+                                const Positioned(
+                                  top: 12,
+                                  right: 12,
+                                  child: _RatedBadge(),
+                                ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -508,13 +523,19 @@ class _FlipFace extends StatelessWidget {
                                   mediaBytes: mediaBytes,
                                   mediaMetadata: mediaMetadata,
                                   onRetryMedia: onRetryMedia,
-                                  imageMaxHeight: 340,
-                                  imageMaxWidth: 760,
+                                  imageMaxHeight: math.max(
+                                    220,
+                                    constraints.maxHeight * 0.72,
+                                  ),
+                                  imageMaxWidth: math.max(
+                                    420,
+                                    constraints.maxWidth * 0.62,
+                                  ),
                                 ),
-                          // Аудит v10 (G8/G5): подсказка о свайпах — внутри
-                          // карточки, одной короткой строкой снизу. Она же делит
-                          // пустоту лица: сплошная полоса ≤30 % высоты.
-                          if (!showBack)
+                          // F05: до ответа подсказок об оценках нет — лицо
+                          // карточки содержит только вопрос. Подсказка стоит
+                          // на обороте, где оценки уже доступны.
+                          if (showBack)
                             Text(
                               l10n.feedRateHint,
                               key: const ValueKey<String>('feed-rate-hint'),

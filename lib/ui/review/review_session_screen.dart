@@ -333,6 +333,13 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen>
     final Deck? deck = widget.deckId == null
         ? null
         : ref.watch(deckProvider(widget.deckId!)).value;
+    // F13: в терминальных состояниях («пусто», «завершено», «время истекло»,
+    // «план не найден») выход уже есть действием панели — крестик скрыт.
+    final bool terminalState =
+        _planMissing ||
+        (!_loading && !_loadFailed && state != null && state.total == 0) ||
+        _timeExpired ||
+        (state?.isCompleted ?? false);
     // Единая точка выхода (M2 ревью): системный back и кнопка AppBar не должны
     // обходить диалог SPEC A6.4.
     return PopScope(
@@ -348,6 +355,7 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen>
           onUndo: _undo,
           whyExcerpt: excerpt,
           onClose: _confirmExit,
+          showClose: !terminalState,
         ),
         body: Focus(
           autofocus: true,
@@ -363,7 +371,7 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen>
     AppLocalizations l10n,
     ReviewSessionState? state,
   ) {
-    if (_loading) return const Center(child: CircularProgressIndicator());
+    if (_loading) return const ReviewLoadingView();
     if (_planMissing) return ReviewPlanMissingView(onBack: _leave);
     if (_loadFailed || state == null) {
       return ReviewLoadErrorView(onRetry: _retry);

@@ -48,16 +48,17 @@ class SessionNotice extends StatelessWidget {
         AppSpacing.xxs,
       ),
       decoration: BoxDecoration(
-        color: scheme.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(AppRadii.control),
-        border: Border.all(color: scheme.outlineVariant),
+        // F23: одно уведомление системы — тот же inverseSurface/радиус/поля,
+        // что у снекбара темы; отличает только способ вызова (in-flow/тост).
+        color: scheme.inverseSurface,
+        borderRadius: BorderRadius.circular(AppRadii.input),
       ),
       child: Row(
         children: <Widget>[
           Icon(
             Icons.info_outline,
             size: AppSizes.icon,
-            color: scheme.onSurfaceVariant,
+            color: scheme.onInverseSurface.withValues(alpha: 0.8),
           ),
           const SizedBox(width: AppSpacing.xs),
           Expanded(
@@ -66,7 +67,7 @@ class SessionNotice extends StatelessWidget {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: scheme.onSurface,
+                color: scheme.onInverseSurface,
               ),
             ),
           ),
@@ -74,6 +75,7 @@ class SessionNotice extends StatelessWidget {
             key: const ValueKey<String>('session-notice-dismiss'),
             tooltip: dismissTooltip,
             iconSize: AppSizes.iconSmall,
+            color: scheme.onInverseSurface,
             visualDensity: VisualDensity.compact,
             onPressed: onDismiss,
             icon: const Icon(Icons.close),

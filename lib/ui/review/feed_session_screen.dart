@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -249,10 +250,18 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
     if (!_pageController.hasClients) return;
     final int current = _pageController.page?.round() ?? 0;
     if (current == state.index) return;
+    // Reduced motion: смена карточки — мгновенная, без анимации прокрутки.
+    if (AppMotion.reduce(context)) {
+      _pageController.jumpToPage(state.index);
+      return;
+    }
     unawaited(
       _pageController.animateToPage(
         state.index,
-        duration: const Duration(milliseconds: 300),
+        duration: AppMotion.duration(
+          context,
+          const Duration(milliseconds: 300),
+        ),
         curve: Curves.easeOutCubic,
       ),
     );
@@ -441,6 +450,15 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
     final String? excerpt = (rawExcerpt == null || rawExcerpt.trim().isEmpty)
         ? null
         : rawExcerpt;
+    // F13: в терминальных состояниях крестик скрыт — выход есть действием
+    // панели состояния.
+    final bool terminalState =
+        _planMissing ||
+        (!_loading &&
+            !_loadFailed &&
+            state != null &&
+            (state.total == 0 || state.isCompleted)) ||
+        _timeExpired;
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (bool didPop, Object? result) {
@@ -456,6 +474,7 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
               ? null
               : () => unawaited(_showWhy(excerpt)),
           onClose: _confirmExit,
+          showClose: !terminalState,
         ),
         body: Focus(
           autofocus: true,
@@ -467,7 +486,7 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
   }
 
   Widget _buildBody(BuildContext context, FeedSessionState? state) {
-    if (_loading) return const Center(child: CircularProgressIndicator());
+    if (_loading) return const ReviewLoadingView();
     if (_planMissing) return ReviewPlanMissingView(onBack: _leave);
     if (_loadFailed || state == null) {
       return ReviewLoadErrorView(onRetry: _retry);
@@ -500,6 +519,16 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
     // Аудит v5 (V5-3): на низком окне карточка получала ~140 лог. px —
     // компактные поля и однострочный футер отдают ей высоту.
     final bool compactHeight = MediaQuery.sizeOf(context).height < 560;
+    // F04/F06: лента живёт в той же контентной колонке, что «Классика»:
+    // карточка и панель оценок выровнены по одной ширине (72 % окна), а не
+    // растянуты на всё окно.
+    final double cardWidth = AppSizes.studyCardWidth(
+      MediaQuery.sizeOf(context).width,
+    );
+    final double toolbarWidth = math.min(
+      cardWidth,
+      MediaQuery.sizeOf(context).width - AppSpacing.lg * 2,
+    );
     final List<bool> ratedFlags = <bool>[
       for (final FeedSessionItem item in state.items) item.rated,
     ];
@@ -507,17 +536,10 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              maxWidth: AppSizes.studyCardMaxWidth,
-            ),
+          child: SizedBox(
+            width: toolbarWidth,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.md,
-                AppSpacing.sm,
-                AppSpacing.md,
-                0,
-              ),
+              padding: const EdgeInsets.fromLTRB(0, AppSpacing.sm, 0, 0),
               child: FeedProgressBar(
                 rated: ratedFlags,
                 currentIndex: state.index,
@@ -572,13 +594,34 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
         // аудит v10 G5/G8): снаружи её нет — ни второй копии, ни лишней высоты.
         // G1: до раскрытия ответа панели оценок нет в дереве — в ленте она тоже
         // не «серая», а отсутствует; остаётся только видимая карточка и свайпы.
+        // F04: после раскрытия панель выровнена по карточке и живёт в своём
+        // контейнере с полями — кнопки не касаются кромок окна.
         if (state.current?.revealed ?? false)
-          ReviewToolbar(
-            key: const ValueKey<String>('feed-toolbar'),
-            preview: null,
-            enabled: !state.busy,
-            compact: compactHeight,
-            onRating: (Rating rating) => unawaited(_rate(rating)),
+          Center(
+            child: SizedBox(
+              width: toolbarWidth,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+                child: Container(
+                  padding: const EdgeInsets.all(AppSpacing.sm),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surfaceContainerLow,
+                    borderRadius: AppRadii.cardRadius,
+                    border: Border.all(
+                      color: Theme.of(context).colorScheme.outlineVariant,
+                      width: AppSizes.borderWidth,
+                    ),
+                  ),
+                  child: ReviewToolbar(
+                    key: const ValueKey<String>('feed-toolbar'),
+                    preview: null,
+                    enabled: !state.busy,
+                    compact: compactHeight,
+                    onRating: (Rating rating) => unawaited(_rate(rating)),
+                  ),
+                ),
+              ),
+            ),
           ),
         // Совсем низкое окно: нижняя панель ленты отнимает всю высоту у
         // карточки (аудит v9, G10 — карточка схлопывалась в 0).
@@ -698,10 +741,15 @@ class _FeedBottomBar extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              FilledButton.tonalIcon(
+              // F29: «Пауза» — вторичное действие, нейтральный контур,
+              // а не мятная тональная кнопка (раньше — самое яркое пятно футера).
+              OutlinedButton.icon(
                 key: const ValueKey<String>('feed-pause'),
                 onPressed: onTogglePause,
-                icon: Icon(paused ? Icons.play_arrow : Icons.pause),
+                icon: Icon(
+                  paused ? Icons.play_arrow : Icons.pause,
+                  size: AppSizes.iconSmall,
+                ),
                 label: Text(paused ? l10n.feedResume : l10n.feedPause),
               ),
             ],

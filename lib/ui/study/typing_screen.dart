@@ -301,7 +301,7 @@ class _TypingScreenState extends ConsumerState<TypingScreen> {
     AppLocalizations l10n,
     StudySessionState? state,
   ) {
-    if (_loading) return const Center(child: CircularProgressIndicator());
+    if (_loading) return const ReviewLoadingView();
     if (_loadFailed || state == null) {
       return ReviewLoadErrorView(onRetry: _retry);
     }
@@ -337,13 +337,8 @@ class _TypingScreenState extends ConsumerState<TypingScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
-          child: StudyProgressBar(
-            answered: state.answeredCount,
-            total: state.total,
-          ),
-        ),
+        const Padding(padding: EdgeInsets.only(top: AppSpacing.xs)),
+        StudyProgressBar(answered: state.answeredCount, total: state.total),
         Expanded(
           child: StudyWorkspace(
             child: Column(

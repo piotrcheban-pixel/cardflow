@@ -25,13 +25,13 @@ String reviewIntervalLabel(AppLocalizations l10n, Duration interval) {
 /// не строит её в состоянии «вопрос», поэтому здесь нет ни `disabled`-вида, ни
 /// подсказки «оценки откроются…» — недоступное действие скрыто, а не серое (G5).
 ///
-/// Размеры из шкалы, а не из компактного режима (G2/G6): кнопка не ниже
-/// [AppSizes.ratingButtonHeight] (56) на любом размере окна, кегль подписи —
-/// [AppSizes.ratingLabelBase] (18) с адаптивным множителем, зазор — не меньше
-/// 12 лог. px (раньше в компактном режиме было 8).
+/// Оформление — один тон-ряд (F11): четыре спокойные тонировки одной светлоты,
+/// общая нейтральная граница контрола (≥3:1), подписи интервалов — один
+/// вторичный цвет, различие оценки — цветом подписи и цифры-клавиши.
 ///
-/// Цвета ролей — дизайн-система: Again — errorContainer, Hard —
-/// surfaceContainer, Good — secondaryContainer, Easy — primaryFixed.
+/// Размеры из шкалы (G2/G6): кнопка не ниже [AppSizes.ratingButtonHeight] (56)
+/// на любом размере окна, кегль подписи — [AppSizes.ratingLabelBase] (18) с
+/// адаптивным множителем, зазор — не меньше 12 лог. px.
 class ReviewToolbar extends StatelessWidget {
   /// Создаёт панель оценок.
   const ReviewToolbar({
@@ -52,8 +52,7 @@ class ReviewToolbar extends StatelessWidget {
   ///
   /// На окне 844×390 физических px (562×260 лог.) панель в сетку 2×2
   /// переполняла карточку: две оценки уходили за нижнюю кромку. В компактном
-  /// виде — один ряд из четырёх кнопок без подсказки клавиши: панель занимает
-  /// 16 + 56 px вместо 148, и карточка помещается целиком.
+  /// виде — один ряд из четырёх кнопок без подсказки клавиши.
   final bool compact;
 
   /// Обработчик оценки.
@@ -66,10 +65,9 @@ class ReviewToolbar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
     final Map<Rating, Duration>? previews = preview;
     final double scale = controlScale(context);
-    final double gap = math.max(AppSpacing.sm, AppSpacing.sm * scale);
+    final double gap = math.max(AppSpacing.sm, AppSpacing.md * scale);
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         final double width = constraints.maxWidth.isFinite
@@ -93,7 +91,6 @@ class ReviewToolbar extends StatelessWidget {
                   scale: scale,
                   compact: compact,
                   onPressed: () => onRating(rating),
-                  textTheme: theme,
                 ),
               ),
           ],
@@ -103,6 +100,14 @@ class ReviewToolbar extends StatelessWidget {
   }
 }
 
+/// Роль оценки для цветов темы (тема не знает доменный `Rating`).
+RatingRole _roleOf(Rating rating) => switch (rating) {
+  Rating.again => RatingRole.again,
+  Rating.hard => RatingRole.hard,
+  Rating.good => RatingRole.good,
+  Rating.easy => RatingRole.easy,
+};
+
 class _RatingButton extends StatelessWidget {
   const _RatingButton({
     required this.rating,
@@ -110,7 +115,6 @@ class _RatingButton extends StatelessWidget {
     required this.enabled,
     required this.scale,
     required this.onPressed,
-    required this.textTheme,
     this.compact = false,
   });
 
@@ -120,82 +124,118 @@ class _RatingButton extends StatelessWidget {
   final double scale;
   final bool compact;
   final VoidCallback onPressed;
-  final ThemeData textTheme;
 
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
-    final ThemeData theme = textTheme;
+    final ThemeData theme = Theme.of(context);
     final ColorScheme scheme = theme.colorScheme;
+    final RatingRole role = _roleOf(rating);
     final String label = switch (rating) {
       Rating.again => l10n.ratingAgain,
       Rating.hard => l10n.ratingHard,
       Rating.good => l10n.ratingGood,
       Rating.easy => l10n.ratingEasy,
     };
-    final (Color background, Color foreground) = switch (rating) {
-      Rating.again => (
-        AppColors.ratingAgainBackground(scheme),
-        AppColors.ratingAgainForeground(scheme),
-      ),
-      Rating.hard => (
-        AppColors.ratingHardBackground(scheme),
-        AppColors.ratingHardForeground(scheme),
-      ),
-      Rating.good => (
-        AppColors.ratingGoodBackground(scheme),
-        AppColors.ratingGoodForeground(scheme),
-      ),
-      Rating.easy => (
-        AppColors.ratingEasyBackground(scheme),
-        AppColors.ratingEasyForeground(scheme),
-      ),
-    };
-    final Color intervalColor = switch (rating) {
-      Rating.again => scheme.tertiary,
-      Rating.hard => scheme.onSurfaceVariant,
-      Rating.good => scheme.secondary,
-      Rating.easy => scheme.primary,
-    };
+    final Color background = AppColors.ratingSurface(scheme, role);
+    final Color foreground = AppColors.ratingForeground(scheme, role);
     final Duration? intervalValue = interval;
-    // Подсказка клавиши: не пользовательский текст, а обозначение клавиши.
-    final String keyHint = '[${rating.index + 1}]';
+    // Подсказка клавиши — обозначение клавиатуры, а не пользовательский текст.
+    final String keyHint = '${rating.index + 1}';
+    // Три корзины движения: отклик на hover/pressed — 120–160 мс.
+    final double fontSize = AppSizes.ratingLabelBase * scale;
+    final double height = compact
+        ? AppSizes.ratingButtonHeight
+        : (60 * scale).clamp(AppSizes.ratingButtonHeight, 68.0);
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        // Прогноз интервала виден на всех размерах окна (G2, V7-18): раньше в
-        // компактном режиме он исчезал — ключевая функция FSRS пропадала.
+        // Прогноз интервала виден на всех размерах окна (G2, V7-18) и во всех
+        // режимах; подпись — один вторичный цвет (F11). В совсем низком окне
+        // (compact) строка прогноза скрыта: иначе панель не помещается в
+        // карточку, а прогноз остаётся в подсказке кнопки.
         SizedBox(
-          height: 20 * scale,
-          child: intervalValue == null
+          height: compact ? 0 : 22 * scale,
+          child: intervalValue == null || compact
               ? null
-              : FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    reviewIntervalLabel(l10n, intervalValue),
-                    key: ValueKey<String>('review-interval-${rating.name}'),
-                    maxLines: 1,
-                    style: AppTypography.caption(context, color: intervalColor),
+              : Center(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      reviewIntervalLabel(l10n, intervalValue),
+                      key: ValueKey<String>('review-interval-${rating.name}'),
+                      maxLines: 1,
+                      style: AppTypography.caption(
+                        context,
+                        color: AppColors.intervalForeground(scheme),
+                      ),
+                    ),
                   ),
                 ),
         ),
         const SizedBox(height: AppSpacing.xxs),
         FilledButton(
           key: ValueKey<String>('review-rating-${rating.name}'),
-          style: FilledButton.styleFrom(
-            backgroundColor: background,
-            foregroundColor: foreground,
-            minimumSize: Size(0, AppSizes.ratingButtonHeight * scale),
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.xs,
-              vertical: AppSpacing.xxs,
+          style: ButtonStyle(
+            backgroundColor: WidgetStateProperty.resolveWith<Color>((
+              Set<WidgetState> states,
+            ) {
+              if (states.contains(WidgetState.pressed)) {
+                return Color.alphaBlend(
+                  foreground.withValues(alpha: 0.12),
+                  background,
+                );
+              }
+              if (states.contains(WidgetState.hovered)) {
+                return Color.alphaBlend(
+                  foreground.withValues(alpha: 0.06),
+                  background,
+                );
+              }
+              return background;
+            }),
+            surfaceTintColor: const WidgetStatePropertyAll<Color>(
+              Colors.transparent,
             ),
-            elevation: 0,
-            shape: const RoundedRectangleBorder(
-              borderRadius: BorderRadius.all(Radius.circular(AppRadii.input)),
+            minimumSize: WidgetStatePropertyAll<Size>(Size(0, height)),
+            padding: const WidgetStatePropertyAll<EdgeInsetsGeometry>(
+              EdgeInsets.symmetric(
+                horizontal: AppSpacing.xs,
+                vertical: AppSpacing.xxs,
+              ),
             ),
-            side: BorderSide(color: foreground.withValues(alpha: 0.18)),
+            elevation: const WidgetStatePropertyAll<double>(0),
+            shape: const WidgetStatePropertyAll<OutlinedBorder>(
+              RoundedRectangleBorder(
+                borderRadius: BorderRadius.all(Radius.circular(AppRadii.input)),
+              ),
+            ),
+            side: WidgetStateProperty.resolveWith<BorderSide>((
+              Set<WidgetState> states,
+            ) {
+              if (states.contains(WidgetState.focused)) {
+                return BorderSide(color: scheme.onSurface, width: 2);
+              }
+              if (states.contains(WidgetState.hovered)) {
+                return BorderSide(color: foreground, width: 1.5);
+              }
+              return BorderSide(
+                color: AppColors.controlBorder(scheme),
+                width: AppSizes.borderWidth,
+              );
+            }),
+            overlayColor: WidgetStateProperty.resolveWith<Color?>((
+              Set<WidgetState> states,
+            ) {
+              if (states.contains(WidgetState.pressed)) {
+                return foreground.withValues(alpha: 0.10);
+              }
+              if (states.contains(WidgetState.hovered)) {
+                return foreground.withValues(alpha: 0.05);
+              }
+              return null;
+            }),
           ),
           onPressed: enabled ? onPressed : null,
           child: Column(
@@ -209,19 +249,30 @@ class _RatingButton extends StatelessWidget {
                 // G2: кегль подписи не ниже 16 даже при пользовательском
                 // масштабе текста 90 % (18 × 0,9 = 16,2 на FullHD).
                 style: theme.textTheme.titleSmall?.copyWith(
-                  fontSize: AppSizes.ratingLabelBase * scale,
+                  fontSize: fontSize,
                   color: foreground,
                   height: 1.15,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
               // Подсказка клавиши занимает место — в компактном окне её нет.
               if (!compact) ...<Widget>[
-                const SizedBox(height: 2),
-                Text(
-                  keyHint,
-                  style: AppTypography.caption(
-                    context,
-                    color: foreground.withValues(alpha: 0.7),
+                const SizedBox(height: 3),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 1,
+                  ),
+                  decoration: BoxDecoration(
+                    color: foreground.withValues(alpha: 0.09),
+                    borderRadius: BorderRadius.circular(AppRadii.xs),
+                  ),
+                  child: Text(
+                    keyHint,
+                    style: AppTypography.caption(
+                      context,
+                      color: foreground.withValues(alpha: 0.8),
+                    ),
                   ),
                 ),
               ],

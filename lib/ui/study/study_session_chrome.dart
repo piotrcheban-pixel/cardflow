@@ -122,9 +122,65 @@ class StudyProgressBar extends StatelessWidget {
     // Находка D20: счётчик «Вопрос 0 из 4» → «Вопрос 1 из 4». На итогах этот
     // виджет уже не рисуется, поэтому последняя карточка показывает total.
     final int current = total == 0 ? 0 : (answered + 1).clamp(1, total);
-    return SessionProgressStrip(
-      label: l10n.testProgressSemantics(current, total),
-      value: total == 0 ? 0 : answered / total,
+    // F21: прогресс выровнен по контентной колонке карточки (72 % окна), а не
+    // растянут на всё окно.
+    return Center(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: math.min(
+            AppSizes.studyCardWidth(MediaQuery.sizeOf(context).width),
+            MediaQuery.sizeOf(context).width - AppSpacing.xxl,
+          ),
+        ),
+        child: SessionProgressStrip(
+          label: l10n.testProgressSemantics(current, total),
+          value: total == 0 ? 0 : answered / total,
+        ),
+      ),
+    );
+  }
+}
+
+/// Футер действия режима проверки: одна кнопка в контентной колонке.
+///
+/// F21: «Проверить»/«Дальше» больше не растягиваются на всю ширину окна —
+/// действие стоит по центру под колонкой вопроса и по ширине как главное
+/// действие карточки сессии.
+class StudyFooterAction extends StatelessWidget {
+  /// Создаёт футер.
+  const StudyFooterAction({required this.child, super.key});
+
+  /// Кнопка действия.
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      top: false,
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            AppSpacing.sm,
+            AppSpacing.lg,
+            AppSpacing.md,
+          ),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: AppSizes.studyCardWidth(
+                MediaQuery.sizeOf(context).width,
+              ),
+            ),
+            child: Align(
+              alignment: AlignmentDirectional.center,
+              child: SizedBox(
+                width: AppSizes.revealButtonMaxWidth,
+                child: child,
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

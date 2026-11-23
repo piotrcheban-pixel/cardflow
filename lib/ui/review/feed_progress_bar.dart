@@ -1,7 +1,8 @@
+import 'dart:math' as math;
+
 import 'package:material_ui/material_ui.dart';
 
 import 'package:cardflow/l10n/app_localizations.dart';
-import 'package:cardflow/ui/components/app_surfaces.dart';
 import 'package:cardflow/ui/motion.dart';
 import 'package:cardflow/ui/theme/app_tokens.dart';
 import 'package:cardflow/ui/theme/app_typography.dart';
@@ -86,71 +87,88 @@ class _FeedProgressBarState extends State<FeedProgressBar>
     final int ratedCount = widget.rated.where((bool value) => value).length;
     final int total = widget.rated.length;
     final String semantics = l10n.feedProgressSemantics(ratedCount, total);
-    if (total > FeedProgressBar.segmentLimit) {
-      final ThemeData theme = Theme.of(context);
-      return Semantics(
-        container: true,
-        label: semantics,
-        child: Row(
-          children: <Widget>[
-            Expanded(
-              child: AppProgressBar(
-                value: total == 0 ? 0 : ratedCount / total,
-                semanticsLabel: semantics,
-              ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Text(
-              l10n.reviewCardCounter(
-                (widget.currentIndex + 1).clamp(1, total),
-                total,
-              ),
-              style: AppTypography.numeric(
-                context,
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
+    // F28: один вид прогресса на всех размерах — сегментная полоса (до 24
+    // сегментов; при большем числе карточки группируются в 24 сегмента), а
+    // подпись «Карточка N из M» стоит в одном месте справа.
+    final int segments = total == 0
+        ? 0
+        : math.min(total, FeedProgressBar.segmentLimit);
+    final int groupSize = segments == 0 ? 1 : (total / segments).ceil();
+    final List<bool> segmentRated = <bool>[
+      for (int index = 0; index < segments; index++)
+        <int>[
+          for (
+            int card = index * groupSize;
+            card < math.min(total, (index + 1) * groupSize);
+            card++
+          )
+            card,
+        ].every((int card) => widget.rated[card]),
+    ];
+    final int currentSegment = groupSize == 0
+        ? 0
+        : (widget.currentIndex ~/ groupSize).clamp(
+            0,
+            math.max(0, segments - 1),
+          );
     return Semantics(
       container: true,
+      // Подпись прогресса уже содержит и оценённое число, и позицию —
+      // вложенный счётчик не дублируем в дереве доступности.
       label: semantics,
-      child: AnimatedBuilder(
-        animation: _pulse,
-        builder: (BuildContext context, Widget? child) {
-          final double pulse = 0.45 + 0.55 * _pulse.value;
-          return Row(
-            children: <Widget>[
-              for (int index = 0; index < widget.rated.length; index++)
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 1.5),
-                    child: _Segment(
-                      segmentKey: ValueKey<String>(
-                        'feed-progress-segment-$index',
+      excludeSemantics: true,
+      child: Row(
+        children: <Widget>[
+          Expanded(
+            child: AnimatedBuilder(
+              animation: _pulse,
+              builder: (BuildContext context, Widget? child) {
+                final double pulse = 0.45 + 0.55 * _pulse.value;
+                return Row(
+                  children: <Widget>[
+                    for (int index = 0; index < segments; index++)
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 1.5),
+                          child: _Segment(
+                            segmentKey: ValueKey<String>(
+                              'feed-progress-segment-$index',
+                            ),
+                            color: segmentRated[index]
+                                ? scheme.primary
+                                : index == currentSegment
+                                ? scheme.primary
+                                : scheme.surfaceContainerHighest,
+                            opacity: segmentRated[index]
+                                ? 1
+                                : index == currentSegment
+                                ? pulse
+                                : 1,
+                            pulse:
+                                _pulsing &&
+                                !segmentRated[index] &&
+                                index == currentSegment,
+                          ),
+                        ),
                       ),
-                      color: widget.rated[index]
-                          ? scheme.primary
-                          : index == widget.currentIndex
-                          ? scheme.primary
-                          : scheme.surfaceContainerHighest,
-                      opacity: widget.rated[index]
-                          ? 1
-                          : index == widget.currentIndex
-                          ? pulse
-                          : 1,
-                      pulse:
-                          _pulsing &&
-                          !widget.rated[index] &&
-                          index == widget.currentIndex,
-                    ),
-                  ),
-                ),
-            ],
-          );
-        },
+                  ],
+                );
+              },
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Text(
+            l10n.reviewCardCounter(
+              (widget.currentIndex + 1).clamp(1, total),
+              total,
+            ),
+            key: const ValueKey<String>('feed-progress-counter'),
+            style: AppTypography.numeric(
+              context,
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+        ],
       ),
     );
   }

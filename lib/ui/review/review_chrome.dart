@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:material_ui/material_ui.dart';
 
 import 'package:cardflow/l10n/app_localizations.dart';
@@ -30,6 +32,7 @@ class ReviewSessionAppBar extends StatelessWidget
     this.progress,
     this.progressSemanticsLabel,
     this.showFsrsBadge = true,
+    this.showClose = true,
     super.key,
   });
 
@@ -67,6 +70,13 @@ class ReviewSessionAppBar extends StatelessWidget
   /// там прямо противоречил подписи режима — тренировка его не показывает.
   final bool showFsrsBadge;
 
+  /// Показывать ли крестик выхода.
+  ///
+  /// F13: в терминальных состояниях сессии («завершено», «пусто», «время
+  /// истекло», «план не найден») выход уже есть основным действием панели —
+  /// второй вход (крестик) убран, чтобы не было дубля.
+  final bool showClose;
+
   @override
   Size get preferredSize => Size.fromHeight(
     AppSizes.headerHeight + (progress == null ? 0 : AppSpacing.md),
@@ -85,12 +95,15 @@ class ReviewSessionAppBar extends StatelessWidget
       child: Row(
         children: <Widget>[
           const SizedBox(width: AppSpacing.xxs),
-          IconButton(
-            key: const ValueKey<String>('review-close'),
-            tooltip: l10n.reviewCloseTooltip,
-            icon: const Icon(Icons.close, size: AppSizes.navIcon),
-            onPressed: onClose,
-          ),
+          if (showClose)
+            IconButton(
+              key: const ValueKey<String>('review-close'),
+              tooltip: l10n.reviewCloseTooltip,
+              icon: const Icon(Icons.close, size: AppSizes.navIcon),
+              onPressed: onClose,
+            )
+          else
+            const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Row(
               children: <Widget>[
@@ -200,17 +213,25 @@ Future<bool> confirmReviewExit(BuildContext context) async {
     title: l10n.reviewExitDialogTitle,
     subtitle: l10n.reviewExitDialogMessage,
     bodyBuilder: (BuildContext dialogContext) => const SizedBox.shrink(),
+    // F12: та же семантика destructive, что у удаления колоды — опасное
+    // действие залито error, безопасное — нейтральный текст.
     actionsBuilder: (BuildContext dialogContext) => <Widget>[
       TextButton(
-        key: const ValueKey<String>('review-exit-confirm'),
-        onPressed: () => Navigator.of(dialogContext).pop(true),
-        style: TextButton.styleFrom(foregroundColor: theme.colorScheme.error),
-        child: Text(l10n.reviewExitConfirm),
-      ),
-      FilledButton(
         key: const ValueKey<String>('review-exit-cancel'),
+        style: TextButton.styleFrom(
+          foregroundColor: theme.colorScheme.onSurface,
+        ),
         onPressed: () => Navigator.of(dialogContext).pop(false),
         child: Text(l10n.reviewExitContinue),
+      ),
+      FilledButton(
+        key: const ValueKey<String>('review-exit-confirm'),
+        style: FilledButton.styleFrom(
+          backgroundColor: theme.colorScheme.error,
+          foregroundColor: theme.colorScheme.onError,
+        ),
+        onPressed: () => Navigator.of(dialogContext).pop(true),
+        child: Text(l10n.reviewExitConfirm),
       ),
     ],
   );
@@ -283,9 +304,12 @@ class ReviewEmptyView extends StatelessWidget {
     final VoidCallback? proceed = onContinue;
     return _SessionStateLayout(
       child: AppEmptyState(
+        hero: true,
         icon: Icons.done_all,
         title: title ?? l10n.reviewEmptyTitle,
         message: message ?? l10n.reviewEmptyMessage,
+        // F13: крестик в шапке скрыт в этом состоянии — выход один (кнопка
+        // ниже); «Продолжить» и «Тренировка» — разные действия, не дубли.
         actions: <Widget>[
           if (proceed != null) ...<Widget>[
             FilledButton(
@@ -299,15 +323,16 @@ class ReviewEmptyView extends StatelessWidget {
                 onPressed: practice,
                 child: Text(l10n.practiceStartAction),
               ),
-            TextButton(onPressed: onBack, child: Text(l10n.reviewBack)),
           ] else if (practice != null) ...<Widget>[
             FilledButton(
               key: const ValueKey<String>('review-empty-practice'),
               onPressed: practice,
               child: Text(l10n.practiceStartAction),
             ),
-            OutlinedButton(onPressed: onBack, child: Text(l10n.reviewBack)),
-          ] else
+          ],
+          if (proceed != null || practice != null)
+            TextButton(onPressed: onBack, child: Text(l10n.reviewBack))
+          else
             FilledButton(onPressed: onBack, child: Text(l10n.reviewBack)),
         ],
       ),
@@ -335,11 +360,19 @@ class ReviewCompletedView extends StatelessWidget {
     final AppLocalizations l10n = AppLocalizations.of(context);
     return _SessionStateLayout(
       child: AppEmptyState(
+        hero: true,
         icon: Icons.celebration_outlined,
+        // F07: завершение — hero-момент: крупная метрика, заголовок 30–38,
+        // одно основное действие.
+        metric: Text(ratedCount.toString()),
         title: l10n.reviewCompletedTitle,
         message: l10n.reviewCompletedMessage(ratedCount),
         actions: <Widget>[
-          FilledButton(onPressed: onDone, child: Text(l10n.reviewDone)),
+          FilledButton(
+            key: const ValueKey<String>('review-completed-done'),
+            onPressed: onDone,
+            child: Text(l10n.reviewDone),
+          ),
         ],
       ),
     );
@@ -359,6 +392,7 @@ class ReviewLoadErrorView extends StatelessWidget {
     final AppLocalizations l10n = AppLocalizations.of(context);
     return _SessionStateLayout(
       child: AppErrorState(
+        hero: true,
         message: l10n.reviewLoadError,
         retryLabel: l10n.retry,
         onRetry: onRetry,
@@ -390,11 +424,17 @@ class ReviewTimeUpView extends StatelessWidget {
     final AppLocalizations l10n = AppLocalizations.of(context);
     return _SessionStateLayout(
       child: AppEmptyState(
+        hero: true,
         icon: Icons.timer_off_outlined,
+        metric: Text(ratedCount.toString()),
         title: l10n.reviewTimeUpTitle,
         message: l10n.reviewTimeUpMessage(ratedCount),
         actions: <Widget>[
-          FilledButton(onPressed: onDone, child: Text(l10n.reviewDone)),
+          FilledButton(
+            key: const ValueKey<String>('review-timeup-done'),
+            onPressed: onDone,
+            child: Text(l10n.reviewDone),
+          ),
         ],
       ),
     );
@@ -417,6 +457,7 @@ class ReviewPlanMissingView extends StatelessWidget {
     final AppLocalizations l10n = AppLocalizations.of(context);
     return _SessionStateLayout(
       child: AppEmptyState(
+        hero: true,
         icon: Icons.search_off,
         title: l10n.reviewPlanMissingTitle,
         message: l10n.reviewPlanMissingMessage,
@@ -436,18 +477,88 @@ class _SessionStateLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        child: ConstrainedBox(
-          // Та же ширина, что у карточки сессии (G3): состояния «пусто»,
-          // «завершено» и «ошибка» не растягиваются на весь 2K/4K.
-          constraints: BoxConstraints(
-            maxWidth: AppSizes.studyCardWidth(MediaQuery.sizeOf(context).width),
+    final double width = AppSizes.studyCardWidth(
+      MediaQuery.sizeOf(context).width,
+    );
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final double available = constraints.maxWidth.isFinite
+            ? math.max(0, constraints.maxWidth - AppSpacing.lg * 2)
+            : width;
+        return Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            // F07: состояния занимают ширину и высоту карточки сессии —
+            // полноценный экран-итог (≥40 % площади), а не миниатюра 253×252.
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight: math.max(
+                  0,
+                  math.min(
+                    constraints.maxHeight.isFinite
+                        ? constraints.maxHeight - AppSpacing.xxl
+                        : AppSizes.studyCardMinHeightFor(context),
+                    AppSizes.studyCardMinHeightFor(context),
+                  ),
+                ),
+              ),
+              child: SizedBox(width: math.min(width, available), child: child),
+            ),
           ),
-          child: child,
-        ),
-      ),
+        );
+      },
+    );
+  }
+}
+
+/// Скелетон загрузки сессии: геометрия карточки и строки прогресса вместо
+/// голого спиннера (F22). Layout не прыгает, когда приходит контент.
+class ReviewLoadingView extends StatelessWidget {
+  /// Создаёт скелетон сессии.
+  const ReviewLoadingView({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final double width = AppSizes.studyCardWidth(
+          MediaQuery.sizeOf(context).width,
+        );
+        final double availableW = constraints.maxWidth.isFinite
+            ? math.max(0, constraints.maxWidth - AppSpacing.lg * 2)
+            : width;
+        final double availableH = constraints.maxHeight.isFinite
+            ? math.max(0, constraints.maxHeight - AppSpacing.lg * 2)
+            : 480;
+        return Center(
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: SizedBox(
+              width: math.min(width, availableW),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  const AppSkeleton(width: 220, height: 20),
+                  const SizedBox(height: AppSpacing.xs),
+                  const AppSkeleton(height: AppSizes.progressHeight),
+                  const SizedBox(height: AppSpacing.md),
+                  AppCardSkeleton(
+                    width: math.min(width, availableW),
+                    height: math.max(
+                      96,
+                      math.min(
+                        AppSizes.studyCardMinHeightFor(context),
+                        availableH - 80,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

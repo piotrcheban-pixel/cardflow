@@ -104,6 +104,7 @@ class _ReviewCardViewState extends State<ReviewCardView>
   );
 
   ScrollController? _internalScroll;
+  bool _hovered = false;
 
   ScrollController get _scroll =>
       widget.scrollController ?? (_internalScroll ??= ScrollController());
@@ -149,10 +150,10 @@ class _ReviewCardViewState extends State<ReviewCardView>
         final double factor = AppAdaptive.factorForContext(context);
         final double questionSize = tight
             ? (narrow ? 26 : 28)
-            : (narrow ? 28 : AppTypography.reviewQuestionSize * factor);
+            : (narrow ? 28 : AppTypography.reviewQuestionSize * factor * 1.12);
         final double answerSize = tight
             ? 20
-            : (narrow ? 22 : AppTypography.reviewAnswerSize * factor);
+            : (narrow ? 22 : AppTypography.reviewAnswerSize * factor * 1.1);
         // Поля 24–48 лог. px (требование композиции): 24 на FullHD, ~30 на 2K.
         final double padV = tight
             ? AppSpacing.xs
@@ -171,14 +172,18 @@ class _ReviewCardViewState extends State<ReviewCardView>
           ),
         );
         final double columnInset = math.max(padH, (width - columnWidth) / 2);
-        // Аудит v8 (G3/G8): карточка принимает высоту содержимого, но не ниже
-        // минимума — короткий вопрос больше не «висит» в белом поле на всю
-        // рабочую область. Пустое место распределяется по краям содержимого
-        // (spaceBetween), поэтому сплошной пустой полосы не возникает.
+        // F01/V3: карточка занимает не меньше 62 % рабочей области под
+        // шапкой (2K live — ~540, 4K — ~1298), а не высоту кеглей 430×factor.
+        // Высота при этом остаётся «по содержимому»: длинный вопрос растёт
+        // до доступной области, короткий заполняет минимум равными полями.
         final double minHeight = math.min(
           height,
-          AppSizes.studyCardMinHeight * (narrow ? 1 : factor),
+          AppSizes.studyCardMinHeightFor(context),
         );
+        // F01/V3: карточка — главный объект постоянного размера: не меньше
+        // 62 % рабочей области, содержимое центрируется, длинное — прокручивается
+        // внутри (F27). Высота не «прыгает» между вопросами разной длины.
+        final double cardHeight = math.max(0, minHeight);
         final Duration flipDuration = AppMotion.duration(
           context,
           kReviewCardFlipDuration,
@@ -208,6 +213,7 @@ class _ReviewCardViewState extends State<ReviewCardView>
                       bodyPadV: bodyPadV,
                       narrow: narrow,
                       cramped: cramped,
+                      tight: tight,
                       columnWidth: columnWidth,
                       columnInset: columnInset,
                     ),
@@ -221,35 +227,51 @@ class _ReviewCardViewState extends State<ReviewCardView>
                     bodyPadV: bodyPadV,
                     narrow: narrow,
                     cramped: cramped,
+                    tight: tight,
                     columnWidth: columnWidth,
                     columnInset: columnInset,
                   );
-            return GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: widget.onTap,
-              child: Transform(
-                alignment: Alignment.center,
-                transform: transform,
-                child: ConstrainedBox(
+            final BorderRadius shape = BorderRadius.circular(AppRadii.card);
+            return MouseRegion(
+              // F26: кликабельная карточка показывает курсор-указатель и
+              // hover-подсветку — «тап раскрывает ответ» обнаруживается.
+              cursor: SystemMouseCursors.click,
+              onEnter: (_) {
+                if (!_hovered) setState(() => _hovered = true);
+              },
+              onExit: (_) {
+                if (_hovered) setState(() => _hovered = false);
+              },
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: widget.onTap,
+                child: AnimatedContainer(
+                  duration: AppMotion.duration(context, AppDurations.quick),
+                  curve: AppMotion.feedback,
                   constraints: BoxConstraints(
                     // Ширина задана окном (≥60 % на 2K/FullHD, G3), высота —
-                    // по содержимому в пределах минимума и доступной области.
+                    // 62 % рабочей области: карточка не «прыгает» по высоте.
                     minWidth: width,
                     maxWidth: width,
-                    minHeight: minHeight,
-                    maxHeight: height,
+                    minHeight: cardHeight,
+                    maxHeight: cardHeight,
                   ),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: scheme.surfaceContainerLowest,
-                      borderRadius: AppRadii.cardRadius,
-                      border: Border.all(
-                        color: scheme.outlineVariant,
-                        width: AppSizes.borderWidth,
-                      ),
-                      boxShadow: AppShadows.card(theme.brightness),
+                  decoration: BoxDecoration(
+                    color: scheme.surfaceContainerLowest,
+                    borderRadius: shape,
+                    border: Border.all(
+                      color: _hovered ? scheme.primary : scheme.outlineVariant,
+                      width: AppSizes.borderWidth,
                     ),
-                    child: face,
+                    boxShadow: AppShadows.card(theme.brightness),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: shape,
+                    child: Transform(
+                      alignment: Alignment.center,
+                      transform: transform,
+                      child: face,
+                    ),
                   ),
                 ),
               ),
@@ -270,14 +292,16 @@ class _ReviewCardViewState extends State<ReviewCardView>
     required double bodyPadV,
     required bool narrow,
     required bool cramped,
+    required bool tight,
     required double columnWidth,
     required double columnInset,
   }) {
     final Widget? footer = widget.questionFooter;
     return Column(
-      // Свободное место делится между надзаголовком, вопросом и действием —
-      // вместо одной сплошной белой полосы (аудит v8, G3/G8).
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      // Верхняя подпись, центрированное содержимое и нижняя полоса действий,
+      // прижатая к кромке карточки (полоса — часть карточки, а не «кнопка в
+      // белом поле»).
+      mainAxisAlignment: MainAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
@@ -288,7 +312,7 @@ class _ReviewCardViewState extends State<ReviewCardView>
               label: AppLocalizations.of(context).reviewQuestionLabel,
             ),
           ),
-        Flexible(
+        Expanded(
           child: Semantics(
             label: widget.front,
             excludeSemantics: true,
@@ -309,7 +333,13 @@ class _ReviewCardViewState extends State<ReviewCardView>
                     letterSpacing: -0.4,
                   ),
                   media: true,
-                  imageMaxHeight: math.max(160, availableHeight * 0.62),
+                  // У occlusion-карточки под картинкой живут кнопки масок:
+                  // оставляем им место, чтобы не прокручивать (F27).
+                  imageMaxHeight: math.max(
+                    widget.card?.occlusionJson != null ? 160 : 200,
+                    availableHeight *
+                        (widget.card?.occlusionJson != null ? 0.66 : 0.92),
+                  ),
                   imageMaxWidth: columnWidth,
                 ),
               ],
@@ -317,11 +347,29 @@ class _ReviewCardViewState extends State<ReviewCardView>
           ),
         ),
         if (footer != null)
-          Padding(
-            padding: EdgeInsets.fromLTRB(padH, 0, padH, padV),
-            child: SizedBox(
-              key: const ValueKey<String>('review-card-actions'),
-              child: footer,
+          _CardFooterBand(
+            band: !tight,
+            padding: EdgeInsets.fromLTRB(
+              padH,
+              tight ? 0 : AppSpacing.md,
+              padH,
+              tight ? AppSpacing.xxs : padV,
+            ),
+            child: Center(
+              child: ConstrainedBox(
+                // F17: главное действие — кнопка осмысленной ширины (240–480),
+                // выровненная по контенту, а не полоса на всю карточку.
+                constraints: BoxConstraints(
+                  maxWidth:
+                      AppSizes.revealButtonMaxWidth *
+                      AppAdaptive.factorForContext(context).clamp(1.0, 1.2),
+                ),
+                child: SizedBox(
+                  key: const ValueKey<String>('review-card-actions'),
+                  width: double.infinity,
+                  child: footer,
+                ),
+              ),
             ),
           ),
       ],
@@ -339,6 +387,7 @@ class _ReviewCardViewState extends State<ReviewCardView>
     required double bodyPadV,
     required bool narrow,
     required bool cramped,
+    required bool tight,
     required double columnWidth,
     required double columnInset,
   }) {
@@ -363,7 +412,7 @@ class _ReviewCardViewState extends State<ReviewCardView>
     );
     final bool occlusion = widget.card?.occlusionJson != null;
     return Column(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      mainAxisAlignment: MainAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
@@ -372,7 +421,7 @@ class _ReviewCardViewState extends State<ReviewCardView>
             padding: EdgeInsets.fromLTRB(columnInset, padV, columnInset, 0),
             child: _SideLabel(label: l10n.reviewQuestionLabel),
           ),
-        Flexible(
+        Expanded(
           child: Semantics(
             label: '${widget.front}\n${widget.back}',
             excludeSemantics: true,
@@ -396,26 +445,19 @@ class _ReviewCardViewState extends State<ReviewCardView>
                     imageMaxHeight: math.max(140, availableHeight * 0.42),
                     imageMaxWidth: columnWidth,
                   ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: AppSpacing.md,
+                  // Один и тот же каркас сторон во всех режимах: разделитель,
+                  // подпись «ОТВЕТ» слева, затем ответ. Раньше в классике
+                  // подпись стояла между двумя линиями по центру, в ленте —
+                  // слева под линией (F06).
+                  const Padding(
+                    padding: EdgeInsets.only(
+                      top: AppSpacing.lg,
+                      bottom: AppSpacing.sm,
                     ),
-                    child: Row(
-                      children: <Widget>[
-                        const Expanded(child: Divider(height: 1)),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.sm,
-                          ),
-                          child: _SideLabel(
-                            label: l10n.reviewAnswerLabel,
-                            accent: true,
-                          ),
-                        ),
-                        const Expanded(child: Divider(height: 1)),
-                      ],
-                    ),
+                    child: Divider(height: 1),
                   ),
+                  _SideLabel(label: l10n.reviewAnswerLabel, accent: true),
+                  const SizedBox(height: AppSpacing.xs),
                 ],
                 if (cramped)
                   Padding(
@@ -435,7 +477,10 @@ class _ReviewCardViewState extends State<ReviewCardView>
                   // рисуем; для cloze вопрос показан выше.
                   media: !occlusion,
                   includeClozeFront: false,
-                  imageMaxHeight: math.max(180, availableHeight * 0.62),
+                  imageMaxHeight: math.max(
+                    occlusion ? 160 : 220,
+                    availableHeight * (occlusion ? 0.66 : 0.92),
+                  ),
                   imageMaxWidth: columnWidth,
                 ),
               ],
@@ -447,8 +492,14 @@ class _ReviewCardViewState extends State<ReviewCardView>
           // (220 мс), а не мгновенная подмена цвета кнопок.
           _FadeSlideIn(
             key: const ValueKey<String>('review-rating-panel'),
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(padH, 0, padH, padV),
+            child: _CardFooterBand(
+              band: !tight,
+              padding: EdgeInsets.fromLTRB(
+                padH,
+                tight ? 0 : AppSpacing.md,
+                padH,
+                tight ? AppSpacing.xxs : padV,
+              ),
               child: footer,
             ),
           ),
@@ -490,6 +541,45 @@ class _ReviewCardViewState extends State<ReviewCardView>
       includeClozeFront: includeClozeFront,
       imageMaxHeight: imageMaxHeight,
       imageMaxWidth: imageMaxWidth,
+    );
+  }
+}
+
+/// Нижняя полоса карточки: действия отделены от содержимого спокойной
+/// поверхностью и тонкой линией, а не висят в белом поле.
+///
+/// Вопрос («Показать ответ») и ответ (оценки) используют одну полосу, поэтому
+/// все режимы выглядят как один компонент (F06).
+class _CardFooterBand extends StatelessWidget {
+  const _CardFooterBand({
+    required this.child,
+    required this.padding,
+    this.band = true,
+  });
+
+  final Widget child;
+  final EdgeInsetsGeometry padding;
+
+  /// Рисовать ли поверхность и разделитель (в очень низком окне — нет).
+  final bool band;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: padding,
+      decoration: band
+          ? BoxDecoration(
+              color: scheme.surfaceContainerLow,
+              border: Border(
+                top: BorderSide(
+                  color: scheme.outlineVariant,
+                  width: AppSizes.borderWidth,
+                ),
+              ),
+            )
+          : null,
+      child: child,
     );
   }
 }
@@ -603,22 +693,57 @@ class _CardBodyState extends State<_CardBody> {
           child: Scrollbar(
             controller: widget.scroll,
             thumbVisibility: _canScroll,
-            child: SingleChildScrollView(
-              controller: widget.scroll,
-              padding: widget.padding,
-              child: Center(
-                child: ConstrainedBox(
-                  // Только ширина колонки: высота — по содержимому, поэтому
-                  // карточка «обнимает» текст (аудит v8, G3/G8).
-                  constraints: BoxConstraints(maxWidth: widget.columnWidth),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: children,
+            child: Stack(
+              children: <Widget>[
+                SingleChildScrollView(
+                  controller: widget.scroll,
+                  padding: widget.padding,
+                  child: Center(
+                    child: ConstrainedBox(
+                      // Короткое содержимое центрируется по высоте тела
+                      // карточки; длинное — прокручивается (F27).
+                      constraints: BoxConstraints(
+                        maxWidth: widget.columnWidth,
+                        minHeight: math.max(0, availableHeight),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: children,
+                      ),
+                    ),
                   ),
                 ),
-              ),
+                // F27: у нижней кромки — мягкое затухание, если контент не
+                // влез: видно, что карточку можно прокрутить, без стрелки.
+                if (_canScroll)
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    height: 40,
+                    child: IgnorePointer(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: <Color>[
+                              Theme.of(context)
+                                  .colorScheme
+                                  .surfaceContainerLowest
+                                  .withValues(alpha: 0),
+                              Theme.of(context)
+                                  .colorScheme
+                                  .surfaceContainerLowest,
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
         );

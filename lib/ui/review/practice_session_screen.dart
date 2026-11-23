@@ -244,7 +244,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen>
     AppLocalizations l10n,
     PracticeSessionState? state,
   ) {
-    if (_loading) return const Center(child: CircularProgressIndicator());
+    if (_loading) return const ReviewLoadingView();
     if (_loadFailed || state == null) {
       return ReviewLoadErrorView(onRetry: _retry);
     }
