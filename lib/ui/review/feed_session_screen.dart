@@ -568,40 +568,8 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
             onDismiss: dismissSessionNotice,
             dismissTooltip: l10n.sessionNoticeDismiss,
           ),
-        // Находки F11/F14: в ленте не было ни подсказки о свайпах, ни кнопок
-        // оценки, ни клавиатурных эквивалентов для видимых действий.
-        // Аудит v4 (V25): одновременно с подсказкой панели оценок эта строка не
-        // показывается — одна подсказка на состояние.
-        // Подсказка о свайпах дублировала панель оценок (G5) и вместе с ней
-        // отнимала у карточки место на низком окне (G10) — только одна строка
-        // подсказки и только пока панели нет.
-        if (!(state.current?.revealed ?? false) &&
-            MediaQuery.sizeOf(context).height >= 330)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.md,
-              AppSpacing.xs,
-              AppSpacing.md,
-              0,
-            ),
-            child: Center(
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxWidth: AppSizes.studyCardWidth(
-                    MediaQuery.sizeOf(context).width,
-                  ),
-                ),
-                child: Text(
-                  l10n.feedRateHint,
-                  key: const ValueKey<String>('feed-rate-hint'),
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ),
-            ),
-          ),
+        // Подсказка о свайпах теперь одна и внутри карточки (feed_card_view.dart,
+        // аудит v10 G5/G8): снаружи её нет — ни второй копии, ни лишней высоты.
         // G1: до раскрытия ответа панели оценок нет в дереве — в ленте она тоже
         // не «серая», а отсутствует; остаётся только видимая карточка и свайпы.
         if (state.current?.revealed ?? false)

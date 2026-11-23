@@ -192,7 +192,9 @@ class _FeedCardViewState extends State<FeedCardView>
         final double factor = AppAdaptive.factorForContext(context);
         final double height = math.min(
           constraints.maxHeight,
-          AppSizes.studyCardMinHeight * factor,
+          // Карточка ленты чуть ниже классики: подсказка о свайпах и короткий
+          // вопрос не должны оставлять сплошную белую полосу >30 % (G8).
+          AppSizes.studyCardMinHeight * factor * 0.85,
         );
         _width = width;
         return AnimatedBuilder(
@@ -413,17 +415,6 @@ class _FlipFace extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: <Widget>[
-                          // Аудит v9 (G11): надзаголовок стороны виден и на
-                          // лицевой стороне — как в карточке «Классики», и
-                          // делит пустоту на две части вместо одной (G3/G8).
-                          if (!showBack)
-                            Align(
-                              alignment: AlignmentDirectional.centerStart,
-                              child: Text(
-                                l10n.reviewQuestionLabel.toUpperCase(),
-                                style: AppTypography.overline(context),
-                              ),
-                            ),
                           // Аудит v4 (V22) + v5 (V5-11): оборот сохраняет вопрос-эхо,
                           // как в «Классике», — контекст не теряется после переворота.
                           if (showBack) ...<Widget>[
@@ -517,6 +508,18 @@ class _FlipFace extends StatelessWidget {
                                   imageMaxHeight: 340,
                                   imageMaxWidth: 760,
                                 ),
+                          // Аудит v10 (G8/G5): подсказка о свайпах — внутри
+                          // карточки, одной короткой строкой снизу. Она же делит
+                          // пустоту лица: сплошная полоса ≤30 % высоты.
+                          if (!showBack)
+                            Text(
+                              l10n.feedRateHint,
+                              key: const ValueKey<String>('feed-rate-hint'),
+                              textAlign: TextAlign.center,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: scheme.onSurfaceVariant,
+                              ),
+                            ),
                         ],
                       ),
                     ),
