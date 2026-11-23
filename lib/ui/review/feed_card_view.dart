@@ -11,6 +11,8 @@ import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/cards/content/card_content_view.dart';
 import 'package:cardflow/ui/motion.dart';
 import 'package:cardflow/ui/review/feed_swipe.dart';
+import 'package:cardflow/ui/theme/app_tokens.dart';
+import 'package:cardflow/ui/theme/app_typography.dart';
 
 /// Карточка ленты: свайпы-оценки, пружина, морфинг формы, 3D-flip (SPEC A7.3).
 ///
@@ -173,7 +175,12 @@ class _FeedCardViewState extends State<FeedCardView>
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
-        final double width = math.min(constraints.maxWidth, 640);
+        // Аудит v4 (V22): карточка ленты той же ширины, что и классика, —
+        // 960 лог. px вместо 640, иначе режимы выглядят как два приложения.
+        final double width = math.min(
+          constraints.maxWidth,
+          AppSizes.studyCardMaxWidth,
+        );
         final double height = constraints.maxHeight;
         _width = width;
         return AnimatedBuilder(
@@ -299,10 +306,23 @@ class _FlipFace extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final ColorScheme scheme = theme.colorScheme;
+    final double factor = AppAdaptive.factorForContext(context);
+    final TextStyle questionStyle = theme.textTheme.headlineMedium!.copyWith(
+      fontSize: AppTypography.reviewQuestionSize * factor,
+      height: 1.35,
+      fontWeight: FontWeight.w600,
+      letterSpacing: -0.4,
+    );
+    final TextStyle answerStyle = theme.textTheme.bodyLarge!.copyWith(
+      fontSize: AppTypography.reviewAnswerSize * factor,
+      height: 1.55,
+    );
     return Semantics(
       button: true,
       label: revealed ? back : front,
-      hint: AppLocalizations.of(context).feedSwipeHint,
+      hint: l10n.feedSwipeHint,
       child: AnimatedBuilder(
         animation: controller,
         builder: (BuildContext context, Widget? child) {
@@ -321,25 +341,51 @@ class _FlipFace extends StatelessWidget {
               alignment: Alignment.center,
               transform: transform,
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: card == null
-                    ? Text(
-                        showBack ? back : front,
-                        key: const ValueKey<String>('feed-card-face'),
-                        textAlign: TextAlign.center,
-                        style: showBack
-                            ? theme.textTheme.bodyLarge?.copyWith(height: 1.6)
-                            : theme.textTheme.headlineMedium,
-                      )
-                    : CardContentView(
-                        card: card!,
-                        side: showBack ? back : front,
-                        revealed: showBack,
-                        faceKey: const ValueKey<String>('feed-card-face'),
-                        mediaBytes: mediaBytes,
-                        mediaMetadata: mediaMetadata,
-                        onRetryMedia: onRetryMedia,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.xxl,
+                  vertical: AppSpacing.xl,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    // Аудит v4 (V22): подписи сторон — как в классике.
+                    Align(
+                      alignment: AlignmentDirectional.centerStart,
+                      child: Text(
+                        (showBack ? l10n.reviewAnswerLabel : l10n.reviewQuestionLabel)
+                            .toUpperCase(),
+                        style: AppTypography.overline(
+                          context,
+                          color: showBack
+                              ? scheme.primary
+                              : scheme.onSurfaceVariant,
+                        ),
                       ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    card == null
+                        ? Text(
+                            showBack ? back : front,
+                            key: const ValueKey<String>('feed-card-face'),
+                            textAlign: TextAlign.center,
+                            style: showBack ? answerStyle : questionStyle,
+                          )
+                        : CardContentView(
+                            card: card!,
+                            side: showBack ? back : front,
+                            revealed: showBack,
+                            faceKey: const ValueKey<String>('feed-card-face'),
+                            questionStyle: questionStyle,
+                            answerStyle: answerStyle,
+                            mediaBytes: mediaBytes,
+                            mediaMetadata: mediaMetadata,
+                            onRetryMedia: onRetryMedia,
+                            imageMaxHeight: 300,
+                            imageMaxWidth: 620,
+                          ),
+                  ],
+                ),
               ),
             ),
           );

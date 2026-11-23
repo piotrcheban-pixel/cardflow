@@ -50,6 +50,7 @@ import 'package:cardflow/domain/text/parsed_document.dart';
 import 'package:cardflow/domain/text/parser_exception.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/cards/content/card_image_view.dart';
+import 'package:cardflow/ui/components/app_buttons.dart';
 import 'package:cardflow/ui/components/app_layout.dart';
 import 'package:cardflow/ui/components/app_surfaces.dart';
 import 'package:cardflow/ui/decks/deck_actions.dart' show showAppMessage;
@@ -61,10 +62,18 @@ import 'package:cardflow/ui/router/app_router.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
 import 'package:cardflow/ui/state/decks_ui_providers.dart';
 import 'package:cardflow/ui/theme/app_tokens.dart';
+import 'package:cardflow/ui/theme/app_typography.dart';
 
 /// Порог «PDF-скан»: меньше символов текста — отправляем страницы как PNG
 /// (итерация 7.9, ADR-023).
 const int kPdfScanMinTextLength = kPdfPageTextMinLength;
+
+/// Минимальная высота зоны загрузки материалов.
+///
+/// Аудит v4 (V34): зона занимала 272 лог. px — при иконке и двух строках
+/// текста это 78 % пустоты. 168 px: компактно, но по-прежнему удобная цель
+/// для клика и drag-n-drop; на узком экране зона растёт по контенту.
+const double _attachZoneMinHeight = 168;
 
 /// Статус локального парсинга прикреплённого файла.
 enum _FileStatus { parsing, parsed, image, scanned, pdfPages, failed }
@@ -1053,48 +1062,75 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
 
   /// Нижняя панель действий: «Сгенерировать» или прогресс + «Отмена».
   Widget _buildActions(AppLocalizations l10n) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
     if (_generating) {
       return Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           _ProgressView(progress: _progress, l10n: l10n),
-          const SizedBox(height: AppSpacing.xs),
-          OutlinedButton(
-            key: const ValueKey<String>('generation-cancel'),
-            onPressed: _cancel,
-            child: Text(l10n.cancel),
+          const SizedBox(height: AppSpacing.sm),
+          // Во время генерации главное на экране — прогресс; «Отмена» —
+          // вторичное действие и не спорит с ним по весу (аудит v4, V32).
+          Align(
+            alignment: Alignment.center,
+            child: OutlinedButton.icon(
+              key: const ValueKey<String>('generation-cancel'),
+              onPressed: _cancel,
+              icon: const Icon(Icons.stop_rounded, size: AppSizes.iconSmall),
+              label: Text(l10n.cancel),
+            ),
           ),
         ],
       );
     }
-    // Без файлов и без темы генерировать нечего: кнопка неактивна, подсказка
-    // из ARB (fix-gen, Д1).
+    // Причина блокировки — рядом с кнопкой (V32): без файлов и темы
+    // генерировать нечего, во время локального парсинга нужно дождаться чтения.
     final bool canGenerate = _hasContent || _hasWishes;
+    final bool blocked = _anyParsing || !canGenerate;
+    final String? blockedReason = !blocked
+        ? null
+        : _anyParsing
+        ? l10n.generationFilesParsing
+        : l10n.generationTopicRequired;
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        if (!canGenerate)
-          Padding(
-            padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-            child: Text(
-              l10n.generationTopicRequired,
-              key: const ValueKey<String>('generation-start-hint'),
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ),
         FilledButton(
           key: const ValueKey<String>('generation-start'),
-          onPressed: _anyParsing || !canGenerate ? null : _generate,
-          style: FilledButton.styleFrom(
-            minimumSize: const Size.fromHeight(AppSizes.buttonHeightLarge),
+          onPressed: blocked ? null : _generate,
+          // Отключённое состояние читаемо (V32): заливка surfaceContainerHigh,
+          // подпись onSurfaceVariant — 7,64:1 в светлой и 8,36:1 в тёмной
+          // теме вместо 2,51:1 у умолчания «12 % onSurface» на surface.
+          // Для остальных состояний стиль берётся из темы (null → fallback).
+          style: AppButtons.large(context).copyWith(
+            backgroundColor: WidgetStateProperty.resolveWith<Color?>(
+              (Set<WidgetState> states) => states.contains(WidgetState.disabled)
+                  ? scheme.surfaceContainerHigh
+                  : null,
+            ),
+            foregroundColor: WidgetStateProperty.resolveWith<Color?>(
+              (Set<WidgetState> states) => states.contains(WidgetState.disabled)
+                  ? scheme.onSurfaceVariant
+                  : null,
+            ),
           ),
           child: Text(l10n.generationStart),
         ),
+        if (blockedReason != null)
+          Padding(
+            padding: const EdgeInsets.only(top: AppSpacing.xs),
+            child: Text(
+              blockedReason,
+              key: const ValueKey<String>('generation-start-hint'),
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+          ),
       ],
     );
   }
@@ -1140,6 +1176,8 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
     final Widget materials = Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
+        // Зона загрузки — одна цель для клика и DnD (V34): внутри нет
+        // дублирующей ссылки «Выбрать файлы», высота 168 вместо 272.
         InkWell(
           key: const ValueKey<String>('generation-attach-zone'),
           onTap: _generating ? null : _pickFiles,
@@ -1147,9 +1185,12 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
           child: AppDashedBorder(
             color: _dragging ? scheme.primary : scheme.outlineVariant,
             child: Container(
+              constraints: const BoxConstraints(
+                minHeight: _attachZoneMinHeight,
+              ),
               padding: const EdgeInsets.symmetric(
                 horizontal: AppSpacing.lg,
-                vertical: AppSpacing.xxl,
+                vertical: AppSpacing.md,
               ),
               decoration: BoxDecoration(
                 color: _dragging
@@ -1158,29 +1199,16 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
                 borderRadius: BorderRadius.circular(AppRadii.input),
               ),
               child: Column(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: <Widget>[
-                  AppIconBadge(
-                    icon: Icons.upload_file_outlined,
+                  Icon(
+                    Icons.upload_file_outlined,
+                    size: AppSizes.iconLarge,
                     color: scheme.primary,
-                    size: 56,
-                    background: scheme.surfaceContainerLowest,
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  Text(
-                    l10n.generationAttachHint,
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.bodyLarge?.copyWith(
-                      color: scheme.onSurface,
-                      fontWeight: FontWeight.w600,
-                    ),
                   ),
                   const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    l10n.generationAttachButton,
-                    style: theme.textTheme.labelLarge?.copyWith(
-                      color: scheme.primary,
-                    ),
-                  ),
+                  _AttachHint(text: l10n.generationAttachHint),
                 ],
               ),
             ),
@@ -1319,13 +1347,42 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
       ),
     );
 
+    // Один паттерн выбора (V33): подпись снаружи у обоих контролов,
+    // провайдер — чипы по содержимому, модель — поле выбора той же высоты
+    // (48 лог. px), без плавающей подписи. «Изменить» — одна текстовая
+    // ссылка на настройки провайдеров и ключей.
+    final TextStyle? fieldLabel = theme.textTheme.labelLarge?.copyWith(
+      color: scheme.onSurfaceVariant,
+    );
+    // Высота поля выбора 48: контент max(иконка 24, текст 22) + padding
+    // 2×11 + рамка 2. Множитель control держит пропорции на 2K/4K.
+    final double control = AppAdaptive.factorForContext(context)
+        .clamp(1.0, 1.3);
+    final EdgeInsets selectContentPadding = EdgeInsets.symmetric(
+      horizontal: AppSpacing.sm + AppSpacing.xxs,
+      vertical: (AppSpacing.sm - AppSizes.borderWidth) * control,
+    );
+
     final Widget model = AppPanel(
       padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          Text(l10n.generationProviderLabel, style: theme.textTheme.titleSmall),
-          const SizedBox(height: AppSpacing.xs),
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: Text(l10n.generationProviderLabel, style: fieldLabel),
+              ),
+              // Ровно одна ссылка «Изменить» на блок (V33): настройки
+              // провайдеров и ключей (находка F8).
+              TextButton(
+                key: const ValueKey<String>('generation-model-change'),
+                onPressed: _generating ? null : _openSettings,
+                child: Text(l10n.generationModelChange),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xxs),
           Wrap(
             spacing: AppSpacing.xs,
             runSpacing: AppSpacing.xs,
@@ -1335,7 +1392,7 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
                   key: ValueKey<String>('generation-provider-${account.id}'),
                   avatar: Icon(
                     providerProtocolIcon(account.protocol),
-                    size: 18,
+                    size: AppSizes.iconSmall,
                   ),
                   label: Text(providerAccountLabel(l10n, account)),
                   selected: _account?.id == account.id,
@@ -1353,12 +1410,16 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
             ],
           ),
           const SizedBox(height: AppSpacing.md),
+          Text(l10n.generationModelLabel, style: fieldLabel),
+          const SizedBox(height: AppSpacing.xs),
           if (_account?.preset != null)
             DropdownButtonFormField<String>(
               key: ValueKey<String>('generation-model-${_account?.preset?.id}'),
               initialValue: _modelId ?? _account?.modelId,
+              // Подпись уже снаружи: плавающего labelText нет (V33).
+              isExpanded: true,
               decoration: InputDecoration(
-                labelText: l10n.generationModelLabel,
+                contentPadding: selectContentPadding,
                 border: _fieldBorder,
               ),
               items: <DropdownMenuItem<String>>[
@@ -1379,35 +1440,38 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
             )
           else
             // Находка F8: раньше здесь было серое поле, которое нельзя было
-            // редактировать (мёртвый контрол). Теперь — строка со значением и
-            // рабочей ссылкой «Изменить» в настройки провайдера.
-            Row(
+            // редактировать (мёртвый контрол). Теперь — значение в рамке
+            // того же вида, что поле выбора; правка — ссылкой «Изменить».
+            Container(
               key: const ValueKey<String>('generation-model-fixed'),
-              children: <Widget>[
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Text(
-                        l10n.generationModelLabel,
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: scheme.onSurfaceVariant,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        _account?.modelId ?? '',
-                        style: theme.textTheme.bodyLarge,
-                      ),
-                    ],
+              constraints: const BoxConstraints(
+                minHeight: AppSizes.buttonHeightLarge,
+              ),
+              padding: selectContentPadding,
+              decoration: BoxDecoration(
+                color: scheme.surfaceContainerLowest,
+                borderRadius: BorderRadius.circular(AppRadii.input),
+                border: Border.all(
+                  color: scheme.outlineVariant,
+                  width: AppSizes.borderWidth,
+                ),
+              ),
+              child: Row(
+                children: <Widget>[
+                  Expanded(
+                    child: Text(
+                      _account?.modelId ?? '',
+                      style: theme.textTheme.bodyLarge,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
-                ),
-                TextButton(
-                  key: const ValueKey<String>('generation-model-change'),
-                  onPressed: _generating ? null : _openSettings,
-                  child: Text(l10n.generationModelChange),
-                ),
-              ],
+                  Icon(
+                    Icons.lock_outline,
+                    size: AppSizes.iconSmall,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ],
+              ),
             ),
           if (showEstimate) ...<Widget>[
             const SizedBox(height: AppSpacing.md),
@@ -1420,7 +1484,7 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
                   size: AppSizes.icon,
                   color: scheme.onSurfaceVariant,
                 ),
-                const SizedBox(width: AppSpacing.xxs + 2),
+                const SizedBox(width: AppSpacing.xs),
                 Expanded(
                   child: Text(
                     l10n.generationEstimate(estimate),
@@ -1430,7 +1494,7 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 2),
+            const SizedBox(height: AppSpacing.xxs),
             Text(
               _planSummary(l10n, planPreview),
               key: const ValueKey<String>('generation-plan-preview'),
@@ -1620,6 +1684,7 @@ class _FileTile extends StatelessWidget {
     return ListTile(
       leading: Icon(
         imageType == null ? _formatIcon(format) : Icons.image_outlined,
+        size: AppSizes.iconLarge,
       ),
       title: Text(file.picked.name),
       subtitle: Column(
@@ -1640,7 +1705,7 @@ class _FileTile extends StatelessWidget {
         key: ValueKey<String>('generation-file-remove-$index'),
         tooltip: l10n.generationFileRemoveTooltip,
         onPressed: onRemove,
-        icon: const Icon(Icons.close),
+        icon: const Icon(Icons.close, size: AppSizes.iconLarge),
       ),
     );
   }
@@ -1669,7 +1734,49 @@ String formatFileSize(AppLocalizations l10n, int sizeBytes) {
   return l10n.generationFileSizeMb((sizeBytes / (1024 * 1024)).ceil());
 }
 
-/// Нумерованный надзаголовок секции формы генерации (макет v2).
+/// Подсказка зоны загрузки: инструкция и перечень форматов.
+///
+/// Строка ARB `generationAttachHint` уже перечисляет поддерживаемые форматы
+/// (V34). Второе предложение показываем мелким кеглем — как отдельную строку
+/// форматов, не добавляя новый ключ локализации: текст остаётся дословно
+/// одним и тем же (его проверяют тесты), меняется только начертание.
+class _AttachHint extends StatelessWidget {
+  const _AttachHint({required this.text});
+
+  /// Полный текст подсказки из ARB.
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
+    final TextStyle? instruction = theme.textTheme.bodyMedium?.copyWith(
+      color: scheme.onSurface,
+    );
+    final TextStyle? formats = theme.textTheme.bodySmall?.copyWith(
+      color: scheme.onSurfaceVariant,
+    );
+    // Делим по первому «. »: инструкция → форматная строка. Если формулировку
+    // ARB изменят и разделителя не будет, рендерим текст целиком.
+    final int split = text.indexOf('. ');
+    final List<InlineSpan> spans = split > 0 && split + 2 < text.length
+        ? <InlineSpan>[
+            TextSpan(text: '${text.substring(0, split + 1)} '),
+            TextSpan(text: text.substring(split + 2), style: formats),
+          ]
+        : <InlineSpan>[TextSpan(text: text)];
+    return Text.rich(
+      TextSpan(style: instruction, children: spans),
+      textAlign: TextAlign.center,
+    );
+  }
+}
+
+/// Нумерованный заголовок секции формы генерации.
+///
+/// Единый стиль заголовка секции (аудит v4, V45): `titleLarge` (21) без
+/// капса — как «Внешний вид» в настройках ([AppSectionCard]); нумерация
+/// остаётся частью текста ключа ARB.
 class _GenSectionLabel extends StatelessWidget {
   const _GenSectionLabel({required this.label, this.trailing});
 
@@ -1681,25 +1788,25 @@ class _GenSectionLabel extends StatelessWidget {
     final ThemeData theme = Theme.of(context);
     final ColorScheme scheme = theme.colorScheme;
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
       children: <Widget>[
         Expanded(
           child: Text(
-            label.toUpperCase(),
-            maxLines: 1,
+            label,
+            maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.labelMedium?.copyWith(
-              color: scheme.onSurfaceVariant,
-              letterSpacing: 0.6,
-            ),
+            style: theme.textTheme.titleLarge,
           ),
         ),
-        if (trailing != null)
+        if (trailing != null) ...<Widget>[
+          const SizedBox(width: AppSpacing.xs),
           Text(
             trailing!,
-            style: theme.textTheme.bodySmall?.copyWith(
+            style: theme.textTheme.bodyMedium?.copyWith(
               color: scheme.onSurfaceVariant,
             ),
           ),
+        ],
       ],
     );
   }
@@ -1739,7 +1846,11 @@ class _KeyBanner extends StatelessWidget {
       ),
       child: Row(
         children: <Widget>[
-          Icon(Icons.key_off_outlined, color: scheme.onErrorContainer),
+          Icon(
+            Icons.key_off_outlined,
+            size: AppSizes.iconLarge,
+            color: scheme.onErrorContainer,
+          ),
           const SizedBox(width: AppSpacing.xs),
           Expanded(
             child: Text(
@@ -1776,6 +1887,8 @@ class _ProgressView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
     final GenerationProgress? value = progress;
     final String text;
     switch (value?.phase) {
@@ -1794,11 +1907,15 @@ class _ProgressView extends StatelessWidget {
       key: const ValueKey<String>('generation-progress'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        const LinearProgressIndicator(),
-        const SizedBox(height: 8),
-        Text(text, textAlign: TextAlign.center),
+        const LinearProgressIndicator(minHeight: AppSizes.progressHeight),
+        const SizedBox(height: AppSpacing.xs),
+        Text(
+          text,
+          textAlign: TextAlign.center,
+          style: theme.textTheme.bodyMedium?.copyWith(color: scheme.onSurface),
+        ),
         if (value != null && (value.requestedCards ?? 0) > 0) ...<Widget>[
-          const SizedBox(height: 4),
+          const SizedBox(height: AppSpacing.xxs),
           Text(
             l10n.generationProgressCardsCount(
               value.cards.length,
@@ -1806,6 +1923,7 @@ class _ProgressView extends StatelessWidget {
             ),
             key: const ValueKey<String>('generation-progress-count'),
             textAlign: TextAlign.center,
+            style: AppTypography.numeric(context),
           ),
           if (value.cards.length < value.requestedCards!)
             Text(
@@ -1814,7 +1932,9 @@ class _ProgressView extends StatelessWidget {
               ),
               key: const ValueKey<String>('generation-progress-remaining'),
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodySmall,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: scheme.onSurfaceVariant,
+              ),
             ),
         ],
       ],
@@ -1837,12 +1957,19 @@ class _LiveCardsStrip extends StatelessWidget {
     final AppLocalizations l10n = AppLocalizations.of(context);
     final ThemeData theme = Theme.of(context);
     return SizedBox(
+      // Высота полосы живых карточек: превью картинки 96 + две строки
+      // текста + отступы. Размер осмысленный (карточка, а не типографика).
       height: 216,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              AppSpacing.xs,
+              AppSpacing.md,
+              AppSpacing.xxs,
+            ),
             child: Row(
               children: <Widget>[
                 Expanded(
@@ -1867,10 +1994,15 @@ class _LiveCardsStrip extends StatelessWidget {
             child: ListView.separated(
               key: const ValueKey<String>('generation-live-cards'),
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.md,
+                0,
+                AppSpacing.md,
+                AppSpacing.xs,
+              ),
               itemCount: cards.length,
               separatorBuilder: (BuildContext context, int index) =>
-                  const SizedBox(width: 8),
+                  const SizedBox(width: AppSpacing.xs),
               itemBuilder: (BuildContext context, int index) {
                 final GeneratedCard card = cards[index];
                 // Живая карточка — лицевая сторона: изображения ответа здесь
@@ -1879,6 +2011,7 @@ class _LiveCardsStrip extends StatelessWidget {
                     ? null
                     : card.questionImages.first;
                 return SizedBox(
+                  // Ширина/высота превью — размер карточки полосы.
                   width: 190,
                   child: Card(
                     clipBehavior: Clip.antiAlias,
@@ -1891,6 +2024,7 @@ class _LiveCardsStrip extends StatelessWidget {
                               ? Center(
                                   child: Icon(
                                     Icons.image_outlined,
+                                    size: AppSizes.iconLarge,
                                     color: theme.colorScheme.onSurfaceVariant,
                                   ),
                                 )
@@ -1901,7 +2035,7 @@ class _LiveCardsStrip extends StatelessWidget {
                                 ),
                         ),
                         Padding(
-                          padding: const EdgeInsets.all(8),
+                          padding: const EdgeInsets.all(AppSpacing.xs),
                           child: Text(
                             card.front,
                             maxLines: 2,

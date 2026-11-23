@@ -386,7 +386,7 @@ class _SessionConstructorScreenState
     }
     return Center(
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 896),
+        constraints: const BoxConstraints(maxWidth: AppSizes.detailsMaxWidth),
         child: ListView(
           padding: const EdgeInsets.fromLTRB(
             AppSpacing.md,
@@ -415,11 +415,17 @@ class _SessionConstructorScreenState
             ),
             _Section(
               title: l10n.constructorTagsSection,
+              // Аудит v4 (V35): пустая секция «Теги» была панелью 130 px с одной
+              // серой строкой — компактный вариант без большой пустоты.
+              dense: _availableTags.isEmpty,
               child: _availableTags.isEmpty
                   ? Text(
                       _selectedDecks.isEmpty
                           ? l10n.constructorSelectDecksHint
                           : l10n.constructorTagsEmpty,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                     )
                   : Wrap(
                       spacing: 8,
@@ -639,7 +645,7 @@ class _SessionConstructorScreenState
           child: Center(
             heightFactor: 1,
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 896),
+              constraints: const BoxConstraints(maxWidth: AppSizes.detailsMaxWidth),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -683,10 +689,17 @@ class _SessionConstructorScreenState
 
 /// Блок формы с заголовком.
 class _Section extends StatelessWidget {
-  const _Section({required this.title, required this.child});
+  const _Section({
+    required this.title,
+    required this.child,
+    this.dense = false,
+  });
 
   final String title;
   final Widget child;
+
+  /// Компактные отступы: пустая секция не занимает пол-экрана (V35).
+  final bool dense;
 
   @override
   Widget build(BuildContext context) {
@@ -694,12 +707,19 @@ class _Section extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: AppSpacing.md),
       child: AppSectionCard(
         title: title,
-        contentPadding: const EdgeInsets.fromLTRB(
-          AppSpacing.lg,
-          AppSpacing.md,
-          AppSpacing.lg,
-          AppSpacing.lg,
-        ),
+        contentPadding: dense
+            ? const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.xs,
+                AppSpacing.lg,
+                AppSpacing.sm,
+              )
+            : const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.md,
+                AppSpacing.lg,
+                AppSpacing.lg,
+              ),
         child: child,
       ),
     );
@@ -719,7 +739,7 @@ class _ConstructorEmptyState extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.xl),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 896),
+          constraints: const BoxConstraints(maxWidth: AppSizes.detailsMaxWidth),
           child: AppEmptyState(
             icon: Icons.library_books_outlined,
             title: l10n.constructorTitle,
@@ -746,7 +766,7 @@ class _ConstructorErrorState extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.xl),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 896),
+          constraints: const BoxConstraints(maxWidth: AppSizes.detailsMaxWidth),
           child: AppErrorState(
             message: message,
             retryLabel: l10n.retry,

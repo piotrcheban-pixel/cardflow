@@ -239,6 +239,7 @@ class _PresetProviderDialogState extends State<_PresetProviderDialog> {
         ),
         const SizedBox(height: 16),
         DropdownButtonFormField<String>(
+          isExpanded: true,
           key: const ValueKey<String>('provider-preset-select'),
           initialValue: preset?.id,
           decoration: InputDecoration(
@@ -271,6 +272,7 @@ class _PresetProviderDialogState extends State<_PresetProviderDialog> {
         ),
         const SizedBox(height: 12),
         DropdownButtonFormField<String>(
+          isExpanded: true,
           key: ValueKey<String>('provider-model-select-${preset?.id}'),
           initialValue: _resolvedModelId,
           decoration: InputDecoration(
@@ -453,6 +455,7 @@ class _CustomProviderDialogState extends State<_CustomProviderDialog> {
         ),
         const SizedBox(height: 12),
         DropdownButtonFormField<ProviderProtocol>(
+          isExpanded: true,
           key: const ValueKey<String>('provider-protocol-select'),
           initialValue: _protocol,
           decoration: InputDecoration(
