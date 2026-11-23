@@ -91,9 +91,7 @@ void main() {
     );
   });
 
-  testWidgets('D1: вопрос 24–32 px, ответ 18–22 px', (
-    WidgetTester tester,
-  ) async {
+  testWidgets('D1: вопрос 30–38 px, ответ 22–28 px', (WidgetTester tester) async {
     await pumpAt(tester, const Size(1280, 720));
 
     // Кегль измеряется по отрисованному абзацу: стиль приходит из
@@ -109,13 +107,13 @@ void main() {
 
     expect(
       renderedFontSize('Сформулируйте закон Ома'),
-      inInclusiveRange(24, 32),
+      inInclusiveRange(30, 38),
     );
 
     await tester.tap(find.byKey(const ValueKey<String>('review-card')));
     await tester.pumpAndSettle();
 
-    expect(renderedFontSize('Сила тока на участке'), inInclusiveRange(18, 22));
+    expect(renderedFontSize('Сила тока на участке'), inInclusiveRange(22, 28));
   });
 
   testWidgets('D3: раскрытая карточка показывает вопрос и ответ', (

@@ -372,9 +372,14 @@ class _MultipleChoiceScreenState extends ConsumerState<MultipleChoiceScreen> {
                         Center(
                           child: ConstrainedBox(
                             // Аудит v5 (V5-5): вопрос — в той же колонке, что и
-                            // варианты (≤720), иначе на 2K строка вопроса
-                            // растягивалась до ~90 знаков (1334 лог. px).
-                            constraints: const BoxConstraints(maxWidth: 720),
+                            // варианты; аудит v7 (G8): колонка растёт с экраном
+                            // (жёсткие 720 давали 42 % ширины на 2K), но остаётся
+                            // читаемой — 45–75 знаков (G7).
+                            constraints: BoxConstraints(
+                              maxWidth:
+                                  AppSizes.studyTextColumnBase *
+                                  AppAdaptive.factorForContext(context),
+                            ),
                             // Аудит v7 (G11): вопрос «Теста» — та же карточка,
                             // что в «Классике», а не строка на фоне.
                             child: StudyQuestionCard(
@@ -411,7 +416,11 @@ class _MultipleChoiceScreenState extends ConsumerState<MultipleChoiceScreen> {
                         Center(
                           child: ConstrainedBox(
                             // Строка варианта не растягивается на 2K: 45–75 знаков.
-                            constraints: const BoxConstraints(maxWidth: 720),
+                            constraints: BoxConstraints(
+                              maxWidth:
+                                  AppSizes.studyTextColumnBase *
+                                  AppAdaptive.factorForContext(context),
+                            ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: <Widget>[

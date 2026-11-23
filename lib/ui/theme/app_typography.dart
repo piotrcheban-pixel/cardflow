@@ -37,13 +37,13 @@ abstract final class AppTypography {
   ];
 
   /// Кегль вопроса карточки сессии (лицевая сторона), базовый уровень.
-  static const double reviewQuestionSize = 30;
+  static const double reviewQuestionSize = 32;
 
   /// Кегль ответа карточки сессии (обратная сторона), базовый уровень.
   ///
   /// Аудит v4 (V4): ответ — главный текст оборота, он не может быть мельче
   /// повторённого вопроса. На 2K адаптивный множитель поднимает его до ~27.
-  static const double reviewAnswerSize = 22;
+  static const double reviewAnswerSize = 24;
 
   /// Кегль повторённого вопроса на обороте карточки.
   static const double reviewQuestionEchoSize = 16;

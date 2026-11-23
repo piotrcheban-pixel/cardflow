@@ -309,7 +309,12 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                       shake: mismatch,
                       child: AnimatedOpacity(
                         opacity: matched ? 0 : 1,
-                        duration: AppDurations.medium,
+                        // Аудит v7 (G9): длительность из общей шкалы и с учётом
+                        // reduced motion.
+                        duration: AppMotion.duration(
+                          context,
+                          AppDurations.medium,
+                        ),
                         child: IgnorePointer(
                           ignoring: matched,
                           child: FilledButton(

@@ -155,6 +155,9 @@ class _ReviewCardViewState extends State<ReviewCardView>
             ? AppSpacing.sm
             : (AppSpacing.xl * factor).clamp(AppSpacing.xl, AppSpacing.huge);
         final double padH = narrow ? AppSpacing.lg : padV;
+        // На узком экране панель оценок занимает больше высоты (сетка 2×2) —
+        // сжимаем поля и приглушённый вопрос, чтобы ответ читался без прокрутки.
+        final double bodyPadV = narrow ? AppSpacing.md : padV;
         // Текстовая колонка — 45–75 знаков (G7): на 2K/4K строки не
         // растягиваются на всю ширину карточки.
         final double columnWidth = math.max(
@@ -191,6 +194,8 @@ class _ReviewCardViewState extends State<ReviewCardView>
                       answerSize: answerSize,
                       padH: padH,
                       padV: padV,
+                      bodyPadV: bodyPadV,
+                      narrow: narrow,
                       columnWidth: columnWidth,
                       columnInset: columnInset,
                     ),
@@ -201,6 +206,8 @@ class _ReviewCardViewState extends State<ReviewCardView>
                     questionSize: questionSize,
                     padH: padH,
                     padV: padV,
+                    bodyPadV: bodyPadV,
+                    narrow: narrow,
                     columnWidth: columnWidth,
                     columnInset: columnInset,
                   );
@@ -245,6 +252,8 @@ class _ReviewCardViewState extends State<ReviewCardView>
     required double questionSize,
     required double padH,
     required double padV,
+    required double bodyPadV,
+    required bool narrow,
     required double columnWidth,
     required double columnInset,
   }) {
@@ -261,7 +270,7 @@ class _ReviewCardViewState extends State<ReviewCardView>
         Expanded(
           child: _CardBody(
             scroll: _scroll,
-            padding: EdgeInsets.fromLTRB(padH, AppSpacing.md, padH, padV),
+            padding: EdgeInsets.fromLTRB(padH, AppSpacing.md, padH, bodyPadV),
             columnWidth: columnWidth,
             builder: (double availableHeight) => <Widget>[
               _content(
@@ -302,6 +311,8 @@ class _ReviewCardViewState extends State<ReviewCardView>
     required double answerSize,
     required double padH,
     required double padV,
+    required double bodyPadV,
+    required bool narrow,
     required double columnWidth,
     required double columnInset,
   }) {
@@ -311,7 +322,8 @@ class _ReviewCardViewState extends State<ReviewCardView>
     // Повтор вопроса — второстепенный контекст (приглушённый), ответ — самый
     // крупный текст карточки (аудит v4, V4).
     final TextStyle mutedQuestion = theme.textTheme.titleSmall!.copyWith(
-      fontSize: math.max(18, questionSize * 0.48),
+      // На узком экране повтор вопроса меньше: место нужно ответу и оценкам.
+      fontSize: narrow ? 17 : math.max(18, questionSize * 0.48),
       height: 1.4,
       fontWeight: FontWeight.w500,
       color: scheme.onSurfaceVariant,
@@ -334,7 +346,7 @@ class _ReviewCardViewState extends State<ReviewCardView>
         Expanded(
           child: _CardBody(
             scroll: _scroll,
-            padding: EdgeInsets.fromLTRB(padH, AppSpacing.xs, padH, padV),
+            padding: EdgeInsets.fromLTRB(padH, AppSpacing.xs, padH, bodyPadV),
             columnWidth: columnWidth,
             builder: (double availableHeight) => <Widget>[
               _content(
