@@ -262,13 +262,6 @@ class _TypingScreenState extends ConsumerState<TypingScreen> {
     if (confirmed && mounted && context.canPop()) context.pop();
   }
 
-  /// Выход в главное меню (N3): не больше двух действий.
-  Future<void> _confirmHome() async {
-    final bool nothingToLose =
-        (_controller?.state.isCompleted ?? true) ||
-        (_controller?.state.total ?? 0) == 0;
-    await confirmLeaveToMainMenu(context, nothingToLose: nothingToLose);
-  }
 
   /// Повтор чтения медиа карточки после ошибки изображения (7.19).
   Future<void> _retryMedia(Card card) async {
@@ -298,7 +291,6 @@ class _TypingScreenState extends ConsumerState<TypingScreen> {
           onUndo: _undo,
           whyExcerpt: excerpt,
           onClose: _confirmExit,
-          onHome: _confirmHome,
         ),
         body: _buildBody(context, l10n, state),
       ),

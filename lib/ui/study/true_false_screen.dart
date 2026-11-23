@@ -215,13 +215,6 @@ class _TrueFalseScreenState extends ConsumerState<TrueFalseScreen> {
     if (confirmed && mounted && context.canPop()) context.pop();
   }
 
-  /// Выход в главное меню (N3): не больше двух действий.
-  Future<void> _confirmHome() async {
-    final bool nothingToLose =
-        (_controller?.state.isCompleted ?? true) ||
-        (_controller?.state.total ?? 0) == 0;
-    await confirmLeaveToMainMenu(context, nothingToLose: nothingToLose);
-  }
 
   void _onHorizontalDragEnd(DragEndDetails details) {
     final double velocity = details.primaryVelocity ?? 0;
@@ -257,7 +250,6 @@ class _TrueFalseScreenState extends ConsumerState<TrueFalseScreen> {
           onUndo: _undo,
           whyExcerpt: current?.sourceExcerpt,
           onClose: _confirmExit,
-          onHome: _confirmHome,
         ),
         body: _buildBody(context, l10n, state),
       ),
@@ -303,6 +295,7 @@ class _TrueFalseScreenState extends ConsumerState<TrueFalseScreen> {
     final Card card = _answeredCard ?? state.current!.card;
     final TrueFalseQuestion question = _questions[card.id]!;
     final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
     final bool? correct = _wasCorrect;
     final bool answered = correct != null;
     return Column(
@@ -339,10 +332,10 @@ class _TrueFalseScreenState extends ConsumerState<TrueFalseScreen> {
                   ),
                   const SizedBox(height: 16),
                   Container(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(AppSpacing.md),
                     decoration: BoxDecoration(
-                      color: theme.colorScheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(16),
+                      color: theme.colorScheme.surfaceContainerHigh,
+                      borderRadius: AppRadii.cardRadius,
                     ),
                     child: CardText(
                       key: const ValueKey<String>('tf-statement'),
@@ -351,7 +344,7 @@ class _TrueFalseScreenState extends ConsumerState<TrueFalseScreen> {
                       style: theme.textTheme.titleMedium,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: AppSpacing.xs),
                   Text(
                     l10n.trueFalseSwipeHint,
                     textAlign: TextAlign.center,
@@ -360,31 +353,55 @@ class _TrueFalseScreenState extends ConsumerState<TrueFalseScreen> {
                     ),
                   ),
                   if (answered) ...<Widget>[
-                    const SizedBox(height: 12),
+                    const SizedBox(height: AppSpacing.sm),
                     _TrueFalseFeedback(correct: correct, question: question),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: AppSpacing.sm),
                     FilledButton(
                       key: const ValueKey<String>('tf-next'),
                       onPressed: _next,
                       child: Text(l10n.trueFalseNext),
                     ),
                   ] else ...<Widget>[
-                    const SizedBox(height: 16),
+                    const SizedBox(height: AppSpacing.md),
+                    // Аудит v4 (V1): «Верно» и «Неверно» различаются цветом и
+                    // иконкой — одинаковые кнопки провоцировали ошибочный ответ.
                     Row(
                       children: <Widget>[
                         Expanded(
-                          child: FilledButton.tonalIcon(
+                          child: FilledButton.icon(
                             key: const ValueKey<String>('tf-true'),
                             onPressed: state.busy ? null : () => _answer(true),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: scheme.secondaryContainer,
+                              foregroundColor: scheme.onSecondaryContainer,
+                              minimumSize: Size.fromHeight(
+                                AppSizes.buttonHeightLarge *
+                                    AppAdaptive.factorForContext(context).clamp(
+                                      1.0,
+                                      1.3,
+                                    ),
+                              ),
+                            ),
                             icon: const Icon(Icons.check),
                             label: Text(l10n.trueFalseTrueAction),
                           ),
                         ),
-                        const SizedBox(width: 12),
+                        const SizedBox(width: AppSpacing.sm),
                         Expanded(
-                          child: FilledButton.tonalIcon(
+                          child: FilledButton.icon(
                             key: const ValueKey<String>('tf-false'),
                             onPressed: state.busy ? null : () => _answer(false),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: scheme.errorContainer,
+                              foregroundColor: scheme.onErrorContainer,
+                              minimumSize: Size.fromHeight(
+                                AppSizes.buttonHeightLarge *
+                                    AppAdaptive.factorForContext(context).clamp(
+                                      1.0,
+                                      1.3,
+                                    ),
+                              ),
+                            ),
                             icon: const Icon(Icons.close),
                             label: Text(l10n.trueFalseFalseAction),
                           ),

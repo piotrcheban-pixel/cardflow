@@ -10,9 +10,11 @@ import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/study/match_game.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/cards/content/card_text.dart';
+import 'package:cardflow/ui/motion.dart';
 import 'package:cardflow/ui/review/review_chrome.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
 
+import 'package:cardflow/ui/theme/app_tokens.dart';
 /// Игровой режим «Подбор пар» (7.16).
 ///
 /// Сетка из 6 пар: вопрос и ответ вперемешку. Совпавшая пара исчезает,
@@ -307,18 +309,37 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                       shake: mismatch,
                       child: AnimatedOpacity(
                         opacity: matched ? 0 : 1,
-                        duration: const Duration(milliseconds: 250),
+                        duration: AppDurations.medium,
                         child: IgnorePointer(
                           ignoring: matched,
-                          child: FilledButton.tonal(
+                          child: FilledButton(
                             onPressed: matched ? null : () => _select(index),
                             style: FilledButton.styleFrom(
-                              padding: const EdgeInsets.all(8),
+                              padding: const EdgeInsets.all(AppSpacing.xs),
                               backgroundColor: selected
                                   ? theme.colorScheme.primaryContainer
                                   : mismatch
                                   ? theme.colorScheme.errorContainer
-                                  : null,
+                                  : theme.colorScheme.surfaceContainerLow,
+                              foregroundColor: selected
+                                  ? theme.colorScheme.onPrimaryContainer
+                                  : mismatch
+                                  ? theme.colorScheme.onErrorContainer
+                                  : theme.colorScheme.onSurface,
+                              disabledBackgroundColor:
+                                  theme.colorScheme.surfaceContainerLow,
+                              disabledForegroundColor:
+                                  theme.colorScheme.onSurfaceVariant,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: AppRadii.inputRadius,
+                                side: BorderSide(
+                                  color: selected
+                                      ? theme.colorScheme.primary
+                                      : theme.colorScheme.outlineVariant,
+                                ),
+                              ),
+                              elevation: 0,
+                              textStyle: theme.textTheme.bodyLarge,
                             ),
                             child: CardText(
                               source: tile.text,
@@ -355,13 +376,14 @@ class _ShakeTileState extends State<_ShakeTile>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 450),
+    duration: AppDurations.base,
   );
 
   @override
   void didUpdateWidget(_ShakeTile oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.shake && !oldWidget.shake) {
+    // Reduced motion: без встряхивания — только цветовая вспышка.
+    if (widget.shake && !oldWidget.shake && !AppMotion.reduce(context)) {
       _controller.forward(from: 0);
     }
   }

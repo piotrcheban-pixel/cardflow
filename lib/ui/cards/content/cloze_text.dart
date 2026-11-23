@@ -1,7 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
 import 'package:cardflow/domain/cards/cloze_markup.dart';
-import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/cards/content/inline_latex_text.dart';
 
 /// Интерактивное раскрытие cloze-групп по одному номеру.
@@ -50,9 +49,14 @@ class _ClozeTextState extends State<ClozeText> {
   Widget build(BuildContext context) {
     final ClozeMarkup markup = ClozeMarkup.parse(widget.source);
     if (!markup.hasGaps) return Text(widget.source);
-    final AppLocalizations l10n = AppLocalizations.of(context);
+    final ThemeData theme = Theme.of(context);
+    // Сегменты копируются в изменяемый список: у пропуска «забирается»
+    // ведущая пунктуация следующего текста, поэтому «____,» рисуется одним
+    // неразрывным фрагментом.
+    final List<ClozeSegment> segments = markup.segments.toList();
     final spans = <InlineSpan>[];
-    for (final ClozeSegment segment in markup.segments) {
+    for (int index = 0; index < segments.length; index++) {
+      final ClozeSegment segment = segments[index];
       if (!segment.isGap) {
         spans.add(
           WidgetSpan(
@@ -65,16 +69,31 @@ class _ClozeTextState extends State<ClozeText> {
       }
       final int number = segment.number!;
       final bool show = widget.revealed || _revealedGroups.contains(number);
+      String trailing = '';
+      if (index + 1 < segments.length && !segments[index + 1].isGap) {
+        final String nextText = segments[index + 1].text ?? '';
+        final RegExpMatch? match = _leadingPunctuation.firstMatch(nextText);
+        if (match != null) {
+          trailing = match.group(1)!;
+          segments[index + 1] = ClozeSegment.text(
+            nextText.substring(trailing.length),
+          );
+        }
+      }
       final Widget child = show
           ? InlineLatexText(
-              source: segment.answer ?? '',
-              style: TextStyle(color: Theme.of(context).colorScheme.primary),
+              source: '${segment.answer ?? ''}$trailing',
+              style: TextStyle(color: theme.colorScheme.primary),
             )
           : Text(
-              l10n.clozeHiddenAnswer,
+              // Фиксированная ширина пропуска (7 неразрывных пробелов с
+              // подчёркиванием) — «—…» заменено на понятную линию.
+              '${'\u00A0' * 7}$trailing',
               style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                color: theme.colorScheme.onSurfaceVariant,
                 decoration: TextDecoration.underline,
+                decorationColor: theme.colorScheme.onSurfaceVariant,
+                decorationThickness: 1.5,
               ),
             );
       spans.add(
@@ -100,4 +119,7 @@ class _ClozeTextState extends State<ClozeText> {
       overflow: widget.overflow ?? TextOverflow.clip,
     );
   }
+
+  /// Ведущая пунктуация фрагмента после пропуска (вместе с пробелом перед ней).
+  static final RegExp _leadingPunctuation = RegExp(r'^(\s*[,.;:!?…)»]+)');
 }

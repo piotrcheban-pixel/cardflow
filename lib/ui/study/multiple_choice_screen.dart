@@ -14,6 +14,7 @@ import 'package:cardflow/domain/study/distractor_generator.dart';
 import 'package:cardflow/domain/study/study_mode.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/theme/app_tokens.dart';
+import 'package:cardflow/ui/theme/app_typography.dart';
 import 'package:cardflow/ui/cards/content/card_content_view.dart';
 import 'package:cardflow/ui/cards/content/card_text.dart';
 import 'package:cardflow/ui/decks/deck_actions.dart';
@@ -235,13 +236,6 @@ class _MultipleChoiceScreenState extends ConsumerState<MultipleChoiceScreen> {
     if (confirmed && mounted && context.canPop()) context.pop();
   }
 
-  /// Выход в главное меню (N3): не больше двух действий.
-  Future<void> _confirmHome() async {
-    final bool nothingToLose =
-        (_controller?.state.isCompleted ?? true) ||
-        (_controller?.state.total ?? 0) == 0;
-    await confirmLeaveToMainMenu(context, nothingToLose: nothingToLose);
-  }
 
   KeyEventResult _handleKey(FocusNode node, KeyEvent event) {
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
@@ -294,7 +288,6 @@ class _MultipleChoiceScreenState extends ConsumerState<MultipleChoiceScreen> {
           onUndo: _undo,
           whyExcerpt: excerpt,
           onClose: _confirmExit,
-          onHome: _confirmHome,
         ),
         body: Focus(
           autofocus: true,
@@ -352,45 +345,74 @@ class _MultipleChoiceScreenState extends ConsumerState<MultipleChoiceScreen> {
           ),
         ),
         Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
-            child: Center(
-              child: CardContentView(
-                key: ValueKey<String>('mc-question-${card.id}'),
-                card: card,
-                side: card.front,
-                revealed: false,
-                showAllFormulas: true,
-                faceKey: const ValueKey<String>('mc-question-face'),
-                mediaBytes: _media.bytes,
-                mediaMetadata: _media.metadata,
-                onRetryMedia: () => _retryMedia(card),
-              ),
-            ),
+          // Аудит v4 (V6): вопрос — в центре свободной области, а не строкой
+          // у верхней кромки; варианты — вторичные полосы под ним.
+          child: LayoutBuilder(
+            builder: (BuildContext context, BoxConstraints constraints) {
+              return SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minHeight: (constraints.maxHeight - 32).clamp(
+                      0,
+                      double.infinity,
+                    ),
+                  ),
+                  child: Center(
+                    child: CardContentView(
+                      key: ValueKey<String>('mc-question-${card.id}'),
+                      card: card,
+                      side: card.front,
+                      revealed: false,
+                      showAllFormulas: true,
+                      faceKey: const ValueKey<String>('mc-question-face'),
+                      questionStyle: Theme.of(context).textTheme.headlineMedium
+                          ?.copyWith(
+                            fontSize:
+                                AppTypography.reviewQuestionSize *
+                                AppAdaptive.factorForContext(context) *
+                                0.85,
+                            height: 1.35,
+                            fontWeight: FontWeight.w600,
+                          ),
+                      mediaBytes: _media.bytes,
+                      mediaMetadata: _media.metadata,
+                      onRetryMedia: () => _retryMedia(card),
+                    ),
+                  ),
+                ),
+              );
+            },
           ),
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-          child: Column(
-            children: <Widget>[
-              for (var index = 0; index < set.options.length; index++)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: _SpringOptionButton(
-                    key: ValueKey<String>('study-option-$index'),
-                    label: set.options[index],
-                    semanticLabel: l10n.testOptionLabel(
-                      index + 1,
-                      plainTextOfLatex(set.options[index]),
+          child: Center(
+            child: ConstrainedBox(
+              // Строка варианта не растягивается на 2K: 45–75 символов.
+              constraints: const BoxConstraints(maxWidth: 720),
+              child: Column(
+                children: <Widget>[
+                  for (var index = 0; index < set.options.length; index++)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: _SpringOptionButton(
+                        key: ValueKey<String>('study-option-$index'),
+                        label: set.options[index],
+                        semanticLabel: l10n.testOptionLabel(
+                          index + 1,
+                          plainTextOfLatex(set.options[index]),
+                        ),
+                        selected: answered?.selectedIndex == index,
+                        state: _optionState(answered, set, index),
+                        onPressed: answered == null && !state.busy
+                            ? () => _select(index)
+                            : null,
+                      ),
                     ),
-                    selected: answered?.selectedIndex == index,
-                    state: _optionState(answered, set, index),
-                    onPressed: answered == null && !state.busy
-                        ? () => _select(index)
-                        : null,
-                  ),
-                ),
-            ],
+                ],
+              ),
+            ),
           ),
         ),
         if (answered != null)
@@ -481,6 +503,9 @@ class _SpringOptionButtonState extends State<_SpringOptionButton>
       ),
       _OptionVisual.neutral => (null, null),
     };
+    final bool neutral = widget.state == _OptionVisual.neutral;
+    final Color fill = background ?? scheme.surfaceContainerLow;
+    final Color text = foreground ?? scheme.onSurface;
     return Semantics(
       button: true,
       selected: widget.selected,
@@ -490,14 +515,34 @@ class _SpringOptionButtonState extends State<_SpringOptionButton>
           scale: _scale,
           child: SizedBox(
             width: double.infinity,
-            child: FilledButton.tonal(
+            // Аудит v4 (V1): нейтральный вариант — поверхность с рамкой, а не
+            // сплошная primary/зелёная заливка: правильный/неправильный ответ
+            // различаются цветом только после ответа.
+            child: FilledButton(
               onPressed: widget.onPressed == null ? null : _press,
               style: FilledButton.styleFrom(
-                backgroundColor: background,
-                foregroundColor: foreground,
-                minimumSize: const Size.fromHeight(52),
+                backgroundColor: fill,
+                foregroundColor: text,
+                disabledBackgroundColor: fill,
+                disabledForegroundColor: text,
+                minimumSize: Size.fromHeight(
+                  AppSizes.buttonHeightLarge *
+                      AppAdaptive.factorForContext(context).clamp(1.0, 1.3),
+                ),
                 alignment: Alignment.centerLeft,
-                padding: const EdgeInsets.symmetric(horizontal: 20),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.lg,
+                  vertical: AppSpacing.xs,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: AppRadii.inputRadius,
+                  side: BorderSide(
+                    color: neutral ? scheme.outlineVariant : text,
+                    width: AppSizes.borderWidth,
+                  ),
+                ),
+                elevation: 0,
+                textStyle: theme.textTheme.bodyLarge,
               ),
               child: CardText(
                 source: widget.label,

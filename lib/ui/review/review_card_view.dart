@@ -7,10 +7,11 @@ import 'package:cardflow/domain/cards/card.dart' as domain;
 import 'package:cardflow/domain/cards/media_metadata.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/cards/content/card_content_view.dart';
+import 'package:cardflow/ui/motion.dart';
 import 'package:cardflow/ui/theme/app_tokens.dart';
 import 'package:cardflow/ui/theme/app_typography.dart';
 
-/// Длительность переворота карточки (SPEC A7.2, аудит D1: 250–350 мс).
+/// Длительность переворота карточки (SPEC A7.2, аудит v4: 280–350 мс).
 const Duration kReviewCardFlipDuration = Duration(milliseconds: 300);
 
 /// Карточка классического режима и тренировки (SPEC A7.2, аудит D1–D3).
@@ -86,6 +87,14 @@ class _ReviewCardViewState extends State<ReviewCardView>
     value: widget.revealed ? 1 : 0,
   );
 
+  /// Кривая переворота: `easeInOutCubic` вместо линейного вращения
+  /// (аудит v4, A1). Смена лица происходит ровно на 50 %.
+  late final Animation<double> _curved = CurvedAnimation(
+    parent: _controller,
+    curve: Curves.easeInOutCubic,
+    reverseCurve: Curves.easeInOutCubic,
+  );
+
   ScrollController? _internalScroll;
 
   ScrollController get _scroll =>
@@ -126,11 +135,27 @@ class _ReviewCardViewState extends State<ReviewCardView>
         // получает 130–220 лог. px — уменьшаем кегль и отступы, чтобы вопрос
         // читался целиком, а не обрезался краем.
         final bool tight = height < 320;
+        // Аудит v4 (V4/V7/V8): кегли — из типографической шкалы с адаптивным
+        // множителем экрана (2K/4K), а не константы: на 2K вопрос ≈32–37,
+        // ответ ≈27–30 логических px.
+        final double factor = AppAdaptive.factorForContext(context);
         final double questionSize = tight
             ? (narrow ? 20 : 22)
-            : (narrow ? 24 : 28);
-        final double answerSize = tight ? 16 : (narrow ? 18 : 19);
+            : (narrow ? 24 : AppTypography.reviewQuestionSize * factor);
+        final double answerSize = tight
+            ? 16
+            : (narrow ? 20 : AppTypography.reviewAnswerSize * factor);
+        // Аудит v4 (V23): иллюстрация — значимая часть ответа: до 45 % высоты
+        // и до 72 % ширины карточки, а не 22 % ширины, как было.
         final double imageMaxHeight = math.max(120, height * 0.45);
+        final double imageMaxWidth = math.max(220, width * 0.72);
+        final Duration flipDuration = AppMotion.duration(
+          context,
+          kReviewCardFlipDuration,
+        );
+        if (_controller.duration != flipDuration) {
+          _controller.duration = flipDuration;
+        }
         final EdgeInsets padding = EdgeInsets.symmetric(
           horizontal: tight
               ? AppSpacing.md
@@ -140,9 +165,9 @@ class _ReviewCardViewState extends State<ReviewCardView>
               : (narrow ? AppSpacing.lg : AppSpacing.xl),
         );
         return AnimatedBuilder(
-          animation: _controller,
+          animation: _curved,
           builder: (BuildContext context, Widget? child) {
-            final double value = _controller.value.clamp(0.0, 1.0);
+            final double value = _curved.value.clamp(0.0, 1.0);
             final bool showBack = value >= 0.5;
             final Matrix4 transform = Matrix4.identity()
               ..setEntry(3, 2, 0.0015)
@@ -157,6 +182,7 @@ class _ReviewCardViewState extends State<ReviewCardView>
                       questionSize: questionSize,
                       answerSize: answerSize,
                       imageMaxHeight: imageMaxHeight,
+                      imageMaxWidth: imageMaxWidth,
                       padding: padding,
                     ),
                   )
@@ -165,6 +191,7 @@ class _ReviewCardViewState extends State<ReviewCardView>
                     theme,
                     questionSize: questionSize,
                     imageMaxHeight: imageMaxHeight,
+                    imageMaxWidth: imageMaxWidth,
                     padding: padding,
                   );
             return GestureDetector(
@@ -207,6 +234,7 @@ class _ReviewCardViewState extends State<ReviewCardView>
     ThemeData theme, {
     required double questionSize,
     required double imageMaxHeight,
+    required double imageMaxWidth,
     required EdgeInsets padding,
   }) {
     return _ScrollableCardBody(
@@ -223,12 +251,13 @@ class _ReviewCardViewState extends State<ReviewCardView>
           revealed: false,
           style: theme.textTheme.headlineMedium?.copyWith(
             fontSize: questionSize,
-            height: 1.4,
+            height: 1.35,
             fontWeight: FontWeight.w600,
             letterSpacing: -0.4,
           ),
           media: true,
           imageMaxHeight: imageMaxHeight,
+          imageMaxWidth: imageMaxWidth,
         ),
       ],
     );
@@ -241,19 +270,23 @@ class _ReviewCardViewState extends State<ReviewCardView>
     required double questionSize,
     required double answerSize,
     required double imageMaxHeight,
+    required double imageMaxWidth,
     required EdgeInsets padding,
   }) {
     final AppLocalizations l10n = AppLocalizations.of(context);
     final ColorScheme scheme = theme.colorScheme;
-    final TextStyle mutedQuestion = theme.textTheme.titleLarge!.copyWith(
-      fontSize: math.max(18, questionSize * 0.72),
-      height: 1.45,
+    // Аудит v4 (V4): повтор вопроса — второстепенный контекст (18/500,
+    // приглушённый), ответ — самый крупный текст экрана (27+ с адаптивом).
+    final TextStyle mutedQuestion = theme.textTheme.titleSmall!.copyWith(
+      fontSize: math.max(18, questionSize * 0.48),
+      height: 1.4,
       fontWeight: FontWeight.w500,
       color: scheme.onSurfaceVariant,
     );
     final TextStyle answerStyle = theme.textTheme.bodyLarge!.copyWith(
       fontSize: answerSize,
-      height: 1.65,
+      height: 1.55,
+      fontWeight: FontWeight.w400,
       color: scheme.onSurface,
     );
     final bool occlusion = widget.card?.occlusionJson != null;
@@ -273,7 +306,8 @@ class _ReviewCardViewState extends State<ReviewCardView>
           // Холст occlusion-карточки рисуется на стороне вопроса с уже
           // раскрытыми масками (revealed: true).
           media: true,
-          imageMaxHeight: imageMaxHeight * 0.55,
+          imageMaxHeight: imageMaxHeight * 0.5,
+          imageMaxWidth: imageMaxWidth * 0.6,
         ),
         Padding(
           padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
@@ -291,7 +325,8 @@ class _ReviewCardViewState extends State<ReviewCardView>
           // для cloze вопрос показан выше, повторять его в ответе не нужно.
           media: !occlusion,
           includeClozeFront: false,
-          imageMaxHeight: imageMaxHeight * 0.55,
+          imageMaxHeight: imageMaxHeight * 0.9,
+          imageMaxWidth: imageMaxWidth,
         ),
       ],
     );
@@ -305,6 +340,7 @@ class _ReviewCardViewState extends State<ReviewCardView>
     required TextStyle? style,
     required bool media,
     required double imageMaxHeight,
+    required double imageMaxWidth,
     bool includeClozeFront = true,
   }) {
     final domain.Card? card = widget.card;
@@ -329,7 +365,7 @@ class _ReviewCardViewState extends State<ReviewCardView>
       showMedia: media,
       includeClozeFront: includeClozeFront,
       imageMaxHeight: imageMaxHeight,
-      imageMaxWidth: AppSizes.studyCardMaxWidth,
+      imageMaxWidth: imageMaxWidth,
     );
   }
 }

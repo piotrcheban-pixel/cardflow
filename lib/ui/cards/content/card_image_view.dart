@@ -5,6 +5,8 @@ import 'package:material_ui/material_ui.dart';
 import 'package:cardflow/domain/cards/media_metadata.dart';
 import 'package:cardflow/domain/generation/card_image_kind.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
+import 'package:cardflow/ui/motion.dart';
+import 'package:cardflow/ui/theme/app_tokens.dart';
 
 /// Угол скругления картинки карточки: токен формы M3 «large» (16).
 ///
@@ -225,98 +227,154 @@ Future<void> showCardImageFullscreen(
   MediaMetadata? metadata,
 }) {
   final AppLocalizations l10n = AppLocalizations.of(context);
+  final ThemeData theme = Theme.of(context);
+  final ColorScheme scheme = theme.colorScheme;
   final MediaMetadata? meta = metadata;
   final String? attribution = meta?.attributionLine;
   final String? sourceUrl = meta?.sourceUrl;
-  return showDialog<void>(
+  // Аудит v4 (V26/A18): фон — роли темы вместо литерального чёрного, кнопка
+  // закрытия — контрастная (surface/onSurface вместо зелёной 1,92:1),
+  // переход — fade + scale 0,98 (180 мс, учитывает reduced motion).
+  final Duration duration = AppMotion.reduce(context)
+      ? Duration.zero
+      : AppDurations.base;
+  return showGeneralDialog<void>(
     context: context,
-    barrierColor: Colors.black87,
-    builder: (BuildContext dialogContext) => Dialog(
-      insetPadding: EdgeInsets.zero,
-      backgroundColor: Colors.black,
-      child: SafeArea(
-        child: Stack(
-          children: <Widget>[
-            Positioned.fill(
-              child: InteractiveViewer(
-                key: const ValueKey<String>('card-image-fullscreen'),
-                minScale: 1,
-                maxScale: 5,
-                child: Center(
-                  child: Image.memory(
-                    bytes,
-                    fit: BoxFit.contain,
-                    errorBuilder:
-                        (
-                          BuildContext context,
-                          Object error,
-                          StackTrace? stack,
-                        ) => Text(
-                          l10n.cardImageLoadFailed,
-                          style: const TextStyle(color: Colors.white),
-                        ),
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              top: 8,
-              right: 8,
-              child: IconButton.filledTonal(
-                key: const ValueKey<String>('card-image-fullscreen-close'),
-                tooltip: l10n.cardImageFullscreenClose,
-                onPressed: () => Navigator.of(dialogContext).pop(),
-                icon: const Icon(Icons.close),
-              ),
-            ),
-            if (attribution != null || sourceUrl != null)
-              Positioned(
-                left: 16,
-                right: 16,
-                bottom: 16,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: Colors.black54,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        Text(
-                          l10n.cardImageFullscreenTitle,
-                          style: Theme.of(dialogContext).textTheme.labelLarge
-                              ?.copyWith(color: Colors.white70),
-                        ),
-                        if (attribution != null) ...<Widget>[
-                          const SizedBox(height: 4),
-                          Text(
-                            l10n.cardImageAttribution(attribution),
-                            style: const TextStyle(color: Colors.white),
+    barrierDismissible: true,
+    barrierLabel: l10n.cardImageFullscreenClose,
+    barrierColor: scheme.inverseSurface.withValues(alpha: 0.94),
+    transitionDuration: duration,
+    pageBuilder: (BuildContext dialogContext, _, _) => const SizedBox.shrink(),
+    transitionBuilder:
+        (
+          BuildContext dialogContext,
+          Animation<double> animation,
+          Animation<double> secondaryAnimation,
+          Widget child,
+        ) {
+          final CurvedAnimation curved = CurvedAnimation(
+            parent: animation,
+            curve: AppMotion.enter,
+            reverseCurve: AppMotion.enter,
+          );
+          return FadeTransition(
+            opacity: curved,
+            child: ScaleTransition(
+              scale: Tween<double>(begin: 0.98, end: 1).animate(curved),
+              child: Dialog(
+                insetPadding: EdgeInsets.zero,
+                backgroundColor: scheme.inverseSurface,
+                child: SafeArea(
+                  child: Stack(
+                    children: <Widget>[
+                      Positioned.fill(
+                        child: InteractiveViewer(
+                          key: const ValueKey<String>(
+                            'card-image-fullscreen',
                           ),
-                        ],
-                        if (sourceUrl != null) ...<Widget>[
-                          const SizedBox(height: 2),
-                          Text(
-                            l10n.cardImageSourceUrl(sourceUrl),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Colors.white54,
-                              fontSize: 12,
+                          minScale: 1,
+                          maxScale: 5,
+                          child: Center(
+                            child: Image.memory(
+                              bytes,
+                              fit: BoxFit.contain,
+                              errorBuilder:
+                                  (
+                                    BuildContext context,
+                                    Object error,
+                                    StackTrace? stack,
+                                  ) => Text(
+                                    l10n.cardImageLoadFailed,
+                                    style: theme.textTheme.bodyLarge?.copyWith(
+                                      color: scheme.onInverseSurface,
+                                    ),
+                                  ),
                             ),
                           ),
-                        ],
-                      ],
-                    ),
+                        ),
+                      ),
+                      Positioned(
+                        top: AppSpacing.xs,
+                        right: AppSpacing.xs,
+                        child: IconButton.filledTonal(
+                          key: const ValueKey<String>(
+                            'card-image-fullscreen-close',
+                          ),
+                          tooltip: l10n.cardImageFullscreenClose,
+                          style: IconButton.styleFrom(
+                            backgroundColor: scheme.surface,
+                            foregroundColor: scheme.onSurface,
+                            minimumSize: const Size(
+                              AppSizes.minTouchTarget,
+                              AppSizes.minTouchTarget,
+                            ),
+                          ),
+                          onPressed: () => Navigator.of(dialogContext).pop(),
+                          icon: const Icon(Icons.close),
+                        ),
+                      ),
+                      if (attribution != null || sourceUrl != null)
+                        Positioned(
+                          left: AppSpacing.md,
+                          right: AppSpacing.md,
+                          bottom: AppSpacing.md,
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: scheme.inverseSurface.withValues(
+                                alpha: 0.88,
+                              ),
+                              borderRadius: BorderRadius.circular(
+                                AppRadii.input,
+                              ),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(AppSpacing.sm),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: <Widget>[
+                                  Text(
+                                    l10n.cardImageFullscreenTitle,
+                                    style: theme.textTheme.labelLarge?.copyWith(
+                                      color: scheme.onInverseSurface.withValues(
+                                        alpha: 0.8,
+                                      ),
+                                    ),
+                                  ),
+                                  if (attribution != null) ...<Widget>[
+                                    const SizedBox(height: AppSpacing.xxs),
+                                    Text(
+                                      l10n.cardImageAttribution(attribution),
+                                      style: theme.textTheme.bodyMedium
+                                          ?.copyWith(
+                                            color: scheme.onInverseSurface,
+                                          ),
+                                    ),
+                                  ],
+                                  if (sourceUrl != null) ...<Widget>[
+                                    const SizedBox(height: AppSpacing.xxs),
+                                    Text(
+                                      l10n.cardImageSourceUrl(sourceUrl),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: theme.textTheme.bodySmall
+                                          ?.copyWith(
+                                            color: scheme.onInverseSurface
+                                                .withValues(alpha: 0.75),
+                                          ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
               ),
-          ],
-        ),
-      ),
-    ),
+            ),
+          );
+        },
   );
 }
