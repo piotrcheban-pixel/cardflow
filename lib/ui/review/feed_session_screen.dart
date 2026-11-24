@@ -577,6 +577,17 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
                   spring: settings.motion == MotionPreference.standard
                       ? AppMotion.standardSpring()
                       : null,
+                  // V1/V3: полоса оценок — внутри карточки, как в «Классике»;
+                  // отдельного блока под карточкой больше нет.
+                  answerFooter: item.revealed
+                      ? ReviewToolbar(
+                          key: const ValueKey<String>('feed-toolbar'),
+                          preview: null,
+                          enabled: !state.busy && index == state.index,
+                          compact: compactHeight,
+                          onRating: (Rating rating) => unawaited(_rate(rating)),
+                        )
+                      : null,
                   onTap: _toggleReveal,
                   onRate: (Rating rating) => unawaited(_rate(rating)),
                 ),
@@ -589,39 +600,6 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
             message: sessionNotice!,
             onDismiss: dismissSessionNotice,
             dismissTooltip: l10n.sessionNoticeDismiss,
-          ),
-        // Подсказка о свайпах теперь одна и внутри карточки (feed_card_view.dart,
-        // аудит v10 G5/G8): снаружи её нет — ни второй копии, ни лишней высоты.
-        // G1: до раскрытия ответа панели оценок нет в дереве — в ленте она тоже
-        // не «серая», а отсутствует; остаётся только видимая карточка и свайпы.
-        // F04: после раскрытия панель выровнена по карточке и живёт в своём
-        // контейнере с полями — кнопки не касаются кромок окна.
-        if (state.current?.revealed ?? false)
-          Center(
-            child: SizedBox(
-              width: toolbarWidth,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
-                child: Container(
-                  padding: const EdgeInsets.all(AppSpacing.sm),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surfaceContainerLow,
-                    borderRadius: AppRadii.cardRadius,
-                    border: Border.all(
-                      color: Theme.of(context).colorScheme.outlineVariant,
-                      width: AppSizes.borderWidth,
-                    ),
-                  ),
-                  child: ReviewToolbar(
-                    key: const ValueKey<String>('feed-toolbar'),
-                    preview: null,
-                    enabled: !state.busy,
-                    compact: compactHeight,
-                    onRating: (Rating rating) => unawaited(_rate(rating)),
-                  ),
-                ),
-              ),
-            ),
           ),
         // Совсем низкое окно: нижняя панель ленты отнимает всю высоту у
         // карточки (аудит v9, G10 — карточка схлопывалась в 0).

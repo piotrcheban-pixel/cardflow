@@ -100,7 +100,10 @@ void main() {
     );
   });
 
-  testWidgets('D1: вопрос 30–38 px, ответ 22–28 px', (
+  // F01/V3: крупная типографика карточки — вопрос 46,4 и ответ 31,2 на
+  // FullHD (32×1,45 и 24×1,3); прежние «30–38/22–28» были нормой для мелкой
+  // карточки-полоски.
+  testWidgets('D1: вопрос 44–50 px, ответ 28–34 px', (
     WidgetTester tester,
   ) async {
     await pumpAt(tester, const Size(1280, 720));
@@ -118,13 +121,13 @@ void main() {
 
     expect(
       renderedFontSize('Сформулируйте закон Ома'),
-      inInclusiveRange(30, 38),
+      inInclusiveRange(44, 50),
     );
 
     await tester.tap(find.byKey(const ValueKey<String>('review-card')));
     await tester.pumpAndSettle();
 
-    expect(renderedFontSize('Сила тока на участке'), inInclusiveRange(22, 28));
+    expect(renderedFontSize('Сила тока на участке'), inInclusiveRange(28, 34));
   });
 
   testWidgets('D3: раскрытая карточка показывает вопрос и ответ', (

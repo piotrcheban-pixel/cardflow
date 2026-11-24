@@ -366,10 +366,13 @@ class AppStatusChip extends StatelessWidget {
       ),
       AppStatusTone.danger => (scheme.errorContainer, scheme.onErrorContainer),
     };
+    // F16/V6: чип-статус растёт вместе с типографикой (12→17 на 4K).
+    final double control = AppAdaptive.factorForContext(context)
+        .clamp(1.0, 1.45);
     return Container(
       padding: EdgeInsets.symmetric(
-        horizontal: dense ? AppSpacing.xs : AppSpacing.xs + 2,
-        vertical: dense ? 1 : 3,
+        horizontal: (dense ? AppSpacing.xs : AppSpacing.xs + 2) * control,
+        vertical: (dense ? 1 : 3) * control,
       ),
       decoration: BoxDecoration(
         color: background,
@@ -379,7 +382,7 @@ class AppStatusChip extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
           if (icon != null) ...<Widget>[
-            Icon(icon, size: dense ? 12 : 14, color: foreground),
+            Icon(icon, size: (dense ? 12 : 14) * control, color: foreground),
             const SizedBox(width: 4),
           ],
           Flexible(

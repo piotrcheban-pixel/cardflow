@@ -10,6 +10,7 @@ import 'package:cardflow/ui/cards/content/card_image_view.dart';
 import 'package:cardflow/ui/cards/content/cloze_text.dart';
 import 'package:cardflow/ui/cards/content/latex_text.dart';
 import 'package:cardflow/ui/cards/content/occlusion_image_view.dart';
+import 'package:cardflow/ui/theme/app_tokens.dart';
 
 /// Единый рендер карточки для классики и ленты (ADR-017).
 ///
@@ -38,6 +39,7 @@ class CardContentView extends StatelessWidget {
     this.includeClozeFront = true,
     this.imageMaxHeight = kCardImageMaxHeight,
     this.imageMaxWidth = kCardImageMaxWidth,
+    this.sideBySide = false,
     super.key,
   });
 
@@ -81,6 +83,13 @@ class CardContentView extends StatelessWidget {
   /// Максимальная ширина изображения стороны.
   final double imageMaxWidth;
 
+  /// На широкой карточке изображение и текст стоят рядом (F08/V7).
+  ///
+  /// На 2K/FullHD текстовая колонка занимает 5 частей, изображение — 4; так
+  /// картинка получает полную высоту контента, не срезается и занимает
+  /// ≥35 % контентной площади, а строки остаются в 45–75 знаках.
+  final bool sideBySide;
+
   /// Сторона вопроса (лицевая): `side` — front или неизвестная строка.
   bool get _isQuestionSide => side != card.back || side == card.front;
 
@@ -105,6 +114,7 @@ class CardContentView extends StatelessWidget {
     final String? occlusionJson = card.occlusionJson;
 
     final List<Widget> content = <Widget>[];
+    final List<Widget> mediaContent = <Widget>[];
     // Occlusion-иллюстрация — общий холст обеих сторон: маски управляются
     // `revealed`, а не выбором стороны (иначе переворот терял бы маски).
     if (occlusionJson != null) {
@@ -114,7 +124,7 @@ class CardContentView extends StatelessWidget {
             : card.questionMediaIds.first;
         final Uint8List? image = imageId == null ? null : mediaBytes[imageId];
         if (image == null) {
-          content.add(
+          mediaContent.add(
             _ImageUnavailable(
               imageKey: imageId == null
                   ? const ValueKey<String>('occlusion-image-unavailable')
@@ -127,7 +137,7 @@ class CardContentView extends StatelessWidget {
             ),
           );
         } else {
-          content.add(
+          mediaContent.add(
             OcclusionImageView(
               bytes: image,
               occlusionJson: occlusionJson,
@@ -135,10 +145,9 @@ class CardContentView extends StatelessWidget {
             ),
           );
         }
-        content.add(const SizedBox(height: 12));
       }
     } else if (showMedia) {
-      content.addAll(_buildMedia(context));
+      mediaContent.addAll(_buildMedia(context));
     }
 
     final String text = _displayText();
@@ -170,10 +179,48 @@ class CardContentView extends StatelessWidget {
     if (content.isEmpty) {
       content.add(SizedBox(key: faceKey));
     }
+    // F08/V7: на широкой карточке с изображением — «текст + картинка» рядом.
+    // Изображение получает полную высоту тела карточки (minHeight), поэтому
+    // не срезается и занимает заметную долю контентной площади; текст — в
+    // читаемой колонке 5:4.
+    if (sideBySide &&
+        mediaContent.isNotEmpty &&
+        content.isNotEmpty &&
+        occlusionJson == null) {
+      return ConstrainedBox(
+        constraints: BoxConstraints(
+          minHeight: imageMaxHeight.isFinite && imageMaxHeight > 0
+              ? imageMaxHeight
+              : 0,
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: <Widget>[
+            Expanded(
+              flex: 4,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: content,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.lg),
+            Expanded(
+              flex: 5,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: mediaContent,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.center,
-      children: content,
+      children: <Widget>[...mediaContent, ...content],
     );
   }
 

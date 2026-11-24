@@ -68,7 +68,16 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen>
   ReviewSessionEngine? _engine;
 
   /// Прокрутка содержимого карточки клавиатурой (аудит v2, D1).
-  final ScrollController _cardScroll = ScrollController();
+  final Map<String, ScrollController> _cardScrolls =
+      <String, ScrollController>{};
+
+  /// Контроллер прокрутки конкретной карточки.
+  ///
+  /// У каждой карточки свой контроллер: `AnimatedSwitcher` держит в дереве две
+  /// карточки во время перехода, и общий контроллер давал два ScrollPosition
+  /// при `Scrollbar.thumbVisibility` (F27).
+  ScrollController _scrollFor(String cardId) =>
+      _cardScrolls.putIfAbsent(cardId, ScrollController.new);
   Timer? _budgetTimer;
   bool _timeExpired = false;
   bool _planMissing = false;
@@ -96,7 +105,9 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen>
     _budgetTimer?.cancel();
     _engine?.removeListener(_onEngineChanged);
     _engine?.dispose();
-    _cardScroll.dispose();
+    for (final ScrollController scroll in _cardScrolls.values) {
+      scroll.dispose();
+    }
     super.dispose();
   }
 
@@ -276,7 +287,7 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen>
       onReveal: _reveal,
       onRate: (Rating rating) => unawaited(_rate(rating)),
       onUndo: () => unawaited(_undo()),
-      scroll: _cardScroll,
+      scroll: state.current == null ? null : _scrollFor(state.current!.card.id),
     );
   }
 
@@ -470,7 +481,7 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen>
                     },
                     child: ReviewCardView(
                       key: ValueKey<String>('card-${state.current!.card.id}'),
-                      scrollController: _cardScroll,
+                      scrollController: _scrollFor(state.current!.card.id),
                       front: state.current!.card.front,
                       back: state.current!.card.back,
                       card: state.current!.card,

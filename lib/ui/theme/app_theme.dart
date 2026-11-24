@@ -309,9 +309,11 @@ abstract final class AppTheme {
         ),
         // F16: визуальная высота чипа — не 32, а ≥38 базовых (44 по цели):
         // 10+10 полей + строка 19–22. Текст и контрол растут вместе.
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.sm + 2,
-          vertical: AppSpacing.xs + 2,
+        padding: EdgeInsets.symmetric(
+          // F16/V6: чипы растут вместе с типографикой (2K ×1,24, 4K ×1,45):
+          // визуальная высота 38–46, а не постоянные 37.
+          horizontal: (AppSpacing.sm + 2) * control,
+          vertical: (AppSpacing.xs + 2) * control,
         ),
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.all(Radius.circular(AppRadii.control)),
@@ -427,7 +429,7 @@ abstract final class AppTheme {
             return resolved.surfaceContainerLow;
           }),
           side: WidgetStatePropertyAll<BorderSide>(
-            BorderSide(color: resolved.outlineVariant),
+            BorderSide(color: resolved.outline),
           ),
           shape: const WidgetStatePropertyAll<OutlinedBorder>(
             RoundedRectangleBorder(
@@ -435,8 +437,11 @@ abstract final class AppTheme {
             ),
           ),
           minimumSize: WidgetStatePropertyAll<Size>(Size(0, button)),
-          padding: const WidgetStatePropertyAll<EdgeInsetsGeometry>(
-            EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+          padding: WidgetStatePropertyAll<EdgeInsetsGeometry>(
+            EdgeInsets.symmetric(
+              horizontal: AppSpacing.sm * control,
+              vertical: AppSpacing.xs * control,
+            ),
           ),
           elevation: const WidgetStatePropertyAll<double>(0),
         ),

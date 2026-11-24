@@ -17,6 +17,7 @@ import 'package:cardflow/api/generation/api_key_verifier.dart';
 import 'package:cardflow/domain/generation/api_key_store.dart';
 import 'package:cardflow/domain/generation/provider_account.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
+import 'package:cardflow/ui/components/app_dialogs.dart';
 import 'package:cardflow/ui/components/app_surfaces.dart';
 import 'package:cardflow/ui/theme/app_tokens.dart';
 import 'package:cardflow/ui/decks/deck_actions.dart' show showAppMessage;
@@ -233,24 +234,33 @@ class _GenerationSettingsScreenState
 
   Future<void> _delete(ProviderAccount account) async {
     final AppLocalizations l10n = AppLocalizations.of(context);
-    final bool? confirmed = await showDialog<bool>(
+    final ThemeData theme = Theme.of(context);
+    final bool? confirmed = await showAppDialog<bool>(
       context: context,
-      builder: (BuildContext context) => AlertDialog(
-        title: Text(l10n.providersDeleteTitle),
-        content: Text(l10n.providersDeleteBody),
-        actions: <Widget>[
-          TextButton(
-            key: const ValueKey<String>('provider-delete-cancel'),
-            onPressed: () => Navigator.of(context).pop(false),
-            child: Text(l10n.cancel),
+      title: l10n.providersDeleteTitle,
+      subtitle: l10n.providersDeleteBody,
+      bodyBuilder: (BuildContext dialogContext) => const SizedBox.shrink(),
+      // F12/V8: destructive — error-заливка, безопасное — нейтральный текст;
+      // один компонент AppDialog вместо сырого AlertDialog.
+      actionsBuilder: (BuildContext dialogContext) => <Widget>[
+        TextButton(
+          key: const ValueKey<String>('provider-delete-cancel'),
+          style: TextButton.styleFrom(
+            foregroundColor: theme.colorScheme.onSurface,
           ),
-          FilledButton(
-            key: const ValueKey<String>('provider-delete-confirm'),
-            onPressed: () => Navigator.of(context).pop(true),
-            child: Text(l10n.providersDelete),
+          onPressed: () => Navigator.of(dialogContext).pop(false),
+          child: Text(l10n.cancel),
+        ),
+        FilledButton(
+          key: const ValueKey<String>('provider-delete-confirm'),
+          style: FilledButton.styleFrom(
+            backgroundColor: theme.colorScheme.error,
+            foregroundColor: theme.colorScheme.onError,
           ),
-        ],
-      ),
+          onPressed: () => Navigator.of(dialogContext).pop(true),
+          child: Text(l10n.providersDelete),
+        ),
+      ],
     );
     if (confirmed != true || !mounted) return;
     try {
@@ -369,7 +379,21 @@ class _GenerationSettingsScreenState
 
   Widget _buildBody(AppLocalizations l10n) {
     if (_loading) {
-      return const Center(child: CircularProgressIndicator());
+      return const SingleChildScrollView(
+        padding: EdgeInsets.all(AppSpacing.xl),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            AppSkeleton(width: 260, height: 34),
+            SizedBox(height: AppSpacing.md),
+            AppSkeleton(height: 96),
+            SizedBox(height: AppSpacing.sm),
+            AppSkeleton(height: 96),
+            SizedBox(height: AppSpacing.sm),
+            AppSkeleton(height: 96),
+          ],
+        ),
+      );
     }
     if (_loadFailed) {
       return Center(

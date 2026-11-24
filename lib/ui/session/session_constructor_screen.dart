@@ -372,12 +372,40 @@ class _SessionConstructorScreenState
     return Scaffold(
       appBar: AppBar(title: Text(l10n.constructorTitle)),
       bottomNavigationBar: _buildBottomBar(l10n),
-      body: _buildBody(l10n),
+      body: Builder(
+        builder: (BuildContext context) {
+          // F09/V1: конструктор — подстраница оболочки; тот же левый отступ,
+          // что у контента shell, — кромка не прыгает.
+          final double shellOffset =
+              MediaQuery.sizeOf(context).width >= AppSizes.sidebarBreakpoint
+              ? AppSizes.sidebarWidthFor(context)
+              : 0;
+          return Padding(
+            padding: EdgeInsetsDirectional.only(start: shellOffset),
+            child: _buildBody(l10n),
+          );
+        },
+      ),
     );
   }
 
   Widget _buildBody(AppLocalizations l10n) {
-    if (_loading) return const Center(child: CircularProgressIndicator());
+    final double scale = AppAdaptive.factorForContext(context).clamp(1.0, 1.45);
+    if (_loading) {
+      return const SingleChildScrollView(
+        padding: EdgeInsets.all(AppSpacing.xl),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            AppSkeleton(height: 120),
+            SizedBox(height: AppSpacing.md),
+            AppSkeleton(height: 96),
+            SizedBox(height: AppSpacing.md),
+            AppSkeleton(height: 120),
+          ],
+        ),
+      );
+    }
     if (_loadError) {
       return _ConstructorErrorState(
         message: l10n.constructorLoadError,
@@ -409,13 +437,13 @@ class _SessionConstructorScreenState
                       key: ValueKey<String>(
                         'constructor-deck-${summary.deck.id}',
                       ),
-                      // Аудит v4: длинное имя колоды обрезалось краем панели —
-                      // подпись ограничена и заканчивается многоточием.
+                      // F34/V10: длинное имя не обрезается — метка занимает
+                      // до двух строк в доступной ширине панели.
                       label: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 260),
+                        constraints: BoxConstraints(maxWidth: 420 * scale),
                         child: Text(
                           summary.deck.name,
-                          maxLines: 1,
+                          maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),

@@ -150,10 +150,10 @@ class _ReviewCardViewState extends State<ReviewCardView>
         final double factor = AppAdaptive.factorForContext(context);
         final double questionSize = tight
             ? (narrow ? 26 : 28)
-            : (narrow ? 28 : AppTypography.reviewQuestionSize * factor * 1.12);
+            : (narrow ? 28 : AppTypography.reviewQuestionSize * factor * 1.45);
         final double answerSize = tight
             ? 20
-            : (narrow ? 22 : AppTypography.reviewAnswerSize * factor * 1.1);
+            : (narrow ? 22 : AppTypography.reviewAnswerSize * factor * 1.3);
         // Поля 24–48 лог. px (требование композиции): 24 на FullHD, ~30 на 2K.
         final double padV = tight
             ? AppSpacing.xs
@@ -260,7 +260,9 @@ class _ReviewCardViewState extends State<ReviewCardView>
                     color: scheme.surfaceContainerLowest,
                     borderRadius: shape,
                     border: Border.all(
-                      color: _hovered ? scheme.primary : scheme.outlineVariant,
+                      // F25/V5: граница карточки читается (4,49:1) и усиливается
+                      // на hover; раньше outlineVariant давал 1,71:1.
+                      color: _hovered ? scheme.primary : scheme.outline,
                       width: AppSizes.borderWidth,
                     ),
                     boxShadow: AppShadows.card(theme.brightness),
@@ -297,6 +299,10 @@ class _ReviewCardViewState extends State<ReviewCardView>
     required double columnInset,
   }) {
     final Widget? footer = widget.questionFooter;
+    final bool occlusion = widget.card?.occlusionJson != null;
+    final bool hasMedia =
+        !occlusion && (widget.card?.questionMediaIds.isNotEmpty ?? false);
+    final bool wideMedia = MediaQuery.sizeOf(context).width >= 1000;
     return Column(
       // Верхняя подпись, центрированное содержимое и нижняя полоса действий,
       // прижатая к кромке карточки (полоса — часть карточки, а не «кнопка в
@@ -318,7 +324,12 @@ class _ReviewCardViewState extends State<ReviewCardView>
             excludeSemantics: true,
             child: _CardBody(
               scroll: _scroll,
-              padding: EdgeInsets.fromLTRB(padH, AppSpacing.md, padH, bodyPadV),
+              padding: EdgeInsets.fromLTRB(
+                padH,
+                hasMedia && wideMedia ? 0 : AppSpacing.md,
+                padH,
+                hasMedia && wideMedia ? 0 : bodyPadV,
+              ),
               columnWidth: columnWidth,
               builder: (double availableHeight) => <Widget>[
                 _content(
@@ -333,14 +344,16 @@ class _ReviewCardViewState extends State<ReviewCardView>
                     letterSpacing: -0.4,
                   ),
                   media: true,
-                  // У occlusion-карточки под картинкой живут кнопки масок:
-                  // оставляем им место, чтобы не прокручивать (F27).
-                  imageMaxHeight: math.max(
-                    widget.card?.occlusionJson != null ? 160 : 200,
-                    availableHeight *
-                        (widget.card?.occlusionJson != null ? 0.66 : 0.92),
-                  ),
-                  imageMaxWidth: columnWidth,
+                  // F08/V7: на широкой карточке изображение стоит рядом с
+                  // текстом и получает полную высоту контента; у occlusion
+                  // под картинкой живут кнопки масок — оставляем им место.
+                  imageMaxHeight: occlusion
+                      ? math.max(160, availableHeight * 0.66)
+                      : wideMedia
+                      ? availableHeight
+                      : math.max(200, availableHeight * 0.92),
+                  imageMaxWidth: wideMedia ? columnWidth * 0.55 : columnWidth,
+                  sideBySide: wideMedia && hasMedia,
                 ),
               ],
             ),
@@ -411,6 +424,13 @@ class _ReviewCardViewState extends State<ReviewCardView>
       color: scheme.onSurface,
     );
     final bool occlusion = widget.card?.occlusionJson != null;
+    final bool hasAnswerMedia =
+        !occlusion && (widget.card?.answerMediaIds.isNotEmpty ?? false);
+    final bool hasQuestionMedia =
+        !occlusion && (widget.card?.questionMediaIds.isNotEmpty ?? false);
+    final bool wideMedia =
+        MediaQuery.sizeOf(context).width >= 1000 &&
+        (hasAnswerMedia || hasQuestionMedia);
     return Column(
       mainAxisAlignment: MainAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -427,7 +447,12 @@ class _ReviewCardViewState extends State<ReviewCardView>
             excludeSemantics: true,
             child: _CardBody(
               scroll: _scroll,
-              padding: EdgeInsets.fromLTRB(padH, AppSpacing.xs, padH, bodyPadV),
+              padding: EdgeInsets.fromLTRB(
+                padH,
+                wideMedia ? 0 : AppSpacing.xs,
+                padH,
+                wideMedia ? 0 : bodyPadV,
+              ),
               columnWidth: columnWidth,
               builder: (double availableHeight) => <Widget>[
                 // В совсем низком окне повтор вопроса не нужен: главное — ответ
@@ -477,11 +502,13 @@ class _ReviewCardViewState extends State<ReviewCardView>
                   // рисуем; для cloze вопрос показан выше.
                   media: !occlusion,
                   includeClozeFront: false,
-                  imageMaxHeight: math.max(
-                    occlusion ? 160 : 220,
-                    availableHeight * (occlusion ? 0.66 : 0.92),
-                  ),
-                  imageMaxWidth: columnWidth,
+                  imageMaxHeight: occlusion
+                      ? math.max(160, availableHeight * 0.66)
+                      : wideMedia
+                      ? availableHeight
+                      : math.max(220, availableHeight * 0.92),
+                  imageMaxWidth: wideMedia ? columnWidth * 0.55 : columnWidth,
+                  sideBySide: wideMedia && hasAnswerMedia,
                 ),
               ],
             ),
@@ -517,6 +544,7 @@ class _ReviewCardViewState extends State<ReviewCardView>
     required double imageMaxHeight,
     required double imageMaxWidth,
     bool includeClozeFront = true,
+    bool sideBySide = false,
   }) {
     final domain.Card? card = widget.card;
     if (card == null) {
@@ -541,6 +569,7 @@ class _ReviewCardViewState extends State<ReviewCardView>
       includeClozeFront: includeClozeFront,
       imageMaxHeight: imageMaxHeight,
       imageMaxWidth: imageMaxWidth,
+      sideBySide: sideBySide,
     );
   }
 }
@@ -715,34 +744,8 @@ class _CardBodyState extends State<_CardBody> {
                     ),
                   ),
                 ),
-                // F27: у нижней кромки — мягкое затухание, если контент не
-                // влез: видно, что карточку можно прокрутить, без стрелки.
-                if (_canScroll)
-                  Positioned(
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    height: 40,
-                    child: IgnorePointer(
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: <Color>[
-                              Theme.of(context)
-                                  .colorScheme
-                                  .surfaceContainerLowest
-                                  .withValues(alpha: 0),
-                              Theme.of(context)
-                                  .colorScheme
-                                  .surfaceContainerLowest,
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
+                // F27: индикатор прокрутки — постоянный Scrollbar (ниже), без
+                // градиентного «среза» поверх изображения.
               ],
             ),
           ),

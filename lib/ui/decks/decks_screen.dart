@@ -106,8 +106,10 @@ class DecksScreen extends ConsumerWidget {
               ? null
               : Text(l10n.decksSubtitleDecks(decks.length)),
           overline: compactHeight ? null : Text(l10n.decksOverline),
+          // V11: на первом запуске (пустая база) единственный вход «создать»
+          // живёт в пустом состоянии — шапка его не дублирует; импорт остаётся.
           actions: <Widget>[
-            if (narrowHeader) ...<Widget>[
+            if (!firstLaunch && narrowHeader)
               FilledButton.icon(
                 key: const ValueKey<String>('decks-new-deck'),
                 onPressed: () => createDeckManually(context, ref),
@@ -115,8 +117,7 @@ class DecksScreen extends ConsumerWidget {
                 label: Text(l10n.decksNewDeck),
                 style: AppButtons.large(context),
               ),
-              // F33: на узком окне «Импорт» — пункт меню рядом с главным
-              // действием, а не одинокая иконка, оторванная от «Новой колоды».
+            if (narrowHeader)
               PopupMenuButton<void>(
                 key: const ValueKey<String>('decks-narrow-actions'),
                 icon: const Icon(Icons.more_horiz_outlined),
@@ -130,21 +131,22 @@ class DecksScreen extends ConsumerWidget {
                     ),
                   ),
                 ],
-              ),
-            ] else ...<Widget>[
+              )
+            else ...<Widget>[
               OutlinedButton.icon(
                 key: const ValueKey<String>('decks-import'),
                 onPressed: () => importDeckZip(context, ref),
                 icon: const Icon(Icons.file_download_outlined),
                 label: Text(l10n.decksImportButton),
               ),
-              FilledButton.icon(
-                key: const ValueKey<String>('decks-new-deck'),
-                onPressed: () => createDeckManually(context, ref),
-                icon: const Icon(Icons.add),
-                label: Text(l10n.decksNewDeck),
-                style: AppButtons.large(context),
-              ),
+              if (!firstLaunch)
+                FilledButton.icon(
+                  key: const ValueKey<String>('decks-new-deck'),
+                  onPressed: () => createDeckManually(context, ref),
+                  icon: const Icon(Icons.add),
+                  label: Text(l10n.decksNewDeck),
+                  style: AppButtons.large(context),
+                ),
             ],
           ],
         ),
@@ -195,31 +197,36 @@ class DecksScreen extends ConsumerWidget {
                   // Находка D17: пустой результат поиска говорит про поиск,
                   // а не про «создайте колоду вручную».
                   final String search = query.normalizedSearch;
-                  return SizedBox(
-                    width: double.infinity,
-                    child: AppEmptyState(
-                      hero: true,
-                      icon: Icons.search_off,
-                      title: search.isNotEmpty
-                          ? l10n.decksNoResultsForQuery(search)
-                          : l10n.decksNoResults,
-                      message: l10n.decksFilterEmptyHint,
-                      actions: <Widget>[
-                        FilledButton(
-                          key: const ValueKey<String>('decks-reset-filters'),
-                          onPressed: () {
-                            ref.read(decksQueryProvider.notifier).clearSearch();
-                            ref
-                                .read(decksQueryProvider.notifier)
-                                .setFilter(DeckFilter.all);
-                          },
-                          child: Text(l10n.decksSearchResetAction),
-                        ),
-                        OutlinedButton(
-                          onPressed: () => createDeckManually(context, ref),
-                          child: Text(l10n.decksCreateButton),
-                        ),
-                      ],
+                  return ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: AppSizes.studyCardMinHeightFor(context),
+                    ),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: AppEmptyState(
+                        hero: true,
+                        icon: Icons.search_off,
+                        title: search.isNotEmpty
+                            ? l10n.decksNoResultsForQuery(search)
+                            : l10n.decksNoResults,
+                        message: l10n.decksFilterEmptyHint,
+                        // V11: «создать» уже есть в шапке страницы — в панели
+                        // только сброс фильтра, без дубля действия.
+                        actions: <Widget>[
+                          FilledButton(
+                            key: const ValueKey<String>('decks-reset-filters'),
+                            onPressed: () {
+                              ref
+                                  .read(decksQueryProvider.notifier)
+                                  .clearSearch();
+                              ref
+                                  .read(decksQueryProvider.notifier)
+                                  .setFilter(DeckFilter.all);
+                            },
+                            child: Text(l10n.decksSearchResetAction),
+                          ),
+                        ],
+                      ),
                     ),
                   );
                 }
@@ -1157,15 +1164,15 @@ class _DeckTile extends StatelessWidget {
                       style: AppTypography.overline(context),
                     ),
                     SizedBox(
-                      // F34: два ряда под имя зарезервированы всегда — плитки
-                      // одной строки сетки остаются одной высоты.
+                      // F34/V10: три строки под имя зарезервированы всегда —
+                      // длинные имена не обрезаются, плитки одной строки равны.
                       height:
                           (theme.textTheme.titleMedium?.fontSize ?? 18) *
                           (theme.textTheme.titleMedium?.height ?? 1.45) *
-                          2,
+                          3,
                       child: Text(
                         summary.deck.name,
-                        maxLines: 2,
+                        maxLines: 3,
                         overflow: TextOverflow.ellipsis,
                         style: theme.textTheme.titleMedium,
                       ),
@@ -1506,28 +1513,35 @@ class _FirstLaunchEmptyState extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final AppLocalizations l10n = AppLocalizations.of(context);
-    return SizedBox(
-      width: double.infinity,
-      child: AppEmptyState(
-        hero: true,
-        icon: Icons.style_outlined,
-        title: l10n.decksEmptyTitle,
-        message: l10n.decksEmptyMessage,
-        actions: <Widget>[
-          FilledButton(
-            key: const ValueKey<String>('decks-empty-create'),
-            onPressed: () => createDeckManually(context, ref),
-            child: Text(l10n.decksCreateButton),
-          ),
-          // F35: второй вход — явно другой по смыслу: AI-иконка и outlined,
-          // а не вторая равнозначная кнопка.
-          OutlinedButton.icon(
-            key: const ValueKey<String>('decks-empty-generate'),
-            onPressed: () => context.push(AppRoutes.generationPath),
-            icon: const Icon(Icons.auto_awesome_outlined),
-            label: Text(l10n.decksCreateGenerate),
-          ),
-        ],
+    return ConstrainedBox(
+      // V2: пустое состояние — не миниатюра, а полноценный экран высотой с
+      // карточку сессии (≥40 % площади).
+      constraints: BoxConstraints(
+        minHeight: AppSizes.studyCardMinHeightFor(context),
+      ),
+      child: SizedBox(
+        width: double.infinity,
+        child: AppEmptyState(
+          hero: true,
+          icon: Icons.style_outlined,
+          title: l10n.decksEmptyTitle,
+          message: l10n.decksEmptyMessage,
+          actions: <Widget>[
+            FilledButton(
+              key: const ValueKey<String>('decks-empty-create'),
+              onPressed: () => createDeckManually(context, ref),
+              child: Text(l10n.decksCreateButton),
+            ),
+            // F35: второй вход — явно другой по смыслу: AI-иконка и outlined,
+            // а не вторая равнозначная кнопка.
+            OutlinedButton.icon(
+              key: const ValueKey<String>('decks-empty-generate'),
+              onPressed: () => context.push(AppRoutes.generationPath),
+              icon: const Icon(Icons.auto_awesome_outlined),
+              label: Text(l10n.decksCreateGenerate),
+            ),
+          ],
+        ),
       ),
     );
   }

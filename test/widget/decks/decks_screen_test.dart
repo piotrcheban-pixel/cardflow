@@ -35,7 +35,13 @@ void main() {
     );
   }
 
-  Finder createButton() => find.byKey(const ValueKey<String>('decks-new-deck'));
+  // V11: «создать» на пустой базе — одна кнопка (в пустом состоянии),
+  // на непустой — кнопка шапки. Helper поддерживает оба входа.
+  Finder createButton() => find.byWidgetPredicate(
+    (Widget widget) =>
+        widget.key == const ValueKey<String>('decks-new-deck') ||
+        widget.key == const ValueKey<String>('decks-empty-create'),
+  );
 
   /// Прокручивает страницу к колоде [name] (карточки ниже первого экрана).
   Future<void> scrollToDeck(WidgetTester tester, String name) async {
@@ -82,9 +88,15 @@ void main() {
         find.widgetWithText(FilledButton, l10n.decksCreateButton),
         findsOneWidget,
       );
+      // V11: единственный вход «создать» — в пустом состоянии, шапка его
+      // не дублирует.
+      expect(
+        find.byKey(const ValueKey<String>('decks-empty-create')),
+        findsOneWidget,
+      );
       expect(
         find.byKey(const ValueKey<String>('decks-new-deck')),
-        findsOneWidget,
+        findsNothing,
       );
     });
 
@@ -405,12 +417,7 @@ void main() {
       await tester.pumpAndSettle();
       final AppLocalizations l10n = l10nOf(tester);
 
-      await tester.tap(
-        find.descendant(
-          of: createButton(),
-          matching: find.text(l10n.decksNewDeck),
-        ),
-      );
+      await tester.tap(createButton());
       await tester.pumpAndSettle();
       expect(
         find.byKey(const ValueKey<String>('deck-name-submit')),
@@ -437,7 +444,11 @@ void main() {
     testWidgets('кнопка шапки «Новая колода» открывает тот же диалог', (
       WidgetTester tester,
     ) async {
-      final FakeDeckRepository repository = FakeDeckRepository();
+      // На первом запуске (пустая база) кнопки шапки нет — V11; проверяем
+      // шапку на непустой базе.
+      final FakeDeckRepository repository = FakeDeckRepository(
+        summaries: <DeckSummary>[makeSummary(id: 'deck-1', name: 'Испанский')],
+      );
 
       await pumpDecks(tester, repository: repository);
       await tester.pumpAndSettle();

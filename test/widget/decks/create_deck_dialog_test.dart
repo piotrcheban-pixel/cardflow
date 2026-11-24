@@ -48,7 +48,14 @@ void main() {
     WidgetTester tester,
     AppLocalizations l10n,
   ) async {
-    await tester.tap(find.byKey(const ValueKey<String>('decks-new-deck')));
+    // V11: на пустой базе единственный вход «создать» — в пустом состоянии;
+    // в шапке кнопки нет.
+    final Finder header = find.byKey(const ValueKey<String>('decks-new-deck'));
+    await tester.tap(
+      header.evaluate().isNotEmpty
+          ? header
+          : find.byKey(const ValueKey<String>('decks-empty-create')),
+    );
     await tester.pumpAndSettle();
     // Заголовок диалога совпадает с подписью кнопки шапки, поэтому ищем его
     // внутри самого диалога (ADR-036: диалог на оболочке; F37 — AppDialog).

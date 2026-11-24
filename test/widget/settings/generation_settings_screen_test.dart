@@ -21,6 +21,7 @@ import 'package:cardflow/domain/generation/model_limits.dart';
 import 'package:cardflow/domain/generation/provider_accounts_store.dart';
 import 'package:cardflow/domain/generation/provider_protocol.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
+import 'package:cardflow/ui/components/app_surfaces.dart';
 import 'package:cardflow/ui/m3e/m3e.dart';
 import 'package:cardflow/ui/settings/generation_settings_screen.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
@@ -223,14 +224,14 @@ void main() {
       ),
     );
 
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.byType(AppSkeleton), findsWidgets);
     final AppLocalizations l10n = l10nOf(tester);
     expect(find.text(l10n.providersTitle), findsOneWidget);
 
     pending.completer.complete(ProviderAccounts.empty);
     await tester.pumpAndSettle();
 
-    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(find.byType(AppSkeleton), findsNothing);
     expect(find.text(l10n.providersEmptyTitle), findsOneWidget);
     expect(find.text(l10n.providersEmptyDescription), findsOneWidget);
     expect(find.byKey(const ValueKey<String>('providers-add')), findsOneWidget);

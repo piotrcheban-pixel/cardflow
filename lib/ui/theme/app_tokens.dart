@@ -117,8 +117,8 @@ abstract final class AppColors {
 
   static const Color lightSecondary = Color(0xFF006C49);
   static const Color lightOnSecondary = Color(0xFFFFFFFF);
-  static const Color lightSecondaryContainer = Color(0xFF6CF8BB);
-  static const Color lightOnSecondaryContainer = Color(0xFF00714D);
+  static const Color lightSecondaryContainer = Color(0xFFC9F2E1);
+  static const Color lightOnSecondaryContainer = Color(0xFF00513A);
   static const Color lightSecondaryFixed = Color(0xFF6FFBBE);
   static const Color lightOnSecondaryFixed = Color(0xFF002113);
 
@@ -587,7 +587,8 @@ abstract final class AppSizes {
   /// адаптивный множитель сохраняет пропорцию на 2K/4K.
   static double formWidth(BuildContext context) {
     final double factor = AppAdaptive.factorForContext(context);
-    return (formMaxWidth * factor.clamp(1.0, 1.45)).clamp(formMaxWidth, 980.0);
+    // F30/V4: не шире 720 даже на 4K — иначе строки полей длиннее 75 знаков.
+    return (formMaxWidth * factor.clamp(1.0, 1.45)).clamp(formMaxWidth, 720.0);
   }
 
   /// Ширина карточки сессии: главный объект экрана на десктопе.
@@ -745,7 +746,7 @@ abstract final class AppDurations {
   static const Duration quick = Duration(milliseconds: 120);
 
   /// Смена состояния: цвет, фокус, раскрытие подсказки.
-  static const Duration base = Duration(milliseconds: 180);
+  static const Duration base = Duration(milliseconds: 200);
 
   /// Переход между карточками, появление панели, смена шага.
   static const Duration medium = Duration(milliseconds: 220);

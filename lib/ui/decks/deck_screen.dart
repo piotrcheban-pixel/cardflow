@@ -198,14 +198,28 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
                 ),
               ],
       ),
-      body: _buildBody(
-        context,
-        ref,
-        l10n,
-        deckAsync,
-        cardsAsync,
-        summaryAsync,
-        hasError,
+      body: Builder(
+        builder: (BuildContext context) {
+          // F09/V1: колода — подстраница оболочки, но открывается поверх неё.
+          // Оставляем тот же левый отступ, что у контента в shell, чтобы
+          // кромка не прыгала на 133 px между «Колодами» и «Колодой».
+          final double shellOffset =
+              MediaQuery.sizeOf(context).width >= AppSizes.sidebarBreakpoint
+              ? AppSizes.sidebarWidthFor(context)
+              : 0;
+          return Padding(
+            padding: EdgeInsetsDirectional.only(start: shellOffset),
+            child: _buildBody(
+              context,
+              ref,
+              l10n,
+              deckAsync,
+              cardsAsync,
+              summaryAsync,
+              hasError,
+            ),
+          );
+        },
       ),
     );
   }
