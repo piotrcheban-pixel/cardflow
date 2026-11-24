@@ -346,7 +346,6 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen>
                     // но кнопки оценок — те же крупные кнопки системы (G2).
                     answerFooter: ReviewToolbar(
                       key: const ValueKey<String>('practice-toolbar'),
-                      preview: null,
                       enabled: !state.busy,
                       compact: compactPanel,
                       onRating: (Rating rating) => unawaited(_rate(rating)),

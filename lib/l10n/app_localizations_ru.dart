@@ -375,34 +375,45 @@ class AppLocalizationsRu extends AppLocalizations {
   String get reviewWhySheetTitle => 'Почему эта карточка?';
 
   @override
-  String get feedPause => 'Пауза';
+  String get feedBrowseBadge => 'Просмотр';
 
   @override
-  String get feedResume => 'Продолжить';
+  String get feedBrowseHint => 'Нажмите на карточку, чтобы увидеть ответ';
 
   @override
-  String feedSeconds(int count) {
-    return '$count с';
+  String get feedNavHint => 'Свайп ↑↓, колесо мыши или стрелки — листать';
+
+  @override
+  String feedProgressSemantics(int position, int total) {
+    return 'Карточка $position из $total';
   }
 
   @override
-  String get feedAutoAdvanceTooltip => 'Авто-продвижение';
+  String get feedSwipeHint => 'Свайп вверх или вниз переключает карточки';
 
   @override
-  String feedCounter(int position, int total) {
-    return '$position из $total';
+  String get feedEmptyTitle => 'В колоде пока нет карточек';
+
+  @override
+  String get feedEmptyMessage =>
+      'Добавьте карточки или сгенерируйте их — лента покажет весь материал колоды.';
+
+  @override
+  String get feedReadFullText => 'Открыть полностью';
+
+  @override
+  String get feedFullTextTitle => 'Карточка целиком';
+
+  @override
+  String get feedPreviousTooltip => 'Предыдущая карточка';
+
+  @override
+  String get feedNextTooltip => 'Следующая карточка';
+
+  @override
+  String feedTimeUpMessage(int count) {
+    return 'Просмотрено карточек: $count. Расписание повторений не изменилось.';
   }
-
-  @override
-  String get feedRatedLabel => 'Оценено';
-
-  @override
-  String feedProgressSemantics(int rated, int total) {
-    return 'Оценено $rated из $total';
-  }
-
-  @override
-  String get feedSwipeHint => 'Свайп вправо — «Знаю», влево — «Не знаю»';
 
   @override
   String get reviewCompletedTitle => 'Сессия завершена';
@@ -428,7 +439,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get ratingAgain => 'Не знаю';
 
   @override
-  String get ratingHard => 'Сложно';
+  String get ratingHard => 'Затрудняюсь';
 
   @override
   String get ratingGood => 'Знаю';
@@ -2503,23 +2514,20 @@ class AppLocalizationsRu extends AppLocalizations {
   String get decksNewDeck => 'Новая колода';
 
   @override
-  String decksFilterAllCount(int count) {
-    return 'Все ($count)';
-  }
+  String get decksFilterAll => 'Все';
 
   @override
-  String decksFilterNewCount(int count) {
-    return 'Новые ($count)';
-  }
+  String get decksFilterNew => 'Новые';
 
   @override
-  String decksFilterInProgressCount(int count) {
-    return 'В процессе ($count)';
-  }
+  String get decksFilterInProgress => 'В процессе';
 
   @override
-  String decksFilterDueCount(int count) {
-    return 'Срок наступил ($count)';
+  String get decksFilterDue => 'Срок наступил';
+
+  @override
+  String decksFilterMenuItem(String label, int count) {
+    return '$label ($count)';
   }
 
   @override
@@ -2844,8 +2852,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get reviewAnswerLabel => 'Ответ';
 
   @override
-  String get reviewKeyboardHints =>
-      'Пробел — показать ответ · 1–4 — оценка · ← — отменить';
+  String get reviewKeyboardHints => '1–4 — оценка · ← — отменить';
 
   @override
   String get reviewHomeTooltip => 'Мои колоды';
@@ -2948,7 +2955,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get reviewModeFeedSubtitle =>
-      'Карточки лентой: свайп или кнопка ставит оценку';
+      'Свободный просмотр: вертикальная лента без оценки и влияния на расписание';
 
   @override
   String studyModeTestNotEnough(int count) {
@@ -2959,10 +2966,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String studyModeTypingNotEnough(int count) {
     return 'Нужна хотя бы одна карточка с коротким ответом, сейчас $count';
   }
-
-  @override
-  String get feedRateHint =>
-      'Свайп вправо — «Знаю», влево — «Не знаю». Клавиши 1–4 тоже ставят оценку';
 
   @override
   String statisticsRetentionLowSample(int count) {

@@ -670,53 +670,77 @@ abstract class AppLocalizations {
   /// **'Почему эта карточка?'**
   String get reviewWhySheetTitle;
 
-  /// Кнопка паузы авто-продвижения в ленте (SPEC A7.3).
+  /// Бейдж режима «Лента» в верхней панели: свободный просмотр, FSRS не меняется (ADR-044).
   ///
   /// In ru, this message translates to:
-  /// **'Пауза'**
-  String get feedPause;
+  /// **'Просмотр'**
+  String get feedBrowseBadge;
 
-  /// Кнопка возобновления авто-продвижения в ленте (SPEC A7.3).
+  /// Подсказка на лицевой стороне карточки ленты (ADR-044).
   ///
   /// In ru, this message translates to:
-  /// **'Продолжить'**
-  String get feedResume;
+  /// **'Нажмите на карточку, чтобы увидеть ответ'**
+  String get feedBrowseHint;
 
-  /// Интервал авто-продвижения ленты в секундах (SPEC A7.3: 3/5/8).
+  /// Подсказка о навигации в ленте: вертикальный свайп, колесо и клавиши (ADR-044).
   ///
   /// In ru, this message translates to:
-  /// **'{count} с'**
-  String feedSeconds(int count);
+  /// **'Свайп ↑↓, колесо мыши или стрелки — листать'**
+  String get feedNavHint;
 
-  /// Подсказка выбора интервала авто-продвижения в ленте.
+  /// Семантическая подпись прогресса ленты.
   ///
   /// In ru, this message translates to:
-  /// **'Авто-продвижение'**
-  String get feedAutoAdvanceTooltip;
+  /// **'Карточка {position} из {total}'**
+  String feedProgressSemantics(int position, int total);
 
-  /// Счётчик текущей карточки ленты: «2 из 10».
+  /// Семантическая подсказка навигации в ленте (ADR-044).
   ///
   /// In ru, this message translates to:
-  /// **'{position} из {total}'**
-  String feedCounter(int position, int total);
-
-  /// Пометка оценённой карточки при возврате к ней в ленте.
-  ///
-  /// In ru, this message translates to:
-  /// **'Оценено'**
-  String get feedRatedLabel;
-
-  /// Семантическая подпись Stories-прогресса ленты.
-  ///
-  /// In ru, this message translates to:
-  /// **'Оценено {rated} из {total}'**
-  String feedProgressSemantics(int rated, int total);
-
-  /// Семантическая подсказка жестов оценки в ленте (SPEC A7.3).
-  ///
-  /// In ru, this message translates to:
-  /// **'Свайп вправо — «Знаю», влево — «Не знаю»'**
+  /// **'Свайп вверх или вниз переключает карточки'**
   String get feedSwipeHint;
+
+  /// Пустое состояние ленты: в колоде нет карточек (ADR-044).
+  ///
+  /// In ru, this message translates to:
+  /// **'В колоде пока нет карточек'**
+  String get feedEmptyTitle;
+
+  /// Пояснение пустого состояния ленты (ADR-044).
+  ///
+  /// In ru, this message translates to:
+  /// **'Добавьте карточки или сгенерируйте их — лента покажет весь материал колоды.'**
+  String get feedEmptyMessage;
+
+  /// Действие карточки ленты при длинном тексте: открыть читаемый лист (ADR-044).
+  ///
+  /// In ru, this message translates to:
+  /// **'Открыть полностью'**
+  String get feedReadFullText;
+
+  /// Заголовок листа с полным текстом карточки в ленте (ADR-044).
+  ///
+  /// In ru, this message translates to:
+  /// **'Карточка целиком'**
+  String get feedFullTextTitle;
+
+  /// Подсказка кнопки навигации вверх в ленте (ADR-044).
+  ///
+  /// In ru, this message translates to:
+  /// **'Предыдущая карточка'**
+  String get feedPreviousTooltip;
+
+  /// Подсказка кнопки навигации вниз в ленте (ADR-044).
+  ///
+  /// In ru, this message translates to:
+  /// **'Следующая карточка'**
+  String get feedNextTooltip;
+
+  /// Итог просмотра ленты по лимиту минут конструктора (ADR-018, ADR-044).
+  ///
+  /// In ru, this message translates to:
+  /// **'Просмотрено карточек: {count}. Расписание повторений не изменилось.'**
+  String feedTimeUpMessage(int count);
 
   /// Заголовок состояния завершённой сессии.
   ///
@@ -742,10 +766,10 @@ abstract class AppLocalizations {
   /// **'Не знаю'**
   String get ratingAgain;
 
-  /// Кнопка оценки Hard (SPEC A7.2).
+  /// Кнопка оценки Hard (SPEC A7.2); название действия без номера и интервала (ADR-045).
   ///
   /// In ru, this message translates to:
-  /// **'Сложно'**
+  /// **'Затрудняюсь'**
   String get ratingHard;
 
   /// Кнопка оценки Good (SPEC A7.2).
@@ -4015,29 +4039,35 @@ abstract class AppLocalizations {
   /// **'Новая колода'**
   String get decksNewDeck;
 
-  /// Чип фильтра «Все» со счётчиком.
+  /// Чип фильтра «Все»; счётчик рисуется отдельным бейджем (ADR-045).
   ///
   /// In ru, this message translates to:
-  /// **'Все ({count})'**
-  String decksFilterAllCount(int count);
+  /// **'Все'**
+  String get decksFilterAll;
 
-  /// Чип фильтра «Новые» со счётчиком.
+  /// Чип фильтра «Новые»; счётчик — отдельный бейдж (ADR-045).
   ///
   /// In ru, this message translates to:
-  /// **'Новые ({count})'**
-  String decksFilterNewCount(int count);
+  /// **'Новые'**
+  String get decksFilterNew;
 
-  /// Чип фильтра «В процессе» со счётчиком.
+  /// Чип фильтра «В процессе»; счётчик — отдельный бейдж (ADR-045).
   ///
   /// In ru, this message translates to:
-  /// **'В процессе ({count})'**
-  String decksFilterInProgressCount(int count);
+  /// **'В процессе'**
+  String get decksFilterInProgress;
 
-  /// Чип фильтра «Просроченные» со счётчиком.
+  /// Чип фильтра «Срок наступил»; счётчик — отдельный бейдж (ADR-045).
   ///
   /// In ru, this message translates to:
-  /// **'Срок наступил ({count})'**
-  String decksFilterDueCount(int count);
+  /// **'Срок наступил'**
+  String get decksFilterDue;
+
+  /// Пункт меню фильтра в очень низком окне: подпись и счётчик.
+  ///
+  /// In ru, this message translates to:
+  /// **'{label} ({count})'**
+  String decksFilterMenuItem(String label, int count);
 
   /// Статус новой колоды без повторений.
   ///
@@ -4591,10 +4621,10 @@ abstract class AppLocalizations {
   /// **'Ответ'**
   String get reviewAnswerLabel;
 
-  /// Напоминание о клавишах сессии.
+  /// Напоминание о клавишах после раскрытия ответа: Space ничего не делает (ADR-045).
   ///
   /// In ru, this message translates to:
-  /// **'Пробел — показать ответ · 1–4 — оценка · ← — отменить'**
+  /// **'1–4 — оценка · ← — отменить'**
   String get reviewKeyboardHints;
 
   /// Кнопка «в главное меню» на экранах сессий: путь домой не длиннее двух действий (находка N3).
@@ -4780,7 +4810,7 @@ abstract class AppLocalizations {
   /// Пояснение режима «Лента» в листе режимов (находка D21).
   ///
   /// In ru, this message translates to:
-  /// **'Карточки лентой: свайп или кнопка ставит оценку'**
+  /// **'Свободный просмотр: вертикальная лента без оценки и влияния на расписание'**
   String get reviewModeFeedSubtitle;
 
   /// Причина недоступности «Теста» с числом подходящих карточек (находки N5/F15).
@@ -4794,12 +4824,6 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Нужна хотя бы одна карточка с коротким ответом, сейчас {count}'**
   String studyModeTypingNotEnough(int count);
-
-  /// Подсказка об оценках в ленте (находки F11/F14).
-  ///
-  /// In ru, this message translates to:
-  /// **'Свайп вправо — «Знаю», влево — «Не знаю». Клавиши 1–4 тоже ставят оценку'**
-  String get feedRateHint;
 
   /// Удержание при недостаточной выборке (находка D6).
   ///

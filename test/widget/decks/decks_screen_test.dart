@@ -3,6 +3,7 @@ import 'package:cardflow/domain/decks/deck_summary.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/components/app_surfaces.dart';
 import 'package:cardflow/ui/decks/deck_screen.dart';
+import 'package:cardflow/ui/components/app_filter_chip.dart';
 import 'package:cardflow/ui/decks/decks_screen.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart' hide Card;
@@ -317,35 +318,45 @@ void main() {
 
       await pumpDecks(tester, repository: repository);
       await tester.pumpAndSettle();
-      final AppLocalizations l10n = l10nOf(tester);
-
-      for (final String label in <String>[
-        l10n.decksFilterAllCount(4),
-        l10n.decksFilterNewCount(1),
-        l10n.decksFilterInProgressCount(1),
-        l10n.decksFilterDueCount(1),
-      ]) {
-        expect(find.text(label), findsOneWidget, reason: 'Нет чипа «$label»');
+      // ADR-045: подпись и счётчик — разные элементы одного чипа.
+      const List<(String, String, int)> expected = <(String, String, int)>[
+        ('all', 'decksFilterAll', 4),
+        ('withNewCards', 'decksFilterNew', 1),
+        ('inProgress', 'decksFilterInProgress', 1),
+        ('due', 'decksFilterDue', 1),
+      ];
+      for (final (String filter, String labelKey, int count) in expected) {
+        final Finder chipFinder = find.byKey(
+          ValueKey<String>('decks-filter-$filter'),
+        );
+        expect(chipFinder, findsOneWidget, reason: 'Нет чипа $filter');
+        final AppFilterChip chip = tester.widget<AppFilterChip>(chipFinder);
+        expect(chip.count, count, reason: labelKey);
+        expect(find.text(chip.label), findsOneWidget);
       }
 
-      await tester.tap(find.text(l10n.decksFilterDueCount(1)));
+      await tester.tap(find.byKey(const ValueKey<String>('decks-filter-due')));
       await tester.pumpAndSettle();
       expect(find.text('География'), findsOneWidget);
       expect(find.text('Испанский'), findsNothing);
       expect(find.text('История'), findsNothing);
       expect(find.text('Повторение'), findsNothing);
 
-      await tester.tap(find.text(l10n.decksFilterNewCount(1)));
+      await tester.tap(
+        find.byKey(const ValueKey<String>('decks-filter-withNewCards')),
+      );
       await tester.pumpAndSettle();
       expect(find.text('Испанский'), findsOneWidget);
       expect(find.text('География'), findsNothing);
 
-      await tester.tap(find.text(l10n.decksFilterInProgressCount(1)));
+      await tester.tap(
+        find.byKey(const ValueKey<String>('decks-filter-inProgress')),
+      );
       await tester.pumpAndSettle();
       expect(find.text('История'), findsOneWidget);
       expect(find.text('Испанский'), findsNothing);
 
-      await tester.tap(find.text(l10n.decksFilterAllCount(4)));
+      await tester.tap(find.byKey(const ValueKey<String>('decks-filter-all')));
       await tester.pumpAndSettle();
       expect(find.text('Испанский'), findsOneWidget);
       expect(find.text('История'), findsOneWidget);
@@ -364,13 +375,16 @@ void main() {
       await tester.pumpAndSettle();
       final AppLocalizations l10n = l10nOf(tester);
 
-      expect(find.text(l10n.decksFilterAllCount(1)), findsOneWidget);
+      final Finder allChip = find.byKey(
+        const ValueKey<String>('decks-filter-all'),
+      );
+      expect(allChip, findsOneWidget);
       await tester.tap(find.byTooltip(l10n.decksFilterTooltip));
       await tester.pumpAndSettle();
-      expect(find.text(l10n.decksFilterAllCount(1)), findsNothing);
+      expect(allChip, findsNothing);
       await tester.tap(find.byTooltip(l10n.decksFilterTooltip));
       await tester.pumpAndSettle();
-      expect(find.text(l10n.decksFilterAllCount(1)), findsOneWidget);
+      expect(allChip, findsOneWidget);
     });
   });
 

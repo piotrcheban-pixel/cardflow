@@ -502,7 +502,6 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen>
                       // оценок внутри карточки, с fade/slide.
                       answerFooter: ReviewToolbar(
                         key: const ValueKey<String>('review-toolbar'),
-                        preview: state.preview,
                         enabled: !state.busy,
                         compact: compactPanel,
                         onRating: (Rating rating) => unawaited(_rate(rating)),

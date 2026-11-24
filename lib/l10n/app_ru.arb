@@ -452,30 +452,21 @@
   "@reviewWhySheetTitle": {
     "description": "Заголовок bottom sheet с цитатой исходника."
   },
-  "feedPause": "Пауза",
-  "@feedPause": {
-    "description": "Кнопка паузы авто-продвижения в ленте (SPEC A7.3)."
+  "feedBrowseBadge": "Просмотр",
+  "@feedBrowseBadge": {
+    "description": "Бейдж режима «Лента» в верхней панели: свободный просмотр, FSRS не меняется (ADR-044)."
   },
-  "feedResume": "Продолжить",
-  "@feedResume": {
-    "description": "Кнопка возобновления авто-продвижения в ленте (SPEC A7.3)."
+  "feedBrowseHint": "Нажмите на карточку, чтобы увидеть ответ",
+  "@feedBrowseHint": {
+    "description": "Подсказка на лицевой стороне карточки ленты (ADR-044)."
   },
-  "feedSeconds": "{count} с",
-  "@feedSeconds": {
-    "description": "Интервал авто-продвижения ленты в секундах (SPEC A7.3: 3/5/8).",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
+  "feedNavHint": "Свайп ↑↓, колесо мыши или стрелки — листать",
+  "@feedNavHint": {
+    "description": "Подсказка о навигации в ленте: вертикальный свайп, колесо и клавиши (ADR-044)."
   },
-  "feedAutoAdvanceTooltip": "Авто-продвижение",
-  "@feedAutoAdvanceTooltip": {
-    "description": "Подсказка выбора интервала авто-продвижения в ленте."
-  },
-  "feedCounter": "{position} из {total}",
-  "@feedCounter": {
-    "description": "Счётчик текущей карточки ленты: «2 из 10».",
+  "feedProgressSemantics": "Карточка {position} из {total}",
+  "@feedProgressSemantics": {
+    "description": "Семантическая подпись прогресса ленты.",
     "placeholders": {
       "position": {
         "type": "int"
@@ -485,25 +476,41 @@
       }
     }
   },
-  "feedRatedLabel": "Оценено",
-  "@feedRatedLabel": {
-    "description": "Пометка оценённой карточки при возврате к ней в ленте."
+  "feedSwipeHint": "Свайп вверх или вниз переключает карточки",
+  "@feedSwipeHint": {
+    "description": "Семантическая подсказка навигации в ленте (ADR-044)."
   },
-  "feedProgressSemantics": "Оценено {rated} из {total}",
-  "@feedProgressSemantics": {
-    "description": "Семантическая подпись Stories-прогресса ленты.",
+  "feedEmptyTitle": "В колоде пока нет карточек",
+  "@feedEmptyTitle": {
+    "description": "Пустое состояние ленты: в колоде нет карточек (ADR-044)."
+  },
+  "feedEmptyMessage": "Добавьте карточки или сгенерируйте их — лента покажет весь материал колоды.",
+  "@feedEmptyMessage": {
+    "description": "Пояснение пустого состояния ленты (ADR-044)."
+  },  "feedReadFullText": "Открыть полностью",
+  "@feedReadFullText": {
+    "description": "Действие карточки ленты при длинном тексте: открыть читаемый лист (ADR-044)."
+  },
+  "feedFullTextTitle": "Карточка целиком",
+  "@feedFullTextTitle": {
+    "description": "Заголовок листа с полным текстом карточки в ленте (ADR-044)."
+  },
+  "feedPreviousTooltip": "Предыдущая карточка",
+  "@feedPreviousTooltip": {
+    "description": "Подсказка кнопки навигации вверх в ленте (ADR-044)."
+  },
+  "feedNextTooltip": "Следующая карточка",
+  "@feedNextTooltip": {
+    "description": "Подсказка кнопки навигации вниз в ленте (ADR-044)."
+  },
+  "feedTimeUpMessage": "Просмотрено карточек: {count}. Расписание повторений не изменилось.",
+  "@feedTimeUpMessage": {
+    "description": "Итог просмотра ленты по лимиту минут конструктора (ADR-018, ADR-044).",
     "placeholders": {
-      "rated": {
-        "type": "int"
-      },
-      "total": {
+      "count": {
         "type": "int"
       }
     }
-  },
-  "feedSwipeHint": "Свайп вправо — «Знаю», влево — «Не знаю»",
-  "@feedSwipeHint": {
-    "description": "Семантическая подсказка жестов оценки в ленте (SPEC A7.3)."
   },
   "reviewCompletedTitle": "Сессия завершена",
   "@reviewCompletedTitle": {
@@ -526,9 +533,9 @@
   "@ratingAgain": {
     "description": "Кнопка оценки Again (SPEC A7.2)."
   },
-  "ratingHard": "Сложно",
+  "ratingHard": "Затрудняюсь",
   "@ratingHard": {
-    "description": "Кнопка оценки Hard (SPEC A7.2)."
+    "description": "Кнопка оценки Hard (SPEC A7.2); название действия без номера и интервала (ADR-045)."
   },
   "ratingGood": "Знаю",
   "@ratingGood": {
@@ -3091,37 +3098,29 @@
   "@decksNewDeck": {
     "description": "Главное действие экрана колод."
   },
-  "decksFilterAllCount": "Все ({count})",
-  "@decksFilterAllCount": {
-    "description": "Чип фильтра «Все» со счётчиком.",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
+  "decksFilterAll": "Все",
+  "@decksFilterAll": {
+    "description": "Чип фильтра «Все»; счётчик рисуется отдельным бейджем (ADR-045)."
   },
-  "decksFilterNewCount": "Новые ({count})",
-  "@decksFilterNewCount": {
-    "description": "Чип фильтра «Новые» со счётчиком.",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
+  "decksFilterNew": "Новые",
+  "@decksFilterNew": {
+    "description": "Чип фильтра «Новые»; счётчик — отдельный бейдж (ADR-045)."
   },
-  "decksFilterInProgressCount": "В процессе ({count})",
-  "@decksFilterInProgressCount": {
-    "description": "Чип фильтра «В процессе» со счётчиком.",
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
+  "decksFilterInProgress": "В процессе",
+  "@decksFilterInProgress": {
+    "description": "Чип фильтра «В процессе»; счётчик — отдельный бейдж (ADR-045)."
   },
-  "decksFilterDueCount": "Срок наступил ({count})",
-  "@decksFilterDueCount": {
-    "description": "Чип фильтра «Просроченные» со счётчиком.",
+  "decksFilterDue": "Срок наступил",
+  "@decksFilterDue": {
+    "description": "Чип фильтра «Срок наступил»; счётчик — отдельный бейдж (ADR-045)."
+  },
+  "decksFilterMenuItem": "{label} ({count})",
+  "@decksFilterMenuItem": {
+    "description": "Пункт меню фильтра в очень низком окне: подпись и счётчик.",
     "placeholders": {
+      "label": {
+        "type": "String"
+      },
       "count": {
         "type": "int"
       }
@@ -3488,8 +3487,8 @@
   "@reviewQuestionLabel": {"description": "Метка стороны вопроса в раскрытой карточке (находка D3)."},
   "reviewAnswerLabel": "Ответ",
   "@reviewAnswerLabel": {"description": "Метка стороны ответа в раскрытой карточке (находка D3)."},
-  "reviewKeyboardHints": "Пробел — показать ответ · 1–4 — оценка · ← — отменить",
-  "@reviewKeyboardHints": {"description": "Напоминание о клавишах сессии."},
+  "reviewKeyboardHints": "1–4 — оценка · ← — отменить",
+  "@reviewKeyboardHints": {"description": "Напоминание о клавишах после раскрытия ответа: Space ничего не делает (ADR-045)."},
   "reviewHomeTooltip": "Мои колоды",
   "@reviewHomeTooltip": {"description": "Кнопка «в главное меню» на экранах сессий: путь домой не длиннее двух действий (находка N3)."},
   "sessionNoticeDismiss": "Скрыть сообщение",
@@ -3553,14 +3552,13 @@
 
   "reviewModeClassicSubtitle": "По расписанию FSRS: вопрос, ответ и прогноз интервала",
   "@reviewModeClassicSubtitle": {"description": "Пояснение режима «Классический» в листе режимов (находка D21)."},
-  "reviewModeFeedSubtitle": "Карточки лентой: свайп или кнопка ставит оценку",
+  "reviewModeFeedSubtitle": "Свободный просмотр: вертикальная лента без оценки и влияния на расписание",
   "@reviewModeFeedSubtitle": {"description": "Пояснение режима «Лента» в листе режимов (находка D21)."},
   "studyModeTestNotEnough": "Нужна хотя бы одна карточка с вариантами ответа, сейчас {count}",
   "@studyModeTestNotEnough": {"description": "Причина недоступности «Теста» с числом подходящих карточек (находки N5/F15).", "placeholders": {"count": {"type": "int"}}},
   "studyModeTypingNotEnough": "Нужна хотя бы одна карточка с коротким ответом, сейчас {count}",
   "@studyModeTypingNotEnough": {"description": "Причина недоступности «Ввода ответа» с числом подходящих карточек.", "placeholders": {"count": {"type": "int"}}},
-  "feedRateHint": "Свайп вправо — «Знаю», влево — «Не знаю». Клавиши 1–4 тоже ставят оценку",
-  "@feedRateHint": {"description": "Подсказка об оценках в ленте (находки F11/F14)."},
+
 
   "statisticsRetentionLowSample": "Мало данных: повторений за 30 дней — {count}",
   "@statisticsRetentionLowSample": {"description": "Удержание при недостаточной выборке (находка D6).", "placeholders": {"count": {"type": "int"}}},

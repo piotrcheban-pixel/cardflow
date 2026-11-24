@@ -107,101 +107,107 @@ enum RatingRole {
 /// тему без правок экранов.
 abstract final class AppColors {
   // --- Светлая палитра -----------------------------------------------------
-  static const Color lightPrimary = Color(0xFF3525CD);
+  //
+  // Дизайн-система v3 (ADR-045): кобальтовый акцент на нейтральном графите.
+  // Предыдущая палитра была построена вокруг indigo #3525CD и голубоватых
+  // поверхностей #E5EEFF — на больших плоскостях она читалась как фиолетовая.
+  // Теперь поверхности нейтральные (серый без синего сдвига), а цвет продукта
+  // живёт только в акценте, состояниях и оценках.
+  static const Color lightPrimary = Color(0xFF1E4FD8);
   static const Color lightOnPrimary = Color(0xFFFFFFFF);
-  static const Color lightPrimaryContainer = Color(0xFF4F46E5);
-  static const Color lightOnPrimaryContainer = Color(0xFFDAD7FF);
-  static const Color lightPrimaryFixed = Color(0xFFE2DFFF);
-  static const Color lightPrimaryFixedDim = Color(0xFFC3C0FF);
-  static const Color lightOnPrimaryFixed = Color(0xFF0F0069);
+  static const Color lightPrimaryContainer = Color(0xFFD8E2FF);
+  static const Color lightOnPrimaryContainer = Color(0xFF0B2A78);
+  static const Color lightPrimaryFixed = Color(0xFFDCE6FF);
+  static const Color lightPrimaryFixedDim = Color(0xFFB3C6FF);
+  static const Color lightOnPrimaryFixed = Color(0xFF001849);
 
-  static const Color lightSecondary = Color(0xFF006C49);
+  static const Color lightSecondary = Color(0xFF0F6B5C);
   static const Color lightOnSecondary = Color(0xFFFFFFFF);
-  static const Color lightSecondaryContainer = Color(0xFFC9F2E1);
-  static const Color lightOnSecondaryContainer = Color(0xFF00513A);
-  static const Color lightSecondaryFixed = Color(0xFF6FFBBE);
-  static const Color lightOnSecondaryFixed = Color(0xFF002113);
+  static const Color lightSecondaryContainer = Color(0xFFC9EFE6);
+  static const Color lightOnSecondaryContainer = Color(0xFF063E36);
+  static const Color lightSecondaryFixed = Color(0xFF9FF2DF);
+  static const Color lightOnSecondaryFixed = Color(0xFF00201A);
 
-  static const Color lightTertiary = Color(0xFF95002B);
+  static const Color lightTertiary = Color(0xFF8A5300);
   static const Color lightOnTertiary = Color(0xFFFFFFFF);
-  static const Color lightTertiaryContainer = Color(0xFFBF0F3C);
-  static const Color lightOnTertiaryContainer = Color(0xFFFFD0D2);
-  static const Color lightTertiaryFixed = Color(0xFFFFDADB);
-  static const Color lightOnTertiaryFixed = Color(0xFF40000D);
+  static const Color lightTertiaryContainer = Color(0xFFFFDF9E);
+  static const Color lightOnTertiaryContainer = Color(0xFF2B1700);
+  static const Color lightTertiaryFixed = Color(0xFFFFE9C2);
+  static const Color lightOnTertiaryFixed = Color(0xFF2B1700);
 
-  static const Color lightError = Color(0xFFBA1A1A);
+  static const Color lightError = Color(0xFFB3261E);
   static const Color lightOnError = Color(0xFFFFFFFF);
-  static const Color lightErrorContainer = Color(0xFFFFDAD6);
-  static const Color lightOnErrorContainer = Color(0xFF93000A);
+  static const Color lightErrorContainer = Color(0xFFF9DEDC);
+  static const Color lightOnErrorContainer = Color(0xFF410E0B);
 
-  static const Color lightSurface = Color(0xFFF8F9FF);
-  static const Color lightOnSurface = Color(0xFF0B1C30);
-  static const Color lightOnSurfaceVariant = Color(0xFF464555);
-  static const Color lightSurfaceDim = Color(0xFFCBDBF5);
-  static const Color lightSurfaceBright = Color(0xFFF8F9FF);
+  static const Color lightSurface = Color(0xFFF6F7F9);
+  static const Color lightOnSurface = Color(0xFF14181F);
+  static const Color lightOnSurfaceVariant = Color(0xFF4A5260);
+  static const Color lightSurfaceDim = Color(0xFFD9DDE3);
+  static const Color lightSurfaceBright = Color(0xFFFFFFFF);
   static const Color lightSurfaceContainerLowest = Color(0xFFFFFFFF);
-  static const Color lightSurfaceContainerLow = Color(0xFFEFF4FF);
-  static const Color lightSurfaceContainer = Color(0xFFE5EEFF);
-  static const Color lightSurfaceContainerHigh = Color(0xFFDCE9FF);
-  static const Color lightSurfaceContainerHighest = Color(0xFFD3E4FE);
+  static const Color lightSurfaceContainerLow = Color(0xFFF0F2F5);
+  static const Color lightSurfaceContainer = Color(0xFFE9EBEF);
+  static const Color lightSurfaceContainerHigh = Color(0xFFE1E4E9);
+  static const Color lightSurfaceContainerHighest = Color(0xFFD8DCE2);
 
-  static const Color lightOutline = Color(0xFF777587);
-  static const Color lightOutlineVariant = Color(0xFFC7C4D8);
-  static const Color lightInverseSurface = Color(0xFF213145);
-  static const Color lightOnInverseSurface = Color(0xFFEAF1FF);
-  static const Color lightInversePrimary = Color(0xFFC3C0FF);
-  static const Color lightSurfaceTint = Color(0xFF4D44E3);
+  static const Color lightOutline = Color(0xFF6E7683);
+  static const Color lightOutlineVariant = Color(0xFFCDD2DA);
+  static const Color lightInverseSurface = Color(0xFF242A33);
+  static const Color lightOnInverseSurface = Color(0xFFF0F2F6);
+  static const Color lightInversePrimary = Color(0xFF9DB7FF);
+  static const Color lightSurfaceTint = Color(0xFF1E4FD8);
 
   // --- Тёмная палитра ------------------------------------------------------
-  static const Color darkPrimary = Color(0xFF818CF8);
-  static const Color darkOnPrimary = Color(0xFF14122B);
+  static const Color darkPrimary = Color(0xFF7FA5FF);
+  static const Color darkOnPrimary = Color(0xFF06143A);
   // A6: контейнер затемнён, чтобы onPrimaryContainer давал ≥ 4,5:1.
-  static const Color darkPrimaryContainer = Color(0xFF4F46E5);
-  static const Color darkOnPrimaryContainer = Color(0xFFEEF2FF);
-  static const Color darkPrimaryFixed = Color(0xFF282463);
-  static const Color darkPrimaryFixedDim = Color(0xFF4F46E5);
-  static const Color darkOnPrimaryFixed = Color(0xFFE2DFFF);
+  static const Color darkPrimaryContainer = Color(0xFF1E3A8A);
+  static const Color darkOnPrimaryContainer = Color(0xFFD8E2FF);
+  static const Color darkPrimaryFixed = Color(0xFF1E3A8A);
+  static const Color darkPrimaryFixedDim = Color(0xFF2F55B8);
+  static const Color darkOnPrimaryFixed = Color(0xFFD8E2FF);
 
-  static const Color darkSecondary = Color(0xFF34D399);
-  static const Color darkOnSecondary = Color(0xFF022C22);
-  static const Color darkSecondaryContainer = Color(0xFF065F46);
-  static const Color darkOnSecondaryContainer = Color(0xFFA7F3D0);
-  static const Color darkSecondaryFixed = Color(0xFF064E3B);
-  static const Color darkOnSecondaryFixed = Color(0xFFA7F3D0);
+  static const Color darkSecondary = Color(0xFF5CD3BC);
+  static const Color darkOnSecondary = Color(0xFF00201A);
+  static const Color darkSecondaryContainer = Color(0xFF0C4A42);
+  static const Color darkOnSecondaryContainer = Color(0xFFC9EFE6);
+  static const Color darkSecondaryFixed = Color(0xFF0C4A42);
+  static const Color darkOnSecondaryFixed = Color(0xFFC9EFE6);
 
-  static const Color darkTertiary = Color(0xFFFB7185);
-  static const Color darkOnTertiary = Color(0xFF4C0519);
+  static const Color darkTertiary = Color(0xFFF0B45A);
+  static const Color darkOnTertiary = Color(0xFF2B1700);
   // A6: контейнер затемнён, чтобы onTertiaryContainer давал ≥ 4,5:1.
-  static const Color darkTertiaryContainer = Color(0xFF9F1239);
-  static const Color darkOnTertiaryContainer = Color(0xFFFFE4E6);
-  static const Color darkTertiaryFixed = Color(0xFF4C0519);
-  static const Color darkOnTertiaryFixed = Color(0xFFFFDADB);
+  static const Color darkTertiaryContainer = Color(0xFF6B4200);
+  static const Color darkOnTertiaryContainer = Color(0xFFFFDF9E);
+  static const Color darkTertiaryFixed = Color(0xFF6B4200);
+  static const Color darkOnTertiaryFixed = Color(0xFFFFDF9E);
 
-  static const Color darkError = Color(0xFFF87171);
-  static const Color darkOnError = Color(0xFF450A0A);
-  static const Color darkErrorContainer = Color(0xFF450A0A);
-  static const Color darkOnErrorContainer = Color(0xFFFECACA);
+  static const Color darkError = Color(0xFFFFB4AB);
+  static const Color darkOnError = Color(0xFF690005);
+  static const Color darkErrorContainer = Color(0xFF93000A);
+  static const Color darkOnErrorContainer = Color(0xFFFFDAD6);
 
-  static const Color darkSurface = Color(0xFF090E1A);
-  static const Color darkOnSurface = Color(0xFFF1F5F9);
-  static const Color darkOnSurfaceVariant = Color(0xFFCBD5E1);
-  static const Color darkSurfaceDim = Color(0xFF334155);
-  static const Color darkSurfaceBright = Color(0xFF0F172A);
-  static const Color darkSurfaceContainerLowest = Color(0xFF111827);
-  static const Color darkSurfaceContainerLow = Color(0xFF172033);
-  static const Color darkSurfaceContainer = Color(0xFF1E293B);
-  static const Color darkSurfaceContainerHigh = Color(0xFF273549);
-  static const Color darkSurfaceContainerHighest = Color(0xFF334155);
+  static const Color darkSurface = Color(0xFF0B0E13);
+  static const Color darkOnSurface = Color(0xFFE7EAF0);
+  static const Color darkOnSurfaceVariant = Color(0xFFB9C0CC);
+  static const Color darkSurfaceDim = Color(0xFF3A414D);
+  static const Color darkSurfaceBright = Color(0xFF1A2029);
+  static const Color darkSurfaceContainerLowest = Color(0xFF10141A);
+  static const Color darkSurfaceContainerLow = Color(0xFF151A22);
+  static const Color darkSurfaceContainer = Color(0xFF1B2028);
+  static const Color darkSurfaceContainerHigh = Color(0xFF222833);
+  static const Color darkSurfaceContainerHighest = Color(0xFF2A3140);
 
-  static const Color darkOutline = Color(0xFF94A3B8);
-  static const Color darkOutlineVariant = Color(0xFF293548);
-  static const Color darkInverseSurface = Color(0xFFE2E8F0);
-  static const Color darkOnInverseSurface = Color(0xFF0F172A);
-  static const Color darkInversePrimary = Color(0xFF3525CD);
-  static const Color darkSurfaceTint = Color(0xFF818CF8);
+  static const Color darkOutline = Color(0xFF9AA3B2);
+  static const Color darkOutlineVariant = Color(0xFF2E3644);
+  static const Color darkInverseSurface = Color(0xFFE7EAF0);
+  static const Color darkOnInverseSurface = Color(0xFF11161D);
+  static const Color darkInversePrimary = Color(0xFF1E4FD8);
+  static const Color darkSurfaceTint = Color(0xFF7FA5FF);
 
   /// Цвет тени карточек в светлой теме (тёмная тема теней не рисует).
-  static const Color shadow = Color(0xFF0B1C30);
+  static const Color shadow = Color(0xFF0A0F1A);
 
   /// Граница интерактивного контрола (кнопка, поле, чип, сегмент).
   ///
@@ -210,41 +216,37 @@ abstract final class AppColors {
   /// и остаётся спокойной: это тонкая линия, а не рамка.
   static Color controlBorder(ColorScheme scheme) => scheme.outline;
 
-  /// Фон оценки в общем тон-ряду (светлая тонировка, без кислотных заливок).
+  /// Фон кнопки оценки.
+  ///
+  /// Иерархия одного действия (ADR-045): «Знаю» — единственная залитая
+  /// кнопка (главный ответ), «Легко» — спокойная тонировка secondary,
+  /// «Затрудняюсь» — нейтральная поверхность, «Не знаю» — тихая тонировка
+  /// error. Четыре кислотные плашки запрещены: карточка остаётся главным
+  /// объектом экрана.
   static Color ratingSurface(ColorScheme scheme, RatingRole role) {
-    final Color tint = switch (role) {
-      RatingRole.again => scheme.error,
-      RatingRole.hard => scheme.onSurface,
-      RatingRole.good => scheme.secondary,
-      RatingRole.easy => scheme.primary,
+    final Color base = scheme.surfaceContainerLowest;
+    return switch (role) {
+      RatingRole.again => Color.alphaBlend(
+        scheme.error.withValues(alpha: 0.08),
+        base,
+      ),
+      RatingRole.hard => Color.alphaBlend(
+        scheme.onSurface.withValues(alpha: 0.05),
+        base,
+      ),
+      RatingRole.good => scheme.primary,
+      RatingRole.easy => scheme.secondaryContainer,
     };
-    final double alpha = switch (role) {
-      RatingRole.again => 0.07,
-      RatingRole.hard => 0.04,
-      RatingRole.good => 0.10,
-      RatingRole.easy => 0.08,
-    };
-    return Color.alphaBlend(
-      tint.withValues(alpha: alpha),
-      scheme.surfaceContainerLowest,
-    );
   }
 
-  /// Цвет подписи оценки в общем тон-ряду.
+  /// Цвет подписи оценки (парный к [ratingSurface], ≥ 4,5:1).
   static Color ratingForeground(ColorScheme scheme, RatingRole role) =>
       switch (role) {
         RatingRole.again => scheme.error,
         RatingRole.hard => scheme.onSurface,
-        RatingRole.good =>
-          scheme.brightness == Brightness.dark
-              ? scheme.secondary
-              : scheme.secondary,
-        RatingRole.easy => scheme.primary,
+        RatingRole.good => scheme.onPrimary,
+        RatingRole.easy => scheme.onSecondaryContainer,
       };
-
-  /// Единственный вторичный цвет подписей интервалов (F11).
-  static Color intervalForeground(ColorScheme scheme) =>
-      scheme.onSurfaceVariant;
 
   /// Собирает светлую схему ролей Material 3 из палитры макета.
   static ColorScheme lightScheme() => ColorScheme(
@@ -627,8 +629,18 @@ abstract final class AppSizes {
   /// Высота кнопки оценки (G2: не меньше 56 лог. px на любом размере).
   static const double ratingButtonHeight = 56;
 
+  /// Высота кнопки оценки в низком окне (один ряд, аудит v8 G10).
+  ///
+  /// Не меньше [ratingButtonHeight]: доступность не зависит от высоты окна,
+  /// компактность даёт один ряд вместо сетки 2×2 и меньшие поля.
+  static const double ratingButtonCompactHeight = 56;
+
   /// Предел адаптивного множителя для кнопки оценки (G2: 56–68 px).
   static const double ratingButtonMaxScale = 1.2;
+
+  /// Множитель контролов оценки: 1,0 / 1,24 / 1,45 → клампится 1,0–1,2.
+  static double controlScale(BuildContext context) =>
+      AppAdaptive.factorForContext(context).clamp(1.0, ratingButtonMaxScale);
 
   /// Кегль подписи оценки (G2: не меньше 16 px при масштабе текста 90 %).
   static const double ratingLabelBase = 18;

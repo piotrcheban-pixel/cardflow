@@ -9,7 +9,7 @@ import 'package:cardflow/domain/decks/deck_summary.dart';
 import 'package:cardflow/domain/generation/provider_account.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/components/app_buttons.dart';
-import 'package:cardflow/ui/motion.dart';
+import 'package:cardflow/ui/components/app_filter_chip.dart';
 import 'package:cardflow/ui/components/app_layout.dart';
 import 'package:cardflow/ui/components/app_surfaces.dart';
 import 'package:cardflow/ui/decks/deck_actions.dart';
@@ -654,7 +654,12 @@ class _DecksToolbar extends ConsumerWidget {
                 CheckedPopupMenuItem<int>(
                   value: index,
                   checked: query.filter == DeckFilter.values[index],
-                  child: Text(_filterLabel(l10n, counts, index)),
+                  child: Text(
+                    l10n.decksFilterMenuItem(
+                      _filterName(l10n, index),
+                      _filterCount(counts, index),
+                    ),
+                  ),
                 ),
             ],
           )
@@ -706,8 +711,12 @@ class _DecksToolbar extends ConsumerWidget {
               runSpacing: AppSpacing.xs,
               children: <Widget>[
                 for (int index = 0; index < 4; index++)
-                  _FilterChip(
-                    label: _filterLabel(l10n, counts, index),
+                  AppFilterChip(
+                    key: ValueKey<String>(
+                      'decks-filter-${DeckFilter.values[index].name}',
+                    ),
+                    label: _filterName(l10n, index),
+                    count: _filterCount(counts, index),
                     selected: query.filter == DeckFilter.values[index],
                     danger: index == 3,
                     onPressed: () => ref
@@ -730,15 +739,19 @@ class _DecksToolbar extends ConsumerWidget {
         DecksSort.name => l10n.decksSortName,
       };
 
-  static String _filterLabel(
-    AppLocalizations l10n,
-    _FilterCounts counts,
-    int index,
-  ) => switch (index) {
-    0 => l10n.decksFilterAllCount(counts.all),
-    1 => l10n.decksFilterNewCount(counts.withNew),
-    2 => l10n.decksFilterInProgressCount(counts.inProgress),
-    _ => l10n.decksFilterDueCount(counts.due),
+  static String _filterName(AppLocalizations l10n, int index) =>
+      switch (index) {
+        0 => l10n.decksFilterAll,
+        1 => l10n.decksFilterNew,
+        2 => l10n.decksFilterInProgress,
+        _ => l10n.decksFilterDue,
+      };
+
+  static int _filterCount(_FilterCounts counts, int index) => switch (index) {
+    0 => counts.all,
+    1 => counts.withNew,
+    2 => counts.inProgress,
+    _ => counts.due,
   };
 }
 
@@ -801,64 +814,6 @@ class _ViewModeButton extends StatelessWidget {
   }
 }
 
-/// Чип фильтра.
-class _FilterChip extends StatelessWidget {
-  const _FilterChip({
-    required this.label,
-    required this.selected,
-    required this.onPressed,
-    this.danger = false,
-  });
-
-  final String label;
-  final bool selected;
-  final bool danger;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
-    final ColorScheme scheme = theme.colorScheme;
-    final Color background = selected
-        ? scheme.primary
-        : danger
-        ? scheme.errorContainer.withValues(alpha: 0.5)
-        : scheme.surfaceContainerLow;
-    final Color foreground = selected
-        ? scheme.onPrimary
-        : danger
-        ? scheme.error
-        : scheme.onSurfaceVariant;
-    return InkWell(
-      onTap: onPressed,
-      borderRadius: BorderRadius.circular(AppRadii.control),
-      // `Padding` + чип по содержимому: в `Wrap` чип сжимается по тексту,
-      // иначе Align/Center растягивается на всю строку и каждый фильтр
-      // занимает отдельный ряд (аудит v4, V28/V29). Высота касания — 44 px.
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: AnimatedContainer(
-          duration: AppMotion.duration(context, AppDurations.quick),
-          height: 38,
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
-          decoration: BoxDecoration(
-            color: background,
-            borderRadius: BorderRadius.circular(AppRadii.control),
-          ),
-          child: Text(
-            label,
-            maxLines: 1,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: foreground,
-              fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 /// Поле поиска колод.
 class _DecksSearchField extends ConsumerStatefulWidget {
   const _DecksSearchField();
@@ -869,9 +824,23 @@ class _DecksSearchField extends ConsumerStatefulWidget {
 
 class _DecksSearchFieldState extends ConsumerState<_DecksSearchField> {
   final TextEditingController _controller = TextEditingController();
+  final FocusNode _focusNode = FocusNode(debugLabel: 'decks-search');
+  int _focusToken = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode.addListener(_onFocusChanged);
+  }
+
+  void _onFocusChanged() {
+    if (mounted) setState(() {});
+  }
 
   @override
   void dispose() {
+    _focusNode.removeListener(_onFocusChanged);
+    _focusNode.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -882,6 +851,18 @@ class _DecksSearchFieldState extends ConsumerState<_DecksSearchField> {
     final ThemeData theme = Theme.of(context);
     final ColorScheme scheme = theme.colorScheme;
     final String search = ref.watch(decksQueryProvider).search;
+    // «Найти колоду» в боковой панели и иконка поиска на узком экране не
+    // только показывают поле, но и передают ему фокус: пользователь сразу
+    // печатает запрос (находка «кнопка не работает»). Токен нужен потому, что
+    // на широком экране поле уже видно — простого появления недостаточно.
+    final int focusToken = ref.watch(decksSearchFocusProvider);
+    if (focusToken != _focusToken) {
+      _focusToken = focusToken;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _focusNode.requestFocus();
+      });
+    }
     // Внешнее изменение запроса (кнопка поиска в панели, сброс) обновляет поле.
     if (_controller.text != search) {
       _controller.value = TextEditingValue(
@@ -889,25 +870,35 @@ class _DecksSearchFieldState extends ConsumerState<_DecksSearchField> {
         selection: TextSelection.collapsed(offset: search.length),
       );
     }
-    final Widget field = Container(
+    final bool focused = _focusNode.hasFocus;
+    return Container(
       height: 44,
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+      padding: const EdgeInsets.only(left: AppSpacing.sm, right: 4),
       decoration: BoxDecoration(
         color: scheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(AppRadii.control),
-        border: Border.all(color: Colors.transparent),
+        border: Border.all(
+          color: focused ? scheme.primary : scheme.outlineVariant,
+          width: focused ? 1.5 : AppSizes.borderWidth,
+        ),
       ),
       child: Row(
         children: <Widget>[
-          Icon(Icons.search, size: AppSizes.icon, color: scheme.outline),
+          Icon(
+            Icons.search,
+            size: AppSizes.icon,
+            color: focused ? scheme.primary : scheme.outline,
+          ),
           const SizedBox(width: 6),
           Expanded(
             child: TextField(
+              key: const ValueKey<String>('decks-search-field'),
               controller: _controller,
+              focusNode: _focusNode,
               autofocus: false,
               onChanged: (String value) =>
                   ref.read(decksQueryProvider.notifier).setSearch(value),
-              style: theme.textTheme.bodySmall?.copyWith(
+              style: theme.textTheme.bodyMedium?.copyWith(
                 color: scheme.onSurface,
               ),
               decoration: InputDecoration(
@@ -918,7 +909,7 @@ class _DecksSearchFieldState extends ConsumerState<_DecksSearchField> {
                 focusedBorder: InputBorder.none,
                 contentPadding: EdgeInsets.zero,
                 hintText: l10n.decksSearchHint,
-                hintStyle: theme.textTheme.bodySmall?.copyWith(
+                hintStyle: theme.textTheme.bodyMedium?.copyWith(
                   color: scheme.onSurfaceVariant,
                 ),
               ),
@@ -933,12 +924,12 @@ class _DecksSearchFieldState extends ConsumerState<_DecksSearchField> {
               onPressed: () {
                 _controller.clear();
                 ref.read(decksQueryProvider.notifier).clearSearch();
+                _focusNode.requestFocus();
               },
             ),
         ],
       ),
     );
-    return field;
   }
 }
 

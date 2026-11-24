@@ -111,6 +111,13 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Первый ответ'), findsOneWidget);
     expect(find.text(l10n.ratingGood), findsOneWidget);
+    // ADR-045: в тренировке нет прогноза интервалов — ни до, ни после ответа.
+    for (final String rating in <String>['again', 'hard', 'good', 'easy']) {
+      expect(
+        find.byKey(ValueKey<String>('review-interval-$rating')),
+        findsNothing,
+      );
+    }
     expect(
       find.byKey(const ValueKey<String>('practice-reveal')),
       findsNothing,

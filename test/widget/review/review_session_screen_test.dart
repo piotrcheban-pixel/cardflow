@@ -121,10 +121,22 @@ void main() {
     await tester.tap(find.byKey(const ValueKey<String>('review-card')));
     await tester.pumpAndSettle();
     expect(find.text(l10n.ratingGood), findsOneWidget);
-    expect(find.text(l10n.reviewIntervalMinutes(1)), findsOneWidget);
-    expect(find.text(l10n.reviewIntervalMinutes(6)), findsOneWidget);
-    expect(find.text(l10n.reviewIntervalMinutes(10)), findsOneWidget);
-    expect(find.text(l10n.reviewIntervalDays(16)), findsOneWidget);
+    expect(find.text(l10n.ratingHard), findsOneWidget);
+    expect(find.text(l10n.ratingAgain), findsOneWidget);
+    expect(find.text(l10n.ratingEasy), findsOneWidget);
+    // ADR-045: интервалы, номера клавиш и технические подписи убраны из UI;
+    // значения по-прежнему считает движок (preview) и применяет FSRS.
+    for (final String rating in <String>['again', 'hard', 'good', 'easy']) {
+      expect(
+        find.byKey(ValueKey<String>('review-interval-$rating')),
+        findsNothing,
+        reason: 'нет подписи интервала в кнопке',
+      );
+    }
+    expect(find.text(l10n.reviewIntervalMinutes(1)), findsNothing);
+    expect(find.text(l10n.reviewIntervalMinutes(6)), findsNothing);
+    expect(find.text(l10n.reviewIntervalMinutes(10)), findsNothing);
+    expect(find.text(l10n.reviewIntervalDays(16)), findsNothing);
     // G1: главное действие лицевой стороны исчезает после раскрытия.
     expect(find.byKey(const ValueKey<String>('review-reveal')), findsNothing);
   });

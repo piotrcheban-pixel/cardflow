@@ -44,11 +44,21 @@ class DecksSearchVisibilityNotifier extends Notifier<bool> {
   @override
   bool build() => false;
 
-  /// Открывает/закрывает поле поиска; при закрытии сбрасывает запрос.
-  void toggle() => state = !state;
+  /// Открывает/закрывает поле поиска; при открытии просит фокус для ввода.
+  void toggle() {
+    state = !state;
+    if (state) ref.read(decksSearchFocusProvider.notifier).request();
+  }
 
   /// Открывает поле поиска (боковая панель / горячая клавиша).
-  void open() => state = true;
+  ///
+  /// Кнопка «Найти колоду» обязана довести пользователя до ввода запроса:
+  /// поле не только появляется, но и получает фокус (находка «кнопка не
+  /// работает» — визуально появлялось поле, но клавиатура в него не попадала).
+  void open() {
+    state = true;
+    ref.read(decksSearchFocusProvider.notifier).request();
+  }
 
   /// Закрывает поле поиска.
   void close() => state = false;
@@ -59,6 +69,27 @@ final NotifierProvider<DecksSearchVisibilityNotifier, bool>
 decksSearchVisibleProvider =
     NotifierProvider<DecksSearchVisibilityNotifier, bool>(
       DecksSearchVisibilityNotifier.new,
+    );
+
+/// Запрос фокуса на поле поиска колод.
+///
+/// Кнопка «Найти колоду» в боковой панели (и иконка поиска на узком экране)
+/// не просто показывает поле — пользователь должен сразу набирать запрос.
+/// Штатный `autofocus` не подходит: на широком экране поле видно всегда, и
+/// автофокус отбирал бы фокус при каждом входе в раздел. Поэтому открытие
+/// поиска увеличивает счётчик, а поле реагирует на его изменение.
+class DecksSearchFocusNotifier extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  /// Просит поле поиска получить фокус (следующий кадр).
+  void request() => state = state + 1;
+}
+
+/// Счётчик запросов фокуса поля поиска.
+final NotifierProvider<DecksSearchFocusNotifier, int> decksSearchFocusProvider =
+    NotifierProvider<DecksSearchFocusNotifier, int>(
+      DecksSearchFocusNotifier.new,
     );
 
 /// Видимость ряда чипов фильтра (иконка filter_list — переключатель).
