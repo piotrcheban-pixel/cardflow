@@ -502,10 +502,11 @@ class _DecksToolbar extends ConsumerWidget {
     final double width = MediaQuery.sizeOf(context).width;
     final bool wide = width >= 900;
     final bool compactControls = width < 520;
-    // Аудит v2 (A1): на клиенте 390×844 (260 лог. px при DPI 150 %) четыре
-    // цели по 44 px + сортировка не влезали в строку. Ниже 360 лог. px
-    // сортировка и режим отображения уходят в одно overflow-меню.
-    final bool ultraNarrow = width < 360;
+    // Аудит v2 (A1) + редизайн v3: на телефоне поле поиска сжималось до
+    // «ктр» — сортировка и переключатель вида занимали ту же строку. Ниже
+    // 420 лог. px оба управления уходят в overflow-меню, и поиск получает
+    // ширину, достаточную для подсказки и запроса.
+    final bool ultraNarrow = width < 420;
 
     const Widget search = _DecksSearchField();
     final Widget controls = Row(
