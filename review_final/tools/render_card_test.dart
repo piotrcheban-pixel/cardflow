@@ -144,9 +144,7 @@ Widget _app({
       builder: (BuildContext context, Widget? child) {
         final MediaQueryData media = MediaQuery.of(context);
         return MediaQuery(
-          data: media.copyWith(
-            textScaler: TextScaler.linear(cfg.textScale),
-          ),
+          data: media.copyWith(textScaler: TextScaler.linear(cfg.textScale)),
           child: child ?? const SizedBox.shrink(),
         );
       },
@@ -170,7 +168,9 @@ Future<void> _shoot(WidgetTester tester, String name) async {
     final RenderView view = tester.binding.renderViews.first;
     final OffsetLayer layer = view.debugLayer! as OffsetLayer;
     final ui.Image image = await layer.toImage(view.paintBounds);
-    final ByteData? data = await image.toByteData(format: ui.ImageByteFormat.png);
+    final ByteData? data = await image.toByteData(
+      format: ui.ImageByteFormat.png,
+    );
     final File file = File('$_outDir/$name.png');
     file.parent.createSync(recursive: true);
     file.writeAsBytesSync(data!.buffer.asUint8List());
@@ -185,7 +185,7 @@ double _textScale(WidgetTester tester, Finder within) {
 }
 
 /// Прямоугольники текста/иконок/кнопок внутри карточки — для оценки пустоты.
-double _emptyShare(WidgetTester tester, Finder cardFinder, Rect card) {
+List<Rect> _contentRects(WidgetTester tester, Finder cardFinder) {
   final List<Rect> rects = <Rect>[];
   void add(Finder f) {
     for (final Element e in f.evaluate()) {
@@ -204,6 +204,11 @@ double _emptyShare(WidgetTester tester, Finder cardFinder, Rect card) {
   add(find.descendant(of: cardFinder, matching: find.byType(FilledButton)));
   add(find.descendant(of: cardFinder, matching: find.byType(OutlinedButton)));
   add(find.descendant(of: cardFinder, matching: find.byType(TextButton)));
+  return rects;
+}
+
+double _emptyShare(WidgetTester tester, Finder cardFinder, Rect card) {
+  final List<Rect> rects = _contentRects(tester, cardFinder);
   if (rects.isEmpty) return 1;
   const double step = 3;
   int total = 0;
@@ -222,6 +227,38 @@ double _emptyShare(WidgetTester tester, Finder cardFinder, Rect card) {
   return total == 0 ? 1 : 1 - covered / total;
 }
 
+/// Вариант А (решение владельца): пустота = самая длинная сплошная полоса
+/// карточки, в которой нет ни текста, ни кнопок, ни изображений.
+///
+/// Считается по строкам: строка «занята», если её пересекает хотя бы один
+/// прямоугольник контента; ответ — максимальный вертикальный пробег пустых
+/// строк / высоту карточки.
+double _emptyBand(WidgetTester tester, Finder cardFinder, Rect card) {
+  final List<Rect> rects = _contentRects(tester, cardFinder);
+  if (rects.isEmpty || card.height <= 0) return 1;
+  int best = 0;
+  int run = 0;
+  for (double y = card.top; y < card.bottom; y += 1) {
+    bool covered = false;
+    for (final Rect r in rects) {
+      if (y >= r.top &&
+          y < r.bottom &&
+          r.right > card.left &&
+          r.left < card.right) {
+        covered = true;
+        break;
+      }
+    }
+    if (covered) {
+      run = 0;
+    } else {
+      run++;
+      if (run > best) best = run;
+    }
+  }
+  return best / card.height;
+}
+
 void _measureCard(WidgetTester tester, Cfg cfg, String screen) {
   final Finder card = find.byKey(const ValueKey<String>('review-card'));
   if (card.evaluate().isEmpty) {
@@ -233,6 +270,7 @@ void _measureCard(WidgetTester tester, Cfg cfg, String screen) {
   final MediaQueryData media = MediaQuery.of(tester.element(card));
   final double bodyH = media.size.height - AppSizes.headerHeight;
   final double empty = _emptyShare(tester, card, r);
+  final double emptyBand = _emptyBand(tester, card, r);
   final Finder reveal = find.byKey(const ValueKey<String>('review-reveal'));
   final String revealText = reveal.evaluate().isEmpty
       ? 'none'
@@ -257,9 +295,10 @@ void _measureCard(WidgetTester tester, Cfg cfg, String screen) {
   }
   final double ts = _textScale(tester, card);
   final List<String> fonts = <String>[];
-  for (final Element e in find
-      .descendant(of: card, matching: find.byType(RichText))
-      .evaluate()) {
+  for (final Element e
+      in find
+          .descendant(of: card, matching: find.byType(RichText))
+          .evaluate()) {
     final RichText rt = e.widget as RichText;
     final double fs = (rt.text.style?.fontSize ?? 0) * ts;
     final String t = rt.text.toPlainText().replaceAll('\n', ' ');
@@ -274,12 +313,17 @@ void _measureCard(WidgetTester tester, Cfg cfg, String screen) {
     'text=${cfg.textScale} card=${r.width.toStringAsFixed(0)}x'
     '${r.height.toStringAsFixed(0)} shareW=${(100 * r.width / media.size.width).toStringAsFixed(1)}% '
     'shareBodyH=${(100 * r.height / bodyH).toStringAsFixed(1)}% '
-    'empty=${(100 * empty).toStringAsFixed(1)}% reveal=$revealText '
+    'empty=${(100 * empty).toStringAsFixed(1)}% band=${(100 * emptyBand).toStringAsFixed(1)}% reveal=$revealText '
     'rating=$rating gap=$gap fonts=[${fonts.join(';')}]',
   );
 }
 
-void _measureGeneric(WidgetTester tester, Cfg cfg, String screen, List<String> keys) {
+void _measureGeneric(
+  WidgetTester tester,
+  Cfg cfg,
+  String screen,
+  List<String> keys,
+) {
   final List<String> parts = <String>[];
   for (final String k in keys) {
     final Finder f = find.byKey(ValueKey<String>(k));
@@ -300,9 +344,10 @@ void _measureGeneric(WidgetTester tester, Cfg cfg, String screen, List<String> k
 void _measureFonts(WidgetTester tester, Cfg cfg, String screen, Finder root) {
   final double ts = _textScale(tester, root);
   final Map<String, int> sizes = <String, int>{};
-  for (final Element e in find
-      .descendant(of: root, matching: find.byType(RichText))
-      .evaluate()) {
+  for (final Element e
+      in find
+          .descendant(of: root, matching: find.byType(RichText))
+          .evaluate()) {
     final RichText rt = e.widget as RichText;
     final double fs = (rt.text.style?.fontSize ?? 0) * ts;
     final String key = fs.toStringAsFixed(1);
@@ -351,12 +396,7 @@ void main() {
         'review-rating-good',
         'review-close',
       ]);
-      _measureFonts(
-        tester,
-        cfg,
-        'classicQ',
-        find.byType(Scaffold).first,
-      );
+      _measureFonts(tester, cfg, 'classicQ', find.byType(Scaffold).first);
       await _shoot(tester, 'card_classic_Q_${cfg.name}');
     }, timeout: const Timeout(Duration(seconds: 180)));
 
@@ -388,14 +428,18 @@ void main() {
       await _pump(tester, cfg, '/decks/deck-1/feed');
       await tester.pump(const Duration(milliseconds: 300));
       _measureCard(tester, cfg, 'feedQ');
-      final Finder feedCard = find.byKey(const ValueKey<String>('feed-card-card-1'));
+      final Finder feedCard = find.descendant(
+        of: find.byKey(const ValueKey<String>('feed-card-card-1')),
+        matching: find.byKey(const ValueKey<String>('feed-swipe-transform')),
+      );
       if (feedCard.evaluate().isNotEmpty) {
-        final Rect r = tester.getRect(feedCard);
+        final Rect r = tester.getRect(feedCard.first);
         // ignore: avoid_print
         print(
           'FEEDRECT feedQ|${cfg.name}|card=${r.width.toStringAsFixed(0)}x'
           '${r.height.toStringAsFixed(0)}@${r.left.toStringAsFixed(0)},'
-          '${r.top.toStringAsFixed(0)}',
+          '${r.top.toStringAsFixed(0)} band='
+          '${(100 * _emptyBand(tester, feedCard.first, r)).toStringAsFixed(1)}%',
         );
       }
       _measureGeneric(tester, cfg, 'feedQ', <String>[
@@ -425,6 +469,19 @@ void main() {
         );
       }
       _measureCard(tester, cfg, 'feedA');
+      final Finder feedCard = find.descendant(
+        of: find.byKey(const ValueKey<String>('feed-card-card-1')),
+        matching: find.byKey(const ValueKey<String>('feed-swipe-transform')),
+      );
+      if (feedCard.evaluate().isNotEmpty) {
+        final Rect r = tester.getRect(feedCard.first);
+        // ignore: avoid_print
+        print(
+          'FEEDRECT feedA|${cfg.name}|card=${r.width.toStringAsFixed(0)}x'
+          '${r.height.toStringAsFixed(0)} band='
+          '${(100 * _emptyBand(tester, feedCard.first, r)).toStringAsFixed(1)}%',
+        );
+      }
       await _shoot(tester, 'card_feed_A_${cfg.name}');
     }, timeout: const Timeout(Duration(seconds: 180)));
   }
