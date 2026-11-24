@@ -50,7 +50,8 @@ class StatisticsScreen extends ConsumerWidget {
       body: AppPageScaffold(
         header: AppPageHeader(
           title: l10n.statisticsTitle,
-          overline: Text(l10n.statisticsOverline.toUpperCase()),
+          // Аудит 2.0 (P3-11): служебный надзаголовок «Аналитический центр»
+          // дублировал H1 — убран, как и «Нейросетевой модуль» в генерации.
           subtitle: Text(l10n.statisticsSubtitle),
         ),
         slivers: <Widget>[

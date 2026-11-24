@@ -15,6 +15,7 @@ import 'package:material_ui/material_ui.dart' hide Card;
 
 import 'package:cardflow/domain/cards/card.dart' as domain;
 import 'package:cardflow/domain/decks/deck_summary.dart';
+import 'package:cardflow/domain/statistics/statistics.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/review/review_toolbar.dart';
 import 'package:cardflow/ui/review/session_card.dart';
@@ -24,6 +25,7 @@ import '../../test/helpers/decks_fakes.dart';
 import '../../test/helpers/pump_app.dart'
     show appWithAppRouter, decksOverrides, ruLocalizationDelegates;
 import '../../test/helpers/review_fakes.dart';
+import '../../test/helpers/settings_fakes.dart';
 
 const String _assetDir = 'build/windows/x64/runner/Debug/data/flutter_assets';
 
@@ -168,10 +170,14 @@ void main() {
   });
 
   List<Override> overrides({List<DeckSummary>? summaries}) {
+    // Фейк отдаёт снимок карточки в токене undo — иначе запись оценки падает и
+    // режимы показывают снекбар ошибки вместо фидбека.
+    final FakeReviewRepository reviews = FakeReviewRepository()
+      ..previousCard = _cards().first;
     return decksOverrides(
       deckRepository: FakeDeckRepository(summaries: summaries ?? _summaries()),
       cardRepository: FakeCardRepository(cards: _cards()),
-      reviewRepository: FakeReviewRepository(),
+      reviewRepository: reviews,
     );
   }
 
@@ -205,6 +211,70 @@ void main() {
     );
     await tester.pumpAndSettle();
     await _shoot(tester, 'deck_1280');
+  });
+
+  testWidgets('настройки: телефон 390×844', (WidgetTester tester) async {
+    await pumpAt(tester, const Size(390, 844));
+    await tester.pumpWidget(
+      appWithAppRouter(overrides: overrides(), initialLocation: '/settings'),
+    );
+    await tester.pumpAndSettle();
+    await _shoot(tester, 'settings_390');
+  });
+
+  testWidgets('тест: отвеченный вопрос 1280×720', (WidgetTester tester) async {
+    await pumpAt(tester, const Size(1280, 720));
+    await tester.pumpWidget(
+      appWithAppRouter(
+        overrides: overrides(),
+        initialLocation: '/decks/deck-1/test',
+      ),
+    );
+    await tester.pumpAndSettle();
+    // Первый вариант — фиксированный ответ, показывает текстовый фидбек
+    // (если вариантов нет, кадр фиксирует пустое состояние — это тоже сигнал).
+    final Finder option = find.byKey(const ValueKey<String>('study-option-0'));
+    if (option.evaluate().isNotEmpty) {
+      await tester.tap(option);
+      await tester.pumpAndSettle();
+    }
+    await _shoot(tester, 'test_answered_1280');
+  });
+
+  testWidgets('статистика 1280×720', (WidgetTester tester) async {
+    await pumpAt(tester, const Size(1280, 720));
+    final DateTime now = DateTime.now();
+    final DateTime today = DateTime(now.year, now.month, now.day);
+    final StatisticsSnapshot snapshot = StatisticsCalculator.build(
+      reviews: <ReviewSample>[
+        for (int day = 0; day < 120; day++)
+          for (int count = 0; count < 1 + day % 4; count++)
+            ReviewSample(
+              cardId: 'card-${day % 7}',
+              rating: count % 5 == 0 ? 1 : 3,
+              reviewedAt: today.subtract(Duration(days: day)),
+            ),
+      ],
+      tagsByCard: <String, List<String>>{
+        for (int i = 0; i < 7; i++)
+          'card-$i': <String>[i.isEven ? 'электротехника' : 'теория'],
+      },
+      dueDates: <DateTime>[today, today.add(const Duration(days: 1))],
+      now: today.add(const Duration(hours: 12)),
+    );
+    await tester.pumpWidget(
+      appWithAppRouter(
+        overrides: decksOverrides(
+          deckRepository: FakeDeckRepository(summaries: _summaries()),
+          cardRepository: FakeCardRepository(cards: _cards()),
+          reviewRepository: FakeReviewRepository(),
+          statisticsRepository: FakeStatisticsRepository(snapshot: snapshot),
+        ),
+        initialLocation: '/statistics',
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _shoot(tester, 'statistics_1280');
   });
 
   testWidgets('колоды: телефон 390×844', (WidgetTester tester) async {
@@ -250,20 +320,38 @@ List<domain.Card> _cards() => <domain.Card>[
     id: 'card-1',
     deckId: 'deck-1',
     front: 'Чему равен ток нейтрального провода при симметричной нагрузке?',
-    back: 'Нулю.',
+    back: 'Нулю',
     tags: const <String>['трёхфазные цепи', 'нейтраль'],
   ),
   makeCard(
     id: 'card-2',
     deckId: 'deck-1',
     front: 'К каким проводам подключён источник трёхфазного напряжения?',
-    back: 'К трём фазным проводам.',
+    back: 'К фазным',
     tags: const <String>['трёхфазные цепи'],
   ),
   makeCard(
     id: 'card-3',
     deckId: 'deck-1',
     front: 'Какое фазное напряжение в опыте 4?',
-    back: '127 В.',
+    back: '127 В',
+  ),
+  makeCard(
+    id: 'card-4',
+    deckId: 'deck-1',
+    front: 'Как называется свойство теста измерять то, что нужно?',
+    back: 'Валидность',
+  ),
+  makeCard(
+    id: 'card-5',
+    deckId: 'deck-1',
+    front: 'Что такое корреляция?',
+    back: 'Корреляция',
+  ),
+  makeCard(
+    id: 'card-6',
+    deckId: 'deck-1',
+    front: 'Что такое надёжность теста?',
+    back: 'Надёжность',
   ),
 ];

@@ -315,8 +315,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               child: AppPageHeader(
                 title: l10n.settingsScreenTitle,
                 // Вторые «хлебные крошки» не дублируем: раздел уже показан в
-                // шапке оболочки, здесь — только контекст страницы.
-                overline: Text(l10n.settingsOverline.toUpperCase()),
+                // Аудит 2.0 (P3-11): «Конфигурация» над H1 — служебный шум;
+                // контекст даёт навигация и заголовок страницы.
                 subtitle: Text(l10n.settingsSubtitle),
               ),
             ),
