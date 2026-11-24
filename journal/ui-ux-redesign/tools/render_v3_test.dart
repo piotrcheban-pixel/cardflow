@@ -50,6 +50,8 @@ const Cfg _c2k = Cfg('2k', Size(1706.7, 940), 1.24);
 const Cfg _cFhd = Cfg('fhd', Size(1280, 720), 1.0);
 const Cfg _cMobile = Cfg('m390', Size(390, 844), 1.0);
 const Cfg _cNarrow = Cfg('m260', Size(260, 562), 1.0);
+const Cfg _cTablet = Cfg('t768', Size(768, 1024), 1.0);
+const Cfg _cM360 = Cfg('m360', Size(360, 800), 1.0);
 
 final DateTime _now = DateTime.utc(2026, 11, 24, 12);
 
@@ -298,9 +300,29 @@ void main() {
     await _pump(tester, _cFhd, '/decks/deck-1/feed');
     await _shoot(tester, '17_feed_fhd_light');
     await _pump(tester, _cNarrow, '/decks/deck-1/feed');
-    await tester.tap(find.byType(GestureDetector).first);
-    await tester.pumpAndSettle();
     await _shoot(tester, '18_feed_m260_light');
+    expect(tester.takeException(), isNull);
+
+    // Планшет 768×1024 и телефон 360×800 — контрольные размеры задания.
+    await _pump(tester, _cTablet, AppRoutes.decksPath);
+    await _shoot(tester, '19_decks_tablet768_light');
+    await _pump(tester, _cTablet, '/decks/deck-1/feed');
+    await _shoot(tester, '20_feed_tablet768_light');
+    await tester.tap(find.text('Что такое электрический ток?'));
+    await tester.pumpAndSettle();
+    await _shoot(tester, '21_feed_answer_tablet768_light');
+    await _pump(tester, _cTablet, '/decks/deck-1/study');
+    await tester.tap(find.byKey(const ValueKey<String>('review-card')));
+    await tester.pumpAndSettle();
+    await _shoot(tester, '22_classic_answer_tablet768_light');
+
+    await _pump(tester, _cM360, AppRoutes.decksPath);
+    await _shoot(tester, '23_decks_m360_light');
+    await _pump(tester, _cM360, '/decks/deck-1/feed');
+    await _shoot(tester, '24_feed_m360_light');
+    await tester.tap(find.text('Что такое электрический ток?'));
+    await tester.pumpAndSettle();
+    await _shoot(tester, '25_feed_answer_m360_light');
     expect(tester.takeException(), isNull);
   });
 }

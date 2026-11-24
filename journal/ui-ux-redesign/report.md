@@ -258,7 +258,7 @@ B выдерживает и десктоп, и мобильный без дек�
 | Format | `fvm dart format --set-exit-if-changed lib test integration_test tool` | **592 файла / 0 changed**, exit 0 |
 | Tests | `fvm flutter test --no-pub --exclude-tags golden` | **2660 passed + 16 skipped** |
 | Coverage | `fvm flutter test --no-pub --coverage --exclude-tags golden` | **90,9 % рукописного кода (22 360/24 607)**; всего 83,6 % (24 119/28 860) |
-| Build | `fvm flutter build windows --release --no-pub` | `√ Built build\windows\x64\runner\Release\cardflow.exe` (первая полная сборка 76,4 с, финальная инкрементальная 43,5 с) |
+| Build | `fvm flutter build windows --release --no-pub` | `√ Built build\windows\x64\runner\Release\cardflow.exe` (76,4 с; финальная после правки — 81,2 с) |
 | Live Release | запуск `cardflow.exe`, окно 1920×1080 | окно открылось, старт без ошибок; `raw/live_stderr.txt` — только строка Impeller, stdout пуст |
 | FSRS-инвариант | `test/integration/feed_session_flow_test.dart` (реальная drift-БД) | `review_logs` пуст, `due`/`fsrs_json`/`state` карточек не изменились |
 | Схема БД | — | `schemaVersion`/`format_version` не менялись, миграций нет |
@@ -312,7 +312,7 @@ B выдерживает и десктоп, и мобильный без дек�
 `docs/decisions/ADR-045-design-system-v3.md` (новый),
 `journal/ui-ux-redesign/audit.md`, `report.md`,
 `journal/ui-ux-redesign/tools/{render_v3_test.dart,live_check.ps1}`,
-`journal/ui-ux-redesign/screenshots/` (18 production-кадров + 3 живых),
+`journal/ui-ux-redesign/screenshots/` (25 production-кадров + 3 живых),
 `journal/ui-ux-redesign/{coverage-run-final,analyze-final,build-windows}.log`,
 `AGENTS.md` (разделы «Лента» и «Дизайн-система v3»), `journal/STATE.md`.`
 
@@ -333,7 +333,10 @@ B выдерживает и десктоп, и мобильный без дек�
 * шевроны навигации вынесены в жёлоб справа от карточки и больше не наезжают
   на неё;
 * мобильная классика: 2×2 кнопок читаются, заголовок/прогресс не спорят с
-  карточкой.
+  карточкой;
+* планшет 768×1024 и телефон 360×800: лента и классика без переполнений;
+* на 360 px поле поиска сжималось до «ктр» — сортировка и переключатель вида
+  убраны в overflow-меню (порог 420 px), поиск снова читается.
 
 ## 16. Оставшиеся ограничения
 

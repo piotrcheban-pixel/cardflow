@@ -1845,10 +1845,10 @@ Baseline: `fvm flutter analyze --no-pub` — 0 issues; полный
   в листе режимов — «Свободный просмотр: вертикальная лента без оценки и
   влияния на расписание».
 - **Визуальная приёмка.** `journal/ui-ux-redesign/tools/render_v3_test.dart`:
-  18 production-кадров (2K light/dark, FullHD, 390×844, 260×562);
+  25 production-кадров (2K light/dark, FullHD, 390×844, 360×800, 768×1024, 260×562);
   `tools/live_check.ps1` — живой Release (старт без ошибок, колоды, лист
   режимов). По кадрам исправлено: ширина карточки ленты (72 %), высота (78 %
-  рабочего поля), шевроны в жёлобе; мобильная классика 2×2.
+  рабочего поля), шевроны в жёлобе; мобильная классика 2×2; на 360 px поиск перестал сжиматься до «ктр» (сортировка/вид — в overflow-меню при <420 px).
 - **Документация.** `journal/ui-ux-redesign/{audit,report}.md`,
   `docs/decisions/ADR-044-feed-browse-mode.md`, `ADR-045-design-system-v3.md`,
   обновлён `AGENTS.md` (разделы ленты и дизайн-системы).
@@ -1857,7 +1857,7 @@ Baseline: `fvm flutter analyze --no-pub` — 0 issues; полный
 `fvm dart format --set-exit-if-changed lib test integration_test tool` — 0
 changed; `fvm flutter test --no-pub --exclude-tags golden` —
 **2660 passed + 16 skipped**; покрытие — **90,9 % рукописного кода (22 360/24 607)**, всего 83,6 % (24 119/28 860);
-`fvm flutter build windows --release --no-pub` — `cardflow.exe` (76,4 с; финальная инкрементальная сборка — 43,5 с);
+`fvm flutter build windows --release --no-pub` — `cardflow.exe` (76,4 с; финальная после правки — 81,2 с);
 живой Release — старт без ошибок (только строка Impeller в stderr).
 Независимый reviewer в сессии недоступен (L35): ревью Lead по чек-листу на
 снимке рабочего дерева.
