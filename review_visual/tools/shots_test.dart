@@ -21,13 +21,13 @@ import 'package:cardflow/ui/theme/app_theme.dart';
 import '../../test/helpers/decks_fakes.dart';
 import '../../test/helpers/pump_app.dart' show decksOverrides, m3eThemeBuilder;
 
-const String _assets =
-    'build/windows/x64/runner/Debug/data/flutter_assets';
+const String _assets = 'build/windows/x64/runner/Debug/data/flutter_assets';
 
 Future<void> _loadFont(String family, String path) async {
   final Uint8List bytes = File(path).readAsBytesSync();
   final ByteData data = ByteData.view(bytes.buffer);
-  final FontLoader loader = FontLoader(family)..addFont(Future<ByteData>.value(data));
+  final FontLoader loader = FontLoader(family)
+    ..addFont(Future<ByteData>.value(data));
   await loader.load();
 }
 
@@ -52,10 +52,7 @@ Widget _shell() {
       Expanded(
         child: Column(
           children: <Widget>[
-            AppTopHeader(
-              section: 'Колоды',
-              onNewCard: () {},
-            ),
+            AppTopHeader(section: 'Колоды', onNewCard: () {}),
             const Expanded(child: DecksScreen()),
           ],
         ),
@@ -124,10 +121,27 @@ Future<void> _shoot(WidgetTester tester, double w, double h, String out) async {
 void main() {
   testWidgets('4K и 2K: колоды', (WidgetTester tester) async {
     await _loadFont('Inter', '$_assets/assets/fonts/Inter-Variable.ttf');
-    await _loadFont('MaterialIcons', '$_assets/fonts/MaterialIcons-Regular.otf');
-    await _shoot(tester, 3840, 2160, 'review_visual/screenshots/decks__3840x2160.png');
-    await _shoot(tester, 2560, 1440, 'review_visual/screenshots/decks__2560x1440.png');
-    await _shoot(tester, 1920, 1080, 'review_visual/screenshots/decks__1920x1080_widget.png');
+    await _loadFont(
+      'MaterialIcons',
+      '$_assets/fonts/MaterialIcons-Regular.otf',
+    );
+    await _shoot(
+      tester,
+      3840,
+      2160,
+      'review_visual/screenshots/decks__3840x2160.png',
+    );
+    await _shoot(
+      tester,
+      2560,
+      1440,
+      'review_visual/screenshots/decks__2560x1440.png',
+    );
+    await _shoot(
+      tester,
+      1920,
+      1080,
+      'review_visual/screenshots/decks__1920x1080_widget.png',
+    );
   });
 }
-

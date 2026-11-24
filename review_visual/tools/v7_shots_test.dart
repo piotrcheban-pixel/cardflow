@@ -28,7 +28,8 @@ import 'package:cardflow/ui/theme/app_theme.dart';
 import 'package:cardflow/ui/theme/app_tokens.dart';
 
 import '../../test/helpers/decks_fakes.dart';
-import '../../test/helpers/pump_app.dart' show decksOverrides, ruLocalizationDelegates;
+import '../../test/helpers/pump_app.dart'
+    show decksOverrides, ruLocalizationDelegates;
 import '../../test/helpers/review_fakes.dart';
 import '../../test/helpers/settings_fakes.dart';
 
@@ -38,7 +39,8 @@ const String _outDir = 'review_visual/screenshots/v7';
 Future<void> _loadFont(String family, String path) async {
   final Uint8List bytes = File(path).readAsBytesSync();
   final ByteData data = ByteData.view(bytes.buffer);
-  final FontLoader loader = FontLoader(family)..addFont(Future<ByteData>.value(data));
+  final FontLoader loader = FontLoader(family)
+    ..addFont(Future<ByteData>.value(data));
   await loader.load();
 }
 
@@ -95,7 +97,9 @@ Future<void> _shoot(WidgetTester tester, String name) async {
     final RenderView view = tester.binding.renderViews.first;
     final OffsetLayer layer = view.debugLayer! as OffsetLayer;
     final ui.Image image = await layer.toImage(view.paintBounds);
-    final ByteData? data = await image.toByteData(format: ui.ImageByteFormat.png);
+    final ByteData? data = await image.toByteData(
+      format: ui.ImageByteFormat.png,
+    );
     final File file = File('$_outDir/$name.png');
     file.parent.createSync(recursive: true);
     file.writeAsBytesSync(data!.buffer.asUint8List());
@@ -104,7 +108,12 @@ Future<void> _shoot(WidgetTester tester, String name) async {
   });
 }
 
-Future<void> _pump(WidgetTester tester, double scale, double textScale, Size size) async {
+Future<void> _pump(
+  WidgetTester tester,
+  double scale,
+  double textScale,
+  Size size,
+) async {
   tester.view.devicePixelRatio = 1.0;
   tester.view.physicalSize = size;
   addTearDown(tester.view.reset);
@@ -119,26 +128,40 @@ List<double> _cardFonts(WidgetTester tester) {
   final Finder card = find.byKey(const ValueKey<String>('review-card'));
   final MediaQueryData media = MediaQuery.of(tester.element(card));
   final List<double> sizes = <double>[];
-  for (final Element element in find
-      .descendant(of: card, matching: find.byType(RichText))
-      .evaluate()) {
+  for (final Element element
+      in find
+          .descendant(of: card, matching: find.byType(RichText))
+          .evaluate()) {
     final RichText rich = element.widget as RichText;
     final double base = rich.text.style?.fontSize ?? 0;
-    sizes.add(double.parse((base * media.textScaler.scale(1)).toStringAsFixed(2)));
+    sizes.add(
+      double.parse((base * media.textScaler.scale(1)).toStringAsFixed(2)),
+    );
   }
   sizes.sort((double a, double b) => b.compareTo(a));
   return sizes;
 }
 
 Future<void> _measure(WidgetTester tester, String label) async {
-  final Size card = tester.getSize(find.byKey(const ValueKey<String>('review-card')));
-  final Rect cardRect = tester.getRect(find.byKey(const ValueKey<String>('review-card')));
-  final Size good = tester.getSize(find.byKey(const ValueKey<String>('review-rating-good')));
-  final double gap = tester
+  final Size card = tester.getSize(
+    find.byKey(const ValueKey<String>('review-card')),
+  );
+  final Rect cardRect = tester.getRect(
+    find.byKey(const ValueKey<String>('review-card')),
+  );
+  final Size good = tester.getSize(
+    find.byKey(const ValueKey<String>('review-rating-good')),
+  );
+  final double gap =
+      tester
           .getRect(find.byKey(const ValueKey<String>('review-rating-hard')))
           .left -
-      tester.getRect(find.byKey(const ValueKey<String>('review-rating-again'))).right;
-  final Finder revealFinder = find.byKey(const ValueKey<String>('review-reveal'));
+      tester
+          .getRect(find.byKey(const ValueKey<String>('review-rating-again')))
+          .right;
+  final Finder revealFinder = find.byKey(
+    const ValueKey<String>('review-reveal'),
+  );
   final String reveal = revealFinder.evaluate().isEmpty
       ? 'none'
       : '${tester.getSize(revealFinder).width.toStringAsFixed(1)}x'
@@ -183,9 +206,13 @@ void _dumpInteractive(WidgetTester tester, String label) {
       case 'review-rating-hard':
       case 'review-rating-good':
       case 'review-rating-easy':
-        state = tester.widget<FilledButton>(f).onPressed == null ? 'DISABLED' : 'enabled';
+        state = tester.widget<FilledButton>(f).onPressed == null
+            ? 'DISABLED'
+            : 'enabled';
       case 'review-undo':
-        state = tester.widget<IconButton>(f).onPressed == null ? 'DISABLED' : 'enabled';
+        state = tester.widget<IconButton>(f).onPressed == null
+            ? 'DISABLED'
+            : 'enabled';
       default:
         state = 'visible';
     }
@@ -198,9 +225,15 @@ void _dumpInteractive(WidgetTester tester, String label) {
 void main() {
   setUpAll(() async {
     await _loadFont('Inter', '$_assets/assets/fonts/Inter-Variable.ttf');
-    await _loadFont('MaterialIcons', '$_assets/fonts/MaterialIcons-Regular.otf');
+    await _loadFont(
+      'MaterialIcons',
+      '$_assets/fonts/MaterialIcons-Regular.otf',
+    );
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(SystemChannels.platform, (MethodCall call) async => null);
+        .setMockMethodCallHandler(
+          SystemChannels.platform,
+          (MethodCall call) async => null,
+        );
   });
 
   tearDownAll(() {
@@ -209,15 +242,16 @@ void main() {
   });
 
   // ---- configurations -----------------------------------------------------
-  final Map<String, (double, double, Size)> configs = <String, (double, double, Size)>{
-    '2k150': (1.24, 0.9, const Size(1707, 940)),
-    '2k100': (1.24, 1.0, const Size(2560, 1440)),
-    '4k100': (1.45, 1.0, const Size(3840, 2160)),
-    '4k150': (1.45, 1.0, const Size(2560, 1440)),
-    'fhd': (1.0, 0.9, const Size(1920, 1080)),
-    '390x844': (1.0, 1.0, const Size(390, 844)),
-    '844x390': (1.0, 1.0, const Size(844, 390)),
-  };
+  final Map<String, (double, double, Size)> configs =
+      <String, (double, double, Size)>{
+        '2k150': (1.24, 0.9, const Size(1707, 940)),
+        '2k100': (1.24, 1.0, const Size(2560, 1440)),
+        '4k100': (1.45, 1.0, const Size(3840, 2160)),
+        '4k150': (1.45, 1.0, const Size(2560, 1440)),
+        'fhd': (1.0, 0.9, const Size(1920, 1080)),
+        '390x844': (1.0, 1.0, const Size(390, 844)),
+        '844x390': (1.0, 1.0, const Size(844, 390)),
+      };
   const Map<String, String> titles = <String, String>{
     '2k150': '2K live 1707x940 text90',
     '2k100': '2K exact 2560x1440',
@@ -228,7 +262,8 @@ void main() {
     '844x390': 'mobile landscape 844x390',
   };
 
-  for (final MapEntry<String, (double, double, Size)> entry in configs.entries) {
+  for (final MapEntry<String, (double, double, Size)> entry
+      in configs.entries) {
     final (double, double, Size) cfg = entry.value;
 
     testWidgets('Q ${titles[entry.key]}', (WidgetTester tester) async {

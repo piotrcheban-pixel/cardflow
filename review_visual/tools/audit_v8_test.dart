@@ -115,7 +115,9 @@ Widget _app({
       builder: (BuildContext context, Widget? child) {
         final MediaQueryData media = MediaQuery.of(context);
         final double probe = media.textScaler.scale(16);
-        final double systemFactor = probe.isFinite && probe > 0 ? probe / 16 : 1;
+        final double systemFactor = probe.isFinite && probe > 0
+            ? probe / 16
+            : 1;
         return MediaQuery(
           data: media.copyWith(
             textScaler: TextScaler.linear(systemFactor * textScale),
@@ -155,7 +157,9 @@ Future<void> _shoot(WidgetTester tester, String name) async {
     final RenderView view = tester.binding.renderViews.first;
     final OffsetLayer layer = view.debugLayer! as OffsetLayer;
     final ui.Image image = await layer.toImage(view.paintBounds);
-    final ByteData? data = await image.toByteData(format: ui.ImageByteFormat.png);
+    final ByteData? data = await image.toByteData(
+      format: ui.ImageByteFormat.png,
+    );
     final File file = File('$_outDir/$name.png');
     file.parent.createSync(recursive: true);
     file.writeAsBytesSync(data!.buffer.asUint8List());
@@ -189,8 +193,8 @@ void _dumpTexts(WidgetTester tester, String label, Rect cardRect) {
     final Size s = box.size;
     final String plain = rt.text.toPlainText().replaceAll('\n', r'\n');
     final double base = rt.text.style?.fontSize ?? 0;
-    final String where = (o.dy + s.height <= cardRect.bottom + 0.5 &&
-            o.dy >= cardRect.top - 0.5)
+    final String where =
+        (o.dy + s.height <= cardRect.bottom + 0.5 && o.dy >= cardRect.top - 0.5)
         ? 'inside'
         : 'OUTSIDE';
     // ignore: avoid_print
@@ -267,10 +271,12 @@ void _dumpDisabled(WidgetTester tester, String label) {
 
 double _cardScrollExtent(WidgetTester tester) {
   double maxExtent = 0;
-  for (final Element e in find
-      .descendant(of: _cardFinder, matching: find.byType(Scrollable))
-      .evaluate()) {
-    final ScrollableState state = (e as StatefulElement).state as ScrollableState;
+  for (final Element e
+      in find
+          .descendant(of: _cardFinder, matching: find.byType(Scrollable))
+          .evaluate()) {
+    final ScrollableState state =
+        (e as StatefulElement).state as ScrollableState;
     maxExtent = math.max(maxExtent, state.position.maxScrollExtent);
   }
   return maxExtent;
@@ -299,7 +305,9 @@ void _dumpGeometry(WidgetTester tester, String label) {
   _dumpDisabled(tester, label);
 
   // Ratings.
-  final Finder again = find.byKey(const ValueKey<String>('review-rating-again'));
+  final Finder again = find.byKey(
+    const ValueKey<String>('review-rating-again'),
+  );
   if (again.evaluate().isNotEmpty) {
     final Rect rAgain = tester.getRect(again);
     final Rect rHard = tester.getRect(
@@ -331,7 +339,9 @@ void _dumpGeometry(WidgetTester tester, String label) {
       'panelInCard=${rEasy.bottom <= cardRect.bottom + 0.5}',
     );
     // Painted label size of "Хорошо".
-    final AppLocalizations l10n = AppLocalizations.of(tester.element(_cardFinder));
+    final AppLocalizations l10n = AppLocalizations.of(
+      tester.element(_cardFinder),
+    );
     final Finder goodLabel = find.descendant(
       of: find.byKey(const ValueKey<String>('review-rating-good')),
       matching: find.text(l10n.ratingGood),
@@ -357,7 +367,9 @@ void _dumpGeometry(WidgetTester tester, String label) {
   if (reveal.evaluate().isNotEmpty) {
     final Size s = tester.getSize(reveal);
     // ignore: avoid_print
-    print('REVEAL $label ${s.width.toStringAsFixed(1)}x${s.height.toStringAsFixed(1)}');
+    print(
+      'REVEAL $label ${s.width.toStringAsFixed(1)}x${s.height.toStringAsFixed(1)}',
+    );
   } else {
     // ignore: avoid_print
     print('REVEAL $label none');
@@ -418,11 +430,15 @@ Uint8List _patternPng(int width, int height) {
 void main() {
   setUpAll(() async {
     await _loadFont('Inter', '$_assets/assets/fonts/Inter-Variable.ttf');
-    await _loadFont('MaterialIcons', '$_assets/fonts/MaterialIcons-Regular.otf');
+    await _loadFont(
+      'MaterialIcons',
+      '$_assets/fonts/MaterialIcons-Regular.otf',
+    );
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(SystemChannels.platform, (
-          MethodCall call,
-        ) async => null);
+        .setMockMethodCallHandler(
+          SystemChannels.platform,
+          (MethodCall call) async => null,
+        );
   });
 
   tearDownAll(() {
@@ -485,9 +501,7 @@ void main() {
         matching: find.byType(Opacity),
       );
       if (opacity.evaluate().isNotEmpty) {
-        opAt175 = tester
-            .widget<Opacity>(opacity.first)
-            .opacity;
+        opAt175 = tester.widget<Opacity>(opacity.first).opacity;
       }
     }
     await tester.pump(const Duration(milliseconds: 230));
@@ -556,7 +570,11 @@ void main() {
           localizationsDelegates: ruLocalizationDelegates,
           home: Scaffold(
             body: Center(
-              child: CardImageView(bytes: bytes, maxWidth: 1116, maxHeight: 480),
+              child: CardImageView(
+                bytes: bytes,
+                maxWidth: 1116,
+                maxHeight: 480,
+              ),
             ),
           ),
         ),

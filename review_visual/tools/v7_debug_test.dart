@@ -18,7 +18,8 @@ import 'package:cardflow/ui/theme/app_tokens.dart';
 import 'package:cardflow/ui/theme/app_theme.dart';
 
 import '../../test/helpers/decks_fakes.dart';
-import '../../test/helpers/pump_app.dart' show decksOverrides, ruLocalizationDelegates;
+import '../../test/helpers/pump_app.dart'
+    show decksOverrides, ruLocalizationDelegates;
 import '../../test/helpers/review_fakes.dart';
 import '../../test/helpers/settings_fakes.dart';
 
@@ -89,14 +90,20 @@ void main() {
     // ignore: avoid_print
     print('DBG pump2');
 
-    final Finder rating = find.byKey(const ValueKey<String>('review-rating-good'));
+    final Finder rating = find.byKey(
+      const ValueKey<String>('review-rating-good'),
+    );
     final FilledButton button = tester.widget<FilledButton>(rating);
     // ignore: avoid_print
     print('DBG rating enabled=${button.onPressed != null}');
     // ignore: avoid_print
-    print('DBG reveal present=${find.byKey(const ValueKey<String>('review-reveal')).evaluate().length}');
+    print(
+      'DBG reveal present=${find.byKey(const ValueKey<String>('review-reveal')).evaluate().length}',
+    );
     // ignore: avoid_print
-    print('DBG hint present=${find.byKey(const ValueKey<String>('review-rating-hint')).evaluate().length}');
+    print(
+      'DBG hint present=${find.byKey(const ValueKey<String>('review-rating-hint')).evaluate().length}',
+    );
 
     final RenderView view = tester.binding.renderViews.first;
     final OffsetLayer layer = view.debugLayer! as OffsetLayer;
@@ -105,7 +112,9 @@ void main() {
     final ui.Image image = await layer.toImage(view.paintBounds);
     // ignore: avoid_print
     print('DBG toImage ${image.width}x${image.height}');
-    final ByteData? data = await image.toByteData(format: ui.ImageByteFormat.png);
+    final ByteData? data = await image.toByteData(
+      format: ui.ImageByteFormat.png,
+    );
     // ignore: avoid_print
     print('DBG png bytes=${data?.lengthInBytes}');
   }, timeout: const Timeout(Duration(seconds: 90)));

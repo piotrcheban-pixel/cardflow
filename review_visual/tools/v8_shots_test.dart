@@ -224,9 +224,10 @@ List<double> _cardFonts(WidgetTester tester) {
   final Finder card = find.byKey(const ValueKey<String>('review-card'));
   final MediaQueryData media = MediaQuery.of(tester.element(card));
   final List<double> sizes = <double>[];
-  for (final Element element in find
-      .descendant(of: card, matching: find.byType(RichText))
-      .evaluate()) {
+  for (final Element element
+      in find
+          .descendant(of: card, matching: find.byType(RichText))
+          .evaluate()) {
     final RichText rich = element.widget as RichText;
     final double base = rich.text.style?.fontSize ?? 0;
     sizes.add(
@@ -241,9 +242,11 @@ List<double> _cardFonts(WidgetTester tester) {
 double _ratingFont(WidgetTester tester) {
   final Finder label = find.descendant(
     of: find.byKey(const ValueKey<String>('review-rating-good')),
-    matching: find.text(AppLocalizations.of(
-      tester.element(find.byKey(const ValueKey<String>('review-card'))),
-    ).ratingGood),
+    matching: find.text(
+      AppLocalizations.of(
+        tester.element(find.byKey(const ValueKey<String>('review-card'))),
+      ).ratingGood,
+    ),
   );
   if (label.evaluate().isEmpty) return 0;
   final RichText rich = tester.widget<RichText>(
@@ -259,9 +262,7 @@ double _ratingFont(WidgetTester tester) {
 }
 
 Future<void> _measure(WidgetTester tester, String label) async {
-  final Finder cardFinder = find.byKey(
-    const ValueKey<String>('review-card'),
-  );
+  final Finder cardFinder = find.byKey(const ValueKey<String>('review-card'));
   final Size card = tester.getSize(cardFinder);
   final Rect cardRect = tester.getRect(cardFinder);
   final MediaQueryData media = MediaQuery.of(tester.element(cardFinder));
@@ -442,7 +443,9 @@ void main() {
         () => Future<void>.delayed(const Duration(milliseconds: 400)),
       );
       await tester.pump();
-      final Finder image = find.byKey(const ValueKey<String>('card-image-media-1'));
+      final Finder image = find.byKey(
+        const ValueKey<String>('card-image-media-1'),
+      );
       if (image.evaluate().isNotEmpty) {
         final Size size = tester.getSize(image);
         // ignore: avoid_print
