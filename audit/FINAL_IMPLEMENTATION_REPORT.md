@@ -247,7 +247,8 @@ Golden-кадры: `tool/screenshots/goldens/card_front_1280.png`,
 | `fvm flutter test --no-pub --exclude-tags golden` | **2678 passed, 16 skipped** (база аудита: 2660 + 16) |
 | `fvm flutter analyze --no-pub` | **0 issues** |
 | `fvm dart format --set-exit-if-changed lib test` | 0 changed |
-| `fvm flutter build windows --release --no-pub` | успешно, `cardflow.exe` |
+| `fvm flutter build windows --release --no-pub` | успешно, `cardflow.exe`, `app.so` 16,4 МБ; `OpenDyslexic-Bold.otf` в ассетах |
+| `fvm flutter test integration_test/session_smoke_windows_test.dart -d windows` | **All tests passed** (реальный desktop-граф: drift-БД + MediaStore + Wikimedia-фейк) |
 | Новые тесты | `image_relevance_test` (11), `review_card_overflow_test` (4), 3 теста сервиса картинок |
 | Обновлённые тесты | 15 файлов (ожидания, зафиксировавшие дефекты аудита, — с комментарием причины) |
 | Golden-кадры | `tool/screenshots/goldens/` (10 кадров: карточка ×3, колоды ×3, экран колоды, «Тест» с фидбеком, настройки 390, статистика) |
@@ -256,6 +257,16 @@ Golden-кадры сняты штатным `matchesGoldenFile --update-goldens`
 `toImage`-харнесс в этом окружении зависал после первого кадра) и просмотрены
 вручную: длинный вопрос + картинка читаются полностью, ответ на телефоне
 прокручивается, колоды в сетке и списке выглядят цельно.
+
+Windows-смоук на реальном процессе подтвердил сквозной сценарий: форма карточки
+(Basic + картинка без масок) → файловая drift-БД и MediaStore → сегодняшняя
+карточка не блокируется лимитом и показывает иллюстрацию → вчерашняя карточка
+даёт предупреждение «Продолжить без лимита» → генерация с `image_query`
+прикрепляет картинку Wikimedia, а нерелевантный кандидат второй карточки
+отсеивается новым порогом («отсеяно нерелевантных 1 из 1») и карточка остаётся
+с пометкой. Сам смоук-тест обновлён под текущий код: `AppDialog` вместо
+`AlertDialog`, ключ `deck-add-card-button`, терпимость к двум заголовкам лимита
+и реалистичный заголовок фейкового файла Commons.
 
 **Ручная проверка после правок (по кадрам и тестам):** карточка (фронт/ответ,
 десктоп/телефон), «Тест» (выбор A–D, ✓/✗ и «Правильный ответ», «Далее»),

@@ -34,6 +34,7 @@ import 'package:cardflow/domain/generation/generation_run.dart';
 import 'package:cardflow/domain/text/parsed_document.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/app.dart';
+import 'package:cardflow/ui/components/app_dialogs.dart';
 import 'package:cardflow/ui/cards/content/card_image_view.dart';
 import 'package:cardflow/ui/generation/generation_preview_screen.dart';
 import 'package:cardflow/ui/review/review_session_screen.dart';
@@ -137,7 +138,7 @@ void main() {
                 'page-1': <String, Object?>{
                   'pageid': 1,
                   'ns': 6,
-                  'title': 'File:Московский Кремль.jpg',
+                  'title': 'File:Moscow Kremlin.jpg',
                   'index': 1,
                   'imageinfo': <Object?>[
                     <String, Object?>{
@@ -241,7 +242,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(
         find.descendant(
-          of: find.byType(AlertDialog),
+          of: find.byType(AppDialog),
           matching: find.text(l10n.deckCreateDialogTitle),
         ),
         findsOneWidget,
@@ -251,7 +252,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(
         find.descendant(
-          of: find.byType(AlertDialog),
+          of: find.byType(AppDialog),
           matching: find.text(l10n.deckCreateDialogTitle),
         ),
         findsNothing,
@@ -264,7 +265,9 @@ void main() {
 
       await tester.tap(find.text('Мои карточки'));
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey<String>('deck-add-card')));
+      await tester.tap(
+        find.byKey(const ValueKey<String>('deck-add-card-button')),
+      );
       await tester.pumpAndSettle();
       await tester.enterText(
         find.byKey(const ValueKey<String>('card-form-front')),
@@ -353,7 +356,9 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text(l10n.reviewModeClassic));
       await tester.pumpAndSettle();
-      expect(find.text(l10n.reviewDailyLimitTitle), findsOneWidget);
+      // Заголовок может встречаться дважды: предупреждение на экране колоды
+      // (`deck-daily-limit-notice`) и диалог выбора после «Классики».
+      expect(find.text(l10n.reviewDailyLimitTitle), findsWidgets);
       await tester.tap(
         find.byKey(const ValueKey<String>('review-limit-continue')),
       );
