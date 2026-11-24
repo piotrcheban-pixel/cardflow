@@ -32,7 +32,9 @@ Future<void> _shoot(WidgetTester tester, String name) async {
     final RenderView view = tester.binding.renderViews.first;
     final OffsetLayer layer = view.debugLayer! as OffsetLayer;
     final ui.Image image = await layer.toImage(view.paintBounds);
-    final ByteData? data = await image.toByteData(format: ui.ImageByteFormat.png);
+    final ByteData? data = await image.toByteData(
+      format: ui.ImageByteFormat.png,
+    );
     final File file = File('$_outDir/$name.png');
     file.parent.createSync(recursive: true);
     file.writeAsBytesSync(data!.buffer.asUint8List());
@@ -75,7 +77,10 @@ Future<void> _pump(WidgetTester tester, Widget child, Brightness b) async {
 void main() {
   setUpAll(() async {
     await _loadFont('Inter', '$_assets/assets/fonts/Inter-Variable.ttf');
-    await _loadFont('MaterialIcons', '$_assets/fonts/MaterialIcons-Regular.otf');
+    await _loadFont(
+      'MaterialIcons',
+      '$_assets/fonts/MaterialIcons-Regular.otf',
+    );
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
           SystemChannels.platform,

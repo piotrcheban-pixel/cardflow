@@ -65,7 +65,10 @@ Widget _app(double factor, double textScale, String location) {
       supportedLocales: AppLocalizations.supportedLocales,
       localizationsDelegates: ruLocalizationDelegates,
       theme: AppTheme.light(scale: factor),
-      routerConfig: createAppRouter(initialLocation: location, navigatorKey: key),
+      routerConfig: createAppRouter(
+        initialLocation: location,
+        navigatorKey: key,
+      ),
       builder: (BuildContext context, Widget? child) {
         final MediaQueryData media = MediaQuery.of(context);
         return MediaQuery(
@@ -80,7 +83,10 @@ Widget _app(double factor, double textScale, String location) {
 void main() {
   setUpAll(() async {
     await _loadFont('Inter', '$_assets/assets/fonts/Inter-Variable.ttf');
-    await _loadFont('MaterialIcons', '$_assets/fonts/MaterialIcons-Regular.otf');
+    await _loadFont(
+      'MaterialIcons',
+      '$_assets/fonts/MaterialIcons-Regular.otf',
+    );
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
           SystemChannels.platform,
@@ -111,9 +117,9 @@ void main() {
   }
 
   void dumpSmall(WidgetTester tester, String tag) {
-    final double ts = MediaQuery.of(
-      tester.element(find.byType(Scaffold).first),
-    ).textScaler.scale(1);
+    final double ts = MediaQuery.of(tester.element(find.byType(Scaffold).first))
+        .textScaler
+        .scale(1);
     for (final Element e in find.byType(RichText).evaluate()) {
       final RichText rt = e.widget as RichText;
       final double fs = (rt.text.style?.fontSize ?? 0) * ts;
@@ -131,15 +137,16 @@ void main() {
   }
 
   void dumpChips(WidgetTester tester, String tag) {
-    for (final Element e in find
-        .byWidgetPredicate(
-          (Widget w) =>
-              w.runtimeType.toString() == 'ChoiceChip' ||
-              w.runtimeType.toString() == 'FilterChip' ||
-              w.runtimeType.toString() == 'SegmentedButton' ||
-              w.runtimeType.toString() == 'InputChip',
-        )
-        .evaluate()) {
+    for (final Element e
+        in find
+            .byWidgetPredicate(
+              (Widget w) =>
+                  w.runtimeType.toString() == 'ChoiceChip' ||
+                  w.runtimeType.toString() == 'FilterChip' ||
+                  w.runtimeType.toString() == 'SegmentedButton' ||
+                  w.runtimeType.toString() == 'InputChip',
+            )
+            .evaluate()) {
       final RenderBox? box = e.renderObject as RenderBox?;
       if (box == null) continue;
       final Offset o = box.localToGlobal(Offset.zero);
@@ -152,13 +159,12 @@ void main() {
     }
   }
 
-  for (final (String name, Size size, double factor, double text) in <
-    (String, Size, double, double)
-  >[
-    ('2k150', const Size(1706.7, 940), 1.24, 0.9),
-    ('4k100', const Size(3840, 2160), 1.45, 1.0),
-    ('fhd150', const Size(1280, 720), 1.0, 0.9),
-  ]) {
+  for (final (String name, Size size, double factor, double text)
+      in <(String, Size, double, double)>[
+        ('2k150', const Size(1706.7, 940), 1.24, 0.9),
+        ('4k100', const Size(3840, 2160), 1.45, 1.0),
+        ('fhd150', const Size(1280, 720), 1.0, 0.9),
+      ]) {
     testWidgets('decks $name', (WidgetTester tester) async {
       await run(
         tester,

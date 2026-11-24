@@ -75,7 +75,10 @@ Widget _app({
       theme: brightness == Brightness.light
           ? AppTheme.light(scale: _factor)
           : AppTheme.dark(scale: _factor),
-      routerConfig: createAppRouter(initialLocation: location, navigatorKey: key),
+      routerConfig: createAppRouter(
+        initialLocation: location,
+        navigatorKey: key,
+      ),
       builder: (BuildContext context, Widget? child) {
         final MediaQueryData media = MediaQuery.of(context);
         return MediaQuery(
@@ -103,7 +106,9 @@ Future<void> _shoot(WidgetTester tester, String name) async {
     final RenderView view = tester.binding.renderViews.first;
     final OffsetLayer layer = view.debugLayer! as OffsetLayer;
     final ui.Image image = await layer.toImage(view.paintBounds);
-    final ByteData? data = await image.toByteData(format: ui.ImageByteFormat.png);
+    final ByteData? data = await image.toByteData(
+      format: ui.ImageByteFormat.png,
+    );
     final File file = File('$_outDir/$name.png');
     file.parent.createSync(recursive: true);
     file.writeAsBytesSync(data!.buffer.asUint8List());
@@ -127,7 +132,10 @@ List<Card> _cards(int n) => <Card>[
 void main() {
   setUpAll(() async {
     await _loadFont('Inter', '$_assets/assets/fonts/Inter-Variable.ttf');
-    await _loadFont('MaterialIcons', '$_assets/fonts/MaterialIcons-Regular.otf');
+    await _loadFont(
+      'MaterialIcons',
+      '$_assets/fonts/MaterialIcons-Regular.otf',
+    );
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
           SystemChannels.platform,
@@ -174,10 +182,7 @@ void main() {
   }, timeout: const Timeout(Duration(seconds: 120)));
 
   testWidgets('plan missing', (WidgetTester tester) async {
-    await _pump(
-      tester,
-      _app(cards: _cards(1), location: '/session/classic'),
-    );
+    await _pump(tester, _app(cards: _cards(1), location: '/session/classic'));
     await _shoot(tester, 'state_plan_missing_2k150');
   }, timeout: const Timeout(Duration(seconds: 120)));
 
@@ -225,10 +230,7 @@ void main() {
   }, timeout: const Timeout(Duration(seconds: 120)));
 
   testWidgets('deck screen overflow menu', (WidgetTester tester) async {
-    await _pump(
-      tester,
-      _app(cards: _cards(3), location: '/decks/deck-1'),
-    );
+    await _pump(tester, _app(cards: _cards(3), location: '/decks/deck-1'));
     await tester.tap(find.byKey(const ValueKey<String>('deck-overflow-menu')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
@@ -236,10 +238,7 @@ void main() {
   }, timeout: const Timeout(Duration(seconds: 120)));
 
   testWidgets('deck delete dialog', (WidgetTester tester) async {
-    await _pump(
-      tester,
-      _app(cards: _cards(3), location: '/decks/deck-1'),
-    );
+    await _pump(tester, _app(cards: _cards(3), location: '/decks/deck-1'));
     await tester.tap(find.byKey(const ValueKey<String>('deck-overflow-menu')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
@@ -265,7 +264,9 @@ void _rects(WidgetTester tester, String label) {
     final Finder f = find.byKey(ValueKey<String>(k));
     if (f.evaluate().isEmpty) continue;
     final Rect r = tester.getRect(f.first);
-    parts.add('$k=${r.width.toStringAsFixed(0)}x${r.height.toStringAsFixed(0)}');
+    parts.add(
+      '$k=${r.width.toStringAsFixed(0)}x${r.height.toStringAsFixed(0)}',
+    );
   }
   // ignore: avoid_print
   print('STATE $label|${parts.isEmpty ? 'no keys' : parts.join(' ')}');

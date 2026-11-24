@@ -135,7 +135,9 @@ Future<void> _shoot(WidgetTester tester, String name) async {
     final RenderView view = tester.binding.renderViews.first;
     final OffsetLayer layer = view.debugLayer! as OffsetLayer;
     final ui.Image image = await layer.toImage(view.paintBounds);
-    final ByteData? data = await image.toByteData(format: ui.ImageByteFormat.png);
+    final ByteData? data = await image.toByteData(
+      format: ui.ImageByteFormat.png,
+    );
     final File file = File('$_outDir/$name.png');
     file.parent.createSync(recursive: true);
     file.writeAsBytesSync(data!.buffer.asUint8List());
@@ -147,7 +149,10 @@ Future<void> _shoot(WidgetTester tester, String name) async {
 void main() {
   setUpAll(() async {
     await _loadFont('Inter', '$_assets/assets/fonts/Inter-Variable.ttf');
-    await _loadFont('MaterialIcons', '$_assets/fonts/MaterialIcons-Regular.otf');
+    await _loadFont(
+      'MaterialIcons',
+      '$_assets/fonts/MaterialIcons-Regular.otf',
+    );
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
           SystemChannels.platform,
@@ -230,8 +235,10 @@ void main() {
           );
         } else {
           // ignore: avoid_print
-          print('IMG ${cfg.key}|$name|missing image=${image.evaluate().length} '
-              'card=${cardFinder.evaluate().length}');
+          print(
+            'IMG ${cfg.key}|$name|missing image=${image.evaluate().length} '
+            'card=${cardFinder.evaluate().length}',
+          );
         }
         await _shoot(tester, 'img_${cfg.key}_$name');
       }, timeout: const Timeout(Duration(seconds: 180)));
@@ -259,12 +266,7 @@ void main() {
       'media-2': _patternPng(960, 1371),
     };
     await tester.pumpWidget(
-      _app(
-        factor: 1.24,
-        textScale: 0.9,
-        card: card,
-        bytes: twoBytes,
-      ),
+      _app(factor: 1.24, textScale: 0.9, card: card, bytes: twoBytes),
     );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 450));
@@ -293,9 +295,11 @@ void main() {
       }
       final Rect r = tester.getRect(f);
       // ignore: avoid_print
-      print('IMG2 $id=${r.width.toStringAsFixed(0)}x'
-          '${r.height.toStringAsFixed(0)}@${r.left.toStringAsFixed(0)},'
-          '${r.top.toStringAsFixed(0)}');
+      print(
+        'IMG2 $id=${r.width.toStringAsFixed(0)}x'
+        '${r.height.toStringAsFixed(0)}@${r.left.toStringAsFixed(0)},'
+        '${r.top.toStringAsFixed(0)}',
+      );
     }
     await _shoot(tester, 'img_2k150_two_images');
   }, timeout: const Timeout(Duration(seconds: 180)));

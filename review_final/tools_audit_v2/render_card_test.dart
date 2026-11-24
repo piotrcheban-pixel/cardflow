@@ -144,9 +144,7 @@ Widget _app({
       builder: (BuildContext context, Widget? child) {
         final MediaQueryData media = MediaQuery.of(context);
         return MediaQuery(
-          data: media.copyWith(
-            textScaler: TextScaler.linear(cfg.textScale),
-          ),
+          data: media.copyWith(textScaler: TextScaler.linear(cfg.textScale)),
           child: child ?? const SizedBox.shrink(),
         );
       },
@@ -170,7 +168,9 @@ Future<void> _shoot(WidgetTester tester, String name) async {
     final RenderView view = tester.binding.renderViews.first;
     final OffsetLayer layer = view.debugLayer! as OffsetLayer;
     final ui.Image image = await layer.toImage(view.paintBounds);
-    final ByteData? data = await image.toByteData(format: ui.ImageByteFormat.png);
+    final ByteData? data = await image.toByteData(
+      format: ui.ImageByteFormat.png,
+    );
     final File file = File('$_outDir/$name.png');
     file.parent.createSync(recursive: true);
     file.writeAsBytesSync(data!.buffer.asUint8List());
@@ -257,9 +257,10 @@ void _measureCard(WidgetTester tester, Cfg cfg, String screen) {
   }
   final double ts = _textScale(tester, card);
   final List<String> fonts = <String>[];
-  for (final Element e in find
-      .descendant(of: card, matching: find.byType(RichText))
-      .evaluate()) {
+  for (final Element e
+      in find
+          .descendant(of: card, matching: find.byType(RichText))
+          .evaluate()) {
     final RichText rt = e.widget as RichText;
     final double fs = (rt.text.style?.fontSize ?? 0) * ts;
     final String t = rt.text.toPlainText().replaceAll('\n', ' ');
@@ -279,7 +280,12 @@ void _measureCard(WidgetTester tester, Cfg cfg, String screen) {
   );
 }
 
-void _measureGeneric(WidgetTester tester, Cfg cfg, String screen, List<String> keys) {
+void _measureGeneric(
+  WidgetTester tester,
+  Cfg cfg,
+  String screen,
+  List<String> keys,
+) {
   final List<String> parts = <String>[];
   for (final String k in keys) {
     final Finder f = find.byKey(ValueKey<String>(k));
@@ -300,9 +306,10 @@ void _measureGeneric(WidgetTester tester, Cfg cfg, String screen, List<String> k
 void _measureFonts(WidgetTester tester, Cfg cfg, String screen, Finder root) {
   final double ts = _textScale(tester, root);
   final Map<String, int> sizes = <String, int>{};
-  for (final Element e in find
-      .descendant(of: root, matching: find.byType(RichText))
-      .evaluate()) {
+  for (final Element e
+      in find
+          .descendant(of: root, matching: find.byType(RichText))
+          .evaluate()) {
     final RichText rt = e.widget as RichText;
     final double fs = (rt.text.style?.fontSize ?? 0) * ts;
     final String key = fs.toStringAsFixed(1);
@@ -351,12 +358,7 @@ void main() {
         'review-rating-good',
         'review-close',
       ]);
-      _measureFonts(
-        tester,
-        cfg,
-        'classicQ',
-        find.byType(Scaffold).first,
-      );
+      _measureFonts(tester, cfg, 'classicQ', find.byType(Scaffold).first);
       await _shoot(tester, 'card_classic_Q_${cfg.name}');
     }, timeout: const Timeout(Duration(seconds: 180)));
 
@@ -388,7 +390,9 @@ void main() {
       await _pump(tester, cfg, '/decks/deck-1/feed');
       await tester.pump(const Duration(milliseconds: 300));
       _measureCard(tester, cfg, 'feedQ');
-      final Finder feedCard = find.byKey(const ValueKey<String>('feed-card-card-1'));
+      final Finder feedCard = find.byKey(
+        const ValueKey<String>('feed-card-card-1'),
+      );
       if (feedCard.evaluate().isNotEmpty) {
         final Rect r = tester.getRect(feedCard);
         // ignore: avoid_print

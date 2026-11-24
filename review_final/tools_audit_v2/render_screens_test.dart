@@ -140,7 +140,11 @@ List<Override> _overrides(double textScale) => decksOverrides(
   ),
 );
 
-Widget _app(Cfg cfg, String location, {Brightness brightness = Brightness.light}) {
+Widget _app(
+  Cfg cfg,
+  String location, {
+  Brightness brightness = Brightness.light,
+}) {
   final GlobalKey<NavigatorState> key = GlobalKey<NavigatorState>();
   return ProviderScope(
     overrides: _overrides(cfg.textScale),
@@ -152,7 +156,10 @@ Widget _app(Cfg cfg, String location, {Brightness brightness = Brightness.light}
       theme: brightness == Brightness.light
           ? AppTheme.light(scale: cfg.factor)
           : AppTheme.dark(scale: cfg.factor),
-      routerConfig: createAppRouter(initialLocation: location, navigatorKey: key),
+      routerConfig: createAppRouter(
+        initialLocation: location,
+        navigatorKey: key,
+      ),
       builder: (BuildContext context, Widget? child) {
         final MediaQueryData media = MediaQuery.of(context);
         return MediaQuery(
@@ -164,8 +171,12 @@ Widget _app(Cfg cfg, String location, {Brightness brightness = Brightness.light}
   );
 }
 
-Future<void> _pump(WidgetTester tester, Cfg cfg, String location,
-    {Brightness brightness = Brightness.light}) async {
+Future<void> _pump(
+  WidgetTester tester,
+  Cfg cfg,
+  String location, {
+  Brightness brightness = Brightness.light,
+}) async {
   tester.view.devicePixelRatio = 1.0;
   tester.view.physicalSize = cfg.size;
   addTearDown(tester.view.reset);
@@ -181,7 +192,9 @@ Future<void> _shoot(WidgetTester tester, String name) async {
     final RenderView view = tester.binding.renderViews.first;
     final OffsetLayer layer = view.debugLayer! as OffsetLayer;
     final ui.Image image = await layer.toImage(view.paintBounds);
-    final ByteData? data = await image.toByteData(format: ui.ImageByteFormat.png);
+    final ByteData? data = await image.toByteData(
+      format: ui.ImageByteFormat.png,
+    );
     final File file = File('$_outDir/$name.png');
     file.parent.createSync(recursive: true);
     file.writeAsBytesSync(data!.buffer.asUint8List());
@@ -199,8 +212,10 @@ void _rects(WidgetTester tester, Cfg cfg, String screen, List<String> keys) {
       continue;
     }
     final Rect r = tester.getRect(f.first);
-    parts.add('$k=${r.width.toStringAsFixed(0)}x${r.height.toStringAsFixed(0)}'
-        '@${r.left.toStringAsFixed(0)},${r.top.toStringAsFixed(0)}');
+    parts.add(
+      '$k=${r.width.toStringAsFixed(0)}x${r.height.toStringAsFixed(0)}'
+      '@${r.left.toStringAsFixed(0)},${r.top.toStringAsFixed(0)}',
+    );
   }
   // ignore: avoid_print
   print('RECT $screen|${cfg.name}|${parts.join(' ')}');
@@ -210,16 +225,19 @@ void _fonts(WidgetTester tester, Cfg cfg, String screen, Finder root) {
   final MediaQueryData media = MediaQuery.of(tester.element(root));
   final double ts = media.textScaler.scale(1);
   final Map<String, int> sizes = <String, int>{};
-  for (final Element e in find
-      .descendant(of: root, matching: find.byType(RichText))
-      .evaluate()) {
+  for (final Element e
+      in find
+          .descendant(of: root, matching: find.byType(RichText))
+          .evaluate()) {
     final RichText rt = e.widget as RichText;
     final String key = ((rt.text.style?.fontSize ?? 0) * ts).toStringAsFixed(1);
     sizes[key] = (sizes[key] ?? 0) + 1;
   }
   // ignore: avoid_print
-  print('FONTS $screen|${cfg.name}|'
-      '${sizes.entries.map((MapEntry<String, int> e) => '${e.key}x${e.value}').join(' ')}');
+  print(
+    'FONTS $screen|${cfg.name}|'
+    '${sizes.entries.map((MapEntry<String, int> e) => '${e.key}x${e.value}').join(' ')}',
+  );
   // Ширина контентной колонки относительно окна (V2/V10).
   final List<String> widths = <String>[];
   for (final Element e in find.byType(AppContentWidth).evaluate()) {
@@ -233,12 +251,16 @@ void _fonts(WidgetTester tester, Cfg cfg, String screen, Finder root) {
     final RenderObject? ro = inner?.renderObject;
     if (ro is! RenderBox || !ro.hasSize || ro.size.width < 1) continue;
     final Offset o = ro.localToGlobal(Offset.zero);
-    widths.add('${ro.size.width.toStringAsFixed(0)}@${o.dx.toStringAsFixed(0)}');
+    widths.add(
+      '${ro.size.width.toStringAsFixed(0)}@${o.dx.toStringAsFixed(0)}',
+    );
   }
   // ignore: avoid_print
-  print('PAGE $screen|${cfg.name}|viewport=${media.size.width.toStringAsFixed(0)} '
-      'columns=${widths.take(3).join(',')} '
-      'share=${widths.isEmpty ? 'n/a' : (100 * double.parse(widths.first.split('@').first) / media.size.width).toStringAsFixed(1)}%');
+  print(
+    'PAGE $screen|${cfg.name}|viewport=${media.size.width.toStringAsFixed(0)} '
+    'columns=${widths.take(3).join(',')} '
+    'share=${widths.isEmpty ? 'n/a' : (100 * double.parse(widths.first.split('@').first) / media.size.width).toStringAsFixed(1)}%',
+  );
 }
 
 void _overflowCheck(WidgetTester tester, Cfg cfg, String screen) {
@@ -252,35 +274,47 @@ void _overflowCheck(WidgetTester tester, Cfg cfg, String screen) {
     }
   }
   // ignore: avoid_print
-  print('OVERFLOW $screen|${cfg.name}|${issues.isEmpty ? 'none' : issues.join(';')}');
+  print(
+    'OVERFLOW $screen|${cfg.name}|${issues.isEmpty ? 'none' : issues.join(';')}',
+  );
 }
 
 void _chipAndButtonAudit(WidgetTester tester, Cfg cfg, String screen) {
   final List<String> small = <String>[];
-  for (final Element e in find
-      .byWidgetPredicate((Widget w) =>
-          w is FilledButton ||
-          w is OutlinedButton ||
-          w is TextButton ||
-          w is IconButton ||
-          w is SegmentedButton)
-      .evaluate()) {
+  for (final Element e
+      in find
+          .byWidgetPredicate(
+            (Widget w) =>
+                w is FilledButton ||
+                w is OutlinedButton ||
+                w is TextButton ||
+                w is IconButton ||
+                w is SegmentedButton,
+          )
+          .evaluate()) {
     final RenderBox box = e.renderObject! as RenderBox;
     if (!box.hasSize) continue;
     final Size s = box.size;
     if (s.height < 44 && s.height > 0) {
-      small.add('${e.widget.runtimeType}:'
-          '${s.width.toStringAsFixed(0)}x${s.height.toStringAsFixed(0)}');
+      small.add(
+        '${e.widget.runtimeType}:'
+        '${s.width.toStringAsFixed(0)}x${s.height.toStringAsFixed(0)}',
+      );
     }
   }
   // ignore: avoid_print
-  print('SMALLBTN $screen|${cfg.name}|${small.isEmpty ? 'none' : small.join(';')}');
+  print(
+    'SMALLBTN $screen|${cfg.name}|${small.isEmpty ? 'none' : small.join(';')}',
+  );
 }
 
 void main() {
   setUpAll(() async {
     await _loadFont('Inter', '$_assets/assets/fonts/Inter-Variable.ttf');
-    await _loadFont('MaterialIcons', '$_assets/fonts/MaterialIcons-Regular.otf');
+    await _loadFont(
+      'MaterialIcons',
+      '$_assets/fonts/MaterialIcons-Regular.otf',
+    );
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
           SystemChannels.platform,
@@ -308,17 +342,34 @@ void main() {
     'practice': '/decks/deck-1/practice',
   };
 
-  for (final Cfg cfg in <Cfg>[_cfhd100, _cw1680, _cw1440, _cw1366, _cwuxga, _cw21x9]) {
+  for (final Cfg cfg in <Cfg>[
+    _cfhd100,
+    _cw1680,
+    _cw1440,
+    _cw1366,
+    _cwuxga,
+    _cw21x9,
+  ]) {
     for (final MapEntry<String, String> entry in screens.entries) {
       // На очень мелких размерах достаточно ключевых экранов.
       if ((cfg == _c800 || cfg == _cm844) &&
-          !<String>['decks', 'deck', 'test', 'settings', 'generation']
-              .contains(entry.key)) {
+          !<String>[
+            'decks',
+            'deck',
+            'test',
+            'settings',
+            'generation',
+          ].contains(entry.key)) {
         continue;
       }
       if (cfg == _cm390 &&
-          !<String>['decks', 'deck', 'test', 'settings', 'statistics']
-              .contains(entry.key)) {
+          !<String>[
+            'decks',
+            'deck',
+            'test',
+            'settings',
+            'statistics',
+          ].contains(entry.key)) {
         continue;
       }
       testWidgets('${entry.key} ${cfg.name}', (WidgetTester tester) async {

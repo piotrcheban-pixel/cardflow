@@ -69,7 +69,10 @@ List<Override> _overrides() => decksOverrides(
 void main() {
   setUpAll(() async {
     await _loadFont('Inter', '$_assets/assets/fonts/Inter-Variable.ttf');
-    await _loadFont('MaterialIcons', '$_assets/fonts/MaterialIcons-Regular.otf');
+    await _loadFont(
+      'MaterialIcons',
+      '$_assets/fonts/MaterialIcons-Regular.otf',
+    );
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
           SystemChannels.platform,
@@ -77,7 +80,12 @@ void main() {
         );
   });
 
-  for (final String location in <String>['/', '/decks/deck-1', '/statistics', '/settings']) {
+  for (final String location in <String>[
+    '/',
+    '/decks/deck-1',
+    '/statistics',
+    '/settings',
+  ]) {
     testWidgets('small text $location', (WidgetTester tester) async {
       tester.view.devicePixelRatio = 1.0;
       tester.view.physicalSize = const Size(1706.7, 940);
@@ -94,7 +102,10 @@ void main() {
             supportedLocales: AppLocalizations.supportedLocales,
             localizationsDelegates: ruLocalizationDelegates,
             theme: AppTheme.light(scale: 1.24),
-            routerConfig: createAppRouter(initialLocation: location, navigatorKey: key),
+            routerConfig: createAppRouter(
+              initialLocation: location,
+              navigatorKey: key,
+            ),
             builder: (BuildContext context, Widget? child) {
               final MediaQueryData media = MediaQuery.of(context);
               return MediaQuery(
