@@ -158,13 +158,30 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   считают. UI — `PracticeSessionEngine` + `PracticeSessionScreen` (каркас `ReviewChrome`, без
   прогноза интервалов), маршрут `/decks/:deckId/practice`, пункт «Тренировка» в листе режимов.
 - `ui/` — экраны, виджеты, локализация. Компоненты M3 Expressive — только через слой `lib/ui/m3e/` (библиотеку можно заменить). Токены движения — `lib/ui/motion.dart`.
-- **Режим «Лента»** (SPEC A7.3, ADR-016): движок `lib/ui/review/feed_session_engine.dart` (очередь
-  `ReviewQueue`, по-карточные revealed/rated, `visit` без записи, `rate`/`undo` через тот же
-  `ReviewRepository`, `mode='feed'`, авто-продвижение без оценки); политика свайпов —
-  `feed_swipe.dart` (80 px + 300 px/с, >60% — Easy/Hard); UI — `feed_session_screen.dart`,
-  `feed_card_view.dart`, `feed_progress_bar.dart`; общий каркас A6.4 — `review_chrome.dart`;
-  маршрут `/decks/:deckId/feed` из листа режимов колоды. Пульсация Stories — повторяющаяся
-  анимация: тесты только `pump(Duration)`, не `pumpAndSettle`.
+- **Режим «Лента» — свободный просмотр** (ADR-044, заменяет пользовательский сценарий ADR-016):
+  движок `lib/ui/review/feed_session_engine.dart` **не знает FSRS**: нет `scheduler`/`ReviewRepository`/
+  `clock`, нет `rate`/`undo`/авто-продвижения; очередь — все карточки, кроме `suspended`
+  (`buildBrowseQueue`, `createdAt` ASC, тай-брек `id`), план конструктора принимается `prebuilt`.
+  Свайп/колесо/клавиши — только навигация; тап раскрывает ответ, раскрытие хранится по карточке.
+  UI — `feed_session_screen.dart` (вертикальный `PageView`, колесо перехватывается `Listener` +
+  `pointerSignalResolver` **внутри страницы**, клавиатура `feed_keyboard.dart`, рейка
+  `feed-previous/next`), `feed_card_view.dart` (отдельный дизайн, без вложенной прокрутки:
+  длинный текст → «Открыть полностью»), `feed_progress_bar.dart` (компактные кликабельные
+  сегменты, без пульсации). Маршруты `/decks/:deckId/feed` и `/session/feed` сохранены;
+  `feedPath` без `?limits=ignore`, дневные лимиты к ленте не применяются. **Свайп не пишет
+  `review_logs` и не меняет `due`/`fsrs_json`** — инвариант держит
+  `test/integration/feed_session_flow_test.dart`. Старая свайп-политика `feed_swipe.dart`
+  остаётся только внутри `SessionCard` (классика её не включает) и в unit-тесте.
+- **Дизайн-система v3** (ADR-045; уточняет ADR-038): палитра «кобальт на графите» в
+  `lib/ui/theme/app_tokens.dart` (primary `#1E4FD8`/`#7FA5FF`, поверхности нейтральные без
+  сине-фиолетового сдвига), guard `test/guards/contrast_test.dart` (≥4,5:1 текст, ≥3:1 границы).
+  Кнопки оценки (`review_toolbar.dart`) — **только названия действий** (`Не знаю / Затрудняюсь /
+  Знаю / Легко`), без номеров клавиш и интервалов; прогноз `preview` остаётся в движке и FSRS,
+  клавиши `1–4` работают, но не печатаются. Единый чип фильтра — `lib/ui/components/app_filter_chip.dart`
+  (высота 36 + цель 44, центр, счётчик отдельным бейджем; ключи `decks-filter-*`).
+  Анимации — одна шкала (`AppDurations`, `AppMotion.reduce`), постоянных (пульс/авто-таймер)
+  анимаций в приложении нет. «Найти колоду» в оболочке обязана передавать фокус полю
+  (`decksSearchFocusProvider` + `FocusNode`), а не только показывать его.
 - **Типы/разметка карточек** (SPEC A7.8–A7.10, ADR-017): чистая разметка — `lib/domain/cards/`
   (`occlusion.dart`, `cloze_markup.dart`, `latex_markup.dart`); общий рендер — `lib/ui/cards/content/`
   (`CardContentView`, `cloze_text.dart`, `latex_text.dart`, `occlusion_image_view.dart`), редактор масок —

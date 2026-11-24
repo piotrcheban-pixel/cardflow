@@ -1788,3 +1788,83 @@ minor D4 (подпись первого поля формы), запас про�
 1–2 строки несовместимы; выбран второй критерий. Лента/тренировка живьём не
 сняты в финале. Тёмная тема, контраст, дислексия, dynamic color, screen reader —
 не перепроверялись.
+
+## Итерация «UI/UX-редизайн v3: лента, оценки, фильтры, поиск» (2026-11-24)
+
+**Старт.** `git rev-parse --abbrev-ref HEAD` → `main`; `HEAD = 36f8738`
+(`docs(review): зафиксировать внешний сбой macOS-раннера в CI`); рабочее дерево
+содержало только прежние журналы/аудиты (`review_visual/`, `review_final/`).
+Baseline: `fvm flutter analyze --no-pub` — 0 issues; полный
+`fvm flutter test --no-pub --exclude-tags golden` — **2654 passed + 16 skipped**
+(до новых тестов).
+
+**Сделано (ADR-044/045).**
+- **Лента — свободный просмотр, без FSRS.** `FeedSessionEngine` переписан: нет
+  `Scheduler`/`ReviewRepository`/`clock`/`rate`/`undo`/лимитов; очередь
+  `buildBrowseQueue` (все, кроме `suspended`, `createdAt` ASC, тай-брек `id`);
+  план конструктора — `prebuilt`. `feed_session_screen.dart`: вертикальный
+  `PageView`, колесо через `Listener` + `pointerSignalResolver` **внутри
+  страницы**, клавиатура `feed_keyboard.dart` (↓/PageDown/→, ↑/PageUp/←,
+  Home/End, Space/Enter, Esc), шевроны и кликабельный прогресс; тап раскрывает
+  ответ, раскрытие хранится по карточке. Длинный текст не прокручивается в
+  странице: «Открыть полностью» (`feed-read-full`) → лист. Карточка —
+  отдельный дизайн (`feed_card_view.dart`), 72 % ширины/78 % высоты на
+  десктопе, вся полезная область на телефоне. `feed_progress_bar.dart` без
+  пульсации. `feedPath` без `?limits=ignore`; лента не показывает диалог
+  дневного лимита. Интеграционный тест на реальной drift-БД подтверждает:
+  после листания/раскрытия `review_logs` пуст, `due`/`fsrs_json`/`state` не
+  изменились.
+- **Кнопки оценки.** `review_toolbar.dart` — только `Не знаю / Затрудняюсь /
+  Знаю / Легко` (ARB `ratingHard` = «Затрудняюсь»), без цифр и интервалов;
+  высота 56–70 (compact тоже 56), кегль 18–22, центр, состояния
+  hover/pressed/focused/disabled, иерархия «одна залитая» (primary) + три
+  тонировки. `preview` продолжает считаться движком и применяться FSRS;
+  клавиши 1–4 работают. UI-хелпер `review_interval_format.dart` и его тест
+  удалены (показ интервалов больше не существует); интервалы проверяются
+  тестами `Scheduler.previewIntervals`.
+- **Поиск колоды.** `decksSearchFocusProvider` + `FocusNode` в
+  `_DecksSearchField`; `open()`/`toggle()` показывают поле и просят фокус;
+  рамка фокуса видна. Тесты на десктопе и в мобильном `Drawer`: поле в фокусе,
+  ввод сразу фильтрует, пустой результат объясняется.
+- **Фильтры.** Новый `AppFilterChip`: высота 36 + цель 44, `Row` по центру,
+  счётчик отдельным бейджем (`tabularFigures`), `Flexible` + ellipsis, состояния
+  selected/unselected/danger/hover/pressed/focus/disabled. ARB:
+  `decksFilterAll/New/InProgress/Due` + `decksFilterMenuItem`. Ряд фильтров
+  колод переведён на компонент (ключи `decks-filter-*`); Material `FilterChip`
+  конструктора остаётся с темой приложения (две строки названия колоды).
+- **Палитра.** «Кобальт на графите»: primary `#1E4FD8`/`#7FA5FF`, нейтральные
+  поверхности `#F6F7F9…#D8DCE2` и `#0B0E13…#2A3140`, secondary teal, tertiary
+  amber; indigo `#3525CD` и голубые фоны убраны. Guard контраста проходит:
+  primary/onPrimary 6,63:1, onSurface 16,6:1, onSurfaceVariant 7,35:1, outline
+  4,28:1; тёмная — 7,47/16,04/10,56/7,60.
+- **Анимации.** Удалены пульс Stories и авто-продвижение 3/5/8 с; переход
+  ленты 240 мс, переворот 300 мс, панель 220 мс, чипы 120–160 мс; reduced
+  motion → `jumpToPage`/`Duration.zero`. Постоянных анимаций нет.
+- **Тексты.** Подсказка на обороте классики — «1–4 — оценка · ← — отменить»
+  (раньше обещала «Пробел — показать ответ» уже после ответа); описание ленты
+  в листе режимов — «Свободный просмотр: вертикальная лента без оценки и
+  влияния на расписание».
+- **Визуальная приёмка.** `journal/ui-ux-redesign/tools/render_v3_test.dart`:
+  18 production-кадров (2K light/dark, FullHD, 390×844, 260×562);
+  `tools/live_check.ps1` — живой Release (старт без ошибок, колоды, лист
+  режимов). По кадрам исправлено: ширина карточки ленты (72 %), высота (78 %
+  рабочего поля), шевроны в жёлобе; мобильная классика 2×2.
+- **Документация.** `journal/ui-ux-redesign/{audit,report}.md`,
+  `docs/decisions/ADR-044-feed-browse-mode.md`, `ADR-045-design-system-v3.md`,
+  обновлён `AGENTS.md` (разделы ленты и дизайн-системы).
+
+**Гейты.** `fvm flutter analyze --no-pub` — 0 issues;
+`fvm dart format --set-exit-if-changed lib test integration_test tool` — 0
+changed; `fvm flutter test --no-pub --exclude-tags golden` —
+**2660 passed + 16 skipped**; покрытие — **90,9 % рукописного кода (22 360/24 607)**, всего 83,6 % (24 119/28 860);
+`fvm flutter build windows --release --no-pub` — `cardflow.exe` (76,4 с; финальная инкрементальная сборка — 43,5 с);
+живой Release — старт без ошибок (только строка Impeller в stderr).
+Независимый reviewer в сессии недоступен (L35): ревью Lead по чек-листу на
+снимке рабочего дерева.
+
+**Ограничения.** Stitch/Mobbin/Figma Make/Uizard недоступны из агента (нет
+сессии/UI; см. audit §3.4); Android/iOS-девайса нет (L2); screen reader — только
+семантика widget-тестов (L46); `SessionCard` содержит неиспользуемую
+свайп-механику (включается только `enableSwipe`, экраны его не передают);
+живой кадр ленты не снят из-за сжатия окна на рабочем столе (лента проверена
+production-рендерами и widget-тестами). Push не выполнялся.
