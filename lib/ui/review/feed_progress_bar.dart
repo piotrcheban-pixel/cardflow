@@ -7,161 +7,88 @@ import 'package:cardflow/ui/motion.dart';
 import 'package:cardflow/ui/theme/app_tokens.dart';
 import 'package:cardflow/ui/theme/app_typography.dart';
 
-/// Stories-прогресс ленты (SPEC A7.3): сегмент на карточку, текущий пульсирует.
+/// Компактный прогресс ленты (ADR-044).
 ///
-/// Аудит v4 (V25): на длинной колоде (69 карточек) сегменты превращались в
-/// шум из микро-полосок — теперь сегменты рисуются до 24 карточек, дальше
-/// показывается одна полоса и «N из M». Пульс учитывает reduced motion и
-/// длится 1,4 с вместо 0,9 с.
-class FeedProgressBar extends StatefulWidget {
+/// Одна полоса-сегмент на карточку (до 24; на длинной колоде карточки
+/// группируются), текущий сегмент залит акцентом. Режим свободного просмотра
+/// не «оценивает» карточки, поэтому прогресс показывает только позицию —
+/// никакого процента изученного и никакой пульсации: движение здесь ничего
+/// не сообщает пользователю, а постоянная анимация нагружала бы растр.
+///
+/// Сегменты кликабельны ([onSeek]): на десктопе это быстрый способ прыгнуть
+/// к карточке, не листая ленту колесом.
+class FeedProgressBar extends StatelessWidget {
   /// Создаёт прогресс ленты.
   const FeedProgressBar({
-    required this.rated,
+    required this.total,
     required this.currentIndex,
-    this.animatePulse = true,
+    this.onSeek,
     super.key,
   });
 
-  /// Оценена ли карточка с каждым индексом.
-  final List<bool> rated;
+  /// Всего карточек.
+  final int total;
 
   /// Индекс текущей карточки.
   final int currentIndex;
 
-  /// Пульс текущего сегмента (A6.6: «Стандартная» анимация — без пульса).
-  final bool animatePulse;
+  /// Переход к карточке по клику на сегмент; `null` — сегменты статичны.
+  final ValueChanged<int>? onSeek;
 
-  /// Сколько сегментов рисовать, прежде чем перейти на общую полосу.
+  /// Сколько сегментов рисовать, прежде чем группировать карточки.
   static const int segmentLimit = 24;
-
-  @override
-  State<FeedProgressBar> createState() => _FeedProgressBarState();
-}
-
-class _FeedProgressBarState extends State<FeedProgressBar>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _pulse = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 1400),
-  );
-  bool _pulsing = false;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _syncPulse();
-  }
-
-  @override
-  void didUpdateWidget(FeedProgressBar oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.animatePulse != widget.animatePulse) _syncPulse();
-  }
-
-  /// Пульс включается только при выразительной анимации и без reduced motion.
-  void _syncPulse() {
-    final bool shouldPulse =
-        widget.animatePulse &&
-        widget.rated.length <= FeedProgressBar.segmentLimit &&
-        !AppMotion.reduce(context);
-    if (shouldPulse == _pulsing) return;
-    _pulsing = shouldPulse;
-    if (shouldPulse) {
-      _pulse.repeat(reverse: true);
-    } else {
-      _pulse.stop();
-      _pulse.value = 1;
-    }
-  }
-
-  @override
-  void dispose() {
-    _pulse.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
     final ColorScheme scheme = Theme.of(context).colorScheme;
-    final int ratedCount = widget.rated.where((bool value) => value).length;
-    final int total = widget.rated.length;
-    final String semantics = l10n.feedProgressSemantics(ratedCount, total);
-    // F28: один вид прогресса на всех размерах — сегментная полоса (до 24
-    // сегментов; при большем числе карточки группируются в 24 сегмента), а
-    // подпись «Карточка N из M» стоит в одном месте справа.
+    final int position = total == 0 ? 0 : (currentIndex + 1).clamp(1, total);
+    final String semantics = l10n.feedProgressSemantics(position, total);
     final int segments = total == 0
         ? 0
         : math.min(total, FeedProgressBar.segmentLimit);
     final int groupSize = segments == 0 ? 1 : (total / segments).ceil();
-    final List<bool> segmentRated = <bool>[
-      for (int index = 0; index < segments; index++)
-        <int>[
-          for (
-            int card = index * groupSize;
-            card < math.min(total, (index + 1) * groupSize);
-            card++
-          )
-            card,
-        ].every((int card) => widget.rated[card]),
-    ];
     final int currentSegment = groupSize == 0
         ? 0
-        : (widget.currentIndex ~/ groupSize).clamp(
-            0,
-            math.max(0, segments - 1),
-          );
+        : (currentIndex ~/ groupSize).clamp(0, math.max(0, segments - 1));
     return Semantics(
       container: true,
-      // Подпись прогресса уже содержит и оценённое число, и позицию —
-      // вложенный счётчик не дублируем в дереве доступности.
       label: semantics,
       excludeSemantics: true,
       child: Row(
         children: <Widget>[
           Expanded(
-            child: AnimatedBuilder(
-              animation: _pulse,
-              builder: (BuildContext context, Widget? child) {
-                final double pulse = 0.45 + 0.55 * _pulse.value;
-                return Row(
-                  children: <Widget>[
-                    for (int index = 0; index < segments; index++)
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 1.5),
-                          child: _Segment(
-                            segmentKey: ValueKey<String>(
-                              'feed-progress-segment-$index',
-                            ),
-                            color: segmentRated[index]
-                                ? scheme.primary
-                                : index == currentSegment
-                                ? scheme.primary
-                                : scheme.surfaceContainerHighest,
-                            opacity: segmentRated[index]
-                                ? 1
-                                : index == currentSegment
-                                ? pulse
-                                : 1,
-                            pulse:
-                                _pulsing &&
-                                !segmentRated[index] &&
-                                index == currentSegment,
-                          ),
+            child: Row(
+              children: <Widget>[
+                for (int index = 0; index < segments; index++)
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 1.5),
+                      child: _Segment(
+                        segmentKey: ValueKey<String>(
+                          'feed-progress-segment-$index',
                         ),
+                        color: index <= currentSegment
+                            ? scheme.primary
+                            : scheme.surfaceContainerHighest,
+                        highlighted: index == currentSegment,
+                        onTap: onSeek == null || total == 0
+                            ? null
+                            : () => onSeek!(
+                                math.min(
+                                  total - 1,
+                                  index * groupSize + groupSize ~/ 2,
+                                ),
+                              ),
                       ),
-                  ],
-                );
-              },
+                    ),
+                  ),
+              ],
             ),
           ),
           const SizedBox(width: AppSpacing.sm),
           Text(
-            l10n.reviewCardCounter(
-              (widget.currentIndex + 1).clamp(1, total),
-              total,
-            ),
+            l10n.reviewCardCounter(position, total),
             key: const ValueKey<String>('feed-progress-counter'),
             style: AppTypography.numeric(
               context,
@@ -178,30 +105,36 @@ class _Segment extends StatelessWidget {
   const _Segment({
     required this.segmentKey,
     required this.color,
-    required this.opacity,
-    required this.pulse,
+    required this.highlighted,
+    this.onTap,
   });
 
   final Key segmentKey;
   final Color color;
-  final double opacity;
-  final bool pulse;
+  final bool highlighted;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    final Widget bar = Container(
+    final Widget bar = AnimatedContainer(
       key: segmentKey,
-      height: 6,
+      duration: AppMotion.duration(context, AppDurations.quick),
+      curve: AppMotion.feedback,
+      // Текущий сегмент выше остальных: позиция читается без анимации.
+      height: highlighted ? 7 : 5,
       decoration: BoxDecoration(
         color: color,
         borderRadius: BorderRadius.circular(3),
       ),
     );
-    if (!pulse) return bar;
-    return Opacity(
-      key: const ValueKey<String>('feed-progress-pulse'),
-      opacity: opacity,
-      child: bar,
+    if (onTap == null) return bar;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: bar,
+      ),
     );
   }
 }

@@ -2,45 +2,86 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/review/feed_progress_bar.dart';
 
 import '../../helpers/pump_app.dart';
 
-/// A6.6: «Стандартная» анимация отключает пульс Stories (ADR-019 §2).
+/// Прогресс ленты: позиция без оценок и без постоянной анимации (ADR-044).
 void main() {
-  Widget bar({required bool animate}) {
+  Widget bar({
+    required int total,
+    required int current,
+    ValueChanged<int>? onSeek,
+  }) {
     return appWithHome(
       overrides: const <Override>[],
       home: Scaffold(
         body: FeedProgressBar(
-          rated: const <bool>[false, false, false],
-          currentIndex: 0,
-          animatePulse: animate,
+          total: total,
+          currentIndex: current,
+          onSeek: onSeek,
         ),
       ),
     );
   }
 
-  testWidgets('выразительная анимация: текущий сегмент пульсирует', (
+  testWidgets('сегмент на карточку, текущий выше остальных', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(bar(animate: true));
-    await tester.pump(const Duration(milliseconds: 200));
+    await tester.pumpWidget(bar(total: 3, current: 1));
+    await tester.pumpAndSettle();
 
     expect(
-      find.byKey(const ValueKey<String>('feed-progress-pulse')),
-      findsOneWidget,
+      tester
+          .getSize(
+            find.byKey(const ValueKey<String>('feed-progress-segment-1')),
+          )
+          .height,
+      7,
     );
-  });
-
-  testWidgets('стандартная анимация: пульса нет', (WidgetTester tester) async {
-    await tester.pumpWidget(bar(animate: false));
-    await tester.pump(const Duration(milliseconds: 200));
-
     expect(
-      find.byKey(const ValueKey<String>('feed-progress-pulse')),
-      findsNothing,
+      tester
+          .getSize(
+            find.byKey(const ValueKey<String>('feed-progress-segment-0')),
+          )
+          .height,
+      5,
     );
     expect(find.byType(FeedProgressBar), findsOneWidget);
+  });
+
+  testWidgets('счётчик позиции и семантика', (WidgetTester tester) async {
+    await tester.pumpWidget(bar(total: 4, current: 2));
+    await tester.pumpAndSettle();
+    final AppLocalizations l10n = l10nOf(tester);
+
+    expect(find.text(l10n.reviewCardCounter(3, 4)), findsOneWidget);
+  });
+
+  testWidgets('клик по сегменту переходит к карточке (onSeek)', (
+    WidgetTester tester,
+  ) async {
+    int? seeked;
+    await tester.pumpWidget(
+      bar(total: 3, current: 0, onSeek: (int index) => seeked = index),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(
+      find.byKey(const ValueKey<String>('feed-progress-segment-2')),
+    );
+    await tester.pumpAndSettle();
+    expect(seeked, 2);
+  });
+
+  testWidgets('нет постоянной анимации: кадры после settle не тикают', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(bar(total: 2, current: 0));
+    await tester.pumpAndSettle();
+    // Падающий тест при повторяющейся анимации: pumpAndSettle зависает —
+    // здесь он завершился, значит пульса нет.
+    expect(tester.hasRunningAnimations, isFalse);
   });
 }

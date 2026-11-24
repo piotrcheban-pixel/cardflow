@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
@@ -5,11 +6,6 @@ import 'package:material_ui/material_ui.dart' hide Card;
 
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/decks/deck_summary.dart';
-import 'package:cardflow/domain/review/daily_limits.dart';
-import 'package:cardflow/domain/scheduling/rating.dart';
-import 'package:cardflow/domain/session/session_config.dart';
-import 'package:cardflow/domain/session/session_plan.dart';
-import 'package:cardflow/domain/settings/app_settings.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/review/feed_card_view.dart';
 import 'package:cardflow/ui/review/feed_progress_bar.dart';
@@ -18,33 +14,29 @@ import 'package:cardflow/ui/review/feed_session_screen.dart';
 import '../../helpers/decks_fakes.dart';
 import '../../helpers/pump_app.dart';
 import '../../helpers/review_fakes.dart';
-import '../../helpers/settings_fakes.dart';
 
-/// Красная фаза итерации 4: экран «Лента» (SPEC A7.3, ADR-016) — PageView,
-/// жесты/пороги, Stories-прогресс, авто-продвижение, пауза, haptics, undo.
+/// Режим «Лента» — свободный просмотр (ADR-044).
+///
+/// Ключевые инварианты: одна карточка на страницу, вертикальный свайп/колесо/
+/// клавиши сразу переключают карточку, ответ раскрывается тапом, оценок и
+/// записи в журнал повторений нет.
 void main() {
   late FakeReviewRepository reviews;
-  late FakeCardRepository cards;
 
-  List<Override> overridesFor(
-    List<Card> deckCards, {
-    FakeDeckRepository? decks,
-  }) {
-    cards = FakeCardRepository(cards: deckCards);
+  List<Override> overridesFor(List<Card> deckCards) {
+    final FakeCardRepository cards = FakeCardRepository(cards: deckCards);
     reviews = FakeReviewRepository();
     return decksOverrides(
-      deckRepository:
-          decks ??
-          FakeDeckRepository(
-            summaries: <DeckSummary>[
-              makeSummary(
-                id: 'deck-1',
-                name: 'Испанский',
-                totalCards: deckCards.length,
-                newCards: deckCards.length,
-              ),
-            ],
+      deckRepository: FakeDeckRepository(
+        summaries: <DeckSummary>[
+          makeSummary(
+            id: 'deck-1',
+            name: 'Электротехника',
+            totalCards: deckCards.length,
+            newCards: deckCards.length,
           ),
+        ],
+      ),
       cardRepository: cards,
       reviewRepository: reviews,
     );
@@ -52,39 +44,24 @@ void main() {
 
   Future<void> pumpFeed(
     WidgetTester tester, {
-    required List<Override> overrides,
+    required List<Card> cards,
   }) async {
+    tester.view.physicalSize = const Size(1280, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     await tester.pumpWidget(
       appWithRouter(
-        overrides: overrides,
+        overrides: overridesFor(cards),
         routes: decksRoutes(),
         initialLocation: '/decks/deck-1/feed',
       ),
     );
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 20));
-    await tester.pump(const Duration(milliseconds: 20));
+    await tester.pump(const Duration(milliseconds: 30));
+    await tester.pumpAndSettle();
   }
 
-  List<Card> twoCards({String? sourceExcerpt}) => <Card>[
-    makeCard(
-      id: 'card-1',
-      deckId: 'deck-1',
-      front: 'Первый вопрос',
-      back: 'Первый ответ',
-      createdAt: DateTime.utc(2026, 11, 14, 10),
-      sourceExcerpt: sourceExcerpt,
-    ),
-    makeCard(
-      id: 'card-2',
-      deckId: 'deck-1',
-      front: 'Второй вопрос',
-      back: 'Второй ответ',
-      createdAt: DateTime.utc(2026, 11, 14, 10, 1),
-    ),
-  ];
-
-  List<Card> manyCards(int count) => <Card>[
+  List<Card> cards(int count) => <Card>[
     for (int index = 0; index < count; index++)
       makeCard(
         id: 'card-${index + 1}',
@@ -95,794 +72,280 @@ void main() {
       ),
   ];
 
-  final ValueKey<String> firstCardKey = const ValueKey<String>(
-    'feed-card-card-1',
-  );
+  final Finder pageView = find.byKey(const ValueKey<String>('feed-page-view'));
 
-  Future<void> pumpAfterGesture(WidgetTester tester) async {
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 50));
-    await tester.pump(const Duration(milliseconds: 450));
+  Future<void> flingUp(WidgetTester tester) async {
+    await tester.fling(pageView, const Offset(0, -500), 1400);
+    await tester.pumpAndSettle();
   }
 
-  /// Раскрывает ответ карточки ленты (F1: оценка до раскрытия запрещена).
-  Future<void> revealCard(WidgetTester tester, ValueKey<String> key) async {
-    await tester.tap(find.byKey(key));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
+  Future<void> flingDown(WidgetTester tester) async {
+    await tester.fling(pageView, const Offset(0, 500), 1400);
+    await tester.pumpAndSettle();
   }
 
-  testWidgets('каркас: Stories, карточка, колода, счётчик, пауза', (
+  Future<void> wheel(WidgetTester tester, double dy) async {
+    final TestPointer pointer = TestPointer(1, PointerDeviceKind.mouse);
+    final Offset center = tester.getCenter(pageView);
+    await tester.sendEventToBinding(pointer.hover(center));
+    await tester.sendEventToBinding(pointer.scroll(Offset(0, dy)));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 40));
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('каркас: одна карточка, прогресс, бейдж просмотра; без оценок', (
     WidgetTester tester,
   ) async {
-    await pumpFeed(tester, overrides: overridesFor(twoCards()));
+    await pumpFeed(tester, cards: cards(2));
     final AppLocalizations l10n = l10nOf(tester);
 
     expect(find.byType(FeedSessionScreen), findsOneWidget);
+    expect(find.byType(PageView), findsOneWidget);
     expect(find.byType(FeedProgressBar), findsOneWidget);
     expect(find.byType(FeedCardView), findsWidgets);
-    expect(find.text('Первый вопрос'), findsOneWidget);
-    expect(find.text('Первый ответ'), findsNothing, reason: 'ответ скрыт');
-    expect(find.text('Испанский'), findsOneWidget);
-    expect(find.text(l10n.feedCounter(1, 2)), findsOneWidget);
-    expect(find.text(l10n.feedPause), findsOneWidget);
-    expect(find.text(l10n.feedSeconds(5)), findsOneWidget);
-    expect(
-      find.byKey(const ValueKey<String>('feed-progress-segment-0')),
-      findsOneWidget,
-    );
-    expect(
-      find.byKey(const ValueKey<String>('feed-progress-segment-1')),
-      findsOneWidget,
-    );
-  });
-
-  testWidgets('тап раскрывает и скрывает ответ', (WidgetTester tester) async {
-    await pumpFeed(tester, overrides: overridesFor(twoCards()));
-
-    await tester.tap(find.byKey(firstCardKey));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
-    expect(find.text('Первый ответ'), findsOneWidget);
-    // Аудит v5 (V5-11): на обороте остаётся вопрос-эхо, как в «Классике».
-    expect(find.text('Первый вопрос'), findsOneWidget);
-
-    await tester.tap(find.byKey(firstCardKey));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
-    expect(find.text('Первый вопрос'), findsOneWidget);
-    expect(find.text('Первый ответ'), findsNothing);
-  });
-
-  testWidgets('вертикальный свайп листает без оценки', (
-    WidgetTester tester,
-  ) async {
-    await pumpFeed(tester, overrides: overridesFor(twoCards()));
-    final AppLocalizations l10n = l10nOf(tester);
-
-    await tester.fling(
-      find.byKey(const ValueKey<String>('feed-page-view')),
-      const Offset(0, -500),
-      1200,
-    );
-    await tester.pump(const Duration(milliseconds: 500));
-
-    expect(find.text('Второй вопрос'), findsOneWidget);
-    expect(find.text('Первый вопрос'), findsNothing);
-    expect(find.text(l10n.feedCounter(2, 2)), findsOneWidget);
-    expect(reviews.ratings, isEmpty, reason: 'листание не засчитывается');
-  });
-
-  testWidgets('свайп вправо — «Знаю», mode=feed', (WidgetTester tester) async {
-    final List<Card> deckCards = twoCards();
-    await pumpFeed(tester, overrides: overridesFor(deckCards));
-    reviews.previousCard = deckCards.first;
-    await revealCard(tester, firstCardKey);
-
-    await tester.fling(find.byKey(firstCardKey), const Offset(140, 0), 1200);
-    await pumpAfterGesture(tester);
-
-    expect(reviews.ratings, <Rating>[Rating.good]);
-    expect(reviews.cardIds, <String>['card-1']);
-    expect(reviews.modes, <String>['feed']);
-    expect(find.text('Второй вопрос'), findsOneWidget);
-  });
-
-  testWidgets('свайп влево — «Не знаю»', (WidgetTester tester) async {
-    final List<Card> deckCards = twoCards();
-    await pumpFeed(tester, overrides: overridesFor(deckCards));
-    reviews.previousCard = deckCards.first;
-    await revealCard(tester, firstCardKey);
-
-    await tester.fling(find.byKey(firstCardKey), const Offset(-140, 0), 1200);
-    await pumpAfterGesture(tester);
-
-    expect(reviews.ratings, <Rating>[Rating.again]);
-    expect(reviews.modes, <String>['feed']);
-  });
-
-  testWidgets('долгий свайп вправо — «Легко», влево — «Сложно»', (
-    WidgetTester tester,
-  ) async {
-    final List<Card> deckCards = manyCards(3);
-    await pumpFeed(tester, overrides: overridesFor(deckCards));
-
-    reviews.previousCard = deckCards[0];
-    await revealCard(tester, firstCardKey);
-    await tester.timedDrag(
-      find.byKey(firstCardKey),
-      const Offset(600, 0),
-      const Duration(milliseconds: 600),
-    );
-    await pumpAfterGesture(tester);
-    expect(reviews.ratings, <Rating>[Rating.easy]);
-
-    reviews.previousCard = deckCards[1];
-    await revealCard(tester, const ValueKey<String>('feed-card-card-2'));
-    await tester.timedDrag(
-      find.byKey(const ValueKey<String>('feed-card-card-2')),
-      const Offset(-600, 0),
-      const Duration(milliseconds: 600),
-    );
-    await pumpAfterGesture(tester);
-    expect(reviews.ratings, <Rating>[Rating.easy, Rating.hard]);
-  });
-
-  testWidgets('короткий медленный свайп возвращает карточку пружиной', (
-    WidgetTester tester,
-  ) async {
-    final List<Card> deckCards = twoCards();
-    await pumpFeed(tester, overrides: overridesFor(deckCards));
-
-    await tester.timedDrag(
-      find.byKey(firstCardKey),
-      const Offset(120, 0),
-      const Duration(seconds: 1),
-    );
-    await tester.pump(const Duration(seconds: 1));
-
-    expect(reviews.ratings, isEmpty);
-    expect(find.text('Первый вопрос'), findsOneWidget);
-    final Transform transform = tester.widget<Transform>(
-      find.descendant(
-        of: find.byKey(firstCardKey),
-        matching: find.byKey(const ValueKey<String>('feed-swipe-transform')),
-      ),
-    );
-    expect(transform.transform.getTranslation().x, closeTo(0, 0.5));
-  });
-
-  testWidgets('Stories: оценённый сегмент заполнен, текущий пульсирует', (
-    WidgetTester tester,
-  ) async {
-    final List<Card> deckCards = twoCards();
-    await pumpFeed(tester, overrides: overridesFor(deckCards));
-
-    Opacity pulse() => tester.widget<Opacity>(
-      find.byKey(const ValueKey<String>('feed-progress-pulse')),
-    );
-    final double firstOpacity = pulse().opacity;
-    await tester.pump(const Duration(milliseconds: 300));
-    final double secondOpacity = pulse().opacity;
-    expect(
-      (firstOpacity - secondOpacity).abs(),
-      greaterThan(0.01),
-      reason: 'текущий сегмент должен пульсировать',
-    );
-
-    reviews.previousCard = deckCards.first;
-    await tester.fling(find.byKey(firstCardKey), const Offset(140, 0), 1200);
-    await pumpAfterGesture(tester);
-
-    final Container segment = tester.widget<Container>(
-      find.byKey(const ValueKey<String>('feed-progress-segment-0')),
-    );
-    final Color color = (segment.decoration! as BoxDecoration).color!;
-    final ColorScheme scheme = Theme.of(
-      tester.element(find.byType(FeedProgressBar)),
-    ).colorScheme;
-    expect(color, scheme.primary, reason: 'оценённый сегмент заполнен');
-  });
-
-  testWidgets('авто-продвижение 3 с перелистывает без оценки', (
-    WidgetTester tester,
-  ) async {
-    await pumpFeed(tester, overrides: overridesFor(twoCards()));
-    final AppLocalizations l10n = l10nOf(tester);
-
-    await tester.tap(find.byKey(const ValueKey<String>('feed-auto-advance')));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 300));
-    await tester.tap(find.text(l10n.feedSeconds(3)));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
-
-    await tester.tap(find.byKey(firstCardKey));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
-    await tester.pump(const Duration(seconds: 3));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
-
-    expect(find.text('Второй вопрос'), findsOneWidget);
-    expect(reviews.ratings, isEmpty, reason: 'авто-продвижение не оценивает');
-    expect(find.text(l10n.feedCounter(2, 2)), findsOneWidget);
-  });
-
-  testWidgets('авто-продвижение не идёт без раскрытия', (
-    WidgetTester tester,
-  ) async {
-    await pumpFeed(tester, overrides: overridesFor(twoCards()));
-    final AppLocalizations l10n = l10nOf(tester);
-
-    await tester.tap(find.byKey(const ValueKey<String>('feed-auto-advance')));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 300));
-    await tester.tap(find.text(l10n.feedSeconds(3)));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
-    await tester.pump(const Duration(seconds: 4));
-
-    expect(find.text('Первый вопрос'), findsOneWidget);
-    expect(find.text(l10n.feedCounter(1, 2)), findsOneWidget);
-  });
-
-  testWidgets('«Пауза» останавливает таймер, «Продолжить» возобновляет', (
-    WidgetTester tester,
-  ) async {
-    await pumpFeed(tester, overrides: overridesFor(twoCards()));
-    final AppLocalizations l10n = l10nOf(tester);
-
-    await tester.tap(find.byKey(const ValueKey<String>('feed-auto-advance')));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 300));
-    await tester.tap(find.text(l10n.feedSeconds(3)));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
-
-    await tester.tap(find.byKey(firstCardKey));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
-    await tester.tap(find.byKey(const ValueKey<String>('feed-pause')));
-    await tester.pump(const Duration(milliseconds: 200));
-    expect(find.text(l10n.feedResume), findsOneWidget);
-
-    await tester.pump(const Duration(seconds: 4));
-    expect(
-      find.text('Первый ответ'),
-      findsOneWidget,
-      reason: 'пауза держит раскрытую карточку на месте',
-    );
-
-    await tester.tap(find.byKey(const ValueKey<String>('feed-pause')));
-    await tester.pump(const Duration(milliseconds: 200));
-    expect(find.text(l10n.feedPause), findsOneWidget);
-    await tester.pump(const Duration(seconds: 3));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
-
-    expect(find.text('Второй вопрос'), findsOneWidget);
-  });
-
-  testWidgets('оценки дают haptics A7.2, завершение — mediumImpact', (
-    WidgetTester tester,
-  ) async {
-    final List<Object?> haptics = <Object?>[];
-    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-      SystemChannels.platform,
-      (MethodCall call) async {
-        if (call.method == 'HapticFeedback.vibrate') {
-          haptics.add(call.arguments);
-        }
-        return null;
-      },
-    );
-    addTearDown(
-      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-        SystemChannels.platform,
-        null,
-      ),
-    );
-
-    final List<Card> deckCards = manyCards(4);
-    await pumpFeed(tester, overrides: overridesFor(deckCards));
-
-    await tester.tap(find.byKey(firstCardKey));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
-
-    reviews.previousCard = deckCards[0];
-    await tester.fling(find.byKey(firstCardKey), const Offset(140, 0), 1200);
-    await pumpAfterGesture(tester);
-
-    reviews.previousCard = deckCards[1];
-    await revealCard(tester, const ValueKey<String>('feed-card-card-2'));
-    await tester.timedDrag(
-      find.byKey(const ValueKey<String>('feed-card-card-2')),
-      const Offset(600, 0),
-      const Duration(milliseconds: 600),
-    );
-    await pumpAfterGesture(tester);
-
-    reviews.previousCard = deckCards[2];
-    await revealCard(tester, const ValueKey<String>('feed-card-card-3'));
-    await tester.fling(
-      find.byKey(const ValueKey<String>('feed-card-card-3')),
-      const Offset(-140, 0),
-      1200,
-    );
-    await pumpAfterGesture(tester);
-
-    reviews.previousCard = deckCards[3];
-    await revealCard(tester, const ValueKey<String>('feed-card-card-4'));
-    await tester.timedDrag(
-      find.byKey(const ValueKey<String>('feed-card-card-4')),
-      const Offset(-600, 0),
-      const Duration(milliseconds: 600),
-    );
-    await pumpAfterGesture(tester);
-
-    // F1: каждая следующая карточка раскрывается перед оценкой — раскрытие
-    // тоже даёт selectionClick, поэтому событий больше, чем оценок.
-    expect(haptics, <Object?>[
-      'HapticFeedbackType.selectionClick', // раскрытие 1
-      'HapticFeedbackType.lightImpact', // короткий свайп вправо — «Знаю»
-      'HapticFeedbackType.selectionClick', // раскрытие 2
-      'HapticFeedbackType.selectionClick', // долгий свайп вправо — «Легко»
-      'HapticFeedbackType.selectionClick', // раскрытие 3
-      'HapticFeedbackType.heavyImpact', // короткий свайп влево — «Не знаю»
-      'HapticFeedbackType.selectionClick', // раскрытие 4
-      'HapticFeedbackType.lightImpact', // долгий свайп влево — «Сложно»
-      'HapticFeedbackType.mediumImpact', // завершение ленты
-    ]);
-  });
-
-  testWidgets('undo возвращает оценённую карточку раскрытой', (
-    WidgetTester tester,
-  ) async {
-    final List<Card> deckCards = twoCards();
-    await pumpFeed(tester, overrides: overridesFor(deckCards));
-    reviews.previousCard = deckCards.first;
-    await revealCard(tester, firstCardKey);
-
-    await tester.fling(find.byKey(firstCardKey), const Offset(140, 0), 1200);
-    await pumpAfterGesture(tester);
-    expect(find.text('Второй вопрос'), findsOneWidget);
-
-    await tester.tap(find.byKey(const ValueKey<String>('review-undo')));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
-    await tester.pump(const Duration(seconds: 1));
-
-    expect(reviews.undone, hasLength(1));
-    expect(find.text('Первый ответ'), findsOneWidget);
-    expect(find.text('Второй вопрос'), findsNothing);
-  });
-
-  testWidgets('ошибка записи: сообщение ARB, карточка остаётся', (
-    WidgetTester tester,
-  ) async {
-    final List<Card> deckCards = twoCards();
-    await pumpFeed(tester, overrides: overridesFor(deckCards));
-    reviews
-      ..previousCard = deckCards.first
-      ..recordError = StateError('БД недоступна');
-    final AppLocalizations l10n = l10nOf(tester);
-    await revealCard(tester, firstCardKey);
-
-    await tester.fling(find.byKey(firstCardKey), const Offset(140, 0), 1200);
-    await tester.pump(const Duration(milliseconds: 500));
-
-    expect(find.text(l10n.reviewSaveError), findsOneWidget);
-    expect(find.text('Первый ответ'), findsOneWidget);
-    expect(find.textContaining('БД недоступна'), findsNothing);
-    expect(reviews.ratings, isEmpty);
-  });
-
-  testWidgets('форма карточки: 28 в покое → 16 при свайпе (A4.3)', (
-    WidgetTester tester,
-  ) async {
-    await pumpFeed(tester, overrides: overridesFor(twoCards()));
-
-    BorderRadius radius() {
-      final Material material = tester.widget<Material>(
-        find
-            .descendant(
-              of: find.byKey(firstCardKey),
-              matching: find.byType(Material),
-            )
-            .first,
-      );
-      return (material.shape! as RoundedRectangleBorder).borderRadius.resolve(
-        TextDirection.ltr,
+    expect(find.text('Вопрос 1'), findsOneWidget);
+    expect(find.text('Ответ 1'), findsNothing);
+    expect(find.text(l10n.feedBrowseBadge), findsOneWidget);
+    expect(find.text(l10n.reviewCardCounter(1, 2)), findsOneWidget);
+    // В ленте нет ни одной кнопки оценки, интервалов и техн. бейджа FSRS.
+    for (final String rating in <String>['again', 'hard', 'good', 'easy']) {
+      expect(
+        find.byKey(ValueKey<String>('review-rating-$rating')),
+        findsNothing,
       );
     }
-
-    // ADR-038: карточка ленты — r16 дизайн-системы, при свайпе скругляется.
-    expect(radius().topLeft.x, 16);
-    final TestGesture gesture = await tester.startGesture(
-      tester.getCenter(find.byKey(firstCardKey)),
-    );
-    await gesture.moveBy(const Offset(100, 0));
-    await tester.pump();
-    await gesture.moveBy(const Offset(100, 0));
-    await tester.pump();
-    expect(radius().topLeft.x, lessThan(16));
-    expect(radius().topLeft.x, greaterThanOrEqualTo(10));
-
-    await gesture.up();
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
-    expect(radius().topLeft.x, closeTo(16, 1));
+    expect(find.text(l10n.reviewIntervalMinutes(1)), findsNothing);
+    expect(find.text(l10n.reviewFsrsBadge), findsNothing);
+    expect(find.byIcon(Icons.pause), findsNothing);
+    expect(find.byIcon(Icons.timer_outlined), findsNothing);
+    expect(reviews.ratings, isEmpty);
   });
 
-  testWidgets('клавиши: Space раскрывает, 3 — «Знаю»', (
+  testWidgets('свайп вверх — сразу следующая карточка, без докрутки', (
     WidgetTester tester,
   ) async {
-    final List<Card> deckCards = twoCards();
-    await pumpFeed(tester, overrides: overridesFor(deckCards));
+    await pumpFeed(tester, cards: cards(3));
+    final AppLocalizations l10n = l10nOf(tester);
+
+    await flingUp(tester);
+
+    expect(find.text('Вопрос 2'), findsOneWidget);
+    expect(find.text('Вопрос 1'), findsNothing);
+    expect(find.text(l10n.reviewCardCounter(2, 3)), findsOneWidget);
+    expect(reviews.ratings, isEmpty, reason: 'листание не оценивает');
+  });
+
+  testWidgets('свайп вниз возвращает предыдущую карточку', (
+    WidgetTester tester,
+  ) async {
+    await pumpFeed(tester, cards: cards(3));
+    await flingUp(tester);
+    await flingDown(tester);
+    expect(find.text('Вопрос 1'), findsOneWidget);
+  });
+
+  testWidgets('быстрые повторные свайпы не оставляют пустой экран', (
+    WidgetTester tester,
+  ) async {
+    await pumpFeed(tester, cards: cards(4));
+    await tester.fling(pageView, const Offset(0, -500), 1600);
+    await tester.pump(const Duration(milliseconds: 40));
+    await tester.fling(pageView, const Offset(0, -500), 1600);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pumpAndSettle();
+
+    // Карточка на экране есть всегда, счётчик не «проваливается» в пустоту.
+    expect(find.byType(FeedCardView), findsWidgets);
+    expect(
+      find.descendant(
+        of: find.byType(FeedSessionScreen),
+        matching: find.textContaining('Вопрос'),
+      ),
+      findsWidgets,
+    );
+    expect(reviews.ratings, isEmpty);
+  });
+
+  testWidgets('тап раскрывает и скрывает ответ; раскрытие переживает переход', (
+    WidgetTester tester,
+  ) async {
+    await pumpFeed(tester, cards: cards(2));
+
+    await tester.tap(find.text('Вопрос 1'));
+    await tester.pumpAndSettle();
+    expect(find.text('Ответ 1'), findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('feed-nav-hint')), findsOneWidget);
+
+    await flingUp(tester);
+    await flingDown(tester);
+    expect(
+      find.text('Ответ 1'),
+      findsOneWidget,
+      reason: 'ответ остался раскрыт',
+    );
+
+    await tester.tap(find.text('Ответ 1'));
+    await tester.pumpAndSettle();
+    expect(find.text('Ответ 1'), findsNothing);
+  });
+
+  testWidgets('клавиатура: вниз/вверх/Home/End/пробел', (
+    WidgetTester tester,
+  ) async {
+    await pumpFeed(tester, cards: cards(3));
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.pumpAndSettle();
+    expect(find.text('Вопрос 2'), findsOneWidget);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.end);
+    await tester.pumpAndSettle();
+    expect(find.text('Вопрос 3'), findsOneWidget);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+    await tester.pumpAndSettle();
+    expect(find.text('Вопрос 2'), findsOneWidget);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.home);
+    await tester.pumpAndSettle();
+    expect(find.text('Вопрос 1'), findsOneWidget);
 
     await tester.sendKeyEvent(LogicalKeyboardKey.space);
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
-    expect(find.text('Первый ответ'), findsOneWidget);
-
-    reviews.previousCard = deckCards.first;
-    await tester.sendKeyEvent(LogicalKeyboardKey.digit3);
-    await pumpAfterGesture(tester);
-    expect(reviews.ratings, <Rating>[Rating.good]);
+    await tester.pumpAndSettle();
+    expect(find.text('Ответ 1'), findsOneWidget);
   });
 
-  testWidgets('Stories: семантическая подпись прогресса на русском', (
+  testWidgets('колесо мыши переключает карточки без повторной прокрутки', (
     WidgetTester tester,
   ) async {
-    final SemanticsHandle handle = tester.ensureSemantics();
-    await pumpFeed(tester, overrides: overridesFor(twoCards()));
+    await pumpFeed(tester, cards: cards(3));
+
+    await wheel(tester, 120);
+    expect(find.text('Вопрос 2'), findsOneWidget);
+
+    await wheel(tester, -120);
+    expect(find.text('Вопрос 1'), findsOneWidget);
+  });
+
+  testWidgets(
+    'края: на первой карточке «вверх» недоступна, на последней «вниз»',
+    (WidgetTester tester) async {
+      await pumpFeed(tester, cards: cards(2));
+
+      expect(
+        tester
+            .widget<IconButton>(
+              find.byKey(const ValueKey<String>('feed-previous')),
+            )
+            .onPressed,
+        isNull,
+      );
+      expect(
+        tester
+            .widget<IconButton>(find.byKey(const ValueKey<String>('feed-next')))
+            .onPressed,
+        isNotNull,
+      );
+
+      await flingUp(tester);
+      expect(
+        tester
+            .widget<IconButton>(find.byKey(const ValueKey<String>('feed-next')))
+            .onPressed,
+        isNull,
+      );
+    },
+  );
+
+  testWidgets('одна карточка: лента не ломается и не показывает пустоту', (
+    WidgetTester tester,
+  ) async {
+    await pumpFeed(tester, cards: cards(1));
+    final AppLocalizations l10n = l10nOf(tester);
+
+    expect(find.text('Вопрос 1'), findsOneWidget);
+    expect(find.text(l10n.reviewCardCounter(1, 1)), findsOneWidget);
+    await flingUp(tester);
+    expect(find.text('Вопрос 1'), findsOneWidget);
+  });
+
+  testWidgets('пустая колода: понятное пустое состояние без оценок', (
+    WidgetTester tester,
+  ) async {
+    await pumpFeed(tester, cards: const <Card>[]);
+    final AppLocalizations l10n = l10nOf(tester);
+
+    expect(find.text(l10n.feedEmptyTitle), findsOneWidget);
+    expect(find.text(l10n.feedEmptyMessage), findsOneWidget);
+    expect(find.byType(FeedCardView), findsNothing);
+  });
+
+  testWidgets('длинная колода: прогресс ограничен 24 сегментами', (
+    WidgetTester tester,
+  ) async {
+    await pumpFeed(tester, cards: cards(40));
     final AppLocalizations l10n = l10nOf(tester);
 
     expect(
-      tester.getSemantics(find.byType(FeedProgressBar)).label,
-      l10n.feedProgressSemantics(0, 2),
-    );
-    handle.dispose();
-  });
-
-  testWidgets('завершение: все оценены — итоговый экран', (
-    WidgetTester tester,
-  ) async {
-    final List<Card> deckCards = twoCards();
-    await pumpFeed(tester, overrides: overridesFor(deckCards));
-    final AppLocalizations l10n = l10nOf(tester);
-
-    reviews.previousCard = deckCards.first;
-    await revealCard(tester, firstCardKey);
-    await tester.fling(find.byKey(firstCardKey), const Offset(140, 0), 1200);
-    await pumpAfterGesture(tester);
-
-    reviews.previousCard = deckCards.last;
-    await revealCard(tester, const ValueKey<String>('feed-card-card-2'));
-    await tester.fling(
-      find.byKey(const ValueKey<String>('feed-card-card-2')),
-      const Offset(140, 0),
-      1200,
-    );
-    await pumpAfterGesture(tester);
-
-    expect(find.text(l10n.reviewCompletedTitle), findsOneWidget);
-    expect(find.text(l10n.reviewCompletedMessage(2)), findsOneWidget);
-    expect(find.text(l10n.reviewDone), findsOneWidget);
-  });
-
-  testWidgets('пустая очередь — пустое состояние', (WidgetTester tester) async {
-    await pumpFeed(tester, overrides: overridesFor(const <Card>[]));
-    final AppLocalizations l10n = l10nOf(tester);
-
-    expect(find.text(l10n.reviewEmptyTitle), findsOneWidget);
-    expect(find.text(l10n.reviewBack), findsOneWidget);
-  });
-
-  testWidgets('ошибка загрузки — ARB и «Повторить»', (
-    WidgetTester tester,
-  ) async {
-    final List<Override> overrides = overridesFor(twoCards());
-    cards.cardsByDeckError = StateError('boom');
-    await pumpFeed(tester, overrides: overrides);
-    final AppLocalizations l10n = l10nOf(tester);
-
-    expect(find.text(l10n.reviewLoadError), findsOneWidget);
-    expect(find.textContaining('boom'), findsNothing);
-
-    cards.cardsByDeckError = null;
-    // F07: повтор в состоянии ошибки — основное действие (filled).
-    await tester.tap(find.widgetWithText(FilledButton, l10n.retry));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 100));
-    expect(find.text('Первый вопрос'), findsOneWidget);
-  });
-
-  testWidgets('«Почему?»: цитата и неактивность без неё', (
-    WidgetTester tester,
-  ) async {
-    await pumpFeed(
-      tester,
-      overrides: overridesFor(
-        twoCards(sourceExcerpt: 'Париж — столица Франции.'),
-      ),
-    );
-    final AppLocalizations l10n = l10nOf(tester);
-
-    await tester.tap(find.byKey(const ValueKey<String>('review-why')));
-    await tester.pump(const Duration(milliseconds: 400));
-    expect(find.text(l10n.reviewWhySheetTitle), findsOneWidget);
-    expect(find.text('Париж — столица Франции.'), findsOneWidget);
-  });
-
-  testWidgets('фон приложения останавливает авто-продвижение', (
-    WidgetTester tester,
-  ) async {
-    await pumpFeed(tester, overrides: overridesFor(twoCards()));
-    final AppLocalizations l10n = l10nOf(tester);
-
-    await tester.tap(find.byKey(const ValueKey<String>('feed-auto-advance')));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 300));
-    await tester.tap(find.text(l10n.feedSeconds(3)));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
-
-    await tester.tap(find.byKey(firstCardKey));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
-
-    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
-    await tester.pump(const Duration(seconds: 4));
-    expect(find.text('Первый ответ'), findsOneWidget);
-
-    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
-    await tester.pump(const Duration(seconds: 3));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
-    expect(find.text('Второй вопрос'), findsOneWidget);
-  });
-
-  testWidgets('«Почему?» останавливает авто-продвижение', (
-    WidgetTester tester,
-  ) async {
-    await pumpFeed(
-      tester,
-      overrides: overridesFor(
-        twoCards(sourceExcerpt: 'Париж — столица Франции.'),
-      ),
-    );
-    final AppLocalizations l10n = l10nOf(tester);
-
-    await tester.tap(find.byKey(const ValueKey<String>('feed-auto-advance')));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 300));
-    await tester.tap(find.text(l10n.feedSeconds(3)));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
-
-    await tester.tap(find.byKey(firstCardKey));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
-    await tester.tap(find.byKey(const ValueKey<String>('review-why')));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 400));
-
-    await tester.pump(const Duration(seconds: 4));
-    expect(find.text('Первый ответ'), findsOneWidget);
-    expect(find.text(l10n.feedCounter(1, 2)), findsOneWidget);
-
-    await tester.tapAt(const Offset(8, 8));
-    await tester.pump(const Duration(milliseconds: 400));
-    expect(find.text('Первый ответ'), findsOneWidget);
-  });
-
-  testWidgets('«Почему?» скрыта без source_excerpt (аудит v4)', (
-    WidgetTester tester,
-  ) async {
-    await pumpFeed(tester, overrides: overridesFor(twoCards()));
-
-    // Аудит v4 (ACTIONS #18): кнопки нет, а не disabled-иконка.
-    expect(find.byKey(const ValueKey<String>('review-why')), findsNothing);
-  });
-
-  testWidgets('выход: диалог, «Продолжить» остаётся в ленте', (
-    WidgetTester tester,
-  ) async {
-    await pumpFeed(tester, overrides: overridesFor(twoCards()));
-    final AppLocalizations l10n = l10nOf(tester);
-
-    await tester.tap(find.byKey(const ValueKey<String>('review-close')));
-    await tester.pump(const Duration(milliseconds: 400));
-    expect(find.text(l10n.reviewExitDialogTitle), findsOneWidget);
-
-    await tester.tap(find.byKey(const ValueKey<String>('review-exit-cancel')));
-    await tester.pump(const Duration(milliseconds: 400));
-    expect(find.byType(FeedSessionScreen), findsOneWidget);
-  });
-
-  group('план конструктора (SPEC A6.7, ADR-018)', () {
-    List<Card> planCards() => <Card>[
-      makeCard(
-        id: 'p1',
-        deckId: 'deck-1',
-        front: 'Плановый вопрос',
-        state: CardState.review,
-        due: DateTime.utc(2026, 12, 1),
-      ),
-      makeCard(
-        id: 'p2',
-        deckId: 'deck-2',
-        front: 'Из второй колоды',
-        createdAt: DateTime.utc(2026, 11, 14, 10, 1),
-      ),
-    ];
-
-    Future<void> pumpPlan(
-      WidgetTester tester, {
-      required SessionPlan plan,
-      List<Override>? overrideList,
-    }) async {
-      await tester.pumpWidget(
-        appWithHome(
-          overrides: overrideList ?? overridesFor(plan.cards),
-          home: FeedSessionScreen(plan: plan),
-        ),
-      );
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 20));
-      await tester.pump(const Duration(milliseconds: 20));
-    }
-
-    testWidgets('порядок плана и подпись числа колод', (
-      WidgetTester tester,
-    ) async {
-      final List<Card> planned = planCards();
-      reviews = FakeReviewRepository();
-      await tester.pumpWidget(
-        appWithHome(
-          overrides: decksOverrides(
-            deckRepository: FakeDeckRepository(
-              summaries: <DeckSummary>[
-                makeSummary(id: 'deck-1', name: 'Испанский'),
-                makeSummary(id: 'deck-2', name: 'Биология'),
-              ],
-            ),
-            cardRepository: FakeCardRepository(cards: planned),
-            reviewRepository: reviews,
-          ),
-          home: FeedSessionScreen(
-            plan: SessionPlan(cards: planned, mode: SessionMode.feed),
-          ),
-        ),
-      );
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 20));
-      final AppLocalizations l10n = l10nOf(tester);
-
-      expect(find.text('Плановый вопрос'), findsOneWidget);
-      expect(find.text(l10n.sessionDeckCountLabel(2)), findsOneWidget);
-      expect(find.text(l10n.feedCounter(1, 2)), findsOneWidget);
-    });
-
-    testWidgets('одна колода — в подписи имя колоды', (
-      WidgetTester tester,
-    ) async {
-      final List<Card> planned = <Card>[
-        makeCard(id: 'p1', deckId: 'deck-1', front: 'Плановый вопрос'),
-      ];
-      await pumpPlan(tester, plan: SessionPlan(cards: planned));
-
-      expect(find.text('Испанский'), findsOneWidget);
-    });
-
-    testWidgets('оценка плановой ленты пишется с mode=feed', (
-      WidgetTester tester,
-    ) async {
-      final List<Card> planned = planCards();
-      await pumpPlan(tester, plan: SessionPlan(cards: planned));
-      reviews.previousCard = planned.first;
-
-      await tester.tap(find.byKey(const ValueKey<String>('feed-card-p1')));
-      await tester.pump(const Duration(milliseconds: 400));
-      await tester.fling(
-        find.byKey(const ValueKey<String>('feed-card-p1')),
-        const Offset(160, 0),
-        1200,
-      );
-      await pumpAfterGesture(tester);
-
-      expect(reviews.modes.single, 'feed');
-      expect(reviews.cardIds.first, 'p1');
-    });
-
-    testWidgets('лимит минут: итог «Время сессии истекло»', (
-      WidgetTester tester,
-    ) async {
-      final List<Card> planned = planCards();
-      await pumpPlan(
-        tester,
-        plan: SessionPlan(
-          cards: planned,
-          timeBudget: const Duration(minutes: 1),
-          mode: SessionMode.feed,
-        ),
-      );
-      final AppLocalizations l10n = l10nOf(tester);
-
-      await tester.pump(const Duration(minutes: 1));
-      await tester.pump();
-
-      expect(find.text(l10n.reviewTimeUpTitle), findsOneWidget);
-      expect(find.text(l10n.reviewTimeUpMessage(0)), findsOneWidget);
-    });
-
-    testWidgets('без плана — «Сессия не найдена»', (WidgetTester tester) async {
-      await tester.pumpWidget(
-        appWithHome(
-          overrides: decksOverrides(
-            deckRepository: FakeDeckRepository(),
-            cardRepository: FakeCardRepository(),
-            reviewRepository: reviews,
-          ),
-          home: const FeedSessionScreen(),
-        ),
-      );
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 20));
-      final AppLocalizations l10n = l10nOf(tester);
-
-      expect(find.text(l10n.reviewPlanMissingTitle), findsOneWidget);
-      expect(find.text(l10n.reviewPlanMissingMessage), findsOneWidget);
-    });
-  });
-
-  // ADR-028 (итерация 7.12): лента тоже объясняет исчерпанный лимит и даёт
-  // «Продолжить без лимита».
-  testWidgets('дневной лимит исчерпан: пустая лента и продолжение без лимита', (
-    WidgetTester tester,
-  ) async {
-    final List<Card> deckCards = twoCards();
-    final List<Override> overrides = decksOverrides(
-      deckRepository: FakeDeckRepository(
-        summaries: <DeckSummary>[
-          makeSummary(
-            id: 'deck-1',
-            name: 'Испанский',
-            totalCards: deckCards.length,
-            newCards: deckCards.length,
-          ),
-        ],
-      ),
-      cardRepository: FakeCardRepository(cards: deckCards),
-      reviewRepository: FakeReviewRepository(),
-      appSettingsStore: FakeAppSettingsStore(
-        settings: AppSettings.defaults.copyWith(dailyNewLimit: 20),
-      ),
-      dailyUsageRepository: FakeDailyUsageRepository(
-        usage: const DailyReviewUsage(newCards: 20),
-      ),
-    );
-    await pumpFeed(tester, overrides: overrides);
-    final AppLocalizations l10n = l10nOf(tester);
-
-    expect(find.text(l10n.reviewDailyLimitTitle), findsOneWidget);
-    expect(
-      find.byKey(const ValueKey<String>('review-empty-continue')),
+      find.byKey(const ValueKey<String>('feed-progress-segment-23')),
       findsOneWidget,
     );
-
-    await tester.tap(
-      find.byKey(const ValueKey<String>('review-empty-continue')),
+    expect(
+      find.byKey(const ValueKey<String>('feed-progress-segment-24')),
+      findsNothing,
     );
-    // Пульсация Stories — повторяющаяся анимация: pumpAndSettle не завершится.
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 100));
-    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.text(l10n.reviewCardCounter(1, 40)), findsOneWidget);
+  });
 
-    expect(find.text('Первый вопрос'), findsOneWidget);
-    expect(find.text(l10n.reviewDailyLimitTitle), findsNothing);
+  testWidgets('карточка без ответа: раскрытие не ломает ленту', (
+    WidgetTester tester,
+  ) async {
+    final List<Card> deck = <Card>[
+      makeCard(
+        id: 'card-1',
+        deckId: 'deck-1',
+        front: 'Только вопрос',
+        back: '',
+        createdAt: DateTime.utc(2026, 11, 14, 10),
+      ),
+    ];
+    await pumpFeed(tester, cards: deck);
+
+    await tester.tap(find.text('Только вопрос'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey<String>('feed-nav-hint')), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('рейка навигации: клик вниз/вверх листает карточки', (
+    WidgetTester tester,
+  ) async {
+    await pumpFeed(tester, cards: cards(3));
+
+    await tester.tap(find.byKey(const ValueKey<String>('feed-next')));
+    await tester.pumpAndSettle();
+    expect(find.text('Вопрос 2'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey<String>('feed-previous')));
+    await tester.pumpAndSettle();
+    expect(find.text('Вопрос 1'), findsOneWidget);
+  });
+
+  testWidgets('изменение размера окна не ломает ленту', (
+    WidgetTester tester,
+  ) async {
+    await pumpFeed(tester, cards: cards(3));
+
+    tester.view.physicalSize = const Size(760, 600);
+    await tester.pumpAndSettle();
+    expect(find.text('Вопрос 1'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    tester.view.physicalSize = const Size(1280, 900);
+    await tester.pumpAndSettle();
+    expect(find.text('Вопрос 1'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 }

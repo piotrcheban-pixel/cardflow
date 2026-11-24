@@ -1,99 +1,171 @@
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:material_ui/material_ui.dart';
+import 'package:material_ui/material_ui.dart' hide Card;
 
+import 'package:cardflow/domain/cards/card.dart';
+import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/review/feed_card_view.dart';
 
+import '../../helpers/decks_fakes.dart';
 import '../../helpers/pump_app.dart';
 
-/// Итерация 7.9: обратная сторона карточки «Ленты» не должна быть отзеркалена.
-///
-/// `Matrix4.rotationY(pi)` разворачивает обратную сторону так, что её текст
-/// читается слева направо (m00 > 0). До фикса матрица давала m00 < 0 —
-/// зеркальный текст.
+/// Карточка ленты: один вопрос, одно действие, никаких оценок (ADR-044).
 void main() {
-  Widget host({required bool revealed, required VoidCallback onTap}) {
+  Widget host({
+    required String front,
+    required String back,
+    required bool revealed,
+    VoidCallback? onTap,
+    Card? card,
+    Size size = const Size(560, 640),
+  }) {
     return appWithHome(
       overrides: const <Override>[],
       home: Scaffold(
-        body: FeedCardView(
-          front: 'Вопрос карточки',
-          back: 'Ответ карточки',
-          revealed: revealed,
-          rated: false,
-          rating: null,
-          enabled: true,
-          resetToken: 0,
-          onTap: onTap,
-          onRate: (_) {},
-        ),
-      ),
-    );
-  }
-
-  Matrix4 flipMatrix(WidgetTester tester) {
-    final Transform transform = tester.widget<Transform>(
-      find.byKey(const ValueKey<String>('feed-card-flip-transform')),
-    );
-    return transform.transform;
-  }
-
-  testWidgets('обратная сторона при revealed=true не зеркалится', (
-    WidgetTester tester,
-  ) async {
-    await tester.pumpWidget(host(revealed: true, onTap: () {}));
-    await tester.pump();
-
-    expect(find.text('Ответ карточки'), findsOneWidget);
-    expect(
-      flipMatrix(tester).entry(0, 0),
-      greaterThan(0),
-      reason:
-          'Обратная сторона отзеркалена: m00 <= 0. Нужен дополнительный '
-          'Matrix4.rotationY(pi) для обратной стороны.',
-    );
-  });
-
-  testWidgets('после анимации переворота текст не отзеркален', (
-    WidgetTester tester,
-  ) async {
-    bool revealed = false;
-    late StateSetter setState;
-    await tester.pumpWidget(
-      appWithHome(
-        overrides: const <Override>[],
-        home: Scaffold(
-          body: StatefulBuilder(
-            builder: (BuildContext context, StateSetter setter) {
-              setState = setter;
-              return FeedCardView(
-                front: 'Вопрос карточки',
-                back: 'Ответ карточки',
-                revealed: revealed,
-                rated: false,
-                rating: null,
-                enabled: true,
-                resetToken: 0,
-                onTap: () {},
-                onRate: (_) {},
-              );
-            },
+        body: Center(
+          child: SizedBox(
+            width: size.width,
+            height: size.height,
+            child: FeedCardView(
+              front: front,
+              back: back,
+              card:
+                  card ??
+                  makeCard(
+                    id: 'card-1',
+                    deckId: 'deck-1',
+                    front: front,
+                    back: back,
+                  ),
+              revealed: revealed,
+              onTap: onTap ?? () {},
+            ),
           ),
         ),
       ),
     );
-    expect(find.text('Вопрос карточки'), findsOneWidget);
+  }
 
-    setState(() => revealed = true);
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 50));
-    await tester.pump(const Duration(seconds: 1));
+  testWidgets(
+    'лицевая сторона: вопрос и «Показать ответ», без ответа и оценок',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        host(front: 'Что такое ток?', back: 'Движение заряда', revealed: false),
+      );
+      await tester.pumpAndSettle();
+      final AppLocalizations l10n = l10nOf(tester);
 
-    expect(find.text('Ответ карточки'), findsOneWidget);
+      expect(find.text('Что такое ток?'), findsOneWidget);
+      expect(find.text('Движение заряда'), findsNothing);
+      expect(find.text(l10n.reviewRevealAction), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey<String>('feed-card-reveal')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const ValueKey<String>('feed-nav-hint')), findsNothing);
+      for (final String rating in <String>['again', 'hard', 'good', 'easy']) {
+        expect(
+          find.byKey(ValueKey<String>('review-rating-$rating')),
+          findsNothing,
+        );
+      }
+    },
+  );
+
+  testWidgets('оборот: вопрос-эхо, ответ и подсказка навигации', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      host(front: 'Что такое ток?', back: 'Движение заряда', revealed: true),
+    );
+    await tester.pumpAndSettle();
+    final AppLocalizations l10n = l10nOf(tester);
+
+    expect(find.text('Что такое ток?'), findsOneWidget);
+    expect(find.text('Движение заряда'), findsOneWidget);
+    expect(find.text(l10n.reviewRevealAction), findsNothing);
+    expect(find.byKey(const ValueKey<String>('feed-nav-hint')), findsOneWidget);
+  });
+
+  testWidgets('тап по карточке вызывает onTap (раскрыть/скрыть)', (
+    WidgetTester tester,
+  ) async {
+    int taps = 0;
+    await tester.pumpWidget(
+      host(
+        front: 'Вопрос',
+        back: 'Ответ',
+        revealed: false,
+        onTap: () => taps++,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Вопрос'));
+    await tester.pumpAndSettle();
+    expect(taps, 1);
+  });
+
+  testWidgets(
+    'длинный текст: карточка не прокручивается, есть «Открыть полностью»',
+    (WidgetTester tester) async {
+      final String longFront = List<String>.filled(
+        60,
+        'Очень длинный вопрос',
+      ).join(' ');
+      await tester.pumpWidget(
+        host(
+          front: longFront,
+          back: 'Ответ',
+          revealed: false,
+          size: const Size(420, 360),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final AppLocalizations l10n = l10nOf(tester);
+
+      expect(
+        find.byKey(const ValueKey<String>('feed-read-full')),
+        findsOneWidget,
+      );
+      expect(find.text(l10n.feedReadFullText), findsOneWidget);
+      // Вложенной пользовательской прокрутки в карточке нет: иначе
+      // вертикальный свайп ленты перехватывался бы текстом (дефект ленты).
+      final SingleChildScrollView body = tester.widget<SingleChildScrollView>(
+        find.descendant(
+          of: find.byType(FeedCardView),
+          matching: find.byType(SingleChildScrollView),
+        ),
+      );
+      expect(body.physics, isA<NeverScrollableScrollPhysics>());
+
+      await tester.tap(find.byKey(const ValueKey<String>('feed-read-full')));
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.feedFullTextTitle), findsOneWidget);
+    },
+  );
+
+  testWidgets('карточка с разметкой: cloze-пропуск раскрывается тапом', (
+    WidgetTester tester,
+  ) async {
+    final Card value = makeCard(
+      id: 'cloze',
+      deckId: 'deck-1',
+      front: 'А {{c1::Б}} и {{c2::В}}',
+      back: '',
+      cardType: CardType.cloze,
+    );
+    await tester.pumpWidget(
+      host(front: value.front, back: value.back, card: value, revealed: false),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey<String>('cloze-gap-1')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey<String>('cloze-gap-1')));
+    await tester.pumpAndSettle();
     expect(
-      flipMatrix(tester).entry(0, 0),
-      greaterThan(0),
-      reason: 'После переворота обратная сторона должна читаться слева направо',
+      find.byKey(const ValueKey<String>('cloze-answer-1')),
+      findsOneWidget,
     );
   });
 }

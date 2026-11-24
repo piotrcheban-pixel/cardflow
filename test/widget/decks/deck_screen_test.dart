@@ -897,7 +897,7 @@ void main() {
 
       await tester.tap(find.text(l10n.reviewStartSession));
       await tester.pumpAndSettle();
-      await tester.tap(find.text(l10n.reviewModeFeed));
+      await tester.tap(find.text(l10n.reviewModeClassic));
       await tester.pumpAndSettle();
       await tester.tap(
         find.byKey(const ValueKey<String>('review-limit-practice')),

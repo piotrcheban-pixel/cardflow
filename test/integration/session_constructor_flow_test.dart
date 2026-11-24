@@ -195,18 +195,17 @@ void main() {
 
     final FeedSessionEngine engine = FeedSessionEngine(
       cards: plan.cards,
-      scheduler: container.read(schedulerProvider),
-      reviewRepository: container.read(reviewRepositoryProvider),
-      clock: () => now,
       prebuilt: true,
     );
     engine.start();
-    expect(await engine.rate(Rating.hard), isTrue);
+    engine.toggleReveal();
+    engine.visit(0);
 
-    final ReviewLogRow log = await db.select(db.reviewLogs).getSingle();
-    expect(log.cardId, 'unique');
-    expect(log.mode, reviewModeFeed);
-    expect(log.rating, 2);
+    // ADR-044: лента по плану конструктора — только просмотр. Даже если план
+    // собран в режиме feed, оценки и записи повторения не появляются.
+    expect(await db.select(db.reviewLogs).get(), isEmpty);
+    expect(engine.state.total, 1);
+    expect(engine.state.items.single.revealed, isTrue);
   });
 
   test('пресет: сохранение, чтение, бюджет времени и удаление', () async {

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -8,83 +9,65 @@ import 'package:material_ui/material_ui.dart' hide Card;
 
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/decks/deck.dart';
-import 'package:cardflow/domain/review/daily_limits.dart';
-import 'package:cardflow/domain/review/review_queue.dart';
-import 'package:cardflow/domain/scheduling/rating.dart';
 import 'package:cardflow/domain/session/session_plan.dart';
-import 'package:cardflow/domain/settings/app_settings.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
+import 'package:cardflow/ui/components/app_surfaces.dart';
 import 'package:cardflow/ui/motion.dart';
 import 'package:cardflow/ui/review/feed_card_view.dart';
+import 'package:cardflow/ui/review/feed_keyboard.dart';
 import 'package:cardflow/ui/review/feed_progress_bar.dart';
 import 'package:cardflow/ui/review/feed_session_engine.dart';
 import 'package:cardflow/ui/review/review_chrome.dart';
-import 'package:cardflow/ui/review/review_toolbar.dart';
-import 'package:cardflow/ui/review/session_keyboard.dart';
-import 'package:cardflow/ui/review/session_notice.dart';
 import 'package:cardflow/ui/review/session_media.dart';
-import 'package:cardflow/ui/review/review_session_engine.dart';
-import 'package:cardflow/ui/router/app_router.dart';
+import 'package:cardflow/ui/review/session_notice.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
 import 'package:cardflow/ui/theme/app_tokens.dart';
+import 'package:cardflow/ui/theme/app_typography.dart';
 
-/// Экран режима «Лента» (SPEC A7.3, ADR-016).
+/// Экран режима «Лента» — свободный просмотр карточек (ADR-044).
 ///
-/// Полноэкранный вертикальный `PageView.builder`, Stories-прогресс, свайпы-
-/// оценки с порогами, авто-продвижение 3/5/8 с с паузой, undo/«Почему?»/выход
-/// из общего каркаса A6.4. Записи — через [FeedSessionEngine] и
-/// `ReviewRepository` (одна транзакция на оценку).
+/// Это **не** классическая сессия в другой раскладке:
+///
+/// * одна карточка на страницу, вертикальный `PageView`: свайп вверх/вниз,
+///   колесо мыши, тачпад и клавиши листают на соседнюю карточку;
+/// * после перехода сразу видна следующая карточка — никакого «докрутите
+///   колесо», пустых кадров и исчезающих карточек;
+/// * никаких оценок, FSRS, дневных лимитов, авто-продвижения и undo: свайп —
+///   навигация, а не ответ. Расписание повторений не меняется;
+/// * тап по карточке раскрывает и скрывает ответ;
+/// * длинный текст не прокручивается внутри страницы (это ломало вертикальные
+///   свайпы): карточка показывает действие «Открыть полностью».
 class FeedSessionScreen extends ConsumerStatefulWidget {
-  /// Создаёт экран ленты для колоды [deckId] (режим колоды, ADR-016).
+  /// Создаёт экран ленты для колоды [deckId].
   ///
-  /// [plan] — очередь конструктора (SPEC A6.7, ADR-018); при наличии
-  /// загруженной колоды не требуется.
-  ///
-  /// [ignoreDailyLimits] — подтверждённое «Продолжить без лимита» (ADR-028).
-  const FeedSessionScreen({
-    this.deckId,
-    this.plan,
-    this.ignoreDailyLimits = false,
-    super.key,
-  });
+  /// [plan] — очередь конструктора (SPEC A6.7, ADR-018): набор и порядок
+  /// карточек уже выбраны пользователем.
+  const FeedSessionScreen({this.deckId, this.plan, super.key});
 
   /// Идентификатор колоды.
   final String? deckId;
 
-  /// План сессии конструктора; `null` — очередь из колоды.
+  /// План сессии конструктора; `null` — вся колода.
   final SessionPlan? plan;
-
-  /// Игнорировать дневные лимиты (`?limits=ignore`, ADR-028).
-  final bool ignoreDailyLimits;
-
-  /// Варианты интервала авто-продвижения (SPEC A7.3).
-  static const List<int> autoAdvanceSeconds = <int>[3, 5, 8];
-
-  /// Интервал авто-продвижения по умолчанию.
-  static const Duration defaultAutoAdvance = Duration(seconds: 5);
 
   @override
   ConsumerState<FeedSessionScreen> createState() => _FeedSessionScreenState();
 }
 
 class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
-    with WidgetsBindingObserver, SessionNoticeMixin<FeedSessionScreen> {
+    with SessionNoticeMixin<FeedSessionScreen> {
   final PageController _pageController = PageController();
   FeedSessionEngine? _engine;
   Deck? _deck;
-  Timer? _autoAdvanceTimer;
-  Timer? _budgetTimer;
-  Duration _autoAdvanceInterval = FeedSessionScreen.defaultAutoAdvance;
-  bool _autoAdvancePaused = false;
-  bool _timeExpired = false;
-  bool _planMissing = false;
   int _deckCount = 1;
   bool _loading = true;
   bool _loadFailed = false;
-  bool _completionHapticPlayed = false;
-  bool _limitReached = false;
-  bool _ignoreLimits = false;
-  int _resetToken = 0;
+  bool _planMissing = false;
+  bool _timeExpired = false;
+  bool _animating = false;
+  double _wheelAccumulator = 0;
+  Timer? _wheelReset;
+  Timer? _budgetTimer;
   SessionMedia _media = SessionMedia.empty;
 
   bool get _hasSource => widget.plan != null || widget.deckId != null;
@@ -95,31 +78,17 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
   @override
   void initState() {
     super.initState();
-    _ignoreLimits = widget.ignoreDailyLimits;
-    WidgetsBinding.instance.addObserver(this);
     unawaited(_load());
   }
 
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    _autoAdvanceTimer?.cancel();
+    _wheelReset?.cancel();
     _budgetTimer?.cancel();
     _engine?.removeListener(_onEngineChanged);
     _engine?.dispose();
     _pageController.dispose();
     super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      final FeedSessionEngine? engine = _engine;
-      if (engine != null) _scheduleAutoAdvance(engine.state);
-      return;
-    }
-    _autoAdvanceTimer?.cancel();
-    _autoAdvanceTimer = null;
   }
 
   Future<void> _load() async {
@@ -150,45 +119,10 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
           ? await ref.read(deckRepositoryProvider).deckById(deckIds.single)
           : null;
       final SessionMedia media = await loadSessionMedia(ref, cards);
-      AppSettings settings;
-      try {
-        settings = await ref.read(appSettingsProvider.future);
-      } on Object {
-        settings = AppSettings.defaults;
-      }
-      // Дневные лимиты A6.6 — остаток на локальный календарный день по
-      // `review_logs`, а не свежий лимит на каждую сессию (ADR-019 §8, L45).
-      // `?limits=ignore` (ADR-028) отключает лимиты после предупреждения.
-      final RemainingReviewLimits? limits = _ignoreLimits
-          ? null
-          : RemainingReviewLimits.of(
-              newLimit: settings.dailyNewLimit,
-              reviewLimit: settings.dailyReviewLimit,
-              usage: await ref
-                  .read(dailyUsageRepositoryProvider)
-                  .usageOnDay(DateTime.now()),
-            );
       if (!mounted) return;
-      final DateTime queueNow = DateTime.now().toUtc();
-      final bool prebuilt = plan != null;
-      final bool limitReached =
-          !_ignoreLimits &&
-          !prebuilt &&
-          ReviewQueue.build(cards, now: queueNow).isNotEmpty &&
-          ReviewQueue.build(
-            cards,
-            now: queueNow,
-            newLimit: limits?.newCards,
-            reviewLimit: limits?.reviews,
-          ).isEmpty;
       final FeedSessionEngine engine = FeedSessionEngine(
         cards: cards,
-        scheduler: ref.read(schedulerProvider),
-        reviewRepository: ref.read(reviewRepositoryProvider),
-        clock: DateTime.now,
-        prebuilt: prebuilt,
-        newLimit: limits?.newCards,
-        reviewLimit: limits?.reviews,
+        prebuilt: plan != null,
       )..addListener(_onEngineChanged);
       engine.start();
       setState(() {
@@ -196,14 +130,9 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
         _deckCount = deckIds.length;
         _engine = engine;
         _media = media;
-        _limitReached = limitReached;
         _loading = false;
-        _autoAdvancePaused = false;
-        _completionHapticPlayed = false;
-        _resetToken = 0;
       });
       _startBudgetTimer(plan?.timeBudget);
-      _syncPageAfterFrame();
     } catch (_) {
       if (!mounted) return;
       setState(() {
@@ -213,22 +142,19 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
     }
   }
 
-  /// Лимит минут (SPEC A6.7): по истечении сессия завершается, авто-продвижение
-  /// и оценки останавливаются, непройденные карточки остаются на следующий раз.
+  /// Лимит минут конструктора (SPEC A6.7): по истечении просмотр
+  /// останавливается, карточки не оцениваются и расписание не меняется.
   void _startBudgetTimer(Duration? budget) {
     _budgetTimer?.cancel();
     _budgetTimer = null;
     if (budget == null) return;
     _budgetTimer = Timer(budget, () {
       if (!mounted) return;
-      _autoAdvanceTimer?.cancel();
-      _autoAdvanceTimer = null;
       setState(() => _timeExpired = true);
     });
   }
 
   void _retry() {
-    _autoAdvanceTimer?.cancel();
     _budgetTimer?.cancel();
     _engine?.removeListener(_onEngineChanged);
     _engine?.dispose();
@@ -237,204 +163,118 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
   }
 
   void _onEngineChanged() {
-    if (!mounted) return;
-    setState(() {});
-    final FeedSessionEngine? engine = _engine;
-    if (engine == null) return;
-    _syncPage(engine.state);
-    _syncPageAfterFrame();
-    _scheduleAutoAdvance(engine.state);
+    if (mounted) setState(() {});
   }
 
-  void _syncPage(FeedSessionState state) {
-    if (!_pageController.hasClients) return;
-    final int current = _pageController.page?.round() ?? 0;
-    if (current == state.index) return;
-    // Reduced motion: смена карточки — мгновенная, без анимации прокрутки.
-    if (AppMotion.reduce(context)) {
-      _pageController.jumpToPage(state.index);
+  Future<void> _goTo(int index) async {
+    final FeedSessionEngine? engine = _engine;
+    if (engine == null ||
+        _animating ||
+        !_pageController.hasClients ||
+        _timeExpired ||
+        index < 0 ||
+        index >= engine.state.total ||
+        index == engine.state.index) {
       return;
     }
-    unawaited(
-      _pageController.animateToPage(
-        state.index,
-        duration: AppMotion.duration(
-          context,
-          const Duration(milliseconds: 300),
-        ),
-        curve: Curves.easeOutCubic,
-      ),
-    );
+    _animating = true;
+    try {
+      if (AppMotion.reduce(context)) {
+        _pageController.jumpToPage(index);
+      } else {
+        await _pageController.animateToPage(
+          index,
+          // Полноэкранный переход ленты — 240 мс: быстрее, чем 300 мс
+          // прежней анимации, и без пружины (лента листается часто).
+          duration: AppMotion.duration(context, AppDurations.medium),
+          curve: AppMotion.enter,
+        );
+      }
+    } finally {
+      _animating = false;
+    }
   }
 
-  void _syncPageAfterFrame() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
+  /// Колесо мыши и тачпад: одно движение — одна карточка.
+  ///
+  /// Обработчик стоит на самой странице (глубже `Scrollable` PageView) и
+  /// забирает событие через `pointerSignalResolver`, поэтому колесо не
+  /// проваливается во вложенный скролл и не требует «докрутить» страницу.
+  /// Мелкие дельты тачпада накапливаются до порога; сброс — 220 мс.
+  void _onPointerSignal(PointerSignalEvent event) {
+    if (event is! PointerScrollEvent) return;
+    if (event.scrollDelta.dy == 0) return;
+    GestureBinding.instance.pointerSignalResolver.register(event, (
+      PointerSignalEvent resolved,
+    ) {
+      if (resolved is! PointerScrollEvent) return;
       final FeedSessionEngine? engine = _engine;
-      if (engine != null) _syncPage(engine.state);
+      if (engine == null || _timeExpired) return;
+      final double dy = resolved.scrollDelta.dy;
+      if (dy == 0) return;
+      // Одно и то же направление суммируется, смена — сбрасывает накопление.
+      if (_wheelAccumulator != 0 && _wheelAccumulator.sign != dy.sign) {
+        _wheelAccumulator = 0;
+      }
+      _wheelAccumulator += dy;
+      _wheelReset?.cancel();
+      _wheelReset = Timer(const Duration(milliseconds: 220), () {
+        _wheelAccumulator = 0;
+      });
+      if (_wheelAccumulator.abs() < 40) return;
+      final int direction = _wheelAccumulator > 0 ? 1 : -1;
+      _wheelAccumulator = 0;
+      unawaited(_goTo(engine.state.index + direction));
     });
-  }
-
-  void _scheduleAutoAdvance(FeedSessionState state) {
-    _autoAdvanceTimer?.cancel();
-    _autoAdvanceTimer = null;
-    if (_autoAdvancePaused || _timeExpired || state.busy || state.isCompleted) {
-      return;
-    }
-    final FeedSessionItem? item = state.current;
-    if (item == null || !item.revealed || item.rated) return;
-    _autoAdvanceTimer = Timer(_autoAdvanceInterval, () {
-      if (!mounted) return;
-      _engine?.advance();
-    });
-  }
-
-  void _togglePause() {
-    final FeedSessionEngine? engine = _engine;
-    if (engine == null) return;
-    setState(() => _autoAdvancePaused = !_autoAdvancePaused);
-    _scheduleAutoAdvance(engine.state);
-  }
-
-  void _setAutoAdvance(int seconds) {
-    final FeedSessionEngine? engine = _engine;
-    setState(() {
-      _autoAdvanceInterval = Duration(seconds: seconds);
-    });
-    if (engine != null) _scheduleAutoAdvance(engine.state);
   }
 
   void _toggleReveal() {
     final FeedSessionEngine? engine = _engine;
     if (engine == null || _timeExpired) return;
-    final FeedSessionItem? item = engine.state.current;
-    if (item == null || item.rated || engine.state.busy) return;
-    final bool revealing = !item.revealed;
-    engine.toggleReveal();
-    if (revealing && _hapticsEnabled) {
+    _toggleRevealAt(engine.state.index);
+  }
+
+  /// Раскрывает ответ конкретной карточки (тап по видимой странице).
+  void _toggleRevealAt(int index) {
+    final FeedSessionEngine? engine = _engine;
+    if (engine == null || _timeExpired) return;
+    final List<FeedSessionItem> items = engine.state.items;
+    if (index < 0 || index >= items.length) return;
+    final bool willReveal = !items[index].revealed;
+    engine.toggleRevealAt(index);
+    if (willReveal && _hapticsEnabled) {
       unawaited(HapticFeedback.selectionClick());
-    }
-  }
-
-  Future<void> _rate(Rating rating) async {
-    final FeedSessionEngine? engine = _engine;
-    if (engine == null || _timeExpired || engine.state.busy) return;
-    // Оценка без показанного ответа запрещена и в ленте (находка F1):
-    // свайп/кнопка не должны писать в FSRS ответ, которого пользователь не
-    // видел. Свайп остаётся доступным, но сначала раскройте карточку.
-    if (!(engine.state.current?.revealed ?? false)) return;
-    try {
-      final bool rated = await engine.rate(rating);
-      if (!rated) {
-        // Оценку не приняли (гонка busy/завершение): возвращаем карточку,
-        // если она уже улетела за экран по свайпу.
-        if (mounted) setState(() => _resetToken++);
-        return;
-      }
-      if (!mounted) return;
-      _playHaptic(rating);
-      if (engine.state.isCompleted &&
-          !_completionHapticPlayed &&
-          _hapticsEnabled) {
-        _completionHapticPlayed = true;
-        unawaited(HapticFeedback.mediumImpact());
-      }
-    } catch (_) {
-      if (!mounted) return;
-      setState(() => _resetToken++);
-      showSessionNotice(AppLocalizations.of(context).reviewSaveError);
-    }
-  }
-
-  Future<void> _undo() async {
-    final FeedSessionEngine? engine = _engine;
-    if (engine == null) return;
-    try {
-      final bool undone = await engine.undo();
-      if (!undone || !mounted) return;
-      setState(() {
-        _completionHapticPlayed = false;
-        _resetToken++;
-      });
-      showSessionNotice(AppLocalizations.of(context).reviewUndoneMessage);
-    } catch (_) {
-      if (!mounted) return;
-      showSessionNotice(AppLocalizations.of(context).reviewUndoError);
-    }
-  }
-
-  void _playHaptic(Rating rating) {
-    if (!_hapticsEnabled) return;
-    switch (reviewHapticFor(rating)) {
-      case ReviewHaptic.heavy:
-        unawaited(HapticFeedback.heavyImpact());
-      case ReviewHaptic.light:
-        unawaited(HapticFeedback.lightImpact());
-      case ReviewHaptic.selection:
-        unawaited(HapticFeedback.selectionClick());
     }
   }
 
   KeyEventResult _handleKey(FocusNode node, KeyEvent event) {
     final FeedSessionEngine? engine = _engine;
     if (engine == null) return KeyEventResult.ignored;
-    final bool canUndo =
-        engine.state.undoCount > 0 &&
-        !engine.state.busy &&
-        !engine.state.isCompleted;
-    return handleReviewSessionKey(
+    return handleFeedSessionKey(
       event: event,
-      revealed: engine.state.current?.revealed ?? false,
-      canUndo: canUndo,
+      onNext: () => unawaited(_goTo(engine.state.index + 1)),
+      onPrevious: () => unawaited(_goTo(engine.state.index - 1)),
       onReveal: _toggleReveal,
-      onRate: (Rating rating) => unawaited(_rate(rating)),
-      onUndo: () => unawaited(_undo()),
+      onFirst: () => unawaited(_goTo(0)),
+      onLast: () => unawaited(_goTo(engine.state.total - 1)),
+      onClose: () => unawaited(_confirmExit()),
     );
   }
 
-  Future<void> _showWhy(String excerpt) async {
-    _autoAdvanceTimer?.cancel();
-    _autoAdvanceTimer = null;
-    await showReviewSourceExcerpt(context, excerpt);
-    if (!mounted) return;
-    final FeedSessionEngine? engine = _engine;
-    if (engine != null) _scheduleAutoAdvance(engine.state);
-  }
-
   Future<void> _confirmExit() async {
-    _autoAdvanceTimer?.cancel();
-    _autoAdvanceTimer = null;
     final FeedSessionEngine? engine = _engine;
-    // Завершённая/пустая лента: диалог — лишний барьер (N7).
-    if (engine == null || engine.state.isCompleted || engine.state.total == 0) {
+    if (engine == null || engine.state.total == 0 || _timeExpired) {
       _leave();
       return;
     }
     final bool confirmed = await confirmReviewExit(context);
-    if (!mounted) return;
-    if (confirmed) {
-      _leave();
-    } else {
-      _scheduleAutoAdvance(engine.state);
-    }
-  }
-
-  /// Переход в тренировку из состояния «дневной лимит исчерпан» (ADR-025).
-  void _startPractice(String deckId) {
-    context.pushReplacement(AppRoutes.practicePath(deckId));
-  }
-
-  /// Продолжает ленту без дневного лимита (ADR-028).
-  void _continueWithoutLimits() {
-    _ignoreLimits = true;
-    _retry();
+    if (confirmed && mounted) _leave();
   }
 
   void _leave() {
     if (context.canPop()) context.pop();
   }
 
-  /// Повтор чтения медиа карточки после ошибки изображения (7.19).
   Future<void> _retryMedia(Card card) async {
     final SessionMedia updated = await reloadSessionMedia(ref, <Card>[
       card,
@@ -445,20 +285,12 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l10n = AppLocalizations.of(context);
     final FeedSessionState? state = _engine?.state;
-    final String? rawExcerpt = state?.current?.card.sourceExcerpt;
-    final String? excerpt = (rawExcerpt == null || rawExcerpt.trim().isEmpty)
-        ? null
-        : rawExcerpt;
-    // F13: в терминальных состояниях крестик скрыт — выход есть действием
-    // панели состояния.
-    final bool terminalState =
+    final bool terminal =
         _planMissing ||
-        (!_loading &&
-            !_loadFailed &&
-            state != null &&
-            (state.total == 0 || state.isCompleted)) ||
-        _timeExpired;
+        _timeExpired ||
+        (!_loading && !_loadFailed && (state?.total ?? 0) == 0);
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (bool didPop, Object? result) {
@@ -466,133 +298,145 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
         unawaited(_confirmExit());
       },
       child: Scaffold(
-        appBar: ReviewSessionAppBar(
-          undoEnabled: state != null && state.undoCount > 0 && !state.busy,
-          onUndo: _undo,
-          whyExcerpt: excerpt,
-          onWhyPressed: excerpt == null
-              ? null
-              : () => unawaited(_showWhy(excerpt)),
-          onClose: _confirmExit,
-          showClose: !terminalState,
-        ),
-        body: Focus(
-          autofocus: true,
-          onKeyEvent: _handleKey,
-          child: _buildBody(context, state),
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        body: SafeArea(
+          child: Focus(
+            autofocus: true,
+            onKeyEvent: _handleKey,
+            child: _buildBody(context, l10n, state, terminal: terminal),
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildBody(BuildContext context, FeedSessionState? state) {
+  Widget _buildBody(
+    BuildContext context,
+    AppLocalizations l10n,
+    FeedSessionState? state, {
+    required bool terminal,
+  }) {
     if (_loading) return const ReviewLoadingView();
     if (_planMissing) return ReviewPlanMissingView(onBack: _leave);
     if (_loadFailed || state == null) {
       return ReviewLoadErrorView(onRetry: _retry);
     }
-    final AppLocalizations l10n = AppLocalizations.of(context);
     if (state.total == 0) {
-      // Пустая лента при непустой колоде — исчерпанный дневной лимит
-      // (ADR-028): объясняем причину и даём «Продолжить без лимита» или
-      // тренировку.
-      final String? deckId = widget.deckId;
       return ReviewEmptyView(
-        title: _limitReached ? l10n.reviewDailyLimitTitle : null,
-        message: _limitReached ? l10n.reviewDailyLimitMessage : null,
-        onContinue: _limitReached && deckId != null
-            ? _continueWithoutLimits
-            : null,
-        onPractice: _limitReached && deckId != null
-            ? () => _startPractice(deckId)
-            : null,
+        title: l10n.feedEmptyTitle,
+        message: l10n.feedEmptyMessage,
         onBack: _leave,
       );
     }
     if (_timeExpired) {
-      return ReviewTimeUpView(ratedCount: state.ratedCount, onDone: _leave);
+      return _FeedTimeUpView(viewed: state.index + 1, onDone: _leave);
     }
-    if (state.isCompleted) {
-      return ReviewCompletedView(ratedCount: state.ratedCount, onDone: _leave);
-    }
-    final AppSettings settings = ref.watch(effectiveAppSettingsProvider);
-    // Аудит v5 (V5-3): на низком окне карточка получала ~140 лог. px —
-    // компактные поля и однострочный футер отдают ей высоту.
-    final bool compactHeight = MediaQuery.sizeOf(context).height < 560;
-    // F04/F06: лента живёт в той же контентной колонке, что «Классика»:
-    // карточка и панель оценок выровнены по одной ширине (72 % окна), а не
-    // растянуты на всё окно.
-    final double cardWidth = AppSizes.studyCardWidth(
-      MediaQuery.sizeOf(context).width,
+    final double windowWidth = MediaQuery.sizeOf(context).width;
+    final double windowHeight = MediaQuery.sizeOf(context).height;
+    final bool compact = windowHeight < 560;
+    // Карточка ленты живёт в той же контентной колонке, что классика:
+    // 72 % окна на десктопе (иначе на 2K текст тонет в белом поле) и почти
+    // вся ширина на телефоне. Прогресс и рейка навигации выровнены по ней.
+    final double cardWidth = math.min(
+      AppSizes.studyCardWidth(windowWidth),
+      windowWidth - AppSpacing.sm * 2,
     );
-    final double toolbarWidth = math.min(
-      cardWidth,
-      MediaQuery.sizeOf(context).width - AppSpacing.lg * 2,
+    final double gutter = math.max(0, (windowWidth - cardWidth) / 2);
+    // Высота листа: на телефоне карточка занимает всю полезную область, на
+    // десктопе — 78 % рабочей высоты (полноэкранный «пустой холст» на 2K
+    // выглядит как неиспользованное пространство, а не как карточка).
+    final double pageHeight = math.max(
+      320,
+      windowHeight - AppSizes.headerHeightFor(context) - (compact ? 34 : 58),
     );
-    final List<bool> ratedFlags = <bool>[
-      for (final FeedSessionItem item in state.items) item.rated,
-    ];
+    final double cardHeight = windowWidth >= 900
+        ? math.min(pageHeight, pageHeight * 0.78)
+        : pageHeight;
+    final String deckLabel =
+        _deck?.name ??
+        (_deckCount > 1
+            ? l10n.sessionDeckCountLabel(_deckCount)
+            : l10n.reviewModeFeed);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
+        _FeedHeader(
+          title: deckLabel,
+          showClose: !terminal,
+          onClose: _confirmExit,
+        ),
         Center(
           child: SizedBox(
-            width: toolbarWidth,
+            width: cardWidth,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(0, AppSpacing.sm, 0, 0),
+              padding: EdgeInsets.fromLTRB(
+                compact ? AppSpacing.xs : AppSpacing.md,
+                compact ? 0 : AppSpacing.xs,
+                compact ? AppSpacing.xs : AppSpacing.md,
+                compact ? 0 : AppSpacing.xs,
+              ),
               child: FeedProgressBar(
-                rated: ratedFlags,
+                total: state.total,
                 currentIndex: state.index,
-                animatePulse: settings.motion == MotionPreference.expressive,
+                onSeek: (int index) => unawaited(_goTo(index)),
               ),
             ),
           ),
         ),
         Expanded(
-          child: PageView.builder(
-            key: const ValueKey<String>('feed-page-view'),
-            controller: _pageController,
-            scrollDirection: Axis.vertical,
-            itemCount: state.total,
-            onPageChanged: (int index) => _engine?.visit(index),
-            itemBuilder: (BuildContext context, int index) {
-              final FeedSessionItem item = state.items[index];
-              return Padding(
-                padding: compactHeight
-                    ? const EdgeInsets.fromLTRB(8, 4, 8, 4)
-                    : const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                child: FeedCardView(
-                  key: ValueKey<String>('feed-card-${item.card.id}'),
-                  front: item.card.front,
-                  back: item.card.back,
-                  card: item.card,
-                  mediaBytes: _media.bytes,
-                  mediaMetadata: _media.metadata,
-                  onRetryMedia: () => _retryMedia(item.card),
-                  revealed: item.revealed,
-                  rated: item.rated,
-                  rating: item.rating,
-                  enabled: !state.busy && !item.rated && index == state.index,
-                  resetToken: _resetToken,
-                  spring: settings.motion == MotionPreference.standard
-                      ? AppMotion.standardSpring()
-                      : null,
-                  // V1/V3: полоса оценок — внутри карточки, как в «Классике»;
-                  // отдельного блока под карточкой больше нет.
-                  answerFooter: item.revealed
-                      ? ReviewToolbar(
-                          key: const ValueKey<String>('feed-toolbar'),
-                          preview: null,
-                          enabled: !state.busy && index == state.index,
-                          compact: compactHeight,
-                          onRating: (Rating rating) => unawaited(_rate(rating)),
-                        )
-                      : null,
-                  onTap: _toggleReveal,
-                  onRate: (Rating rating) => unawaited(_rate(rating)),
+          child: Stack(
+            children: <Widget>[
+              PageView.builder(
+                key: const ValueKey<String>('feed-page-view'),
+                controller: _pageController,
+                scrollDirection: Axis.vertical,
+                itemCount: state.total,
+                // Страница всегда целиком: никаких частичных положений после
+                // свайпа и никакой инерционной прокрутки через несколько карточек.
+                physics: const PageScrollPhysics(),
+                allowImplicitScrolling: false,
+                onPageChanged: (int index) => _engine?.visit(index),
+                itemBuilder: (BuildContext context, int index) {
+                  final FeedSessionItem item = state.items[index];
+                  return Listener(
+                    behavior: HitTestBehavior.opaque,
+                    onPointerSignal: _onPointerSignal,
+                    child: Center(
+                      child: SizedBox(
+                        width: cardWidth,
+                        height: cardHeight,
+                        child: FeedCardView(
+                          key: ValueKey<String>('feed-card-${item.card.id}'),
+                          front: item.card.front,
+                          back: item.card.back,
+                          card: item.card,
+                          mediaBytes: _media.bytes,
+                          mediaMetadata: _media.metadata,
+                          onRetryMedia: () => _retryMedia(item.card),
+                          revealed: item.revealed,
+                          compact: compact,
+                          onTap: () => _toggleRevealAt(index),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+              if (windowWidth >= 1000 && state.total > 1 && gutter >= 120)
+                Positioned(
+                  right: math.max(AppSpacing.sm, gutter - 56),
+                  top: 0,
+                  bottom: 0,
+                  child: Center(
+                    child: _FeedNavRail(
+                      canPrevious: state.canGoPrevious,
+                      canNext: state.canGoNext,
+                      onPrevious: () => unawaited(_goTo(state.index - 1)),
+                      onNext: () => unawaited(_goTo(state.index + 1)),
+                    ),
+                  ),
                 ),
-              );
-            },
+            ],
           ),
         ),
         if (sessionNotice != null)
@@ -601,134 +445,156 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
             onDismiss: dismissSessionNotice,
             dismissTooltip: l10n.sessionNoticeDismiss,
           ),
-        // Совсем низкое окно: нижняя панель ленты отнимает всю высоту у
-        // карточки (аудит v9, G10 — карточка схлопывалась в 0).
-        if (MediaQuery.sizeOf(context).height >= 330)
-          _FeedBottomBar(
-            compact: compactHeight,
-            deckName: _deck?.name,
-            deckCount: _deckCount,
-            position: state.index + 1,
-            total: state.total,
-            intervalSeconds: _autoAdvanceInterval.inSeconds,
-            paused: _autoAdvancePaused,
-            onIntervalChanged: _setAutoAdvance,
-            onTogglePause: _togglePause,
-            l10n: l10n,
-          ),
       ],
     );
   }
 }
 
-class _FeedBottomBar extends StatelessWidget {
-  const _FeedBottomBar({
-    required this.compact,
-    required this.deckName,
-    required this.deckCount,
-    required this.position,
-    required this.total,
-    required this.intervalSeconds,
-    required this.paused,
-    required this.onIntervalChanged,
-    required this.onTogglePause,
-    required this.l10n,
+/// Шапка ленты: выход, название колоды и бейдж режима просмотра.
+class _FeedHeader extends StatelessWidget {
+  const _FeedHeader({
+    required this.title,
+    required this.showClose,
+    required this.onClose,
   });
 
-  /// Однострочный футер для низких окон.
-  final bool compact;
-
-  final String? deckName;
-  final int deckCount;
-  final int position;
-  final int total;
-  final int intervalSeconds;
-  final bool paused;
-  final ValueChanged<int> onIntervalChanged;
-  final VoidCallback onTogglePause;
-  final AppLocalizations l10n;
+  final String title;
+  final bool showClose;
+  final VoidCallback onClose;
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
+    return SizedBox(
+      height: AppSizes.headerHeightFor(context),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+        child: Row(
+          children: <Widget>[
+            if (showClose)
+              IconButton(
+                key: const ValueKey<String>('review-close'),
+                tooltip: l10n.reviewCloseTooltip,
+                icon: const Icon(Icons.arrow_back, size: AppSizes.navIcon),
+                onPressed: onClose,
+              )
+            else
+              const SizedBox(width: AppSpacing.sm),
+            const SizedBox(width: AppSpacing.xxs),
+            Expanded(
+              child: Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.titleMedium,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.xs),
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.xs,
+                vertical: 3,
+              ),
+              decoration: BoxDecoration(
+                color: scheme.primary.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(AppRadii.xs),
+                border: Border.all(
+                  color: scheme.primary.withValues(alpha: 0.28),
+                ),
+              ),
+              child: Text(
+                l10n.feedBrowseBadge,
+                key: const ValueKey<String>('feed-browse-badge'),
+                style: AppTypography.caption(context, color: scheme.primary),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.xs),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Вертикальная рейка навигации для мыши (десктоп).
+class _FeedNavRail extends StatelessWidget {
+  const _FeedNavRail({
+    required this.canPrevious,
+    required this.canNext,
+    required this.onPrevious,
+    required this.onNext,
+  });
+
+  final bool canPrevious;
+  final bool canNext;
+  final VoidCallback onPrevious;
+  final VoidCallback onNext;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l10n = AppLocalizations.of(context);
     final ColorScheme scheme = Theme.of(context).colorScheme;
-    final String? label = compact
-        ? null
-        : deckName ??
-              (deckCount > 1 ? l10n.sessionDeckCountLabel(deckCount) : null);
-    return Material(
-      color: scheme.surfaceContainerLow,
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: compact
-              ? const EdgeInsets.fromLTRB(12, 2, 8, 2)
-              : const EdgeInsets.fromLTRB(16, 8, 12, 12),
-          child: Row(
-            children: <Widget>[
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    if (label != null)
-                      Text(
-                        label,
-                        key: const ValueKey<String>('feed-deck-name'),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                    Text(
-                      l10n.feedCounter(position, total),
-                      key: const ValueKey<String>('feed-counter'),
-                      style: Theme.of(context).textTheme.labelMedium
-                          ?.copyWith(color: scheme.onSurfaceVariant),
-                    ),
-                  ],
-                ),
-              ),
-              PopupMenuButton<int>(
-                key: const ValueKey<String>('feed-auto-advance'),
-                tooltip: l10n.feedAutoAdvanceTooltip,
-                onSelected: onIntervalChanged,
-                itemBuilder: (BuildContext context) => <PopupMenuEntry<int>>[
-                  for (final int seconds
-                      in FeedSessionScreen.autoAdvanceSeconds)
-                    PopupMenuItem<int>(
-                      value: seconds,
-                      child: Text(l10n.feedSeconds(seconds)),
-                    ),
-                ],
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 10,
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      Icon(
-                        Icons.timer_outlined,
-                        size: 18,
-                        color: scheme.onSurfaceVariant,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(l10n.feedSeconds(intervalSeconds)),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              // F29: «Пауза» — вторичное действие, нейтральный контур,
-              // а не мятная тональная кнопка (раньше — самое яркое пятно футера).
-              OutlinedButton.icon(
-                key: const ValueKey<String>('feed-pause'),
-                onPressed: onTogglePause,
-                icon: Icon(
-                  paused ? Icons.play_arrow : Icons.pause,
-                  size: AppSizes.iconSmall,
-                ),
-                label: Text(paused ? l10n.feedResume : l10n.feedPause),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        IconButton(
+          key: const ValueKey<String>('feed-previous'),
+          tooltip: l10n.feedPreviousTooltip,
+          onPressed: canPrevious ? onPrevious : null,
+          style: IconButton.styleFrom(
+            backgroundColor: scheme.surfaceContainerLowest,
+            disabledForegroundColor: scheme.outlineVariant,
+            side: BorderSide(color: scheme.outlineVariant),
+          ),
+          icon: const Icon(Icons.keyboard_arrow_up, size: AppSizes.iconLarge),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        IconButton(
+          key: const ValueKey<String>('feed-next'),
+          tooltip: l10n.feedNextTooltip,
+          onPressed: canNext ? onNext : null,
+          style: IconButton.styleFrom(
+            backgroundColor: scheme.surfaceContainerLowest,
+            disabledForegroundColor: scheme.outlineVariant,
+            side: BorderSide(color: scheme.outlineVariant),
+          ),
+          icon: const Icon(Icons.keyboard_arrow_down, size: AppSizes.iconLarge),
+        ),
+      ],
+    );
+  }
+}
+
+/// Итог просмотра по лимиту минут конструктора (ADR-018).
+class _FeedTimeUpView extends StatelessWidget {
+  const _FeedTimeUpView({required this.viewed, required this.onDone});
+
+  final int viewed;
+  final VoidCallback onDone;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: AppSizes.studyCardWidth(MediaQuery.sizeOf(context).width),
+          ),
+          child: AppEmptyState(
+            hero: true,
+            icon: Icons.timer_off_outlined,
+            metric: Text(viewed.toString()),
+            title: l10n.reviewTimeUpTitle,
+            message: l10n.feedTimeUpMessage(viewed),
+            actions: <Widget>[
+              FilledButton(
+                key: const ValueKey<String>('feed-timeup-done'),
+                onPressed: onDone,
+                child: Text(l10n.reviewDone),
               ),
             ],
           ),

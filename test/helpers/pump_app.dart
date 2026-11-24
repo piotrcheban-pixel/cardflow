@@ -185,10 +185,8 @@ List<GoRoute> decksRoutes() {
     ),
     GoRoute(
       path: '/decks/:id/feed',
-      builder: (BuildContext context, GoRouterState state) => FeedSessionScreen(
-        deckId: state.pathParameters['id']!,
-        ignoreDailyLimits: _ignoresDailyLimits(state),
-      ),
+      builder: (BuildContext context, GoRouterState state) =>
+          FeedSessionScreen(deckId: state.pathParameters['id']!),
     ),
     GoRoute(
       path: '/decks/:id/practice',

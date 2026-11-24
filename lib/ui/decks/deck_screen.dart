@@ -630,41 +630,32 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
       case DeckSessionMode.constructor:
         await context.push(AppRoutes.constructorDeckPath(deckId));
       case DeckSessionMode.classic:
-        await _openReviewMode(
+        await _openClassicMode(
           context,
           deckId: deckId,
-          feed: false,
           queueWithLimits: queueWithLimits,
           queueWithoutLimits: queueWithoutLimits,
           limitedByDay: limits != null,
         );
       case DeckSessionMode.feed:
-        await _openReviewMode(
-          context,
-          deckId: deckId,
-          feed: true,
-          queueWithLimits: queueWithLimits,
-          queueWithoutLimits: queueWithoutLimits,
-          limitedByDay: limits != null,
-        );
+        // Лента — свободный просмотр (ADR-044): ни дневные лимиты, ни очередь
+        // FSRS не проверяются, потому что просмотр ничего не записывает.
+        await context.push(AppRoutes.feedPath(deckId));
     }
   }
 
-  /// Открывает классику/ленту; при исчерпанном лимите — предупреждение с
+  /// Открывает классику; при исчерпанном лимите — предупреждение с
   /// «Продолжить без лимита» (ADR-028).
-  Future<void> _openReviewMode(
+  Future<void> _openClassicMode(
     BuildContext context, {
     required String deckId,
-    required bool feed,
     required bool queueWithLimits,
     required bool queueWithoutLimits,
     required bool limitedByDay,
   }) async {
     final AppLocalizations l10n = AppLocalizations.of(context);
     if (queueWithLimits) {
-      await context.push(
-        feed ? AppRoutes.feedPath(deckId) : AppRoutes.studyPath(deckId),
-      );
+      await context.push(AppRoutes.studyPath(deckId));
       return;
     }
     if (!queueWithoutLimits || !limitedByDay) {
@@ -706,11 +697,7 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
       await context.push(AppRoutes.practicePath(deckId));
       return;
     }
-    await context.push(
-      feed
-          ? AppRoutes.feedPath(deckId, ignoreDailyLimits: true)
-          : AppRoutes.studyPath(deckId, ignoreDailyLimits: true),
-    );
+    await context.push(AppRoutes.studyPath(deckId, ignoreDailyLimits: true));
   }
 
   /// Единое контекстное меню колоды (V8): тот же нижний лист, что в сетке.

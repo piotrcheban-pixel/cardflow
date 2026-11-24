@@ -99,11 +99,11 @@ abstract final class AppRoutes {
       ? '/decks/$deckId/study?$dailyLimitsQuery=$ignoreDailyLimitsValue'
       : '/decks/$deckId/study';
 
-  /// Путь сессии-ленты по колоде (SPEC A7.3).
-  static String feedPath(String deckId, {bool ignoreDailyLimits = false}) =>
-      ignoreDailyLimits
-      ? '/decks/$deckId/feed?$dailyLimitsQuery=$ignoreDailyLimitsValue'
-      : '/decks/$deckId/feed';
+  /// Путь ленты свободного просмотра по колоде (ADR-044).
+  ///
+  /// Дневные лимиты к ленте не применяются: просмотр не пишет в FSRS, поэтому
+  /// параметра «продолжить без лимита» здесь нет.
+  static String feedPath(String deckId) => '/decks/$deckId/feed';
 
   /// Путь тренировки по колоде (ADR-025).
   static String practicePath(String deckId) => '/decks/$deckId/practice';
@@ -233,10 +233,8 @@ GoRouter createAppRouter({
       GoRoute(
         path: '/decks/:deckId/feed',
         name: AppRoutes.feed,
-        builder: (context, state) => FeedSessionScreen(
-          deckId: state.pathParameters['deckId']!,
-          ignoreDailyLimits: _ignoresDailyLimits(state),
-        ),
+        builder: (context, state) =>
+            FeedSessionScreen(deckId: state.pathParameters['deckId']!),
       ),
       GoRoute(
         path: '/decks/:deckId/practice',
