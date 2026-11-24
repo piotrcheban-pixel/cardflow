@@ -217,9 +217,12 @@ class _StatisticsContent extends StatelessWidget {
         statistics.heatmap.length,
       ),
       icon: Icons.calendar_month_outlined,
+      // Аудит 2.0 (P3-12): «2 %» без пояснения читалось как ошибка —
+      // теперь подписано «2 % года».
       headerTrailing: AppStatusChip(
-        label: l10n.statisticsRetentionValue(heatmapPercent),
+        label: l10n.statisticsCalendarYearShare(heatmapPercent),
         tone: AppStatusTone.neutral,
+        dense: true,
       ),
       contentPadding: const EdgeInsets.fromLTRB(
         AppSpacing.lg,

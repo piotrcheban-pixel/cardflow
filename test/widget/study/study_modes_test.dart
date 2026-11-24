@@ -67,14 +67,20 @@ void main() {
     return (reviews: reviewRepository, practice: practiceRepository);
   }
 
+  /// Цвет поверхности варианта.
+  ///
+  /// Аудит 2.0 (P2-24): вариант — не FilledButton, а поверхность с буквой и
+  /// «радио»; цвет состояния живёт в `Material` плитки.
   Color? backgroundOf(WidgetTester tester, int index) {
-    final FilledButton button = tester.widget<FilledButton>(
-      find.descendant(
-        of: find.byKey(ValueKey<String>('study-option-$index')),
-        matching: find.byType(FilledButton),
-      ),
+    final Material surface = tester.widget<Material>(
+      find
+          .descendant(
+            of: find.byKey(ValueKey<String>('study-option-$index')),
+            matching: find.byType(Material),
+          )
+          .first,
     );
-    return button.style?.backgroundColor?.resolve(<WidgetState>{});
+    return surface.color;
   }
 
   group('Тест', () {
@@ -133,16 +139,25 @@ void main() {
       expect(find.byKey(const ValueKey<String>('test-next')), findsOneWidget);
     });
 
-    testWidgets('верный ответ авто-переходит через 1,2 с', (tester) async {
+    testWidgets('F9/P1-06: верный ответ не улетает сам — ждёт «Далее»', (
+      tester,
+    ) async {
       await pumpScreen(tester, location: '/decks/deck-1/test', deck: cards());
       await tester.tap(find.text('Митохондрия'));
       await tester.pump();
       expect(find.text('Вопрос 0?'), findsOneWidget);
 
-      await tester.pump(const Duration(milliseconds: 1300));
+      // Аудит 2.0 (P1-06): автопереход через 1,2 с не давал прочитать фидбек.
+      await tester.pump(const Duration(milliseconds: 1500));
       await tester.pump();
-      expect(find.text('Вопрос 0?'), findsNothing);
-      expect(find.text('Вопрос 1?'), findsOneWidget);
+      expect(find.text('Вопрос 0?'), findsOneWidget);
+      expect(find.text('Вопрос 1?'), findsNothing);
+      expect(find.byKey(const ValueKey<String>('test-next')), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey<String>('test-feedback-result')),
+        findsOneWidget,
+        reason: 'результат ответа виден текстом, а не только цветом',
+      );
     });
 
     testWidgets('клавиши 1–4 выбирают вариант, Enter ведёт дальше', (

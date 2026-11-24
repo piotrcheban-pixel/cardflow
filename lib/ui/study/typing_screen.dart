@@ -258,7 +258,10 @@ class _TypingScreenState extends ConsumerState<TypingScreen> {
       if (mounted && context.canPop()) context.pop();
       return;
     }
-    final bool confirmed = await confirmReviewExit(context);
+    final bool confirmed = await confirmReviewExit(
+      context,
+      kind: SessionExitKind.study,
+    );
     if (confirmed && mounted && context.canPop()) context.pop();
   }
 
@@ -338,7 +341,12 @@ class _TypingScreenState extends ConsumerState<TypingScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         const Padding(padding: EdgeInsets.only(top: AppSpacing.xs)),
-        StudyProgressBar(answered: state.answeredCount, total: state.total),
+        // Аудит 2.0 (P2-02): номер вопроса не опережает показанный.
+        StudyProgressBar(
+          answered: state.answeredCount,
+          total: state.total,
+          currentIndex: _answeredCard != null ? state.answeredCount : null,
+        ),
         Expanded(
           child: StudyWorkspace(
             child: Column(

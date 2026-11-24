@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
@@ -17,12 +19,26 @@ import 'package:cardflow/ui/theme/app_tokens.dart';
 /// маппятся в ARB (`archiveErrorMessage`), прочие — в общую строку. Сырые
 /// исключения наружу не выводятся.
 
+/// Ширина снекбара: на широком окне уведомление не растягивается на всю
+/// ширину (аудит 2.0, P2-21: тёмная полоса 1250 px с текстом в 150).
+const double kAppSnackBarMaxWidth = 520;
+
 /// Показывает короткое сообщение снекбаром темы (F23: одна система
 /// уведомлений — тот же inverseSurface и поля, что у `SessionNotice`).
+///
+/// Аудит 2.0 (P2-21): снекбар прижат к нижнему левому краю и ограничен
+/// [kAppSnackBarMaxWidth]; текст получает ширину строки, а не полосы окна.
 void showAppMessage(BuildContext context, String message) {
+  final double windowWidth = MediaQuery.sizeOf(context).width;
+  final double width = math.min(kAppSnackBarMaxWidth, windowWidth - 32);
   ScaffoldMessenger.of(context)
     ..hideCurrentSnackBar()
-    ..showSnackBar(SnackBar(content: Text(message)));
+    ..showSnackBar(
+      SnackBar(
+        width: windowWidth >= 640 ? width : null,
+        content: Text(message),
+      ),
+    );
 }
 
 /// Диалог создания колоды вручную; возвращает созданную колоду.

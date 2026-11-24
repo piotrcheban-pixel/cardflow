@@ -362,6 +362,71 @@ void main() {
       for (final provider in providers) provider.name,
     ], isNot(contains('pixabay')));
   });
+
+  // Аудит 2.0 (P1-04): до скачивания отсеиваются кандидаты, чьё название и
+  // описание не связаны с запросом — карточка остаётся без иллюстрации, но не
+  // получает чужое фото.
+  group('релевантность кандидата', () {
+    test('нерелевантный кандидат не скачивается', () async {
+      var requests = 0;
+      final provider = _FakeProvider('wikimedia', const <ImageCandidate>[
+        ImageCandidate(
+          provider: 'wikimedia',
+          url: 'https://img.test/building.png',
+          title: 'Moscow State University main building',
+          description: 'University building photo',
+        ),
+      ]);
+      final dio = dioWithImages(<String, Uint8List>{
+        'https://img.test/building.png': png800x450,
+      }, onRequest: () => requests++);
+      final service = ImageSearchService(
+        dio: dio,
+        providers: <ImageProvider>[provider],
+      );
+
+      final image = await service.findImage('test reliability');
+
+      expect(image, isNull);
+      expect(requests, 0, reason: 'нерелевантное не скачиваем вовсе');
+    });
+
+    test('релевантный кандидат прикрепляется', () async {
+      final provider = _FakeProvider('wikimedia', const <ImageCandidate>[
+        ImageCandidate(
+          provider: 'wikimedia',
+          url: 'https://img.test/leaf.png',
+          title: 'Leaf structure diagram',
+          description: 'Cross section of a leaf',
+        ),
+      ]);
+      final service = ImageSearchService(
+        dio: dioWithImages(<String, Uint8List>{
+          'https://img.test/leaf.png': png800x450,
+        }),
+        providers: <ImageProvider>[provider],
+      );
+
+      final image = await service.findImage('leaf structure');
+
+      expect(image, isNotNull);
+      expect(image!.sourceUrl, 'https://img.test/leaf.png');
+    });
+
+    test('кандидат без метаданных не отбрасывается', () async {
+      final provider = _FakeProvider('openverse', <ImageCandidate>[
+        candidate('openverse', 'https://img.test/plain.png'),
+      ]);
+      final service = ImageSearchService(
+        dio: dioWithImages(<String, Uint8List>{
+          'https://img.test/plain.png': png800x450,
+        }),
+        providers: <ImageProvider>[provider],
+      );
+
+      expect(await service.findImage('truss bridge'), isNotNull);
+    });
+  });
 }
 
 Uint8List _png(int width, int height) {

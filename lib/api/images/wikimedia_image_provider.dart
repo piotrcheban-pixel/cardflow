@@ -122,6 +122,11 @@ class WikimediaImageProvider implements ImageProvider {
       final String? license = _metaValue(
         metadata is Map ? metadata['LicenseShortName'] : null,
       );
+      // Аудит 2.0 (P1-04): заголовок и описание файла — сигналы релевантности
+      // для отсева «фото здания по запросу о надёжности теста».
+      final String? description = _metaValue(
+        metadata is Map ? metadata['ImageDescription'] : null,
+      );
       final Object? index = raw['index'];
       found.add((
         index: index is int ? index : found.length,
@@ -132,6 +137,8 @@ class WikimediaImageProvider implements ImageProvider {
           height: asPositiveInt(first['thumbheight'] ?? first['height']),
           author: artist,
           license: license,
+          title: title,
+          description: description,
           attribution: joinAttribution(<String?>[title, artist, license]),
         ),
       ));

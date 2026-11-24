@@ -241,7 +241,7 @@ abstract class AppLocalizations {
   /// Счётчик карточек в процессе изучения на экране колоды.
   ///
   /// In ru, this message translates to:
-  /// **'Начато: {count}'**
+  /// **'В процессе: {count}'**
   String deckInProgressCount(int count);
 
   /// Заголовок диалога создания колоды.
@@ -685,7 +685,7 @@ abstract class AppLocalizations {
   /// Подсказка о навигации в ленте: вертикальный свайп, колесо и клавиши (ADR-044).
   ///
   /// In ru, this message translates to:
-  /// **'Свайп ↑↓, колесо мыши или стрелки — листать'**
+  /// **'↑↓ / колесо мыши / стрелки — листать'**
   String get feedNavHint;
 
   /// Семантическая подпись прогресса ленты.
@@ -1780,7 +1780,7 @@ abstract class AppLocalizations {
   /// Строка «Запрошено: N карточек» рядом с полем количества (7.20).
   ///
   /// In ru, this message translates to:
-  /// **'Запрошено: {count} карточек'**
+  /// **'{count, plural, one{Запрошено: {count} карточка} few{Запрошено: {count} карточки} many{Запрошено: {count} карточек} other{Запрошено: {count} карточки}}'**
   String generationPlanRequestedCount(int count);
 
   /// Предупреждение плана: фрагменты не удалось объединить, сумма лимитов больше заказа (D.5, TASK 02B-FINAL).
@@ -1804,7 +1804,7 @@ abstract class AppLocalizations {
   /// Подсказка числового поля количества карточек (TASK 03).
   ///
   /// In ru, this message translates to:
-  /// **'Пусто — из пожеланий или по бюджету модели'**
+  /// **'Авто: по материалу и бюджету модели'**
   String get generationCardsCountHint;
 
   /// Валидация числового поля количества карточек (TASK 03).
@@ -3730,7 +3730,7 @@ abstract class AppLocalizations {
   /// Таймер игры, время строкой.
   ///
   /// In ru, this message translates to:
-  /// **'Время: {time}'**
+  /// **'Время: {time} с'**
   String matchTimer(String time);
 
   /// Лучший результат по колоде.
@@ -3784,7 +3784,7 @@ abstract class AppLocalizations {
   /// Показанное утверждение.
   ///
   /// In ru, this message translates to:
-  /// **'Ответ: {answer}'**
+  /// **'Утверждение: {answer}'**
   String trueFalseStatement(String answer);
 
   /// Кнопка «верно».
@@ -4627,6 +4627,12 @@ abstract class AppLocalizations {
   /// **'1–4 — оценка · ← — отменить'**
   String get reviewKeyboardHints;
 
+  /// Подсказка клавиатуры после раскрытия ответа, когда отменять нечего (аудит 2.0, §5.1).
+  ///
+  /// In ru, this message translates to:
+  /// **'1–4 — оценка'**
+  String get reviewKeyboardHintsRating;
+
   /// Кнопка «в главное меню» на экранах сессий: путь домой не длиннее двух действий (находка N3).
   ///
   /// In ru, this message translates to:
@@ -4987,10 +4993,10 @@ abstract class AppLocalizations {
   /// **'{count, plural, one{день} few{дня} many{дней} other{дня}}'**
   String statisticsDaysUnit(int count);
 
-  /// Подсказка клавиатуры до раскрытия ответа (аудит v5, V5-10).
+  /// Подсказка клавиатуры до раскрытия ответа (аудит 2.0: «← — отменить» до первой оценки — мёртвая инструкция).
   ///
   /// In ru, this message translates to:
-  /// **'Пробел — показать ответ · ← — отменить'**
+  /// **'Пробел — показать ответ'**
   String get reviewKeyboardHintsFront;
 
   /// Развернуть остальные теги (аудит v5, V5-15).
@@ -4998,6 +5004,282 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Ещё {count}'**
   String constructorTagsMore(int count);
+
+  /// Диалог выхода из «Ленты» (аудит 2.0, P2-03).
+  ///
+  /// In ru, this message translates to:
+  /// **'Выйти из просмотра? Прогресс просмотра не сохраняется, расписание повторений остаётся прежним.'**
+  String get sessionExitFeedMessage;
+
+  /// Диалог выхода из «Тренировки» (аудит 2.0, P2-03).
+  ///
+  /// In ru, this message translates to:
+  /// **'Выйти из тренировки? Поставленные оценки уже сохранены, расписание не изменилось.'**
+  String get sessionExitPracticeMessage;
+
+  /// Диалог выхода из проверочных режимов (аудит 2.0, P2-03).
+  ///
+  /// In ru, this message translates to:
+  /// **'Выйти из проверки? Ответы уже сохранены.'**
+  String get sessionExitStudyMessage;
+
+  /// Заголовок сводки завершённой сессии (аудит 2.0, P2-25).
+  ///
+  /// In ru, this message translates to:
+  /// **'Итог сессии'**
+  String get reviewSummaryTitle;
+
+  /// Длительность сессии в сводке (аудит 2.0, P2-25).
+  ///
+  /// In ru, this message translates to:
+  /// **'Время: {duration}'**
+  String reviewSummaryDuration(String duration);
+
+  /// Доля карточек, оценённых «Знаю» и «Легко», в сводке сессии.
+  ///
+  /// In ru, this message translates to:
+  /// **'Без ошибок: {percent} %'**
+  String reviewSummaryAccuracy(int percent);
+
+  /// Повторить сессию из сводки (аудит 2.0, P2-25).
+  ///
+  /// In ru, this message translates to:
+  /// **'Ещё раз'**
+  String get reviewAgainAction;
+
+  /// Перейти к колоде из сводки (аудит 2.0, P2-25).
+  ///
+  /// In ru, this message translates to:
+  /// **'К карточкам'**
+  String get reviewToDeckAction;
+
+  /// Подсказка навигации в ленте на touch-устройстве (аудит 2.0, P3-08).
+  ///
+  /// In ru, this message translates to:
+  /// **'Свайп ↑↓ — листать карточки'**
+  String get feedNavHintTouch;
+
+  /// Чип режима «Лента» вместо «Просмотр» (аудит 2.0, P3-08).
+  ///
+  /// In ru, this message translates to:
+  /// **'Лента'**
+  String get feedBrowseBadgeV2;
+
+  /// Подпись KPI «колод» с плюрализацией (аудит 2.0, P3-07).
+  ///
+  /// In ru, this message translates to:
+  /// **'{count, plural, one{колода} few{колоды} many{колод} other{колоды}}'**
+  String decksMetricDecksLabel(int count);
+
+  /// Заголовок первого запуска (аудит 2.0, P2-01).
+  ///
+  /// In ru, this message translates to:
+  /// **'Добро пожаловать в CardFlow'**
+  String get decksWelcomeTitle;
+
+  /// Пояснение первого запуска.
+  ///
+  /// In ru, this message translates to:
+  /// **'Создайте первую колоду, импортируйте готовую или сгенерируйте карточки из конспекта.'**
+  String get decksWelcomeMessage;
+
+  /// Нейтральная заметка о ненастроенном ИИ на первом запуске (аудит 2.0, P2-01).
+  ///
+  /// In ru, this message translates to:
+  /// **'ИИ не настроен — карточки можно создавать вручную. Провайдер подключается в любой момент.'**
+  String get decksWelcomeAiNote;
+
+  /// Действие первого запуска: подключить провайдера (аудит 2.0, P2-01).
+  ///
+  /// In ru, this message translates to:
+  /// **'Настроить ИИ'**
+  String get decksWelcomeAiAction;
+
+  /// Текст прогресса колоды с числами (аудит 2.0, §6).
+  ///
+  /// In ru, this message translates to:
+  /// **'{studied} из {total} изучено'**
+  String deckProgressCounts(int studied, int total);
+
+  /// Кнопка очистки поиска в колоде.
+  ///
+  /// In ru, this message translates to:
+  /// **'Сбросить поиск'**
+  String get deckSearchClear;
+
+  /// Подсказка под полем количества карточек: авто-режим и партии (аудит 2.0, P2-19).
+  ///
+  /// In ru, this message translates to:
+  /// **'Пусто — авто: столько, сколько позволяет материал. Большие заказы идут партиями.'**
+  String get generationCardsCountHelper;
+
+  /// Пресет количества карточек.
+  ///
+  /// In ru, this message translates to:
+  /// **'{count}'**
+  String generationCardsCountPreset(int count);
+
+  /// Подпись чекбокса выбора карточки в превью (аудит 2.0, P2-20).
+  ///
+  /// In ru, this message translates to:
+  /// **'Выбрать карточку'**
+  String get generationSelectCard;
+
+  /// Предупреждение над списком карточек в превью (аудит 2.0, P1-04).
+  ///
+  /// In ru, this message translates to:
+  /// **'Изображения подобраны автоматически'**
+  String get generationImagesAutoTitle;
+
+  /// Пояснение предупреждения о автоподборе изображений.
+  ///
+  /// In ru, this message translates to:
+  /// **'Проверьте, подходят ли иллюстрации к карточкам: поиск работает по описанию и может ошибаться.'**
+  String get generationImagesAutoMessage;
+
+  /// Действие превью: удалить все автоматически найденные изображения.
+  ///
+  /// In ru, this message translates to:
+  /// **'Убрать все изображения'**
+  String get generationRemoveAllImages;
+
+  /// Подтверждение после «Убрать все изображения».
+  ///
+  /// In ru, this message translates to:
+  /// **'Изображения убраны'**
+  String get generationImagesRemoved;
+
+  /// Счётчик прикреплённых файлов (вместо дубля «Всего файлов»/«Файлы не прикреплены»).
+  ///
+  /// In ru, this message translates to:
+  /// **'Прикреплено файлов: {count}'**
+  String generationFilesAttached(int count);
+
+  /// Inline-статус успешной проверки провайдера (аудит 2.0, P2-15).
+  ///
+  /// In ru, this message translates to:
+  /// **'Подключение работает'**
+  String get providersCheckInlineOk;
+
+  /// Inline-статус неудачной проверки провайдера.
+  ///
+  /// In ru, this message translates to:
+  /// **'Подключиться не удалось'**
+  String get providersCheckInlineFail;
+
+  /// Опасное действие: удалить сохранённый ключ провайдера.
+  ///
+  /// In ru, this message translates to:
+  /// **'Удалить ключ'**
+  String get providersDeleteKey;
+
+  /// Подзаголовок листа добавления провайдера.
+  ///
+  /// In ru, this message translates to:
+  /// **'Пресет подставит адрес и модели, кастомный профиль — свои.'**
+  String get providersSheetSubtitle;
+
+  /// Подпись к переключателю тактильной отдачи на настольных ОС (аудит 2.0, P3-05).
+  ///
+  /// In ru, this message translates to:
+  /// **'Вибрация есть только на телефоне'**
+  String get settingsHapticsDesktopHint;
+
+  /// Пояснение к переключателю шрифта дислексии.
+  ///
+  /// In ru, this message translates to:
+  /// **'Шрифт для дислексии применяется ко всему интерфейсу'**
+  String get settingsDyslexiaHint;
+
+  /// Подпись доли года у календаря (аудит 2.0, P3-12).
+  ///
+  /// In ru, this message translates to:
+  /// **'{percent} % года'**
+  String statisticsCalendarYearShare(int percent);
+
+  /// Подсказка клетки календаря (аудит 2.0, P2-22).
+  ///
+  /// In ru, this message translates to:
+  /// **'{date} · повторений: {count}'**
+  String statisticsDayTooltip(String date, int count);
+
+  /// Подпись над вариантами «Теста» (аудит 2.0, P2-24).
+  ///
+  /// In ru, this message translates to:
+  /// **'Выберите один ответ'**
+  String get studyChooseOne;
+
+  /// Текстовый результат верного ответа (аудит 2.0, P1-06).
+  ///
+  /// In ru, this message translates to:
+  /// **'Верно'**
+  String get studyFeedbackCorrect;
+
+  /// Текстовый результат неверного ответа (аудит 2.0, P1-06).
+  ///
+  /// In ru, this message translates to:
+  /// **'Неверно'**
+  String get studyFeedbackIncorrect;
+
+  /// Подпись правильного ответа после неверного выбора.
+  ///
+  /// In ru, this message translates to:
+  /// **'Правильный ответ'**
+  String get studyCorrectAnswerLabel;
+
+  /// Таймер «Подбора пар» с единицами (аудит 2.0, P2-23).
+  ///
+  /// In ru, this message translates to:
+  /// **'Время: {seconds} с'**
+  String matchTimeSeconds(String seconds);
+
+  /// Таймер «Подбора пар» с единицами (аудит 2.0, P2-23).
+  ///
+  /// In ru, this message translates to:
+  /// **'Время: {minutes} мин {seconds} с'**
+  String matchTimeMinutes(int minutes, String seconds);
+
+  /// Прогресс «Подбора пар» (аудит 2.0, P2-23).
+  ///
+  /// In ru, this message translates to:
+  /// **'Пары: {done} из {total}'**
+  String matchProgress(int done, int total);
+
+  /// Диалог выхода из «Подбора пар» (аудит 2.0, P2-23).
+  ///
+  /// In ru, this message translates to:
+  /// **'Выйти из подбора пар?'**
+  String get matchExitTitle;
+
+  /// Пояснение диалога выхода из «Подбора пар».
+  ///
+  /// In ru, this message translates to:
+  /// **'Прогресс игры не сохранится, карточки останутся в колоде.'**
+  String get matchExitMessage;
+
+  /// Короткая подпись действия «убрать изображение» в превью (аудит 2.0, P2-20).
+  ///
+  /// In ru, this message translates to:
+  /// **'Удалить'**
+  String get generationPreviewRemoveShort;
+
+  /// Короткая подпись действия «заменить изображение» в превью.
+  ///
+  /// In ru, this message translates to:
+  /// **'Заменить'**
+  String get generationPreviewReplaceShort;
+
+  /// Номер изображения стороны в превью (вместо повтора подписи стороны).
+  ///
+  /// In ru, this message translates to:
+  /// **'Изображение {index}'**
+  String generationPreviewImageNumber(int index);
+
+  /// Расшифровка бейджа «FSRS» в шапке сессии (аудит 2.0, P3-06).
+  ///
+  /// In ru, this message translates to:
+  /// **'Интервальное повторение по алгоритму FSRS'**
+  String get reviewFsrsTooltip;
 }
 
 class _AppLocalizationsDelegate

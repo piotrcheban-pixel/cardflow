@@ -22,6 +22,20 @@ import 'package:cardflow/ui/theme/app_typography.dart';
 /// параметром [enableSwipe]: горизонтальный жест двигает карточку, меняет её
 /// форму/тон и по отпусканию отправляет оценку через [onRate].
 ///
+/// Геометрия (аудит 2.0, находки P1-01/P1-03/P1-05/P2-27):
+///
+/// * карточка занимает основную часть рабочей области: на десктопе — до 62 %
+///   собственной ширины по высоте, на узком экране — всю доступную высоту;
+/// * кегль вопроса **стабилен** и не зависит от переворота: на обратной стороне
+///   вопрос повторяется приглушённо в 0,74× кегля вопроса, а ответ набран
+///   0,88× — иерархия не инвертируется, текст не «прыгает»;
+/// * текстовая колонка ограничена 820 px (45–75 знаков), изображение получает
+///   фиксированную долю ширины и **не может** выйти за свои границы;
+/// * длинный текст прокручивается внутри карточки: снизу/сверху появляется
+///   мягкий градиент-подсказка и постоянный скроллбар;
+/// * панель действий — фиксированная полоса внизу карточки, контент её не
+///   перекрывает.
+///
 /// Бизнес-логики здесь нет: тексты, стороны и действия приходят снаружи;
 /// раскрытие ответа — состояние движка сессии.
 class SessionCard extends StatefulWidget {
@@ -94,8 +108,7 @@ class SessionCard extends StatefulWidget {
   /// Действие оборотной стороны внутри карточки (панель оценок).
   final Widget? answerFooter;
 
-  /// Подсказка под вопросом (клавиши/жесты) — заполняет пустоту карточки
-  /// осмысленной строкой и дробит её на короткие полосы (Вариант А).
+  /// Подсказка под вопросом (клавиши/жесты) — в нижней полосе карточки.
   final Widget? questionHint;
 
   /// Подсказка под ответом (у «Ленты» — о свайпах/клавишах).
@@ -154,6 +167,22 @@ class SessionCard extends StatefulWidget {
 
   /// Длительность переворота без пружины (280–350 мс).
   final Duration flipDuration;
+
+  /// Кегль вопроса для ширины карточки [width] и множителя экрана [factor].
+  ///
+  /// Единая шкала «вопрос карточки» (аудит 2.0, P2-27): 34 базовых px на
+  /// десктопе с ростом до 44 на 4K, 28 px на телефоне. Ответ и повтор вопроса
+  /// считаются от этого значения, поэтому иерархия стабильна.
+  static double questionSizeFor(double width, double factor) =>
+      width < 600 ? 28 : 34 * factor.clamp(1.0, 1.3);
+
+  /// Кегль ответа: 0,88 от кегля вопроса (не крупнее вопроса).
+  static double answerSizeFor(double questionSize) =>
+      (questionSize * 0.88).clamp(20, 40);
+
+  /// Кегль повторённого вопроса на обороте: 0,74 от кегля вопроса.
+  static double echoSizeFor(double questionSize) =>
+      (questionSize * 0.74).clamp(17, 30);
 
   @override
   State<SessionCard> createState() => _SessionCardState();
@@ -316,32 +345,35 @@ class _SessionCardState extends State<SessionCard>
                 constraints.maxHeight,
                 AppSizes.studyCardMinHeightFor(context),
               )
-            : (constraints.hasBoundedHeight ? constraints.maxHeight : 420);
-        final double cardHeight = math.min(
-          availableHeight,
-          AppSizes.studyCardMinHeightFor(context),
-        );
+            : (constraints.hasBoundedHeight ? constraints.maxHeight : 520);
         _width = width;
-        final bool narrow = width < 560;
-        final bool tight = cardHeight < 320;
-        final bool cramped = cardHeight < 260;
+        final bool narrow = width < 600;
         final double factor = AppAdaptive.factorForContext(context);
-        final double questionSize = tight
-            ? (narrow ? 26 : 28)
-            : (narrow ? 28 : AppTypography.reviewQuestionSize * factor * 1.45);
-        final double answerSize = tight
-            ? 20
-            : (narrow ? 22 : AppTypography.reviewAnswerSize * factor * 1.3);
-        final double padV = tight
-            ? AppSpacing.xs
-            : (AppSpacing.xl * factor).clamp(AppSpacing.xl, AppSpacing.huge);
-        final double padH = narrow ? AppSpacing.lg : padV;
-        final double bodyPadV = narrow ? AppSpacing.md : padV;
+        // Аудит 2.0 (P2-27): карточка занимает основную часть рабочей области.
+        // Узкий экран — вся доступная высота (телефон читает ответ внутри
+        // карточки), десктоп — 62 % собственной ширины (163-я пропорция), но не
+        // меньше 440 px и не больше доступного места.
+        final double preferredHeight = narrow
+            ? availableHeight
+            : math.max(width * 0.62, 440);
+        final double cardHeight = math.max(
+          160,
+          math.min(availableHeight, preferredHeight),
+        );
+        final double questionSize = SessionCard.questionSizeFor(width, factor);
+        final double answerSize = SessionCard.answerSizeFor(questionSize);
+        final double echoSize = SessionCard.echoSizeFor(questionSize);
+        final double padH = narrow
+            ? AppSpacing.lg
+            : (AppSpacing.xl * factor).clamp(AppSpacing.lg, AppSpacing.xxl);
+        final double padV = narrow
+            ? AppSpacing.md
+            : (AppSpacing.md * factor).clamp(AppSpacing.md, AppSpacing.xl);
         final double columnWidth = math.max(
           200,
           math.min(
             width - padH * 2,
-            AppSizes.studyTextColumnBase * (narrow ? 1 : factor),
+            (narrow ? 560 : 820) * factor.clamp(1, 1.3),
           ),
         );
         final double columnInset = math.max(padH, (width - columnWidth) / 2);
@@ -373,14 +405,13 @@ class _SessionCardState extends State<SessionCard>
                     theme,
                     questionSize: questionSize,
                     answerSize: answerSize,
+                    echoSize: echoSize,
                     padH: padH,
                     padV: padV,
-                    bodyPadV: bodyPadV,
                     narrow: narrow,
-                    cramped: cramped,
-                    tight: tight,
                     columnWidth: columnWidth,
                     columnInset: columnInset,
+                    cardWidth: width,
                   )
                 : _buildQuestion(
                     context,
@@ -388,12 +419,10 @@ class _SessionCardState extends State<SessionCard>
                     questionSize: questionSize,
                     padH: padH,
                     padV: padV,
-                    bodyPadV: bodyPadV,
                     narrow: narrow,
-                    cramped: cramped,
-                    tight: tight,
                     columnWidth: columnWidth,
                     columnInset: columnInset,
+                    cardWidth: width,
                   );
             final Matrix4 transform = Matrix4.identity()
               ..setEntry(3, 2, 0.0015)
@@ -497,107 +526,119 @@ class _SessionCardState extends State<SessionCard>
     );
   }
 
-  /// Лицевая сторона: надзаголовок, вопрос по центру, действие внизу.
+  /// Лицевая сторона: надзаголовок, вопрос, действие внизу.
   Widget _buildQuestion(
     BuildContext context,
     ThemeData theme, {
     required double questionSize,
     required double padH,
     required double padV,
-    required double bodyPadV,
     required bool narrow,
-    required bool cramped,
-    required bool tight,
     required double columnWidth,
     required double columnInset,
+    required double cardWidth,
   }) {
     final Widget? footer = widget.questionFooter;
     final bool occlusion = widget.card?.occlusionJson != null;
     final bool hasMedia =
         !occlusion && (widget.card?.questionMediaIds.isNotEmpty ?? false);
-    final bool wideMedia = MediaQuery.sizeOf(context).width >= 1000;
-    // Вариант А: текстовая карточка раскладывает вопрос и подсказку по всей
-    // высоте тела (spaceEvenly), поэтому пустые полосы короткие; карточка с
-    // изображением сохраняет центрирование и полную высоту картинки.
-    final bool spaced =
-        !cramped && !hasMedia && !occlusion && widget.questionHint != null;
+    final bool sideBySide = hasMedia && cardWidth >= 760 && !occlusion;
+    final TextStyle questionStyle =
+        theme.textTheme.headlineMedium?.copyWith(
+          fontSize: questionSize,
+          height: 1.32,
+          fontWeight: FontWeight.w600,
+          letterSpacing: questionSize >= 32 ? -0.4 : -0.1,
+          color: theme.colorScheme.onSurface,
+        ) ??
+        TextStyle(
+          fontSize: questionSize,
+          height: 1.32,
+          fontWeight: FontWeight.w600,
+        );
     return Column(
       mainAxisAlignment: MainAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        if (!cramped)
-          Padding(
-            padding: EdgeInsets.fromLTRB(columnInset, padV, columnInset, 0),
-            child: _SideLabel(
-              label: AppLocalizations.of(context).reviewQuestionLabel,
-            ),
+        Padding(
+          padding: EdgeInsets.fromLTRB(
+            columnInset,
+            padV + AppSpacing.xs,
+            columnInset,
+            0,
           ),
+          child: _SideLabel(
+            label: AppLocalizations.of(context).reviewQuestionLabel,
+          ),
+        ),
         Expanded(
           child: Semantics(
             label: widget.front,
             excludeSemantics: true,
             child: _CardBody(
               scroll: _scroll,
-              padding: EdgeInsets.fromLTRB(
-                padH,
-                hasMedia && wideMedia ? 0 : AppSpacing.md,
-                padH,
-                hasMedia && wideMedia ? 0 : bodyPadV,
-              ),
+              padding: EdgeInsets.fromLTRB(padH, padV, padH, padV),
               columnWidth: columnWidth,
-              alignment: spaced
-                  ? MainAxisAlignment.spaceEvenly
-                  : MainAxisAlignment.center,
               builder: (double availableHeight) => <Widget>[
                 _content(
                   theme,
                   context,
                   side: widget.front,
                   revealed: false,
-                  style: theme.textTheme.headlineMedium?.copyWith(
-                    fontSize: questionSize,
-                    height: 1.35,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: -0.4,
-                  ),
+                  style: questionStyle,
                   media: true,
-                  imageMaxHeight: occlusion
-                      ? math.max(160, availableHeight * 0.66)
-                      : wideMedia
+                  imageMaxHeight: sideBySide
                       ? availableHeight
-                      : math.max(200, availableHeight * 0.92),
-                  imageMaxWidth: wideMedia ? columnWidth * 0.55 : columnWidth,
-                  sideBySide: wideMedia && hasMedia,
+                      : math.max(140, availableHeight * 0.42),
+                  imageMaxWidth: sideBySide
+                      ? math.min(columnWidth * 0.36, 420)
+                      : math.min(columnWidth, 560),
+                  sideBySide: sideBySide,
+                  mediaAfterText: !sideBySide,
                 ),
-                if (spaced) widget.questionHint!,
               ],
             ),
           ),
         ),
         if (footer != null)
           _CardFooterBand(
-            band: !tight,
             padding: EdgeInsets.fromLTRB(
               padH,
-              tight ? 0 : AppSpacing.md,
+              AppSpacing.md,
               padH,
-              tight ? AppSpacing.xxs : padV,
+              padV + AppSpacing.xxs,
             ),
-            child: Center(
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxWidth:
-                      AppSizes.revealButtonMaxWidth *
-                      AppAdaptive.factorForContext(context).clamp(1.0, 1.2),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                if (widget.questionHint != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+                    child: Center(child: widget.questionHint!),
+                  ),
+                Center(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth:
+                          AppSizes.revealButtonMaxWidth *
+                          AppAdaptive.factorForContext(context).clamp(1.0, 1.2),
+                    ),
+                    child: SizedBox(
+                      key: widget.questionActionsKey,
+                      width: double.infinity,
+                      child: footer,
+                    ),
+                  ),
                 ),
-                child: SizedBox(
-                  key: widget.questionActionsKey,
-                  width: double.infinity,
-                  child: footer,
-                ),
-              ),
+              ],
             ),
+          )
+        else if (widget.questionHint != null)
+          Padding(
+            padding: EdgeInsets.fromLTRB(padH, 0, padH, padV),
+            child: Center(child: widget.questionHint!),
           ),
       ],
     );
@@ -609,99 +650,92 @@ class _SessionCardState extends State<SessionCard>
     ThemeData theme, {
     required double questionSize,
     required double answerSize,
+    required double echoSize,
     required double padH,
     required double padV,
-    required double bodyPadV,
     required bool narrow,
-    required bool cramped,
-    required bool tight,
     required double columnWidth,
     required double columnInset,
+    required double cardWidth,
   }) {
     final AppLocalizations l10n = AppLocalizations.of(context);
     final ColorScheme scheme = theme.colorScheme;
     final Widget? footer = widget.answerFooter;
-    final TextStyle mutedQuestion = theme.textTheme.titleSmall!.copyWith(
-      fontSize: narrow ? 17 : math.max(18, questionSize * 0.48),
-      height: 1.4,
-      fontWeight: FontWeight.w500,
-      color: scheme.onSurfaceVariant,
-    );
-    final TextStyle answerStyle = theme.textTheme.bodyLarge!.copyWith(
-      fontSize: answerSize,
-      height: 1.45,
-      fontWeight: FontWeight.w400,
-      color: scheme.onSurface,
-    );
+    // Аудит 2.0 (P1-05): повтор вопроса сохраняет вес (0,74 кегля вопроса),
+    // ответ набран 0,88 — вопрос не «схлопывается», иерархия стабильна.
+    final TextStyle echoStyle =
+        theme.textTheme.titleSmall?.copyWith(
+          fontSize: echoSize,
+          height: 1.38,
+          fontWeight: FontWeight.w500,
+          color: scheme.onSurfaceVariant,
+        ) ??
+        TextStyle(fontSize: echoSize, height: 1.38);
+    final TextStyle answerStyle =
+        theme.textTheme.bodyLarge?.copyWith(
+          fontSize: answerSize,
+          height: 1.44,
+          fontWeight: FontWeight.w400,
+          color: scheme.onSurface,
+        ) ??
+        TextStyle(fontSize: answerSize, height: 1.44);
     final bool occlusion = widget.card?.occlusionJson != null;
     final bool hasAnswerMedia =
         !occlusion && (widget.card?.answerMediaIds.isNotEmpty ?? false);
     final bool hasQuestionMedia =
         !occlusion && (widget.card?.questionMediaIds.isNotEmpty ?? false);
-    final bool wideMedia =
-        MediaQuery.sizeOf(context).width >= 1000 &&
-        (hasAnswerMedia || hasQuestionMedia);
-    // Вариант А: ответ, повтор вопроса и подсказка распределяются по высоте
-    // тела, поэтому самая длинная пустая полоса короткая (≤30 %).
-    final bool spaced =
-        !tight && !cramped && !wideMedia && widget.answerHint != null;
+    final bool sideBySide =
+        cardWidth >= 760 && !occlusion && (hasAnswerMedia || hasQuestionMedia);
     return Column(
       mainAxisAlignment: MainAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        if (!cramped)
-          Padding(
-            padding: EdgeInsets.fromLTRB(columnInset, padV, columnInset, 0),
-            child: _SideLabel(label: l10n.reviewQuestionLabel),
+        Padding(
+          padding: EdgeInsets.fromLTRB(
+            columnInset,
+            padV + AppSpacing.xs,
+            columnInset,
+            0,
           ),
+          child: _SideLabel(label: l10n.reviewQuestionLabel),
+        ),
         Expanded(
           child: Semantics(
             label: '${widget.front}\n${widget.back}',
             excludeSemantics: true,
             child: _CardBody(
               scroll: _scroll,
-              padding: EdgeInsets.fromLTRB(
-                padH,
-                wideMedia ? 0 : AppSpacing.xs,
-                padH,
-                wideMedia ? 0 : bodyPadV,
-              ),
+              padding: EdgeInsets.fromLTRB(padH, padV * 0.75, padH, padV),
               columnWidth: columnWidth,
-              alignment: spaced
-                  ? MainAxisAlignment.spaceEvenly
-                  : MainAxisAlignment.center,
               builder: (double availableHeight) => <Widget>[
-                if (!cramped) ...<Widget>[
-                  _content(
-                    theme,
-                    context,
-                    side: widget.front,
-                    revealed: true,
-                    style: mutedQuestion,
-                    media: true,
-                    imageMaxHeight: math.max(140, availableHeight * 0.42),
-                    imageMaxWidth: columnWidth,
-                    faceKey: widget.echoFaceKey ?? widget.faceKey,
+                _content(
+                  theme,
+                  context,
+                  side: widget.front,
+                  revealed: true,
+                  style: echoStyle,
+                  media: true,
+                  imageMaxHeight: math.max(120, availableHeight * 0.34),
+                  imageMaxWidth: math.min(columnWidth * 0.62, 520),
+                  faceKey: widget.echoFaceKey ?? widget.faceKey,
+                ),
+                const Padding(
+                  padding: EdgeInsets.only(
+                    top: AppSpacing.sm,
+                    bottom: AppSpacing.sm,
                   ),
-                  const Padding(
-                    padding: EdgeInsets.only(
-                      top: AppSpacing.lg,
-                      bottom: AppSpacing.sm,
-                    ),
-                    child: Divider(height: 1),
+                  child: Divider(height: 1),
+                ),
+                // Аудит 2.0 (§5.1): метка «Ответ» стоит над ответом, а не у
+                // правого края шапки — она относится к тексту, который ниже.
+                Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+                  child: _SideLabel(
+                    label: l10n.reviewAnswerLabel,
+                    accent: true,
                   ),
-                  _SideLabel(label: l10n.reviewAnswerLabel, accent: true),
-                  const SizedBox(height: AppSpacing.xs),
-                ],
-                if (cramped)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-                    child: _SideLabel(
-                      label: l10n.reviewAnswerLabel,
-                      accent: true,
-                    ),
-                  ),
+                ),
                 _content(
                   theme,
                   context,
@@ -710,21 +744,15 @@ class _SessionCardState extends State<SessionCard>
                   style: answerStyle,
                   media: !occlusion,
                   includeClozeFront: false,
-                  imageMaxHeight: occlusion
-                      ? math.max(160, availableHeight * 0.66)
-                      : wideMedia
+                  imageMaxHeight: sideBySide
                       ? availableHeight
-                      : math.max(220, availableHeight * 0.92),
-                  imageMaxWidth: wideMedia ? columnWidth * 0.55 : columnWidth,
-                  sideBySide: wideMedia && hasAnswerMedia,
+                      : math.max(160, availableHeight * 0.42),
+                  imageMaxWidth: sideBySide
+                      ? math.min(columnWidth * 0.36, 420)
+                      : math.min(columnWidth, 560),
+                  sideBySide: sideBySide && hasAnswerMedia,
+                  mediaAfterText: !sideBySide,
                 ),
-                if (widget.answerHint != null)
-                  spaced
-                      ? widget.answerHint!
-                      : Padding(
-                          padding: const EdgeInsets.only(top: AppSpacing.sm),
-                          child: widget.answerHint!,
-                        ),
               ],
             ),
           ),
@@ -733,14 +761,24 @@ class _SessionCardState extends State<SessionCard>
           _FadeSlideIn(
             key: widget.ratingPanelKey,
             child: _CardFooterBand(
-              band: !tight,
               padding: EdgeInsets.fromLTRB(
                 padH,
-                tight ? 0 : AppSpacing.md,
+                AppSpacing.md,
                 padH,
-                tight ? AppSpacing.xxs : padV,
+                padV + AppSpacing.xxs,
               ),
-              child: footer,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  if (widget.answerHint != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+                      child: Center(child: widget.answerHint!),
+                    ),
+                  footer,
+                ],
+              ),
             ),
           ),
       ],
@@ -758,6 +796,7 @@ class _SessionCardState extends State<SessionCard>
     required double imageMaxWidth,
     bool includeClozeFront = true,
     bool sideBySide = false,
+    bool mediaAfterText = false,
     ValueKey<String>? faceKey,
   }) {
     final domain.Card? card = widget.card;
@@ -784,6 +823,7 @@ class _SessionCardState extends State<SessionCard>
       imageMaxHeight: imageMaxHeight,
       imageMaxWidth: imageMaxWidth,
       sideBySide: sideBySide,
+      mediaAfterText: mediaAfterText,
     );
   }
 }
@@ -791,34 +831,25 @@ class _SessionCardState extends State<SessionCard>
 /// Нижняя полоса карточки: действия отделены от содержимого спокойной
 /// поверхностью и тонкой линией, а не висят в белом поле.
 class _CardFooterBand extends StatelessWidget {
-  const _CardFooterBand({
-    required this.child,
-    required this.padding,
-    this.band = true,
-  });
+  const _CardFooterBand({required this.child, required this.padding});
 
   final Widget child;
   final EdgeInsetsGeometry padding;
-
-  /// Рисовать ли поверхность и разделитель (в очень низком окне — нет).
-  final bool band;
 
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
     return Container(
       padding: padding,
-      decoration: band
-          ? BoxDecoration(
-              color: scheme.surfaceContainerLow,
-              border: Border(
-                top: BorderSide(
-                  color: scheme.outlineVariant,
-                  width: AppSizes.borderWidth,
-                ),
-              ),
-            )
-          : null,
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLow,
+        border: Border(
+          top: BorderSide(
+            color: scheme.outlineVariant,
+            width: AppSizes.borderWidth,
+          ),
+        ),
+      ),
       child: child,
     );
   }
@@ -877,14 +908,17 @@ class _SideLabel extends StatelessWidget {
   }
 }
 
-/// Тело карточки: короткое содержимое центрируется, длинное — прокручивается.
+/// Тело карточки: прокручиваемое содержимое с подсказкой о прокрутке.
+///
+/// Аудит 2.0 (P1-03): обрез текста не должен выглядеть багом. Когда контент не
+/// помещается, у кромки появляется мягкий градиент и постоянный скроллбар —
+/// пользователь видит, что текст продолжается.
 class _CardBody extends StatefulWidget {
   const _CardBody({
     required this.scroll,
     required this.padding,
     required this.columnWidth,
     required this.builder,
-    this.alignment = MainAxisAlignment.center,
   });
 
   final ScrollController scroll;
@@ -892,18 +926,63 @@ class _CardBody extends StatefulWidget {
   final double columnWidth;
   final List<Widget> Function(double availableHeight) builder;
 
-  /// Как распределять короткое содержимое по высоте тела.
-  final MainAxisAlignment alignment;
-
   @override
   State<_CardBody> createState() => _CardBodyState();
 }
 
 class _CardBodyState extends State<_CardBody> {
   bool _canScroll = false;
+  bool _atTop = true;
+  bool _atEnd = false;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.scroll.addListener(_onScroll);
+  }
+
+  @override
+  void didUpdateWidget(_CardBody oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.scroll != widget.scroll) {
+      oldWidget.scroll.removeListener(_onScroll);
+      widget.scroll.addListener(_onScroll);
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.scroll.removeListener(_onScroll);
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (!widget.scroll.hasClients) return;
+    final ScrollPosition position = widget.scroll.position;
+    final bool atTop = position.pixels <= 4;
+    final bool atEnd =
+        position.pixels >= position.maxScrollExtent - 4 ||
+        position.maxScrollExtent <= 0;
+    if (atTop != _atTop || atEnd != _atEnd) {
+      setState(() {
+        _atTop = atTop;
+        _atEnd = atEnd;
+      });
+    }
+  }
+
+  void _setCanScroll(bool value) {
+    if (value == _canScroll) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && value != _canScroll) {
+        setState(() => _canScroll = value);
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         final double availableHeight = math.max(
@@ -913,37 +992,81 @@ class _CardBodyState extends State<_CardBody> {
         final List<Widget> children = widget.builder(availableHeight);
         return NotificationListener<ScrollMetricsNotification>(
           onNotification: (ScrollMetricsNotification notification) {
-            final bool canScroll = notification.metrics.maxScrollExtent > 0.5;
-            if (canScroll != _canScroll) {
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (mounted && canScroll != _canScroll) {
-                  setState(() => _canScroll = canScroll);
-                }
-              });
-            }
+            _setCanScroll(notification.metrics.maxScrollExtent > 0.5);
             return false;
           },
-          child: Scrollbar(
-            controller: widget.scroll,
-            thumbVisibility: _canScroll,
-            child: SingleChildScrollView(
-              controller: widget.scroll,
-              padding: widget.padding,
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxWidth: widget.columnWidth,
-                    minHeight: math.max(0, availableHeight),
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: widget.alignment,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: children,
+          child: Stack(
+            children: <Widget>[
+              Positioned.fill(
+                child: Scrollbar(
+                  controller: widget.scroll,
+                  thumbVisibility: _canScroll,
+                  child: SingleChildScrollView(
+                    controller: widget.scroll,
+                    padding: widget.padding,
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxWidth: widget.columnWidth,
+                          minHeight: availableHeight,
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: children,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ),
+              // Подсказки о прокрутке: без них обрез длинного текста читается
+              // как ошибка вёрстки (P1-03).
+              if (_canScroll && !_atEnd)
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: IgnorePointer(
+                    child: Container(
+                      key: const ValueKey<String>('card-scroll-fade-bottom'),
+                      height: 40,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: <Color>[
+                            scheme.surfaceContainerLowest.withValues(alpha: 0),
+                            scheme.surfaceContainerLowest,
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              if (_canScroll && !_atTop)
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  top: 0,
+                  child: IgnorePointer(
+                    child: Container(
+                      height: 28,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.bottomCenter,
+                          end: Alignment.topCenter,
+                          colors: <Color>[
+                            scheme.surfaceContainerLowest.withValues(alpha: 0),
+                            scheme.surfaceContainerLowest,
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
         );
       },

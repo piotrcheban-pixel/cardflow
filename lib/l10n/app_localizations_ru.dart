@@ -100,7 +100,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String deckInProgressCount(int count) {
-    return 'Начато: $count';
+    return 'В процессе: $count';
   }
 
   @override
@@ -381,7 +381,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get feedBrowseHint => 'Нажмите на карточку, чтобы увидеть ответ';
 
   @override
-  String get feedNavHint => 'Свайп ↑↓, колесо мыши или стрелки — листать';
+  String get feedNavHint => '↑↓ / колесо мыши / стрелки — листать';
 
   @override
   String feedProgressSemantics(int position, int total) {
@@ -1081,7 +1081,15 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String generationPlanRequestedCount(int count) {
-    return 'Запрошено: $count карточек';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Запрошено: $count карточки',
+      many: 'Запрошено: $count карточек',
+      few: 'Запрошено: $count карточки',
+      one: 'Запрошено: $count карточка',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -1098,8 +1106,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get generationCardsCountLabel => 'Сколько карточек';
 
   @override
-  String get generationCardsCountHint =>
-      'Пусто — из пожеланий или по бюджету модели';
+  String get generationCardsCountHint => 'Авто: по материалу и бюджету модели';
 
   @override
   String get generationCardsCountInvalid => 'Укажите целое число больше нуля';
@@ -2303,7 +2310,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String matchTimer(String time) {
-    return 'Время: $time';
+    return 'Время: $time с';
   }
 
   @override
@@ -2337,7 +2344,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String trueFalseStatement(String answer) {
-    return 'Ответ: $answer';
+    return 'Утверждение: $answer';
   }
 
   @override
@@ -2855,6 +2862,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get reviewKeyboardHints => '1–4 — оценка · ← — отменить';
 
   @override
+  String get reviewKeyboardHintsRating => '1–4 — оценка';
+
+  @override
   String get reviewHomeTooltip => 'Мои колоды';
 
   @override
@@ -3075,11 +3085,190 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get reviewKeyboardHintsFront =>
-      'Пробел — показать ответ · ← — отменить';
+  String get reviewKeyboardHintsFront => 'Пробел — показать ответ';
 
   @override
   String constructorTagsMore(int count) {
     return 'Ещё $count';
   }
+
+  @override
+  String get sessionExitFeedMessage =>
+      'Выйти из просмотра? Прогресс просмотра не сохраняется, расписание повторений остаётся прежним.';
+
+  @override
+  String get sessionExitPracticeMessage =>
+      'Выйти из тренировки? Поставленные оценки уже сохранены, расписание не изменилось.';
+
+  @override
+  String get sessionExitStudyMessage =>
+      'Выйти из проверки? Ответы уже сохранены.';
+
+  @override
+  String get reviewSummaryTitle => 'Итог сессии';
+
+  @override
+  String reviewSummaryDuration(String duration) {
+    return 'Время: $duration';
+  }
+
+  @override
+  String reviewSummaryAccuracy(int percent) {
+    return 'Без ошибок: $percent %';
+  }
+
+  @override
+  String get reviewAgainAction => 'Ещё раз';
+
+  @override
+  String get reviewToDeckAction => 'К карточкам';
+
+  @override
+  String get feedNavHintTouch => 'Свайп ↑↓ — листать карточки';
+
+  @override
+  String get feedBrowseBadgeV2 => 'Лента';
+
+  @override
+  String decksMetricDecksLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'колоды',
+      many: 'колод',
+      few: 'колоды',
+      one: 'колода',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get decksWelcomeTitle => 'Добро пожаловать в CardFlow';
+
+  @override
+  String get decksWelcomeMessage =>
+      'Создайте первую колоду, импортируйте готовую или сгенерируйте карточки из конспекта.';
+
+  @override
+  String get decksWelcomeAiNote =>
+      'ИИ не настроен — карточки можно создавать вручную. Провайдер подключается в любой момент.';
+
+  @override
+  String get decksWelcomeAiAction => 'Настроить ИИ';
+
+  @override
+  String deckProgressCounts(int studied, int total) {
+    return '$studied из $total изучено';
+  }
+
+  @override
+  String get deckSearchClear => 'Сбросить поиск';
+
+  @override
+  String get generationCardsCountHelper =>
+      'Пусто — авто: столько, сколько позволяет материал. Большие заказы идут партиями.';
+
+  @override
+  String generationCardsCountPreset(int count) {
+    return '$count';
+  }
+
+  @override
+  String get generationSelectCard => 'Выбрать карточку';
+
+  @override
+  String get generationImagesAutoTitle => 'Изображения подобраны автоматически';
+
+  @override
+  String get generationImagesAutoMessage =>
+      'Проверьте, подходят ли иллюстрации к карточкам: поиск работает по описанию и может ошибаться.';
+
+  @override
+  String get generationRemoveAllImages => 'Убрать все изображения';
+
+  @override
+  String get generationImagesRemoved => 'Изображения убраны';
+
+  @override
+  String generationFilesAttached(int count) {
+    return 'Прикреплено файлов: $count';
+  }
+
+  @override
+  String get providersCheckInlineOk => 'Подключение работает';
+
+  @override
+  String get providersCheckInlineFail => 'Подключиться не удалось';
+
+  @override
+  String get providersDeleteKey => 'Удалить ключ';
+
+  @override
+  String get providersSheetSubtitle =>
+      'Пресет подставит адрес и модели, кастомный профиль — свои.';
+
+  @override
+  String get settingsHapticsDesktopHint => 'Вибрация есть только на телефоне';
+
+  @override
+  String get settingsDyslexiaHint =>
+      'Шрифт для дислексии применяется ко всему интерфейсу';
+
+  @override
+  String statisticsCalendarYearShare(int percent) {
+    return '$percent % года';
+  }
+
+  @override
+  String statisticsDayTooltip(String date, int count) {
+    return '$date · повторений: $count';
+  }
+
+  @override
+  String get studyChooseOne => 'Выберите один ответ';
+
+  @override
+  String get studyFeedbackCorrect => 'Верно';
+
+  @override
+  String get studyFeedbackIncorrect => 'Неверно';
+
+  @override
+  String get studyCorrectAnswerLabel => 'Правильный ответ';
+
+  @override
+  String matchTimeSeconds(String seconds) {
+    return 'Время: $seconds с';
+  }
+
+  @override
+  String matchTimeMinutes(int minutes, String seconds) {
+    return 'Время: $minutes мин $seconds с';
+  }
+
+  @override
+  String matchProgress(int done, int total) {
+    return 'Пары: $done из $total';
+  }
+
+  @override
+  String get matchExitTitle => 'Выйти из подбора пар?';
+
+  @override
+  String get matchExitMessage =>
+      'Прогресс игры не сохранится, карточки останутся в колоде.';
+
+  @override
+  String get generationPreviewRemoveShort => 'Удалить';
+
+  @override
+  String get generationPreviewReplaceShort => 'Заменить';
+
+  @override
+  String generationPreviewImageNumber(int index) {
+    return 'Изображение $index';
+  }
+
+  @override
+  String get reviewFsrsTooltip => 'Интервальное повторение по алгоритму FSRS';
 }

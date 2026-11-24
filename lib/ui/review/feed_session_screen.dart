@@ -267,7 +267,10 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
       _leave();
       return;
     }
-    final bool confirmed = await confirmReviewExit(context);
+    final bool confirmed = await confirmReviewExit(
+      context,
+      kind: SessionExitKind.feed,
+    );
     if (confirmed && mounted) _leave();
   }
 
@@ -505,7 +508,9 @@ class _FeedHeader extends StatelessWidget {
                 ),
               ),
               child: Text(
-                l10n.feedBrowseBadge,
+                // Аудит 2.0 (P3-08): режим называется «Лента» везде — чип
+                // «Просмотр» расходился с названием в листе режимов.
+                l10n.feedBrowseBadgeV2,
                 key: const ValueKey<String>('feed-browse-badge'),
                 style: AppTypography.caption(context, color: scheme.primary),
               ),

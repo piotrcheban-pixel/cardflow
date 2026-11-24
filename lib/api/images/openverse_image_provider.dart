@@ -66,6 +66,15 @@ class OpenverseImageProvider implements ImageProvider {
       final String? url = asString(raw['thumbnail']) ?? asString(raw['url']);
       if (url == null) continue;
       final String? creator = asString(raw['creator']);
+      // Аудит 2.0 (P1-04): заголовок и теги — сигналы релевантности.
+      final String? title = asString(raw['title']);
+      final Object? tags = raw['tags'];
+      final String? description = tags is List
+          ? tags
+                .map((Object? tag) => tag is Map ? asString(tag['name']) : null)
+                .whereType<String>()
+                .join(' ')
+          : null;
       final String? license = asString(raw['license']);
       final String? licenseVersion = asString(raw['license_version']);
       final String? licenseName = _licenseName(license, licenseVersion);
@@ -77,6 +86,8 @@ class OpenverseImageProvider implements ImageProvider {
           height: asPositiveInt(raw['height']),
           author: creator,
           license: licenseName,
+          title: title,
+          description: description,
           attribution:
               asString(raw['attribution']) ??
               joinAttribution(<String?>[creator, licenseName]),

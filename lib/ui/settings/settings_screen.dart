@@ -29,6 +29,7 @@ import 'package:cardflow/ui/settings/about_links.dart';
 import 'package:cardflow/ui/settings/provider_banner.dart';
 import 'package:cardflow/ui/settings/provider_labels.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
+import 'package:cardflow/ui/state/platform_info.dart';
 import 'package:cardflow/ui/theme/app_tokens.dart';
 import 'package:cardflow/ui/theme/app_typography.dart';
 
@@ -103,17 +104,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   static double _navBarHeight(BuildContext context) {
     final double control = AppAdaptive.factorForContext(context)
         .clamp(1.0, 1.3);
-    final double width = MediaQuery.sizeOf(context).width;
-    // Аудит v5 (V5-2): на узком окне ряд из пяти разделов не помещается —
-    // вкладки переносятся (Wrap), панель выше на число рядов.
-    final int rows = width < 480
-        ? 3
-        : width < 900
-        ? 2
-        : 1;
-    return AppSizes.buttonHeight * control * rows +
-        AppSpacing.xs * (rows - 1) +
-        AppSpacing.md;
+    // Аудит 2.0 (P2-10/P2-11): пять разделов в один ряд не помещаются на
+    // телефоне, поэтому ряд прокручивается по горизонтали. Высота панели
+    // всегда одна строка — закреплённый хедер больше не наезжает на контент
+    // и не оставляет обрезанных контролов под собой.
+    return AppSizes.buttonHeight * control + AppSpacing.md;
   }
 
   /// Горизонтальные поля страницы — те же, что у `AppPageScaffold`.
@@ -547,24 +542,26 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             builder: (BuildContext context, BoxConstraints constraints) {
               final bool narrow = constraints.maxWidth < 420;
               if (narrow) {
-                return Wrap(
+                // Аудит 2.0 (P2-10): три взаимоисключающих варианта чипами
+                // распадались на два ряда и переставали читаться как группа.
+                // На узком экране — вертикальный список выбора.
+                return _ChoiceRows<AppThemePreference>(
                   key: const ValueKey<String>('settings-theme'),
-                  spacing: AppSpacing.xs,
-                  runSpacing: AppSpacing.xs,
-                  children: <Widget>[
+                  value: settings.theme,
+                  options: <_ChoiceOption<AppThemePreference>>[
                     for (final AppThemePreference preference
                         in AppThemePreference.values)
-                      ChoiceChip(
-                        label: Text(switch (preference) {
+                      _ChoiceOption<AppThemePreference>(
+                        value: preference,
+                        label: switch (preference) {
                           AppThemePreference.light => l10n.settingsThemeLight,
                           AppThemePreference.dark => l10n.settingsThemeDark,
                           AppThemePreference.system => l10n.settingsThemeSystem,
-                        }),
-                        selected: settings.theme == preference,
-                        onSelected: (_) =>
-                            _update(settings.copyWith(theme: preference)),
+                        },
                       ),
                   ],
+                  onChanged: (AppThemePreference preference) =>
+                      _update(settings.copyWith(theme: preference)),
                 );
               }
               return Align(
@@ -621,25 +618,24 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             builder: (BuildContext context, BoxConstraints constraints) {
               final bool narrow = constraints.maxWidth < 420;
               if (narrow) {
-                return Wrap(
+                return _ChoiceRows<MotionPreference>(
                   key: const ValueKey<String>('settings-motion'),
-                  spacing: AppSpacing.xs,
-                  runSpacing: AppSpacing.xs,
-                  children: <Widget>[
+                  value: settings.motion,
+                  options: <_ChoiceOption<MotionPreference>>[
                     for (final MotionPreference preference
                         in MotionPreference.values)
-                      ChoiceChip(
-                        label: Text(switch (preference) {
+                      _ChoiceOption<MotionPreference>(
+                        value: preference,
+                        label: switch (preference) {
                           MotionPreference.expressive =>
                             l10n.settingsMotionExpressive,
                           MotionPreference.standard =>
                             l10n.settingsMotionStandard,
-                        }),
-                        selected: settings.motion == preference,
-                        onSelected: (_) =>
-                            _update(settings.copyWith(motion: preference)),
+                        },
                       ),
                   ],
+                  onChanged: (MotionPreference preference) =>
+                      _update(settings.copyWith(motion: preference)),
                 );
               }
               return Align(
@@ -689,19 +685,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             key: const ValueKey<String>('settings-dyslexia-font'),
             contentPadding: EdgeInsets.zero,
             title: Text(l10n.settingsDyslexiaFont),
+            subtitle: Text(l10n.settingsDyslexiaHint),
             value: settings.dyslexiaFont,
             onChanged: (bool value) =>
                 _update(settings.copyWith(dyslexiaFont: value)),
           ),
-          SwitchListTile(
-            key: const ValueKey<String>('settings-haptics'),
-            contentPadding: EdgeInsets.zero,
-            title: Text(l10n.settingsHapticsTitle),
-            subtitle: Text(l10n.settingsHapticsHint),
-            value: settings.haptics,
-            onChanged: (bool value) =>
-                _update(settings.copyWith(haptics: value)),
-          ),
+          // Аудит 2.0 (P3-05): на настольных ОС вибрации нет — переключатель
+          // скрыт, а не показывает настройку без эффекта.
+          if (PlatformInfo.supportsHaptics)
+            SwitchListTile(
+              key: const ValueKey<String>('settings-haptics'),
+              contentPadding: EdgeInsets.zero,
+              title: Text(l10n.settingsHapticsTitle),
+              subtitle: Text(l10n.settingsHapticsHint),
+              value: settings.haptics,
+              onChanged: (bool value) =>
+                  _update(settings.copyWith(haptics: value)),
+            ),
           SwitchListTile(
             key: const ValueKey<String>('settings-high-contrast'),
             contentPadding: EdgeInsets.zero,
@@ -907,29 +907,35 @@ class _SettingsSubNav extends StatelessWidget {
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
     bool selected(_SettingsNavItem item) => activeKey == item.key;
-    // Аудит v5 (V5-2): вместо горизонтальной прокрутки без индикатора —
-    // перенос вкладок: все разделы (и выбранный) видны на любой ширине.
-    return Wrap(
-      spacing: AppSpacing.xs,
-      runSpacing: AppSpacing.xs,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      children: <Widget>[
-        for (final _SettingsNavItem item in items)
-          ChoiceChip(
-            key: ValueKey<String>('settings-nav-${item.label}'),
-            avatar: Icon(
-              item.icon,
-              size: AppSizes.iconSmall,
-              color: selected(item) ? scheme.onPrimary : scheme.primary,
+    // Аудит 2.0 (P2-10): вместо переноса в 3 ряда — одна строка с
+    // горизонтальной прокруткой. Разделы не обрезаются, панель остаётся
+    // 26 %-ной высоты экрана и не съедает контент.
+    return SingleChildScrollView(
+      key: const ValueKey<String>('settings-nav-scroll'),
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          for (final _SettingsNavItem item in items)
+            Padding(
+              padding: const EdgeInsetsDirectional.only(end: AppSpacing.xs),
+              child: ChoiceChip(
+                key: ValueKey<String>('settings-nav-${item.label}'),
+                avatar: Icon(
+                  item.icon,
+                  size: AppSizes.iconSmall,
+                  color: selected(item) ? scheme.onPrimary : scheme.primary,
+                ),
+                label: Text(item.label),
+                selected: selected(item),
+                // Аватар-иконка уже показывает раздел; галочка не нужна.
+                showCheckmark: false,
+                materialTapTargetSize: MaterialTapTargetSize.padded,
+                onSelected: (_) => onSelect(item.key),
+              ),
             ),
-            label: Text(item.label),
-            selected: selected(item),
-            // Аватар-иконка уже показывает раздел; галочка не нужна.
-            showCheckmark: false,
-            materialTapTargetSize: MaterialTapTargetSize.padded,
-            onSelected: (_) => onSelect(item.key),
-          ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -1095,11 +1101,14 @@ class _PercentSliderState extends State<_PercentSlider> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Row(
+        // Аудит 2.0 (P3-04): значение стояло у правого края панели — связь с
+        // бегунком терялась. Теперь бейдж стоит рядом с подписью.
+        Wrap(
+          spacing: AppSpacing.xs,
+          runSpacing: AppSpacing.xxs,
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: <Widget>[
-            Expanded(
-              child: Text(widget.title, style: theme.textTheme.titleSmall),
-            ),
+            Text(widget.title, style: theme.textTheme.titleSmall),
             Container(
               padding: const EdgeInsets.symmetric(
                 horizontal: AppSpacing.xs,
@@ -1387,6 +1396,87 @@ class _SettingsLoading extends StatelessWidget {
               ),
             ),
             const SizedBox(height: AppSpacing.md),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Один вариант выбора в вертикальном списке.
+class _ChoiceOption<T> {
+  const _ChoiceOption({required this.value, required this.label});
+
+  final T value;
+  final String label;
+}
+
+/// Вертикальный список взаимоисключающего выбора для узких экранов.
+///
+/// Аудит 2.0 (P2-10): чипы в `Wrap` распадались на два ряда, и группа из трёх
+/// вариантов переставала читаться как группа. Список с «радио» на всю ширину
+/// однозначен, каждая строка — цель ≥ 44 px.
+class _ChoiceRows<T> extends StatelessWidget {
+  const _ChoiceRows({
+    required this.value,
+    required this.options,
+    required this.onChanged,
+    super.key,
+  });
+
+  final T value;
+  final List<_ChoiceOption<T>> options;
+  final ValueChanged<T> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border.all(color: scheme.outlineVariant),
+        borderRadius: BorderRadius.circular(AppRadii.input),
+      ),
+      child: Column(
+        children: <Widget>[
+          for (int index = 0; index < options.length; index++) ...<Widget>[
+            if (index > 0) Divider(height: 1, color: scheme.outlineVariant),
+            InkWell(
+              key: ValueKey<String>('choice-${options[index].label}'),
+              onTap: () => onChanged(options[index].value),
+              borderRadius: BorderRadius.circular(AppRadii.input),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  minHeight: AppSizes.minTouchTarget,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm,
+                    vertical: AppSpacing.xs,
+                  ),
+                  child: Row(
+                    children: <Widget>[
+                      Icon(
+                        options[index].value == value
+                            ? Icons.radio_button_checked
+                            : Icons.radio_button_unchecked,
+                        size: AppSizes.icon,
+                        color: options[index].value == value
+                            ? scheme.primary
+                            : scheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: Text(
+                          options[index].label,
+                          style: theme.textTheme.bodyLarge,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ],
         ],
       ),

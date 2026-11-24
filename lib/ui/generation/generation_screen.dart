@@ -850,7 +850,11 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
           ),
         );
     if (imported != null && mounted && GoRouter.maybeOf(context) != null) {
-      context.go(AppRoutes.deckPath(imported.deckId));
+      // Аудит 2.0 (P1-02): `go` заменял весь стек — у экрана колоды не было
+      // пути назад. `pushReplacement` оставляет под колодой точку входа
+      // (список колод или экран исходной колоды), поэтому стрелка «назад»
+      // работает, а экран генерации не остаётся в истории.
+      context.pushReplacement(AppRoutes.deckPath(imported.deckId));
     }
   }
 
@@ -979,7 +983,7 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
         body: SafeArea(
           bottom: false,
           child: _loading
-              ? _GenerationLoading(width: AppSizes.formWidth(context))
+              ? _GenerationLoading(width: AppSizes.wideFormWidth(context))
               : _configError
               ? _buildConfigError(context, l10n)
               : _buildBody(context, l10n, targetDeck),
@@ -1009,7 +1013,7 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
                       heightFactor: 1,
                       child: ConstrainedBox(
                         constraints: BoxConstraints(
-                          maxWidth: AppSizes.formWidth(context),
+                          maxWidth: AppSizes.wideFormWidth(context),
                         ),
                         child: _buildActions(l10n),
                       ),
@@ -1322,6 +1326,9 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
             decoration: InputDecoration(
               labelText: l10n.generationCardsCountLabel,
               hintText: l10n.generationCardsCountHint,
+              // Аудит 2.0 (P2-19): явный диапазон и подсказка «пусто — авто».
+              helperText: l10n.generationCardsCountHelper,
+              helperMaxLines: 2,
               errorText: _cardCountTooLarge
                   ? l10n.generationCardsCountTooLarge
                   : _cardCountInvalid
@@ -1329,6 +1336,38 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
                   : null,
               border: _fieldBorder,
             ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          // Быстрые пресеты: один клик вместо набора числа. «Авто» очищает поле
+          // и возвращает планировщику решение по материалу и бюджету модели.
+          Wrap(
+            spacing: AppSpacing.xs,
+            runSpacing: AppSpacing.xs,
+            children: <Widget>[
+              ChoiceChip(
+                key: const ValueKey<String>('generation-count-auto'),
+                label: Text(l10n.generationCardsCountLabel),
+                selected: _requestedCards == null,
+                onSelected: _generating
+                    ? null
+                    : (bool selected) {
+                        if (!selected) return;
+                        _cardCountController.clear();
+                      },
+              ),
+              for (final int preset in const <int>[10, 20, 50])
+                ChoiceChip(
+                  key: ValueKey<String>('generation-count-$preset'),
+                  label: Text(l10n.generationCardsCountPreset(preset)),
+                  selected: _requestedCards == preset,
+                  onSelected: _generating
+                      ? null
+                      : (bool selected) {
+                          if (!selected) return;
+                          _cardCountController.text = preset.toString();
+                        },
+                ),
+            ],
           ),
           // §4 задания 7.20: пользовательское значение не меняется и видно
           // строкой «Запрошено: N карточек» сразу под полем.
@@ -1560,7 +1599,7 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
         padding: EdgeInsets.zero,
         children: <Widget>[
           AppContentWidth(
-            maxWidth: AppSizes.formWidth(context),
+            maxWidth: AppSizes.wideFormWidth(context),
             padding: const EdgeInsets.fromLTRB(
               AppSpacing.md,
               AppSpacing.xs,
@@ -1570,32 +1609,18 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
+                // Аудит 2.0 (P3-11): служебный надзаголовок «Нейросетевой
+                // модуль» дублировал H1 и занимал вертикаль — убран.
                 AppPageHeader(
                   title: l10n.generationPageTitle,
-                  overline: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      Icon(
-                        Icons.auto_awesome,
-                        size: AppSizes.iconSmall,
-                        color: scheme.primary,
-                      ),
-                      const SizedBox(width: AppSpacing.xxs + 2),
-                      Flexible(
-                        child: Text(
-                          l10n.generationOverline.toUpperCase(),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
                   subtitle: Text(l10n.generationSubtitle),
                 ),
                 const SizedBox(height: AppSpacing.xl),
                 _GenSectionLabel(
                   label: l10n.generationSectionMaterials,
-                  trailing: l10n.generationFilesCount(_files.length),
+                  trailing: _files.isEmpty
+                      ? null
+                      : l10n.generationFilesAttached(_files.length),
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 materials,

@@ -34,6 +34,8 @@ class ImageCandidate {
     this.license,
     this.width,
     this.height,
+    this.title,
+    this.description,
   });
 
   /// Имя провайдера (`wikimedia`, `wikipedia`, `openverse`, `pixabay`, `pexels`).
@@ -56,6 +58,13 @@ class ImageCandidate {
 
   /// Высота, если провайдер её сообщил.
   final int? height;
+
+  /// Заголовок/имя файла/статьи — по нему проверяется релевантность
+  /// (аудит 2.0, P1-04).
+  final String? title;
+
+  /// Описание, теги или подпись кандидата — второй сигнал релевантности.
+  final String? description;
 
   /// Подсказка о размере, если провайдер сообщил обе стороны.
   bool get hasKnownSize => width != null && height != null;

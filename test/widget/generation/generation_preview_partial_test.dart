@@ -215,11 +215,18 @@ void main() {
       ),
       findsOneWidget,
     );
-    await tester.tap(
-      find.byKey(
-        const ValueKey<String>('generation-preview-remove-question-0-0'),
-      ),
+    // Аудит 2.0 (P2-20): карточка предпросмотра выше — действие у изображения
+    // может оказаться за сгибом, поэтому сначала прокручиваем к нему.
+    final Finder removeButton = find.byKey(
+      const ValueKey<String>('generation-preview-remove-question-0-0'),
     );
+    await tester.scrollUntilVisible(
+      removeButton,
+      240,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(removeButton);
     await tester.pumpAndSettle();
     expect(
       find.byKey(

@@ -189,7 +189,10 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen>
       _leave();
       return;
     }
-    final bool confirmed = await confirmReviewExit(context);
+    final bool confirmed = await confirmReviewExit(
+      context,
+      kind: SessionExitKind.practice,
+    );
     if (confirmed && mounted) _leave();
   }
 

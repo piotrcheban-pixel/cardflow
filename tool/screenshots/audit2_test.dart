@@ -1,0 +1,269 @@
+// Скриншот-харнесс для визуальной проверки правок аудита 2.0.
+//
+// Рендерит ключевые экраны в точных логических размерах и сохраняет PNG в
+// `work/shots/`. Запуск:
+//   fvm flutter test tool/screenshots/audit2_test.dart --no-pub
+// Шрифты (Inter, MaterialIcons) подкладываются из собранных flutter_assets —
+// иначе кириллица рендерится квадратами.
+import 'dart:io';
+
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
+import 'package:flutter_test/flutter_test.dart';
+import 'package:image/image.dart' as img;
+import 'package:material_ui/material_ui.dart' hide Card;
+
+import 'package:cardflow/domain/cards/card.dart' as domain;
+import 'package:cardflow/domain/decks/deck_summary.dart';
+import 'package:cardflow/l10n/app_localizations.dart';
+import 'package:cardflow/ui/review/review_toolbar.dart';
+import 'package:cardflow/ui/review/session_card.dart';
+import 'package:cardflow/ui/theme/app_theme.dart';
+
+import '../../test/helpers/decks_fakes.dart';
+import '../../test/helpers/pump_app.dart'
+    show appWithAppRouter, decksOverrides, ruLocalizationDelegates;
+import '../../test/helpers/review_fakes.dart';
+
+const String _assetDir = 'build/windows/x64/runner/Debug/data/flutter_assets';
+
+Future<void> _loadFonts() async {
+  Future<void> load(String family, String path) async {
+    final File file = File(path);
+    if (!file.existsSync()) return;
+    final Uint8List bytes = file.readAsBytesSync();
+    final FontLoader loader = FontLoader(family)
+      ..addFont(Future<ByteData>.value(ByteData.view(bytes.buffer)));
+    await loader.load();
+  }
+
+  await load('Inter', 'assets/fonts/Inter-Variable.ttf');
+  await load('MaterialIcons', '$_assetDir/fonts/MaterialIcons-Regular.otf');
+}
+
+Future<void> _shoot(WidgetTester tester, String name) async {
+  await expectLater(
+    find.byType(MaterialApp),
+    matchesGoldenFile('goldens/$name.png'),
+  );
+}
+
+void main() {
+  final Uint8List landscape = Uint8List.fromList(
+    img.encodePng(img.Image(width: 800, height: 450)),
+  );
+
+  setUpAll(() async {
+    await _loadFonts();
+  });
+
+  Future<void> pumpAt(WidgetTester tester, Size size) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = size;
+    addTearDown(tester.view.reset);
+  }
+
+  Widget cardHarness({
+    required String front,
+    required String back,
+    required bool revealed,
+    String? mediaId,
+    bool withRatings = true,
+  }) {
+    final domain.Card card = makeCard(
+      id: 'card-1',
+      deckId: 'deck-1',
+      front: front,
+      back: back,
+      questionMediaIds: mediaId == null ? const <String>[] : <String>[mediaId],
+    );
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      locale: const Locale('ru'),
+      supportedLocales: AppLocalizations.supportedLocales,
+      localizationsDelegates: ruLocalizationDelegates,
+      theme: AppTheme.light(),
+      home: Scaffold(
+        backgroundColor: AppTheme.light().colorScheme.surface,
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: SessionCard(
+              front: front,
+              back: back,
+              card: card,
+              mediaBytes: mediaId == null
+                  ? const <String, Uint8List>{}
+                  : <String, Uint8List>{mediaId: landscape},
+              revealed: revealed,
+              onTap: () {},
+              questionFooter: FilledButton(
+                onPressed: () {},
+                child: const Text('Показать ответ'),
+              ),
+              answerFooter: withRatings
+                  ? ReviewToolbar(enabled: true, onRating: (dynamic _) {})
+                  : null,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  testWidgets('карточка: вопрос с картинкой, 1280×720', (
+    WidgetTester tester,
+  ) async {
+    await pumpAt(tester, const Size(1280, 720));
+    await tester.pumpWidget(
+      cardHarness(
+        front:
+            'Как называют свойство теста измерять именно ту характеристику, '
+            'для которой он создан, и насколько устойчивы результаты '
+            'при повторных измерениях?',
+        back: 'Валидность — соответствие теста измеряемому свойству.',
+        revealed: false,
+        mediaId: 'media-q',
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _shoot(tester, 'card_front_1280');
+  });
+
+  testWidgets('карточка: ответ с оценками, 1280×720', (
+    WidgetTester tester,
+  ) async {
+    await pumpAt(tester, const Size(1280, 720));
+    await tester.pumpWidget(
+      cardHarness(
+        front: 'Что такое валидность теста?',
+        back:
+            'Валидность — это соответствие теста тому свойству, которое он '
+            'измеряет, и устойчивость результатов при повторных измерениях. '
+            'Различают содержательную, конструктную и критериальную валидность.',
+        revealed: true,
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _shoot(tester, 'card_back_1280');
+  });
+
+  testWidgets('карточка: ответ на телефоне 390×844', (
+    WidgetTester tester,
+  ) async {
+    await pumpAt(tester, const Size(390, 844));
+    await tester.pumpWidget(
+      cardHarness(
+        front: 'Что такое трёхфазная цепь?',
+        back:
+            'Совокупность трёх однофазных цепей с тремя синусоидальными ЭДС '
+            'одинаковой частоты и амплитуды, сдвинутыми по фазе на 120 градусов. '
+            'Такая система ЭДС создаёт вращающееся магнитное поле, которое и '
+            'приводит во вращение ротор двигателя.',
+        revealed: true,
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _shoot(tester, 'card_back_390');
+  });
+
+  List<Override> overrides({List<DeckSummary>? summaries}) {
+    return decksOverrides(
+      deckRepository: FakeDeckRepository(summaries: summaries ?? _summaries()),
+      cardRepository: FakeCardRepository(cards: _cards()),
+      reviewRepository: FakeReviewRepository(),
+    );
+  }
+
+  testWidgets('колоды: сетка 1280×720', (WidgetTester tester) async {
+    await pumpAt(tester, const Size(1280, 720));
+    await tester.pumpWidget(
+      appWithAppRouter(overrides: overrides(), initialLocation: '/'),
+    );
+    await tester.pumpAndSettle();
+    await _shoot(tester, 'decks_grid_1280');
+  });
+
+  testWidgets('колоды: список 1280×720', (WidgetTester tester) async {
+    await pumpAt(tester, const Size(1280, 720));
+    await tester.pumpWidget(
+      appWithAppRouter(overrides: overrides(), initialLocation: '/'),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey<String>('decks-view-list')));
+    await tester.pumpAndSettle();
+    await _shoot(tester, 'decks_list_1280');
+  });
+
+  testWidgets('экран колоды 1280×720', (WidgetTester tester) async {
+    await pumpAt(tester, const Size(1280, 720));
+    await tester.pumpWidget(
+      appWithAppRouter(
+        overrides: overrides(),
+        initialLocation: '/decks/deck-1',
+      ),
+    );
+    await tester.pumpAndSettle();
+    await _shoot(tester, 'deck_1280');
+  });
+
+  testWidgets('колоды: телефон 390×844', (WidgetTester tester) async {
+    await pumpAt(tester, const Size(390, 844));
+    await tester.pumpWidget(
+      appWithAppRouter(overrides: overrides(), initialLocation: '/'),
+    );
+    await tester.pumpAndSettle();
+    await _shoot(tester, 'decks_390');
+  });
+}
+
+List<DeckSummary> _summaries() => <DeckSummary>[
+  makeSummary(
+    id: 'deck-1',
+    name: 'Электротехника',
+    totalCards: 71,
+    dueCards: 46,
+    newCards: 9,
+    inProgressCards: 62,
+  ),
+  makeSummary(
+    id: 'deck-2',
+    name: 'Тест фигни',
+    totalCards: 134,
+    dueCards: 33,
+    newCards: 12,
+    inProgressCards: 100,
+  ),
+  makeSummary(
+    id: 'deck-3',
+    name: 'ЛРЗ_Трехфазная_цепь_звездой',
+    totalCards: 40,
+    dueCards: 22,
+    newCards: 4,
+    inProgressCards: 30,
+  ),
+  makeSummary(id: 'deck-4', name: 'Кинематика', totalCards: 15, dueCards: 0),
+];
+
+List<domain.Card> _cards() => <domain.Card>[
+  makeCard(
+    id: 'card-1',
+    deckId: 'deck-1',
+    front: 'Чему равен ток нейтрального провода при симметричной нагрузке?',
+    back: 'Нулю.',
+    tags: const <String>['трёхфазные цепи', 'нейтраль'],
+  ),
+  makeCard(
+    id: 'card-2',
+    deckId: 'deck-1',
+    front: 'К каким проводам подключён источник трёхфазного напряжения?',
+    back: 'К трём фазным проводам.',
+    tags: const <String>['трёхфазные цепи'],
+  ),
+  makeCard(
+    id: 'card-3',
+    deckId: 'deck-1',
+    front: 'Какое фазное напряжение в опыте 4?',
+    back: '127 В.',
+  ),
+];

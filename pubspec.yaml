@@ -115,6 +115,11 @@ flutter:
     - family: OpenDyslexic
       fonts:
         - asset: assets/fonts/OpenDyslexic-Regular.otf
+          weight: 400
+        # Аудит 2.0 (P2-13): без жирного начертания заголовки при включённом
+        # шрифте дислексии переставали быть жирными и иерархия ломалась.
+        - asset: assets/fonts/OpenDyslexic-Bold.otf
+          weight: 700
     - family: Inter
       fonts:
         - asset: assets/fonts/Inter-Variable.ttf

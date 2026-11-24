@@ -17,6 +17,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'package:cardflow/domain/decks/deck.dart';
 import 'package:cardflow/domain/decks/deck_summary.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/components/app_dialogs.dart';
@@ -56,7 +57,13 @@ class AppShell extends ConsumerWidget {
     }
     if (!context.mounted) return;
     if (summaries.isEmpty) {
-      showAppMessage(context, l10n.shellNewCardNoDecks);
+      // Аудит 2.0 (P2-05): на пустой базе кнопка не показывает transient-
+      // снекбар, а сразу ведёт к созданию колоды и формы карточки — карточке
+      // нужен дом, и пользователь не остаётся без пути.
+      final Deck? created = await createDeckManually(context, ref);
+      if (created != null && context.mounted) {
+        context.push(AppRoutes.cardNewPath(created.id));
+      }
       return;
     }
     if (summaries.length == 1) {
@@ -93,16 +100,10 @@ class AppShell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final AppLocalizations l10n = AppLocalizations.of(context);
     final ColorScheme scheme = Theme.of(context).colorScheme;
     final double width = MediaQuery.sizeOf(context).width;
     final bool wide = width >= AppSizes.sidebarBreakpoint;
     final bool compactRail = !wide && width >= AppSizes.railBreakpoint;
-    final String section = switch (navigationShell.currentIndex) {
-      1 => l10n.navStatistics,
-      2 => l10n.navSettings,
-      _ => l10n.navDecks,
-    };
 
     final Widget sidebar = AppSidebar(
       currentBranch: navigationShell.currentIndex,
@@ -138,7 +139,6 @@ class AppShell extends ConsumerWidget {
                 child: Column(
                   children: <Widget>[
                     AppTopHeader(
-                      section: section,
                       showNewCard: navigationShell.currentIndex == 0,
                       onNewCard: () => unawaited(_createCard(context, ref)),
                     ),
@@ -183,7 +183,6 @@ class AppShell extends ConsumerWidget {
                 child: Column(
                   children: <Widget>[
                     AppTopHeader(
-                      section: section,
                       showNewCard: navigationShell.currentIndex == 0,
                       onNewCard: () => unawaited(_createCard(context, ref)),
                     ),
@@ -229,7 +228,6 @@ class AppShell extends ConsumerWidget {
           child: Column(
             children: <Widget>[
               AppTopHeader(
-                section: section,
                 showNewCard: navigationShell.currentIndex == 0,
                 onNewCard: () => unawaited(_createCard(bodyContext, ref)),
                 onOpenNav: () => Scaffold.of(bodyContext).openDrawer(),

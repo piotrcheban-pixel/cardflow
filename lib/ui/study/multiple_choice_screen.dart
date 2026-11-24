@@ -65,7 +65,6 @@ class _MultipleChoiceScreenState extends ConsumerState<MultipleChoiceScreen> {
   bool _loading = true;
   bool _loadFailed = false;
   bool _completionHapticPlayed = false;
-  Timer? _autoAdvance;
   _AnsweredQuestion? _answered;
 
   bool get _hapticsEnabled => ref.read(effectiveAppSettingsProvider).haptics;
@@ -78,7 +77,6 @@ class _MultipleChoiceScreenState extends ConsumerState<MultipleChoiceScreen> {
 
   @override
   void dispose() {
-    _autoAdvance?.cancel();
     _controller?.removeListener(_onChanged);
     _controller?.dispose();
     super.dispose();
@@ -165,11 +163,8 @@ class _MultipleChoiceScreenState extends ConsumerState<MultipleChoiceScreen> {
       );
     });
     unawaited(_record(correct));
-    final bool reduceMotion =
-        MediaQuery.maybeDisableAnimationsOf(context) ?? false;
-    if (correct && !reduceMotion) {
-      _autoAdvance = Timer(const Duration(milliseconds: 1200), _next);
-    }
+    // Аудит 2.0 (P1-06): автопереход через 1,2 с не давал прочитать результат.
+    // Теперь темп контролирует пользователь: «Далее» или Enter.
   }
 
   Future<void> _record(bool correct) async {
@@ -189,8 +184,6 @@ class _MultipleChoiceScreenState extends ConsumerState<MultipleChoiceScreen> {
   }
 
   void _next() {
-    _autoAdvance?.cancel();
-    _autoAdvance = null;
     if (!mounted) return;
     setState(() => _answered = null);
     final StudySessionController? controller = _controller;
@@ -205,7 +198,6 @@ class _MultipleChoiceScreenState extends ConsumerState<MultipleChoiceScreen> {
   Future<void> _undo() async {
     final StudySessionController? controller = _controller;
     if (controller == null) return;
-    _autoAdvance?.cancel();
     try {
       final bool undone = await controller.undo();
       if (undone && mounted) {
@@ -232,7 +224,10 @@ class _MultipleChoiceScreenState extends ConsumerState<MultipleChoiceScreen> {
       if (mounted && context.canPop()) context.pop();
       return;
     }
-    final bool confirmed = await confirmReviewExit(context);
+    final bool confirmed = await confirmReviewExit(
+      context,
+      kind: SessionExitKind.study,
+    );
     if (confirmed && mounted && context.canPop()) context.pop();
   }
 
@@ -313,7 +308,8 @@ class _MultipleChoiceScreenState extends ConsumerState<MultipleChoiceScreen> {
         onBack: () => context.canPop() ? context.pop() : null,
       );
     }
-    if (state.isCompleted && _answered == null) {
+    final _AnsweredQuestion? answered = _answered;
+    if (state.isCompleted && answered == null) {
       return StudyResultsView(
         accuracy: state.accuracy,
         correct: state.correctCount,
@@ -329,15 +325,22 @@ class _MultipleChoiceScreenState extends ConsumerState<MultipleChoiceScreen> {
         onDone: () => context.canPop() ? context.pop() : null,
       );
     }
-    final _AnsweredQuestion? answered = _answered;
     final Card card = answered?.card ?? state.current!.card;
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
     final DistractorSet set =
         answered?.options ?? _options[card.id] ?? _options.values.first;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         const Padding(padding: EdgeInsets.only(top: AppSpacing.xs)),
-        StudyProgressBar(answered: state.answeredCount, total: state.total),
+        // Аудит 2.0 (P2-02): пока на экране отвеченный вопрос с фидбеком,
+        // счётчик показывает его номер, а не следующий.
+        StudyProgressBar(
+          answered: state.answeredCount,
+          total: state.total,
+          currentIndex: answered == null ? null : state.answeredCount,
+        ),
         Expanded(
           // Аудит v4 (V6): вопрос и варианты — одна центрированная колонка с
           // воздухом 32 px, а не вопрос вверху и варианты у нижней кромки с
@@ -418,6 +421,24 @@ class _MultipleChoiceScreenState extends ConsumerState<MultipleChoiceScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: <Widget>[
+                                // Аудит 2.0 (P2-24): подпись «выберите один
+                                // ответ» — пользователь понимает, что это выбор,
+                                // а не список.
+                                Padding(
+                                  padding: const EdgeInsets.only(
+                                    bottom: AppSpacing.xs,
+                                  ),
+                                  child: Text(
+                                    l10n.studyChooseOne,
+                                    key: const ValueKey<String>(
+                                      'test-choose-one',
+                                    ),
+                                    style: theme.textTheme.labelMedium
+                                        ?.copyWith(
+                                          color: scheme.onSurfaceVariant,
+                                        ),
+                                  ),
+                                ),
                                 for (
                                   var index = 0;
                                   index < set.options.length;
@@ -431,6 +452,7 @@ class _MultipleChoiceScreenState extends ConsumerState<MultipleChoiceScreen> {
                                       key: ValueKey<String>(
                                         'study-option-$index',
                                       ),
+                                      index: index,
                                       label: set.options[index],
                                       semanticLabel: l10n.testOptionLabel(
                                         index + 1,
@@ -444,6 +466,16 @@ class _MultipleChoiceScreenState extends ConsumerState<MultipleChoiceScreen> {
                                           : null,
                                     ),
                                   ),
+                                if (answered != null) ...<Widget>[
+                                  const SizedBox(height: AppSpacing.sm),
+                                  // Аудит 2.0 (P1-06): результат — текстом и
+                                  // иконкой, а не только цветом.
+                                  _TestFeedbackBanner(
+                                    correct: answered.correct,
+                                    correctAnswer:
+                                        set.options[set.correctIndex],
+                                  ),
+                                ],
                               ],
                             ),
                           ),
@@ -491,6 +523,7 @@ class _SpringOptionButton extends StatefulWidget {
     required this.selected,
     required this.state,
     required this.onPressed,
+    this.index = 0,
     super.key,
   });
 
@@ -499,6 +532,9 @@ class _SpringOptionButton extends StatefulWidget {
   final bool selected;
   final _OptionVisual state;
   final VoidCallback? onPressed;
+
+  /// Порядковый номер варианта: буква A–D (аудит 2.0, P2-24).
+  final int index;
 
   @override
   State<_SpringOptionButton> createState() => _SpringOptionButtonState();
@@ -527,6 +563,7 @@ class _SpringOptionButtonState extends State<_SpringOptionButton>
 
   @override
   Widget build(BuildContext context) {
+    final AppLocalizations l10n = AppLocalizations.of(context);
     final ThemeData theme = Theme.of(context);
     final ColorScheme scheme = theme.colorScheme;
     final (Color? background, Color? foreground) = switch (widget.state) {
@@ -543,6 +580,21 @@ class _SpringOptionButtonState extends State<_SpringOptionButton>
     final bool neutral = widget.state == _OptionVisual.neutral;
     final Color fill = background ?? scheme.surfaceContainerLow;
     final Color text = foreground ?? scheme.onSurface;
+    final String letter = String.fromCharCode(0x41 + widget.index);
+    final String? feedbackLabel = switch (widget.state) {
+      _OptionVisual.correct => l10n.studyFeedbackCorrect,
+      _OptionVisual.wrong => l10n.studyFeedbackIncorrect,
+      _OptionVisual.neutral => null,
+    };
+    final IconData? feedbackIcon = switch (widget.state) {
+      _OptionVisual.correct => Icons.check_circle,
+      _OptionVisual.wrong => Icons.cancel,
+      _OptionVisual.neutral => null,
+    };
+    final double minHeight =
+        AppSizes.buttonHeightLarge *
+        AppAdaptive.factorForContext(context).clamp(1.0, 1.3);
+    final BorderRadius radius = BorderRadius.circular(AppRadii.input);
     return Semantics(
       button: true,
       selected: widget.selected,
@@ -550,46 +602,176 @@ class _SpringOptionButtonState extends State<_SpringOptionButton>
       child: ExcludeSemantics(
         child: ScaleTransition(
           scale: _scale,
-          child: SizedBox(
-            width: double.infinity,
-            // Аудит v4 (V1): нейтральный вариант — поверхность с рамкой, а не
-            // сплошная primary/зелёная заливка: правильный/неправильный ответ
-            // различаются цветом только после ответа.
-            child: FilledButton(
-              onPressed: widget.onPressed == null ? null : _press,
-              style: FilledButton.styleFrom(
-                backgroundColor: fill,
-                foregroundColor: text,
-                disabledBackgroundColor: fill,
-                disabledForegroundColor: text,
-                minimumSize: Size.fromHeight(
-                  AppSizes.buttonHeightLarge *
-                      AppAdaptive.factorForContext(context).clamp(1.0, 1.3),
-                ),
-                alignment: Alignment.centerLeft,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.lg,
-                  vertical: AppSpacing.xs,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: AppRadii.inputRadius,
-                  side: BorderSide(
-                    color: neutral ? scheme.outlineVariant : text,
-                    width: AppSizes.borderWidth,
+          child: Material(
+            color: fill,
+            shape: RoundedRectangleBorder(
+              borderRadius: radius,
+              side: BorderSide(
+                color: neutral ? scheme.outlineVariant : text,
+                width: neutral ? AppSizes.borderWidth : 2,
+              ),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              key: ValueKey<String>('study-option-tap-${widget.index}'),
+              onTap: widget.onPressed == null ? null : _press,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: minHeight),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md,
+                    vertical: AppSpacing.xs,
+                  ),
+                  child: Row(
+                    children: <Widget>[
+                      // Буква + «радио»: вариант читается как выбор, а не
+                      // строка списка (аудит 2.0, P2-24).
+                      _OptionMarker(
+                        letter: letter,
+                        selected: widget.selected,
+                        neutral: neutral,
+                        color: text,
+                        background: fill,
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: CardText(
+                          source: widget.label,
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.start,
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            color: text,
+                          ),
+                        ),
+                      ),
+                      if (feedbackIcon != null) ...<Widget>[
+                        const SizedBox(width: AppSpacing.xs),
+                        Icon(feedbackIcon, size: AppSizes.icon, color: text),
+                        const SizedBox(width: AppSpacing.xxs),
+                        Text(
+                          feedbackLabel!,
+                          style: theme.textTheme.labelLarge?.copyWith(
+                            color: text,
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
-                elevation: 0,
-                textStyle: theme.textTheme.bodyLarge,
-              ),
-              child: CardText(
-                source: widget.label,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.start,
               ),
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Маркер варианта: буква A–D внутри круга-«радио».
+class _OptionMarker extends StatelessWidget {
+  const _OptionMarker({
+    required this.letter,
+    required this.selected,
+    required this.neutral,
+    required this.color,
+    required this.background,
+  });
+
+  final String letter;
+  final bool selected;
+  final bool neutral;
+  final Color color;
+  final Color background;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
+    final Color border = neutral ? scheme.outline : color;
+    return Container(
+      width: 32,
+      height: 32,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: selected ? border : Colors.transparent,
+        border: Border.all(color: border, width: selected ? 2 : 1.5),
+      ),
+      child: Text(
+        letter,
+        style: theme.textTheme.labelLarge?.copyWith(
+          color: selected ? background : (neutral ? scheme.onSurface : color),
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+}
+
+/// Текстовый итог ответа: «Верно» / «Неверно» + правильный ответ.
+class _TestFeedbackBanner extends StatelessWidget {
+  const _TestFeedbackBanner({
+    required this.correct,
+    required this.correctAnswer,
+  });
+
+  final bool correct;
+  final String correctAnswer;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
+    final Color foreground = correct
+        ? AppColors.feedbackCorrectForeground(scheme)
+        : AppColors.feedbackWrongForeground(scheme);
+    final Color background = correct
+        ? AppColors.feedbackCorrectBackground(scheme)
+        : AppColors.feedbackWrongBackground(scheme);
+    return Container(
+      key: const ValueKey<String>('test-feedback'),
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(AppRadii.input),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Icon(
+                correct ? Icons.check_circle : Icons.cancel,
+                size: AppSizes.icon,
+                color: foreground,
+              ),
+              const SizedBox(width: AppSpacing.xxs),
+              Text(
+                correct
+                    ? l10n.studyFeedbackCorrect
+                    : l10n.studyFeedbackIncorrect,
+                key: const ValueKey<String>('test-feedback-result'),
+                style: theme.textTheme.titleSmall?.copyWith(color: foreground),
+              ),
+            ],
+          ),
+          if (!correct) ...<Widget>[
+            const SizedBox(height: AppSpacing.xxs),
+            Text(
+              l10n.studyCorrectAnswerLabel,
+              style: theme.textTheme.labelSmall?.copyWith(color: foreground),
+            ),
+            const SizedBox(height: 2),
+            CardText(
+              source: correctAnswer,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.bodyMedium?.copyWith(color: foreground),
+            ),
+          ],
+        ],
       ),
     );
   }

@@ -130,7 +130,7 @@ void main() {
       await openDeck(tester);
       expect(find.byType(DeckScreen), findsOneWidget);
 
-      await tester.tap(find.byType(BackButton));
+      await tester.tap(find.byKey(const ValueKey<String>('deck-back')));
       await tester.pumpAndSettle();
       expect(find.byType(DecksScreen), findsOneWidget);
     });
@@ -261,7 +261,7 @@ void main() {
       expect(find.byType(DeckScreen), findsOneWidget);
       expect(find.byType(ReviewSessionScreen), findsNothing);
 
-      await tester.tap(find.byType(BackButton));
+      await tester.tap(find.byKey(const ValueKey<String>('deck-back')));
       await tester.pumpAndSettle();
       expect(find.byType(DecksScreen), findsOneWidget);
     });

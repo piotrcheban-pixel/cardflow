@@ -158,6 +158,21 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        // Аудит 2.0 (P1-02): у экрана колоды всегда есть видимый выход. Если
+        // стек пуст (переход после импорта через `go`), стрелка ведёт к списку
+        // колод, а не исчезает.
+        leading: IconButton(
+          key: const ValueKey<String>('deck-back'),
+          tooltip: l10n.decksTitle,
+          icon: const Icon(Icons.arrow_back, size: AppSizes.navIcon),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go(AppRoutes.decksPath);
+            }
+          },
+        ),
         title: deck == null ? null : Text(deck.name),
         actions: deck == null
             ? null
@@ -180,28 +195,14 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
                 ),
               ],
       ),
-      body: Builder(
-        builder: (BuildContext context) {
-          // F09/V1: колода — подстраница оболочки, но открывается поверх неё.
-          // Оставляем тот же левый отступ, что у контента в shell, чтобы
-          // кромка не прыгала на 133 px между «Колодами» и «Колодой».
-          final double shellOffset =
-              MediaQuery.sizeOf(context).width >= AppSizes.sidebarBreakpoint
-              ? AppSizes.sidebarWidthFor(context)
-              : 0;
-          return Padding(
-            padding: EdgeInsetsDirectional.only(start: shellOffset),
-            child: _buildBody(
-              context,
-              ref,
-              l10n,
-              deckAsync,
-              cardsAsync,
-              summaryAsync,
-              hasError,
-            ),
-          );
-        },
+      body: _buildBody(
+        context,
+        ref,
+        l10n,
+        deckAsync,
+        cardsAsync,
+        summaryAsync,
+        hasError,
       ),
     );
   }
@@ -406,6 +407,24 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
                           hintText: l10n.deckSearchCardsHint,
                           prefixIcon: const Icon(Icons.search, size: 18),
                           isDense: true,
+                          // Аудит 2.0 (§6): поиск без кнопки очистки заставлял
+                          // стирать запрос вручную.
+                          suffixIcon: _cardSearch.text.isEmpty
+                              ? null
+                              : IconButton(
+                                  key: const ValueKey<String>(
+                                    'deck-card-search-clear',
+                                  ),
+                                  tooltip: l10n.deckSearchClear,
+                                  icon: const Icon(
+                                    Icons.close,
+                                    size: AppSizes.iconSmall,
+                                  ),
+                                  onPressed: () {
+                                    _cardSearch.clear();
+                                    setState(() {});
+                                  },
+                                ),
                         ),
                       ),
                     ],
@@ -443,6 +462,18 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
                     title: l10n.deckCardsNoMatches,
                     message: l10n.decksFilterEmptyHint,
                     compact: true,
+                    actions: <Widget>[
+                      // Аудит 2.0 (§6): пустой результат даёт действие «сбросить»,
+                      // а не только текст.
+                      FilledButton.tonal(
+                        key: const ValueKey<String>('deck-cards-reset'),
+                        onPressed: () => setState(() {
+                          _cardSearch.clear();
+                          _cardFilter = _CardFilter.all;
+                        }),
+                        child: Text(l10n.decksSearchResetAction),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -882,6 +913,15 @@ class _DeckProgress extends StatelessWidget {
                   style: theme.textTheme.titleSmall,
                 ),
               ),
+              // Аудит 2.0 (§6): «87 %» без чисел не отвечает на вопрос «сколько
+              // изучено». Показываем «62 из 71 изучено» и процент рядом.
+              Text(
+                l10n.deckProgressCounts(studied, total),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.xs),
               Text(
                 l10n.statisticsRetentionValue(percent),
                 style: AppTypography.numeric(
@@ -1029,6 +1069,8 @@ class _DeckCardTile extends StatelessWidget {
     final ThemeData theme = Theme.of(context);
     final ColorScheme scheme = theme.colorScheme;
     final String tags = card.tags.map((String tag) => '#$tag').join(', ');
+    final bool isCloze = card.cardType == CardType.cloze;
+    final bool isOcclusion = card.occlusionJson != null;
     return AppPanel(
       onTap: onTap,
       padding: const EdgeInsets.fromLTRB(
@@ -1038,56 +1080,78 @@ class _DeckCardTile extends StatelessWidget {
         AppSpacing.sm,
       ),
       radius: AppRadii.input,
-      child: Row(
-        children: <Widget>[
-          // F14: декоративный «☰» (тип карточки) убран — тип уже написан
-          // надзаголовком; в строке остаются один переход («›») и действия
-          // страницы, а не три «меню» подряд.
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
+      child: LayoutBuilder(
+        builder: (BuildContext context, BoxConstraints constraints) {
+          // Аудит 2.0 (P2-09): на телефоне статус-чип и кебаб сужали текстовую
+          // колонку до «Чему равен ток нейтрального пр…». На узком экране текст
+          // занимает всю ширину, а состояние уходит в нижнюю строку.
+          final bool narrow = constraints.maxWidth < 460;
+          final Widget text = Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              // P3-02: «Обычная» повторялась на каждой строке и ничего не
+              // сообщала. Badge остаётся только у особых типов.
+              if (isCloze || isOcclusion)
                 Text(
-                  card.cardType == CardType.cloze
-                      ? l10n.cardTypeCloze
-                      : l10n.cardTypeBasic,
+                  isCloze ? l10n.cardTypeCloze : l10n.cardTypeOcclusion,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.labelSmall?.copyWith(
                     color: scheme.onSurfaceVariant,
                   ),
                 ),
-                // Находка D8: в списке больше нет сырой cloze-разметки
-                // «{{c1::…}}» — только отформатированный текст с пропуском.
-                CardText(
-                  source: card.front,
-                  revealed: false,
-                  maxLines: 2,
+              // Находка D8: в списке больше нет сырой cloze-разметки
+              // «{{c1::…}}» — только отформатированный текст с пропуском.
+              CardText(
+                source: card.front,
+                revealed: false,
+                maxLines: narrow ? 3 : 2,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodyLarge,
+              ),
+              if (card.tags.isNotEmpty)
+                Text(
+                  l10n.cardTagsLine(tags),
+                  maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodyLarge,
-                ),
-                if (card.tags.isNotEmpty)
-                  Text(
-                    l10n.cardTagsLine(tags),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: scheme.onSurfaceVariant,
-                    ),
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: scheme.onSurfaceVariant,
                   ),
-              ],
-            ),
-          ),
-          const SizedBox(width: AppSpacing.xs),
-          AppStatusChip(
+                ),
+            ],
+          );
+          final Widget state = AppStatusChip(
             label: _cardStateLabel(l10n, card.state),
             tone: card.state == CardState.newCard
                 ? AppStatusTone.info
                 : AppStatusTone.neutral,
             dense: true,
-          ),
-          Icon(Icons.chevron_right, color: scheme.outline),
-        ],
+          );
+          if (narrow) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                text,
+                const SizedBox(height: AppSpacing.xxs),
+                Row(
+                  children: <Widget>[
+                    state,
+                    const Spacer(),
+                    Icon(Icons.chevron_right, color: scheme.outline),
+                  ],
+                ),
+              ],
+            );
+          }
+          return Row(
+            children: <Widget>[
+              Expanded(child: text),
+              const SizedBox(width: AppSpacing.xs),
+              state,
+              Icon(Icons.chevron_right, color: scheme.outline),
+            ],
+          );
+        },
       ),
     );
   }

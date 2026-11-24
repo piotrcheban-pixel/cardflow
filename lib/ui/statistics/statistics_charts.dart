@@ -478,39 +478,45 @@ class _StatisticsHeatmapState extends State<StatisticsHeatmap> {
     final double labelHeight =
         textScaler.scale(labelStyle.fontSize ?? 13) *
         (labelStyle.height ?? 1.35);
-    // F31: ячейка и шаг растут вместе с масштабом экрана (16 → 19,8 → 23,2),
-    // пустой день контрастнее (outlineVariant вместо почти белого) — карта
-    // читается как календарь, а не как бледная сетка.
+    // F31: ячейка растёт вместе с масштабом экрана (16 → 19,8 → 23,2),
+    // пустой день контрастнее — карта читается как календарь.
     final double factor = AppAdaptive.factorForContext(context)
         .clamp(1.0, 1.45);
     final double cell = (_heatmapCell * factor).clamp(16.0, 24.0);
-    final double step = cell + (_heatmapStep - _heatmapCell);
     final int columns = math.max(1, (days.length / 7).ceil());
-    final double chartWidth = columns * step;
-    final double chartHeight = labelHeight + AppSpacing.xxs + 7 * step;
-    final Widget paint = CustomPaint(
-      key: const ValueKey<String>('statistics-heatmap'),
-      size: Size(chartWidth, chartHeight),
-      painter: _HeatmapPainter(
-        days: days,
-        monthLabels: labels,
-        cell: cell,
-        step: step,
-        top: labelHeight + AppSpacing.xxs,
-        emptyColor: scheme.outlineVariant,
-        color: scheme.primary,
-        labelStyle: labelStyle,
-        textScaler: textScaler,
-      ),
-    );
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
+        final double available = constraints.maxWidth;
+        // Аудит 2.0 (P2-22): при шаге 20 px год не помещался в 960 px, карта
+        // прокручивалась и первая подпись месяца выглядела обрезанной. Шаг
+        // подстраивается под доступную ширину (не меньше cell + 1,5), поэтому
+        // на десктопе карта видна целиком, а на телефоне остаётся прокрутка.
+        final double maxStep = cell + (_heatmapStep - _heatmapCell);
+        final double fitStep = available.isFinite && available > 0
+            ? available / columns
+            : maxStep;
+        final double step = fitStep.clamp(cell + 1.5, maxStep);
+        final double chartWidth = columns * step;
+        final double chartHeight = labelHeight + AppSpacing.xxs + 7 * step;
         final Widget sized = SizedBox(
           width: chartWidth,
           height: chartHeight,
-          child: paint,
+          child: CustomPaint(
+            key: const ValueKey<String>('statistics-heatmap'),
+            size: Size(chartWidth, chartHeight),
+            painter: _HeatmapPainter(
+              days: days,
+              monthLabels: labels,
+              cell: cell,
+              step: step,
+              top: labelHeight + AppSpacing.xxs,
+              emptyColor: scheme.outlineVariant,
+              color: scheme.primary,
+              labelStyle: labelStyle,
+              textScaler: textScaler,
+            ),
+          ),
         );
-        final double available = constraints.maxWidth;
         if (!available.isFinite || available >= chartWidth) {
           return Center(child: sized);
         }

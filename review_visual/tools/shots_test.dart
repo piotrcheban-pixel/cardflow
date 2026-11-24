@@ -52,7 +52,7 @@ Widget _shell() {
       Expanded(
         child: Column(
           children: <Widget>[
-            AppTopHeader(section: 'Колоды', onNewCard: () {}),
+            AppTopHeader(onNewCard: () {}),
             const Expanded(child: DecksScreen()),
           ],
         ),

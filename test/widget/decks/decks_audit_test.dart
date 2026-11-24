@@ -42,7 +42,7 @@ void main() {
 
     expect(find.text(l10n.decksNoResultsForQuery('to')), findsOneWidget);
     expect(find.text(l10n.decksSearchResetAction), findsOneWidget);
-    expect(find.text(l10n.decksEmptyMessage), findsNothing);
+    expect(find.text(l10n.decksWelcomeMessage), findsNothing);
 
     // Пустое состояние может быть ниже сгиба (шапка + баннер провайдера):
     // прокручиваем к действию, как это сделал бы пользователь.

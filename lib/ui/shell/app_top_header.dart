@@ -9,15 +9,11 @@ import 'package:cardflow/ui/theme/app_tokens.dart';
 class AppTopHeader extends StatelessWidget {
   /// Создаёт панель.
   const AppTopHeader({
-    required this.section,
     required this.onNewCard,
     this.showNewCard = true,
     this.onOpenNav,
     super.key,
   });
-
-  /// Название текущего раздела для крошек.
-  final String section;
 
   /// Создать карточку (глобальное действие).
   final VoidCallback onNewCard;
@@ -61,23 +57,11 @@ class AppTopHeader extends StatelessWidget {
             ),
             const SizedBox(width: 2),
           ],
-          // F36: крошки — текст с разделителем, а не поле в рамке. Рамка
-          // читалась как неактивное поле ввода.
-          Flexible(
-            child: Align(
-              alignment: AlignmentDirectional.centerStart,
-              child: Text(
-                l10n.shellBreadcrumb(section),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: scheme.onSurfaceVariant,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: AppSpacing.xs),
+          // Аудит 2.0 (P3-03): «Рабочее пространство / ...» нигде не
+          // выбиралось, а название раздела дублировало H1 страницы. В шапке
+          // остаются только глобальные действия; контекст раздела даёт
+          // подсветка навигации и заголовок самой страницы.
+          const Spacer(),
           if (showNewCard) ...<Widget>[
             if (compact)
               IconButton(

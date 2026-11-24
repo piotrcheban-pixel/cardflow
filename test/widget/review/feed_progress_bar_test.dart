@@ -32,13 +32,15 @@ void main() {
     await tester.pumpWidget(bar(total: 3, current: 1));
     await tester.pumpAndSettle();
 
+    // Аудит 2.0 (P2-26): полоса стала заметнее (10/7 px), а её зона нажатия —
+    // 44 px по высоте, иначе сегмент нельзя было ни нажать, ни задеть пальцем.
     expect(
       tester
           .getSize(
             find.byKey(const ValueKey<String>('feed-progress-segment-1')),
           )
           .height,
-      7,
+      10,
     );
     expect(
       tester
@@ -46,7 +48,7 @@ void main() {
             find.byKey(const ValueKey<String>('feed-progress-segment-0')),
           )
           .height,
-      5,
+      7,
     );
     expect(find.byType(FeedProgressBar), findsOneWidget);
   });

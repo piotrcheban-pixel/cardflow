@@ -70,6 +70,7 @@ class PixabayImageProvider implements ImageProvider {
           height: asPositiveInt(raw['imageHeight']),
           author: author,
           license: 'Pixabay License',
+          description: asString(raw['tags']),
           attribution: joinAttribution(<String?>[author, 'Pixabay License']),
         ),
       );

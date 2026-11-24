@@ -9,6 +9,8 @@ import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/cards/content/card_content_view.dart';
 import 'package:cardflow/ui/components/app_buttons.dart';
 import 'package:cardflow/ui/components/app_dialogs.dart';
+import 'package:cardflow/ui/review/session_card.dart';
+import 'package:cardflow/ui/state/platform_info.dart';
 import 'package:cardflow/ui/theme/app_tokens.dart';
 import 'package:cardflow/ui/theme/app_typography.dart';
 
@@ -86,12 +88,16 @@ class _FeedCardViewState extends State<FeedCardView> {
     final bool veryShort = windowHeight < 520 || widget.compact;
     final double padH = narrow ? AppSpacing.lg : AppSpacing.xxl;
     final double padV = veryShort ? AppSpacing.md : AppSpacing.xl;
+    // Аудит 2.0 (P2-27): та же шкала кеглей, что у «Классики» — вопрос 34
+    // (28 на телефоне), ответ 0,88 вопроса, повтор вопроса 0,74.
+    final double cardWidth = AppSizes.studyCardWidth(windowWidth);
     final double questionSize = veryShort
         ? (narrow ? 24 : 28)
-        : (narrow ? 28 : math.min(46, 30 * factor + 4));
+        : SessionCard.questionSizeFor(cardWidth, factor);
     final double answerSize = veryShort
         ? (narrow ? 19 : 22)
-        : (narrow ? 22 : math.min(34, 23 * factor + 2));
+        : SessionCard.answerSizeFor(questionSize);
+    final double echoSize = SessionCard.echoSizeFor(questionSize);
     final bool wideMedia = windowWidth >= 1000;
     final Color borderColor = _hovered ? scheme.primary : scheme.outlineVariant;
     return Padding(
@@ -155,6 +161,7 @@ class _FeedCardViewState extends State<FeedCardView> {
                         l10n,
                         questionSize: questionSize,
                         answerSize: answerSize,
+                        echoSize: echoSize,
                         availableHeight: availableHeight,
                         wideMedia: wideMedia,
                         narrow: narrow,
@@ -226,6 +233,7 @@ class _FeedCardViewState extends State<FeedCardView> {
     AppLocalizations l10n, {
     required double questionSize,
     required double answerSize,
+    required double echoSize,
     required double availableHeight,
     required bool wideMedia,
     required bool narrow,
@@ -259,7 +267,7 @@ class _FeedCardViewState extends State<FeedCardView> {
       color: theme.colorScheme.onSurface,
     );
     final TextStyle mutedQuestion = theme.textTheme.titleSmall!.copyWith(
-      fontSize: narrow ? 16 : math.max(17, questionSize * 0.46),
+      fontSize: echoSize,
       height: 1.4,
       fontWeight: FontWeight.w500,
       color: theme.colorScheme.onSurfaceVariant,
@@ -285,6 +293,7 @@ class _FeedCardViewState extends State<FeedCardView> {
           imageMaxHeight: imageMaxHeight,
           imageMaxWidth: wideMedia ? columnWidth * 0.6 : columnWidth,
           sideBySide: wideMedia,
+          mediaAfterText: !wideMedia,
         ),
         const SizedBox(height: AppSpacing.sm),
         Text(
@@ -329,6 +338,7 @@ class _FeedCardViewState extends State<FeedCardView> {
         imageMaxHeight: occlusion ? imageMaxHeight : imageMaxHeight,
         imageMaxWidth: wideMedia ? columnWidth * 0.6 : columnWidth,
         sideBySide: wideMedia,
+        mediaAfterText: !wideMedia,
       ),
     ];
   }
@@ -485,7 +495,9 @@ class _NavHint extends StatelessWidget {
         const SizedBox(width: AppSpacing.xxs + 2),
         Flexible(
           child: Text(
-            l10n.feedNavHint,
+            PlatformInfo.hasPhysicalKeyboard
+                ? l10n.feedNavHint
+                : l10n.feedNavHintTouch,
             key: const ValueKey<String>('feed-nav-hint'),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,

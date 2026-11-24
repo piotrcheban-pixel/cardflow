@@ -116,24 +116,32 @@ class _Segment extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Аудит 2.0 (P2-26): сегмент высотой 4 px нельзя ни нажать мышью, ни
+    // попасть пальцем. Визуальная полоса остаётся тонкой, но каждая ячейка
+    // имеет полноценную цель 44 px (WCAG 2.5.5) на всю высоту строки.
     final Widget bar = AnimatedContainer(
       key: segmentKey,
       duration: AppMotion.duration(context, AppDurations.quick),
       curve: AppMotion.feedback,
       // Текущий сегмент выше остальных: позиция читается без анимации.
-      height: highlighted ? 7 : 5,
+      height: highlighted ? 10 : 7,
       decoration: BoxDecoration(
         color: color,
-        borderRadius: BorderRadius.circular(3),
+        borderRadius: BorderRadius.circular(4),
       ),
     );
-    if (onTap == null) return bar;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
-        child: bar,
+    if (onTap == null) {
+      return SizedBox(
+        height: AppSizes.minTouchTarget,
+        child: Center(child: bar),
+      );
+    }
+    return SizedBox(
+      height: AppSizes.minTouchTarget,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Center(child: bar),
       ),
     );
   }

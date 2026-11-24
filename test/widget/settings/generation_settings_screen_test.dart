@@ -540,9 +540,14 @@ void main() {
       find.byKey(const ValueKey<String>('provider-check-deepseek')),
     );
     await tester.pumpAndSettle();
-    expect(find.text(l10n.providersCheckValid), findsOneWidget);
+    // Аудит 2.0 (P2-15): результат проверки живёт inline в карточке провайдера
+    // (со временем), а не только в исчезающем снекбаре.
+    expect(
+      find.byKey(const ValueKey<String>('provider-check-result-deepseek')),
+      findsOneWidget,
+    );
+    expect(find.textContaining(l10n.providersCheckInlineOk), findsOneWidget);
     expect(transport.calls, 1);
-    await hideSnackbar(tester);
 
     transport = _Transport(
       error: const GenerationException(GenerationErrorCode.invalidApiKey),
@@ -552,8 +557,7 @@ void main() {
       find.byKey(const ValueKey<String>('provider-check-deepseek')),
     );
     await tester.pumpAndSettle();
-    expect(find.text(l10n.providersCheckInvalid), findsOneWidget);
-    await hideSnackbar(tester);
+    expect(find.textContaining(l10n.providersCheckInlineFail), findsOneWidget);
   });
 
   testWidgets('удаление: подтверждение удаляет аккаунт и ключ', (

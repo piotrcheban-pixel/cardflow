@@ -88,6 +88,26 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen>
   bool _completionHapticPlayed = false;
   SessionMedia _media = SessionMedia.empty;
 
+  /// Разбивка оценок завершённой сессии (аудит 2.0, P2-25).
+  ///
+  /// Считается на экране: движок пишет оценки в `review_logs`, а для сводки
+  /// достаточно локальной истории (undo снимает последнюю запись).
+  final List<Rating> _ratingHistory = <Rating>[];
+
+  /// Начало сессии — для строки «Время» в сводке.
+  DateTime _sessionStartedAt = DateTime.now();
+
+  /// Количество оценок по каждому действию.
+  Map<Rating, int> get _ratingCounts {
+    final Map<Rating, int> counts = <Rating, int>{
+      for (final Rating rating in Rating.values) rating: 0,
+    };
+    for (final Rating rating in _ratingHistory) {
+      counts[rating] = (counts[rating] ?? 0) + 1;
+    }
+    return counts;
+  }
+
   bool get _hasSource => widget.plan != null || widget.deckId != null;
 
   /// Haptics включены в настройках (A6.6, ADR-019 §2).
@@ -178,6 +198,8 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen>
         _media = media;
         _limitReached = limitReached;
         _loading = false;
+        _sessionStartedAt = DateTime.now();
+        _ratingHistory.clear();
       });
       _startBudgetTimer(plan?.timeBudget);
     } catch (_) {
@@ -222,6 +244,7 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen>
     try {
       final bool rated = await engine.rate(rating);
       if (!rated) return;
+      _ratingHistory.add(rating);
       _playHaptic(rating);
       if (engine.state.isCompleted &&
           !_completionHapticPlayed &&
@@ -242,6 +265,7 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen>
     try {
       final bool undone = await engine.undo();
       if (undone && mounted) {
+        if (_ratingHistory.isNotEmpty) _ratingHistory.removeLast();
         _completionHapticPlayed = false;
         showSessionNotice(AppLocalizations.of(context).reviewUndoneMessage);
       }
@@ -324,6 +348,12 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen>
     if (context.canPop()) context.pop();
   }
 
+  /// Повторить сессию из сводки: очередь читается заново (оценки уже записаны).
+  void _repeatSession() {
+    _completionHapticPlayed = false;
+    _retry();
+  }
+
   /// Повтор чтения медиа карточки после ошибки изображения (7.19).
   Future<void> _retryMedia(Card card) async {
     final SessionMedia updated = await reloadSessionMedia(ref, <Card>[
@@ -362,7 +392,13 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen>
       child: Scaffold(
         appBar: ReviewSessionAppBar(
           title: deck?.name ?? l10n.reviewTitle,
-          undoEnabled: state != null && state.undoCount > 0 && !state.busy,
+          // Аудит 2.0 (P2-25): в терминальном состоянии откатывать нечего —
+          // иконка undo не остаётся над сводкой.
+          undoEnabled:
+              !terminalState &&
+              state != null &&
+              state.undoCount > 0 &&
+              !state.busy,
           onUndo: _undo,
           whyExcerpt: excerpt,
           onClose: _confirmExit,
@@ -405,10 +441,21 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen>
       );
     }
     if (_timeExpired) {
-      return ReviewTimeUpView(ratedCount: state.ratedCount, onDone: _leave);
+      return ReviewTimeUpView(
+        ratedCount: state.ratedCount,
+        ratingCounts: _ratingCounts,
+        elapsed: DateTime.now().difference(_sessionStartedAt),
+        onDone: _leave,
+      );
     }
     if (state.isCompleted) {
-      return ReviewCompletedView(ratedCount: state.ratedCount, onDone: _leave);
+      return ReviewCompletedView(
+        ratedCount: state.ratedCount,
+        ratingCounts: _ratingCounts,
+        elapsed: DateTime.now().difference(_sessionStartedAt),
+        onDone: _leave,
+        onAgain: widget.deckId == null ? null : _repeatSession,
+      );
     }
     final int displayIndex = (state.ratedCount + 1).clamp(1, state.total);
     // Аудит v7 (G3/G19): ширина карточки — от окна (≥60 % на 2K/FullHD), а не
@@ -490,6 +537,7 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen>
                       onRetryMedia: () => _retryMedia(state.current!.card),
                       revealed: state.revealed,
                       onTap: _reveal,
+                      showUndoHint: state.undoCount > 0,
                       // G1: до раскрытия в карточке только одно действие
                       // «Показать ответ»; оценок нет в дереве вообще.
                       questionFooter: FilledButton(

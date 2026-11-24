@@ -36,13 +36,15 @@ void main() {
     );
   }
 
-  // V11: «создать» на пустой базе — одна кнопка (в пустом состоянии),
-  // на непустой — кнопка шапки. Helper поддерживает оба входа.
-  Finder createButton() => find.byWidgetPredicate(
-    (Widget widget) =>
-        widget.key == const ValueKey<String>('decks-new-deck') ||
-        widget.key == const ValueKey<String>('decks-empty-create'),
-  );
+  // Аудит 2.0 (P2-01): «Новая колода» есть в шапке всегда, а пустое состояние
+  // дублирует её как подсказку. Поэтому helper выбирает ровно одну кнопку —
+  // шапку, если она уже в дереве.
+  Finder createButton() {
+    final Finder header = find.byKey(const ValueKey<String>('decks-new-deck'));
+    return header.evaluate().isNotEmpty
+        ? header
+        : find.byKey(const ValueKey<String>('decks-empty-create'));
+  }
 
   /// Прокручивает страницу к колоде [name] (карточки ниже первого экрана).
   Future<void> scrollToDeck(WidgetTester tester, String name) async {
@@ -71,7 +73,7 @@ void main() {
       expect(find.byType(AppSkeleton), findsWidgets);
       expect(find.text(l10n.decksTitle), findsOneWidget);
       expect(find.text(l10n.decksErrorTitle), findsNothing);
-      expect(find.text(l10n.decksEmptyTitle), findsNothing);
+      expect(find.text(l10n.decksWelcomeTitle), findsNothing);
     });
 
     testWidgets('empty: пустое состояние с кнопкой создания', (
@@ -83,21 +85,24 @@ void main() {
       await tester.pumpAndSettle();
 
       final AppLocalizations l10n = l10nOf(tester);
-      expect(find.text(l10n.decksEmptyTitle), findsOneWidget);
-      expect(find.text(l10n.decksEmptyMessage), findsOneWidget);
+      // Аудит 2.0 (P2-01): первый запуск — приветствие с путями к первой
+      // колоде (создать / импортировать / сгенерировать), а не пустая панель.
+      expect(find.text(l10n.decksWelcomeTitle), findsOneWidget);
+      expect(find.text(l10n.decksWelcomeMessage), findsOneWidget);
+      expect(find.text(l10n.decksWelcomeAiNote), findsOneWidget);
       expect(
         find.widgetWithText(FilledButton, l10n.decksCreateButton),
         findsOneWidget,
       );
-      // V11: единственный вход «создать» — в пустом состоянии, шапка его
-      // не дублирует.
       expect(
         find.byKey(const ValueKey<String>('decks-empty-create')),
         findsOneWidget,
       );
+      // Аудит 2.0 (P2-01/P2-05): «Новая колода» в шапке есть всегда —
+      // путь к первой колоде не спрятан в пустое состояние.
       expect(
         find.byKey(const ValueKey<String>('decks-new-deck')),
-        findsNothing,
+        findsOneWidget,
       );
     });
 
@@ -587,7 +592,8 @@ void main() {
 
       expect(repository.deletedIds, <String>['deck-1']);
       expect(find.text('Испанский'), findsNothing);
-      expect(find.text(l10n.decksEmptyTitle), findsOneWidget);
+      // Аудит 2.0 (P2-01): пустая база — приветствие с путями к первой колоде.
+      expect(find.text(l10n.decksWelcomeTitle), findsOneWidget);
     });
 
     testWidgets('отмена удаления не трогает колоду', (

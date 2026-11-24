@@ -106,7 +106,8 @@ void main() {
     expect(find.byType(FeedCardView), findsWidgets);
     expect(find.text('Вопрос 1'), findsOneWidget);
     expect(find.text('Ответ 1'), findsNothing);
-    expect(find.text(l10n.feedBrowseBadge), findsOneWidget);
+    // Аудит 2.0 (P3-08): режим называется «Лента» везде.
+    expect(find.text(l10n.feedBrowseBadgeV2), findsOneWidget);
     expect(find.text(l10n.reviewCardCounter(1, 2)), findsOneWidget);
     // В ленте нет ни одной кнопки оценки, интервалов и техн. бейджа FSRS.
     for (final String rating in <String>['again', 'hard', 'good', 'easy']) {

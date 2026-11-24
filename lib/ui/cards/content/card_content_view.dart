@@ -40,6 +40,7 @@ class CardContentView extends StatelessWidget {
     this.imageMaxHeight = kCardImageMaxHeight,
     this.imageMaxWidth = kCardImageMaxWidth,
     this.sideBySide = false,
+    this.mediaAfterText = false,
     super.key,
   });
 
@@ -89,6 +90,13 @@ class CardContentView extends StatelessWidget {
   /// картинка получает полную высоту контента, не срезается и занимает
   /// ≥35 % контентной площади, а строки остаются в 45–75 знаках.
   final bool sideBySide;
+
+  /// Ставить изображение после текста, а не перед ним.
+  ///
+  /// Аудит 2.0 (P1-01): в вертикальной раскладке сначала читается вопрос, а
+  /// картинка идёт под ним — иначе изображение «съедает» первый экран и текст
+  /// приходится искать. В раскладке «рядом» порядок не важен.
+  final bool mediaAfterText;
 
   /// Сторона вопроса (лицевая): `side` — front или неизвестная строка.
   bool get _isQuestionSide => side != card.back || side == card.front;
@@ -151,12 +159,18 @@ class CardContentView extends StatelessWidget {
     }
 
     final String text = _displayText();
+    // Аудит 2.0 (P1-01): короткая карточка читается лучше по центру, длинный
+    // абзац — по левому краю. Раньше всё было центрировано, и многострочный
+    // ответ «плясал» по строкам разной длины.
+    final TextAlign textAlign = text.length > 160
+        ? TextAlign.start
+        : TextAlign.center;
     if (text.isNotEmpty) {
       if (card.cardType == CardType.cloze && text.contains('{{')) {
         content.add(
           DefaultTextStyle.merge(
             style: style,
-            textAlign: TextAlign.center,
+            textAlign: textAlign,
             child: ClozeText(source: text, revealed: revealed),
           ),
         );
@@ -167,7 +181,7 @@ class CardContentView extends StatelessWidget {
         content.add(
           DefaultTextStyle.merge(
             style: style,
-            textAlign: TextAlign.center,
+            textAlign: textAlign,
             child: LatexText(
               source: text,
               revealed: revealed || showAllFormulas,
@@ -180,47 +194,47 @@ class CardContentView extends StatelessWidget {
       content.add(SizedBox(key: faceKey));
     }
     // F08/V7: на широкой карточке с изображением — «текст + картинка» рядом.
-    // Изображение получает полную высоту тела карточки (minHeight), поэтому
-    // не срезается и занимает заметную долю контентной площади; текст — в
-    // читаемой колонке 5:4.
+    // Аудит 2.0 (P1-01): картинка получает **фиксированную** ширину слота, а не
+    // Expanded — иначе её собственный размер (maxHeight × aspect) превышал слот
+    // и изображение заезжало под текст.
     if (sideBySide &&
         mediaContent.isNotEmpty &&
         content.isNotEmpty &&
         occlusionJson == null) {
-      return ConstrainedBox(
-        constraints: BoxConstraints(
-          minHeight: imageMaxHeight.isFinite && imageMaxHeight > 0
-              ? imageMaxHeight
-              : 0,
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: <Widget>[
-            Expanded(
-              flex: 4,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: content,
-              ),
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: <Widget>[
+          Expanded(
+            flex: 5,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: content,
             ),
-            const SizedBox(width: AppSpacing.lg),
-            Expanded(
-              flex: 5,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: mediaContent,
-              ),
+          ),
+          const SizedBox(width: AppSpacing.lg),
+          SizedBox(
+            width: imageMaxWidth.isFinite && imageMaxWidth > 0
+                ? imageMaxWidth
+                : 320,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: mediaContent,
             ),
-          ],
-        ),
+          ),
+        ],
       );
     }
+    final List<Widget> mediaBlock = mediaContent.isEmpty
+        ? const <Widget>[]
+        : <Widget>[const SizedBox(height: AppSpacing.md), ...mediaContent];
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.center,
-      children: <Widget>[...mediaContent, ...content],
+      children: mediaAfterText
+          ? <Widget>[...content, ...mediaBlock]
+          : <Widget>[...mediaContent, ...content],
     );
   }
 

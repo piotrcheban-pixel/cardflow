@@ -373,7 +373,8 @@ void main() {
 
     expect(find.text(l10n.reviewCompletedTitle), findsOneWidget);
     expect(find.text(l10n.reviewCompletedMessage(2)), findsOneWidget);
-    expect(find.text(l10n.reviewDone), findsOneWidget);
+    // Аудит 2.0 (P2-25): из сводки — «К карточкам» (второе действие «Ещё раз»).
+    expect(find.text(l10n.reviewToDeckAction), findsOneWidget);
   });
 
   testWidgets('пустая очередь — пустое состояние с кнопкой «Назад»', (

@@ -593,6 +593,26 @@ abstract final class AppSizes {
     return (formMaxWidth * factor.clamp(1.0, 1.45)).clamp(formMaxWidth, 720.0);
   }
 
+  /// Ширина широкой формы: 640–920 px (генерация, провайдеры).
+  ///
+  /// Аудит 2.0 (P2-18): колонка генерации занимала 607 px из 1006 доступных,
+  /// и заголовок рвался («ИИ» на отдельной строке). Широкая форма использует
+  /// 82 % контентной ширины, но не выходит за 920 px (строки остаются
+  /// читаемыми) и никогда не шире самой страницы (телефон — вся ширина).
+  static double wideFormWidth(BuildContext context) {
+    final double page = pageWidth(context);
+    final double upper = math.max(AppSpacing.xs, math.min(920.0, page));
+    final double lower = math.min(formMaxWidth, upper);
+    return (page * 0.82).clamp(lower, upper);
+  }
+
+  /// Максимальная высота карточки изучения на больших экранах.
+  ///
+  /// Аудит 2.0 (P1-01/P2-27): карточка — главный объект, но не «белый лист» на
+  /// весь 4K-монитор: высота ограничена 720 × адаптивный множитель.
+  static double studyCardMaxHeightFor(BuildContext context) =>
+      720 * AppAdaptive.factorForContext(context).clamp(1.0, 1.3);
+
   /// Ширина карточки сессии: главный объект экрана на десктопе.
   ///
   /// Аудит v7 (G3/G19): раньше это был **фиксированный** максимум 960 — на 2K

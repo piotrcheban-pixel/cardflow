@@ -100,10 +100,10 @@ void main() {
     );
   });
 
-  // F01/V3: крупная типографика карточки — вопрос 46,4 и ответ 31,2 на
-  // FullHD (32×1,45 и 24×1,3); прежние «30–38/22–28» были нормой для мелкой
-  // карточки-полоски.
-  testWidgets('D1: вопрос 44–50 px, ответ 28–34 px', (
+  // Аудит 2.0 (P1-05/P2-27): единая шкала «вопрос карточки» — 34 px на
+  // FullHD (вместо 46,4, которые не влезали в текстовую колонку), ответ —
+  // 0,88 вопроса, повтор вопроса на обороте — 0,74 вопроса.
+  testWidgets('P1-05: вопрос 32–36 px, ответ 28–32 px, кегль стабилен', (
     WidgetTester tester,
   ) async {
     await pumpAt(tester, const Size(1280, 720));
@@ -119,15 +119,21 @@ void main() {
       return size!;
     }
 
-    expect(
-      renderedFontSize('Сформулируйте закон Ома'),
-      inInclusiveRange(44, 50),
-    );
+    final double questionSize = renderedFontSize('Сформулируйте закон Ома');
+    expect(questionSize, inInclusiveRange(32, 36));
 
     await tester.tap(find.byKey(const ValueKey<String>('review-card')));
     await tester.pumpAndSettle();
 
-    expect(renderedFontSize('Сила тока на участке'), inInclusiveRange(28, 34));
+    final double answerSize = renderedFontSize('Сила тока на участке');
+    expect(answerSize, inInclusiveRange(28, 32));
+    // Ответ не крупнее вопроса: иерархия не инвертируется после переворота.
+    expect(answerSize, lessThanOrEqualTo(questionSize));
+    // Повторённый вопрос на обороте не «схлопывается» до 21 px: 0,74 кегля.
+    final double echoSize = renderedFontSize(
+      'Сформулируйте закон Ома для участка цепи',
+    );
+    expect(echoSize, greaterThan(questionSize * 0.6));
   });
 
   testWidgets('D3: раскрытая карточка показывает вопрос и ответ', (

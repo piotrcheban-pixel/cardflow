@@ -11,6 +11,10 @@ import 'package:cardflow/ui/theme/app_tokens.dart';
 /// аккаунт невалиден (пустые адрес/модель): генерация в такой конфигурации
 /// недоступна, и пользователь должен увидеть причину там, где он работает, а
 /// не только на экране генерации. Кнопка ведёт прямо к исправлению.
+///
+/// Аудит 2.0 (P2-01): это **настройка**, а не сбой приложения. Тон — спокойный
+/// предупреждающий (tertiary), а не `errorContainer`: красная полоса на первом
+/// запуске читалась как «приложение сломано».
 class PrimaryProviderBanner extends StatelessWidget {
   /// Создаёт баннер.
   const PrimaryProviderBanner({this.showAction = true, super.key});
@@ -23,6 +27,8 @@ class PrimaryProviderBanner extends StatelessWidget {
     final AppLocalizations l10n = AppLocalizations.of(context);
     final ThemeData theme = Theme.of(context);
     final ColorScheme scheme = theme.colorScheme;
+    final Color background = scheme.tertiaryContainer;
+    final Color foreground = scheme.onTertiaryContainer;
     return Container(
       key: const ValueKey<String>('primary-provider-banner'),
       padding: const EdgeInsets.fromLTRB(
@@ -32,31 +38,23 @@ class PrimaryProviderBanner extends StatelessWidget {
         AppSpacing.xs,
       ),
       decoration: BoxDecoration(
-        color: scheme.errorContainer,
+        color: background,
         borderRadius: BorderRadius.circular(AppRadii.input),
       ),
       child: Row(
         children: <Widget>[
-          Icon(Icons.key_off_outlined, color: scheme.onErrorContainer),
+          Icon(Icons.info_outline, color: foreground),
           const SizedBox(width: AppSpacing.xs),
           Expanded(
             child: Text(
               l10n.settingsProvidersPrimaryBroken,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: scheme.onErrorContainer,
-              ),
+              style: theme.textTheme.bodyMedium?.copyWith(color: foreground),
             ),
           ),
           if (showAction)
             TextButton(
               key: const ValueKey<String>('primary-provider-fix'),
-              style: TextButton.styleFrom(
-                foregroundColor: scheme.onErrorContainer,
-                textStyle: theme.textTheme.labelLarge?.copyWith(
-                  decoration: TextDecoration.underline,
-                  decorationColor: scheme.onErrorContainer,
-                ),
-              ),
+              style: TextButton.styleFrom(foregroundColor: foreground),
               onPressed: () => context.push(AppRoutes.generationSettingsPath),
               child: Text(l10n.settingsProvidersFixAction),
             ),

@@ -13,6 +13,7 @@ import 'package:cardflow/ui/components/app_filter_chip.dart';
 import 'package:cardflow/ui/components/app_layout.dart';
 import 'package:cardflow/ui/components/app_surfaces.dart';
 import 'package:cardflow/ui/decks/deck_actions.dart';
+import 'package:cardflow/ui/format/app_dates.dart';
 import 'package:cardflow/ui/decks/deck_modes_sheet.dart';
 import 'package:cardflow/ui/router/app_router.dart';
 import 'package:cardflow/ui/settings/provider_banner.dart';
@@ -105,11 +106,16 @@ class DecksScreen extends ConsumerWidget {
           subtitle: veryCompact
               ? null
               : Text(l10n.decksSubtitleDecks(decks.length)),
-          overline: compactHeight ? null : Text(l10n.decksOverline),
-          // V11: на первом запуске (пустая база) единственный вход «создать»
-          // живёт в пустом состоянии — шапка его не дублирует; импорт остаётся.
+          // Аудит 2.0 (§1.2): надзаголовок «Интервальное повторение» дублирует
+          // описание продукта и на телефоне занимает строку первого экрана.
+          overline: compactHeight || window.width < 720
+              ? null
+              : Text(l10n.decksOverline),
+          // V11: шапка больше не прячет «создать» на первом запуске (аудит
+          // 2.0, P2-01/P2-05): путь к первой колоде доступен в один клик,
+          // а пустое состояние дублирует только как подсказку.
           actions: <Widget>[
-            if (!firstLaunch && narrowHeader)
+            if (narrowHeader)
               FilledButton.icon(
                 key: const ValueKey<String>('decks-new-deck'),
                 onPressed: () => createDeckManually(context, ref),
@@ -139,14 +145,13 @@ class DecksScreen extends ConsumerWidget {
                 icon: const Icon(Icons.file_download_outlined),
                 label: Text(l10n.decksImportButton),
               ),
-              if (!firstLaunch)
-                FilledButton.icon(
-                  key: const ValueKey<String>('decks-new-deck'),
-                  onPressed: () => createDeckManually(context, ref),
-                  icon: const Icon(Icons.add),
-                  label: Text(l10n.decksNewDeck),
-                  style: AppButtons.large(context),
-                ),
+              FilledButton.icon(
+                key: const ValueKey<String>('decks-new-deck'),
+                onPressed: () => createDeckManually(context, ref),
+                icon: const Icon(Icons.add),
+                label: Text(l10n.decksNewDeck),
+                style: AppButtons.large(context),
+              ),
             ],
           ],
         ),
@@ -158,7 +163,10 @@ class DecksScreen extends ConsumerWidget {
           // (пустая база) метрики и панель фильтров не показываются вовсе —
           // первым видно пустое состояние с действиями.
           if (showChrome && !filteredEmpty && !veryCompact) ...<Widget>[
-            if (compactHeight)
+            // Аудит 2.0 (P2/§1.2): на телефоне 2×2 KPI-плитки съедали первый
+            // экран — до первой колоды было видно только счётчики. Узкий экран
+            // получает компактную строку метрик.
+            if (compactHeight || window.width < 720)
               _MetricsLine(
                 totalCards: totalCards,
                 dueCards: dueCards,
@@ -431,7 +439,8 @@ class _MetricsStrip extends StatelessWidget {
           ),
           AppStatTile(
             key: const ValueKey<String>('decks-kpi-decks'),
-            label: l10n.decksMetricDecks,
+            // Аудит 2.0 (P3-07): «1 Колод» — подпись согласуется с числом.
+            label: l10n.decksMetricDecksLabel(decks),
             value: number.format(decks),
             icon: Icons.view_agenda_outlined,
             iconColor: scheme.primary,
@@ -974,7 +983,41 @@ class _DeckCollection extends StatelessWidget {
         final double gap = AppSpacing.md;
         final double width =
             (constraints.maxWidth - gap * (columns - 1)) / columns;
+        // Аудит 2.0 (P2-06): «список» показывал одну колоду на экран.
+        // Теперь это компактные строки 84–96 px — плотность выше сетки.
+        if (viewMode == DecksViewMode.list) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              for (
+                int index = 0;
+                index < summaries.length;
+                index++
+              ) ...<Widget>[
+                if (index > 0) const SizedBox(height: AppSpacing.xs),
+                Dismissible(
+                  key: ValueKey<String>(
+                    'deck-card-${summaries[index].deck.id}',
+                  ),
+                  direction: DismissDirection.endToStart,
+                  background: const _ArchiveSwipeBackground(),
+                  onDismissed: (DismissDirection direction) =>
+                      onArchive(summaries[index]),
+                  child: _DeckRow(
+                    summary: summaries[index],
+                    maxWidth: constraints.maxWidth,
+                    onOpen: () => onOpen(summaries[index]),
+                    onStudy: () => onStudy(summaries[index]),
+                    onMenu: () => onMenu(summaries[index]),
+                  ),
+                ),
+              ],
+            ],
+          );
+        }
         return Wrap(
+          alignment: WrapAlignment.start,
+          crossAxisAlignment: WrapCrossAlignment.start,
           spacing: gap,
           runSpacing: gap,
           children: <Widget>[
@@ -998,6 +1041,172 @@ class _DeckCollection extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+/// Компактная строка колоды для режима «список» (аудит 2.0, P2-06).
+///
+/// Высота 84–96 px: имя, состояние, число карточек, мини-прогресс и действия —
+/// как в списках Anki/Quizlet, а не растянутая на всю ширину плитка.
+class _DeckRow extends StatelessWidget {
+  const _DeckRow({
+    required this.summary,
+    required this.maxWidth,
+    required this.onOpen,
+    required this.onStudy,
+    required this.onMenu,
+  });
+
+  final DeckSummary summary;
+  final double maxWidth;
+  final VoidCallback onOpen;
+  final VoidCallback onStudy;
+  final VoidCallback onMenu;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
+    final int total = summary.totalCards;
+    final int studied = total - summary.newCards;
+    final double progress = total == 0 ? 0 : studied / total;
+    final bool hasWork = summary.dueCards > 0 || summary.newCards > 0;
+    final bool narrow = maxWidth < 720;
+    final bool veryNarrow = maxWidth < 520;
+    final Widget status = summary.totalCards == 0
+        ? AppStatusChip(
+            label: l10n.deckCardsEmpty,
+            tone: AppStatusTone.neutral,
+            dense: true,
+          )
+        : summary.dueCards > 0
+        ? AppStatusChip(
+            label: l10n.deckDueCount(summary.dueCards),
+            tone: AppStatusTone.info,
+            icon: Icons.schedule,
+            dense: true,
+          )
+        : summary.newCards > 0
+        ? AppStatusChip(
+            label: l10n.deckNewCount(summary.newCards),
+            tone: AppStatusTone.neutral,
+            dense: true,
+          )
+        : AppStatusChip(
+            label: l10n.deckAllReviewed,
+            tone: AppStatusTone.success,
+            icon: Icons.check_circle,
+            dense: true,
+          );
+    return AppPanel(
+      key: ValueKey<String>('deck-row-${summary.deck.id}'),
+      onTap: onOpen,
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        AppSpacing.sm,
+        AppSpacing.xs,
+        AppSpacing.sm,
+      ),
+      radius: AppRadii.input,
+      child: Row(
+        children: <Widget>[
+          _DeckMonogram(name: summary.deck.name, size: veryNarrow ? 36 : 44),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Text(
+                  summary.deck.name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.titleMedium,
+                ),
+                const SizedBox(height: 2),
+                Wrap(
+                  spacing: AppSpacing.xs,
+                  runSpacing: 2,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: <Widget>[
+                    status,
+                    Text(
+                      l10n.deckCardCount(total),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                    if (total > 0)
+                      Text(
+                        l10n.statisticsRetentionValue((progress * 100).round()),
+                        style: AppTypography.numeric(
+                          context,
+                          color: progress >= 1
+                              ? scheme.secondary
+                              : scheme.onSurfaceVariant,
+                        ),
+                      ),
+                  ],
+                ),
+                if (!veryNarrow) ...<Widget>[
+                  const SizedBox(height: AppSpacing.xxs + 2),
+                  AppProgressBar(
+                    value: progress,
+                    height: 4,
+                    color: progress >= 1 ? scheme.secondary : scheme.primary,
+                    semanticsLabel: l10n.decksProgressLabel,
+                  ),
+                ],
+              ],
+            ),
+          ),
+          if (!narrow) ...<Widget>[
+            const SizedBox(width: AppSpacing.sm),
+            hasWork
+                ? OutlinedButton.icon(
+                    key: ValueKey<String>('deck-study-${summary.deck.id}'),
+                    onPressed: onStudy,
+                    icon: const Icon(
+                      Icons.play_arrow,
+                      size: AppSizes.iconSmall,
+                    ),
+                    label: Text(l10n.deckStudyAction),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(0, AppSizes.minTouchTarget),
+                      foregroundColor: scheme.primary,
+                    ),
+                  )
+                : OutlinedButton.icon(
+                    key: ValueKey<String>('deck-study-${summary.deck.id}'),
+                    onPressed: onOpen,
+                    icon: const Icon(
+                      Icons.visibility_outlined,
+                      size: AppSizes.iconSmall,
+                    ),
+                    label: Text(l10n.deckReviewAction),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(0, AppSizes.minTouchTarget),
+                    ),
+                  ),
+          ],
+          IconButton(
+            key: ValueKey<String>('deck-menu-${summary.deck.id}'),
+            tooltip: l10n.deckMoreActions,
+            icon: const Icon(Icons.more_horiz, size: AppSizes.icon),
+            onPressed: onMenu,
+            style: IconButton.styleFrom(
+              foregroundColor: scheme.outline,
+              minimumSize: const Size(
+                AppSizes.minTouchTarget,
+                AppSizes.minTouchTarget,
+              ),
+              padding: EdgeInsets.zero,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1098,9 +1307,13 @@ class _DeckTile extends StatelessWidget {
         ? 0
         : studied / summary.totalCards;
     final bool hasWork = summary.dueCards > 0 || summary.newCards > 0;
-    final String date = MaterialLocalizations.of(context)
-        .formatShortDate(summary.deck.updatedAt.toLocal());
+    // Аудит 2.0 (P3-13): единый формат дат интерфейса.
+    final String date = formatRelativeDate(summary.deck.updatedAt);
 
+    // Аудит 2.0 (P2-08): плитка выравнивается по содержимому, без резерва
+    // «три строки под имя». Под имя оставлено ровно две строки — плитки одной
+    // строки получают одинаковую высоту, но пустоты между именем и счётчиками
+    // больше нет (высота ≈230 вместо 287).
     return AppPanel(
       key: ValueKey<String>('deck-tile-${summary.deck.id}'),
       onTap: onOpen,
@@ -1114,30 +1327,17 @@ class _DeckTile extends StatelessWidget {
               _DeckMonogram(name: summary.deck.name),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      l10n.deckOverline.toUpperCase(),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTypography.overline(context),
-                    ),
-                    SizedBox(
-                      // F34/V10: три строки под имя зарезервированы всегда —
-                      // длинные имена не обрезаются, плитки одной строки равны.
-                      height:
-                          (theme.textTheme.titleMedium?.fontSize ?? 18) *
-                          (theme.textTheme.titleMedium?.height ?? 1.45) *
-                          3,
-                      child: Text(
-                        summary.deck.name,
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.titleMedium,
-                      ),
-                    ),
-                  ],
+                child: SizedBox(
+                  height:
+                      (theme.textTheme.titleMedium?.fontSize ?? 18) *
+                      (theme.textTheme.titleMedium?.height ?? 1.45) *
+                      2,
+                  child: Text(
+                    summary.deck.name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.titleMedium,
+                  ),
                 ),
               ),
               IconButton(
@@ -1157,7 +1357,7 @@ class _DeckTile extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.sm),
+          const SizedBox(height: AppSpacing.xs),
           Wrap(
             spacing: AppSpacing.xs,
             runSpacing: AppSpacing.xxs,
@@ -1201,7 +1401,7 @@ class _DeckTile extends StatelessWidget {
                 ),
             ],
           ),
-          const SizedBox(height: AppSpacing.md),
+          const SizedBox(height: AppSpacing.sm),
           Row(
             children: <Widget>[
               Expanded(
@@ -1233,8 +1433,8 @@ class _DeckTile extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(top: AppSpacing.sm),
             child: LayoutBuilder(
-              builder: (BuildContext context, BoxConstraints constraints) {
-                final Widget updatedRow = Row(
+              builder: (BuildContext context, BoxConstraints inner) {
+                final Widget dateRow = Row(
                   children: <Widget>[
                     Icon(
                       Icons.schedule,
@@ -1245,7 +1445,7 @@ class _DeckTile extends StatelessWidget {
                     Expanded(
                       child: Text(
                         l10n.deckUpdated(date),
-                        maxLines: 2,
+                        maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: scheme.onSurfaceVariant,
@@ -1254,10 +1454,10 @@ class _DeckTile extends StatelessWidget {
                     ),
                   ],
                 );
+                // Аудит v5 (V5-4): «Учить» — действие уровня карточки,
+                // поэтому outlined, а не filled: единственное filled-primary
+                // на экране — «Новая колода».
                 final Widget action = hasWork
-                    // Аудит v5 (V5-4): «Учить» — действие уровня карточки,
-                    // поэтому outlined, а не filled: единственное filled-primary
-                    // на экране — «Новая колода».
                     ? OutlinedButton.icon(
                         key: ValueKey<String>('deck-study-${summary.deck.id}'),
                         onPressed: onStudy,
@@ -1268,12 +1468,7 @@ class _DeckTile extends StatelessWidget {
                           side: BorderSide(
                             color: scheme.primary.withValues(alpha: 0.55),
                           ),
-                          minimumSize: Size(
-                            0,
-                            AppSizes.buttonHeight *
-                                AppAdaptive.factorForContext(context)
-                                    .clamp(1.0, 1.3),
-                          ),
+                          minimumSize: const Size(0, AppSizes.buttonHeight),
                           padding: const EdgeInsets.symmetric(
                             horizontal: AppSpacing.sm,
                           ),
@@ -1285,24 +1480,19 @@ class _DeckTile extends StatelessWidget {
                         icon: const Icon(Icons.visibility_outlined),
                         label: Text(l10n.deckReviewAction),
                         style: OutlinedButton.styleFrom(
-                          minimumSize: Size(
-                            0,
-                            AppSizes.buttonHeight *
-                                AppAdaptive.factorForContext(context)
-                                    .clamp(1.0, 1.3),
-                          ),
+                          minimumSize: const Size(0, AppSizes.buttonHeight),
                           padding: const EdgeInsets.symmetric(
                             horizontal: AppSpacing.sm,
                           ),
                         ),
                       );
-                // Аудит v2 (A1): на 260 лог. px кнопка и дата не влезали в одну
-                // строку — на узкой карточке кнопка уходит на свою строку.
-                if (constraints.maxWidth < 240) {
+                // Аудит 2.0 (A1 v2): на плитке шириной 188 px дата и кнопка
+                // не помещаются в одну строку — кнопка уходит на свою строку.
+                if (inner.maxWidth < 260) {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: <Widget>[
-                      updatedRow,
+                      dateRow,
                       const SizedBox(height: AppSpacing.xs),
                       Align(
                         alignment: AlignmentDirectional.centerEnd,
@@ -1313,22 +1503,7 @@ class _DeckTile extends StatelessWidget {
                 }
                 return Row(
                   children: <Widget>[
-                    Icon(
-                      Icons.schedule,
-                      size: AppSizes.iconSmall,
-                      color: scheme.outline,
-                    ),
-                    const SizedBox(width: AppSpacing.xxs),
-                    Expanded(
-                      child: Text(
-                        l10n.deckUpdated(date),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: scheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ),
+                    Expanded(child: dateRow),
                     const SizedBox(width: AppSpacing.xs),
                     action,
                   ],
@@ -1349,9 +1524,12 @@ class _DeckTile extends StatelessWidget {
 /// визуально неразличимы. Теперь монограмма нейтральная, а цвет колоды несут
 /// её статусные чипы.
 class _DeckMonogram extends StatelessWidget {
-  const _DeckMonogram({required this.name});
+  const _DeckMonogram({required this.name, this.size = 44});
 
   final String name;
+
+  /// Сторона квадрата: 44 в плитке сетки, 36–44 в компактной строке.
+  final double size;
 
   @override
   Widget build(BuildContext context) {
@@ -1361,8 +1539,8 @@ class _DeckMonogram extends StatelessWidget {
         ? '?'
         : name.trim().substring(0, 1).toUpperCase();
     return Container(
-      width: 44,
-      height: 44,
+      width: size,
+      height: size,
       decoration: BoxDecoration(
         color: scheme.surfaceContainerHigh,
         borderRadius: BorderRadius.circular(AppRadii.input),
@@ -1422,7 +1600,7 @@ class _MetricsLine extends StatelessWidget {
           ),
           _MetricValue(
             key: const ValueKey<String>('decks-kpi-decks'),
-            label: l10n.decksMetricDecks,
+            label: l10n.decksMetricDecksLabel(decks),
             value: decks,
           ),
         ],
@@ -1467,12 +1645,15 @@ class _MetricValue extends StatelessWidget {
 
 /// Пустое состояние первого запуска (находка D16).
 ///
-/// Функциональный виджет, а не литерал в дереве: действия «Создать» и
-/// «Сгенерировать» должны работать, а не быть заглушкой.
+/// Аудит 2.0 (P2-01): вместо «ошибки» провайдера и пустой панели — приветствие
+/// с явными шагами: создать колоду, импортировать готовую, сгенерировать
+/// карточки. AI-подсказка нейтральная: ИИ не обязателен.
 class _FirstLaunchEmptyState extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final AppLocalizations l10n = AppLocalizations.of(context);
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
     return ConstrainedBox(
       // V2: пустое состояние — не миниатюра, а полноценный экран высотой с
       // карточку сессии (≥40 % площади).
@@ -1484,8 +1665,38 @@ class _FirstLaunchEmptyState extends ConsumerWidget {
         child: AppEmptyState(
           hero: true,
           icon: Icons.style_outlined,
-          title: l10n.decksEmptyTitle,
-          message: l10n.decksEmptyMessage,
+          title: l10n.decksWelcomeTitle,
+          message: l10n.decksWelcomeMessage,
+          body: DecoratedBox(
+            decoration: BoxDecoration(
+              color: scheme.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(AppRadii.input),
+            ),
+            child: Row(
+              children: <Widget>[
+                Icon(
+                  Icons.auto_awesome_outlined,
+                  size: AppSizes.iconLarge,
+                  color: scheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    l10n.decksWelcomeAiNote,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+                TextButton(
+                  key: const ValueKey<String>('decks-welcome-ai-setup'),
+                  onPressed: () =>
+                      context.push(AppRoutes.generationSettingsPath),
+                  child: Text(l10n.decksWelcomeAiAction),
+                ),
+              ],
+            ),
+          ),
           actions: <Widget>[
             FilledButton(
               key: const ValueKey<String>('decks-empty-create'),
@@ -1499,6 +1710,12 @@ class _FirstLaunchEmptyState extends ConsumerWidget {
               onPressed: () => context.push(AppRoutes.generationPath),
               icon: const Icon(Icons.auto_awesome_outlined),
               label: Text(l10n.decksCreateGenerate),
+            ),
+            TextButton.icon(
+              key: const ValueKey<String>('decks-empty-import'),
+              onPressed: () => importDeckZip(context, ref),
+              icon: const Icon(Icons.file_download_outlined),
+              label: Text(l10n.decksImportButton),
             ),
           ],
         ),

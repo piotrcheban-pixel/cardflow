@@ -2,9 +2,11 @@ import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
 
+import 'package:cardflow/domain/scheduling/rating.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/components/app_dialogs.dart';
 import 'package:cardflow/ui/components/app_surfaces.dart';
+import 'package:cardflow/ui/review/review_toolbar.dart';
 import 'package:cardflow/ui/theme/app_tokens.dart';
 import 'package:cardflow/ui/theme/app_typography.dart';
 
@@ -117,21 +119,26 @@ class ReviewSessionAppBar extends StatelessWidget
                 ),
                 if (showFsrsBadge) ...<Widget>[
                   const SizedBox(width: AppSpacing.xs),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.xs,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: scheme.surfaceContainer,
-                      borderRadius: BorderRadius.circular(AppRadii.xs),
-                      border: Border.all(color: scheme.outlineVariant),
-                    ),
-                    child: Text(
-                      l10n.reviewFsrsBadge,
-                      style: AppTypography.caption(
-                        context,
-                        color: scheme.onSurfaceVariant,
+                  // Аудит 2.0 (P3-06): «FSRS» — аббревиатура; расшифровка в
+                  // подсказке, чтобы новичок понимал, что это расписание.
+                  Tooltip(
+                    message: l10n.reviewFsrsTooltip,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.xs,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: scheme.surfaceContainer,
+                        borderRadius: BorderRadius.circular(AppRadii.xs),
+                        border: Border.all(color: scheme.outlineVariant),
+                      ),
+                      child: Text(
+                        l10n.reviewFsrsBadge,
+                        style: AppTypography.caption(
+                          context,
+                          color: scheme.onSurfaceVariant,
+                        ),
                       ),
                     ),
                   ),
@@ -193,6 +200,21 @@ class ReviewSessionAppBar extends StatelessWidget
   }
 }
 
+/// Режим, из которого выходит пользователь: от него зависит текст диалога.
+enum SessionExitKind {
+  /// Классическое повторение: оценки уже записаны, текущая карточка — нет.
+  classic,
+
+  /// Свободный просмотр «Лента»: ничего не записывается.
+  feed,
+
+  /// Тренировка: оценки пишутся в `review_logs`, расписание не меняется.
+  practice,
+
+  /// Проверочные режимы («Тест», «Ввод», «Пары», «Верно/Неверно»).
+  study,
+}
+
 /// Диалог выхода из сессии (SPEC A6.4): «Продолжить» / «Выйти».
 ///
 /// Аудит v4 (V11): один вход (кнопка «×» или Esc) и один диалог; из диалога
@@ -203,15 +225,31 @@ class ReviewSessionAppBar extends StatelessWidget
 /// Аудит v7 (G5/V7-14): убрано дублирование «остаться» — раньше крестик в
 /// шапке и filled-кнопка «Продолжить» делали одно и то же. Теперь «остаться» —
 /// ровно один вход (кнопка), а Esc/крестик закрытия в диалоге нет.
-Future<bool> confirmReviewExit(BuildContext context) async {
+///
+/// Аудит 2.0 (P2-03): текст диалога соответствует режиму — в «Ленте» оценок
+/// нет, в «Тренировке» они уже сохранены.
+Future<bool> confirmReviewExit(
+  BuildContext context, {
+  SessionExitKind kind = SessionExitKind.classic,
+  String? title,
+  String? message,
+}) async {
   final AppLocalizations l10n = AppLocalizations.of(context);
   final ThemeData theme = Theme.of(context);
+  final String resolvedMessage =
+      message ??
+      switch (kind) {
+        SessionExitKind.classic => l10n.reviewExitDialogMessage,
+        SessionExitKind.feed => l10n.sessionExitFeedMessage,
+        SessionExitKind.practice => l10n.sessionExitPracticeMessage,
+        SessionExitKind.study => l10n.sessionExitStudyMessage,
+      };
   // AppDialog передаёт действиям контекст диалога — правило ADR-036
   // (закрывается маршрут диалога, а не экран-ветка).
   final bool? result = await showAppDialog<bool>(
     context: context,
-    title: l10n.reviewExitDialogTitle,
-    subtitle: l10n.reviewExitDialogMessage,
+    title: title ?? l10n.reviewExitDialogTitle,
+    subtitle: resolvedMessage,
     bodyBuilder: (BuildContext dialogContext) => const SizedBox.shrink(),
     // F12: та же семантика destructive, что у удаления колоды — опасное
     // действие залито error, безопасное — нейтральный текст.
@@ -341,11 +379,17 @@ class ReviewEmptyView extends StatelessWidget {
 }
 
 /// Итоговое состояние завершённой сессии.
+///
+/// Аудит 2.0 (P2-25): момент завершения даёт обратную связь — разбивка оценок,
+/// время и два действия, а не только число и маленькая кнопка «Готово».
 class ReviewCompletedView extends StatelessWidget {
   /// Создаёт итоговый экран.
   const ReviewCompletedView({
     required this.ratedCount,
     required this.onDone,
+    this.ratingCounts = const <Rating, int>{},
+    this.elapsed,
+    this.onAgain,
     super.key,
   });
 
@@ -354,6 +398,15 @@ class ReviewCompletedView extends StatelessWidget {
 
   /// Закрыть сессию.
   final VoidCallback onDone;
+
+  /// Разбивка оценок (Again/Hard/Good/Easy).
+  final Map<Rating, int> ratingCounts;
+
+  /// Длительность сессии.
+  final Duration? elapsed;
+
+  /// Повторить сессию; `null` — действия нет.
+  final VoidCallback? onAgain;
 
   @override
   Widget build(BuildContext context) {
@@ -367,13 +420,155 @@ class ReviewCompletedView extends StatelessWidget {
         metric: Text(ratedCount.toString()),
         title: l10n.reviewCompletedTitle,
         message: l10n.reviewCompletedMessage(ratedCount),
+        body: SessionSummary(ratingCounts: ratingCounts, elapsed: elapsed),
         actions: <Widget>[
           FilledButton(
             key: const ValueKey<String>('review-completed-done'),
             onPressed: onDone,
-            child: Text(l10n.reviewDone),
+            child: Text(l10n.reviewToDeckAction),
           ),
+          if (onAgain != null)
+            OutlinedButton(
+              key: const ValueKey<String>('review-completed-again'),
+              onPressed: onAgain,
+              child: Text(l10n.reviewAgainAction),
+            ),
         ],
+      ),
+    );
+  }
+}
+
+/// Сводка сессии: разбивка оценок, доля «без ошибок» и время.
+class SessionSummary extends StatelessWidget {
+  /// Создаёт сводку.
+  const SessionSummary({required this.ratingCounts, this.elapsed, super.key});
+
+  /// Разбивка оценок.
+  final Map<Rating, int> ratingCounts;
+
+  /// Длительность сессии.
+  final Duration? elapsed;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
+    final int total = ratingCounts.values.fold<int>(0, (int a, int b) => a + b);
+    final int clean =
+        (ratingCounts[Rating.good] ?? 0) + (ratingCounts[Rating.easy] ?? 0);
+    final int percent = total == 0 ? 0 : (clean * 100 / total).round();
+    final Duration? duration = elapsed;
+    return Column(
+      key: const ValueKey<String>('review-summary'),
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        if (total > 0)
+          Row(
+            children: <Widget>[
+              for (final Rating rating in Rating.values)
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.xxs,
+                    ),
+                    child: _SummaryRatingCell(
+                      rating: rating,
+                      count: ratingCounts[rating] ?? 0,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        const SizedBox(height: AppSpacing.sm),
+        Wrap(
+          alignment: WrapAlignment.center,
+          spacing: AppSpacing.md,
+          runSpacing: AppSpacing.xxs,
+          children: <Widget>[
+            Text(
+              l10n.reviewSummaryAccuracy(percent),
+              key: const ValueKey<String>('review-summary-accuracy'),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+            if (duration != null)
+              Text(
+                l10n.reviewSummaryDuration(_formatDuration(duration)),
+                key: const ValueKey<String>('review-summary-duration'),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  /// Компактная длительность: «42 с», «3 мин 05 с», «1 ч 04 мин».
+  static String _formatDuration(Duration duration) {
+    final int hours = duration.inHours;
+    final int minutes = duration.inMinutes.remainder(60);
+    final int seconds = duration.inSeconds.remainder(60);
+    if (hours > 0) {
+      return '$hours ч ${minutes.toString().padLeft(2, '0')} мин';
+    }
+    if (minutes > 0) {
+      return '$minutes мин ${seconds.toString().padLeft(2, '0')} с';
+    }
+    return '$seconds с';
+  }
+}
+
+/// Одна ячейка разбивки оценок в сводке.
+class _SummaryRatingCell extends StatelessWidget {
+  const _SummaryRatingCell({required this.rating, required this.count});
+
+  final Rating rating;
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final ThemeData theme = Theme.of(context);
+    final RatingRole role = RatingButton.roleOf(rating);
+    final ColorScheme scheme = theme.colorScheme;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppColors.ratingSurface(scheme, role),
+        borderRadius: BorderRadius.circular(AppRadii.input),
+        border: Border.all(color: AppColors.controlBorder(scheme)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.xxs,
+          vertical: AppSpacing.xs,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Text(
+              count.toString(),
+              style: AppTypography.numeric(
+                context,
+                color: AppColors.ratingForeground(scheme, role),
+              ).copyWith(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              RatingButton.labelOf(l10n, rating),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: AppColors.ratingForeground(scheme, role),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -410,6 +605,8 @@ class ReviewTimeUpView extends StatelessWidget {
   const ReviewTimeUpView({
     required this.ratedCount,
     required this.onDone,
+    this.ratingCounts = const <Rating, int>{},
+    this.elapsed,
     super.key,
   });
 
@@ -418,6 +615,12 @@ class ReviewTimeUpView extends StatelessWidget {
 
   /// Закрыть сессию.
   final VoidCallback onDone;
+
+  /// Разбивка оценок.
+  final Map<Rating, int> ratingCounts;
+
+  /// Длительность сессии.
+  final Duration? elapsed;
 
   @override
   Widget build(BuildContext context) {
@@ -429,6 +632,7 @@ class ReviewTimeUpView extends StatelessWidget {
         metric: Text(ratedCount.toString()),
         title: l10n.reviewTimeUpTitle,
         message: l10n.reviewTimeUpMessage(ratedCount),
+        body: SessionSummary(ratingCounts: ratingCounts, elapsed: elapsed),
         actions: <Widget>[
           FilledButton(
             key: const ValueKey<String>('review-timeup-done'),

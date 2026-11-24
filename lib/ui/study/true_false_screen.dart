@@ -211,7 +211,10 @@ class _TrueFalseScreenState extends ConsumerState<TrueFalseScreen> {
       if (mounted && context.canPop()) context.pop();
       return;
     }
-    final bool confirmed = await confirmReviewExit(context);
+    final bool confirmed = await confirmReviewExit(
+      context,
+      kind: SessionExitKind.study,
+    );
     if (confirmed && mounted && context.canPop()) context.pop();
   }
 
@@ -301,7 +304,12 @@ class _TrueFalseScreenState extends ConsumerState<TrueFalseScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         const Padding(padding: EdgeInsets.only(top: AppSpacing.xs)),
-        StudyProgressBar(answered: state.answeredCount, total: state.total),
+        // Аудит 2.0 (P2-02): номер вопроса не опережает показанный.
+        StudyProgressBar(
+          answered: state.answeredCount,
+          total: state.total,
+          currentIndex: answered ? state.answeredCount : null,
+        ),
         Expanded(
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
@@ -338,13 +346,16 @@ class _TrueFalseScreenState extends ConsumerState<TrueFalseScreen> {
                     ),
                   ),
                   const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    l10n.trueFalseSwipeHint,
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
+                  // Аудит 2.0 (P3-09): подсказка о свайпе бессмысленна после
+                  // ответа — карточка уже не принимает жестов.
+                  if (!answered)
+                    Text(
+                      l10n.trueFalseSwipeHint,
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
                     ),
-                  ),
                   if (answered) ...<Widget>[
                     const SizedBox(height: AppSpacing.sm),
                     _TrueFalseFeedback(correct: correct, question: question),

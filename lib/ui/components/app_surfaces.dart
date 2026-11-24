@@ -499,6 +499,7 @@ class AppEmptyState extends StatelessWidget {
     required this.message,
     this.actions = const <Widget>[],
     this.metric,
+    this.body,
     this.compact = false,
     this.hero = false,
     super.key,
@@ -515,6 +516,9 @@ class AppEmptyState extends StatelessWidget {
 
   /// Крупная метрика над заголовком (например, «12 оценено»).
   final Widget? metric;
+
+  /// Дополнительный блок под пояснением (сводка сессии, список).
+  final Widget? body;
 
   /// Кнопки под сообщением.
   final List<Widget> actions;
@@ -578,6 +582,13 @@ class AppEmptyState extends StatelessWidget {
                       ?.copyWith(color: scheme.onSurfaceVariant),
             ),
           ),
+          if (body != null) ...<Widget>[
+            SizedBox(height: hero ? AppSpacing.lg : AppSpacing.md),
+            ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: hero ? 560 : 420),
+              child: body!,
+            ),
+          ],
           if (actions.isNotEmpty) ...<Widget>[
             SizedBox(height: hero ? AppSpacing.xl : AppSpacing.md),
             Wrap(

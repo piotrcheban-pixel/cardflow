@@ -97,12 +97,13 @@ void main() {
     expect(find.byType(NavigationBar), findsNothing);
     expect(find.byTooltip(l10n.shellOpenNavTooltip), findsNothing);
     expect(find.byType(DecksScreen), findsOneWidget);
-    expect(find.text(l10n.shellBreadcrumb(l10n.navDecks)), findsOneWidget);
+    // Аудит 2.0 (P3-03): «Рабочее пространство / Колоды» убрано из шапки —
+    // раздел даёт подсветка навигации и H1 страницы.
+    expect(find.text(l10n.shellBreadcrumb(l10n.navDecks)), findsNothing);
 
     await tester.tap(find.text(l10n.navStatistics));
     await tester.pumpAndSettle();
     expect(find.byType(StatisticsScreen), findsOneWidget);
-    expect(find.text(l10n.shellBreadcrumb(l10n.navStatistics)), findsOneWidget);
 
     await tester.tap(find.text(l10n.navSettings));
     await tester.pumpAndSettle();

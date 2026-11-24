@@ -25,6 +25,7 @@ import 'package:cardflow/domain/generation/card_image_finder.dart';
 import 'package:cardflow/domain/generation/card_image_kind.dart';
 import 'package:cardflow/domain/generation/generated_card_image.dart';
 import 'package:cardflow/domain/generation/generation_attachment.dart';
+import 'package:cardflow/domain/generation/image_relevance.dart';
 
 /// Цепочка провайдеров с таймаутами, фильтрами и кэшем.
 class ImageSearchService implements CardImageFinder {
@@ -210,9 +211,36 @@ class ImageSearchService implements CardImageFinder {
     required GeneratedCardImageKind kind,
     required Set<String>? excludedSourceUrls,
   }) async {
-    final List<ImageCandidate> candidates = await provider.search(
+    final List<ImageCandidate> found = await provider.search(
       ImageProviderQuery(query: query, kind: kind),
     );
+    // Аудит 2.0 (P1-04): до скачивания отсеиваем кандидатов, чьё название и
+    // описание никак не связаны с запросом. Скачивание и прикрепление
+    // нерелевантной картинки хуже, чем карточка без картинки.
+    final List<ImageCandidate> candidates = <ImageCandidate>[
+      for (final ImageCandidate candidate in found)
+        if (isImageRelevant(
+          query: query,
+          title: candidate.title,
+          description: candidate.description,
+        ))
+          candidate,
+    ];
+    if (candidates.length != found.length) {
+      diagnostics.imageSearch(
+        query: query,
+        outcome:
+            '${provider.name}: отсеяно нерелевантных '
+            '${found.length - candidates.length} из ${found.length}',
+      );
+    }
+    if (candidates.isEmpty) {
+      diagnostics.imageSearch(
+        query: query,
+        outcome: '${provider.name}: нет релевантных кандидатов',
+      );
+      return null;
+    }
     for (final ImageCandidate candidate in candidates) {
       if (excludedSourceUrls?.contains(candidate.url) ?? false) continue;
       if (candidate.hasKnownSize &&

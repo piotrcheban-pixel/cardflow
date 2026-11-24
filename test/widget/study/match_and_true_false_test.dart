@@ -95,8 +95,9 @@ void main() {
       final List<String> texts = tileTexts(tester);
       expect(texts.where((String text) => text.isNotEmpty), hasLength(12));
       final l10n = l10nOf(tester);
-      expect(find.text(l10n.matchBest('5,0')), findsOneWidget);
-      expect(find.text(l10n.matchTimer('0,0')), findsOneWidget);
+      // Аудит 2.0 (P2-23): время подписано единицами.
+      expect(find.text(l10n.matchBest('5,0 с')), findsOneWidget);
+      expect(find.text(l10n.matchTimeSeconds('0,0')), findsOneWidget);
     });
 
     testWidgets('несовпавшая пара не исчезает', (tester) async {

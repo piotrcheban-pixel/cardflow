@@ -74,6 +74,7 @@ class PexelsImageProvider implements ImageProvider {
           height: asPositiveInt(raw['height']),
           author: author,
           license: 'Pexels License',
+          title: asString(raw['alt']),
           attribution: joinAttribution(<String?>[author, 'Pexels License']),
         ),
       );

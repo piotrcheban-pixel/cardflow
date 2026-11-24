@@ -107,6 +107,7 @@ class StudyProgressBar extends StatelessWidget {
   const StudyProgressBar({
     required this.answered,
     required this.total,
+    this.currentIndex,
     super.key,
   });
 
@@ -116,12 +117,21 @@ class StudyProgressBar extends StatelessWidget {
   /// Сколько всего.
   final int total;
 
+  /// Явный номер показанного вопроса (1-based).
+  ///
+  /// Аудит 2.0 (P2-02): после ответа на экране остаётся тот же вопрос с
+  /// фидбеком, а прогресс уже уходил на следующий. Экран передаёт номер
+  /// отвеченного вопроса, пока он виден.
+  final int? currentIndex;
+
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
     // Находка D20: счётчик «Вопрос 0 из 4» → «Вопрос 1 из 4». На итогах этот
     // виджет уже не рисуется, поэтому последняя карточка показывает total.
-    final int current = total == 0 ? 0 : (answered + 1).clamp(1, total);
+    final int current = total == 0
+        ? 0
+        : (currentIndex ?? (answered + 1)).clamp(1, total);
     // F21: прогресс выровнен по контентной колонке карточки (72 % окна), а не
     // растянут на всё окно.
     return Center(
@@ -134,7 +144,7 @@ class StudyProgressBar extends StatelessWidget {
         ),
         child: SessionProgressStrip(
           label: l10n.testProgressSemantics(current, total),
-          value: total == 0 ? 0 : answered / total,
+          value: total == 0 ? 0 : (current - 1) / total,
         ),
       ),
     );

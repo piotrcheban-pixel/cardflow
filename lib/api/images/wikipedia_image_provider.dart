@@ -114,6 +114,8 @@ class WikipediaImageProvider implements ImageProvider {
           width: asPositiveInt(thumbnail['width']),
           height: asPositiveInt(thumbnail['height']),
           author: title,
+          title: title,
+          description: asString(raw['description']),
           attribution: title == null ? null : '$title · Wikipedia',
         ),
       );

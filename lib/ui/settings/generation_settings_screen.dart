@@ -42,6 +42,11 @@ class _GenerationSettingsScreenState
   ProviderAccounts _accounts = ProviderAccounts.empty;
   Map<String, bool> _keyConfigured = <String, bool>{};
   final Set<String> _checking = <String>{};
+
+  /// Результат последней проверки по аккаунту: показывается inline, а не только
+  /// снекбаром (аудит 2.0, P2-15).
+  final Map<String, (ApiKeyCheckStatus, String)> _checkResults =
+      <String, (ApiKeyCheckStatus, String)>{};
   bool _loading = true;
   bool _loadFailed = false;
 
@@ -127,27 +132,58 @@ class _GenerationSettingsScreenState
     final _AddProviderChoice? choice =
         await showModalBottomSheet<_AddProviderChoice>(
           context: context,
+          // Аудит 2.0 (P2-16): нижний пункт обрезался кромкой на 720 px.
+          isScrollControlled: true,
+          showDragHandle: true,
           builder: (BuildContext context) => SafeArea(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                ListTile(
-                  key: const ValueKey<String>('providers-add-preset'),
-                  leading: const Icon(Icons.storefront_outlined),
-                  title: Text(l10n.providersAddPreset),
-                  subtitle: Text(l10n.providersAddPresetSubtitle),
-                  onTap: () =>
-                      Navigator.of(context).pop(_AddProviderChoice.preset),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.sizeOf(context).height * 0.85,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.lg,
+                        0,
+                        AppSpacing.lg,
+                        AppSpacing.xs,
+                      ),
+                      child: Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        child: Text(
+                          l10n.providersSheetSubtitle,
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant,
+                              ),
+                        ),
+                      ),
+                    ),
+                    ListTile(
+                      key: const ValueKey<String>('providers-add-preset'),
+                      leading: const Icon(Icons.storefront_outlined),
+                      title: Text(l10n.providersAddPreset),
+                      subtitle: Text(l10n.providersAddPresetSubtitle),
+                      onTap: () =>
+                          Navigator.of(context).pop(_AddProviderChoice.preset),
+                    ),
+                    ListTile(
+                      key: const ValueKey<String>('providers-add-custom'),
+                      leading: const Icon(Icons.tune_outlined),
+                      title: Text(l10n.providersAddCustom),
+                      subtitle: Text(l10n.providersAddCustomSubtitle),
+                      onTap: () =>
+                          Navigator.of(context).pop(_AddProviderChoice.custom),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                  ],
                 ),
-                ListTile(
-                  key: const ValueKey<String>('providers-add-custom'),
-                  leading: const Icon(Icons.tune_outlined),
-                  title: Text(l10n.providersAddCustom),
-                  subtitle: Text(l10n.providersAddCustomSubtitle),
-                  onTap: () =>
-                      Navigator.of(context).pop(_AddProviderChoice.custom),
-                ),
-              ],
+              ),
             ),
           ),
         );
@@ -303,33 +339,33 @@ class _GenerationSettingsScreenState
   }
 
   Future<void> _check(ProviderAccount account) async {
-    final AppLocalizations l10n = AppLocalizations.of(context);
     setState(() => _checking.add(account.id));
     try {
       final ApiKeyCheckResult result = await ref
           .read(apiKeyVerifierProvider)
           .check(account);
       if (!mounted) return;
-      showAppMessage(context, _statusMessage(l10n, result.status));
+      final MaterialLocalizations material = MaterialLocalizations.of(context);
+      final String time = material.formatTimeOfDay(
+        TimeOfDay.now(),
+        alwaysUse24HourFormat: true,
+      );
+      setState(() {
+        _checkResults[account.id] = (result.status, time);
+      });
     } on Object {
       if (!mounted) return;
-      showAppMessage(context, l10n.settingsApiCheckUnexpected);
+      final MaterialLocalizations material = MaterialLocalizations.of(context);
+      final String time = material.formatTimeOfDay(
+        TimeOfDay.now(),
+        alwaysUse24HourFormat: true,
+      );
+      setState(() {
+        _checkResults[account.id] = (ApiKeyCheckStatus.unexpected, time);
+      });
     } finally {
       if (mounted) setState(() => _checking.remove(account.id));
     }
-  }
-
-  String _statusMessage(AppLocalizations l10n, ApiKeyCheckStatus status) {
-    return switch (status) {
-      ApiKeyCheckStatus.valid => l10n.providersCheckValid,
-      ApiKeyCheckStatus.invalidKey => l10n.providersCheckInvalid,
-      ApiKeyCheckStatus.missingKey => l10n.settingsApiCheckMissing,
-      ApiKeyCheckStatus.noConnection => l10n.settingsApiCheckNoConnection,
-      ApiKeyCheckStatus.rateLimited => l10n.settingsApiCheckRateLimited,
-      ApiKeyCheckStatus.providerNotConfigured =>
-        l10n.settingsApiCheckNotConfigured,
-      ApiKeyCheckStatus.unexpected => l10n.settingsApiCheckUnexpected,
-    };
   }
 
   @override
@@ -361,7 +397,7 @@ class _GenerationSettingsScreenState
                     heightFactor: 1,
                     child: ConstrainedBox(
                       constraints: BoxConstraints(
-                        maxWidth: AppSizes.formWidth(context),
+                        maxWidth: AppSizes.wideFormWidth(context),
                       ),
                       child: FilledButton.icon(
                         key: const ValueKey<String>('providers-add'),
@@ -416,7 +452,7 @@ class _GenerationSettingsScreenState
     final ThemeData theme = Theme.of(context);
     return Center(
       child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: AppSizes.formWidth(context)),
+        constraints: BoxConstraints(maxWidth: AppSizes.wideFormWidth(context)),
         child: ListView(
           padding: const EdgeInsets.fromLTRB(
             AppSpacing.md,
@@ -443,6 +479,7 @@ class _GenerationSettingsScreenState
                     active: _accounts.active?.id == account.id,
                     keyConfigured: _keyConfigured[account.id] ?? false,
                     checking: _checking.contains(account.id),
+                    checkResult: _checkResults[account.id],
                     onCheck: () => _check(account),
                     onEdit: () => _edit(account),
                     onDelete: () => _delete(account),
@@ -492,6 +529,20 @@ class _GenerationSettingsScreenState
   }
 }
 
+/// Сообщение о результате проверки подключения (ARB, без сырых ошибок).
+String _statusMessage(AppLocalizations l10n, ApiKeyCheckStatus status) {
+  return switch (status) {
+    ApiKeyCheckStatus.valid => l10n.providersCheckValid,
+    ApiKeyCheckStatus.invalidKey => l10n.providersCheckInvalid,
+    ApiKeyCheckStatus.missingKey => l10n.settingsApiCheckMissing,
+    ApiKeyCheckStatus.noConnection => l10n.settingsApiCheckNoConnection,
+    ApiKeyCheckStatus.rateLimited => l10n.settingsApiCheckRateLimited,
+    ApiKeyCheckStatus.providerNotConfigured =>
+      l10n.settingsApiCheckNotConfigured,
+    ApiKeyCheckStatus.unexpected => l10n.settingsApiCheckUnexpected,
+  };
+}
+
 /// Выбор способа добавления провайдера.
 enum _AddProviderChoice {
   /// Сторонний поставщик из каталога.
@@ -518,6 +569,11 @@ class _EmptyProviders extends StatelessWidget {
 }
 
 /// Карточка одного провайдера со статусом ключа и действиями.
+///
+/// Аудит 2.0 (P2-14/P2-15): статусы («основной», «ключ сохранён») — бейджи, а
+/// не кнопки и не синий текст; действия — кнопки с иконками; «Удалить» —
+/// danger-стиль; проверка подключения показывает inline-результат со временем,
+/// а не только исчезающий снекбар.
 class _ProviderCard extends StatelessWidget {
   const _ProviderCard({
     required this.account,
@@ -528,6 +584,7 @@ class _ProviderCard extends StatelessWidget {
     required this.onEdit,
     required this.onDelete,
     required this.onActivate,
+    this.checkResult,
   });
 
   final ProviderAccount account;
@@ -539,26 +596,29 @@ class _ProviderCard extends StatelessWidget {
   final VoidCallback onDelete;
   final VoidCallback onActivate;
 
+  /// Последний результат проверки подключения (статус и время).
+  final (ApiKeyCheckStatus, String)? checkResult;
+
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
     final ThemeData theme = Theme.of(context);
-    final String keyStatus = account.requiresApiKey
-        ? (keyConfigured ? l10n.settingsKeyConfigured : l10n.settingsKeyMissing)
-        : l10n.providersKeyNotRequired;
+    final ColorScheme scheme = theme.colorScheme;
+    final bool keyOk = keyConfigured || !account.requiresApiKey;
+    final (ApiKeyCheckStatus, String)? result = checkResult;
     return AppPanel(
       key: ValueKey<String>('provider-card-${account.id}'),
       padding: const EdgeInsets.all(AppSpacing.md),
       radius: AppRadii.input,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           Row(
             children: <Widget>[
               AppIconBadge(
                 icon: providerProtocolIcon(account.protocol),
-                color: theme.colorScheme.primary,
-                size: 32,
+                color: scheme.primary,
+                size: 36,
               ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
@@ -571,85 +631,164 @@ class _ProviderCard extends StatelessWidget {
                     ),
                     Text(
                       providerSummary(l10n, account),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
+                        color: scheme.onSurfaceVariant,
                       ),
                     ),
                   ],
                 ),
               ),
               if (active)
-                Chip(
+                AppStatusChip(
                   key: ValueKey<String>('provider-active-${account.id}'),
-                  label: Text(l10n.providersActive),
-                  visualDensity: VisualDensity.compact,
+                  label: l10n.providersActive,
+                  tone: AppStatusTone.success,
+                  icon: Icons.check_circle_outline,
+                  dense: true,
                 ),
             ],
           ),
           if (!account.isConfigured)
             Padding(
-              padding: const EdgeInsets.only(top: 4),
+              padding: const EdgeInsets.only(top: AppSpacing.xxs),
               child: Text(
                 l10n.providersIncompleteHint,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.error,
+                style: theme.textTheme.bodySmall?.copyWith(color: scheme.error),
+              ),
+            ),
+          const SizedBox(height: AppSpacing.xs),
+          Wrap(
+            spacing: AppSpacing.xs,
+            runSpacing: AppSpacing.xxs,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: <Widget>[
+              AppStatusChip(
+                key: ValueKey<String>('provider-key-status-${account.id}'),
+                label: account.requiresApiKey
+                    ? (keyConfigured
+                          ? l10n.settingsKeyConfigured
+                          : l10n.settingsKeyMissing)
+                    : l10n.providersKeyNotRequired,
+                tone: keyOk ? AppStatusTone.neutral : AppStatusTone.warning,
+                icon: keyOk ? Icons.key_outlined : Icons.key_off_outlined,
+                dense: true,
+              ),
+              Text(
+                account.supportsVision
+                    ? l10n.providersVisionSupported
+                    : l10n.providersVisionNotSupported,
+                key: ValueKey<String>('provider-vision-${account.id}'),
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: scheme.onSurfaceVariant,
                 ),
               ),
-            ),
-          const SizedBox(height: 8),
-          Text(
-            keyStatus,
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: keyConfigured || !account.requiresApiKey
-                  ? theme.colorScheme.primary
-                  : theme.colorScheme.onSurfaceVariant,
-            ),
+            ],
           ),
-          Text(
-            account.supportsVision
-                ? l10n.providersVisionSupported
-                : l10n.providersVisionNotSupported,
-            key: ValueKey<String>('provider-vision-${account.id}'),
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
+          if (result != null) ...<Widget>[
+            const SizedBox(height: AppSpacing.xs),
+            _ProviderCheckResult(
+              key: ValueKey<String>('provider-check-result-${account.id}'),
+              status: result.$1,
+              time: result.$2,
+              message: _statusMessage(l10n, result.$1),
             ),
-          ),
-          const SizedBox(height: 4),
+          ],
+          const SizedBox(height: AppSpacing.xs),
           Wrap(
-            spacing: 4,
-            runSpacing: 4,
+            spacing: AppSpacing.xs,
+            runSpacing: AppSpacing.xs,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: <Widget>[
-              TextButton(
+              OutlinedButton.icon(
                 key: ValueKey<String>('provider-check-${account.id}'),
                 onPressed: checking ? null : onCheck,
-                child: checking
+                icon: checking
                     ? const SizedBox(
-                        width: 16,
-                        height: 16,
+                        width: AppSizes.iconSmall,
+                        height: AppSizes.iconSmall,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : Text(l10n.providersCheck),
+                    : const Icon(
+                        Icons.wifi_tethering,
+                        size: AppSizes.iconSmall,
+                      ),
+                label: Text(l10n.providersCheck),
               ),
               if (!active)
-                TextButton(
+                OutlinedButton(
                   key: ValueKey<String>('provider-activate-${account.id}'),
                   onPressed: onActivate,
                   child: Text(l10n.providersMakeActive),
                 ),
-              TextButton(
+              OutlinedButton(
                 key: ValueKey<String>('provider-edit-${account.id}'),
                 onPressed: onEdit,
                 child: Text(l10n.providersEdit),
               ),
-              TextButton(
+              TextButton.icon(
                 key: ValueKey<String>('provider-delete-${account.id}'),
+                style: TextButton.styleFrom(foregroundColor: scheme.error),
                 onPressed: onDelete,
-                child: Text(l10n.providersDelete),
+                icon: const Icon(
+                  Icons.delete_outline,
+                  size: AppSizes.iconSmall,
+                ),
+                label: Text(l10n.providersDelete),
               ),
             ],
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Inline-результат проверки подключения со временем.
+class _ProviderCheckResult extends StatelessWidget {
+  const _ProviderCheckResult({
+    required this.status,
+    required this.time,
+    required this.message,
+    super.key,
+  });
+
+  final ApiKeyCheckStatus status;
+  final String time;
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
+    final bool ok = status == ApiKeyCheckStatus.valid;
+    final Color color = ok ? scheme.secondary : scheme.error;
+    return Row(
+      children: <Widget>[
+        Icon(
+          ok ? Icons.check_circle_outline : Icons.error_outline,
+          size: AppSizes.iconSmall,
+          color: color,
+        ),
+        const SizedBox(width: AppSpacing.xxs),
+        Expanded(
+          child: Text(
+            ok
+                ? '${AppLocalizations.of(context).providersCheckInlineOk} · $time'
+                : '${AppLocalizations.of(context).providersCheckInlineFail} · $time',
+            style: theme.textTheme.bodySmall?.copyWith(color: color),
+          ),
+        ),
+        Tooltip(
+          message: message,
+          child: Icon(
+            Icons.info_outline,
+            size: AppSizes.iconSmall,
+            color: scheme.onSurfaceVariant,
+          ),
+        ),
+      ],
     );
   }
 }

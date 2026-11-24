@@ -15,6 +15,7 @@ import 'package:cardflow/domain/generation/provider_preset.dart';
 import 'package:cardflow/domain/generation/provider_protocol.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/components/app_dialogs.dart';
+import 'package:cardflow/ui/theme/app_tokens.dart';
 
 import 'provider_labels.dart';
 
@@ -254,11 +255,20 @@ class _PresetProviderDialogState extends State<_PresetProviderDialog> {
                 },
         ),
         const SizedBox(height: 12),
+        // Аудит 2.0 (P2-17): адрес пресета неизменяем — поле выглядит
+        // недоступным (серый фон, замок, приглушённый текст), а не обычным
+        // полем ввода, которое пользователь пытается отредактировать.
         InputDecorator(
           key: const ValueKey<String>('provider-base-url'),
           decoration: InputDecoration(
             labelText: l10n.settingsServerAddressLabel,
             border: _fieldBorder,
+            enabled: false,
+            filled: true,
+            suffixIcon: const Icon(
+              Icons.lock_outline,
+              size: AppSizes.iconSmall,
+            ),
           ),
           child: Text(preset?.baseUrl ?? ''),
         ),

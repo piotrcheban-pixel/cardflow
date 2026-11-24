@@ -111,7 +111,7 @@
       }
     }
   },
-  "deckInProgressCount": "Начато: {count}",
+  "deckInProgressCount": "В процессе: {count}",
   "@deckInProgressCount": {
     "description": "Счётчик карточек в процессе изучения на экране колоды.",
     "placeholders": {
@@ -460,7 +460,7 @@
   "@feedBrowseHint": {
     "description": "Подсказка на лицевой стороне карточки ленты (ADR-044)."
   },
-  "feedNavHint": "Свайп ↑↓, колесо мыши или стрелки — листать",
+  "feedNavHint": "↑↓ / колесо мыши / стрелки — листать",
   "@feedNavHint": {
     "description": "Подсказка о навигации в ленте: вертикальный свайп, колесо и клавиши (ADR-044)."
   },
@@ -1334,7 +1334,7 @@
       }
     }
   },
-  "generationPlanRequestedCount": "Запрошено: {count} карточек",
+  "generationPlanRequestedCount": "{count, plural, one{Запрошено: {count} карточка} few{Запрошено: {count} карточки} many{Запрошено: {count} карточек} other{Запрошено: {count} карточки}}",
   "@generationPlanRequestedCount": {
     "description": "Строка «Запрошено: N карточек» рядом с полем количества (7.20).",
     "placeholders": {
@@ -1368,7 +1368,7 @@
   "@generationCardsCountLabel": {
     "description": "Числовое поле количества карточек на экране генерации (TASK 03, L132)."
   },
-  "generationCardsCountHint": "Пусто — из пожеланий или по бюджету модели",
+  "generationCardsCountHint": "Авто: по материалу и бюджету модели",
   "@generationCardsCountHint": {
     "description": "Подсказка числового поля количества карточек (TASK 03)."
   },
@@ -2844,7 +2844,7 @@
   "@matchTitle": {
     "description": "Заголовок игры."
   },
-  "matchTimer": "Время: {time}",
+  "matchTimer": "Время: {time} с",
   "@matchTimer": {
     "description": "Таймер игры, время строкой.",
     "placeholders": {
@@ -2895,7 +2895,7 @@
   "@trueFalseTitle": {
     "description": "Заголовок режима."
   },
-  "trueFalseStatement": "Ответ: {answer}",
+  "trueFalseStatement": "Утверждение: {answer}",
   "@trueFalseStatement": {
     "description": "Показанное утверждение.",
     "placeholders": {
@@ -3489,6 +3489,8 @@
   "@reviewAnswerLabel": {"description": "Метка стороны ответа в раскрытой карточке (находка D3)."},
   "reviewKeyboardHints": "1–4 — оценка · ← — отменить",
   "@reviewKeyboardHints": {"description": "Напоминание о клавишах после раскрытия ответа: Space ничего не делает (ADR-045)."},
+  "reviewKeyboardHintsRating": "1–4 — оценка",
+  "@reviewKeyboardHintsRating": {"description": "Подсказка клавиатуры после раскрытия ответа, когда отменять нечего (аудит 2.0, §5.1)."},
   "reviewHomeTooltip": "Мои колоды",
   "@reviewHomeTooltip": {"description": "Кнопка «в главное меню» на экранах сессий: путь домой не длиннее двух действий (находка N3)."},
   "sessionNoticeDismiss": "Скрыть сообщение",
@@ -3617,8 +3619,100 @@
   "@constructorSubtitle": {"description": "Пояснение режима «Конструктор» в листе режимов."},
   "statisticsDaysUnit": "{count, plural, one{день} few{дня} many{дней} other{дня}}",
   "@statisticsDaysUnit": {"description": "Единица «дни» для KPI статистики (аудит v4).", "placeholders": {"count": {"type": "int"}}},
-  "reviewKeyboardHintsFront": "Пробел — показать ответ · ← — отменить",
-  "@reviewKeyboardHintsFront": {"description": "Подсказка клавиатуры до раскрытия ответа (аудит v5, V5-10)."},
+  "reviewKeyboardHintsFront": "Пробел — показать ответ",
+  "@reviewKeyboardHintsFront": {"description": "Подсказка клавиатуры до раскрытия ответа (аудит 2.0: «← — отменить» до первой оценки — мёртвая инструкция)."},
   "constructorTagsMore": "Ещё {count}",
-  "@constructorTagsMore": {"description": "Развернуть остальные теги (аудит v5, V5-15).", "placeholders": {"count": {"type": "int"}}}
+  "@constructorTagsMore": {"description": "Развернуть остальные теги (аудит v5, V5-15).", "placeholders": {"count": {"type": "int"}}},
+  "sessionExitFeedMessage": "Выйти из просмотра? Прогресс просмотра не сохраняется, расписание повторений остаётся прежним.",
+  "@sessionExitFeedMessage": {"description": "Диалог выхода из «Ленты» (аудит 2.0, P2-03)."},
+  "sessionExitPracticeMessage": "Выйти из тренировки? Поставленные оценки уже сохранены, расписание не изменилось.",
+  "@sessionExitPracticeMessage": {"description": "Диалог выхода из «Тренировки» (аудит 2.0, P2-03)."},
+  "sessionExitStudyMessage": "Выйти из проверки? Ответы уже сохранены.",
+  "@sessionExitStudyMessage": {"description": "Диалог выхода из проверочных режимов (аудит 2.0, P2-03)."},
+  "reviewSummaryTitle": "Итог сессии",
+  "@reviewSummaryTitle": {"description": "Заголовок сводки завершённой сессии (аудит 2.0, P2-25)."},
+  "reviewSummaryDuration": "Время: {duration}",
+  "@reviewSummaryDuration": {"description": "Длительность сессии в сводке (аудит 2.0, P2-25).", "placeholders": {"duration": {"type": "String"}}},
+  "reviewSummaryAccuracy": "Без ошибок: {percent} %",
+  "@reviewSummaryAccuracy": {"description": "Доля карточек, оценённых «Знаю» и «Легко», в сводке сессии.", "placeholders": {"percent": {"type": "int"}}},
+  "reviewAgainAction": "Ещё раз",
+  "@reviewAgainAction": {"description": "Повторить сессию из сводки (аудит 2.0, P2-25)."},
+  "reviewToDeckAction": "К карточкам",
+  "@reviewToDeckAction": {"description": "Перейти к колоде из сводки (аудит 2.0, P2-25)."},
+  "feedNavHintTouch": "Свайп ↑↓ — листать карточки",
+  "@feedNavHintTouch": {"description": "Подсказка навигации в ленте на touch-устройстве (аудит 2.0, P3-08)."},
+  "feedBrowseBadgeV2": "Лента",
+  "@feedBrowseBadgeV2": {"description": "Чип режима «Лента» вместо «Просмотр» (аудит 2.0, P3-08)."},
+  "decksMetricDecksLabel": "{count, plural, one{колода} few{колоды} many{колод} other{колоды}}",
+  "@decksMetricDecksLabel": {"description": "Подпись KPI «колод» с плюрализацией (аудит 2.0, P3-07).", "placeholders": {"count": {"type": "int"}}},
+  "decksWelcomeTitle": "Добро пожаловать в CardFlow",
+  "@decksWelcomeTitle": {"description": "Заголовок первого запуска (аудит 2.0, P2-01)."},
+  "decksWelcomeMessage": "Создайте первую колоду, импортируйте готовую или сгенерируйте карточки из конспекта.",
+  "@decksWelcomeMessage": {"description": "Пояснение первого запуска."},
+  "decksWelcomeAiNote": "ИИ не настроен — карточки можно создавать вручную. Провайдер подключается в любой момент.",
+  "@decksWelcomeAiNote": {"description": "Нейтральная заметка о ненастроенном ИИ на первом запуске (аудит 2.0, P2-01)."},
+  "decksWelcomeAiAction": "Настроить ИИ",
+  "@decksWelcomeAiAction": {"description": "Действие первого запуска: подключить провайдера (аудит 2.0, P2-01)."},
+  "deckProgressCounts": "{studied} из {total} изучено",
+  "@deckProgressCounts": {"description": "Текст прогресса колоды с числами (аудит 2.0, §6).", "placeholders": {"studied": {"type": "int"}, "total": {"type": "int"}}},
+  "deckSearchClear": "Сбросить поиск",
+  "@deckSearchClear": {"description": "Кнопка очистки поиска в колоде."},
+  "generationCardsCountHelper": "Пусто — авто: столько, сколько позволяет материал. Большие заказы идут партиями.",
+  "@generationCardsCountHelper": {"description": "Подсказка под полем количества карточек: авто-режим и партии (аудит 2.0, P2-19)."},
+  "generationCardsCountPreset": "{count}",
+  "@generationCardsCountPreset": {"description": "Пресет количества карточек.", "placeholders": {"count": {"type": "int"}}},
+  "generationSelectCard": "Выбрать карточку",
+  "@generationSelectCard": {"description": "Подпись чекбокса выбора карточки в превью (аудит 2.0, P2-20)."},
+  "generationImagesAutoTitle": "Изображения подобраны автоматически",
+  "@generationImagesAutoTitle": {"description": "Предупреждение над списком карточек в превью (аудит 2.0, P1-04)."},
+  "generationImagesAutoMessage": "Проверьте, подходят ли иллюстрации к карточкам: поиск работает по описанию и может ошибаться.",
+  "@generationImagesAutoMessage": {"description": "Пояснение предупреждения о автоподборе изображений."},
+  "generationRemoveAllImages": "Убрать все изображения",
+  "@generationRemoveAllImages": {"description": "Действие превью: удалить все автоматически найденные изображения."},
+  "generationImagesRemoved": "Изображения убраны",
+  "@generationImagesRemoved": {"description": "Подтверждение после «Убрать все изображения»."},
+  "generationFilesAttached": "Прикреплено файлов: {count}",
+  "@generationFilesAttached": {"description": "Счётчик прикреплённых файлов (вместо дубля «Всего файлов»/«Файлы не прикреплены»).", "placeholders": {"count": {"type": "int"}}},
+  "providersCheckInlineOk": "Подключение работает",
+  "@providersCheckInlineOk": {"description": "Inline-статус успешной проверки провайдера (аудит 2.0, P2-15)."},
+  "providersCheckInlineFail": "Подключиться не удалось",
+  "@providersCheckInlineFail": {"description": "Inline-статус неудачной проверки провайдера."},
+  "providersDeleteKey": "Удалить ключ",
+  "@providersDeleteKey": {"description": "Опасное действие: удалить сохранённый ключ провайдера."},
+  "providersSheetSubtitle": "Пресет подставит адрес и модели, кастомный профиль — свои.",
+  "@providersSheetSubtitle": {"description": "Подзаголовок листа добавления провайдера."},
+  "settingsHapticsDesktopHint": "Вибрация есть только на телефоне",
+  "@settingsHapticsDesktopHint": {"description": "Подпись к переключателю тактильной отдачи на настольных ОС (аудит 2.0, P3-05)."},
+  "settingsDyslexiaHint": "Шрифт для дислексии применяется ко всему интерфейсу",
+  "@settingsDyslexiaHint": {"description": "Пояснение к переключателю шрифта дислексии."},
+  "statisticsCalendarYearShare": "{percent} % года",
+  "@statisticsCalendarYearShare": {"description": "Подпись доли года у календаря (аудит 2.0, P3-12).", "placeholders": {"percent": {"type": "int"}}},
+  "statisticsDayTooltip": "{date} · повторений: {count}",
+  "@statisticsDayTooltip": {"description": "Подсказка клетки календаря (аудит 2.0, P2-22).", "placeholders": {"date": {"type": "String"}, "count": {"type": "int"}}},
+  "studyChooseOne": "Выберите один ответ",
+  "@studyChooseOne": {"description": "Подпись над вариантами «Теста» (аудит 2.0, P2-24)."},
+  "studyFeedbackCorrect": "Верно",
+  "@studyFeedbackCorrect": {"description": "Текстовый результат верного ответа (аудит 2.0, P1-06)."},
+  "studyFeedbackIncorrect": "Неверно",
+  "@studyFeedbackIncorrect": {"description": "Текстовый результат неверного ответа (аудит 2.0, P1-06)."},
+  "studyCorrectAnswerLabel": "Правильный ответ",
+  "@studyCorrectAnswerLabel": {"description": "Подпись правильного ответа после неверного выбора."},
+  "matchTimeSeconds": "Время: {seconds} с",
+  "@matchTimeSeconds": {"description": "Таймер «Подбора пар» с единицами (аудит 2.0, P2-23).", "placeholders": {"seconds": {"type": "String"}}},
+  "matchTimeMinutes": "Время: {minutes} мин {seconds} с",
+  "@matchTimeMinutes": {"description": "Таймер «Подбора пар» с единицами (аудит 2.0, P2-23).", "placeholders": {"minutes": {"type": "int"}, "seconds": {"type": "String"}}},
+  "matchProgress": "Пары: {done} из {total}",
+  "@matchProgress": {"description": "Прогресс «Подбора пар» (аудит 2.0, P2-23).", "placeholders": {"done": {"type": "int"}, "total": {"type": "int"}}},
+  "matchExitTitle": "Выйти из подбора пар?",
+  "@matchExitTitle": {"description": "Диалог выхода из «Подбора пар» (аудит 2.0, P2-23)."},
+  "matchExitMessage": "Прогресс игры не сохранится, карточки останутся в колоде.",
+  "@matchExitMessage": {"description": "Пояснение диалога выхода из «Подбора пар»."},
+  "generationPreviewRemoveShort": "Удалить",
+  "@generationPreviewRemoveShort": {"description": "Короткая подпись действия «убрать изображение» в превью (аудит 2.0, P2-20)."},
+  "generationPreviewReplaceShort": "Заменить",
+  "@generationPreviewReplaceShort": {"description": "Короткая подпись действия «заменить изображение» в превью."},
+  "generationPreviewImageNumber": "Изображение {index}",
+  "@generationPreviewImageNumber": {"description": "Номер изображения стороны в превью (вместо повтора подписи стороны).", "placeholders": {"index": {"type": "int"}}},
+  "reviewFsrsTooltip": "Интервальное повторение по алгоритму FSRS",
+  "@reviewFsrsTooltip": {"description": "Расшифровка бейджа «FSRS» в шапке сессии (аудит 2.0, P3-06)."}
 }

@@ -170,6 +170,25 @@ class _GenerationPreviewScreenState
 
   /// Сколько **выбранных** карточек осталось без картинки после поиска
   /// (ADR-028). Снятая галочка убирает карточку из импорта и из предупреждения.
+  /// Сколько карточек получили изображения автоматическим поиском: для них
+  /// показывается предупреждение «проверьте иллюстрации» (аудит 2.0, P1-04).
+  int get _autoImages =>
+      _cards.where((_EditableCard card) => card.hasImages).length;
+
+  /// Убирает все автоматически найденные изображения сразу.
+  void _removeAllImages() {
+    setState(() {
+      for (final _EditableCard card in _cards) {
+        card.questionImages = <GeneratedCardImage>[];
+        card.answerImages = <GeneratedCardImage>[];
+      }
+    });
+    showAppMessage(
+      context,
+      AppLocalizations.of(context).generationImagesRemoved,
+    );
+  }
+
   int get _imagesNotFound => _cards
       .where(
         (_EditableCard card) =>
@@ -641,6 +660,66 @@ class _GenerationPreviewScreenState
                     ),
                   ),
                 ),
+                if (_autoImages > 0)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: AppPanel(
+                      key: const ValueKey<String>(
+                        'generation-preview-auto-images',
+                      ),
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.sm,
+                        AppSpacing.xs,
+                        AppSpacing.xs,
+                        AppSpacing.xs,
+                      ),
+                      color: theme.colorScheme.tertiaryContainer,
+                      borderColor: theme.colorScheme.tertiaryContainer,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Icon(
+                            Icons.info_outline,
+                            size: 18,
+                            color: theme.colorScheme.onTertiaryContainer,
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                Text(
+                                  l10n.generationImagesAutoTitle,
+                                  style: theme.textTheme.labelLarge?.copyWith(
+                                    color:
+                                        theme.colorScheme.onTertiaryContainer,
+                                  ),
+                                ),
+                                Text(
+                                  l10n.generationImagesAutoMessage,
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color:
+                                        theme.colorScheme.onTertiaryContainer,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          TextButton(
+                            key: const ValueKey<String>(
+                              'generation-preview-remove-all-images',
+                            ),
+                            style: TextButton.styleFrom(
+                              foregroundColor:
+                                  theme.colorScheme.onTertiaryContainer,
+                            ),
+                            onPressed: _removeAllImages,
+                            child: Text(l10n.generationRemoveAllImages),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 if (_imagesNotFound > 0)
                   Padding(
                     padding: const EdgeInsets.only(top: 8),
@@ -738,7 +817,7 @@ class _GenerationPreviewScreenState
               heightFactor: 1,
               child: ConstrainedBox(
                 constraints: BoxConstraints(
-                  maxWidth: AppSizes.formWidth(context),
+                  maxWidth: AppSizes.wideFormWidth(context),
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -821,24 +900,57 @@ class _PreviewCardTile extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
+            // Аудит 2.0 (P2-20): подпись «Обычная» стояла рядом с чекбоксом и
+            // читалась как переключатель типа. Теперь чекбокс называется
+            // «Выбрать карточку», а тип — отдельный бейдж справа.
             Row(
               children: <Widget>[
-                Checkbox(
-                  key: ValueKey<String>('generation-preview-checkbox-$index'),
-                  value: card.selected,
-                  onChanged: (bool? value) => onSelected(value ?? false),
+                InkWell(
+                  key: ValueKey<String>('generation-preview-select-$index'),
+                  onTap: () => onSelected(!card.selected),
+                  borderRadius: BorderRadius.circular(AppRadii.sm),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.xxs,
+                      vertical: AppSpacing.xxs,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        Checkbox(
+                          key: ValueKey<String>(
+                            'generation-preview-checkbox-$index',
+                          ),
+                          value: card.selected,
+                          onChanged: (bool? value) =>
+                              onSelected(value ?? false),
+                        ),
+                        Text(
+                          l10n.generationSelectCard,
+                          style: theme.textTheme.labelLarge,
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
+                const SizedBox(width: AppSpacing.xs),
                 Expanded(
-                  child: Text(
-                    card.original.isOcclusion
-                        ? l10n.cardTypeOcclusion
-                        : switch (card.original.cardType) {
-                            CardType.basic => l10n.cardTypeBasic,
-                            CardType.basicReversed =>
-                              l10n.cardTypeBasicReversed,
-                            CardType.cloze => l10n.cardTypeCloze,
-                          },
-                    style: theme.textTheme.labelMedium,
+                  child: Align(
+                    alignment: AlignmentDirectional.centerEnd,
+                    child: AppStatusChip(
+                      label: card.original.isOcclusion
+                          ? l10n.cardTypeOcclusion
+                          : switch (card.original.cardType) {
+                              CardType.basic => l10n.cardTypeBasic,
+                              CardType.basicReversed =>
+                                l10n.cardTypeBasicReversed,
+                              CardType.cloze => l10n.cardTypeCloze,
+                            },
+                      tone: card.original.isOcclusion
+                          ? AppStatusTone.info
+                          : AppStatusTone.neutral,
+                      dense: true,
+                    ),
                   ),
                 ),
                 IconButton(
@@ -974,31 +1086,34 @@ class _PreviewSide extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
+                // Аудит 2.0 (P2-20/P3-10): подпись стороны повторялась второй
+                // раз, а немые иконки не объясняли действие. Действия —
+                // текстовые кнопки с иконкой и подписью.
                 Row(
                   children: <Widget>[
                     Expanded(
                       child: Text(
-                        question
-                            ? l10n.cardFormQuestionImages
-                            : l10n.cardFormAnswerImages,
-                        style: theme.textTheme.bodySmall,
+                        l10n.generationPreviewImageNumber(imageIndex + 1),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
                       ),
                     ),
-                    IconButton(
+                    TextButton.icon(
                       key: ValueKey<String>(
                         'generation-preview-remove-$prefix-$cardIndex-$imageIndex',
                       ),
-                      tooltip: l10n.generationPreviewRemoveImage,
                       onPressed: () => onRemoveImage(question, imageIndex),
-                      icon: const Icon(Icons.hide_image_outlined, size: 20),
+                      icon: const Icon(Icons.hide_image_outlined, size: 18),
+                      label: Text(l10n.generationPreviewRemoveShort),
                     ),
-                    IconButton(
+                    TextButton.icon(
                       key: ValueKey<String>(
                         'generation-preview-replace-$prefix-$cardIndex-$imageIndex',
                       ),
-                      tooltip: l10n.generationPreviewReplaceImage,
                       onPressed: () => onReplaceImage(question, imageIndex),
-                      icon: const Icon(Icons.swap_horiz, size: 20),
+                      icon: const Icon(Icons.swap_horiz, size: 18),
+                      label: Text(l10n.generationPreviewReplaceShort),
                     ),
                   ],
                 ),

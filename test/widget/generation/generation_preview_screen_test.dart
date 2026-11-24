@@ -29,6 +29,20 @@ void main() {
   late FakeGenerationRunner runner;
   late FakeGenerationCardStore store;
 
+  /// Прокручивает список предпросмотра к элементу [finder].
+  ///
+  /// Аудит 2.0 (P2-20): карточка предпросмотра стала выше (чекбокс «Выбрать»,
+  /// бейдж типа, подписи действий у изображений) — часть содержимого ушла за
+  /// сгиб, а `ListView` строит элементы лениво.
+  Future<void> scrollTo(WidgetTester tester, Finder finder) async {
+    await tester.scrollUntilVisible(
+      finder,
+      240,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.pumpAndSettle();
+  }
+
   GenerationChunk chunkOf(int index, String text) {
     return GenerationChunk(
       index: index,
@@ -335,6 +349,7 @@ void main() {
 
     expect(runner.retryCalls, 1);
     expect(runner.lastPrevious, first);
+    await scrollTo(tester, find.text('Третий вопрос'));
     expect(find.text('Третий вопрос'), findsOneWidget);
     expect(find.text(l10n.generationFailuresTitle), findsNothing);
   });
@@ -478,6 +493,7 @@ void main() {
       findsOneWidget,
     );
     expect(find.text(l10n.generationImageSearchFailed(1)), findsOneWidget);
+    await scrollTo(tester, find.text(l10n.generationIssueImageNotFound));
     expect(find.text(l10n.generationIssueImageNotFound), findsOneWidget);
     final Finder downloaded = find.byKey(
       const ValueKey<String>('generation-preview-question-image-1-0'),

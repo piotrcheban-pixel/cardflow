@@ -167,9 +167,51 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
     });
   }
 
-  String _formatMs(int milliseconds) {
-    final String seconds = (milliseconds / 1000).toStringAsFixed(1);
-    return seconds.replaceAll('.', ',');
+  /// Выход из игры с подтверждением: результат не сохранится.
+  Future<void> _confirmExit() async {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final bool playing =
+        _started && !_completed && (_game?.isPlayable ?? false);
+    if (!playing) {
+      if (context.canPop()) context.pop();
+      return;
+    }
+    final bool confirmed = await confirmReviewExit(
+      context,
+      kind: SessionExitKind.study,
+      title: l10n.matchExitTitle,
+      message: l10n.matchExitMessage,
+    );
+    if (confirmed && mounted && context.canPop()) context.pop();
+  }
+
+  /// Время игры строкой с единицами (аудит 2.0, P2-23): «2,6 с» / «1 мин 05 с».
+  String _formatDuration(int milliseconds) {
+    if (milliseconds >= Duration.millisecondsPerMinute) {
+      final int minutes = milliseconds ~/ Duration.millisecondsPerMinute;
+      final String seconds =
+          ((milliseconds % Duration.millisecondsPerMinute) / 1000)
+              .toStringAsFixed(1)
+              .replaceAll('.', ',');
+      return AppLocalizations.of(context).matchTimeMinutes(minutes, seconds);
+    }
+    final String seconds = (milliseconds / 1000)
+        .toStringAsFixed(1)
+        .replaceAll('.', ',');
+    return AppLocalizations.of(context).matchTimeSeconds(seconds);
+  }
+
+  /// Только значение времени с единицами — для строки «Лучшее время».
+  String _formatValue(int milliseconds) {
+    if (milliseconds >= Duration.millisecondsPerMinute) {
+      final int minutes = milliseconds ~/ Duration.millisecondsPerMinute;
+      final String seconds =
+          ((milliseconds % Duration.millisecondsPerMinute) / 1000)
+              .toStringAsFixed(1)
+              .replaceAll('.', ',');
+      return '$minutes мин $seconds с';
+    }
+    return '${(milliseconds / 1000).toStringAsFixed(1).replaceAll('.', ',')} с';
   }
 
   @override
@@ -186,9 +228,8 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
         whyExcerpt: null,
         showFsrsBadge: false,
         showClose: _loading || _loadFailed || playable,
-        onClose: () {
-          if (context.canPop()) context.pop();
-        },
+        // Аудит 2.0 (P2-23): выход из игры не теряет прогресс молча.
+        onClose: () => unawaited(_confirmExit()),
       ),
       body: _buildBody(context, l10n),
     );
@@ -226,7 +267,15 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
           _MatchStat(
             key: const ValueKey<String>('match-timer'),
             icon: Icons.timer_outlined,
-            label: l10n.matchTimer(_formatMs(_elapsedMs)),
+            label: _formatDuration(_elapsedMs),
+          ),
+          _MatchStat(
+            key: const ValueKey<String>('match-progress'),
+            icon: Icons.extension_outlined,
+            label: l10n.matchProgress(
+              game.matched.length ~/ 2,
+              game.tiles.length ~/ 2,
+            ),
           ),
           _MatchStat(
             key: const ValueKey<String>('match-moves'),
@@ -237,7 +286,7 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
             _MatchStat(
               key: const ValueKey<String>('match-best'),
               icon: Icons.emoji_events_outlined,
-              label: l10n.matchBest(_formatMs(_bestMs!)),
+              label: l10n.matchBest(_formatValue(_bestMs!)),
             ),
         ],
       ),
@@ -271,11 +320,11 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                       style: theme.textTheme.titleMedium,
                     ),
                     const SizedBox(height: 8),
-                    Text(l10n.matchTimer(_formatMs(_elapsedMs))),
+                    Text(_formatDuration(_elapsedMs)),
                     if (_bestMs != null) ...<Widget>[
                       const SizedBox(height: 4),
                       Text(
-                        l10n.matchBest(_formatMs(_bestMs!)),
+                        l10n.matchBest(_formatValue(_bestMs!)),
                         key: const ValueKey<String>('match-best-result'),
                       ),
                     ],
@@ -316,6 +365,12 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                         : constraints.maxWidth >= 380
                         ? 2
                         : 1;
+                    // Аудит 2.0 (P2-23): совпавшие плитки убираются из сетки,
+                    // а не оставляют дыры — сетка перестраивается.
+                    final List<int> visible = <int>[
+                      for (var i = 0; i < game.tiles.length; i++)
+                        if (!game.matched.contains(i)) i,
+                    ];
                     return GridView.builder(
                       padding: const EdgeInsets.all(AppSpacing.sm),
                       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
@@ -324,29 +379,25 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                         crossAxisSpacing: AppSpacing.xs,
                         childAspectRatio: 1.35,
                       ),
-                      itemCount: game.tiles.length,
-                      itemBuilder: (BuildContext context, int index) {
+                      itemCount: visible.length,
+                      itemBuilder: (BuildContext context, int position) {
+                        final int index = visible[position];
                         final MatchTile tile = game.tiles[index];
-                        final bool matched = game.matched.contains(index);
                         final bool selected = game.selected == index;
                         final bool mismatch = game.mismatch.contains(index);
                         return _ShakeTile(
                           key: ValueKey<String>('match-tile-$index'),
                           shake: mismatch,
                           child: AnimatedOpacity(
-                            opacity: matched ? 0 : 1,
-                            // Аудит v7 (G9): длительность из общей шкалы и с
-                            // учётом reduced motion.
+                            opacity: 1,
                             duration: AppMotion.duration(
                               context,
                               AppDurations.medium,
                             ),
                             child: IgnorePointer(
-                              ignoring: matched,
+                              ignoring: false,
                               child: FilledButton(
-                                onPressed: matched
-                                    ? null
-                                    : () => _select(index),
+                                onPressed: () => _select(index),
                                 style: FilledButton.styleFrom(
                                   padding: const EdgeInsets.all(AppSpacing.sm),
                                   backgroundColor: selected
