@@ -27,7 +27,7 @@ V1/V8/V11 закрыты в итерации 3.
 | V9. Движение | **PASS** | корзины 120–160/200–250/280–350; reduced motion; flip 300, панель 200 |
 | V10. Текст без обрезки | **PASS** | имена колод 3 строки, чипы 2; `OVERFLOW` — `none` на всех конфигурациях, включая `match|1024` |
 | V11. Один вход на действие | **PASS** | первый запуск — одна «Создать»; выход один; меню одно; дублей нет |
-| V12. Проверки | **PASS** | `analyze` 0, **2678 passed + 16 skipped**, Debug-сборка ok |
+| V12. Проверки | **PASS** | `analyze` 0, **2678 passed + 16 skipped**, Debug-сборка ok; CI: format/analyze, тесты и сборки Windows/Linux/Android — зелёные, macOS/iOS не получили раннер (внешний сбой GitHub) |
 
 ---
 
@@ -139,6 +139,7 @@ V1/V8/V11 закрыты в итерации 3.
 | `flutter test --no-pub --exclude-tags golden` | **2678 passed + 16 skipped** |
 | `flutter build windows --debug --no-pub` | **ok** |
 | Рендер-гейты 2K/4K/FullHD/1024/800/390 | `OVERFLOW` — `none`; `band` ≤25,7 % |
+| CI (run [`45430108959`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/45430108959)) | format + analyze, тесты (ubuntu/windows), сборки Windows/Linux/Android — зелёные; `build macos`/`build ios` — **раннер не получен**: «The job was not acquired by Runner of type hosted», «Internal server error», capacity constraints macOS arm64. Внешний сбой инфраструктуры, не код; повторный запуск `a2d7069` дал ту же ошибку. |
 
 ---
 

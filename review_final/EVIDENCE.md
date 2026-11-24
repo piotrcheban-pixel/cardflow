@@ -292,6 +292,7 @@
 | `flutter analyze --no-pub` | **No issues found!** |
 | `flutter test --no-pub --exclude-tags golden` | **2678 passed + 16 skipped** |
 | `flutter build windows --debug --no-pub` | **ok** |
+| CI (run [`45430108959`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/45430108959)) | format+analyze, тесты и сборки Windows/Linux/Android — успешны; `build macos`/`build ios` не получили macOS-раннер: «The job was not acquired by Runner of type hosted», «Internal server error», capacity constraints. Внешний сбой GitHub Actions; повторный запуск `a2d7069` — та же ошибка. |
 | `OVERFLOW` в рендерах экранов | только ожидаемые состояния; `match` — `none` на всех конфигурациях |
 
 ---
