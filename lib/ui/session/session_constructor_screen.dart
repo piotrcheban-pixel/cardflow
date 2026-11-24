@@ -12,6 +12,7 @@ import 'package:cardflow/domain/session/session_config.dart';
 import 'package:cardflow/domain/session/session_plan.dart';
 import 'package:cardflow/domain/session/session_preset.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
+import 'package:cardflow/ui/components/app_dialogs.dart';
 import 'package:cardflow/ui/components/app_surfaces.dart';
 import 'package:cardflow/ui/theme/app_tokens.dart';
 import 'package:cardflow/ui/decks/deck_actions.dart';
@@ -874,9 +875,9 @@ class _PresetNameDialogState extends State<_PresetNameDialog> {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
-    return AlertDialog(
-      title: Text(l10n.constructorPresetDialogTitle),
-      content: TextField(
+    return AppDialog(
+      title: l10n.constructorPresetDialogTitle,
+      bodyBuilder: (BuildContext dialogContext) => TextField(
         key: const ValueKey<String>('constructor-preset-name'),
         controller: _controller,
         autofocus: true,
@@ -887,9 +888,9 @@ class _PresetNameDialogState extends State<_PresetNameDialog> {
           errorText: _errorText,
         ),
       ),
-      actions: <Widget>[
+      actionsBuilder: (BuildContext dialogContext) => <Widget>[
         TextButton(
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => Navigator.of(dialogContext).pop(),
           child: Text(l10n.cancel),
         ),
         FilledButton(

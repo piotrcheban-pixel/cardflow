@@ -334,3 +334,54 @@ Future<bool> _showImportPreviewDialog(
   );
   return confirmed ?? false;
 }
+
+/// Действия контекстного меню колоды (V8: одно меню на всех экранах).
+enum DeckMenuAction { rename, export, archive, delete }
+
+/// Показывает единое контекстное меню колоды — нижний лист в стиле системы.
+///
+/// И «Колоды» (сетка), и экран «Колода» (шапка) используют этот лист, поэтому
+/// механизм, порядок и оформление действий совпадают. [includeArchive] = false
+/// на экране самой колоды: архивировать открытую колоду из её же меню не нужно.
+Future<DeckMenuAction?> showDeckContextMenu(
+  BuildContext context, {
+  required String deckName,
+  bool includeArchive = true,
+}) {
+  final AppLocalizations l10n = AppLocalizations.of(context);
+  return showAppSheet<DeckMenuAction>(
+    context: context,
+    builder: (BuildContext sheetContext) => Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        AppSheetHeader(title: deckName, icon: Icons.style_outlined),
+        ListTile(
+          key: const ValueKey<String>('deck-menu-rename'),
+          leading: const Icon(Icons.edit_outlined),
+          title: Text(l10n.deckRename),
+          onTap: () => Navigator.of(sheetContext).pop(DeckMenuAction.rename),
+        ),
+        ListTile(
+          key: const ValueKey<String>('deck-menu-export'),
+          leading: const Icon(Icons.ios_share),
+          title: Text(l10n.deckExport),
+          onTap: () => Navigator.of(sheetContext).pop(DeckMenuAction.export),
+        ),
+        if (includeArchive)
+          ListTile(
+            key: const ValueKey<String>('deck-menu-archive'),
+            leading: const Icon(Icons.archive_outlined),
+            title: Text(l10n.deckActionArchive),
+            onTap: () => Navigator.of(sheetContext).pop(DeckMenuAction.archive),
+          ),
+        ListTile(
+          key: const ValueKey<String>('deck-menu-delete'),
+          leading: const Icon(Icons.delete_outline),
+          title: Text(l10n.delete),
+          onTap: () => Navigator.of(sheetContext).pop(DeckMenuAction.delete),
+        ),
+      ],
+    ),
+  );
+}

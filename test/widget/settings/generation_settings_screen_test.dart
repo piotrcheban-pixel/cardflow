@@ -21,6 +21,7 @@ import 'package:cardflow/domain/generation/model_limits.dart';
 import 'package:cardflow/domain/generation/provider_accounts_store.dart';
 import 'package:cardflow/domain/generation/provider_protocol.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
+import 'package:cardflow/ui/components/app_dialogs.dart';
 import 'package:cardflow/ui/components/app_surfaces.dart';
 import 'package:cardflow/ui/m3e/m3e.dart';
 import 'package:cardflow/ui/settings/generation_settings_screen.dart';
@@ -310,7 +311,7 @@ void main() {
     await tester.tap(
       find
           .descendant(
-            of: find.byType(AlertDialog),
+            of: find.byType(AppDialog),
             matching: find.byType(DropdownButtonFormField<String>),
           )
           .first,
@@ -346,7 +347,7 @@ void main() {
       expect(find.text(l10n.settingsKeyEmptyError), findsOneWidget);
       expect(store.writeCalls, 0);
       expect(keys.writeCalls, 0);
-      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(find.byType(AppDialog), findsOneWidget);
     },
   );
 
@@ -359,7 +360,7 @@ void main() {
     await tester.tap(
       find
           .descendant(
-            of: find.byType(AlertDialog),
+            of: find.byType(AppDialog),
             matching: find.byType(DropdownButtonFormField<String>),
           )
           .first,
@@ -505,7 +506,7 @@ void main() {
     await tester.tap(
       find
           .descendant(
-            of: find.byType(AlertDialog),
+            of: find.byType(AppDialog),
             matching: find.byType(DropdownButtonFormField<String>),
           )
           .last,

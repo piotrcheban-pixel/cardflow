@@ -305,13 +305,17 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                 constraints: BoxConstraints(maxWidth: contentWidth),
                 child: LayoutBuilder(
                   builder: (BuildContext context, BoxConstraints constraints) {
+                    // V11: 1024×768 (683×512 лог.) — четыре колонки при
+                    // кегле 13: все 12 плиток видны, длинные вопросы
+                    // переносятся в 4 строки без многоточия.
+                    final bool compactTiles = constraints.maxWidth < 900;
                     final int columns = constraints.maxWidth >= 1600
                         ? 6
                         : constraints.maxWidth >= 560
                         ? 4
                         : constraints.maxWidth >= 380
-                        ? 3
-                        : 2;
+                        ? 2
+                        : 1;
                     return GridView.builder(
                       padding: const EdgeInsets.all(AppSpacing.sm),
                       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
@@ -370,11 +374,14 @@ class _MatchScreenState extends ConsumerState<MatchScreen> {
                                     ),
                                   ),
                                   elevation: 0,
-                                  textStyle: theme.textTheme.titleSmall,
+                                  textStyle: theme.textTheme.titleSmall
+                                      ?.copyWith(
+                                        fontSize: compactTiles ? 13 : null,
+                                      ),
                                 ),
                                 child: CardText(
                                   source: tile.text,
-                                  maxLines: 4,
+                                  maxLines: compactTiles ? 6 : 4,
                                   overflow: TextOverflow.ellipsis,
                                   textAlign: TextAlign.center,
                                 ),

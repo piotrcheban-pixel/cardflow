@@ -22,7 +22,7 @@ import 'package:cardflow/ui/theme/app_tokens.dart';
 import 'package:cardflow/ui/theme/app_typography.dart';
 
 /// Действие контекстного меню колоды.
-enum _DeckMenuAction { archive, rename, export, delete }
+// Контекстное меню колоды — общий `showDeckContextMenu` (V8).
 
 /// Экран «Мои колоды» (SPEC A6.2, ADR-038).
 ///
@@ -361,51 +361,19 @@ class DecksScreen extends ConsumerWidget {
     WidgetRef ref,
     DeckSummary summary,
   ) async {
-    final AppLocalizations l10n = AppLocalizations.of(context);
-    final _DeckMenuAction? action = await showModalBottomSheet<_DeckMenuAction>(
-      context: context,
-      showDragHandle: true,
-      builder: (BuildContext sheetContext) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            ListTile(
-              leading: const Icon(Icons.edit_outlined),
-              title: Text(l10n.deckRename),
-              onTap: () =>
-                  Navigator.of(sheetContext).pop(_DeckMenuAction.rename),
-            ),
-            ListTile(
-              leading: const Icon(Icons.ios_share),
-              title: Text(l10n.deckExport),
-              onTap: () =>
-                  Navigator.of(sheetContext).pop(_DeckMenuAction.export),
-            ),
-            ListTile(
-              leading: const Icon(Icons.archive_outlined),
-              title: Text(l10n.deckActionArchive),
-              onTap: () =>
-                  Navigator.of(sheetContext).pop(_DeckMenuAction.archive),
-            ),
-            ListTile(
-              leading: const Icon(Icons.delete_outline),
-              title: Text(l10n.delete),
-              onTap: () =>
-                  Navigator.of(sheetContext).pop(_DeckMenuAction.delete),
-            ),
-          ],
-        ),
-      ),
+    final DeckMenuAction? action = await showDeckContextMenu(
+      context,
+      deckName: summary.deck.name,
     );
     if (action == null || !context.mounted) return;
     switch (action) {
-      case _DeckMenuAction.archive:
+      case DeckMenuAction.archive:
         await _archiveDeck(context, ref, summary);
-      case _DeckMenuAction.rename:
+      case DeckMenuAction.rename:
         await renameDeck(context, ref, deck: summary.deck);
-      case _DeckMenuAction.export:
+      case DeckMenuAction.export:
         await exportDeckZip(context, ref, deck: summary.deck);
-      case _DeckMenuAction.delete:
+      case DeckMenuAction.delete:
         await deleteDeckWithConfirmation(context, ref, deck: summary.deck);
     }
   }

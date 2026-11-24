@@ -24,8 +24,6 @@ import 'package:cardflow/ui/state/decks_ui_providers.dart';
 import 'package:cardflow/ui/state/review_limits.dart';
 
 /// Действие меню экрана колоды.
-enum _DeckMenuAction { rename, export, delete }
-
 /// Решение в предупреждении об исчерпанном дневном лимите (ADR-028).
 enum _LimitChoice { continueWithoutLimits, practice }
 
@@ -174,27 +172,11 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
                   onPressed: () =>
                       context.push(AppRoutes.deckGenerationPath(deck.id)),
                 ),
-                PopupMenuButton<_DeckMenuAction>(
+                IconButton(
                   key: const ValueKey<String>('deck-overflow-menu'),
                   tooltip: l10n.decksMenuTooltip,
                   icon: const Icon(Icons.more_vert),
-                  onSelected: (_DeckMenuAction action) =>
-                      _handleMenuAction(context, ref, deck, action),
-                  itemBuilder: (BuildContext context) =>
-                      <PopupMenuEntry<_DeckMenuAction>>[
-                        PopupMenuItem<_DeckMenuAction>(
-                          value: _DeckMenuAction.rename,
-                          child: Text(l10n.deckRename),
-                        ),
-                        PopupMenuItem<_DeckMenuAction>(
-                          value: _DeckMenuAction.export,
-                          child: Text(l10n.deckExport),
-                        ),
-                        PopupMenuItem<_DeckMenuAction>(
-                          value: _DeckMenuAction.delete,
-                          child: Text(l10n.delete),
-                        ),
-                      ],
+                  onPressed: () => _showDeckMenu(context, ref, deck),
                 ),
               ],
       ),
@@ -731,18 +713,36 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
     );
   }
 
+  /// Единое контекстное меню колоды (V8): тот же нижний лист, что в сетке.
+  Future<void> _showDeckMenu(
+    BuildContext context,
+    WidgetRef ref,
+    Deck deck,
+  ) async {
+    final DeckMenuAction? action = await showDeckContextMenu(
+      context,
+      deckName: deck.name,
+      includeArchive: false,
+    );
+    if (action == null || !context.mounted) return;
+    await _handleMenuAction(context, ref, deck, action);
+  }
+
   Future<void> _handleMenuAction(
     BuildContext context,
     WidgetRef ref,
     Deck deck,
-    _DeckMenuAction action,
+    DeckMenuAction action,
   ) async {
     switch (action) {
-      case _DeckMenuAction.rename:
+      case DeckMenuAction.rename:
         await renameDeck(context, ref, deck: deck);
-      case _DeckMenuAction.export:
+      case DeckMenuAction.export:
         await exportDeckZip(context, ref, deck: deck);
-      case _DeckMenuAction.delete:
+      case DeckMenuAction.archive:
+        // На экране открытой колоды архива нет (includeArchive: false).
+        break;
+      case DeckMenuAction.delete:
         final bool deleted = await deleteDeckWithConfirmation(
           context,
           ref,

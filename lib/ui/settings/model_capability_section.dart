@@ -11,6 +11,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:cardflow/domain/generation/model_limits.dart';
 import 'package:cardflow/domain/generation/provider_account.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
+import 'package:cardflow/ui/components/app_dialogs.dart';
 import 'package:cardflow/ui/components/app_surfaces.dart';
 import 'package:cardflow/ui/settings/provider_labels.dart';
 import 'package:cardflow/ui/theme/app_tokens.dart';
@@ -457,55 +458,53 @@ class _CapabilityEditDialogState extends State<_CapabilityEditDialog> {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
-    return AlertDialog(
-      title: Text(l10n.settingsCapabilitiesEditTitle),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Text(l10n.settingsCapabilitiesEditHelp),
-            const SizedBox(height: AppSpacing.sm),
-            TextField(
-              key: const ValueKey<String>('capabilities-context-field'),
-              controller: _context,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                labelText: l10n.settingsCapabilitiesContext,
+    return AppDialog(
+      title: l10n.settingsCapabilitiesEditTitle,
+      bodyBuilder: (BuildContext dialogContext) => Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(l10n.settingsCapabilitiesEditHelp),
+          const SizedBox(height: AppSpacing.sm),
+          TextField(
+            key: const ValueKey<String>('capabilities-context-field'),
+            controller: _context,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(
+              labelText: l10n.settingsCapabilitiesContext,
+            ),
+          ),
+          TextField(
+            key: const ValueKey<String>('capabilities-input-field'),
+            controller: _input,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(
+              labelText: l10n.settingsCapabilitiesInput,
+            ),
+          ),
+          TextField(
+            key: const ValueKey<String>('capabilities-output-field'),
+            controller: _output,
+            keyboardType: TextInputType.number,
+            decoration: InputDecoration(
+              labelText: l10n.settingsCapabilitiesOutput,
+            ),
+          ),
+          if (_error != null)
+            Padding(
+              padding: const EdgeInsets.only(top: AppSpacing.xs),
+              child: Text(
+                _error!,
+                key: const ValueKey<String>('capabilities-edit-error'),
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
             ),
-            TextField(
-              key: const ValueKey<String>('capabilities-input-field'),
-              controller: _input,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                labelText: l10n.settingsCapabilitiesInput,
-              ),
-            ),
-            TextField(
-              key: const ValueKey<String>('capabilities-output-field'),
-              controller: _output,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                labelText: l10n.settingsCapabilitiesOutput,
-              ),
-            ),
-            if (_error != null)
-              Padding(
-                padding: const EdgeInsets.only(top: AppSpacing.xs),
-                child: Text(
-                  _error!,
-                  key: const ValueKey<String>('capabilities-edit-error'),
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
-                ),
-              ),
-          ],
-        ),
+        ],
       ),
-      actions: <Widget>[
+      actionsBuilder: (BuildContext dialogContext) => <Widget>[
         TextButton(
           key: const ValueKey<String>('capabilities-cancel'),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => Navigator.of(dialogContext).pop(),
           child: Text(l10n.settingsCapabilitiesCancel),
         ),
         FilledButton(

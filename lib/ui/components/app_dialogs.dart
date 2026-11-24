@@ -67,55 +67,83 @@ class AppDialog extends StatelessWidget {
             // Аудит v4 (V42): у диалога без тела (подтверждение выхода,
             // удаление) больше нет 44 px пустоты между заголовком и кнопками.
             final bool hasBody = body is! SizedBox;
-            return SingleChildScrollView(
-              padding: const EdgeInsets.all(AppSpacing.xl),
+            // V8: заголовок и действия закреплены, прокручивается только тело.
+            // Высокая форма (провайдер, смена характеристик) не уводит
+            // «Сохранить»/«Удалить» за нижнюю кромку экрана.
+            return ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.sizeOf(context).height * 0.85,
+              ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            Text(title, style: theme.textTheme.titleLarge),
-                            if (subtitle != null) ...<Widget>[
-                              const SizedBox(height: AppSpacing.xxs),
-                              Text(
-                                subtitle!,
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: theme.colorScheme.onSurfaceVariant,
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                      if (closeLabel != null)
-                        IconButton(
-                          tooltip: closeLabel,
-                          icon: const Icon(Icons.close, size: AppSizes.icon),
-                          onPressed:
-                              onClose ??
-                              () => Navigator.of(dialogContext).pop(),
-                        ),
-                    ],
-                  ),
-                  if (hasBody) ...<Widget>[
-                    const SizedBox(height: AppSpacing.md),
-                    body,
-                  ],
-                  if (actions.isNotEmpty) ...<Widget>[
-                    SizedBox(height: hasBody ? AppSpacing.xl : AppSpacing.lg),
-                    Wrap(
-                      alignment: WrapAlignment.end,
-                      spacing: AppSpacing.xs,
-                      runSpacing: AppSpacing.xs,
-                      children: actions,
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      AppSpacing.xl,
+                      AppSpacing.xl,
+                      AppSpacing.xl,
+                      hasBody ? 0 : AppSpacing.sm,
                     ),
-                  ],
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              Text(title, style: theme.textTheme.titleLarge),
+                              if (subtitle != null) ...<Widget>[
+                                const SizedBox(height: AppSpacing.xxs),
+                                Text(
+                                  subtitle!,
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        if (closeLabel != null)
+                          IconButton(
+                            tooltip: closeLabel,
+                            icon: const Icon(Icons.close, size: AppSizes.icon),
+                            onPressed:
+                                onClose ??
+                                () => Navigator.of(dialogContext).pop(),
+                          ),
+                      ],
+                    ),
+                  ),
+                  if (hasBody)
+                    Flexible(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.fromLTRB(
+                          AppSpacing.xl,
+                          AppSpacing.md,
+                          AppSpacing.xl,
+                          0,
+                        ),
+                        child: body,
+                      ),
+                    ),
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      AppSpacing.xl,
+                      hasBody ? AppSpacing.xl : AppSpacing.lg,
+                      AppSpacing.xl,
+                      AppSpacing.xl,
+                    ),
+                    child: actions.isEmpty
+                        ? const SizedBox.shrink()
+                        : Wrap(
+                            alignment: WrapAlignment.end,
+                            spacing: AppSpacing.xs,
+                            runSpacing: AppSpacing.xs,
+                            children: actions,
+                          ),
+                  ),
                 ],
               ),
             );

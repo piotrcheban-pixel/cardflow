@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 
 import 'package:cardflow/domain/generation/provider_account.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
+import 'package:cardflow/ui/components/app_dialogs.dart';
 import 'package:cardflow/ui/settings/generation_settings_screen.dart';
 import 'package:cardflow/ui/settings/provider_labels.dart';
 import 'package:cardflow/ui/settings/settings_screen.dart';
@@ -131,10 +132,9 @@ void main() {
     await tester.tap(edit);
     await tester.pumpAndSettle();
 
-    final AlertDialog dialog = tester.widget<AlertDialog>(
-      find.byType(AlertDialog),
-    );
-    expect(dialog.scrollable, isTrue);
+    // V8: форма провайдера — AppDialog с прокручиваемым телом; сырого
+    // AlertDialog больше нет.
+    expect(find.byType(AppDialog), findsOneWidget);
     expect(find.byKey(const ValueKey<String>('provider-save')), findsOneWidget);
     expect(tester.takeException(), isNull);
   });

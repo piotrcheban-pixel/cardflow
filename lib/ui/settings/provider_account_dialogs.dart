@@ -14,7 +14,7 @@ import 'package:cardflow/domain/generation/provider_account.dart';
 import 'package:cardflow/domain/generation/provider_preset.dart';
 import 'package:cardflow/domain/generation/provider_protocol.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
-import 'package:cardflow/ui/theme/app_tokens.dart';
+import 'package:cardflow/ui/components/app_dialogs.dart';
 
 import 'provider_labels.dart';
 
@@ -74,64 +74,61 @@ Future<ProviderAccountDraft?> showCustomProviderDialog(
   );
 }
 
-/// Общая часть диалога: поля ключа и кнопки действий.
+/// Общая часть диалога: заголовок, поля ключа и кнопки действий.
+///
+/// V8: единый `AppDialog` вместо сырого `AlertDialog` — та же ширина, отступы,
+/// заголовок и порядок кнопок, что у диалогов подтверждения.
 class _ProviderDialogChrome extends StatelessWidget {
   const _ProviderDialogChrome({
+    required this.title,
     required this.l10n,
     required this.fields,
     required this.onSave,
-    required this.onCancel,
     required this.hasStoredKey,
     required this.onDeleteKey,
     required this.deleteKey,
   });
 
+  final String title;
   final AppLocalizations l10n;
   final List<Widget> fields;
   final VoidCallback onSave;
-  final VoidCallback onCancel;
   final bool hasStoredKey;
   final VoidCallback onDeleteKey;
   final bool deleteKey;
 
   @override
   Widget build(BuildContext context) {
-    // Находка D13: диалог прокручивается целиком (вместе с кнопками), а не
-    // обрезается по высоте окна — последнее поле и «Сохранить» всегда видны.
-    return AlertDialog(
-      scrollable: true,
-      insetPadding: const EdgeInsets.all(AppSpacing.lg),
-      content: SizedBox(
-        width: 420,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            ...fields,
-            if (hasStoredKey)
-              Align(
-                alignment: AlignmentDirectional.centerStart,
-                child: TextButton.icon(
-                  key: const ValueKey<String>('provider-delete-key'),
-                  onPressed: onDeleteKey,
-                  icon: Icon(
-                    deleteKey ? Icons.undo : Icons.delete_outline,
-                    size: 18,
-                  ),
-                  label: Text(
-                    deleteKey
-                        ? l10n.providersKeyUndoDelete
-                        : l10n.settingsKeyDelete,
-                  ),
+    return AppDialog(
+      title: title,
+      bodyBuilder: (BuildContext dialogContext) => Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          ...fields,
+          if (hasStoredKey)
+            Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: TextButton.icon(
+                key: const ValueKey<String>('provider-delete-key'),
+                onPressed: onDeleteKey,
+                icon: Icon(
+                  deleteKey ? Icons.undo : Icons.delete_outline,
+                  size: 18,
+                ),
+                label: Text(
+                  deleteKey
+                      ? l10n.providersKeyUndoDelete
+                      : l10n.settingsKeyDelete,
                 ),
               ),
-          ],
-        ),
+            ),
+        ],
       ),
-      actions: <Widget>[
+      actionsBuilder: (BuildContext dialogContext) => <Widget>[
         TextButton(
           key: const ValueKey<String>('provider-cancel'),
-          onPressed: onCancel,
+          onPressed: () => Navigator.of(dialogContext).pop(),
           child: Text(l10n.cancel),
         ),
         FilledButton(
@@ -226,18 +223,13 @@ class _PresetProviderDialogState extends State<_PresetProviderDialog> {
     final ProviderPreset? preset = _preset;
     final bool locked = widget.initial != null;
     return _ProviderDialogChrome(
+      title: locked ? l10n.providersEditTitle : l10n.providersAddPreset,
       l10n: l10n,
       hasStoredKey: widget.hasStoredKey,
       deleteKey: _deleteKey,
       onDeleteKey: () => setState(() => _deleteKey = !_deleteKey),
       onSave: _save,
-      onCancel: () => Navigator.of(context).pop(),
       fields: <Widget>[
-        Text(
-          locked ? l10n.providersEditTitle : l10n.providersAddPreset,
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
-        const SizedBox(height: 16),
         DropdownButtonFormField<String>(
           isExpanded: true,
           key: const ValueKey<String>('provider-preset-select'),
@@ -427,20 +419,15 @@ class _CustomProviderDialogState extends State<_CustomProviderDialog> {
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
     return _ProviderDialogChrome(
+      title: widget.initial == null
+          ? l10n.providersAddCustom
+          : l10n.providersEditTitle,
       l10n: l10n,
       hasStoredKey: widget.hasStoredKey,
       deleteKey: _deleteKey,
       onDeleteKey: () => setState(() => _deleteKey = !_deleteKey),
       onSave: _save,
-      onCancel: () => Navigator.of(context).pop(),
       fields: <Widget>[
-        Text(
-          widget.initial == null
-              ? l10n.providersAddCustom
-              : l10n.providersEditTitle,
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
-        const SizedBox(height: 16),
         TextField(
           key: const ValueKey<String>('provider-name'),
           controller: _labelController,
