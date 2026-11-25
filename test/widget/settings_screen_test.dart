@@ -151,34 +151,35 @@ void main() {
 
   // Owner-note 1.0.1 (ADR-047): отказ ОС в записи — не «попробуйте ещё раз»,
   // а понятная причина: папка данных приложения недоступна.
-  testWidgets('нет прав на запись: отдельная строка ARB, значение откатывается', (
-    WidgetTester tester,
-  ) async {
-    await pump(tester);
-    settings.writeError = const AppSettingsWriteException(
-      AppSettingsWriteFailure.writeDenied,
-      details: r'SQLITE_READONLY: C:\Users\user\AppData\Roaming',
-    );
-    final AppLocalizations l10n = l10nOf(tester);
+  testWidgets(
+    'нет прав на запись: отдельная строка ARB, значение откатывается',
+    (WidgetTester tester) async {
+      await pump(tester);
+      settings.writeError = const AppSettingsWriteException(
+        AppSettingsWriteFailure.writeDenied,
+        details: r'SQLITE_READONLY: C:\Users\user\AppData\Roaming',
+      );
+      final AppLocalizations l10n = l10nOf(tester);
 
-    await reveal(
-      tester,
-      find.byKey(const ValueKey<String>('settings-dynamic-color')),
-    );
-    await tester.tap(
-      find.byKey(const ValueKey<String>('settings-dynamic-color')),
-    );
-    await tester.pumpAndSettle();
+      await reveal(
+        tester,
+        find.byKey(const ValueKey<String>('settings-dynamic-color')),
+      );
+      await tester.tap(
+        find.byKey(const ValueKey<String>('settings-dynamic-color')),
+      );
+      await tester.pumpAndSettle();
 
-    expect(find.text(l10n.settingsSavePermissionError), findsOneWidget);
-    expect(
-      find.text(l10n.settingsSaveError),
-      findsNothing,
-      reason: 'Общий текст не должен подменять конкретную причину',
-    );
-    expect(find.textContaining('SQLITE_READONLY'), findsNothing);
-    expect(settings.settings.dynamicColor, isFalse);
-  });
+      expect(find.text(l10n.settingsSavePermissionError), findsOneWidget);
+      expect(
+        find.text(l10n.settingsSaveError),
+        findsNothing,
+        reason: 'Общий текст не должен подменять конкретную причину',
+      );
+      expect(find.textContaining('SQLITE_READONLY'), findsNothing);
+      expect(settings.settings.dynamicColor, isFalse);
+    },
+  );
 
   testWidgets('лимиты, шаги обучения и размер шрифта', (
     WidgetTester tester,

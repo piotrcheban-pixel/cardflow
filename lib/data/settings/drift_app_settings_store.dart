@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'package:cardflow/data/db/app_database.dart';
 import 'package:cardflow/domain/settings/app_settings.dart';
 import 'package:cardflow/domain/settings/app_settings_store.dart';
+import 'package:cardflow/domain/settings/app_settings_write_error.dart';
 
 /// Хранит настройки одной строкой `app_settings` с ключом [settingKey].
 class DriftAppSettingsStore implements AppSettingsStore {
@@ -37,13 +38,22 @@ class DriftAppSettingsStore implements AppSettingsStore {
 
   @override
   Future<void> write(AppSettings settings) async {
-    await db
-        .into(db.appSettings)
-        .insertOnConflictUpdate(
-          AppSettingsCompanion.insert(
-            key: settingKey,
-            valueJson: jsonEncode(settings.toJson()),
-          ),
-        );
+    try {
+      await db
+          .into(db.appSettings)
+          .insertOnConflictUpdate(
+            AppSettingsCompanion.insert(
+              key: settingKey,
+              valueJson: jsonEncode(settings.toJson()),
+            ),
+          );
+    } on Object catch (error) {
+      // ADR-047: UI различает «нет прав на папку данных» и прочие сбои; сырой
+      // текст drift/SQLite остаётся только в `details` (для логов и тестов).
+      throw AppSettingsWriteException(
+        classifyAppSettingsWriteFailure(error),
+        details: 'write app.settings: $error',
+      );
+    }
   }
 }

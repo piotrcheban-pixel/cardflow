@@ -50,7 +50,10 @@ void main() {
   }
 
   test('изменение → сохранение → чтение из БД → значения совпадают', () async {
-    expect(await container.read(appSettingsProvider.future), AppSettings.defaults);
+    expect(
+      await container.read(appSettingsProvider.future),
+      AppSettings.defaults,
+    );
 
     final AppSettings changed = AppSettings.defaults.copyWith(
       theme: AppThemePreference.dark,
@@ -80,9 +83,7 @@ void main() {
       appSettingsProvider.notifier,
     );
     await container.read(appSettingsProvider.future);
-    await controller.save(
-      AppSettings.defaults.copyWith(dailyNewLimit: 5),
-    );
+    await controller.save(AppSettings.defaults.copyWith(dailyNewLimit: 5));
     await controller.save(
       AppSettings.defaults.copyWith(dailyNewLimit: 5, dailyReviewLimit: 55),
     );
@@ -100,28 +101,29 @@ void main() {
     expect(stored.desiredRetention, 0.8);
   });
 
-  test('закрытая БД: запись не «успешна», предыдущее значение не теряется', () async {
-    final AppSettingsController controller = container.read(
-      appSettingsProvider.notifier,
-    );
-    await container.read(appSettingsProvider.future);
-    await controller.save(
-      AppSettings.defaults.copyWith(dailyNewLimit: 12),
-    );
+  test(
+    'закрытая БД: запись не «успешна», предыдущее значение не теряется',
+    () async {
+      final AppSettingsController controller = container.read(
+        appSettingsProvider.notifier,
+      );
+      await container.read(appSettingsProvider.future);
+      await controller.save(AppSettings.defaults.copyWith(dailyNewLimit: 12));
 
-    await db.close();
+      await db.close();
 
-    await expectLater(
-      controller.save(AppSettings.defaults.copyWith(dailyNewLimit: 13)),
-      throwsA(anything),
-      reason: 'Запись в закрытую БД обязана сообщить об ошибке',
-    );
-    // Состояние откатилось к последнему сохранённому значению.
-    expect(container.read(effectiveAppSettingsProvider).dailyNewLimit, 12);
+      await expectLater(
+        controller.save(AppSettings.defaults.copyWith(dailyNewLimit: 13)),
+        throwsA(anything),
+        reason: 'Запись в закрытую БД обязана сообщить об ошибке',
+      );
+      // Состояние откатилось к последнему сохранённому значению.
+      expect(container.read(effectiveAppSettingsProvider).dailyNewLimit, 12);
 
-    final AppSettings stored = await readAfterReopen();
-    expect(stored.dailyNewLimit, 12);
-  });
+      final AppSettings stored = await readAfterReopen();
+      expect(stored.dailyNewLimit, 12);
+    },
+  );
 
   test('файл БД лежит в каталоге данных приложения', () async {
     // drift открывает файл лениво — сначала реальный запрос.

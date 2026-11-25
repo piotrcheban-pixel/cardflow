@@ -19,6 +19,7 @@ import 'package:material_ui/material_ui.dart';
 
 import 'package:cardflow/domain/generation/provider_account.dart';
 import 'package:cardflow/domain/settings/app_settings.dart';
+import 'package:cardflow/domain/settings/app_settings_write_error.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/components/app_dialogs.dart';
 import 'package:cardflow/ui/components/app_layout.dart';
@@ -90,6 +91,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Future<void> _update(AppSettings settings) async {
     try {
       await ref.read(appSettingsProvider.notifier).save(settings);
+    } on AppSettingsWriteException catch (error) {
+      // ADR-047: если ОС запретила запись в каталог данных, повтор не поможет —
+      // показываем причину. Остальные сбои — прежняя строка ARB.
+      if (mounted) {
+        final AppLocalizations l10n = AppLocalizations.of(context);
+        showAppMessage(
+          context,
+          error.failure == AppSettingsWriteFailure.writeDenied
+              ? l10n.settingsSavePermissionError
+              : l10n.settingsSaveError,
+        );
+      }
     } on Object {
       if (mounted) {
         showAppMessage(context, AppLocalizations.of(context).settingsSaveError);

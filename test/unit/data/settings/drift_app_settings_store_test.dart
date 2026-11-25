@@ -126,7 +126,8 @@ void main() {
       // drift открывает файл лениво — первый запрос создаёт его и схему.
       await DriftAppSettingsStore(seedDb).read();
       await seedDb.close();
-      path = '${tempDir.path}${Platform.pathSeparator}'
+      path =
+          '${tempDir.path}${Platform.pathSeparator}'
           '$appDataDirectoryName${Platform.pathSeparator}'
           '$appDatabaseFileName';
     });
@@ -147,24 +148,25 @@ void main() {
       await readOnlyDb.close();
     });
 
-    test('запись в readonly-БД → AppSettingsWriteException(writeDenied)', () async {
-      final DriftAppSettingsStore readOnlyStore = DriftAppSettingsStore(
-        readOnlyDb,
-      );
+    test(
+      'запись в readonly-БД → AppSettingsWriteException(writeDenied)',
+      () async {
+        final DriftAppSettingsStore readOnlyStore = DriftAppSettingsStore(
+          readOnlyDb,
+        );
 
-      await expectLater(
-        readOnlyStore.write(
-          AppSettings.defaults.copyWith(dailyNewLimit: 7),
-        ),
-        throwsA(
-          isA<AppSettingsWriteException>().having(
-            (AppSettingsWriteException error) => error.failure,
-            'failure',
-            AppSettingsWriteFailure.writeDenied,
+        await expectLater(
+          readOnlyStore.write(AppSettings.defaults.copyWith(dailyNewLimit: 7)),
+          throwsA(
+            isA<AppSettingsWriteException>().having(
+              (AppSettingsWriteException error) => error.failure,
+              'failure',
+              AppSettingsWriteFailure.writeDenied,
+            ),
           ),
-        ),
-      );
-    });
+        );
+      },
+    );
 
     test('чтение из readonly-БД работает (настройки не теряются)', () async {
       final DriftAppSettingsStore readOnlyStore = DriftAppSettingsStore(

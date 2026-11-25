@@ -14,7 +14,7 @@ void main() {
       // Реальный текст из debug-лога приложения:
       // DriftRemoteException: SqliteException(8): attempt to write a readonly
       // database ... Causing statement: INSERT INTO "app_settings" ...
-      final Object error =StateError(
+      final Object error = StateError(
         'DriftRemoteException: SqliteException(8): while executing statement, '
         'attempt to write a readonly database (code 8) '
         'Causing statement: INSERT INTO "app_settings" ("key", "value_json") '
@@ -90,7 +90,7 @@ void main() {
       // Создаём валидную БД и закрываем её, чтобы файл существовал.
       final Database seed = sqlite3.open(path);
       seed.execute('CREATE TABLE probe (x INTEGER)');
-      seed.dispose();
+      seed.close();
     });
 
     tearDown(() {
@@ -99,7 +99,7 @@ void main() {
 
     test('SqliteException из драйвера классифицируется как writeDenied', () {
       final Database readOnly = sqlite3.open(path, mode: OpenMode.readOnly);
-      addTearDown(readOnly.dispose);
+      addTearDown(readOnly.close);
       SqliteException? failure;
       try {
         readOnly.execute('INSERT INTO probe (x) VALUES (1)');
