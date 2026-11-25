@@ -3,7 +3,7 @@ library;
 
 /// Версия приложения для отображения (совпадает с `pubspec.yaml`; контракт
 /// проверяется тестом `test/unit/ui/about_links_test.dart`).
-const String appVersion = '1.0.0';
+const String appVersion = '1.0.1';
 
 /// Публичная политика приватности (docs/privacy.md в репозитории).
 ///
