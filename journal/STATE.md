@@ -68,6 +68,9 @@ owner-note после установки 1.0.0. **Режим:** ИТЕРАЦИИ
 (`79fc764`) — **9/9 job success** (`format + analyze`, `test` × 3 ОС,
 `build desktop` × 3, `build mobile` Android + iOS); artifact
 `cardflow-android-release-apk` (50 137 605 Б zip, APK 106 177 646 Б).
+Журнальный коммит `03a6249` — run
+[`45683524007`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/45683524007),
+также **9/9 job success**.
 Предыдущий прогон (`45671962176`) упал на **одном** тесте — жёсткий `'1.0.0'`
 в `settings_screen_test` после выпуска 1.0.1+2; закрыто `79fc764`.
 **Известный локальный нюанс:** `flutter build apk` после `flutter test`
