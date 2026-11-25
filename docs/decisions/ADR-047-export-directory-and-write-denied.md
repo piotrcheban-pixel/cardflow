@@ -80,7 +80,14 @@ UI по-прежнему показывает **только** строку ARB:
 маппинг один — `archiveErrorCodeMessage` (switch по коду, компилятор требует
 ветку для нового значения).
 
-### 3. Настройки: причина видна в debug-логе, запись проверяется тестом
+### 3. Заголовок диалога — из ARB (находка F12)
+
+`FileGateway.saveZipFile` получает `dialogTitle`; экран передаёт
+`deckExportPickerTitle` («Сохранить ZIP-архив колоды»). До этого нативный
+диалог писал «Save File» — тот же класс дефекта, что F12 для импорта
+(«Select File»).
+
+### 4. Настройки: причина видна в debug-логе, запись проверяется тестом
 
 Код записи настроек не менялся — он корректен. Добавлено то, чего не хватало
 для разбора:
@@ -89,9 +96,34 @@ UI по-прежнему показывает **только** строку ARB:
   по образцу ADR-024): тип исключения, текст drift/SQLite и первые 8 кадров
   стека — в `debugPrint` через `settingsDiagnosticsProvider`; в release —
   no-op. Пользователю по-прежнему только строка ARB;
+* `AppSettingsWriteException` + `classifyAppSettingsWriteFailure`
+  (`lib/domain/settings/app_settings_write_error.dart`): `DriftAppSettingsStore`
+  ловит ошибку записи и отдаёт код `writeDenied` (маркеры `readonly`,
+  `access is denied`, `errno = 5` и т. п.) либо `unknown`. Блокировка БД
+  (`database is locked`) намеренно **не** относится к `writeDenied`: для неё
+  повтор действительно помогает. Экран показывает
+  `settingsSavePermissionError` («папка данных приложения недоступна для
+  записи») вместо общего «попробуйте ещё раз»;
 * интеграционный тест на **файловой** drift-БД: изменение → `save` → закрытие
   → повторное открытие → `read` → значения совпадают (in-memory тест эту
-  ошибку класса «файл/права/блокировка» не ловит).
+  ошибку класса «файл/права/блокировка» не ловит), плюс тест отказа на
+  настоящей readonly-БД, открытой драйвером.
+
+## Проверка
+
+* Unit/widget: `file_picker_gateway_test` (+13) — `initialDirectory`,
+  порядок каталогов, откаты резолвера, `FileSystemException → writeDenied`,
+  заголовок диалога; `deck_screen_test` — русская строка вместо системного
+  текста; `settings_screen_test` — отдельная строка при отказе записи;
+  `app_settings_write_error_test`, `drift_app_settings_store_test`,
+  `settings_persistence_file_db_test`, `settings_diagnostics_test`.
+* Живая проверка (release-сборка, 2026-11-25): диалог сохранения открывается в
+  **Downloads** с заголовком «Сохранить ZIP-архив колоды» и именем
+  `Электротехника.zip` (`journal/fix-export-settings/screenshots/release-export-dialog.png`);
+  изменение настроек при недоступном каталоге данных показывает строку о
+  правах (`release-settings-permission.png`); с доступным каталогом данные
+  сохраняются (`daily_new_limit` 20 → 21 в UI и в `app_settings.value_json`,
+  `settings-saved-21.png`).
 
 ## Последствия
 
