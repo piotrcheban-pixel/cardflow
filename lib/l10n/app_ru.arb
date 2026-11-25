@@ -596,11 +596,11 @@
   "@cardFormHintLabel": {
     "description": "Подпись необязательного поля hint."
   },
-  "cardFormTagsLabel": "Теги через запятую (необязательно)",
+  "cardFormTagsLabel": "Теги",
   "@cardFormTagsLabel": {
     "description": "Подпись поля тегов; больше трёх тегов запрещено (SPEC A8.4)."
   },
-  "cardFormSourceExcerptLabel": "Цитата для кнопки «Почему?» (необязательно)",
+  "cardFormSourceExcerptLabel": "Цитата источника",
   "@cardFormSourceExcerptLabel": {
     "description": "Подпись необязательного поля source_excerpt (SPEC A5)."
   },
@@ -3714,5 +3714,27 @@
   "generationPreviewImageNumber": "Изображение {index}",
   "@generationPreviewImageNumber": {"description": "Номер изображения стороны в превью (вместо повтора подписи стороны).", "placeholders": {"index": {"type": "int"}}},
   "reviewFsrsTooltip": "Интервальное повторение по алгоритму FSRS",
-  "@reviewFsrsTooltip": {"description": "Расшифровка бейджа «FSRS» в шапке сессии (аудит 2.0, P3-06)."}
+  "@reviewFsrsTooltip": {"description": "Расшифровка бейджа «FSRS» в шапке сессии (аудит 2.0, P3-06)."},
+  "appInfoClose": "Понятно",
+  "@appInfoClose": {"description": "Кнопка закрытия контекстной подсказки (TASK 04)."},
+  "appInfoTooltip": "Подробнее",
+  "@appInfoTooltip": {"description": "Подсказка кнопки «?» рядом с заголовком раздела (TASK 04)."},
+  "cardFormMoreSection": "Дополнительно",
+  "@cardFormMoreSection": {"description": "Раскрываемая секция второстепенных полей карточки (TASK 04)."},
+  "cardFormMoreSectionHint": "Подсказка, теги и источник",
+  "@cardFormMoreSectionHint": {"description": "Короткое описание содержимого секции «Дополнительно» (TASK 04)."},
+  "cardFormImageInfoTitle": "Изображения на карточке",
+  "@cardFormImageInfoTitle": {"description": "Заголовок подсказки секции изображений (TASK 04)."},
+  "cardFormTypeInfoTitle": "Тип карточки",
+  "@cardFormTypeInfoTitle": {"description": "Заголовок подсказки типа карточки (TASK 04)."},
+  "practiceInfoTooltip": "Без FSRS",
+  "@practiceInfoTooltip": {"description": "Подсказка режима «Тренировка»: расписание не меняется (TASK 04)."},
+  "reviewCardCounterShort": "{current} / {total}",
+  "@reviewCardCounterShort": {"description": "Компактный счётчик карточек на телефоне (TASK 04).", "placeholders": {"current": {"type": "int"}, "total": {"type": "int"}}},
+  "feedEndTitle": "Лента пройдена",
+  "@feedEndTitle": {"description": "Заголовок завершения просмотра ленты (TASK 04)."},
+  "feedEndMessage": "Просмотрено карточек: {count}. Расписание повторений не изменилось.",
+  "@feedEndMessage": {"description": "Итог завершения ленты: счётчик и отсутствие влияния на FSRS (TASK 04).", "placeholders": {"count": {"type": "int"}}},
+  "feedAnswerNavHint": "Свайп ↑↓ · тап — вопрос",
+  "@feedAnswerNavHint": {"description": "Подсказка на обороте карточки ленты: листание и возврат к вопросу (TASK 04)."}
 }

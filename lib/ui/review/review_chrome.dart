@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:cardflow/domain/scheduling/rating.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/components/app_dialogs.dart';
+import 'package:cardflow/ui/components/app_info_hint.dart';
 import 'package:cardflow/ui/components/app_surfaces.dart';
 import 'package:cardflow/ui/review/review_toolbar.dart';
 import 'package:cardflow/ui/theme/app_tokens.dart';
@@ -35,6 +36,8 @@ class ReviewSessionAppBar extends StatelessWidget
     this.progressSemanticsLabel,
     this.showFsrsBadge = true,
     this.showClose = true,
+    this.infoMessage,
+    this.infoTooltip,
     super.key,
   });
 
@@ -79,6 +82,15 @@ class ReviewSessionAppBar extends StatelessWidget
   /// второй вход (крестик) убран, чтобы не было дубля.
   final bool showClose;
 
+  /// Пояснение режима для кнопки «i» в шапке (TASK 04, M-10/M-14).
+  ///
+  /// На телефоне постоянные абзацы-пояснения убраны из тела экрана: смысл
+  /// режима («без FSRS», расшифровка метода) доступен по нажатию.
+  final String? infoMessage;
+
+  /// Подсказка кнопки «i»; `null` — [infoMessage].
+  final String? infoTooltip;
+
   @override
   Size get preferredSize => Size.fromHeight(
     AppSizes.headerHeight + (progress == null ? 0 : AppSpacing.md),
@@ -92,6 +104,12 @@ class ReviewSessionAppBar extends StatelessWidget
     final String? excerpt = whyExcerpt;
     final VoidCallback? onWhy = onWhyPressed;
     final double? value = progress;
+    // TASK 04 (M-14): на телефоне технический чип «FSRS» отнимал у названия
+    // колоды место и вытеснял его в многоточие. Расшифровка метода живёт в
+    // подсказках профильных экранов, а не в каждой шапке.
+    final bool narrowHeader =
+        MediaQuery.sizeOf(context).width < AppSizes.mobileBreakpoint;
+    final String? info = infoMessage;
     final Widget bar = SizedBox(
       height: AppSizes.headerHeight,
       child: Row(
@@ -117,7 +135,7 @@ class ReviewSessionAppBar extends StatelessWidget
                     style: theme.textTheme.titleMedium,
                   ),
                 ),
-                if (showFsrsBadge) ...<Widget>[
+                if (showFsrsBadge && !narrowHeader) ...<Widget>[
                   const SizedBox(width: AppSpacing.xs),
                   // Аудит 2.0 (P3-06): «FSRS» — аббревиатура; расшифровка в
                   // подсказке, чтобы новичок понимал, что это расписание.
@@ -146,6 +164,18 @@ class ReviewSessionAppBar extends StatelessWidget
               ],
             ),
           ),
+          // Пояснение режима по запросу (TASK 04): «Без FSRS» на тренировке.
+          if (info != null)
+            IconButton(
+              key: const ValueKey<String>('review-info'),
+              tooltip: infoTooltip ?? l10n.appInfoTooltip,
+              icon: const Icon(Icons.help_outline, size: AppSizes.navIcon),
+              onPressed: () => showAppInfoSheet(
+                context,
+                title: title ?? l10n.reviewTitle,
+                message: info,
+              ),
+            ),
           // Аудит v7 (G5): недоступное действие скрывается, а не показывается
           // серым. Без истории отката кнопки undo в дереве нет вовсе.
           if (undoEnabled)
@@ -160,7 +190,9 @@ class ReviewSessionAppBar extends StatelessWidget
             IconButton(
               key: const ValueKey<String>('review-why'),
               tooltip: l10n.reviewWhyTooltip,
-              icon: const Icon(Icons.info_outline, size: AppSizes.navIcon),
+              // TASK 04: «i» уже занят подсказкой режима; «Почему?» — цитата
+              // источника, поэтому иконка цитаты, а не второй «info».
+              icon: const Icon(Icons.format_quote, size: AppSizes.navIcon),
               onPressed:
                   onWhy ??
                   (excerpt == null

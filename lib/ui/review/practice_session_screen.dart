@@ -232,6 +232,10 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen>
           onClose: _confirmExit,
           // Аудит v4 (V12): на тренировке FSRS не меняется — бейдж «FSRS» убран.
           showFsrsBadge: false,
+          // TASK 04 (M-10): постоянная подпись на две строки над карточкой
+          // убрана; смысл режима доступен по кнопке «i» в шапке.
+          infoMessage: l10n.practiceSubtitle,
+          infoTooltip: l10n.practiceInfoTooltip,
         ),
         body: Focus(
           autofocus: true,
@@ -266,6 +270,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen>
     }
     final double windowWidth = MediaQuery.sizeOf(context).width;
     final double cardWidth = AppSizes.studyCardWidth(windowWidth);
+    final bool narrowProgress = windowWidth < AppSizes.mobileBreakpoint;
     final bool compactPanel =
         MediaQuery.sizeOf(context).height < AppSizes.compactPanelHeight;
     return Column(
@@ -279,17 +284,22 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen>
               child: SizedBox(
                 width: cardWidth,
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(
+                  padding: EdgeInsets.fromLTRB(
                     AppSpacing.md,
-                    AppSpacing.sm,
+                    narrowProgress ? AppSpacing.xxs : AppSpacing.sm,
                     AppSpacing.md,
                     0,
                   ),
                   child: SessionProgressStrip(
-                    label: l10n.practiceRatedLabel(
-                      state.ratedCount,
-                      state.total,
-                    ),
+                    label: narrowProgress
+                        ? l10n.reviewCardCounterShort(
+                            (state.ratedCount + 1).clamp(1, state.total),
+                            state.total,
+                          )
+                        : l10n.practiceRatedLabel(
+                            state.ratedCount,
+                            state.total,
+                          ),
                     value: state.total == 0
                         ? 0
                         : state.ratedCount / state.total,
@@ -298,22 +308,6 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen>
               ),
             ),
           ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.md,
-            AppSpacing.xxs + 2,
-            AppSpacing.md,
-            0,
-          ),
-          child: Text(
-            l10n.practiceSubtitle,
-            key: const ValueKey<String>('practice-subtitle'),
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ),
         Expanded(
           child: Center(
             child: Padding(

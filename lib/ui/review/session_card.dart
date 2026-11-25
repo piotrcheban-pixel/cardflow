@@ -605,9 +605,9 @@ class _SessionCardState extends State<SessionCard>
           _CardFooterBand(
             padding: EdgeInsets.fromLTRB(
               padH,
-              AppSpacing.md,
+              narrow ? AppSpacing.sm : AppSpacing.md,
               padH,
-              padV + AppSpacing.xxs,
+              narrow ? AppSpacing.sm : padV + AppSpacing.xxs,
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -715,15 +715,19 @@ class _SessionCardState extends State<SessionCard>
                   side: widget.front,
                   revealed: true,
                   style: echoStyle,
-                  media: true,
+                  // TASK 04 (M-12): изображения вопроса уже были показаны до
+                  // переворота. На обороте они дублировались и отнимали у
+                  // ответа 30–40 % высоты. Исключение — occlusion: там холст
+                  // с масками и есть содержание карточки.
+                  media: occlusion,
                   imageMaxHeight: math.max(120, availableHeight * 0.34),
                   imageMaxWidth: math.min(columnWidth * 0.62, 520),
                   faceKey: widget.echoFaceKey ?? widget.faceKey,
                 ),
                 const Padding(
                   padding: EdgeInsets.only(
-                    top: AppSpacing.sm,
-                    bottom: AppSpacing.sm,
+                    top: AppSpacing.xs,
+                    bottom: AppSpacing.xs,
                   ),
                   child: Divider(height: 1),
                 ),

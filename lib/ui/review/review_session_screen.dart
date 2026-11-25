@@ -462,6 +462,10 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen>
     // фиксированные 960 лог. px.
     final double windowWidth = MediaQuery.sizeOf(context).width;
     final double cardWidth = AppSizes.studyCardWidth(windowWidth);
+    // TASK 04 (M-11): на телефоне три представления одного прогресса
+    // («Карточка 1 из 1», полоса, «Оценено: 0») заменены одной строкой
+    // «1 / 1» + полоса. Технический счётчик оценок остаётся на широком экране.
+    final bool narrowProgress = windowWidth < AppSizes.mobileBreakpoint;
     // Аудит v8 (G10): в низком окне панель оценок — один ряд (иначе две оценки
     // уходят за нижнюю кромку карточки).
     final bool compactPanel =
@@ -474,22 +478,26 @@ class _ReviewSessionScreenState extends ConsumerState<ReviewSessionScreen>
         if (MediaQuery.sizeOf(context).height >= 330)
           _cardAligned(
             width: cardWidth,
-            padding: const EdgeInsets.fromLTRB(
+            padding: EdgeInsets.fromLTRB(
               AppSpacing.md,
-              AppSpacing.sm,
+              narrowProgress ? AppSpacing.xxs : AppSpacing.sm,
               AppSpacing.md,
               0,
             ),
             child: SessionProgressStrip(
-              label: l10n.reviewCardCounter(displayIndex, state.total),
+              label: narrowProgress
+                  ? l10n.reviewCardCounterShort(displayIndex, state.total)
+                  : l10n.reviewCardCounter(displayIndex, state.total),
               value: state.total == 0 ? 0 : state.ratedCount / state.total,
-              trailing: Text(
-                l10n.reviewRatedCount(state.ratedCount),
-                style: AppTypography.numeric(
-                  context,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-              ),
+              trailing: narrowProgress
+                  ? null
+                  : Text(
+                      l10n.reviewRatedCount(state.ratedCount),
+                      style: AppTypography.numeric(
+                        context,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
             ),
           ),
         Expanded(

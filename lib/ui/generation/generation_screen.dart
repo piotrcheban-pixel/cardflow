@@ -1869,6 +1869,35 @@ class _KeyBanner extends StatelessWidget {
     // Находка D15/A1 аудита: ссылка «Открыть настройки» сливалась с фоном
     // (контраст 1,36:1). Баннер — errorContainer, все элементы — на
     // onErrorContainer (≥ 4,5:1 в обеих темах).
+    // TASK 04 (M-02-класс): на телефоне «иконка + текст + ссылка» в одном Row
+    // отнимал у текста ширину, и баннер превращался в узкую колонку. На
+    // мобильной ширине — вертикальный блок: текст на всю ширину, действие под
+    // ним (то же правило, что у мобильного Empty State).
+    final bool stacked =
+        MediaQuery.sizeOf(context).width < AppSizes.mobileBreakpoint;
+    final Widget icon = Icon(
+      Icons.key_off_outlined,
+      size: AppSizes.iconLarge,
+      color: scheme.onErrorContainer,
+    );
+    final Widget text = Text(
+      message,
+      style: theme.textTheme.bodyMedium?.copyWith(
+        color: scheme.onErrorContainer,
+      ),
+    );
+    final Widget action = TextButton(
+      key: const ValueKey<String>('generation-open-settings'),
+      style: TextButton.styleFrom(
+        foregroundColor: scheme.onErrorContainer,
+        textStyle: theme.textTheme.labelLarge?.copyWith(
+          decoration: TextDecoration.underline,
+          decorationColor: scheme.onErrorContainer,
+        ),
+      ),
+      onPressed: onAction,
+      child: Text(actionLabel),
+    );
     return Container(
       key: const ValueKey<String>('generation-key-missing'),
       padding: const EdgeInsets.fromLTRB(
@@ -1881,36 +1910,32 @@ class _KeyBanner extends StatelessWidget {
         color: scheme.errorContainer,
         borderRadius: BorderRadius.circular(AppRadii.input),
       ),
-      child: Row(
-        children: <Widget>[
-          Icon(
-            Icons.key_off_outlined,
-            size: AppSizes.iconLarge,
-            color: scheme.onErrorContainer,
-          ),
-          const SizedBox(width: AppSpacing.xs),
-          Expanded(
-            child: Text(
-              message,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: scheme.onErrorContainer,
-              ),
+      child: stacked
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    icon,
+                    const SizedBox(width: AppSpacing.xs),
+                    Expanded(child: text),
+                  ],
+                ),
+                Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: action,
+                ),
+              ],
+            )
+          : Row(
+              children: <Widget>[
+                icon,
+                const SizedBox(width: AppSpacing.xs),
+                Expanded(child: text),
+                action,
+              ],
             ),
-          ),
-          TextButton(
-            key: const ValueKey<String>('generation-open-settings'),
-            style: TextButton.styleFrom(
-              foregroundColor: scheme.onErrorContainer,
-              textStyle: theme.textTheme.labelLarge?.copyWith(
-                decoration: TextDecoration.underline,
-                decorationColor: scheme.onErrorContainer,
-              ),
-            ),
-            onPressed: onAction,
-            child: Text(actionLabel),
-          ),
-        ],
-      ),
     );
   }
 }

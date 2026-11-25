@@ -15,9 +15,12 @@ import 'package:cardflow/domain/cards/media_metadata.dart';
 import 'package:cardflow/domain/cards/occlusion.dart';
 import 'package:cardflow/domain/generation/card_image_kind.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
+import 'package:cardflow/ui/components/app_action_bar.dart';
 import 'package:cardflow/ui/components/app_buttons.dart';
 import 'package:cardflow/ui/components/app_dialogs.dart';
+import 'package:cardflow/ui/components/app_info_hint.dart';
 import 'package:cardflow/ui/components/app_layout.dart';
+import 'package:cardflow/ui/components/app_section_header.dart';
 import 'package:cardflow/ui/components/app_surfaces.dart';
 import 'package:cardflow/ui/theme/app_tokens.dart';
 import 'package:cardflow/ui/theme/app_typography.dart';
@@ -25,6 +28,7 @@ import 'package:cardflow/ui/cards/content/card_content_view.dart';
 import 'package:cardflow/ui/cards/content/card_image_view.dart';
 import 'package:cardflow/ui/cards/occlusion_mask_editor.dart';
 import 'package:cardflow/ui/decks/deck_actions.dart';
+import 'package:cardflow/ui/motion.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
 
 /// Результат работы формы карточки (для сообщений на экране колоды).
@@ -101,7 +105,6 @@ enum _ImageAction {
 }
 
 /// Высота превью изображения в форме: список сторон не раздувается.
-const double _imageTileMaxHeight = 180;
 
 /// Ширина иллюстрации в живом предпросмотре (панель предпросмотра уже).
 const double _previewImageMaxWidth = 560;
@@ -142,6 +145,9 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
   bool _saving = false;
   bool _imageLoading = false;
   bool _showValidationSummary = false;
+
+  /// Раскрыта ли секция второстепенных полей (TASK 04, M-07/M-15).
+  bool _additionalExpanded = false;
   String _initialSignature = '';
   List<_MediaItem> _questionImages = <_MediaItem>[];
   List<_MediaItem> _answerImages = <_MediaItem>[];
@@ -227,6 +233,12 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
         // карточка с иллюстрацией — с выключенными (ADR-028).
         _useOcclusion = _occlusion != null;
         _loading = false;
+        // Заполненные второстепенные поля не прячутся от пользователя:
+        // секция «Дополнительно» открыта, если в ней есть данные.
+        _additionalExpanded =
+            _hint.text.trim().isNotEmpty ||
+            _tags.text.trim().isNotEmpty ||
+            _sourceExcerpt.text.trim().isNotEmpty;
         _initialSignature = _draftSignature();
       });
     } catch (_) {
@@ -468,10 +480,18 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
     );
     final Map<CardDraftField, CardValidationError> errors = draft.validate();
     if (errors.isNotEmpty) {
+      final bool additionalError = errors.keys.any(
+        (CardDraftField field) =>
+            field == CardDraftField.tags ||
+            field == CardDraftField.sourceExcerpt,
+      );
       setState(() {
         _errors = errors;
         // Находка F3: сводка видна всегда, а не только при прокрутке вверх.
         _showValidationSummary = true;
+        // Ошибка в свёрнутой секции не должна быть невидимой: «Дополнительно»
+        // раскрывается, чтобы человек увидел поле и сообщение (TASK 04).
+        if (additionalError) _additionalExpanded = true;
       });
       _scrollToFirstError(errors);
       return;
@@ -669,7 +689,6 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
-    final ThemeData theme = Theme.of(context);
     return PopScope(
       // Находка N2: «назад», Esc и системный back не теряют правки молча.
       canPop: false,
@@ -681,6 +700,10 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
         appBar: AppBar(
           title: Text(
             _isEditing ? l10n.cardFormTitleEdit : l10n.cardFormTitleNew,
+            // TASK 04: на телефоне titleLarge (21–27 px) не вмещает
+            // «Редактировать карточку» и даёт многоточие — используем
+            // titleMedium; на десктопе разница не читается как «мельче».
+            style: Theme.of(context).textTheme.titleMedium,
           ),
           actions: _isEditing && _card != null
               ? <Widget>[
@@ -699,42 +722,12 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
         bottomNavigationBar:
             _loading || _loadFailed || (_isEditing && _card == null)
             ? null
-            : DecoratedBox(
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerLowest,
-                  border: Border(
-                    top: BorderSide(
-                      color: theme.colorScheme.outlineVariant,
-                      width: AppSizes.borderWidth,
-                    ),
-                  ),
-                ),
-                child: SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.md,
-                      AppSpacing.xs,
-                      AppSpacing.md,
-                      AppSpacing.sm,
-                    ),
-                    child: Center(
-                      heightFactor: 1,
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(
-                          maxWidth:
-                              320 *
-                              AppAdaptive.factorForContext(context)
-                                  .clamp(1.0, 1.15),
-                        ),
-                        child: FilledButton(
-                          key: const ValueKey<String>('card-form-save'),
-                          style: AppButtons.large(context),
-                          onPressed: _saving ? null : _save,
-                          child: Text(l10n.save),
-                        ),
-                      ),
-                    ),
-                  ),
+            : AppActionBar(
+                child: FilledButton(
+                  key: const ValueKey<String>('card-form-save'),
+                  style: AppButtons.large(context),
+                  onPressed: _saving ? null : _save,
+                  child: Text(l10n.save),
                 ),
               ),
       ),
@@ -830,36 +823,8 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
                 maxLines: 6,
               ),
             ),
-            const SizedBox(height: AppSpacing.sm),
-            _textField(
-              key: const ValueKey<String>('card-form-hint'),
-              controller: _hint,
-              label: l10n.cardFormHintLabel,
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            KeyedSubtree(
-              key: _fieldAnchors[CardDraftField.tags],
-              child: _textField(
-                key: const ValueKey<String>('card-form-tags'),
-                controller: _tags,
-                label: l10n.cardFormTagsLabel,
-                errorText: _errorText(l10n, CardDraftField.tags),
-                validationField: CardDraftField.tags,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            KeyedSubtree(
-              key: _fieldAnchors[CardDraftField.sourceExcerpt],
-              child: _textField(
-                key: const ValueKey<String>('card-form-source'),
-                controller: _sourceExcerpt,
-                label: l10n.cardFormSourceExcerptLabel,
-                errorText: _errorText(l10n, CardDraftField.sourceExcerpt),
-                validationField: CardDraftField.sourceExcerpt,
-                minLines: 2,
-                maxLines: 4,
-              ),
-            ),
+            const SizedBox(height: AppSpacing.md),
+            _buildAdditionalSection(l10n),
             const SizedBox(height: AppSpacing.md),
             _buildTypeSection(l10n),
             const SizedBox(height: AppSpacing.lg),
@@ -992,13 +957,12 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        Text(l10n.cardFormImageSection, style: theme.textTheme.titleMedium),
-        const SizedBox(height: AppSpacing.xxs),
-        Text(
-          l10n.cardFormImageHint,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: scheme.onSurfaceVariant,
-          ),
+        AppSectionHeader(
+          title: l10n.cardFormImageSection,
+          titleKey: const ValueKey<String>('card-form-image-section-title'),
+          infoKey: 'card-form-image-info',
+          infoTitle: l10n.cardFormImageInfoTitle,
+          infoMessage: l10n.cardFormImageHint,
         ),
         if (error != null) ...<Widget>[
           const SizedBox(height: AppSpacing.xs),
@@ -1070,6 +1034,13 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
     final ThemeData theme = Theme.of(context);
     final ColorScheme scheme = theme.colorScheme;
     final String prefix = question ? 'question' : 'answer';
+    final bool hasItems = items.isNotEmpty;
+    final String addLabel = question
+        ? l10n.cardFormAddQuestionImage
+        : l10n.cardFormAddAnswerImage;
+    final Key addKey = ValueKey<String>(
+      question ? 'card-form-add-question-image' : 'card-form-add-answer-image',
+    );
     return Column(
       key: ValueKey<String>('card-form-$prefix-images'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1083,80 +1054,109 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
                 key: ValueKey<String>('card-form-$prefix-images-title'),
               ),
             ),
-            const SizedBox(width: AppSpacing.xs),
-            OutlinedButton.icon(
-              key: ValueKey<String>(
-                question
-                    ? 'card-form-add-question-image'
-                    : 'card-form-add-answer-image',
-              ),
-              onPressed: _imageLoading || _saving
-                  ? null
-                  : () => _addImage(question: question),
-              icon: const Icon(
-                Icons.add_photo_alternate_outlined,
-                size: AppSizes.icon,
-              ),
-              label: Text(
-                question
-                    ? l10n.cardFormAddQuestionImage
-                    : l10n.cardFormAddAnswerImage,
-              ),
-            ),
-          ],
-        ),
-        if (items.isEmpty)
-          Container(
-            key: ValueKey<String>('card-form-empty-$prefix-images'),
-            margin: const EdgeInsets.only(top: AppSpacing.xs),
-            padding: const EdgeInsets.all(AppSpacing.sm),
-            decoration: BoxDecoration(
-              color: scheme.surfaceContainerHighest,
-              borderRadius: AppRadii.cardRadius,
-              border: Border.all(
-                color: scheme.outlineVariant,
-                width: AppSizes.borderWidth,
-              ),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-                Icon(
-                  Icons.image_outlined,
-                  size: AppSizes.icon,
-                  color: scheme.onSurfaceVariant,
-                ),
-                const SizedBox(width: AppSpacing.xs),
-                Flexible(
+            if (hasItems) ...<Widget>[
+              if (items.length > 1)
+                Padding(
+                  padding: const EdgeInsets.only(right: AppSpacing.xxs),
                   child: Text(
-                    question
-                        ? l10n.cardFormEmptyQuestionImages
-                        : l10n.cardFormEmptyAnswerImages,
-                    style: theme.textTheme.bodySmall?.copyWith(
+                    items.length.toString(),
+                    style: theme.textTheme.labelMedium?.copyWith(
                       color: scheme.onSurfaceVariant,
                     ),
                   ),
                 ),
-              ],
+              // На телефоне действие — компактная иконка: раньше подпись
+              // «Добавить к вопросу» забирала ширину у заголовка, и он рвался
+              // по слогам в вертикальную колонку (M-02).
+              if (MediaQuery.sizeOf(context).width < AppSizes.mobileBreakpoint)
+                IconButton(
+                  key: addKey,
+                  tooltip: addLabel,
+                  visualDensity: VisualDensity.compact,
+                  iconSize: AppSizes.navIcon,
+                  constraints: const BoxConstraints(
+                    minWidth: AppSizes.minTouchTarget,
+                    minHeight: AppSizes.minTouchTarget,
+                  ),
+                  onPressed: _imageLoading || _saving
+                      ? null
+                      : () => _addImage(question: question),
+                  icon: const Icon(Icons.add_photo_alternate_outlined),
+                )
+              else
+                OutlinedButton.icon(
+                  key: addKey,
+                  onPressed: _imageLoading || _saving
+                      ? null
+                      : () => _addImage(question: question),
+                  icon: const Icon(
+                    Icons.add_photo_alternate_outlined,
+                    size: AppSizes.icon,
+                  ),
+                  label: Text(addLabel),
+                ),
+            ],
+          ],
+        ),
+        if (!hasItems)
+          Padding(
+            padding: const EdgeInsets.only(top: AppSpacing.xs),
+            child: SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                key: addKey,
+                onPressed: _imageLoading || _saving
+                    ? null
+                    : () => _addImage(question: question),
+                icon: const Icon(
+                  Icons.add_photo_alternate_outlined,
+                  size: AppSizes.icon,
+                ),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(0, AppSizes.minTouchTarget),
+                  side: BorderSide(color: scheme.outlineVariant),
+                ),
+                label: Text(addLabel),
+              ),
             ),
           ),
-        for (var index = 0; index < items.length; index++)
-          _buildImageTile(
-            l10n: l10n,
-            question: question,
-            index: index,
-            item: items[index],
+        if (hasItems)
+          Padding(
+            padding: const EdgeInsets.only(top: AppSpacing.xs),
+            child: LayoutBuilder(
+              builder: (BuildContext context, BoxConstraints constraints) {
+                final bool twoColumns = constraints.maxWidth >= 300;
+                final double cell = twoColumns
+                    ? (constraints.maxWidth - AppSpacing.xs) / 2
+                    : constraints.maxWidth;
+                return Wrap(
+                  spacing: AppSpacing.xs,
+                  runSpacing: AppSpacing.xs,
+                  children: <Widget>[
+                    for (var index = 0; index < items.length; index++)
+                      SizedBox(
+                        width: cell,
+                        child: _buildImageTile(
+                          l10n: l10n,
+                          question: question,
+                          index: index,
+                          item: items[index],
+                        ),
+                      ),
+                  ],
+                );
+              },
+            ),
           ),
       ],
     );
   }
 
-  /// Карточка одного изображения: превью, кнопка «Заменить» и меню ⋮.
+  /// Карточка одного изображения: компактное превью, «Заменить» и меню ⋮.
   ///
-  /// Аудит v4 (ACTIONS #6): раньше у изображения было до пяти текстовых
-  /// кнопок (↑↓, «На другую сторону», «Заменить», «Найти заново», «Удалить») —
-  /// при трёх изображениях секция превращалась в 15 действий. Теперь видимая
-  /// кнопка одна, остальные действия — в меню ⋮ с прежними ключами.
+  /// TASK 04 (M-08): вместо высокой панели 180 px с текстовой кнопкой —
+  /// плитка сетки 2 колонки (132 px), тап по превью открывает полноэкранный
+  /// просмотр, замена и меню — иконки поверх превью. Ключи и действия прежние.
   Widget _buildImageTile({
     required AppLocalizations l10n,
     required bool question,
@@ -1170,144 +1170,171 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
     final bool first = index == 0;
     final bool busy = _imageLoading || _saving;
     final int total = question ? _questionImages.length : _answerImages.length;
+    final ButtonStyle overlayStyle = IconButton.styleFrom(
+      backgroundColor: scheme.surfaceContainerLowest.withValues(alpha: 0.94),
+      foregroundColor: scheme.onSurface,
+      disabledForegroundColor: scheme.onSurfaceVariant,
+      side: BorderSide(color: scheme.outlineVariant),
+      minimumSize: const Size(36, 36),
+      maximumSize: const Size(36, 36),
+      padding: EdgeInsets.zero,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(Radius.circular(AppRadii.sm)),
+      ),
+    );
     return Container(
       key: ValueKey<String>('card-form-$prefix-image-$index'),
-      margin: const EdgeInsets.only(top: AppSpacing.xs),
-      padding: const EdgeInsets.all(AppSpacing.xs),
+      height: 132,
       decoration: BoxDecoration(
-        color: scheme.surfaceContainerLowest,
+        color: scheme.surfaceContainerLow,
         borderRadius: AppRadii.cardRadius,
         border: Border.all(
           color: scheme.outlineVariant,
           width: AppSizes.borderWidth,
         ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          if (bytes == null)
-            Container(
-              key: ValueKey<String>('card-form-$prefix-missing-$index'),
-              padding: const EdgeInsets.all(AppSpacing.sm),
-              decoration: BoxDecoration(
-                color: scheme.errorContainer,
-                borderRadius: AppRadii.inputRadius,
-              ),
-              child: Row(
-                children: <Widget>[
-                  Icon(
-                    Icons.image_not_supported_outlined,
-                    size: AppSizes.iconLarge,
-                    color: scheme.onErrorContainer,
-                  ),
-                  const SizedBox(width: AppSpacing.xs),
-                  Expanded(
-                    child: Text(
-                      l10n.cardImageUnavailable,
-                      style: theme.textTheme.bodySmall?.copyWith(
+      clipBehavior: Clip.antiAlias,
+      child: LayoutBuilder(
+        builder: (BuildContext context, BoxConstraints constraints) {
+          final double width = constraints.maxWidth;
+          return Stack(
+            fit: StackFit.expand,
+            children: <Widget>[
+              if (bytes == null)
+                Container(
+                  key: ValueKey<String>('card-form-$prefix-missing-$index'),
+                  padding: const EdgeInsets.all(AppSpacing.xs),
+                  color: scheme.errorContainer,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: <Widget>[
+                      Icon(
+                        Icons.image_not_supported_outlined,
+                        size: AppSizes.iconLarge,
                         color: scheme.onErrorContainer,
                       ),
-                    ),
-                  ),
-                ],
-              ),
-            )
-          else
-            CardImageView(
-              bytes: bytes,
-              kind: item.metadata?.kind ?? GeneratedCardImageKind.photo,
-              metadata: item.metadata,
-              maxHeight: _imageTileMaxHeight,
-              onRetry: item.isStored ? () => _reloadImage(item) : null,
-            ),
-          const SizedBox(height: AppSpacing.xs),
-          Wrap(
-            crossAxisAlignment: WrapCrossAlignment.center,
-            spacing: AppSpacing.xs,
-            runSpacing: AppSpacing.xs,
-            children: <Widget>[
-              TextButton.icon(
-                key: ValueKey<String>('card-form-replace-$prefix-$index'),
-                onPressed: busy
-                    ? null
-                    : () => _replaceImage(question: question, index: index),
-                icon: const Icon(
-                  Icons.add_photo_alternate_outlined,
-                  size: AppSizes.icon,
-                ),
-                label: Text(
-                  item.bytes == null && !item.isStored
-                      ? l10n.cardFormPickImage
-                      : l10n.cardFormChangeImage,
-                ),
-              ),
-              PopupMenuButton<_ImageAction>(
-                key: ValueKey<String>('card-form-more-$prefix-$index'),
-                tooltip: l10n.deckMoreActions,
-                icon: const Icon(Icons.more_vert, size: AppSizes.navIcon),
-                enabled: !busy,
-                onSelected: (_ImageAction action) => _handleImageAction(
-                  action,
-                  question: question,
-                  index: index,
-                  item: item,
-                ),
-                itemBuilder: (BuildContext context) =>
-                    <PopupMenuEntry<_ImageAction>>[
-                      if (index > 0)
-                        PopupMenuItem<_ImageAction>(
-                          key: ValueKey<String>(
-                            'card-form-move-up-$prefix-$index',
-                          ),
-                          value: _ImageAction.moveUp,
-                          child: _menuLabel(theme, l10n.cardFormMoveImageUp),
-                        ),
-                      if (index < total - 1)
-                        PopupMenuItem<_ImageAction>(
-                          key: ValueKey<String>(
-                            'card-form-move-down-$prefix-$index',
-                          ),
-                          value: _ImageAction.moveDown,
-                          child: _menuLabel(theme, l10n.cardFormMoveImageDown),
-                        ),
-                      PopupMenuItem<_ImageAction>(
-                        key: ValueKey<String>('card-form-move-$prefix-$index'),
-                        value: _ImageAction.moveToOtherSide,
-                        child: _menuLabel(
-                          theme,
-                          question
-                              ? l10n.cardFormMoveToAnswer
-                              : l10n.cardFormMoveToQuestion,
-                        ),
-                      ),
-                      if (item.isStored)
-                        PopupMenuItem<_ImageAction>(
-                          key: first && question
-                              ? const ValueKey<String>(
-                                  'card-form-refresh-image',
-                                )
-                              : ValueKey<String>(
-                                  'card-form-refresh-$prefix-$index',
-                                ),
-                          value: _ImageAction.refresh,
-                          child: _menuLabel(theme, l10n.cardImageRetryAction),
-                        ),
-                      PopupMenuItem<_ImageAction>(
-                        key: ValueKey<String>(
-                          'card-form-remove-$prefix-$index',
-                        ),
-                        value: _ImageAction.remove,
-                        child: _menuLabel(
-                          theme,
-                          l10n.cardFormRemoveImage,
-                          color: scheme.error,
+                      const SizedBox(height: AppSpacing.xxs),
+                      Text(
+                        l10n.cardImageUnavailable,
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: scheme.onErrorContainer,
                         ),
                       ),
                     ],
+                  ),
+                )
+              else
+                Center(
+                  child: CardImageView(
+                    bytes: bytes,
+                    kind: item.metadata?.kind ?? GeneratedCardImageKind.photo,
+                    metadata: item.metadata,
+                    maxHeight: 132,
+                    maxWidth: width,
+                    onRetry: item.isStored ? () => _reloadImage(item) : null,
+                  ),
+                ),
+              Positioned(
+                top: AppSpacing.xxs,
+                right: AppSpacing.xxs,
+                child: PopupMenuButton<_ImageAction>(
+                  key: ValueKey<String>('card-form-more-$prefix-$index'),
+                  tooltip: l10n.deckMoreActions,
+                  style: overlayStyle,
+                  iconSize: AppSizes.iconSmall,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(
+                    minWidth: AppSizes.minTouchTarget,
+                    minHeight: AppSizes.minTouchTarget,
+                  ),
+                  enabled: !busy,
+                  onSelected: (_ImageAction action) => _handleImageAction(
+                    action,
+                    question: question,
+                    index: index,
+                    item: item,
+                  ),
+                  itemBuilder: (BuildContext context) =>
+                      <PopupMenuEntry<_ImageAction>>[
+                        if (index > 0)
+                          PopupMenuItem<_ImageAction>(
+                            key: ValueKey<String>(
+                              'card-form-move-up-$prefix-$index',
+                            ),
+                            value: _ImageAction.moveUp,
+                            child: _menuLabel(theme, l10n.cardFormMoveImageUp),
+                          ),
+                        if (index < total - 1)
+                          PopupMenuItem<_ImageAction>(
+                            key: ValueKey<String>(
+                              'card-form-move-down-$prefix-$index',
+                            ),
+                            value: _ImageAction.moveDown,
+                            child: _menuLabel(
+                              theme,
+                              l10n.cardFormMoveImageDown,
+                            ),
+                          ),
+                        PopupMenuItem<_ImageAction>(
+                          key: ValueKey<String>(
+                            'card-form-move-$prefix-$index',
+                          ),
+                          value: _ImageAction.moveToOtherSide,
+                          child: _menuLabel(
+                            theme,
+                            question
+                                ? l10n.cardFormMoveToAnswer
+                                : l10n.cardFormMoveToQuestion,
+                          ),
+                        ),
+                        if (item.isStored)
+                          PopupMenuItem<_ImageAction>(
+                            key: first && question
+                                ? const ValueKey<String>(
+                                    'card-form-refresh-image',
+                                  )
+                                : ValueKey<String>(
+                                    'card-form-refresh-$prefix-$index',
+                                  ),
+                            value: _ImageAction.refresh,
+                            child: _menuLabel(theme, l10n.cardImageRetryAction),
+                          ),
+                        PopupMenuItem<_ImageAction>(
+                          key: ValueKey<String>(
+                            'card-form-remove-$prefix-$index',
+                          ),
+                          value: _ImageAction.remove,
+                          child: _menuLabel(
+                            theme,
+                            l10n.cardFormRemoveImage,
+                            color: scheme.error,
+                          ),
+                        ),
+                      ],
+                ),
+              ),
+              Positioned(
+                right: AppSpacing.xxs,
+                bottom: AppSpacing.xxs,
+                child: IconButton(
+                  key: ValueKey<String>('card-form-replace-$prefix-$index'),
+                  tooltip: item.bytes == null && !item.isStored
+                      ? l10n.cardFormPickImage
+                      : l10n.cardFormChangeImage,
+                  style: overlayStyle,
+                  iconSize: AppSizes.iconSmall,
+                  onPressed: busy
+                      ? null
+                      : () => _replaceImage(question: question, index: index),
+                  icon: const Icon(Icons.add_photo_alternate_outlined),
+                ),
               ),
             ],
-          ),
-        ],
+          );
+        },
       ),
     );
   }
@@ -1345,11 +1372,135 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
     }
   }
 
-  /// «Тип карточки»: одна система вида в создании и правке — сегменты.
+  /// Секция «Дополнительно»: подсказка, теги и цитата источника.
   ///
-  /// Аудит v4 (ACTIONS #19): в правке блок выглядел как поле ввода, но был
-  /// недоступен. Теперь везде один и тот же сегментный выбор; после создания
-  /// он disabled, а причина подписана под ним.
+  /// TASK 04 (M-07/M-15): второстепенные поля не занимают первые экраны
+  /// формы. Секция свёрнута по умолчанию у новой карточки и открыта, если в
+  /// карточке уже есть данные.
+  Widget _buildAdditionalSection(AppLocalizations l10n) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
+    final Duration duration = AppMotion.duration(context, AppDurations.base);
+    final int filled = <String>[
+      _hint.text,
+      _tags.text,
+      _sourceExcerpt.text,
+    ].where((String value) => value.trim().isNotEmpty).length;
+    final Widget fields = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        _textField(
+          key: const ValueKey<String>('card-form-hint'),
+          controller: _hint,
+          label: l10n.cardFormHintLabel,
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        KeyedSubtree(
+          key: _fieldAnchors[CardDraftField.tags],
+          child: _textField(
+            key: const ValueKey<String>('card-form-tags'),
+            controller: _tags,
+            label: l10n.cardFormTagsLabel,
+            errorText: _errorText(l10n, CardDraftField.tags),
+            validationField: CardDraftField.tags,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        KeyedSubtree(
+          key: _fieldAnchors[CardDraftField.sourceExcerpt],
+          child: _textField(
+            key: const ValueKey<String>('card-form-source'),
+            controller: _sourceExcerpt,
+            label: l10n.cardFormSourceExcerptLabel,
+            errorText: _errorText(l10n, CardDraftField.sourceExcerpt),
+            validationField: CardDraftField.sourceExcerpt,
+            minLines: 2,
+            maxLines: 4,
+          ),
+        ),
+      ],
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            key: const ValueKey<String>('card-form-additional-toggle'),
+            borderRadius: BorderRadius.circular(AppRadii.input),
+            onTap: () =>
+                setState(() => _additionalExpanded = !_additionalExpanded),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.xs,
+                vertical: AppSpacing.xs,
+              ),
+              child: Row(
+                children: <Widget>[
+                  Icon(
+                    Icons.tune,
+                    size: AppSizes.icon,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(width: AppSpacing.xs),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        Text(
+                          l10n.cardFormMoreSection,
+                          style: theme.textTheme.titleSmall,
+                        ),
+                        Text(
+                          l10n.cardFormMoreSectionHint,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (filled > 0)
+                    Padding(
+                      padding: const EdgeInsets.only(right: AppSpacing.xs),
+                      child: Text(
+                        filled.toString(),
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  AnimatedRotation(
+                    turns: _additionalExpanded ? 0.5 : 0,
+                    duration: duration,
+                    child: Icon(
+                      Icons.expand_more,
+                      size: AppSizes.icon,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        AnimatedCrossFade(
+          firstChild: const SizedBox(width: double.infinity),
+          secondChild: Padding(
+            padding: const EdgeInsets.only(top: AppSpacing.xs),
+            child: fields,
+          ),
+          crossFadeState: _additionalExpanded
+              ? CrossFadeState.showSecond
+              : CrossFadeState.showFirst,
+          duration: duration,
+          sizeCurve: Curves.easeOutCubic,
+        ),
+      ],
+    );
+  }
+
   Widget _buildTypeSection(AppLocalizations l10n) {
     final ThemeData theme = Theme.of(context);
     final ColorScheme scheme = theme.colorScheme;
@@ -1357,7 +1508,24 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        Text(l10n.cardFormTypeLabel, style: _fieldLabelStyle(theme)),
+        Row(
+          children: <Widget>[
+            Expanded(
+              child: Text(
+                l10n.cardFormTypeLabel,
+                style: _fieldLabelStyle(theme),
+              ),
+            ),
+            // TASK 04 (M-07): объяснение «тип нельзя изменить» — в подсказке,
+            // а не двумя строками под сегментами.
+            if (_isEditing)
+              AppInfoButton(
+                title: l10n.cardFormTypeInfoTitle,
+                message: l10n.cardFormTypeImmutable,
+                keyValue: 'card-form-type-info',
+              ),
+          ],
+        ),
         const SizedBox(height: AppSpacing.xs),
         // Аудит v5 (V5-8): на узком экране три сегмента не помещаются и
         // подписи ломаются по буквам — там это переносимые чипы.
@@ -1411,27 +1579,6 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
             );
           },
         ),
-        if (_isEditing) ...<Widget>[
-          const SizedBox(height: AppSpacing.xxs),
-          Row(
-            children: <Widget>[
-              Icon(
-                Icons.lock_outline,
-                size: AppSizes.iconSmall,
-                color: scheme.onSurfaceVariant,
-              ),
-              const SizedBox(width: AppSpacing.xxs),
-              Expanded(
-                child: Text(
-                  l10n.cardFormTypeImmutable,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
         if (!_isEditing && _cardType == CardType.basicReversed) ...<Widget>[
           const SizedBox(height: AppSpacing.xs),
           Text(

@@ -65,6 +65,12 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
   bool _planMissing = false;
   bool _timeExpired = false;
   bool _animating = false;
+
+  /// Индекс страницы, которую видит пользователь (`total` — итог ленты).
+  int _visibleIndex = 0;
+
+  /// Пользователь долистал до итоговой страницы после последней карточки.
+  bool _endReached = false;
   double _wheelAccumulator = 0;
   Timer? _wheelReset;
   Timer? _budgetTimer;
@@ -173,8 +179,8 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
         !_pageController.hasClients ||
         _timeExpired ||
         index < 0 ||
-        index >= engine.state.total ||
-        index == engine.state.index) {
+        index > engine.state.total ||
+        index == _visibleIndex) {
       return;
     }
     _animating = true;
@@ -193,6 +199,23 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
     } finally {
       _animating = false;
     }
+  }
+
+  /// Завершение вертикального перехода страницы ленты.
+  ///
+  /// TASK 04 (M-13): после последней карточки есть отдельная итоговая
+  /// страница — свайп вверх больше не «ничего не делает», а показывает
+  /// результат просмотра и кнопку выхода.
+  void _onPageChanged(int index) {
+    _visibleIndex = index;
+    final FeedSessionEngine? engine = _engine;
+    final int total = engine?.state.total ?? 0;
+    if (index >= total) {
+      if (!_endReached) setState(() => _endReached = true);
+      return;
+    }
+    if (_endReached) setState(() => _endReached = false);
+    engine?.visit(index);
   }
 
   /// Колесо мыши и тачпад: одно движение — одна карточка.
@@ -230,14 +253,14 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
 
   void _toggleReveal() {
     final FeedSessionEngine? engine = _engine;
-    if (engine == null || _timeExpired) return;
+    if (engine == null || _timeExpired || _endReached) return;
     _toggleRevealAt(engine.state.index);
   }
 
   /// Раскрывает ответ конкретной карточки (тап по видимой странице).
   void _toggleRevealAt(int index) {
     final FeedSessionEngine? engine = _engine;
-    if (engine == null || _timeExpired) return;
+    if (engine == null || _timeExpired || _endReached) return;
     final List<FeedSessionItem> items = engine.state.items;
     if (index < 0 || index >= items.length) return;
     final bool willReveal = !items[index].revealed;
@@ -366,6 +389,9 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
         _FeedHeader(
           title: deckLabel,
           showClose: !terminal,
+          // TASK 04: на телефоне чип «Лента» отнимал у названия колоды место;
+          // режим и так очевиден по композиции.
+          showModeChip: windowWidth >= AppSizes.mobileBreakpoint,
           onClose: _confirmExit,
         ),
         Center(
@@ -380,7 +406,9 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
               ),
               child: FeedProgressBar(
                 total: state.total,
-                currentIndex: state.index,
+                currentIndex: _endReached
+                    ? state.total - 1
+                    : math.min(state.index, state.total - 1),
                 onSeek: (int index) => unawaited(_goTo(index)),
               ),
             ),
@@ -393,13 +421,22 @@ class _FeedSessionScreenState extends ConsumerState<FeedSessionScreen>
                 key: const ValueKey<String>('feed-page-view'),
                 controller: _pageController,
                 scrollDirection: Axis.vertical,
-                itemCount: state.total,
+                // TASK 04: после последней карточки — итоговая страница, чтобы
+                // свайп вверх не упирался в границу без объяснения.
+                itemCount: state.total + 1,
                 // Страница всегда целиком: никаких частичных положений после
                 // свайпа и никакой инерционной прокрутки через несколько карточек.
                 physics: const PageScrollPhysics(),
                 allowImplicitScrolling: false,
-                onPageChanged: (int index) => _engine?.visit(index),
+                onPageChanged: _onPageChanged,
                 itemBuilder: (BuildContext context, int index) {
+                  if (index >= state.total) {
+                    return _FeedEndView(
+                      total: state.total,
+                      cardWidth: cardWidth,
+                      onDone: _leave,
+                    );
+                  }
                   final FeedSessionItem item = state.items[index];
                   return Listener(
                     behavior: HitTestBehavior.opaque,
@@ -458,11 +495,15 @@ class _FeedHeader extends StatelessWidget {
   const _FeedHeader({
     required this.title,
     required this.showClose,
+    required this.showModeChip,
     required this.onClose,
   });
 
   final String title;
   final bool showClose;
+
+  /// Показывать ли чип «Лента»; на телефоне он скрыт (TASK 04, M-14).
+  final bool showModeChip;
   final VoidCallback onClose;
 
   @override
@@ -495,26 +536,27 @@ class _FeedHeader extends StatelessWidget {
               ),
             ),
             const SizedBox(width: AppSpacing.xs),
-            Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.xs,
-                vertical: 3,
-              ),
-              decoration: BoxDecoration(
-                color: scheme.primary.withValues(alpha: 0.10),
-                borderRadius: BorderRadius.circular(AppRadii.xs),
-                border: Border.all(
-                  color: scheme.primary.withValues(alpha: 0.28),
+            if (showModeChip)
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.xs,
+                  vertical: 3,
+                ),
+                decoration: BoxDecoration(
+                  color: scheme.primary.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(AppRadii.xs),
+                  border: Border.all(
+                    color: scheme.primary.withValues(alpha: 0.28),
+                  ),
+                ),
+                child: Text(
+                  // Аудит 2.0 (P3-08): режим называется «Лента» везде — чип
+                  // «Просмотр» расходился с названием в листе режимов.
+                  l10n.feedBrowseBadgeV2,
+                  key: const ValueKey<String>('feed-browse-badge'),
+                  style: AppTypography.caption(context, color: scheme.primary),
                 ),
               ),
-              child: Text(
-                // Аудит 2.0 (P3-08): режим называется «Лента» везде — чип
-                // «Просмотр» расходился с названием в листе режимов.
-                l10n.feedBrowseBadgeV2,
-                key: const ValueKey<String>('feed-browse-badge'),
-                style: AppTypography.caption(context, color: scheme.primary),
-              ),
-            ),
             const SizedBox(width: AppSpacing.xs),
           ],
         ),
@@ -568,6 +610,50 @@ class _FeedNavRail extends StatelessWidget {
           icon: const Icon(Icons.keyboard_arrow_down, size: AppSizes.iconLarge),
         ),
       ],
+    );
+  }
+}
+
+/// Итог просмотра: пользователь долистал ленту до конца (TASK 04).
+class _FeedEndView extends StatelessWidget {
+  const _FeedEndView({
+    required this.total,
+    required this.cardWidth,
+    required this.onDone,
+  });
+
+  final int total;
+  final double cardWidth;
+  final VoidCallback onDone;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.sm,
+        ),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: cardWidth),
+          child: AppEmptyState(
+            key: const ValueKey<String>('feed-end'),
+            hero: true,
+            icon: Icons.done_all,
+            metric: Text(total.toString()),
+            title: l10n.feedEndTitle,
+            message: l10n.feedEndMessage(total),
+            actions: <Widget>[
+              FilledButton(
+                key: const ValueKey<String>('feed-end-done'),
+                onPressed: onDone,
+                child: Text(l10n.reviewDone),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

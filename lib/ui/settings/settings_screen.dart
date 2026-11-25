@@ -910,32 +910,58 @@ class _SettingsSubNav extends StatelessWidget {
     // Аудит 2.0 (P2-10): вместо переноса в 3 ряда — одна строка с
     // горизонтальной прокруткой. Разделы не обрезаются, панель остаётся
     // 26 %-ной высоты экрана и не съедает контент.
-    return SingleChildScrollView(
-      key: const ValueKey<String>('settings-nav-scroll'),
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          for (final _SettingsNavItem item in items)
-            Padding(
-              padding: const EdgeInsetsDirectional.only(end: AppSpacing.xs),
-              child: ChoiceChip(
-                key: ValueKey<String>('settings-nav-${item.label}'),
-                avatar: Icon(
-                  item.icon,
-                  size: AppSizes.iconSmall,
-                  color: selected(item) ? scheme.onPrimary : scheme.primary,
+    // TASK 04: у правой кромки — мягкое затухание: обрезанная на полуслове
+    // плитка больше не выглядит дефектом, а показывает, что ряд прокручивается.
+    return Stack(
+      children: <Widget>[
+        SingleChildScrollView(
+          key: const ValueKey<String>('settings-nav-scroll'),
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              for (final _SettingsNavItem item in items)
+                Padding(
+                  padding: const EdgeInsetsDirectional.only(end: AppSpacing.xs),
+                  child: ChoiceChip(
+                    key: ValueKey<String>('settings-nav-${item.label}'),
+                    avatar: Icon(
+                      item.icon,
+                      size: AppSizes.iconSmall,
+                      color: selected(item) ? scheme.onPrimary : scheme.primary,
+                    ),
+                    label: Text(item.label),
+                    selected: selected(item),
+                    // Аватар-иконка уже показывает раздел; галочка не нужна.
+                    showCheckmark: false,
+                    materialTapTargetSize: MaterialTapTargetSize.padded,
+                    onSelected: (_) => onSelect(item.key),
+                  ),
                 ),
-                label: Text(item.label),
-                selected: selected(item),
-                // Аватар-иконка уже показывает раздел; галочка не нужна.
-                showCheckmark: false,
-                materialTapTargetSize: MaterialTapTargetSize.padded,
-                onSelected: (_) => onSelect(item.key),
+            ],
+          ),
+        ),
+        Positioned(
+          top: 0,
+          right: 0,
+          bottom: 0,
+          width: AppSpacing.lg,
+          child: IgnorePointer(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: AlignmentDirectional.centerStart,
+                  end: AlignmentDirectional.centerEnd,
+                  colors: <Color>[
+                    scheme.surface.withValues(alpha: 0),
+                    scheme.surface,
+                  ],
+                ),
               ),
             ),
-        ],
-      ),
+          ),
+        ),
+      ],
     );
   }
 }

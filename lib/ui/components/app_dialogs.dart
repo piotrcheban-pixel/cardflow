@@ -247,6 +247,10 @@ class AppSheetHeader extends StatelessWidget {
 
 /// Открывает нижний лист в стиле системы: максимальная ширина 560 px на
 /// широком экране, прокрутка при нехватке высоты, drag handle.
+///
+/// TASK 04 (M-03): лист учитывает клавиатуру (`viewInsets`) и системные
+/// области; содержимое прокручивается внутри листа, а не растягивает его за
+/// пределы экрана.
 Future<T?> showAppSheet<T>({
   required BuildContext context,
   required WidgetBuilder builder,
@@ -256,12 +260,106 @@ Future<T?> showAppSheet<T>({
     context: context,
     isScrollControlled: isScrollControlled,
     showDragHandle: true,
+    useSafeArea: true,
     builder: (BuildContext sheetContext) {
-      return ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 560),
-        child: SafeArea(
-          top: false,
-          child: SingleChildScrollView(child: builder(sheetContext)),
+      final double keyboard = MediaQuery.viewInsetsOf(sheetContext).bottom;
+      return AnimatedPadding(
+        padding: EdgeInsets.only(bottom: keyboard),
+        duration: AppDurations.quick,
+        curve: Curves.easeOut,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 560),
+          child: SafeArea(
+            top: false,
+            child: SingleChildScrollView(child: builder(sheetContext)),
+          ),
+        ),
+      );
+    },
+  );
+}
+
+/// Высокий нижний лист с управляемой высотой и закрытием свайпом вниз.
+///
+/// Для длинных списков (выбор режима, меню действий, пресеты): стартовая высота
+/// [initialChildSize] (72 %), максимум [maxChildSize] (92 %), минимум
+/// [minChildSize]. Внутренний `ListView` получает [ScrollController] от
+/// `DraggableScrollableSheet`, поэтому жест «потянуть вниз» в любом месте
+/// содержимого сначала уменьшает лист, а достигнув минимума — закрывает его
+/// (`shouldCloseOnMinExtent`). Так лист больше не открывается «на весь экран»
+/// и не требует искать крошечный drag handle.
+Future<T?> showAppDetentSheet<T>({
+  required BuildContext context,
+  required Widget Function(
+    BuildContext sheetContext,
+    ScrollController controller,
+  )
+  builder,
+  double initialChildSize = 0.72,
+  double minChildSize = 0.4,
+  double maxChildSize = 0.92,
+  double maxWidth = 760,
+}) {
+  final double initial = initialChildSize.clamp(0.2, 0.95);
+  final double min = minChildSize.clamp(0.15, initial);
+  final double max = maxChildSize.clamp(initial, 0.98);
+  return showModalBottomSheet<T>(
+    context: context,
+    isScrollControlled: true,
+    // Лист рисует свою поверхность: прозрачный модальный контейнер не
+    // перекрывает фон за пределами листа.
+    backgroundColor: Colors.transparent,
+    elevation: 0,
+    useSafeArea: true,
+    builder: (BuildContext sheetContext) {
+      final ThemeData theme = Theme.of(sheetContext);
+      final ColorScheme scheme = theme.colorScheme;
+      final double keyboard = MediaQuery.viewInsetsOf(sheetContext).bottom;
+      return AnimatedPadding(
+        padding: EdgeInsets.only(bottom: keyboard),
+        duration: AppDurations.quick,
+        curve: Curves.easeOut,
+        child: Align(
+          alignment: Alignment.bottomCenter,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: maxWidth),
+            child: DraggableScrollableSheet(
+              expand: false,
+              initialChildSize: initial,
+              minChildSize: min,
+              maxChildSize: max,
+              snap: true,
+              snapSizes: <double>[initial, max],
+              builder: (BuildContext dragContext, ScrollController controller) {
+                return Material(
+                  key: const ValueKey<String>('app-detent-sheet'),
+                  color: scheme.surfaceContainerLowest,
+                  clipBehavior: Clip.antiAlias,
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(AppRadii.panel),
+                    ),
+                  ),
+                  child: Column(
+                    children: <Widget>[
+                      const SizedBox(height: AppSpacing.xs),
+                      Container(
+                        key: const ValueKey<String>('app-detent-sheet-handle'),
+                        width: 32,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: scheme.onSurfaceVariant.withValues(alpha: 0.4),
+                          borderRadius: BorderRadius.circular(AppRadii.pill),
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xxs),
+                      Expanded(child: builder(dragContext, controller)),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
         ),
       );
     },

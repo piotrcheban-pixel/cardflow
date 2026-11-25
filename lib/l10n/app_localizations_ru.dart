@@ -481,11 +481,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get cardFormHintLabel => 'Подсказка (необязательно)';
 
   @override
-  String get cardFormTagsLabel => 'Теги через запятую (необязательно)';
+  String get cardFormTagsLabel => 'Теги';
 
   @override
-  String get cardFormSourceExcerptLabel =>
-      'Цитата для кнопки «Почему?» (необязательно)';
+  String get cardFormSourceExcerptLabel => 'Цитата источника';
 
   @override
   String get cardFormTypeLabel => 'Тип карточки';
@@ -3271,4 +3270,41 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get reviewFsrsTooltip => 'Интервальное повторение по алгоритму FSRS';
+
+  @override
+  String get appInfoClose => 'Понятно';
+
+  @override
+  String get appInfoTooltip => 'Подробнее';
+
+  @override
+  String get cardFormMoreSection => 'Дополнительно';
+
+  @override
+  String get cardFormMoreSectionHint => 'Подсказка, теги и источник';
+
+  @override
+  String get cardFormImageInfoTitle => 'Изображения на карточке';
+
+  @override
+  String get cardFormTypeInfoTitle => 'Тип карточки';
+
+  @override
+  String get practiceInfoTooltip => 'Без FSRS';
+
+  @override
+  String reviewCardCounterShort(int current, int total) {
+    return '$current / $total';
+  }
+
+  @override
+  String get feedEndTitle => 'Лента пройдена';
+
+  @override
+  String feedEndMessage(int count) {
+    return 'Просмотрено карточек: $count. Расписание повторений не изменилось.';
+  }
+
+  @override
+  String get feedAnswerNavHint => 'Свайп ↑↓ · тап — вопрос';
 }

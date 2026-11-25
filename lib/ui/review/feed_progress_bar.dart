@@ -42,6 +42,8 @@ class FeedProgressBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
     final ColorScheme scheme = Theme.of(context).colorScheme;
+    final bool compact =
+        MediaQuery.sizeOf(context).width < AppSizes.mobileBreakpoint;
     final int position = total == 0 ? 0 : (currentIndex + 1).clamp(1, total);
     final String semantics = l10n.feedProgressSemantics(position, total);
     final int segments = total == 0
@@ -88,7 +90,9 @@ class FeedProgressBar extends StatelessWidget {
           ),
           const SizedBox(width: AppSpacing.sm),
           Text(
-            l10n.reviewCardCounter(position, total),
+            compact
+                ? l10n.reviewCardCounterShort(position, total)
+                : l10n.reviewCardCounter(position, total),
             key: const ValueKey<String>('feed-progress-counter'),
             style: AppTypography.numeric(
               context,

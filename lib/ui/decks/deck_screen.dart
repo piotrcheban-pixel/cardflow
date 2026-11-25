@@ -388,8 +388,15 @@ class _DeckScreenState extends ConsumerState<DeckScreen> {
                           children: <Widget>[
                             titleRow,
                             const SizedBox(height: AppSpacing.xs),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
+                            // TASK 04 (M-06): на 320 px и при кегле 130 %
+                            // ряд «поиск + фильтр + Добавить карточку» не
+                            // помещался (overflow 14–17 px). Wrap переносит
+                            // действие на вторую строку без обрезки.
+                            Wrap(
+                              alignment: WrapAlignment.end,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              spacing: AppSpacing.xs,
+                              runSpacing: AppSpacing.xxs,
                               children: actions,
                             ),
                           ],

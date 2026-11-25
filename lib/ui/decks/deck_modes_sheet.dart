@@ -106,202 +106,153 @@ Future<DeckSessionMode?> showDeckModesSheet(
   final AppLocalizations l10n = AppLocalizations.of(context);
   final Size size = MediaQuery.sizeOf(context);
   final double maxWidth = math.min(size.width - AppSpacing.xl, 760);
-  return showModalBottomSheet<DeckSessionMode>(
+  Widget available(
+    DeckSessionMode mode,
+    IconData icon,
+    String title,
+    String subtitle, {
+    bool enabled = true,
+    Key? key,
+  }) {
+    return _ModeTile(
+      tileKey: key,
+      mode: mode,
+      icon: icon,
+      title: title,
+      subtitle: subtitle,
+      enabled: enabled,
+    );
+  }
+
+  final bool availableTest = availability.testCount > 0;
+  final bool availableTyping = availability.typingCount > 0;
+  final bool availableMatch = availability.matchableCount >= 6;
+  final bool availableTrueFalse = availability.trueFalseCount > 0;
+  final List<Widget> review = <Widget>[
+    available(
+      DeckSessionMode.classic,
+      Icons.style_outlined,
+      l10n.reviewModeClassic,
+      l10n.reviewModeClassicSubtitle,
+      key: const ValueKey<String>('review-mode-classic'),
+    ),
+    available(
+      DeckSessionMode.feed,
+      Icons.view_agenda_outlined,
+      l10n.reviewModeFeed,
+      l10n.reviewModeFeedSubtitle,
+      key: const ValueKey<String>('review-mode-feed'),
+    ),
+    available(
+      DeckSessionMode.practice,
+      Icons.sports_esports_outlined,
+      l10n.reviewModePractice,
+      l10n.practiceSubtitle,
+      key: const ValueKey<String>('review-mode-practice'),
+    ),
+  ];
+  final List<Widget> check = <Widget>[
+    available(
+      DeckSessionMode.test,
+      Icons.quiz_outlined,
+      l10n.reviewModeTest,
+      availableTest
+          ? '${l10n.studyModeTestSubtitle} · '
+                '${l10n.studyModeAvailableCount(availability.testCount)}'
+          : l10n.studyModeTestNotEnough(availability.testCount),
+      enabled: availableTest,
+      key: const ValueKey<String>('review-mode-test'),
+    ),
+    available(
+      DeckSessionMode.typing,
+      Icons.keyboard_outlined,
+      l10n.reviewModeTyping,
+      availableTyping
+          ? '${l10n.studyModeTypingSubtitle} · '
+                '${l10n.studyModeAvailableCount(availability.typingCount)}'
+          : l10n.studyModeTypingNotEnough(availability.typingCount),
+      enabled: availableTyping,
+      key: const ValueKey<String>('review-mode-typing'),
+    ),
+    available(
+      DeckSessionMode.match,
+      Icons.grid_view_outlined,
+      l10n.reviewModeMatch,
+      availableMatch
+          ? '${l10n.studyModeMatchSubtitle} · '
+                '${l10n.studyModeAvailableCount(availability.matchableCount)}'
+          : '${l10n.studyModeMatchNotEnough} · '
+                '${l10n.studyModeAvailableCount(availability.matchableCount)}',
+      enabled: availableMatch,
+      key: const ValueKey<String>('review-mode-match'),
+    ),
+    available(
+      DeckSessionMode.trueFalse,
+      Icons.check_circle_outline,
+      l10n.reviewModeTrueFalse,
+      availableTrueFalse
+          ? '${l10n.studyModeTrueFalseSubtitle} · '
+                '${l10n.studyModeAvailableCount(availability.trueFalseCount)}'
+          : '${l10n.studyModeTrueFalseNotEnough} · '
+                '${l10n.studyModeAvailableCount(availability.trueFalseCount)}',
+      enabled: availableTrueFalse,
+      key: const ValueKey<String>('review-mode-true-false'),
+    ),
+  ];
+  final List<Widget> setup = <Widget>[
+    available(
+      DeckSessionMode.constructor,
+      Icons.tune,
+      l10n.constructorAction,
+      l10n.constructorSubtitle,
+      key: const ValueKey<String>('review-mode-constructor'),
+    ),
+  ];
+
+  // TASK 04 (M-03): лист открывается на 72 % высоты, а не на 98 %; тянется
+  // вниз из любого места списка и закрывается, дойдя до минимума. Раньше
+  // `SingleChildScrollView` перехватывал жест и закрыть лист свайпом по
+  // содержимому было невозможно.
+  return showAppDetentSheet<DeckSessionMode>(
     context: context,
-    isScrollControlled: true,
-    showDragHandle: true,
-    constraints: BoxConstraints(maxWidth: maxWidth),
-    builder: (BuildContext sheetContext) {
-      final double maxHeight = MediaQuery.sizeOf(sheetContext).height * 0.92;
-      Widget available(
-        DeckSessionMode mode,
-        IconData icon,
-        String title,
-        String subtitle, {
-        bool enabled = true,
-        Key? key,
-      }) {
-        return _ModeTile(
-          tileKey: key,
-          mode: mode,
-          icon: icon,
-          title: title,
-          subtitle: subtitle,
-          enabled: enabled,
-        );
-      }
-
-      final bool availableTest = availability.testCount > 0;
-      final bool availableTyping = availability.typingCount > 0;
-      final bool availableMatch = availability.matchableCount >= 6;
-      final bool availableTrueFalse = availability.trueFalseCount > 0;
-      final List<Widget> review = <Widget>[
-        available(
-          DeckSessionMode.classic,
-          Icons.style_outlined,
-          l10n.reviewModeClassic,
-          l10n.reviewModeClassicSubtitle,
-          key: const ValueKey<String>('review-mode-classic'),
+    maxWidth: maxWidth,
+    builder: (BuildContext sheetContext, ScrollController controller) {
+      // TASK 04: SingleChildScrollView + Column (а не ListView) — все плитки
+      // построены сразу: клавиатурный/экранный поиск и тесты видят весь список,
+      // а контроллер прокрутки всё равно принадлежит DraggableScrollableSheet,
+      // поэтому свайп вниз закрывает лист.
+      return SingleChildScrollView(
+        key: const ValueKey<String>('deck-modes-list'),
+        controller: controller,
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          0,
+          AppSpacing.lg,
+          AppSpacing.lg,
         ),
-        available(
-          DeckSessionMode.feed,
-          Icons.view_agenda_outlined,
-          l10n.reviewModeFeed,
-          l10n.reviewModeFeedSubtitle,
-          key: const ValueKey<String>('review-mode-feed'),
-        ),
-        available(
-          DeckSessionMode.practice,
-          Icons.sports_esports_outlined,
-          l10n.reviewModePractice,
-          l10n.practiceSubtitle,
-          key: const ValueKey<String>('review-mode-practice'),
-        ),
-      ];
-      final List<Widget> check = <Widget>[
-        available(
-          DeckSessionMode.test,
-          Icons.quiz_outlined,
-          l10n.reviewModeTest,
-          availableTest
-              ? '${l10n.studyModeTestSubtitle} · '
-                    '${l10n.studyModeAvailableCount(availability.testCount)}'
-              : l10n.studyModeTestNotEnough(availability.testCount),
-          enabled: availableTest,
-          key: const ValueKey<String>('review-mode-test'),
-        ),
-        available(
-          DeckSessionMode.typing,
-          Icons.keyboard_outlined,
-          l10n.reviewModeTyping,
-          availableTyping
-              ? '${l10n.studyModeTypingSubtitle} · '
-                    '${l10n.studyModeAvailableCount(availability.typingCount)}'
-              : l10n.studyModeTypingNotEnough(availability.typingCount),
-          enabled: availableTyping,
-          key: const ValueKey<String>('review-mode-typing'),
-        ),
-        available(
-          DeckSessionMode.match,
-          Icons.grid_view_outlined,
-          l10n.reviewModeMatch,
-          availableMatch
-              ? '${l10n.studyModeMatchSubtitle} · '
-                    '${l10n.studyModeAvailableCount(availability.matchableCount)}'
-              : '${l10n.studyModeMatchNotEnough} · '
-                    '${l10n.studyModeAvailableCount(availability.matchableCount)}',
-          enabled: availableMatch,
-          key: const ValueKey<String>('review-mode-match'),
-        ),
-        available(
-          DeckSessionMode.trueFalse,
-          Icons.check_circle_outline,
-          l10n.reviewModeTrueFalse,
-          availableTrueFalse
-              ? '${l10n.studyModeTrueFalseSubtitle} · '
-                    '${l10n.studyModeAvailableCount(availability.trueFalseCount)}'
-              : '${l10n.studyModeTrueFalseNotEnough} · '
-                    '${l10n.studyModeAvailableCount(availability.trueFalseCount)}',
-          enabled: availableTrueFalse,
-          key: const ValueKey<String>('review-mode-true-false'),
-        ),
-      ];
-      final List<Widget> setup = <Widget>[
-        available(
-          DeckSessionMode.constructor,
-          Icons.tune,
-          l10n.constructorAction,
-          l10n.constructorSubtitle,
-          key: const ValueKey<String>('review-mode-constructor'),
-        ),
-      ];
-
-      return SafeArea(
-        top: false,
-        child: ConstrainedBox(
-          constraints: BoxConstraints(maxHeight: maxHeight),
-          child: _SheetScroll(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.lg,
-                0,
-                AppSpacing.lg,
-                AppSpacing.lg,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: <Widget>[
-                  AppSheetHeader(
-                    title: l10n.reviewSessionModeTitle,
-                    subtitle: l10n.deckStudyModesTitle,
-                    // Аудит v5 (V5-12): видимый способ закрыть лист.
-                    trailing: IconButton(
-                      key: const ValueKey<String>('review-modes-close'),
-                      tooltip: l10n.cancel,
-                      onPressed: () => Navigator.of(sheetContext).pop(),
-                      icon: const Icon(Icons.close),
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                  _ModeGroup(title: l10n.deckModesGroupReview, tiles: review),
-                  _ModeGroup(title: l10n.deckModesGroupCheck, tiles: check),
-                  _ModeGroup(title: l10n.deckModesGroupCustom, tiles: setup),
-                ],
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            AppSheetHeader(
+              title: l10n.reviewSessionModeTitle,
+              subtitle: l10n.deckStudyModesTitle,
+              // Аудит v5 (V5-12): видимый способ закрыть лист.
+              trailing: IconButton(
+                key: const ValueKey<String>('review-modes-close'),
+                tooltip: l10n.cancel,
+                onPressed: () => Navigator.of(sheetContext).pop(),
+                icon: const Icon(Icons.close),
               ),
             ),
-          ),
+            const SizedBox(height: AppSpacing.xs),
+            _ModeGroup(title: l10n.deckModesGroupReview, tiles: review),
+            _ModeGroup(title: l10n.deckModesGroupCheck, tiles: check),
+            _ModeGroup(title: l10n.deckModesGroupCustom, tiles: setup),
+          ],
         ),
       );
     },
   );
-}
-
-/// Прокручиваемое тело листа с видимым индикатором (аудит v4, V3):
-/// на низком окне все восемь режимов достижимы и видно, что список длиннее.
-class _SheetScroll extends StatefulWidget {
-  const _SheetScroll({required this.child});
-
-  final Widget child;
-
-  @override
-  State<_SheetScroll> createState() => _SheetScrollState();
-}
-
-class _SheetScrollState extends State<_SheetScroll> {
-  final ScrollController _controller = ScrollController();
-  bool _canScroll = false;
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return NotificationListener<ScrollMetricsNotification>(
-      onNotification: (ScrollMetricsNotification notification) {
-        final bool canScroll = notification.metrics.maxScrollExtent > 0.5;
-        if (canScroll != _canScroll) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted && canScroll != _canScroll) {
-              setState(() => _canScroll = canScroll);
-            }
-          });
-        }
-        return false;
-      },
-      child: Scrollbar(
-        controller: _controller,
-        thumbVisibility: _canScroll,
-        child: SingleChildScrollView(
-          controller: _controller,
-          child: widget.child,
-        ),
-      ),
-    );
-  }
 }
 
 /// Группа режимов: подпись и сетка плиток (2 колонки на широком листе).

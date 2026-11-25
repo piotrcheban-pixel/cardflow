@@ -841,13 +841,13 @@ abstract class AppLocalizations {
   /// Подпись поля тегов; больше трёх тегов запрещено (SPEC A8.4).
   ///
   /// In ru, this message translates to:
-  /// **'Теги через запятую (необязательно)'**
+  /// **'Теги'**
   String get cardFormTagsLabel;
 
   /// Подпись необязательного поля source_excerpt (SPEC A5).
   ///
   /// In ru, this message translates to:
-  /// **'Цитата для кнопки «Почему?» (необязательно)'**
+  /// **'Цитата источника'**
   String get cardFormSourceExcerptLabel;
 
   /// Подпись выбора типа карточки.
@@ -5280,6 +5280,72 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Интервальное повторение по алгоритму FSRS'**
   String get reviewFsrsTooltip;
+
+  /// Кнопка закрытия контекстной подсказки (TASK 04).
+  ///
+  /// In ru, this message translates to:
+  /// **'Понятно'**
+  String get appInfoClose;
+
+  /// Подсказка кнопки «?» рядом с заголовком раздела (TASK 04).
+  ///
+  /// In ru, this message translates to:
+  /// **'Подробнее'**
+  String get appInfoTooltip;
+
+  /// Раскрываемая секция второстепенных полей карточки (TASK 04).
+  ///
+  /// In ru, this message translates to:
+  /// **'Дополнительно'**
+  String get cardFormMoreSection;
+
+  /// Короткое описание содержимого секции «Дополнительно» (TASK 04).
+  ///
+  /// In ru, this message translates to:
+  /// **'Подсказка, теги и источник'**
+  String get cardFormMoreSectionHint;
+
+  /// Заголовок подсказки секции изображений (TASK 04).
+  ///
+  /// In ru, this message translates to:
+  /// **'Изображения на карточке'**
+  String get cardFormImageInfoTitle;
+
+  /// Заголовок подсказки типа карточки (TASK 04).
+  ///
+  /// In ru, this message translates to:
+  /// **'Тип карточки'**
+  String get cardFormTypeInfoTitle;
+
+  /// Подсказка режима «Тренировка»: расписание не меняется (TASK 04).
+  ///
+  /// In ru, this message translates to:
+  /// **'Без FSRS'**
+  String get practiceInfoTooltip;
+
+  /// Компактный счётчик карточек на телефоне (TASK 04).
+  ///
+  /// In ru, this message translates to:
+  /// **'{current} / {total}'**
+  String reviewCardCounterShort(int current, int total);
+
+  /// Заголовок завершения просмотра ленты (TASK 04).
+  ///
+  /// In ru, this message translates to:
+  /// **'Лента пройдена'**
+  String get feedEndTitle;
+
+  /// Итог завершения ленты: счётчик и отсутствие влияния на FSRS (TASK 04).
+  ///
+  /// In ru, this message translates to:
+  /// **'Просмотрено карточек: {count}. Расписание повторений не изменилось.'**
+  String feedEndMessage(int count);
+
+  /// Подсказка на обороте карточки ленты: листание и возврат к вопросу (TASK 04).
+  ///
+  /// In ru, this message translates to:
+  /// **'Свайп ↑↓ · тап — вопрос'**
+  String get feedAnswerNavHint;
 }
 
 class _AppLocalizationsDelegate
