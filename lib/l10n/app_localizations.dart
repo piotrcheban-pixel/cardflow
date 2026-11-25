@@ -820,6 +820,12 @@ abstract class AppLocalizations {
   /// **'Редактировать карточку'**
   String get cardFormTitleEdit;
 
+  /// Короткий заголовок редактора на телефоне (TASK 04).
+  ///
+  /// In ru, this message translates to:
+  /// **'Редактирование'**
+  String get cardFormTitleEditShort;
+
   /// Подпись поля front в форме карточки.
   ///
   /// In ru, this message translates to:

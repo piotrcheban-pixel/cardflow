@@ -699,7 +699,13 @@ class _CardFormScreenState extends ConsumerState<CardFormScreen> {
       child: Scaffold(
         appBar: AppBar(
           title: Text(
-            _isEditing ? l10n.cardFormTitleEdit : l10n.cardFormTitleNew,
+            _isEditing
+                ? (MediaQuery.sizeOf(context).width < AppSizes.mobileBreakpoint
+                      // TASK 04: «Редактировать карточку» при кегле 130 %
+                      // не вмещается в AppBar и рвётся многоточием.
+                      ? l10n.cardFormTitleEditShort
+                      : l10n.cardFormTitleEdit)
+                : l10n.cardFormTitleNew,
             // TASK 04: на телефоне titleLarge (21–27 px) не вмещает
             // «Редактировать карточку» и даёт многоточие — используем
             // titleMedium; на десктопе разница не читается как «мельче».

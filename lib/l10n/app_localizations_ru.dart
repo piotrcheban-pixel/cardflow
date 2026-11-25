@@ -472,6 +472,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get cardFormTitleEdit => 'Редактировать карточку';
 
   @override
+  String get cardFormTitleEditShort => 'Редактирование';
+
+  @override
   String get cardFormFrontLabel => 'Вопрос';
 
   @override

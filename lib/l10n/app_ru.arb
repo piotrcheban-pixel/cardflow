@@ -581,6 +581,8 @@
     "description": "Заголовок формы создания карточки (SPEC A6.3)."
   },
   "cardFormTitleEdit": "Редактировать карточку",
+  "cardFormTitleEditShort": "Редактирование",
+  "@cardFormTitleEditShort": {"description": "Короткий заголовок редактора на телефоне (TASK 04)."},
   "@cardFormTitleEdit": {
     "description": "Заголовок формы редактирования карточки (SPEC A6.3)."
   },
