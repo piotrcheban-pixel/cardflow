@@ -134,6 +134,16 @@ Expected: a value less than or equal to <37>
 
 Схема БД, `schemaVersion` и `format_version` не менялись; живых API-запросов нет.
 
+## Push и CI
+
+`9bb160e..37894ad`: `1104519` (red-фаза теста), `e10fe70` (фикс блока ИИ),
+`0b52c0e` (журнал/AGENTS/скриншоты), `a0aaf3e` (баннер провайдера),
+`37894ad` (скриншот через production-роутер). Run
+[`45619796606`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/45619796606)
+(`37894ad`) — **9/9 job success** (`format + analyze`, `test` × 3 ОС,
+`build desktop` × 3, `build mobile` Android + iOS). Прогон `45617686487`
+отменён `concurrency` при следующем push.
+
 ## Изменённые файлы
 
 - `lib/ui/decks/decks_screen.dart` — раскладка AI-блока по ширине + отступ плашки;
