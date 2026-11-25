@@ -6,13 +6,15 @@ owner-note после установки 1.0.0. **Режим:** ИТЕРАЦИИ
 
 **Старт:** `HEAD = origin/main = 0d5446c`, ветка `main`, `git status` — только
 неотслеживаемые каталоги аудита. **Baseline:** `flutter test` **2706 passed +
-16 skipped**. **Гейты итогового снимка:** `flutter test --coverage
---exclude-tags golden` **2738 passed + 16 skipped** (+32 теста), покрытие
+16 skipped**. **Гейты итогового снимка (`79fc764`):** `flutter test --coverage
+--exclude-tags golden` → **2739 passed + 16 skipped** (+33 теста), покрытие
 рукописного кода **90,2 % (24092/26703)**, всего 83,5 %; `analyze` 0;
-`dart format --set-exit-if-changed lib test` 604/0;
-`flutter build windows --release --no-pub` → `cardflow.exe` (58,8 с).
+`dart format --set-exit-if-changed lib test` 606/0;
+`flutter build windows --release --no-pub` → `cardflow.exe` (58,8 с);
+`flutter build apk --release --no-pub` → **`app-release.apk`
+(106 177 646 Б, `ru.example.cardflow`, versionName **1.0.1**, versionCode 2)**.
 Схема БД, `schemaVersion` и `format_version` не менялись; FSRS-логика не
-менялась. Версия — **1.0.1+2**.
+менялась.
 
 **Причины (измерены, не гипотезы):**
 1. **Экспорт.** `FilePickerGateway.saveZipFile` вызывал `FilePicker.saveFile`
@@ -58,9 +60,21 @@ owner-note после установки 1.0.0. **Режим:** ИТЕРАЦИИ
 
 **Коммиты:** `4494a49` (red экспорт), `c76290f` (red настройки), `28f0dcd`
 (fix экспорт), `0c2fb65` (fix настройки), `63406ab` (контракт ARB),
-`ec9e377` (docs/ADR-047), `d0d3b1a` (версия 1.0.1+2).
-**Push:** выполнен 2026-11-25, `0d5446c..d0d3b1a` (ветка `main`); CI —
-GitHub Actions на снимке `d0d3b1a`; статус — вкладка Actions репозитория.
+`ec9e377` (docs/ADR-047), `d0d3b1a` (версия 1.0.1+2), `d60bb7d` (polish),
+`79fc764` (guard + версия в тесте из контракта), далее docs/STATE.
+**Push:** выполнен 2026-11-25, `0d5446c..79fc764` (ветка `main`).
+**CI:** run
+[`45678359533`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/45678359533)
+(`79fc764`) — **9/9 job success** (`format + analyze`, `test` × 3 ОС,
+`build desktop` × 3, `build mobile` Android + iOS); artifact
+`cardflow-android-release-apk` (50 137 605 Б zip, APK 106 177 646 Б).
+Предыдущий прогон (`45671962176`) упал на **одном** тесте — жёсткий `'1.0.0'`
+в `settings_screen_test` после выпуска 1.0.1+2; закрыто `79fc764`.
+**Известный локальный нюанс:** `flutter build apk` после `flutter test`
+переиспользует `GeneratedPluginRegistrant.java` с dev-плагином
+`integration_test` и падает на javac; лечится удалением этого
+(неотслеживаемого, регенерируемого) файла перед сборкой — в CI не
+воспроизводится.
 
 **Открытые ограничения:** L204 (при отказе прав приложение не самолечится:
 причина в debug-логе и адресная строка в UI, но БД не переносится), L205
