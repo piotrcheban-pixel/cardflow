@@ -1,8 +1,8 @@
 # ADR-047 — сохранение файла экспорта в «Загрузки» и честная ошибка прав записи
 
 **Дата:** 2026-11-25 · **Статус:** принято. Уточняет
-[ADR-006](ADR-006-deck-archive-and-file-gateway.md) (контракт `FileGateway`,
-пикер `file_picker`) и [ADR-019](ADR-019-settings-statistics.md) §1
+[ADR-006](ADR-006-zip-archive-format.md) (контракт `FileGateway`,
+пикер `file_picker`) и [ADR-019](ADR-019-statistics-and-settings.md) §1
 (хранение настроек в `app_settings`). Диагностика owner-note —
 `journal/fix-export-settings/diagnosis.md`.
 

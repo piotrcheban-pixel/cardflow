@@ -91,9 +91,25 @@ String decodeForScan(List<int> bytes) {
 List<File> scannableFiles(Directory root) {
   final result = <File>[];
 
+  // Имя последнего сегмента пути.
+  //
+  // Для `Directory` брать `uri.pathSegments.last` нельзя: URI каталога
+  // заканчивается на «/», и последний сегмент — пустая строка. Из-за этого
+  // исключения (`build`, `.dart_tool`, …) не срабатывали никогда и guard
+  // сканировал артефакты сборки (находка итерации «Фикс экспорта и
+  // сохранения настроек»: отчёт Gradle дал ложное «похоже на ключ API»).
+  String entryName(FileSystemEntity entity) {
+    final String path = entity.path;
+    final int separator = path.lastIndexOf(Platform.pathSeparator);
+    final String name = separator < 0 ? path : path.substring(separator + 1);
+    // Корень диска («C:\») как «имя» не используется — такие сущности не
+    // встречаются внутри проекта.
+    return name;
+  }
+
   void walk(Directory directory) {
     for (final entity in directory.listSync(followLinks: false)) {
-      final name = entity.uri.pathSegments.last;
+      final name = entryName(entity);
       if (entity is Directory) {
         // Исключения проверяются по имени каталога при обходе, т.е. по пути
         // ОТНОСИТЕЛЬНО корня проекта. Так репозиторий, лежащий на CI внутри
@@ -220,5 +236,51 @@ void main() {
         );
       },
     );
+
+    test('исключённые каталоги (build) действительно не сканируются', () {
+      // Регрессия: `entity.uri.pathSegments.last` для Directory — ПУСТАЯ строка
+      // (URI каталога заканчивается на «/»), поэтому исключения не срабатывали
+      // и guard сканировал `build/`, `coverage/`, `.dart_tool/`. Отчёт Gradle
+      // (`build/reports/problems/problems-report.html`) дал ложное срабатывание
+      // «похоже на ключ API».
+      final temp = Directory.systemTemp.createTempSync('cardflow_guard_');
+      addTearDown(() => temp.deleteSync(recursive: true));
+      final repo = Directory(
+        <String>[temp.path, 'repo'].join(Platform.pathSeparator),
+      )..createSync(recursive: true);
+      File(<String>[repo.path, 'pubspec.yaml'].join(Platform.pathSeparator))
+          .writeAsStringSync('name: cardflow');
+      File(<String>[repo.path, 'notes.md'].join(Platform.pathSeparator))
+          .writeAsStringSync('нет секретов');
+      final build = Directory(
+        <String>[repo.path, 'build', 'reports'].join(Platform.pathSeparator),
+      )..createSync(recursive: true);
+      // Ключ собирается в рантайме: в исходнике не должно быть строки-ключа
+      // (этот же guard сканирует и себя).
+      final String fakeKey = 'sk-${'x' * 32}';
+      File(
+        <String>[
+          build.path,
+          'problems-report.html',
+        ].join(Platform.pathSeparator),
+      ).writeAsStringSync(fakeKey);
+      expect(
+        detectSecrets(fakeKey),
+        isNotEmpty,
+        reason: 'Строка в артефакте действительно похожа на ключ',
+      );
+
+      final files = scannableFiles(repo);
+
+      expect(
+        files.map((file) => file.path.replaceAll('\\', '/')),
+        isNot(contains(endsWith('build/reports/problems-report.html'))),
+        reason: 'Артефакты сборки не должны попадать в скан секретов',
+      );
+      expect(
+        files.map((file) => file.uri.pathSegments.last).toSet(),
+        containsAll(<String>['pubspec.yaml', 'notes.md']),
+      );
+    });
   });
 }

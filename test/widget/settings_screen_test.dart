@@ -15,6 +15,7 @@ import 'package:cardflow/domain/generation/provider_account.dart';
 import 'package:cardflow/domain/settings/app_settings.dart';
 import 'package:cardflow/domain/settings/app_settings_write_error.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
+import 'package:cardflow/ui/settings/about_links.dart' show appVersion;
 import 'package:cardflow/ui/settings/settings_screen.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
 
@@ -324,7 +325,10 @@ void main() {
       tester,
       find.byKey(const ValueKey<String>('settings-about-privacy')),
     );
-    expect(find.text(l10n.settingsAboutVersion('1.0.0')), findsOneWidget);
+    // Версию берём из контракта `appVersion` (он сверяется с pubspec.yaml
+    // тестом about_links_test), а не литералом: при выпуске патча 1.0.1
+    // жёсткий '1.0.0' уронил CI, хотя код был верен.
+    expect(find.text(l10n.settingsAboutVersion(appVersion)), findsOneWidget);
 
     await tester.tap(
       find.byKey(const ValueKey<String>('settings-about-privacy')),
