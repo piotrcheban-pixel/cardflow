@@ -30,8 +30,9 @@ FSRS в ленте — вариант B (ADR-044): просмотр не пиш�
 `a5aac94` в отдельном `git worktree`, «after» на итоговом коде:
 `journal/task04/screenshots/{before,after}/`. Новые тесты:
 `rating_panel_mobile_test`, `card_form_mobile_test`, `feed_flip_test`,
-`app_sheet_test` (+17). 8 существующих тестов обновлены по контрактам
-ADR-046, не ослаблены.
+`app_sheet_test` (+17). Дополнительно сняты конструктор сессии и диалог
+создания колоды (390×844, без overflow). 8 существующих тестов обновлены по
+контрактам ADR-046, не ослаблены.
 
 **Коммиты:** `3967d20` (feat ui), `5d80453` (test ui), `a0d59f0` (docs task04),
 `29b0bfb` (fix заголовка редактора), `8af1d7a`, `a69a1b1` (docs/STATE).

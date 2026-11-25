@@ -36,7 +36,10 @@ import '../../test/helpers/pump_app.dart'
 import '../../test/helpers/settings_fakes.dart';
 
 const String _outDir = 'journal/task04/screenshots';
-const String _variant = String.fromEnvironment('T4_SHOTS', defaultValue: 'before');
+const String _variant = String.fromEnvironment(
+  'T4_SHOTS',
+  defaultValue: 'before',
+);
 
 const String kLongFront =
     'Почему в трёхфазной цепи при симметричной нагрузке ток в нейтральном '
@@ -252,7 +255,11 @@ void main() {
           overrides: decksOverrides(
             deckRepository: FakeDeckRepository(
               summaries: <DeckSummary>[
-                makeSummary(id: 'deck-1', name: 'Электротехника', totalCards: 1),
+                makeSummary(
+                  id: 'deck-1',
+                  name: 'Электротехника',
+                  totalCards: 1,
+                ),
               ],
             ),
             cardRepository: FakeCardRepository(cards: <Card>[card]),
@@ -304,7 +311,11 @@ void main() {
           overrides: decksOverrides(
             deckRepository: FakeDeckRepository(
               summaries: <DeckSummary>[
-                makeSummary(id: 'deck-1', name: 'Электротехника', totalCards: 2),
+                makeSummary(
+                  id: 'deck-1',
+                  name: 'Электротехника',
+                  totalCards: 2,
+                ),
               ],
             ),
             cardRepository: FakeCardRepository(cards: <Card>[card]),
@@ -349,20 +360,27 @@ void main() {
           overrides: decksOverrides(
             deckRepository: FakeDeckRepository(
               summaries: <DeckSummary>[
-                makeSummary(id: 'deck-1', name: 'Электротехника', totalCards: 2),
+                makeSummary(
+                  id: 'deck-1',
+                  name: 'Электротехника',
+                  totalCards: 2,
+                ),
               ],
             ),
-            cardRepository: FakeCardRepository(cards: <Card>[
-              card,
-              _imageCard(
-                id: 'card-2',
-                front: 'Что такое реактивная мощность?',
-                back: 'Мощность, которая циркулирует между источником и '
-                    'реактивными элементами и не совершает полезной работы.',
-                questionMedia: const <String>[],
-                answerMedia: const <String>[],
-              ),
-            ]),
+            cardRepository: FakeCardRepository(
+              cards: <Card>[
+                card,
+                _imageCard(
+                  id: 'card-2',
+                  front: 'Что такое реактивная мощность?',
+                  back:
+                      'Мощность, которая циркулирует между источником и '
+                      'реактивными элементами и не совершает полезной работы.',
+                  questionMedia: const <String>[],
+                  answerMedia: const <String>[],
+                ),
+              ],
+            ),
             cardMediaRepository: FakeCardMediaRepository(
               bytesById: <String, Uint8List>{'q1': q1, 'q2': q2, 'a1': a1},
               metadataById: <String, MediaMetadata>{
@@ -407,7 +425,11 @@ void main() {
           overrides: decksOverrides(
             deckRepository: FakeDeckRepository(
               summaries: <DeckSummary>[
-                makeSummary(id: 'deck-1', name: 'Электротехника', totalCards: 1),
+                makeSummary(
+                  id: 'deck-1',
+                  name: 'Электротехника',
+                  totalCards: 1,
+                ),
               ],
             ),
             cardRepository: FakeCardRepository(cards: <Card>[card]),
@@ -428,25 +450,27 @@ void main() {
       await _pump(tester);
       _dumpOverflow(tester, 'cardform-top-$tag');
       await _shoot(tester, 'cardform_top_$tag');
-      await tester.drag(find.byType(SingleChildScrollView).first, const Offset(0, -520));
+      await tester.drag(
+        find.byType(SingleChildScrollView).first,
+        const Offset(0, -520),
+      );
       await _pump(tester);
       _dumpOverflow(tester, 'cardform-media-$tag');
       _dumpRect(
         tester,
         'cardform-question-images-title',
-        find.byKey(
-          const ValueKey<String>('card-form-question-images-title'),
-        ),
+        find.byKey(const ValueKey<String>('card-form-question-images-title')),
       );
       _dumpRect(
         tester,
         'cardform-add-question',
-        find.byKey(
-          const ValueKey<String>('card-form-add-question-image'),
-        ),
+        find.byKey(const ValueKey<String>('card-form-add-question-image')),
       );
       await _shoot(tester, 'cardform_media_$tag');
-      await tester.drag(find.byType(SingleChildScrollView).first, const Offset(0, -720));
+      await tester.drag(
+        find.byType(SingleChildScrollView).first,
+        const Offset(0, -720),
+      );
       await _pump(tester);
       _dumpOverflow(tester, 'cardform-bottom-$tag');
       await _shoot(tester, 'cardform_bottom_$tag');
@@ -540,6 +564,7 @@ void main() {
     ('settings', '/settings'),
     ('statistics', '/statistics'),
     ('generation', '/generate'),
+    ('constructor', '/constructor?deck=deck-1'),
   ]) {
     testWidgets('T4 $name 390x844', (WidgetTester tester) async {
       _configure(tester, const Size(390, 844));
@@ -575,4 +600,31 @@ void main() {
       _dumpOverflow(tester, '$name-390x844');
       await _shoot(tester, '${name}_390x844');
     }, timeout: const Timeout(Duration(seconds: 180)));
-  }}
+  }
+  testWidgets('T4 deck create dialog 390x844', (WidgetTester tester) async {
+    _configure(tester, const Size(390, 844));
+    await tester.pumpWidget(
+      _app(
+        textScale: 1,
+        home: const DecksScreen(),
+        overrides: decksOverrides(
+          deckRepository: FakeDeckRepository(
+            summaries: <DeckSummary>[
+              makeSummary(id: 'deck-1', name: 'Электротехника', totalCards: 3),
+            ],
+          ),
+        ),
+      ),
+    );
+    await _pump(tester);
+    final Finder create = find.byKey(const ValueKey<String>('decks-new-deck'));
+    if (create.evaluate().isNotEmpty) {
+      await tester.tap(create.first);
+      await _pump(tester);
+      _dumpOverflow(tester, 'deck-create-390x844');
+      await _shoot(tester, 'deck_create_dialog_390x844');
+    } else {
+      print('SHEET deck-create button not found');
+    }
+  }, timeout: const Timeout(Duration(seconds: 180)));
+}
