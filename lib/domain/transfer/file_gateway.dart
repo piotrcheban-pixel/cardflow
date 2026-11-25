@@ -20,9 +20,15 @@ abstract interface class FileGateway {
 
   /// Предлагает сохранить zip под именем [suggestedFileName] с содержимым
   /// [bytes]; возвращает `true`, если файл сохранён, `false` — при отмене.
+  ///
+  /// [dialogTitle] — локализованный заголовок системного диалога (ADR-047:
+  /// диалог показывал английский «Save File»). Если запись в выбранную папку
+  /// запрещена ОС — [ArchiveException] с кодом
+  /// `ArchiveErrorCode.writeDenied` (не сырое `FileSystemException`).
   Future<bool> saveZipFile({
     required String suggestedFileName,
     required Uint8List bytes,
+    String? dialogTitle,
   });
 
   /// Читает файл целиком (для пути, полученного из [pickZipToImport]).

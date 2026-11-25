@@ -246,6 +246,11 @@ void main() {
         orderedEquals(transfer.exportBytes),
         reason: 'Шлюзу передаются ровно байты экспортированного архива',
       );
+      expect(
+        gateway.lastSaveDialogTitle,
+        l10n.deckExportPickerTitle,
+        reason: 'Диалог сохранения показывает локализованный заголовок',
+      );
       expect(find.text(l10n.deckExportSuccess), findsOneWidget);
     });
 
@@ -299,6 +304,41 @@ void main() {
 
       expect(find.text(l10n.archiveErrorMediaMissing), findsOneWidget);
       expect(find.textContaining('сырой стектрейс'), findsNothing);
+    });
+
+    // Owner-note 1.0.1 (ADR-047): Windows отвечал «У вас нет разрешения на
+    // сохранение файлов в этом месте» — пользователь должен увидеть русскую
+    // причину, а не системный текст.
+    testWidgets('экспорт: нет прав на запись — строка ARB, не текст ОС', (
+      WidgetTester tester,
+    ) async {
+      final FakeDeckRepository repository = FakeDeckRepository(
+        summaries: <DeckSummary>[makeSummary(id: 'deck-1', name: 'Испанский')],
+      );
+      final FakeDeckTransferService transfer = FakeDeckTransferService();
+      final FakeFileGateway gateway = FakeFileGateway()
+        ..saveError = const ArchiveException(
+          ArchiveErrorCode.writeDenied,
+          details: r'Access is denied (C:\Users\user\deck.zip)',
+        );
+
+      await pumpDeck(
+        tester,
+        repository: repository,
+        transfer: transfer,
+        gateway: gateway,
+      );
+      await tester.pumpAndSettle();
+      final AppLocalizations l10n = l10nOf(tester);
+
+      await openOverflowMenu(tester);
+      await tester.tap(find.text(l10n.deckExport));
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.archiveErrorWriteDenied), findsOneWidget);
+      expect(find.text(l10n.deckExportSuccess), findsNothing);
+      expect(find.textContaining('Access is denied'), findsNothing);
+      expect(find.textContaining(r'C:\Users'), findsNothing);
     });
   });
 

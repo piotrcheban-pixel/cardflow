@@ -2933,6 +2933,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get deckImportPickerTitle => 'Выберите ZIP-архив колоды';
 
   @override
+  String get deckExportPickerTitle => 'Сохранить ZIP-архив колоды';
+
+  @override
   String get deckImportCancelled => 'Импорт отменён';
 
   @override

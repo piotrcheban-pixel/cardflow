@@ -4753,6 +4753,12 @@ abstract class AppLocalizations {
   /// **'Выберите ZIP-архив колоды'**
   String get deckImportPickerTitle;
 
+  /// Заголовок системного диалога сохранения при экспорте (ADR-047: диалог показывал английский «Save File»).
+  ///
+  /// In ru, this message translates to:
+  /// **'Сохранить ZIP-архив колоды'**
+  String get deckExportPickerTitle;
+
   /// Реакция на отмену выбора файла (находка F13).
   ///
   /// In ru, this message translates to:

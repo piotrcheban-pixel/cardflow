@@ -2,9 +2,17 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:path_provider/path_provider.dart';
 
 import 'package:cardflow/domain/transfer/deck_archive.dart';
 import 'package:cardflow/domain/transfer/file_gateway.dart';
+
+/// Поддерживает ли платформа стартовый каталог в диалоге сохранения (ADR-047).
+///
+/// Desktop-реализации `file_picker` принимают обычный путь; Android/iOS пишут
+/// через SAF (`content://`), где каталог платформы не имеет смысла.
+bool get _desktopSupportsInitialDirectory =>
+    Platform.isWindows || Platform.isMacOS || Platform.isLinux;
 
 /// Добавляет расширение `.zip`, если его ещё нет (сравнение без учёта
 /// регистра), и обрезает пробелы вокруг имени.
@@ -27,12 +35,39 @@ typedef SaveDirectoryResolver = Future<String?> Function();
 
 /// Каталог по умолчанию для диалога сохранения (ADR-047).
 ///
+/// По умолчанию нативный диалог открывается в профиле пользователя
+/// (`C:\Users\<имя>`), и Windows отвечает «У вас нет разрешения на сохранение
+/// файлов в этом месте». Порядок выбора: «Загрузки», затем «Документы»; если
+/// платформа не даёт ни одного существующего каталога — `null`, и место
+/// выбирает ОС (прежнее поведение).
+///
 /// [downloads]/[documents] — точки подмены для тестов; по умолчанию
 /// `path_provider`.
 Future<String?> resolveDefaultSaveDirectory({
   Future<Directory?> Function()? downloads,
   Future<Directory?> Function()? documents,
 }) async {
+  final List<Future<Directory?> Function()> sources =
+      <Future<Directory?> Function()>[
+        downloads ?? getDownloadsDirectory,
+        documents ?? getApplicationDocumentsDirectory,
+      ];
+  for (final Future<Directory?> Function() source in sources) {
+    try {
+      final Directory? directory = await source();
+      if (directory == null) continue;
+      final String path = directory.path.trim();
+      // Каталог должен существовать: диалог с несуществующим путём снова
+      // открылся бы не там (или не открылся вовсе).
+      if (path.isEmpty || !await directory.exists()) continue;
+      return path;
+    } on Object {
+      // `UnsupportedError` на платформах без «Загрузок», отсутствующий плагин
+      // (`MissingPluginException`) или ошибка ОС — просто пробуем следующий
+      // каталог: диалог сохранения не должен падать из-за подсказки места.
+      continue;
+    }
+  }
   return null;
 }
 
@@ -56,7 +91,8 @@ class FilePickerGateway implements FileGateway {
     this.maxFileBytes = DeckArchiveLimits.maxImportBytes,
     bool? useInitialDirectory,
     SaveDirectoryResolver? saveDirectoryResolver,
-  }) : useInitialDirectory = useInitialDirectory ?? false,
+  }) : useInitialDirectory =
+           useInitialDirectory ?? _desktopSupportsInitialDirectory,
        _saveDirectoryResolver =
            saveDirectoryResolver ?? resolveDefaultSaveDirectory;
 
@@ -64,6 +100,10 @@ class FilePickerGateway implements FileGateway {
   final int maxFileBytes;
 
   /// Передавать ли диалогу стартовый каталог.
+  ///
+  /// Только desktop: на Android `saveFile` пишет через SAF (`content://`), а
+  /// `getDownloadsDirectory` возвращает каталог приложения во внешнем
+  /// хранилище — подставлять его в системный диалог нельзя (ADR-047).
   final bool useInitialDirectory;
 
   /// Источник стартового каталога диалога сохранения.
@@ -83,17 +123,43 @@ class FilePickerGateway implements FileGateway {
   Future<bool> saveZipFile({
     required String suggestedFileName,
     required Uint8List bytes,
+    String? dialogTitle,
   }) async {
-    final uri = await FilePicker.saveFile(
-      fileName: ensureZipExtension(suggestedFileName),
-      bytes: bytes,
-      mimeType: 'application/zip',
-    );
-    if (uri == null) {
-      // Пользователь отменил диалог сохранения — тихий no-op (ADR-006 п.7).
-      return false;
+    try {
+      final uri = await FilePicker.saveFile(
+        fileName: ensureZipExtension(suggestedFileName),
+        bytes: bytes,
+        mimeType: 'application/zip',
+        dialogTitle: dialogTitle,
+        initialDirectory: await _initialDirectory(),
+      );
+      if (uri == null) {
+        // Пользователь отменил диалог сохранения — тихий no-op (ADR-006 п.7).
+        return false;
+      }
+      return await _ensureSaved(uri, bytes);
+    } on FileSystemException catch (error) {
+      // ADR-047: системный текст Windows («У вас нет разрешения на сохранение
+      // файлов в этом месте») пользователю не показывается — только строка ARB
+      // по коду writeDenied.
+      throw ArchiveException(
+        ArchiveErrorCode.writeDenied,
+        details: 'saveZipFile: ${error.message} (${error.path})',
+      );
     }
-    return _ensureSaved(uri, bytes);
+  }
+
+  /// Стартовый каталог диалога сохранения или `null`.
+  ///
+  /// Подсказка места не должна ломать экспорт: любая ошибка резолвера — `null`.
+  Future<String?> _initialDirectory() async {
+    if (!useInitialDirectory) return null;
+    try {
+      return await _saveDirectoryResolver();
+    } on Object {
+      // Подсказка места не должна ломать экспорт.
+      return null;
+    }
   }
 
   @override

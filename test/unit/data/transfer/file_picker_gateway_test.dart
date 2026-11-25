@@ -65,6 +65,9 @@ class _FakePickerPlatform extends FilePickerPlatform {
   /// Каталог, который плагин получил для старта диалога (ADR-047).
   String? savedInitialDirectory;
 
+  /// Заголовок диалога сохранения (находка F12/ADR-047).
+  String? savedDialogTitle;
+
   @override
   Future<PlatformFile?> pickFile({
     String? dialogTitle,
@@ -104,6 +107,7 @@ class _FakePickerPlatform extends FilePickerPlatform {
     savedMimeType = mimeType;
     savedBytes = bytes;
     savedInitialDirectory = initialDirectory;
+    savedDialogTitle = dialogTitle;
     final Object? failure = throwOnSave;
     if (failure != null) {
       throw failure;
@@ -248,6 +252,19 @@ void main() {
       expect(fake.savedBytes, bytes);
     });
 
+    // Находка F12/ADR-047: диалог сохранения показывал английский «Save File».
+    test('передаёт локализованный заголовок диалога', () async {
+      fake.savedUri = Uri.file(p.join(tempDir.path, 'deck.zip'));
+
+      await gateway.saveZipFile(
+        suggestedFileName: 'deck',
+        bytes: bytes,
+        dialogTitle: 'Сохранить ZIP-архив колоды',
+      );
+
+      expect(fake.savedDialogTitle, 'Сохранить ZIP-архив колоды');
+    });
+
     test('пустое suggested-имя → cardflow.zip', () async {
       fake.savedUri = Uri.file(p.join(tempDir.path, 'cardflow.zip'));
 
@@ -290,7 +307,8 @@ void main() {
     test('разрешение каталога упало — сохранение всё равно работает', () async {
       final flaky = FilePickerGateway(
         useInitialDirectory: true,
-        saveDirectoryResolver: () async => throw UnsupportedError('нет каталога'),
+        saveDirectoryResolver: () async =>
+            throw UnsupportedError('нет каталога'),
       );
       fake.savedUri = Uri.file(p.join(tempDir.path, 'deck.zip'));
 
@@ -370,24 +388,26 @@ void main() {
   group('ADR-047: нет прав на запись в выбранную папку', () {
     final Uint8List bytes = Uint8List.fromList(<int>[80, 75, 3, 4]);
 
-    test('FileSystemException диалога → ArchiveException, не системный текст',
-        () async {
-      fake.throwOnSave = const FileSystemException(
-        'Access is denied',
-        r'C:\Users\user\file.zip',
-      );
+    test(
+      'FileSystemException диалога → ArchiveException, не системный текст',
+      () async {
+        fake.throwOnSave = const FileSystemException(
+          'Access is denied',
+          r'C:\Users\user\file.zip',
+        );
 
-      await expectLater(
-        gateway.saveZipFile(suggestedFileName: 'deck', bytes: bytes),
-        throwsA(
-          isA<ArchiveException>().having(
-            (ArchiveException error) => error.code,
-            'code',
-            ArchiveErrorCode.writeDenied,
+        await expectLater(
+          gateway.saveZipFile(suggestedFileName: 'deck', bytes: bytes),
+          throwsA(
+            isA<ArchiveException>().having(
+              (ArchiveException error) => error.code,
+              'code',
+              ArchiveErrorCode.writeDenied,
+            ),
           ),
-        ),
-      );
-    });
+        );
+      },
+    );
 
     test('плагин вернул путь, но запись запрещена → ArchiveException', () async {
       // Каталог вместо файла: запись `dart:io` завершится FileSystemException.

@@ -3536,6 +3536,8 @@
   "decksFilterEmptyHint": "Измените запрос или сбросьте фильтр.",
   "deckImportPickerTitle": "Выберите ZIP-архив колоды",
   "@deckImportPickerTitle": {"description": "Заголовок системного выбора файла для импорта (находка F12)."},
+  "deckExportPickerTitle": "Сохранить ZIP-архив колоды",
+  "@deckExportPickerTitle": {"description": "Заголовок системного диалога сохранения при экспорте (ADR-047: диалог показывал английский «Save File»)."},
   "deckImportCancelled": "Импорт отменён",
   "@deckImportCancelled": {"description": "Реакция на отмену выбора файла (находка F13)."},
   "@decksFilterEmptyHint": {"description": "Подсказка в пустом результате поиска колод (находка D17)."},

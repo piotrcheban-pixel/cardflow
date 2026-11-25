@@ -173,7 +173,11 @@ Future<void> exportDeckZip(
     );
     final bool saved = await ref
         .read(fileGatewayProvider)
-        .saveZipFile(suggestedFileName: suggestedFileName, bytes: bytes);
+        .saveZipFile(
+          suggestedFileName: suggestedFileName,
+          bytes: bytes,
+          dialogTitle: l10n.deckExportPickerTitle,
+        );
     if (!saved || !context.mounted) return;
     showAppMessage(context, l10n.deckExportSuccess);
   } catch (error) {

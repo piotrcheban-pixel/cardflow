@@ -587,6 +587,9 @@ class FakeFileGateway implements FileGateway {
   /// Байты последнего сохранения (null, если сохранение отменено/не было).
   Uint8List? lastSavedBytes;
 
+  /// Заголовок системного диалога сохранения (ADR-047).
+  String? lastSaveDialogTitle;
+
   @override
   Future<String?> pickZipToImport({String? dialogTitle}) async {
     pickImportCalls++;
@@ -597,9 +600,11 @@ class FakeFileGateway implements FileGateway {
   Future<bool> saveZipFile({
     required String suggestedFileName,
     required Uint8List bytes,
+    String? dialogTitle,
   }) async {
     saveCalls++;
     lastSuggestedFileName = suggestedFileName;
+    lastSaveDialogTitle = dialogTitle;
     if (saveError != null) throw saveError!;
     if (!saveResult) return false;
     lastSavedBytes = bytes;
