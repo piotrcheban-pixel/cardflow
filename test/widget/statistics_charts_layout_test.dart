@@ -87,10 +87,12 @@ void main() {
           ValueKey<String>('statistics-week-bar-$index'),
         );
         expect(bar, findsOneWidget);
-        // D5: столбец 12–20 px, а не «клякса» на всю ячейку.
+        // D5: столбец — половина ячейки, а не «клякса» на всю ширину.
+        // Аудит 2.0: 20 px-й предел на широком экране (ячейка ≈68 px) давал
+        // «спички»; теперь столбец 14–32 px (≈50 % ячейки).
         expect(
           tester.getSize(bar).width,
-          inInclusiveRange(12.0, 20.0),
+          inInclusiveRange(14.0, 32.0),
           reason: 'ширина столбца $index',
         );
         expect(

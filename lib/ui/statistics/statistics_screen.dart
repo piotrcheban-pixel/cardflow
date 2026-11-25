@@ -421,7 +421,11 @@ class _StatisticsContent extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
-        final bool wide = constraints.maxWidth >= AppSizes.sidebarBreakpoint;
+        // Аудит 2.0: при пороге 1024 два графика ставились друг под другом даже
+        // на 1280-окне (контент ≈ 995 px) — карточки шли во всю ширину, а сами
+        // диаграммы занимали 480 px по центру. Порог 900 даёт два столбца
+        // карточек и диаграммы во всю их ширину.
+        final bool wide = constraints.maxWidth >= 900;
         // V13/V14: карта повторений занимает всю ширину — 53 недели по 20 px
         // помещаются только так; два графика стоят рядом и читаются одним
         // языком, а удержание и слабые темы образуют вторую пару.

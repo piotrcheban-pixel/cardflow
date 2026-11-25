@@ -153,33 +153,10 @@ class AppSectionCard extends StatelessWidget {
                   const SizedBox(width: AppSpacing.xs + 2),
                 ],
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Row(
-                        children: <Widget>[
-                          Flexible(
-                            child: Text(
-                              title,
-                              style: theme.textTheme.titleLarge,
-                            ),
-                          ),
-                          if (headerTrailing != null) ...<Widget>[
-                            const SizedBox(width: AppSpacing.xs),
-                            headerTrailing!,
-                          ],
-                        ],
-                      ),
-                      if (subtitle != null) ...<Widget>[
-                        const SizedBox(height: 2),
-                        Text(
-                          subtitle!,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: scheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
-                    ],
+                  child: _SectionHeaderText(
+                    title: title,
+                    subtitle: subtitle,
+                    headerTrailing: headerTrailing,
                   ),
                 ),
                 if (trailing != null) ...<Widget>[
@@ -193,6 +170,64 @@ class AppSectionCard extends StatelessWidget {
           Padding(padding: contentPadding, child: child),
         ],
       ),
+    );
+  }
+}
+
+/// Заголовок и подзаголовок секции с необязательным чипом.
+///
+/// Аудит 2.0: на узкой карточке (390 px) чип в строке с заголовком заставлял
+/// заголовок переноситься на три строки, а чип висел по центру справа — теперь
+/// на узких экранах чип уходит под подзаголовок.
+///
+/// Ширина берётся из `MediaQuery`, а не `LayoutBuilder`: карточки графиков
+/// стоят внутри `IntrinsicHeight`, который не поддерживает LayoutBuilder.
+class _SectionHeaderText extends StatelessWidget {
+  const _SectionHeaderText({
+    required this.title,
+    required this.headerTrailing,
+    this.subtitle,
+  });
+
+  final String title;
+  final String? subtitle;
+  final Widget? headerTrailing;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
+    final bool narrow = MediaQuery.sizeOf(context).width < 720;
+    final Widget? chip = headerTrailing;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        if (narrow)
+          Text(title, style: theme.textTheme.titleLarge)
+        else
+          Row(
+            children: <Widget>[
+              Flexible(child: Text(title, style: theme.textTheme.titleLarge)),
+              if (chip != null) ...<Widget>[
+                const SizedBox(width: AppSpacing.xs),
+                chip,
+              ],
+            ],
+          ),
+        if (subtitle != null) ...<Widget>[
+          const SizedBox(height: 2),
+          Text(
+            subtitle!,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+        if (narrow && chip != null) ...<Widget>[
+          const SizedBox(height: AppSpacing.xs),
+          chip,
+        ],
+      ],
     );
   }
 }

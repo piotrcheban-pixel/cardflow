@@ -25,12 +25,13 @@ import 'package:cardflow/ui/theme/app_typography.dart';
 /// Ширина столбца столбчатого графика при любой ширине колонки.
 ///
 /// Находка D5 аудита: столбец растягивался на всю ячейку (≈153 px), и максимум
-/// выглядел «кляксой». Ширина ограничена 12–20 px — на экране 390 px и на
-/// широком мониторе столбик остаётся узким. С V13 функцию используют оба
-/// графика, поэтому столбцы недели и прогноза одной ширины.
+/// выглядел «кляксой». Половина ячейки (14–32 px) — привычная пропорция
+/// столбчатой диаграммы: столбик читается как величина, но не занимает всю
+/// ячейку. С V13 функцию используют оба графика, поэтому столбцы недели и
+/// прогноза одной ширины.
 @visibleForTesting
 double statisticsWeekBarWidth(double columnWidth) =>
-    (columnWidth * 0.45).clamp(12.0, 20.0);
+    (columnWidth * 0.5).clamp(14.0, 32.0);
 
 /// Высота графика вместе с числами и подписями дней (V13).
 ///
@@ -38,9 +39,10 @@ double statisticsWeekBarWidth(double columnWidth) =>
 /// как на FullHD.
 const double _statisticsChartHeight = 120;
 
-/// Максимальная ширина графика: на широком экране 7 столбцов не растягиваются
-/// на всю карточку, а остаются компактной группой.
-const double _maxChartWidth = 480;
+/// Максимальная ширина графика: 7 столбцов не растягиваются на всю карточку,
+/// но и не сжимаются в «полоску по центру». Аудит 2.0: при пределе 480 px в
+/// карточке шириной ~570 px оставалось по 45 px пустоты с каждой стороны.
+const double _maxChartWidth = 600;
 
 /// Толщина общей оси столбчатых графиков.
 const double _axisHeight = AppSizes.borderWidth;
@@ -157,7 +159,7 @@ class StatisticsBarChart extends StatelessWidget {
                               height: AppSizes.borderWidth,
                               child: ColoredBox(
                                 color: scheme.outlineVariant.withValues(
-                                  alpha: 0.5,
+                                  alpha: 0.35,
                                 ),
                               ),
                             ),
@@ -370,15 +372,22 @@ class _ChartLabel extends StatelessWidget {
           fontWeight: emphasized ? FontWeight.w600 : FontWeight.w500,
           letterSpacing: 0,
         );
-    return FittedBox(
-      fit: BoxFit.scaleDown,
-      child: Text(
-        text,
-        key: textKey,
-        textAlign: TextAlign.center,
-        maxLines: 1,
-        softWrap: false,
-        style: style,
+    // Аудит 2.0: подписи «Сегодня»/«Завтра» занимали ячейку целиком и
+    // сливались в «СегодняЗавтра». Горизонтальный зазор 2 px с каждой стороны
+    // даёт FittedBox меньше места — текст ужимается и между подписями
+    // остаётся воздух.
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 2),
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Text(
+          text,
+          key: textKey,
+          textAlign: TextAlign.center,
+          maxLines: 1,
+          softWrap: false,
+          style: style,
+        ),
       ),
     );
   }

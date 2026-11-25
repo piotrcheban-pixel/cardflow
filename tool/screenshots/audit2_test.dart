@@ -277,6 +277,118 @@ void main() {
     await _shoot(tester, 'statistics_1280');
   });
 
+  /// Данные статистики: 120 дней повторений и прогноз на неделю.
+  StatisticsSnapshot statisticsSnapshot() {
+    final DateTime now = DateTime.now();
+    final DateTime today = DateTime(now.year, now.month, now.day);
+    return StatisticsCalculator.build(
+      reviews: <ReviewSample>[
+        for (int day = 0; day < 120; day++)
+          for (int count = 0; count < 1 + day % 4; count++)
+            ReviewSample(
+              cardId: 'card-${day % 7}',
+              rating: count % 5 == 0 ? 1 : 3,
+              reviewedAt: today.subtract(Duration(days: day)),
+            ),
+      ],
+      tagsByCard: <String, List<String>>{
+        for (int i = 0; i < 7; i++)
+          'card-$i': <String>[i.isEven ? 'электротехника' : 'теория'],
+      },
+      dueDates: <DateTime>[
+        today,
+        today.add(const Duration(days: 1, hours: 9)),
+        today.add(const Duration(days: 2, hours: 18)),
+        today.add(const Duration(days: 3, hours: 9)),
+        today.add(const Duration(days: 5, hours: 12)),
+      ],
+      now: today.add(const Duration(hours: 12)),
+    );
+  }
+
+  Future<void> pumpStatistics(WidgetTester tester, Size size) async {
+    await pumpAt(tester, size);
+    await tester.pumpWidget(
+      appWithAppRouter(
+        overrides: decksOverrides(
+          deckRepository: FakeDeckRepository(summaries: _summaries()),
+          cardRepository: FakeCardRepository(cards: _cards()),
+          reviewRepository: FakeReviewRepository(),
+          statisticsRepository: FakeStatisticsRepository(
+            snapshot: statisticsSnapshot(),
+          ),
+        ),
+        initialLocation: '/statistics',
+      ),
+    );
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('статистика: календарь 1280×720', (WidgetTester tester) async {
+    await pumpStatistics(tester, const Size(1280, 720));
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey<String>('statistics-heatmap')),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    await _shoot(tester, 'statistics_calendar_1280');
+  });
+
+  testWidgets('статистика: графики 1280×720', (WidgetTester tester) async {
+    await pumpStatistics(tester, const Size(1280, 720));
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey<String>('statistics-forecast')),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    await _shoot(tester, 'statistics_charts_1280');
+  });
+
+  testWidgets('статистика: удержание и темы 1280×720', (
+    WidgetTester tester,
+  ) async {
+    await pumpStatistics(tester, const Size(1280, 720));
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey<String>('statistics-retention-panel')),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    await _shoot(tester, 'statistics_details_1280');
+  });
+
+  testWidgets('статистика: календарь на телефоне 390×844', (
+    WidgetTester tester,
+  ) async {
+    await pumpStatistics(tester, const Size(390, 844));
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey<String>('statistics-heatmap')),
+      160,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    await _shoot(tester, 'statistics_calendar_390');
+  });
+
+  testWidgets('статистика: графики на телефоне 390×844', (
+    WidgetTester tester,
+  ) async {
+    await pumpStatistics(tester, const Size(390, 844));
+    final AppLocalizations l10n = AppLocalizations.of(
+      tester.element(find.byType(Scaffold).first),
+    );
+    // Прокручиваем к заголовку карточки прогноза: видно и шапку (чип), и график.
+    await tester.scrollUntilVisible(
+      find.text(l10n.statisticsForecastTitle),
+      160,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    await _shoot(tester, 'statistics_charts_390');
+  });
+
   testWidgets('колоды: телефон 390×844', (WidgetTester tester) async {
     await pumpAt(tester, const Size(390, 844));
     await tester.pumpWidget(

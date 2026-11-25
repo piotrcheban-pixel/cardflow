@@ -62,16 +62,24 @@ void main() {
     expect(labels.firstWhere((String label) => label.isNotEmpty), 'M2');
   });
 
-  test('ширина столбца недельного графика — 12–20 px на любой ширине (D5)', () {
+  // Аудит 2.0: прежний предел 20 px давал на широкой карточке (ячейка ≈68 px)
+  // «спички»; столбец стал половиной ячейки (14–32 px), но по-прежнему не
+  // занимает её целиком — исходная находка D5 про «кляксу» 153 px закрыта.
+  test('ширина столбца недельного графика — 14–32 px на любой ширине (D5)', () {
     for (final double columnWidth in <double>[0, 20, 30, 45, 80, 172, 400]) {
       expect(
         statisticsWeekBarWidth(columnWidth),
-        inInclusiveRange(12.0, 20.0),
+        inInclusiveRange(14.0, 32.0),
         reason: 'columnWidth=$columnWidth',
       );
     }
-    expect(statisticsWeekBarWidth(172), 20.0);
-    expect(statisticsWeekBarWidth(20), 12.0);
+    expect(statisticsWeekBarWidth(172), 32.0);
+    expect(statisticsWeekBarWidth(20), 14.0);
+    expect(
+      statisticsWeekBarWidth(68),
+      lessThan(68 * 0.6),
+      reason: 'столбец не занимает всю ячейку',
+    );
   });
 
   test('подписи дней недели — краткая форма ru, а не одна буква (D7)', () {
