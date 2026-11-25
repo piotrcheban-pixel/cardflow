@@ -8,9 +8,9 @@
 **Старт:** `HEAD = a5aac94`, ветка `main`, `git status` — только неотслеживаемые
 каталоги аудита. **Baseline:** `flutter test` **2689 passed + 16 skipped**.
 **Гейты итогового снимка:** `flutter test --coverage` **2706 passed + 16
-skipped**, покрытие рукописного кода **90,5 % (23050/25459)**, всего 83,4 %;
+skipped**, покрытие рукописного кода **90,5 % (23054/25463)**, всего 83,4 %;
 `analyze` 0; `dart format --set-exit-if-changed lib test` 599/0; 
-`flutter build windows --release --no-pub` → `cardflow.exe` (68,5 с). Схема БД,
+`flutter build windows --release --no-pub` → `cardflow.exe` (58,4 с). Схема БД,
 `schemaVersion` и `format_version` не менялись; FSRS-логика не менялась.
 
 **Сделано (измеренные дефекты `audit.md` M-01…M-27):** оценки — сетка 2×2
@@ -33,8 +33,9 @@ FSRS в ленте — вариант B (ADR-044): просмотр не пиш�
 `app_sheet_test` (+17). 8 существующих тестов обновлены по контрактам
 ADR-046, не ослаблены.
 
-**Коммиты:** `3967d20` (feat ui), `5d80453` (test ui), `a0d59f0` (docs task04)
-+ финальный docs-коммит STATE. Push/deploy не выполнялись.
+**Коммиты:** `3967d20` (feat ui), `5d80453` (test ui), `a0d59f0` (docs task04),
+`29b0bfb` (fix заголовка редактора) + финальный docs-коммит STATE.
+Push/deploy не выполнялись.
 
 **Открытые ограничения:** L198 (нет реального Android-устройства), L199
 (Stitch/Mobbin/Figma недоступны, задание владельцу приложено), L200

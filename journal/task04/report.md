@@ -167,7 +167,7 @@ FSRS-логика не менялась: классика/тренировка �
 
 - `fvm dart format lib test` — 599 файлов; `--set-exit-if-changed` → 0.
 - `fvm flutter analyze` → **No issues found**.
-- `fvm flutter test --no-pub --coverage --exclude-tags golden` → **2706 passed + 16 skipped**, покрытие рукописного кода **90,5 % (23050/25459)**, всего 83,4 %.
+- `fvm flutter test --no-pub --coverage --exclude-tags golden` → **2706 passed + 16 skipped**, покрытие рукописного кода **90,5 % (23054/25463)**, всего 83,4 % (24862/29797).
 - Production-снимки 320×640, 360×800, 390×844, 360×800 при кегле 130 %,
   реальные Inter + MaterialIcons — before/after в
   `journal/task04/screenshots/{before,after}/`; «before» снят на неизменённом
@@ -177,15 +177,15 @@ FSRS-логика не менялась: классика/тренировка �
   лист режимов (открытие/свайп), клавиатурные подсказки, пустые состояния.
 - FSRS-инварианты: существующие тесты `feed_session_flow_test`,
   `review_session_screen_test`, `practice_session_screen_test`.
-- `fvm flutter build windows --release --no-pub` → `√ Built build\windows\x64\runner\Release\cardflow.exe` (68,5 с).
+- `fvm flutter build windows --release --no-pub` → `√ Built build\windows\x64\runner\Release\cardflow.exe` (58,4 с).
 - Android/iOS-сборки — CI; локального устройства нет (L198).
 
 ## 12. Какие тесты прошли
 
 - Baseline: **2689 passed + 16 skipped**.
 - Итог: **2706 passed + 16 skipped** (полный прогон; +17 новых тестов),
-  exit 0; покрытие рукописного кода **90,5 % (23050/25459)**,
-  всего 83,4 % (24857/29792).
+  exit 0; покрытие рукописного кода **90,5 % (23054/25463)**,
+  всего 83,4 % (24862/29797).
 - Новые тесты: `test/widget/review/rating_panel_mobile_test.dart` (6),
   `test/widget/cards/card_form_mobile_test.dart` (5),
   `test/widget/review/feed_flip_test.dart` (4),
@@ -243,6 +243,9 @@ FSRS-логика не менялась: классика/тренировка �
 - `a0d59f0` — `docs(task04): аудит, исследование, ADR-046, отчёт и снимки
   before/after` (ADR-046, `journal/task04/*`, 96 снимков, AGENTS,
   KNOWN_LIMITATIONS, харнесс снимков).
-- Финальный docs-коммит — `journal/STATE.md` (гейты и коммиты итерации).
+- `29b0bfb` — `fix(ui): заголовок редактора на телефоне без многоточия`
+  (M-26; снимки `cardform_*` обновлены).
+- Финальный docs-коммит — `journal/STATE.md` + финальные гейты (гейты и
+  коммиты итерации).
 - Push и deploy **не выполнялись** (по заданию — только по отдельному
   разрешению владельца).
