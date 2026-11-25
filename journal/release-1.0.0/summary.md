@@ -52,6 +52,20 @@ Flutter- и плагин-DLL, каталог `data/`.
 Живых API-запросов не было; схема БД, `schemaVersion` и `format_version`
 не менялись.
 
+## Коммит, тег и CI
+
+- Коммит `7e975bf` — `chore(release): prepare v1.0.0` (ci.yml, STATE,
+  этот журнал); тег `v1.0.0` → `7e975bf`.
+- Push: `origin/main` `36f8738..7e975bf`, тег `v1.0.0` (новый).
+- CI run [`45603871350`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/45603871350)
+  (`7e975bf`, run #87) — **9/9 job success** за 11 мин 49 с:
+  `format + analyze` (ubuntu), `test` × 3 ОС (ubuntu/macOS/Windows),
+  `build desktop` × 3 (linux/windows/macos), `build mobile` — Android
+  **release** и iOS (`--no-codesign`).
+- Artifact `cardflow-android-release-apk` — APK `app-release.apk`,
+  **50 050 015 Б**, создан 11:29:57Z, хранится до 2027-02-23
+  (второй artifact — `coverage-lcov`).
+
 ## Ограничения
 
 - Android SDK/JDK локально отсутствуют: APK собирается только в CI

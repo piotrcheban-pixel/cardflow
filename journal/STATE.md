@@ -8,6 +8,13 @@
 `flutter build windows --release` → `cardflow.exe` (FileVersion `1.0.0+1`).
 Схема БД, `schemaVersion` и `format_version` не менялись. **Режим:** ИТЕРАЦИИ.
 
+**Push и CI релиза:** коммит `7e975bf` (`chore(release): prepare v1.0.0`),
+тег `v1.0.0`; `origin/main` `36f8738..7e975bf` → run
+[`45603871350`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/45603871350)
+(`7e975bf`) — **9/9 job success**; artifact `cardflow-android-release-apk`
+(APK `app-release.apk`, 50 050 015 Б). Windows-артефакт локально:
+`build\windows\x64\runner\Release\cardflow.exe` (`FileVersion 1.0.0+1`).
+
 **Следующий шаг:** релиз v1.0.0 закоммичен и помечен тегом `v1.0.0`;
 открытые ограничения — `audit/FINAL_IMPLEMENTATION_REPORT.md` §11 (реальные
 мобильные устройства, screen reader, живой поиск картинок, нативные диалоги)
