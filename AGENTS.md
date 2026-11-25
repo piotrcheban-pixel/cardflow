@@ -320,6 +320,17 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   для молчаливых сервисов с `null`-контрактом (поиск картинок) добавлять debug-диагностику **вместе** с
   фиксом, иначе «модель не дала image_query» и «не удалось скачать» неразличимы; `fvm flutter test` без
   `--no-pub` в сессии агента зависает на `pub get --example` — прогоны только с `--no-pub`.
+- **Ретроспектива итерации «Фикс мобильного Empty State» (1.0.1):** блок `Row` из
+  «иконка + `Expanded(Text)` + `TextButton`» на телефоне отдаёт кнопке её неделимую ширину, а тексту —
+  остаток: на 390 px оставалось 36,8 px (42 строки), на 360 px — 6,8 px (по одной букве). Горизонтальные
+  блоки с неделимым действием проверять на мобильной ширине `Column`-ом (`< AppSizes.mobileBreakpoint`),
+  а не только на десктопе. Widget-тесты шрифтом по умолчанию **скрывают** переполнения реального
+  Inter: измерять геометрию на реальных шрифтах/кегле 150 % (`textScaleFactorTestValue`) и проверять
+  относительное положение (`action.top >= note.bottom`), а не только `takeException()`. Скриншот без
+  устройства — `RepaintBoundary.toImage(pixelRatio: 2)` в `tester.runAsync` (вне fake-async зоны `toImage`
+  не завершается) + `FontLoader` из `assets/fonts` и `materialicons-regular.otf` из SDK
+  (`$FLUTTER_ROOT/bin/cache/artifacts/material_fonts`); `setSurfaceSize` **не** меняет `MediaQuery` —
+  размер задавать через `tester.view.physicalSize` + `devicePixelRatio: 1`.
 
 ## Факты хоста (обновлять при изменении)
 
