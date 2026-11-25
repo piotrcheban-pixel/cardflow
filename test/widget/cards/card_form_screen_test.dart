@@ -53,6 +53,14 @@ void main() {
 
   Finder field(String key) => find.byKey(ValueKey<String>(key));
 
+  /// TASK 04: второстепенные поля живут в свёрнутой секции «Дополнительно».
+  Future<void> expandAdditional(WidgetTester tester) async {
+    await tester.tap(
+      find.byKey(const ValueKey<String>('card-form-additional-toggle')),
+    );
+    await tester.pumpAndSettle();
+  }
+
   testWidgets('создание basic-карточки: черновик уходит в репозиторий', (
     WidgetTester tester,
   ) async {
@@ -63,6 +71,7 @@ void main() {
 
     await tester.enterText(field('card-form-front'), 'Столица Франции?');
     await tester.enterText(field('card-form-back'), 'Париж');
+    await expandAdditional(tester);
     await tester.enterText(field('card-form-tags'), ' #география, европа ');
     await tester.tap(field('card-form-save'));
     await tester.pumpAndSettle();
@@ -114,6 +123,7 @@ void main() {
 
     await tester.enterText(field('card-form-front'), 'Вопрос');
     await tester.enterText(field('card-form-back'), 'Ответ');
+    await expandAdditional(tester);
     await tester.enterText(field('card-form-tags'), 'а, б, в, г');
     await tester.tap(field('card-form-save'));
     await tester.pumpAndSettle();
@@ -159,7 +169,19 @@ void main() {
     await tester.tap(find.text('Старый вопрос'));
     await tester.pumpAndSettle();
     expect(find.byType(CardFormScreen), findsOneWidget);
+    // TASK 04: причина неизменяемого типа — в подсказке «?», а не строкой
+    // на всю ширину формы; текст доступен по нажатию.
+    final Finder typeInfo = find.byKey(
+      const ValueKey<String>('app-info-card-form-type-info'),
+    );
+    expect(typeInfo, findsOneWidget);
+    await tester.ensureVisible(typeInfo);
+    await tester.pumpAndSettle();
+    await tester.tap(typeInfo);
+    await tester.pumpAndSettle();
     expect(find.text(l10n.cardFormTypeImmutable), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey<String>('app-info-close')));
+    await tester.pumpAndSettle();
 
     await tester.enterText(field('card-form-front'), 'Новый вопрос');
     await tester.enterText(field('card-form-back'), 'Новый ответ');

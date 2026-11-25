@@ -149,7 +149,7 @@ void main() {
     }
   });
 
-  group('G2: кнопки оценок ≥56 и кегль ≥16 при масштабе текста 90 %', () {
+  group('G2: компактная панель оценок (≥44 на телефоне, ≥56 на широком)', () {
     for (final (String label, Size size) in <(String, Size)>[
       ('2K 2560×1440', Size(2560, 1440)),
       ('FullHD 1920×1080', Size(1920, 1080)),
@@ -158,6 +158,7 @@ void main() {
       testWidgets('кнопки и подписи: $label', (WidgetTester tester) async {
         await pumpSession(tester, size, textScale: 0.9);
         await reveal(tester);
+        final bool mobile = size.width < AppSizes.mobileBreakpoint;
         final double scale = MediaQuery.of(
           tester.element(find.byKey(const ValueKey<String>('review-card'))),
         ).textScaler.scale(1);
@@ -165,13 +166,21 @@ void main() {
           final Size button = tester.getSize(
             find.byKey(ValueKey<String>('review-rating-$name')),
           );
+          // TASK 04 / ADR-046: на телефоне кнопка 48 px (цель ≥44), на
+          // широком экране — прежние 56 px. Обрезка подписи проверяется
+          // отдельно ниже (FittedBox, без ellipsis).
           expect(
             button.height,
-            greaterThanOrEqualTo(AppSizes.ratingButtonHeight),
-            reason: 'G2: «$name» ${button.height} < 56',
+            greaterThanOrEqualTo(
+              mobile ? AppSizes.minTouchTarget : AppSizes.ratingButtonHeight,
+            ),
+            reason: mobile
+                ? 'G2: «$name» ${button.height} < 44'
+                : 'G2: «$name» ${button.height} < 56',
           );
         }
-        // Кегль подписи: стиль 18 × адаптив, пользовательский масштаб 0,9.
+        // Кегль подписи: 16 на телефоне / 18 на широком, пользовательский
+        // масштаб 0,9; нижняя граница — 14 на телефоне и 16 на десктопе.
         final RichText label = tester.widget<RichText>(
           find
               .descendant(
@@ -183,10 +192,10 @@ void main() {
         final double rendered = (label.text.style?.fontSize ?? 0) * scale;
         expect(
           rendered,
-          greaterThanOrEqualTo(16),
-          reason: 'G2: подпись оценки $rendered < 16',
+          greaterThanOrEqualTo(mobile ? 14 : 16),
+          reason: 'G2: подпись оценки $rendered < ${mobile ? 14 : 16}',
         );
-        // G6: зазор между оценками не меньше 12.
+        // G6: зазор между оценками — 8 на сетке 2×2, 12 на широкой панели.
         final Rect again = tester.getRect(
           find.byKey(const ValueKey<String>('review-rating-again')),
         );
@@ -196,7 +205,11 @@ void main() {
         final double gap = hard.left > again.left
             ? hard.left - again.right
             : again.top - hard.bottom;
-        expect(gap, greaterThanOrEqualTo(12), reason: 'G6: зазор $gap < 12');
+        expect(
+          gap,
+          greaterThanOrEqualTo(mobile ? 8 : 12),
+          reason: 'G6: зазор $gap < ${mobile ? 8 : 12}',
+        );
       });
     }
   });
@@ -382,7 +395,13 @@ void main() {
             reason: 'G10: «$name» выходит за нижнюю кромку карточки',
           );
           expect(button.top, greaterThanOrEqualTo(cardAnswered.top - 0.5));
-          expect(button.height, greaterThanOrEqualTo(55.5));
+          // TASK 04 / ADR-046: на телефоне компактная кнопка 48 px; цель
+          // касания остаётся ≥44, поэтому «доступность» гейта не ослаблена.
+          expect(
+            button.height,
+            greaterThanOrEqualTo(AppSizes.minTouchTarget),
+            reason: 'G10: «$name» ${button.height} < 44',
+          );
         }
       });
     }

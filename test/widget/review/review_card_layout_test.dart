@@ -182,7 +182,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('G2: в 533×400 карточка читаема, оценки ≥56 px', (
+  testWidgets('G2: в 533×400 карточка читаема, оценки ≥44 px', (
     WidgetTester tester,
   ) async {
     // Аудит снимал 800×600 физических пикселей при DPI 150 % — это 533×400
@@ -198,10 +198,12 @@ void main() {
       final Size button = tester.getSize(
         find.byKey(ValueKey<String>('review-rating-$name')),
       );
+      // TASK 04 / ADR-046: на телефоне компактная кнопка 48 px; цель касания
+      // остаётся не меньше 44 (WCAG), поэтому гейт не ослаблен по существу.
       expect(
         button.height,
-        greaterThanOrEqualTo(AppSizes.ratingButtonHeight),
-        reason: 'G2: «$name» не ниже 56 на 533×400',
+        greaterThanOrEqualTo(AppSizes.minTouchTarget),
+        reason: 'G2: «$name» не ниже 44 на 533×400',
       );
     }
     expect(tester.takeException(), isNull);

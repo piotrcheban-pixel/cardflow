@@ -85,7 +85,10 @@ void main() {
 
     expect(find.byType(PracticeSessionScreen), findsOneWidget);
     expect(find.text(l10n.practiceTitle), findsOneWidget);
-    expect(find.text(l10n.practiceSubtitle), findsOneWidget);
+    // TASK 04 (M-10): постоянной подписи на две строки над карточкой больше
+    // нет; смысл режима — в подсказке «i» в шапке.
+    expect(find.text(l10n.practiceSubtitle), findsNothing);
+    expect(find.byKey(const ValueKey<String>('review-info')), findsOneWidget);
     expect(find.text('Первый вопрос'), findsOneWidget);
     expect(find.text('Первый ответ'), findsNothing);
     // Аудит v7 (G1): до раскрытия ответа панели оценок нет в дереве вообще —

@@ -260,7 +260,7 @@ void main() {
     },
   );
 
-  testWidgets('одна карточка: лента не ломается и не показывает пустоту', (
+  testWidgets('одна карточка: свайп вверх открывает итог, вниз возвращает', (
     WidgetTester tester,
   ) async {
     await pumpFeed(tester, cards: cards(1));
@@ -268,7 +268,13 @@ void main() {
 
     expect(find.text('Вопрос 1'), findsOneWidget);
     expect(find.text(l10n.reviewCardCounter(1, 1)), findsOneWidget);
+    // TASK 04 (M-13): после последней карточки — итоговая страница, а не
+    // «упор» в границу списка. Свайп вниз возвращает карточку.
     await flingUp(tester);
+    expect(find.byKey(const ValueKey<String>('feed-end')), findsOneWidget);
+    expect(find.text(l10n.feedEndTitle), findsOneWidget);
+    expect(find.text('Вопрос 1'), findsNothing);
+    await flingDown(tester);
     expect(find.text('Вопрос 1'), findsOneWidget);
   });
 

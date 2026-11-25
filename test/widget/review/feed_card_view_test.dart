@@ -72,7 +72,7 @@ void main() {
     },
   );
 
-  testWidgets('оборот: вопрос-эхо, ответ и подсказка навигации', (
+  testWidgets('оборот: только ответ и подсказка навигации, без вопроса-эха', (
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(
@@ -81,7 +81,9 @@ void main() {
     await tester.pumpAndSettle();
     final AppLocalizations l10n = l10nOf(tester);
 
-    expect(find.text('Что такое ток?'), findsOneWidget);
+    // TASK 04 (M-04): на обороте ленты вопроса и его изображений нет —
+    // состояния вопроса и ответа визуально разделены.
+    expect(find.text('Что такое ток?'), findsNothing);
     expect(find.text('Движение заряда'), findsOneWidget);
     expect(find.text(l10n.reviewRevealAction), findsNothing);
     expect(find.byKey(const ValueKey<String>('feed-nav-hint')), findsOneWidget);

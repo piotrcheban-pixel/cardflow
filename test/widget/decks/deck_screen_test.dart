@@ -500,7 +500,17 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(PracticeSessionScreen), findsOneWidget);
-      expect(find.text(l10n.practiceSubtitle), findsWidgets);
+      // TASK 04 (M-10): смысл режима — в подсказке «i», а не постоянной
+      // строкой над карточкой.
+      final Finder practiceInfo = find.byKey(
+        const ValueKey<String>('review-info'),
+      );
+      expect(practiceInfo, findsOneWidget);
+      await tester.tap(practiceInfo);
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.practiceSubtitle), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey<String>('app-info-close')));
+      await tester.pumpAndSettle();
       expect(find.text('Вопрос'), findsOneWidget);
     });
 
@@ -752,6 +762,11 @@ void main() {
       expect(find.text(l10n.reviewModeMatch), findsOneWidget);
       expect(find.text(l10n.reviewModeTrueFalse), findsOneWidget);
 
+      // TASK 04: лист режимов открывается на 72 % высоты (M-03), поэтому
+      // нижние плитки достижимы прокруткой — тест прокручивает так же, как
+      // пользователь.
+      await tester.ensureVisible(find.text(l10n.reviewModeMatch));
+      await tester.pumpAndSettle();
       await tester.tap(find.text(l10n.reviewModeMatch));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
