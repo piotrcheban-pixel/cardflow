@@ -624,6 +624,7 @@ void main() {
       _dumpOverflow(tester, 'deck-create-390x844');
       await _shoot(tester, 'deck_create_dialog_390x844');
     } else {
+      // ignore: avoid_print
       print('SHEET deck-create button not found');
     }
   }, timeout: const Timeout(Duration(seconds: 180)));
