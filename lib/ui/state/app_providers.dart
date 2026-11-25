@@ -68,6 +68,7 @@ import 'package:cardflow/domain/settings/app_settings.dart';
 import 'package:cardflow/domain/settings/app_settings_store.dart';
 import 'package:cardflow/domain/statistics/statistics.dart';
 import 'package:cardflow/domain/statistics/statistics_repository.dart';
+import 'package:cardflow/ui/state/settings_diagnostics.dart';
 import 'package:cardflow/domain/transfer/archive_codec.dart';
 import 'package:cardflow/domain/transfer/deck_transfer_service.dart';
 import 'package:cardflow/domain/transfer/file_gateway.dart';
@@ -209,6 +210,15 @@ final appSettingsStoreProvider = Provider<AppSettingsStore>((ref) {
   return DriftAppSettingsStore(ref.watch(appDatabaseProvider));
 });
 
+/// Debug-диагностика записи настроек (owner-note 1.0.1).
+///
+/// В release-сборке методы — no-op; в debug причина падения (тип исключения,
+/// текст drift/SQLite, первые кадры стека) идёт в консоль `flutter run`, чтобы
+/// «не сохраняется» не оставалось без причины.
+final settingsDiagnosticsProvider = Provider<SettingsDiagnostics>((ref) {
+  return SettingsDiagnostics(sink: kDebugMode ? debugPrint : null);
+});
+
 /// Контроллер настроек: состояние меняется сразу, запись — в store.
 ///
 /// Ошибка записи не «проглатывается»: состояние откатывается к прежнему,
@@ -225,6 +235,7 @@ class AppSettingsController extends AsyncNotifier<AppSettings> {
     try {
       await ref.read(appSettingsStoreProvider).write(settings);
     } on Object catch (error, stackTrace) {
+      ref.read(settingsDiagnosticsProvider).saveFailed(error, stackTrace);
       state = previous == null
           ? AsyncError<AppSettings>(error, stackTrace)
           : AsyncData<AppSettings>(previous);

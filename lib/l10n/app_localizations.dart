@@ -1168,6 +1168,12 @@ abstract class AppLocalizations {
   /// **'Не удалось сохранить настройки. Попробуйте ещё раз'**
   String get settingsSaveError;
 
+  /// Отказ ОС в записи в каталог данных приложения (ADR-047, owner-note 1.0.1): повтор не поможет, нужны права на папку.
+  ///
+  /// In ru, this message translates to:
+  /// **'Не удалось записать настройки: папка данных приложения недоступна для записи. Проверьте права доступа к папке и перезапустите CardFlow'**
+  String get settingsSavePermissionError;
+
   /// Ошибка загрузки настроек сервера (без сырых исключений).
   ///
   /// In ru, this message translates to:

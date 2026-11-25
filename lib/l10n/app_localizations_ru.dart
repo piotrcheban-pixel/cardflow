@@ -686,6 +686,10 @@ class AppLocalizationsRu extends AppLocalizations {
       'Не удалось сохранить настройки. Попробуйте ещё раз';
 
   @override
+  String get settingsSavePermissionError =>
+      'Не удалось записать настройки: папка данных приложения недоступна для записи. Проверьте права доступа к папке и перезапустите CardFlow';
+
+  @override
   String get settingsLoadError =>
       'Не удалось загрузить настройки. Попробуйте ещё раз';
 

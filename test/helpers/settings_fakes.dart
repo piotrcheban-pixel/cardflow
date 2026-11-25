@@ -19,11 +19,16 @@ class FakeAppSettingsStore implements AppSettingsStore {
   /// Если `true`, запись бросает исключение (проверка ошибки сохранения).
   bool failWrites = false;
 
+  /// Если задано — запись бросает именно это исключение (ADR-047).
+  Object? writeError;
+
   @override
   Future<AppSettings> read() async => settings;
 
   @override
   Future<void> write(AppSettings settings) async {
+    final Object? failure = writeError;
+    if (failure != null) throw failure;
     if (failWrites) {
       throw StateError('Запись настроек недоступна (тест)');
     }

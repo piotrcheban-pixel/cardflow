@@ -1,0 +1,24 @@
+
+00:00 +0 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/settings/app_settings_write_error_test.dart: classifyAppSettingsWriteFailure: права на папку данных SQLITE_READONLY из drift (текст sqlite3) → writeDenied [E]
+  Expected: AppSettingsWriteFailure:<AppSettingsWriteFailure.writeDenied>
+    Actual: AppSettingsWriteFailure:<AppSettingsWriteFailure.unknown>
+00:00 +0 -2: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/settings/app_settings_write_error_test.dart: classifyAppSettingsWriteFailure: права на папку данных «read-only» и «read only» тоже распознаются [E]
+  Expected: AppSettingsWriteFailure:<AppSettingsWriteFailure.writeDenied>
+    Actual: AppSettingsWriteFailure:<AppSettingsWriteFailure.unknown>
+00:00 +0 -3: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/settings/app_settings_write_error_test.dart: classifyAppSettingsWriteFailure: права на папку данных FileSystemException с отказом доступа → writeDenied [E]
+  Expected: AppSettingsWriteFailure:<AppSettingsWriteFailure.writeDenied>
+    Actual: AppSettingsWriteFailure:<AppSettingsWriteFailure.unknown>
+00:00 +2 -4: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/settings/app_settings_write_error_test.dart: classifyAppSettingsWriteFailure: настоящий readonly SQLite SqliteException из драйвера классифицируется как writeDenied [E]
+  Expected: AppSettingsWriteFailure:<AppSettingsWriteFailure.writeDenied>
+    Actual: AppSettingsWriteFailure:<AppSettingsWriteFailure.unknown>
+00:00 +8 -5: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/data/settings/drift_app_settings_store_test.dart: DriftAppSettingsStore: отказ записи (ADR-047) запись в readonly-БД → AppSettingsWriteException(writeDenied) [E]
+  Expected: throws <Instance of 'AppSettingsWriteException'> with `failure`: AppSettingsWriteFailure:<AppSettingsWriteFailure.writeDenied>
+    Actual: <Instance of 'Future<void>'>
+     Which: threw SqliteException:<SqliteException(8): while executing statement, attempt to write a readonly database, attempt to write a readonly database (code 8)
+Expected: exactly one matching candidate
+  Actual: _TextWidgetFinder:<Found 0 widgets with text "Не удалось записать настройки: папка данных
+   Which: means none were found but one was expected
+00:05 +15 -6: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/widget/settings_screen_test.dart: нет прав на запись: отдельная строка ARB, значение откатывается [E]
+00:06 +20 -6: Some tests failed.
+Failing tests:
+

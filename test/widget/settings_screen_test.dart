@@ -13,6 +13,7 @@ import 'package:cardflow/api/providers/openai_adapter.dart';
 import 'package:cardflow/api/providers/openai_compatible_adapter.dart';
 import 'package:cardflow/domain/generation/provider_account.dart';
 import 'package:cardflow/domain/settings/app_settings.dart';
+import 'package:cardflow/domain/settings/app_settings_write_error.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/settings/settings_screen.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
@@ -145,6 +146,37 @@ void main() {
       find.byKey(const ValueKey<String>('settings-dynamic-color')),
     );
     expect(tile.value, isFalse);
+    expect(settings.settings.dynamicColor, isFalse);
+  });
+
+  // Owner-note 1.0.1 (ADR-047): отказ ОС в записи — не «попробуйте ещё раз»,
+  // а понятная причина: папка данных приложения недоступна.
+  testWidgets('нет прав на запись: отдельная строка ARB, значение откатывается', (
+    WidgetTester tester,
+  ) async {
+    await pump(tester);
+    settings.writeError = const AppSettingsWriteException(
+      AppSettingsWriteFailure.writeDenied,
+      details: r'SQLITE_READONLY: C:\Users\user\AppData\Roaming',
+    );
+    final AppLocalizations l10n = l10nOf(tester);
+
+    await reveal(
+      tester,
+      find.byKey(const ValueKey<String>('settings-dynamic-color')),
+    );
+    await tester.tap(
+      find.byKey(const ValueKey<String>('settings-dynamic-color')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text(l10n.settingsSavePermissionError), findsOneWidget);
+    expect(
+      find.text(l10n.settingsSaveError),
+      findsNothing,
+      reason: 'Общий текст не должен подменять конкретную причину',
+    );
+    expect(find.textContaining('SQLITE_READONLY'), findsNothing);
     expect(settings.settings.dynamicColor, isFalse);
   });
 

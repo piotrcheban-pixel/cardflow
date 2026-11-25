@@ -1,10 +1,15 @@
 import 'dart:convert';
+import 'dart:io';
 
+import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sqlite3/sqlite3.dart';
 
 import 'package:cardflow/data/db/app_database.dart';
+import 'package:cardflow/data/db/database_opener.dart';
 import 'package:cardflow/data/settings/drift_app_settings_store.dart';
 import 'package:cardflow/domain/settings/app_settings.dart';
+import 'package:cardflow/domain/settings/app_settings_write_error.dart';
 
 void main() {
   late AppDatabase db;
@@ -103,6 +108,70 @@ void main() {
             ),
           );
       expect(await store.read(), AppSettings.defaults);
+    });
+  });
+
+  // Owner-note 1.0.1 (ADR-047): «Не удалось сохранить настройки» без причины.
+  // Причина — отказ ОС в записи; UI должен получить код, а не сырое исключение.
+  group('DriftAppSettingsStore: отказ записи (ADR-047)', () {
+    late Directory tempDir;
+    late String path;
+    late AppDatabase readOnlyDb;
+
+    setUpAll(() async {
+      tempDir = Directory.systemTemp.createTempSync('cardflow_settings_ro_');
+      // Полная схема приложения создаётся обычным открытием (user_version = 1),
+      // иначе drift попытается выполнить onCreate и упадёт раньше самой записи.
+      final AppDatabase seedDb = await openAppDatabase(baseDirectory: tempDir);
+      // drift открывает файл лениво — первый запрос создаёт его и схему.
+      await DriftAppSettingsStore(seedDb).read();
+      await seedDb.close();
+      path = '${tempDir.path}${Platform.pathSeparator}'
+          '$appDataDirectoryName${Platform.pathSeparator}'
+          '$appDatabaseFileName';
+    });
+
+    tearDownAll(() {
+      if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
+    });
+
+    setUp(() {
+      // Настоящая БД, открытая драйвером только для чтения: запись даёт
+      // SqliteException(8) SQLITE_READONLY — тот же код, что видел владелец.
+      readOnlyDb = AppDatabase(
+        NativeDatabase.opened(sqlite3.open(path, mode: OpenMode.readOnly)),
+      );
+    });
+
+    tearDown(() async {
+      await readOnlyDb.close();
+    });
+
+    test('запись в readonly-БД → AppSettingsWriteException(writeDenied)', () async {
+      final DriftAppSettingsStore readOnlyStore = DriftAppSettingsStore(
+        readOnlyDb,
+      );
+
+      await expectLater(
+        readOnlyStore.write(
+          AppSettings.defaults.copyWith(dailyNewLimit: 7),
+        ),
+        throwsA(
+          isA<AppSettingsWriteException>().having(
+            (AppSettingsWriteException error) => error.failure,
+            'failure',
+            AppSettingsWriteFailure.writeDenied,
+          ),
+        ),
+      );
+    });
+
+    test('чтение из readonly-БД работает (настройки не теряются)', () async {
+      final DriftAppSettingsStore readOnlyStore = DriftAppSettingsStore(
+        readOnlyDb,
+      );
+
+      expect(await readOnlyStore.read(), AppSettings.defaults);
     });
   });
 }
