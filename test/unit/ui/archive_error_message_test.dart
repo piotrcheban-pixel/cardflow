@@ -24,6 +24,7 @@ void main() {
         ArchiveErrorCode.mediaMissing: l10n.archiveErrorMediaMissing,
         ArchiveErrorCode.deckNotFound: l10n.archiveErrorDeckNotFound,
         ArchiveErrorCode.invalidEntryName: l10n.archiveErrorInvalidEntryName,
+        ArchiveErrorCode.writeDenied: l10n.archiveErrorWriteDenied,
       };
 
       expect(
