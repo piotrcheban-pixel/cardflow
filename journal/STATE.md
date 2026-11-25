@@ -4,8 +4,8 @@
 (`journal/mobile-empty-state/summary.md`) — owner-note после установки APK: блок
 «ИИ не настроен — …» на главном экране на телефоне сжимался в колонку по одной
 букве, кнопка «Настроить ИИ» стояла сбоку.
-Локальные гейты: `flutter test` **2686 passed + 16 skipped**, покрытие
-**90,8 % (22842/25165)**, `analyze` 0, `dart format` 594 файла / 0 changed,
+Локальные гейты: `flutter test` **2689 passed + 16 skipped**, покрытие
+**90,8 % (22848/25171)**, `analyze` 0, `dart format` 594 файла / 0 changed,
 `flutter build windows --release` → `cardflow.exe` (69,1 с).
 Схема БД, `schemaVersion` и `format_version` не менялись. **Режим:** ИТЕРАЦИИ.
 
@@ -22,7 +22,10 @@
 (контент на 390 px: 278 → 318 px). Плашка получила внутренний отступ 12 px.
 Новый тест `test/widget/decks/decks_mobile_empty_state_test.dart` (+8): кнопка
 под текстом на 390 px, отсутствие overflow на 360×800 и при кегле 150 %,
-горизонтальный `Row` на 1440×900, отступы панели ≤ 20 px. Скриншоты 360×800,
+горизонтальный `Row` на 1440×900, отступы панели ≤ 20 px. Тем же правилом
+исправлен найденный аудитом `PrimaryProviderBanner` (тот же `Row` на том же
+экране: текст 146 px при 390 px и 78,6 px при кегле 150 %) — +3 теста в
+`test/widget/settings/provider_audit_test.dart`. Скриншоты 360×800,
 390×844 и 1440×900 (реальные Inter + MaterialIcons) — в
 `journal/mobile-empty-state/`. Урок о шрифтах/`setSurfaceSize`/`toImage` —
 ретроспектива в `AGENTS.md`.

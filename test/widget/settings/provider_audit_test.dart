@@ -5,6 +5,7 @@ import 'package:cardflow/domain/generation/provider_account.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/components/app_dialogs.dart';
 import 'package:cardflow/ui/settings/generation_settings_screen.dart';
+import 'package:cardflow/ui/settings/provider_banner.dart';
 import 'package:cardflow/ui/settings/provider_labels.dart';
 import 'package:cardflow/ui/settings/settings_screen.dart';
 
@@ -160,5 +161,93 @@ void main() {
 
     final ChoiceChip selected = tester.widget<ChoiceChip>(chip);
     expect(selected.selected, isTrue);
+  });
+
+  // Итерация «Фикс мобильного Empty State»: баннер основного провайдера —
+  // тот же дефект, что и блок ИИ в пустом состоянии (Row с Expanded-текстом и
+  // TextButton): на 390 px тексту оставалось 146 px, при кегле 150 % — 78,6 px.
+  group('Баннер провайдера на мобильной ширине', () {
+    Future<void> pumpBannerAt(
+      WidgetTester tester,
+      Size size, {
+      double textScale = 1,
+    }) async {
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1;
+      tester.platformDispatcher.textScaleFactorTestValue = textScale;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(
+        appWithHome(
+          overrides: decksOverrides(deckRepository: FakeDeckRepository()),
+          home: const Scaffold(
+            body: Padding(
+              padding: EdgeInsets.all(16),
+              child: PrimaryProviderBanner(),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    Rect bannerText(WidgetTester tester) => tester.getRect(
+      find.text(l10nOf(tester).settingsProvidersPrimaryBroken),
+    );
+
+    Rect bannerAction(WidgetTester tester) => tester.getRect(
+      find.byKey(const ValueKey<String>('primary-provider-fix')),
+    );
+
+    testWidgets('390×844: действие под текстом, текст на ширину баннера', (
+      WidgetTester tester,
+    ) async {
+      await pumpBannerAt(tester, const Size(390, 844));
+      final Rect text = bannerText(tester);
+      final Rect action = bannerAction(tester);
+
+      expect(
+        text.width,
+        greaterThanOrEqualTo(220),
+        reason: 'текст не сжимается в узкую колонку: ${text.width}',
+      );
+      expect(
+        action.top,
+        greaterThanOrEqualTo(text.bottom),
+        reason: 'на телефоне «Исправить» — под текстом, а не сбоку',
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('390×844 при 150 %: без overflow, текст читается', (
+      WidgetTester tester,
+    ) async {
+      await pumpBannerAt(tester, const Size(390, 844), textScale: 1.5);
+      expect(tester.takeException(), isNull);
+      expect(
+        bannerText(tester).width,
+        greaterThanOrEqualTo(160),
+        reason: 'при 150 % кегле текст не сжат: ${bannerText(tester).width}',
+      );
+      expect(
+        bannerAction(tester).top,
+        greaterThanOrEqualTo(bannerText(tester).bottom),
+      );
+    });
+
+    testWidgets('1440×900: баннер остаётся горизонтальным', (
+      WidgetTester tester,
+    ) async {
+      await pumpBannerAt(tester, const Size(1440, 900));
+      final Rect text = bannerText(tester);
+      final Rect action = bannerAction(tester);
+      expect(
+        action.left,
+        greaterThanOrEqualTo(text.right - 1),
+        reason: 'на десктопе кнопка справа от текста',
+      );
+      expect(action.top, lessThan(text.bottom));
+    });
   });
 }

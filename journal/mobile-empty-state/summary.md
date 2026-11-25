@@ -61,6 +61,21 @@
   меню «⋮»); на 390×844 весь экран помещается без прокрутки. Вертикальные отступы не
   увеличивались.
 
+### Шаг 2a. Тот же дефект рядом: баннер основного провайдера
+
+`lib/ui/settings/provider_banner.dart` (`PrimaryProviderBanner`) собран **тем же**
+`Row`-ом (`Icon` + `Expanded(Text)` + `TextButton` «Исправить») и живёт на **том же**
+главном экране — он показывается, когда основной аккаунт настроен неполностью
+(`providerBroken`). Замеры до фикса: на 390×844 текст занимал **146,1 px** при
+кнопке 159,9 px, при кегле 150 % — **78,6 px** при кнопке 227,4 px.
+
+Исправлено тем же правилом: ниже `AppSizes.mobileBreakpoint` баннер вертикальный
+(«иконка + текст», ниже — «Исправить» по левому краю), отступ 12 px со всех сторон;
+на десктопе — прежний `Row`. Тесты (+3) в `test/widget/settings/provider_audit_test.dart`:
+390×844 — текст ≥ 220 px и действие под текстом; 150 % — без overflow и текст
+≥ 160 px; 1440×900 — баннер горизонтальный. Существующие F7/D13/D14/D22 не
+изменялись.
+
 ## Шаг 3. Тесты (STEP 3)
 
 `test/widget/decks/decks_mobile_empty_state_test.dart` (+8 тестов):
@@ -92,6 +107,10 @@ Expected: a value less than or equal to <37>
 
 Существующие тесты не ослаблены и не менялись.
 
+## Шаг 4. Тот же дефект у баннера провайдера (находка аудита)
+
+См. «Шаг 2a» выше — `PrimaryProviderBanner` исправлен тем же правилом, +3 теста.
+
 **Скриншот без устройства:** временный harness (не закоммичен) рендерил
 `appWithRouter` в `RepaintBoundary` при `tester.view.physicalSize` 390×844
 (`devicePixelRatio: 1`), `toImage(pixelRatio: 2)` — внутри `tester.runAsync`;
@@ -116,9 +135,11 @@ Expected: a value less than or equal to <37>
 ## Изменённые файлы
 
 - `lib/ui/decks/decks_screen.dart` — раскладка AI-блока по ширине + отступ плашки;
+- `lib/ui/settings/provider_banner.dart` — мобильная раскладка баннера провайдера;
 - `lib/ui/components/app_surfaces.dart` — мобильные отступы `AppEmptyState`;
 - `lib/ui/theme/app_tokens.dart` — `AppSizes.mobileBreakpoint`;
-- `test/widget/decks/decks_mobile_empty_state_test.dart` — новый набор тестов;
+- `test/widget/decks/decks_mobile_empty_state_test.dart` — новый набор (+8);
+- `test/widget/settings/provider_audit_test.dart` — мобильный баннер (+3);
 - `AGENTS.md` — ретроспектива итерации;
 - `journal/STATE.md` — состояние;
 - `journal/mobile-empty-state/*.png` — скриншоты 360×800, 390×844, 1440×900.

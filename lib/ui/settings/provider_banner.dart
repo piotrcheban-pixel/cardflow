@@ -29,37 +29,57 @@ class PrimaryProviderBanner extends StatelessWidget {
     final ColorScheme scheme = theme.colorScheme;
     final Color background = scheme.tertiaryContainer;
     final Color foreground = scheme.onTertiaryContainer;
+    // Итерация «Фикс мобильного Empty State»: та же ловушка, что и в блоке ИИ
+    // пустого состояния, — `Row` отдаёт `TextButton` неделимую ширину, а
+    // `Expanded` получает остаток. На 390 px тексту оставалось 146 px, при
+    // кегле 150 % — 78,6 px. На мобильной ширине действие уходит под текст.
+    final bool stacked =
+        MediaQuery.sizeOf(context).width < AppSizes.mobileBreakpoint;
+
+    final Widget message = Row(
+      children: <Widget>[
+        Icon(Icons.info_outline, color: foreground),
+        const SizedBox(width: AppSpacing.xs),
+        Expanded(
+          child: Text(
+            l10n.settingsProvidersPrimaryBroken,
+            style: theme.textTheme.bodyMedium?.copyWith(color: foreground),
+          ),
+        ),
+      ],
+    );
+    final Widget action = TextButton(
+      key: const ValueKey<String>('primary-provider-fix'),
+      style: TextButton.styleFrom(foregroundColor: foreground),
+      onPressed: () => context.push(AppRoutes.generationSettingsPath),
+      child: Text(l10n.settingsProvidersFixAction),
+    );
+
     return Container(
       key: const ValueKey<String>('primary-provider-banner'),
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.sm + 4,
-        AppSpacing.xs,
-        AppSpacing.xs,
-        AppSpacing.xs,
-      ),
+      padding: stacked
+          ? const EdgeInsets.all(AppSpacing.sm)
+          : const EdgeInsets.fromLTRB(
+              AppSpacing.sm + 4,
+              AppSpacing.xs,
+              AppSpacing.xs,
+              AppSpacing.xs,
+            ),
       decoration: BoxDecoration(
         color: background,
         borderRadius: BorderRadius.circular(AppRadii.input),
       ),
-      child: Row(
-        children: <Widget>[
-          Icon(Icons.info_outline, color: foreground),
-          const SizedBox(width: AppSpacing.xs),
-          Expanded(
-            child: Text(
-              l10n.settingsProvidersPrimaryBroken,
-              style: theme.textTheme.bodyMedium?.copyWith(color: foreground),
+      child: stacked
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[message, if (showAction) action],
+            )
+          : Row(
+              children: <Widget>[
+                Expanded(child: message),
+                if (showAction) action,
+              ],
             ),
-          ),
-          if (showAction)
-            TextButton(
-              key: const ValueKey<String>('primary-provider-fix'),
-              style: TextButton.styleFrom(foregroundColor: foreground),
-              onPressed: () => context.push(AppRoutes.generationSettingsPath),
-              child: Text(l10n.settingsProvidersFixAction),
-            ),
-        ],
-      ),
     );
   }
 }
