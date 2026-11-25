@@ -134,5 +134,8 @@ overflow 14–17 px`.
 * `test/widget/decks/deck_screen_test.dart` — прокрутка нижней плитки листа,
   подсказка тренировки.
 
-Новые тесты — отдельным разделом в `report.md` (файлы создаются после
-фиксации контрактов).
+Новые тесты: `test/widget/review/rating_panel_mobile_test.dart` (6),
+`test/widget/cards/card_form_mobile_test.dart` (5),
+`test/widget/review/feed_flip_test.dart` (4),
+`test/widget/components/app_sheet_test.dart` (2). Итоговый прогон — в
+`report.md` §12.
