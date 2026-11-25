@@ -568,12 +568,18 @@ class AppEmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
     final ColorScheme scheme = theme.colorScheme;
+    // Owner-note (итерация «Фикс мобильного Empty State»): hero-отступ 40 px
+    // с каждой стороны на телефоне забирал 80 из 390 px — пятую часть экрана
+    // на пустоту, из-за этого текст и действия сжимались. На мобильной ширине
+    // панель держит 20 px по горизонтали и 24 px по вертикали.
+    final bool mobile =
+        MediaQuery.sizeOf(context).width < AppSizes.mobileBreakpoint;
     final EdgeInsets padding = hero
-        ? const EdgeInsets.symmetric(
-            horizontal: AppSpacing.xxxl,
-            vertical: AppSpacing.xxl + AppSpacing.xs,
+        ? EdgeInsets.symmetric(
+            horizontal: mobile ? AppSpacing.lg : AppSpacing.xxxl,
+            vertical: mobile ? AppSpacing.xl : AppSpacing.xxl + AppSpacing.xs,
           )
-        : EdgeInsets.all(compact ? AppSpacing.lg : AppSpacing.xxl);
+        : EdgeInsets.all(compact || mobile ? AppSpacing.lg : AppSpacing.xxl);
     return AppPanel(
       padding: padding,
       child: Column(

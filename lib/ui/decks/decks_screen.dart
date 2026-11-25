@@ -1654,6 +1654,39 @@ class _FirstLaunchEmptyState extends ConsumerWidget {
     final AppLocalizations l10n = AppLocalizations.of(context);
     final ThemeData theme = Theme.of(context);
     final ColorScheme scheme = theme.colorScheme;
+    // Owner-note (итерация «Фикс мобильного Empty State»): блок был собран
+    // `Row`, где `TextButton` забирал свою неделимую ширину, а `Expanded`
+    // получал остаток. На 390×844 тексту оставалось 36,8 px (42 строки,
+    // ~2 символа в строке), на 360×800 — 6,8 px (77 строк, по одной букве),
+    // при кегле 150 % — RenderFlex overflow 53 px. На мобильной ширине блок
+    // вертикальный: текст на всю ширину, действие под ним.
+    final bool stacked =
+        MediaQuery.sizeOf(context).width < AppSizes.mobileBreakpoint;
+
+    final Widget aiNote = Row(
+      children: <Widget>[
+        Icon(
+          Icons.auto_awesome_outlined,
+          size: AppSizes.iconLarge,
+          color: scheme.onSurfaceVariant,
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(
+          child: Text(
+            l10n.decksWelcomeAiNote,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+      ],
+    );
+    final Widget aiAction = TextButton(
+      key: const ValueKey<String>('decks-welcome-ai-setup'),
+      onPressed: () => context.push(AppRoutes.generationSettingsPath),
+      child: Text(l10n.decksWelcomeAiAction),
+    );
+
     return ConstrainedBox(
       // V2: пустое состояние — не миниатюра, а полноценный экран высотой с
       // карточку сессии (≥40 % площади).
@@ -1672,29 +1705,29 @@ class _FirstLaunchEmptyState extends ConsumerWidget {
               color: scheme.surfaceContainerLow,
               borderRadius: BorderRadius.circular(AppRadii.input),
             ),
-            child: Row(
-              children: <Widget>[
-                Icon(
-                  Icons.auto_awesome_outlined,
-                  size: AppSizes.iconLarge,
-                  color: scheme.onSurfaceVariant,
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: Text(
-                    l10n.decksWelcomeAiNote,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: scheme.onSurfaceVariant,
+            // STEP 2 аудита: у плашки не было внутренних отступов — иконка и
+            // строка действия упирались в её край. 12 px дают плашке «воздух»
+            // и на телефоне, и на десктопе.
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.sm),
+              child: stacked
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        aiNote,
+                        const SizedBox(height: AppSpacing.xxs),
+                        // Действие под текстом, по левому краю блока: цель
+                        // касания 44 px задаёт тема, строка не растягивается
+                        // на всю ширину — это второстепенное действие.
+                        aiAction,
+                      ],
+                    )
+                  : Row(
+                      children: <Widget>[
+                        Expanded(child: aiNote),
+                        aiAction,
+                      ],
                     ),
-                  ),
-                ),
-                TextButton(
-                  key: const ValueKey<String>('decks-welcome-ai-setup'),
-                  onPressed: () =>
-                      context.push(AppRoutes.generationSettingsPath),
-                  child: Text(l10n.decksWelcomeAiAction),
-                ),
-              ],
             ),
           ),
           actions: <Widget>[
