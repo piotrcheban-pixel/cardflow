@@ -157,7 +157,6 @@ class FilePickerGateway implements FileGateway {
     try {
       return await _saveDirectoryResolver();
     } on Object {
-      // Подсказка места не должна ломать экспорт.
       return null;
     }
   }
