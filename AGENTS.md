@@ -182,6 +182,18 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   Анимации — одна шкала (`AppDurations`, `AppMotion.reduce`), постоянных (пульс/авто-таймер)
   анимаций в приложении нет. «Найти колоду» в оболочке обязана передавать фокус полю
   (`decksSearchFocusProvider` + `FocusNode`), а не только показывать его.
+- **Мобильные правила TASK 04** (ADR-046; не заменяют ADR-045, а уточняют композицию `< 600 px`):
+  панель оценок — сетка 2×2, высота 48, кегль 16, `FittedBox` (никакого `ellipsis` на названиях
+  действий, цель ≥44); второстепенные объяснения — `AppInfoButton`/`AppSectionHeader` (по нажатию
+  «?»), а не постоянным абзацем; длинные списки — `showAppDetentSheet` (72 % → 92 %, свайп вниз
+  закрывает), короткие — `showAppSheet` (учитывает `viewInsets`); формы завершаются `AppActionBar`
+  (SafeArea, полная ширина на телефоне). «Лента» (ADR-044) на обороте показывает **только ответ**,
+  переворот — собственный `AnimationController` с reduced motion, после последней карточки — итоговая
+  страница; вопрос и его изображения на обороте не дублируются. Классика/тренировка на обороте
+  повторяют вопрос **без изображений** (исключение — occlusion); прогресс на телефоне — «1 / N» без
+  «Оценено». Горизонтальные блоки «иконка + текст + действие» на `< 600 px` собираются в колонку
+  (`PrimaryProviderBanner`, `_KeyBanner`, Empty State, заголовок стороны изображений). Новые тесты:
+  `rating_panel_mobile_test`, `card_form_mobile_test`, `feed_flip_test`, `app_sheet_test`.
 - **Типы/разметка карточек** (SPEC A7.8–A7.10, ADR-017): чистая разметка — `lib/domain/cards/`
   (`occlusion.dart`, `cloze_markup.dart`, `latex_markup.dart`); общий рендер — `lib/ui/cards/content/`
   (`CardContentView`, `cloze_text.dart`, `latex_text.dart`, `occlusion_image_view.dart`), редактор масок —
