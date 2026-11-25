@@ -350,9 +350,19 @@ jobs:
           rm -rf "$HOME/.gradle/caches"
           echo "== df -h после очистки кэша Gradle =="
           df -h
-      - name: Сборка Android (debug, без подписи)
+      # Релизный APK подписывается debug-ключом (android/app/build.gradle.kts,
+      # buildTypes.release.signingConfig = debug): ключ выпуска у проекта нет,
+      # а APK из CI должен устанавливаться на телефон без дополнительных шагов.
+      - name: Сборка Android (release, debug-подпись)
         if: matrix.name == 'android'
-        run: flutter build apk --debug
+        run: flutter build apk --release
+      - name: Загрузка APK
+        if: matrix.name == 'android'
+        uses: actions/upload-artifact@v5
+        with:
+          name: cardflow-android-release-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
       - name: Сборка iOS (release, без подписи)
         if: matrix.name == 'ios'
         run: flutter build ios --release --no-codesign
