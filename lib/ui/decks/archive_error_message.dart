@@ -16,6 +16,7 @@ String archiveErrorCodeMessage(AppLocalizations l10n, ArchiveErrorCode code) {
     ArchiveErrorCode.mediaMissing => l10n.archiveErrorMediaMissing,
     ArchiveErrorCode.deckNotFound => l10n.archiveErrorDeckNotFound,
     ArchiveErrorCode.invalidEntryName => l10n.archiveErrorInvalidEntryName,
+    ArchiveErrorCode.writeDenied => l10n.archiveErrorWriteDenied,
   };
 }
 

@@ -253,6 +253,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get archiveErrorInvalidEntryName => 'В архиве недопустимое имя файла.';
 
   @override
+  String get archiveErrorWriteDenied =>
+      'Нет прав на запись в эту папку. Выберите другую.';
+
+  @override
   String get archiveErrorUnknown =>
       'Не удалось выполнить операцию с архивом. Попробуйте ещё раз.';
 

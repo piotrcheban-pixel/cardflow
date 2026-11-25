@@ -5,6 +5,7 @@ import 'package:cardflow/data/transfer/file_picker_gateway.dart';
 import 'package:cardflow/domain/transfer/deck_archive.dart';
 import 'package:cardflow/domain/transfer/file_gateway.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/services.dart' show MissingPluginException;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 
@@ -51,11 +52,18 @@ class _FakePickerPlatform extends FilePickerPlatform {
   /// Если `true` — имитируем desktop-плагин, который сам пишет байты.
   bool writeSavedFile = false;
 
+  /// Исключение, которое «нативный диалог» бросает вместо возврата пути
+  /// (Windows: нет прав на запись в выбранную папку).
+  Object? throwOnSave;
+
   FileType? pickedType;
   List<String>? pickedExtensions;
   String? savedFileName;
   String? savedMimeType;
   Uint8List? savedBytes;
+
+  /// Каталог, который плагин получил для старта диалога (ADR-047).
+  String? savedInitialDirectory;
 
   @override
   Future<PlatformFile?> pickFile({
@@ -95,6 +103,11 @@ class _FakePickerPlatform extends FilePickerPlatform {
     savedFileName = fileName;
     savedMimeType = mimeType;
     savedBytes = bytes;
+    savedInitialDirectory = initialDirectory;
+    final Object? failure = throwOnSave;
+    if (failure != null) {
+      throw failure;
+    }
     final uri = savedUri;
     if (uri != null && writeSavedFile && uri.scheme == 'file') {
       await File(uri.toFilePath()).writeAsBytes(bytes, flush: true);
@@ -241,6 +254,165 @@ void main() {
       await gateway.saveZipFile(suggestedFileName: '   ', bytes: bytes);
 
       expect(fake.savedFileName, 'cardflow.zip');
+    });
+  });
+
+  // Owner-note 1.0.1 (ADR-047): Windows открывал диалог в корне профиля
+  // (`C:\Users\<имя>`) и отказывал «нет разрешения на сохранение».
+  group('ADR-047: каталог по умолчанию в диалоге сохранения', () {
+    final Uint8List bytes = Uint8List.fromList(<int>[80, 75, 3, 4]);
+
+    test('desktop: диалог открывается в предложенном каталоге', () async {
+      final custom = FilePickerGateway(
+        useInitialDirectory: true,
+        saveDirectoryResolver: () async => r'C:\Users\user\Downloads',
+      );
+      fake.savedUri = Uri.file(p.join(tempDir.path, 'deck.zip'));
+
+      await custom.saveZipFile(suggestedFileName: 'deck', bytes: bytes);
+
+      expect(
+        fake.savedInitialDirectory,
+        r'C:\Users\user\Downloads',
+        reason: 'initialDirectory должен доходить до нативного диалога',
+      );
+    });
+
+    test('mobile: initialDirectory не передаётся (SAF, content://)', () async {
+      final mobile = FilePickerGateway(useInitialDirectory: false);
+      fake.savedUri = Uri.parse('content://media/deck.zip');
+
+      await mobile.saveZipFile(suggestedFileName: 'deck', bytes: bytes);
+
+      expect(fake.savedInitialDirectory, isNull);
+    });
+
+    test('разрешение каталога упало — сохранение всё равно работает', () async {
+      final flaky = FilePickerGateway(
+        useInitialDirectory: true,
+        saveDirectoryResolver: () async => throw UnsupportedError('нет каталога'),
+      );
+      fake.savedUri = Uri.file(p.join(tempDir.path, 'deck.zip'));
+
+      expect(
+        await flaky.saveZipFile(suggestedFileName: 'deck', bytes: bytes),
+        isTrue,
+      );
+      expect(fake.savedInitialDirectory, isNull);
+    });
+
+    group('resolveDefaultSaveDirectory', () {
+      test('берёт «Загрузки», если каталог существует', () async {
+        final downloads = Directory(p.join(tempDir.path, 'Downloads'))
+          ..createSync();
+        Directory(p.join(tempDir.path, 'Documents')).createSync();
+
+        expect(
+          await resolveDefaultSaveDirectory(
+            downloads: () async => downloads,
+            documents: () async => Directory(p.join(tempDir.path, 'Documents')),
+          ),
+          downloads.path,
+        );
+      });
+
+      test('«Загрузки» недоступны → «Документы»', () async {
+        final documents = Directory(p.join(tempDir.path, 'Documents'))
+          ..createSync();
+
+        expect(
+          await resolveDefaultSaveDirectory(
+            downloads: () async => null,
+            documents: () async => documents,
+          ),
+          documents.path,
+        );
+      });
+
+      test('нет ни одного каталога → null (решение системы)', () async {
+        expect(
+          await resolveDefaultSaveDirectory(
+            downloads: () async => null,
+            documents: () async => null,
+          ),
+          isNull,
+        );
+      });
+
+      test('исключение плагина не выходит наружу → null', () async {
+        expect(
+          await resolveDefaultSaveDirectory(
+            downloads: () async => throw UnsupportedError('нет платформы'),
+            documents: () async => throw MissingPluginException('нет плагина'),
+          ),
+          isNull,
+        );
+      });
+
+      test('несуществующий каталог пропускается', () async {
+        final documents = Directory(p.join(tempDir.path, 'Documents'))
+          ..createSync();
+
+        expect(
+          await resolveDefaultSaveDirectory(
+            // path_provider может вернуть путь, которого ещё нет.
+            downloads: () async =>
+                Directory(p.join(tempDir.path, 'Нет такого каталога')),
+            documents: () async => documents,
+          ),
+          documents.path,
+        );
+      });
+    });
+  });
+
+  // Owner-note 1.0.1, шаг 1: системный текст Windows не должен доходить до UI.
+  group('ADR-047: нет прав на запись в выбранную папку', () {
+    final Uint8List bytes = Uint8List.fromList(<int>[80, 75, 3, 4]);
+
+    test('FileSystemException диалога → ArchiveException, не системный текст',
+        () async {
+      fake.throwOnSave = const FileSystemException(
+        'Access is denied',
+        r'C:\Users\user\file.zip',
+      );
+
+      await expectLater(
+        gateway.saveZipFile(suggestedFileName: 'deck', bytes: bytes),
+        throwsA(
+          isA<ArchiveException>().having(
+            (ArchiveException error) => error.code,
+            'code',
+            ArchiveErrorCode.writeDenied,
+          ),
+        ),
+      );
+    });
+
+    test('плагин вернул путь, но запись запрещена → ArchiveException', () async {
+      // Каталог вместо файла: запись `dart:io` завершится FileSystemException.
+      fake.savedUri = Uri.directory(tempDir.path);
+      fake.writeSavedFile = true;
+
+      await expectLater(
+        gateway.saveZipFile(suggestedFileName: 'deck', bytes: bytes),
+        throwsA(
+          isA<ArchiveException>().having(
+            (ArchiveException error) => error.code,
+            'code',
+            ArchiveErrorCode.writeDenied,
+          ),
+        ),
+      );
+    });
+
+    test('отмена диалога остаётся тихим no-op (ADR-006 п. 7)', () async {
+      fake.savedUri = null;
+
+      expect(
+        await gateway.saveZipFile(suggestedFileName: 'deck', bytes: bytes),
+        isFalse,
+      );
     });
   });
 

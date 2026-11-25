@@ -454,6 +454,12 @@ abstract class AppLocalizations {
   /// **'В архиве недопустимое имя файла.'**
   String get archiveErrorInvalidEntryName;
 
+  /// Ошибка экспорта: ОС запретила запись в выбранную папку (ADR-047).
+  ///
+  /// In ru, this message translates to:
+  /// **'Нет прав на запись в эту папку. Выберите другую.'**
+  String get archiveErrorWriteDenied;
+
   /// Общая ошибка операции с архивом без подробностей исключения.
   ///
   /// In ru, this message translates to:

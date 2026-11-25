@@ -295,6 +295,10 @@
   "@archiveErrorInvalidEntryName": {
     "description": "Ошибка импорта: недопустимое имя записи (zip-slip)."
   },
+  "archiveErrorWriteDenied": "Нет прав на запись в эту папку. Выберите другую.",
+  "@archiveErrorWriteDenied": {
+    "description": "Ошибка экспорта: ОС запретила запись в выбранную папку (ADR-047)."
+  },
   "archiveErrorUnknown": "Не удалось выполнить операцию с архивом. Попробуйте ещё раз.",
   "@archiveErrorUnknown": {
     "description": "Общая ошибка операции с архивом без подробностей исключения."

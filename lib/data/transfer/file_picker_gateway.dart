@@ -22,6 +22,20 @@ String ensureZipExtension(String fileName) {
   return '$trimmed.zip';
 }
 
+/// Возвращает каталог, который предлагается в диалоге сохранения (ADR-047).
+typedef SaveDirectoryResolver = Future<String?> Function();
+
+/// Каталог по умолчанию для диалога сохранения (ADR-047).
+///
+/// [downloads]/[documents] — точки подмены для тестов; по умолчанию
+/// `path_provider`.
+Future<String?> resolveDefaultSaveDirectory({
+  Future<Directory?> Function()? downloads,
+  Future<Directory?> Function()? documents,
+}) async {
+  return null;
+}
+
 /// Файловый шлюз через `file_picker` 13.3.3 + `dart:io` (SPEC A6.9).
 ///
 /// Контракт сохранения объединён в [saveZipFile]: в `file_picker` 13.3.3
@@ -33,10 +47,27 @@ class FilePickerGateway implements FileGateway {
   ///
   /// [maxFileBytes] — предел размера читаемого файла (по умолчанию
   /// [DeckArchiveLimits.maxImportBytes]); больше — `tooLarge` до чтения.
-  FilePickerGateway({this.maxFileBytes = DeckArchiveLimits.maxImportBytes});
+  ///
+  /// [useInitialDirectory] — передавать ли диалогу сохранения стартовый
+  /// каталог (ADR-047); `null` — автоопределение по платформе.
+  /// [saveDirectoryResolver] — источник каталога (по умолчанию «Загрузки» →
+  /// «Документы», см. [resolveDefaultSaveDirectory]).
+  FilePickerGateway({
+    this.maxFileBytes = DeckArchiveLimits.maxImportBytes,
+    bool? useInitialDirectory,
+    SaveDirectoryResolver? saveDirectoryResolver,
+  }) : useInitialDirectory = useInitialDirectory ?? false,
+       _saveDirectoryResolver =
+           saveDirectoryResolver ?? resolveDefaultSaveDirectory;
 
   /// Максимальный размер файла, который разрешено читать в память.
   final int maxFileBytes;
+
+  /// Передавать ли диалогу стартовый каталог.
+  final bool useInitialDirectory;
+
+  /// Источник стартового каталога диалога сохранения.
+  final SaveDirectoryResolver _saveDirectoryResolver;
 
   @override
   Future<String?> pickZipToImport({String? dialogTitle}) async {
