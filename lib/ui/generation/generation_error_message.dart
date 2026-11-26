@@ -25,6 +25,8 @@ String generationErrorCodeMessage(
     GenerationErrorCode.providerNotConfigured =>
       l10n.generationErrorProviderNotConfigured,
     GenerationErrorCode.invalidApiKey => l10n.generationErrorInvalidApiKey,
+    GenerationErrorCode.insufficientBalance =>
+      l10n.generationErrorInsufficientBalance,
     GenerationErrorCode.badRequest =>
       providerReason == null || providerReason.trim().isEmpty
           ? l10n.generationErrorBadRequest

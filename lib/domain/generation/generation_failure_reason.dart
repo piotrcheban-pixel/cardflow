@@ -78,6 +78,7 @@ enum GenerationFailureReason {
       GenerationErrorCode.pdfScanVisionRequired ||
       GenerationErrorCode.attachmentTooLarge => unsupportedModality,
       GenerationErrorCode.invalidApiKey ||
+      GenerationErrorCode.insufficientBalance ||
       GenerationErrorCode.badRequest => httpClientError,
       GenerationErrorCode.contextOverflow => contextOverflow,
       GenerationErrorCode.payloadTooLarge => payloadTooLarge,

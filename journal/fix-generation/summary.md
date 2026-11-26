@@ -42,6 +42,9 @@
   `generationErrorStorageUnavailable`/`generationReasonStorage`; catch-all
   экранов показывает причину и пишет в debug-диагностику только тип исключения
   (`GenerationDiagnostics.unexpectedFailure`).
+- HTTP **402** — отдельный `GenerationErrorCode.insufficientBalance` и строка
+  «Недостаточно средств на балансе провайдера. Проверьте баланс или ключ API»
+  (401/403 остаются `invalidApiKey`); тест http-клиента на 402 и тест строки.
 - Постоянный инструмент `tool/debug_generation.dart`: реальный запрос тем же
   промптом/параметрами (тема «трансформаторы», 10 карточек, лестница ADR-021),
   статус + сырое тело, разбор production-экстрактором и схемой; ключ только из

@@ -219,6 +219,24 @@ void main() {
     expect(message, isNot(contains('GenerationException')));
   });
 
+  test('баланс: HTTP 402 — отдельная строка о балансе, не общая', () {
+    expect(
+      generationErrorCodeMessage(l10n, GenerationErrorCode.insufficientBalance),
+      l10n.generationErrorInsufficientBalance,
+    );
+    expect(
+      generationErrorCodeMessage(l10n, GenerationErrorCode.insufficientBalance),
+      isNot(l10n.generationErrorGeneric),
+    );
+    expect(
+      generationErrorMessage(
+        l10n,
+        const GenerationException(GenerationErrorCode.insufficientBalance),
+      ),
+      l10n.generationErrorInsufficientBalance,
+    );
+  });
+
   test('произвольная ошибка → общая строка ARB без текста исключения', () {
     final message = generationErrorMessage(l10n, StateError('внутренний сбой'));
     expect(message, l10n.generationErrorGeneric);

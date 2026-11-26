@@ -119,6 +119,10 @@ uses-permission: name='ru.example.cardflow.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISS
 - `GenerationErrorCode.storageUnavailable` + `GenerationFailureReason.storage`:
   сбои drift/SQLite/ФС из репозиториев и пайплайна доходят до UI конкретной
   причиной; debug-диагностика пишет только тип исключения.
+- HTTP **402** теперь отдельный `insufficientBalance` → ARB «Недостаточно
+  средств на балансе провайдера. Проверьте баланс или ключ API» (раньше
+  показывался общий 400 с англоязычной причиной); 401/403 — по-прежнему
+  `invalidApiKey`.
 - `tool/debug_generation.dart` — постоянный инструмент диагностики (ключ из
   env, без печати значения).
 - Live-тест пайплайна `test/live/generation_pipeline_live_test.dart`

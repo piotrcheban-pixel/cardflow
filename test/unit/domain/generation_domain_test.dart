@@ -50,6 +50,7 @@ void main() {
         GenerationErrorCode.missingApiKey,
         GenerationErrorCode.providerNotConfigured,
         GenerationErrorCode.invalidApiKey,
+        GenerationErrorCode.insufficientBalance,
         GenerationErrorCode.badRequest,
         GenerationErrorCode.contextOverflow,
         GenerationErrorCode.payloadTooLarge,

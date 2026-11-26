@@ -17,6 +17,10 @@ enum GenerationErrorCode {
   /// Провайдер отверг ключ (HTTP 401/403).
   invalidApiKey,
 
+  /// На балансе провайдера нет средств (HTTP 402, например DeepSeek
+  /// «Insufficient Balance»). Ключ при этом может быть верным.
+  insufficientBalance,
+
   /// Запрос отвергнут (HTTP 400/404/422 и прочие 4xx кроме 429).
   badRequest,
 

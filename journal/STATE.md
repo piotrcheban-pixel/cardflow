@@ -8,8 +8,8 @@ Windows и Android генерация падает общей строкой «�
 **Старт:** `HEAD = origin/main = f8cc926`, ветка `main`, `git status` — только
 неотслеживаемые каталоги аудита. **Baseline:** `flutter test` **2739 passed +
 16 skipped**. **Гейты итогового снимка:** `flutter test --coverage
---exclude-tags golden` → **2745 passed + 17 skipped** (+6 тестов), покрытие
-рукописного кода **90,9 % (23153/25476)**; `analyze` 0;
+--exclude-tags golden` → **2750 passed + 17 skipped** (+11 тестов), покрытие
+рукописного кода **90,9 % (23160/25483)**; `analyze` 0;
 `dart format --set-exit-if-changed lib test tool` 614/0;
 `flutter build windows --release --no-pub` → `cardflow.exe` (98,1 с);
 `flutter build apk --release --no-pub` → `app-release.apk` (101,3 МБ,
@@ -55,6 +55,10 @@ FSRS-логика не менялись.
   `generationErrorStorageUnavailable`/`generationReasonStorage`; catch-all
   экранов генерации и повтора показывает причину и пишет в debug-диагностику
   только тип исключения (`GenerationDiagnostics.unexpectedFailure`).
+- HTTP **402** — отдельный `GenerationErrorCode.insufficientBalance` и строка
+  «Недостаточно средств на балансе провайдера. Проверьте баланс или ключ API»;
+  401/403 остаются `invalidApiKey`. Widget-тесты экрана подтверждают: причина
+  хранилища показывается вместо общей строки, сырой текст не утекает.
 - `tool/debug_generation.dart` — постоянный инструмент: реальный запрос тем же
   промптом/параметрами, статус + сырое тело, production-разбор; ключ только из
   `DEEPSEEK_API_KEY`, не печатается.
@@ -65,7 +69,7 @@ FSRS-логика не менялись.
   на настоящей readonly-БД, строки ARB хранилища, живой pipeline-тест.
   Диагностические временные тесты и `tool/debug_pipeline.dart` удалены.
 
-**Коммиты:** `2bd24a3` (INTERNET в main-манифесте + guard), `931a7e8`
+**Коммиты:** `2bd24a3` (INTERNET в main-манифесте + guard), `8a339c9` (UI-тесты причины), `931a7e8`
 (production `gen-ru-v9`, `storageUnavailable` и понятные строки), `d4b594b`
 (live pipeline + `tool/debug_generation.dart`), далее docs/STATE.
 **Push:** — **CI:** —

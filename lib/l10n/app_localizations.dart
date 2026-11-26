@@ -1048,6 +1048,12 @@ abstract class AppLocalizations {
   /// **'Ключ доступа недействителен. Проверьте ключ в настройках'**
   String get generationErrorInvalidApiKey;
 
+  /// Генерация: HTTP 402, на балансе провайдера нет средств (например, DeepSeek Insufficient Balance).
+  ///
+  /// In ru, this message translates to:
+  /// **'Недостаточно средств на балансе провайдера. Проверьте баланс или ключ API'**
+  String get generationErrorInsufficientBalance;
+
   /// Генерация: запрос отвергнут (HTTP 400/404/422, SPEC A8.6).
   ///
   /// In ru, this message translates to:

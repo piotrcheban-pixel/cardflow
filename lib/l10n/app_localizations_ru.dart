@@ -600,6 +600,10 @@ class AppLocalizationsRu extends AppLocalizations {
       'Ключ доступа недействителен. Проверьте ключ в настройках';
 
   @override
+  String get generationErrorInsufficientBalance =>
+      'Недостаточно средств на балансе провайдера. Проверьте баланс или ключ API';
+
+  @override
   String get generationErrorBadRequest =>
       'Запрос отклонён. Проверьте выбранную модель и ключ в настройках';
 

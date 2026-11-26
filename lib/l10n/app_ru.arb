@@ -734,6 +734,10 @@
   "@generationErrorInvalidApiKey": {
     "description": "Генерация: провайдер отверг ключ (HTTP 401/403, SPEC A8.6)."
   },
+  "generationErrorInsufficientBalance": "Недостаточно средств на балансе провайдера. Проверьте баланс или ключ API",
+  "@generationErrorInsufficientBalance": {
+    "description": "Генерация: HTTP 402, на балансе провайдера нет средств (например, DeepSeek Insufficient Balance)."
+  },
   "generationErrorBadRequest": "Запрос отклонён. Проверьте выбранную модель и ключ в настройках",
   "@generationErrorBadRequest": {
     "description": "Генерация: запрос отвергнут (HTTP 400/404/422, SPEC A8.6)."

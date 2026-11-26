@@ -135,6 +135,26 @@ void main() {
     expect(delays, isEmpty);
   });
 
+  test('402 (нет баланса) не повторяется и даёт insufficientBalance', () async {
+    final adapter = FakeHttpAdapter(
+      (options) => jsonResponse(<String, Object?>{
+        'error': <String, Object?>{
+          'message': 'Insufficient Balance',
+          'type': 'invalid_request_error',
+        },
+      }, statusCode: 402),
+    );
+    final delays = <Duration>[];
+    final client = clientWith(dioWithAdapter(adapter), delays: delays);
+
+    await expectLater(
+      client.postJson(request),
+      throwsGeneration(GenerationErrorCode.insufficientBalance),
+    );
+    expect(adapter.requests, hasLength(1));
+    expect(delays, isEmpty);
+  });
+
   test('403 не повторяется; 400 — badRequest без повторов', () async {
     for (final status in <int>[403, 400]) {
       final adapter = FakeHttpAdapter(

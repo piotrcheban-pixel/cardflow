@@ -66,6 +66,7 @@ const Set<GenerationErrorCode> _fatalCodes = <GenerationErrorCode>{
   GenerationErrorCode.missingApiKey,
   GenerationErrorCode.providerNotConfigured,
   GenerationErrorCode.invalidApiKey,
+  GenerationErrorCode.insufficientBalance,
   GenerationErrorCode.noMaterials,
   GenerationErrorCode.storageUnavailable,
 };
@@ -1367,6 +1368,7 @@ class GenerationPipeline implements GenerationRunner {
       case GenerationErrorCode.missingApiKey:
       case GenerationErrorCode.providerNotConfigured:
       case GenerationErrorCode.invalidApiKey:
+      case GenerationErrorCode.insufficientBalance:
       case GenerationErrorCode.badRequest:
       case GenerationErrorCode.rateLimited:
       case GenerationErrorCode.serverUnavailable:
@@ -1528,6 +1530,7 @@ class GenerationPipeline implements GenerationRunner {
       GenerationErrorCode.missingApiKey ||
       GenerationErrorCode.providerNotConfigured ||
       GenerationErrorCode.invalidApiKey ||
+      GenerationErrorCode.insufficientBalance ||
       GenerationErrorCode.noMaterials ||
       GenerationErrorCode.visionUnsupported ||
       GenerationErrorCode.fileWithoutTextAndVision ||

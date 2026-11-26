@@ -266,6 +266,16 @@ class GenerationHttpClient implements GenerationTransport {
         failureReason: GenerationFailureReason.httpClientError,
       );
     }
+    if (statusCode == 402) {
+      // DeepSeek: «Insufficient Balance». Ключ верный, но платить нечем —
+      // отдаём отдельный код, а не общий 4xx: сообщение говорит о балансе.
+      return GenerationException(
+        GenerationErrorCode.insufficientBalance,
+        details: details,
+        providerReason: providerReason,
+        failureReason: GenerationFailureReason.httpClientError,
+      );
+    }
     if (statusCode == 429) {
       return GenerationException(
         GenerationErrorCode.rateLimited,
