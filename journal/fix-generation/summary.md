@@ -77,7 +77,11 @@
 `fvm flutter build apk --release --no-pub` → `app-release.apk` (101,3 МБ,
 1.0.1+2). Схема БД, `schemaVersion` и `format_version` не менялись.
 
-**Push:** `f8cc926..f411fe9` (main); CI финального снимка — после docs/CI-коммита (9/9 job — ожидается). **Ограничения:** L206 (реальное Android-устройство после фикса INTERNET),
+**Push:** `f8cc926..127dd48` (main). **CI:** run
+[`45892725049`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/45892725049)
+(`127dd48`) — **9/9 job success** (`format + analyze`, `test` × 3 ОС,
+`build desktop` × 3, `build mobile` Android + iOS); Android-artifact собран с
+`INTERNET`. **Ограничения:** L206 (реальное Android-устройство после фикса INTERNET),
 L207 (Windows-сбой не воспроизведён в среде агента — причина теперь видна
 пользователю), L208 (`tool` требует ключ), L209 («Авто» без числа карточек
 строит 383-карточный план).

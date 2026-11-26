@@ -74,10 +74,11 @@ FSRS-логика не менялись.
 (live pipeline + `tool/debug_generation.dart`), `b020c87`
 (диагностика/ADR-048/STATE), `8a339c9` (UI-тесты причины), `f411fe9`
 (HTTP 402 «нет баланса»), далее docs/CI.
-**Push:** `f8cc926..f411fe9` (ветка `main`, 2026-11-26). **CI:** прогон
-финального снимка после docs/CI-коммита (9 job: `format + analyze`,
-`test` × 3 ОС, `build desktop` × 3, `build mobile` Android + iOS); ссылка —
-в отчёте и вкладке Actions.
+**Push:** `f8cc926..127dd48` (ветка `main`, 2026-11-26). **CI:** run
+[`45892725049`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/45892725049)
+(`127dd48`) — **9/9 job success** (`format + analyze`, `test` × 3 ОС,
+`build desktop` × 3, `build mobile` Android + iOS); artifact
+`cardflow-android-release-apk` содержит APK с `INTERNET`.
 
 ---
 
