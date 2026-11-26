@@ -44,34 +44,33 @@ void main() {
       expect(exception.toString(), contains('rateLimited'));
     });
 
-    test(
-      'все коды A8.6, noMaterials (3c), вложений (7.8) и плана (02B) есть',
-      () {
-        expect(GenerationErrorCode.values.toSet(), <GenerationErrorCode>{
-          GenerationErrorCode.missingApiKey,
-          GenerationErrorCode.providerNotConfigured,
-          GenerationErrorCode.invalidApiKey,
-          GenerationErrorCode.badRequest,
-          GenerationErrorCode.contextOverflow,
-          GenerationErrorCode.payloadTooLarge,
-          GenerationErrorCode.rateLimited,
-          GenerationErrorCode.serverUnavailable,
-          GenerationErrorCode.timeout,
-          GenerationErrorCode.network,
-          GenerationErrorCode.cancelled,
-          GenerationErrorCode.emptyResponse,
-          GenerationErrorCode.truncated,
-          GenerationErrorCode.refused,
-          GenerationErrorCode.invalidResponse,
-          GenerationErrorCode.noMaterials,
-          GenerationErrorCode.visionUnsupported,
-          GenerationErrorCode.fileWithoutTextAndVision,
-          GenerationErrorCode.pdfScanUnsupported,
-          GenerationErrorCode.pdfScanVisionRequired,
-          GenerationErrorCode.attachmentTooLarge,
-        });
-      },
-    );
+    test('все коды A8.6, noMaterials (3c), вложений (7.8), плана (02B) и '
+        'хранилища (фикс генерации) есть', () {
+      expect(GenerationErrorCode.values.toSet(), <GenerationErrorCode>{
+        GenerationErrorCode.missingApiKey,
+        GenerationErrorCode.providerNotConfigured,
+        GenerationErrorCode.invalidApiKey,
+        GenerationErrorCode.badRequest,
+        GenerationErrorCode.contextOverflow,
+        GenerationErrorCode.payloadTooLarge,
+        GenerationErrorCode.rateLimited,
+        GenerationErrorCode.serverUnavailable,
+        GenerationErrorCode.timeout,
+        GenerationErrorCode.network,
+        GenerationErrorCode.cancelled,
+        GenerationErrorCode.emptyResponse,
+        GenerationErrorCode.truncated,
+        GenerationErrorCode.refused,
+        GenerationErrorCode.invalidResponse,
+        GenerationErrorCode.noMaterials,
+        GenerationErrorCode.visionUnsupported,
+        GenerationErrorCode.fileWithoutTextAndVision,
+        GenerationErrorCode.pdfScanUnsupported,
+        GenerationErrorCode.pdfScanVisionRequired,
+        GenerationErrorCode.attachmentTooLarge,
+        GenerationErrorCode.storageUnavailable,
+      });
+    });
 
     test('providerReason — безопасная причина 400, не входит в details', () {
       const exception = GenerationException(

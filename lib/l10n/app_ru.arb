@@ -775,6 +775,10 @@
   "@generationErrorPayloadTooLarge": {
     "description": "Генерация: HTTP 413 или превышен лимит тела запроса (TASK 02B-FINAL)."
   },
+  "generationErrorStorageUnavailable": "Не удалось сохранить данные генерации: хранилище недоступно. Проверьте свободное место и права доступа к папке данных приложения",
+  "@generationErrorStorageUnavailable": {
+    "description": "Генерация: не удалось прочитать/записать generation_jobs (права на каталог данных, диск, блокировка БД). Итерация «Диагностика и фикс пайплайна генерации»."
+  },
   "generationErrorRateLimited": "Превышен лимит запросов. Повтор через {seconds, plural, one{{seconds} секунду} few{{seconds} секунды} many{{seconds} секунд} other{{seconds} секунды}}",
   "@generationErrorRateLimited": {
     "description": "Генерация: HTTP 429 с Retry-After, пауза в секундах (SPEC A8.6).",
@@ -1307,6 +1311,10 @@
   "generationReasonUnknown": "неизвестная ошибка фрагмента",
   "@generationReasonUnknown": {
     "description": "Причина падения фрагмента: unknown."
+  },
+  "generationReasonStorage": "хранилище данных недоступно",
+  "@generationReasonStorage": {
+    "description": "Причина падения фрагмента: storage_unavailable (журнал задания не читается/не пишется)."
   },
   "generationReasonContextOverflow": "переполнение контекста модели",
   "@generationReasonContextOverflow": {

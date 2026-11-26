@@ -823,10 +823,19 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
           providerReason: error.providerReason,
         ),
       );
-    } on Object {
+    } on Object catch (error) {
+      // Непредвиденный сбой вне модели: в debug-лог — только тип (ADR-024),
+      // пользователю — причина из доменного кода (например, недоступное
+      // хранилище), общая строка остаётся последним резервом.
+      ref
+          .read(generationDiagnosticsProvider)
+          .unexpectedFailure(
+            operation: 'generation',
+            errorType: error.runtimeType.toString(),
+          );
       if (!mounted) return;
       setState(() => _generating = false);
-      showAppMessage(context, l10n.generationErrorGeneric);
+      showAppMessage(context, generationErrorMessage(l10n, error));
     } finally {
       if (mounted) {
         setState(() {

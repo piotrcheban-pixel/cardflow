@@ -190,6 +190,21 @@ class GenerationDiagnostics {
     );
   }
 
+  /// Непредвиденный сбой вне модели (хранилище, UI-проводка).
+  ///
+  /// Пишется только операция и тип исключения: текст исключения может
+  /// содержать путь или фрагмент ответа провайдера, поэтому в лог не идёт.
+  void unexpectedFailure({
+    required String operation,
+    required String errorType,
+  }) {
+    if (!enabled) return;
+    _write(
+      'Генерация: непредвиденная ошибка ($operation): '
+      '${redactedDiagnosticText(errorType, maxLength: 120)}',
+    );
+  }
+
   /// Записывает сообщение в приёмник (лейзи-`dart:developer.log`).
   void _write(String message) {
     final GenerationDiagnosticsSink? target = sink;

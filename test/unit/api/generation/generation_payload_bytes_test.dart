@@ -115,7 +115,7 @@ void main() {
       final ProviderRequest request = adapter.buildRequest(
         apiKey: 'test-key',
         model: 'test-model',
-        systemPrompt: systemPromptGenRuV8,
+        systemPrompt: systemPromptGenRuV9,
         userContent: userContent,
         maxOutputTokens: 4096,
         baseUrl: 'https://api.example.com/v1',

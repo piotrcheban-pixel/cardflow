@@ -48,7 +48,7 @@ class CardGenerationService implements GenerationCaller {
     CardResponseSchema? responseSchema,
     CardContentValidator? contentValidator,
     this.jsonExtractor = const CardsJsonExtractor(),
-    this.systemPrompt = systemPromptGenRuV8,
+    this.systemPrompt = systemPromptGenRuV9,
     this.promptVersion = systemPromptVersion,
     this.maxOutputTokens = 8192,
     this.textSanitizer = const TextSanitizer(),

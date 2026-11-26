@@ -224,10 +224,17 @@ class _GenerationPreviewScreenState
           providerReason: error.providerReason,
         ),
       );
-    } on Object {
+    } on Object catch (error) {
+      // См. generation_screen: в debug-лог только тип, пользователю — причина.
+      ref
+          .read(generationDiagnosticsProvider)
+          .unexpectedFailure(
+            operation: 'retryFailed',
+            errorType: error.runtimeType.toString(),
+          );
       if (!mounted) return;
       setState(() => _retrying = false);
-      showAppMessage(context, l10n.generationErrorGeneric);
+      showAppMessage(context, generationErrorMessage(l10n, error));
     }
   }
 

@@ -506,19 +506,32 @@ class FakeGenerationCaller implements GenerationCaller {
 
 /// Фейковое хранилище заданий: in-memory, журнал сохранений.
 class FakeGenerationJobRepository implements GenerationJobRepository {
+  /// Создаёт фейк; [saveError]/[readError] имитируют сбой локального хранилища.
+  FakeGenerationJobRepository({this.saveError, this.readError});
+
   final Map<String, GenerationJob> _jobs = <String, GenerationJob>{};
+
+  /// Исключение, которое бросает [save] (симуляция SQLITE_READONLY и т.п.).
+  final Object? saveError;
+
+  /// Исключение, которое бросает [jobById].
+  final Object? readError;
 
   /// Все сохранённые версии заданий в порядке записи.
   final List<GenerationJob> saved = <GenerationJob>[];
 
   @override
   Future<void> save(GenerationJob job) async {
+    if (saveError case final Object error) throw error;
     saved.add(job);
     _jobs[job.id] = job;
   }
 
   @override
-  Future<GenerationJob?> jobById(String id) async => _jobs[id];
+  Future<GenerationJob?> jobById(String id) async {
+    if (readError case final Object error) throw error;
+    return _jobs[id];
+  }
 }
 
 /// Фейковое хранилище карточек: хеши существующих и импорт с дедупликацией.

@@ -52,6 +52,7 @@ import 'package:cardflow/domain/generation/provider_account.dart';
 import 'package:cardflow/domain/generation/provider_protocol.dart';
 import 'package:cardflow/domain/generation/token_calibration.dart';
 import 'package:cardflow/domain/generation/token_accounting.dart';
+import 'package:cardflow/domain/generation/storage_failure.dart';
 
 import 'package:cardflow/api/generation/exact_token_cache.dart';
 import 'package:cardflow/api/generation/generation_images.dart';
@@ -66,6 +67,7 @@ const Set<GenerationErrorCode> _fatalCodes = <GenerationErrorCode>{
   GenerationErrorCode.providerNotConfigured,
   GenerationErrorCode.invalidApiKey,
   GenerationErrorCode.noMaterials,
+  GenerationErrorCode.storageUnavailable,
 };
 
 /// Код в `generation_jobs.error_code` для непредвиденного сбоя пайплайна/БД.
@@ -226,9 +228,12 @@ class GenerationPipeline implements GenerationRunner {
       cardsCount: 0,
       files: _fileNames(request),
     );
-    await jobRepository.save(initialJob);
 
     try {
+      // Запись задания — часть защищённого участка: сбой локального хранилища
+      // (права на каталог данных, диск, блокировка БД) должен дойти до UI
+      // конкретной причиной, а не общей строкой «Не удалось получить карточки».
+      await jobRepository.save(initialJob);
       onProgress?.call(
         const GenerationProgress(phase: GenerationProgressPhase.chunking),
       );
@@ -318,10 +323,27 @@ class GenerationPipeline implements GenerationRunner {
         cancellation: cancellation,
       );
       return result;
-    } on Object {
+    } on Object catch (error) {
       await _markUnexpected(jobId, initialJob);
-      rethrow;
+      throw _unexpectedAsGeneration(error);
     }
+  }
+
+  /// Сбой вне вызова модели → доменный код, если это локальное хранилище.
+  ///
+  /// Сырые `SqliteException`/`DriftRemoteException`/`FileSystemException`
+  /// (например, `SQLITE_READONLY` на каталоге данных) раньше доходили до экрана
+  /// как произвольные исключения и показывались общей строкой. Теперь UI видит
+  /// `storageUnavailable` и говорит, что именно недоступно. Прочие
+  /// непредвиденные ошибки остаются как есть (их текст не подменяется).
+  Object _unexpectedAsGeneration(Object error) {
+    if (error is GenerationException) return error;
+    if (!isStorageFailure(error)) return error;
+    return GenerationException(
+      GenerationErrorCode.storageUnavailable,
+      details: 'pipeline storage failure: ${error.runtimeType}',
+      failureReason: GenerationFailureReason.storage,
+    );
   }
 
   /// Строит план: prompt-only по теме или по материалам (D.5/D.7).
@@ -386,7 +408,7 @@ class GenerationPipeline implements GenerationRunner {
         tokenCountCache ?? (_tokenCache ??= ExactTokenCountCache());
     final String key = exactTokenCacheKey(
       account: request.account,
-      systemPrompt: systemPromptGenRuV8,
+      systemPrompt: systemPromptGenRuV9,
       userContent: counted.userContent,
       attachments: counted.attachments,
     );
@@ -394,7 +416,7 @@ class GenerationPipeline implements GenerationRunner {
       key: key,
       load: () => counter.count(
         request.account,
-        systemPrompt: systemPromptGenRuV8,
+        systemPrompt: systemPromptGenRuV9,
         userContent: counted.userContent,
         attachments: counted.attachments,
       ),
@@ -592,27 +614,34 @@ class GenerationPipeline implements GenerationRunner {
     _usedImageUrls.clear();
     _resetImageBudget();
 
-    final GenerationJob job =
-        await jobRepository.jobById(previous.jobId) ??
-        GenerationJob(
-          id: previous.jobId,
-          status: GenerationJobStatus.partial,
-          createdAt: now(),
-          provider: request.account.id,
-          model: request.account.modelId,
-          promptVersion: systemPromptVersion,
-          files: _fileNames(request),
-        );
-    final Set<String> seen = <String>{
-      ..._hashesOfCards(previous.cards),
-      ...?await _existingHashes(request.targetDeckId),
-    };
+    final GenerationJob job;
+    try {
+      job =
+          await jobRepository.jobById(previous.jobId) ??
+          GenerationJob(
+            id: previous.jobId,
+            status: GenerationJobStatus.partial,
+            createdAt: now(),
+            provider: request.account.id,
+            model: request.account.modelId,
+            promptVersion: systemPromptVersion,
+            files: _fileNames(request),
+          );
+    } on Object catch (error) {
+      // Чтение журнала — тоже локальное хранилище: UI должен увидеть причину.
+      throw _unexpectedAsGeneration(error);
+    }
+    final Set<String> seenHashes = _hashesOfCards(previous.cards);
     final List<PlannedChunk> chunks = <PlannedChunk>[
       for (final GenerationChunkFailure failure in retryable)
         failure.plannedChunk ?? _plannedFromFailure(failure),
     ];
 
     try {
+      final Set<String> seen = <String>{
+        ...seenHashes,
+        ...?await _existingHashes(request.targetDeckId),
+      };
       return await _process(
         request: request,
         job: job.copyWith(
@@ -631,9 +660,9 @@ class GenerationPipeline implements GenerationRunner {
         onProgress: onProgress,
         cancellation: cancellation,
       );
-    } on Object {
+    } on Object catch (error) {
       await _markUnexpected(previous.jobId, job);
-      rethrow;
+      throw _unexpectedAsGeneration(error);
     }
   }
 
@@ -1353,6 +1382,7 @@ class GenerationPipeline implements GenerationRunner {
       case GenerationErrorCode.pdfScanUnsupported:
       case GenerationErrorCode.pdfScanVisionRequired:
       case GenerationErrorCode.attachmentTooLarge:
+      case GenerationErrorCode.storageUnavailable:
         return null;
     }
   }
@@ -1504,6 +1534,7 @@ class GenerationPipeline implements GenerationRunner {
       GenerationErrorCode.pdfScanUnsupported ||
       GenerationErrorCode.pdfScanVisionRequired ||
       GenerationErrorCode.attachmentTooLarge ||
+      GenerationErrorCode.storageUnavailable ||
       GenerationErrorCode.refused ||
       GenerationErrorCode.contextOverflow ||
       GenerationErrorCode.payloadTooLarge => false,

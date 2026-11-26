@@ -118,7 +118,7 @@ void main() {
     ),
   );
 
-  test('production: системный промпт по умолчанию — gen-ru-v8', () async {
+  test('production: системный промпт по умолчанию — gen-ru-v9', () async {
     final adapter = FakeProviderAdapter(
       cardsJson: cardsJson(<Map<String, Object?>>[validCardJson()]),
     );
@@ -136,8 +136,13 @@ void main() {
       httpClient: transport,
     );
     final result = await service.generate(requestFor(openAiAccount()));
-    expect(adapter.buildArgs!.systemPrompt, systemPromptGenRuV8);
+    expect(adapter.buildArgs!.systemPrompt, systemPromptGenRuV9);
     expect(adapter.buildArgs!.systemPrompt, contains('ПЛАНИРОВАНИЕ ВЫДАЧИ'));
+    // v9 (ADR-042): стороны изображений — часть контракта ответа модели.
+    expect(
+      adapter.buildArgs!.systemPrompt,
+      contains(systemPromptCardSidesGenRuV9),
+    );
     expect(result.promptVersion, systemPromptVersion);
   });
 

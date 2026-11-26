@@ -17,6 +17,8 @@ import 'package:cardflow/domain/cards/media_metadata.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
 import 'package:cardflow/domain/generation/generated_card_image.dart';
 import 'package:cardflow/domain/generation/generation_card_store.dart';
+import 'package:cardflow/domain/generation/generation_error.dart';
+import 'package:cardflow/domain/generation/generation_failure_reason.dart';
 import 'package:cardflow/domain/generation/image_bytes.dart';
 
 /// Импорт карточек поверх drift-БД.
@@ -40,10 +42,20 @@ class DriftGenerationCardStore implements GenerationCardStore {
 
   @override
   Future<Set<String>> existingContentHashes(String deckId) async {
-    final List<CardRow> rows = await (database.select(
-      database.cards,
-    )..where((table) => table.deckId.equals(deckId))).get();
-    return _hashesOf(rows);
+    try {
+      final List<CardRow> rows = await (database.select(
+        database.cards,
+      )..where((table) => table.deckId.equals(deckId))).get();
+      return _hashesOf(rows);
+    } on Object catch (error) {
+      // Сбой чтения БД — доменный код: UI покажет «хранилище недоступно», а не
+      // общую строку. Пишется только тип/текст локальной ошибки, без карточек.
+      throw GenerationException(
+        GenerationErrorCode.storageUnavailable,
+        details: 'read cards for dedup: ${error.runtimeType}: $error',
+        failureReason: GenerationFailureReason.storage,
+      );
+    }
   }
 
   @override

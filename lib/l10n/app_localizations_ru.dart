@@ -637,6 +637,10 @@ class AppLocalizationsRu extends AppLocalizations {
       'Запрос слишком большой для выбранной модели. Уменьшите объём материалов или изображений';
 
   @override
+  String get generationErrorStorageUnavailable =>
+      'Не удалось сохранить данные генерации: хранилище недоступно. Проверьте свободное место и права доступа к папке данных приложения';
+
+  @override
   String generationErrorRateLimited(int seconds) {
     String _temp0 = intl.Intl.pluralLogic(
       seconds,
@@ -1064,6 +1068,9 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get generationReasonUnknown => 'неизвестная ошибка фрагмента';
+
+  @override
+  String get generationReasonStorage => 'хранилище данных недоступно';
 
   @override
   String get generationReasonContextOverflow => 'переполнение контекста модели';

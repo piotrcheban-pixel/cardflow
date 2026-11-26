@@ -152,7 +152,7 @@ class GenerationPlanBuilder {
     List<DocumentImage> documentImages = const <DocumentImage>[],
     String? wishes,
     int? requestedCards,
-    String systemPrompt = systemPromptGenRuV8,
+    String systemPrompt = systemPromptGenRuV9,
     Map<String, Object?> responseSchema = canonicalCardsResponseSchema,
     GenerationOverheadTokens? overhead,
     GenerationBudgetConfig budgetConfig = const GenerationBudgetConfig(),
@@ -213,7 +213,7 @@ class GenerationPlanBuilder {
   GenerationPlan buildPromptOnly({
     required PromptOnlyRequest request,
     required ModelCapabilities capabilities,
-    String systemPrompt = systemPromptGenRuV8,
+    String systemPrompt = systemPromptGenRuV9,
     Map<String, Object?> responseSchema = canonicalCardsResponseSchema,
     GenerationOverheadTokens? overhead,
     GenerationBudgetConfig budgetConfig = const GenerationBudgetConfig(),

@@ -7,6 +7,8 @@ import 'package:drift/drift.dart';
 
 import 'package:cardflow/data/db/app_database.dart';
 import 'package:cardflow/data/db/epoch.dart';
+import 'package:cardflow/domain/generation/generation_error.dart';
+import 'package:cardflow/domain/generation/generation_failure_reason.dart';
 import 'package:cardflow/domain/generation/generation_job.dart';
 
 /// Хранилище заданий поверх drift-БД.
@@ -23,47 +25,69 @@ class DriftGenerationJobRepository implements GenerationJobRepository {
 
   @override
   Future<void> save(GenerationJob job) async {
-    await database
-        .into(database.generationJobs)
-        .insertOnConflictUpdate(
-          GenerationJobsCompanion.insert(
-            id: job.id,
-            status: job.status.wireName,
-            createdAt: toEpochMs(job.createdAt),
-            provider: Value<String?>(job.provider),
-            model: Value<String?>(job.model),
-            tokensUsed: Value<int?>(job.tokensUsed),
-            promptVersion: Value<String?>(job.promptVersion),
-            errorCode: Value<String?>(job.errorCode),
-            cardsCount: Value<int?>(job.cardsCount),
-            chunkCount: Value<int?>(job.chunkCount),
-            filesJson: Value<String?>(
-              job.files.isEmpty ? null : jsonEncode(job.files),
+    try {
+      await database
+          .into(database.generationJobs)
+          .insertOnConflictUpdate(
+            GenerationJobsCompanion.insert(
+              id: job.id,
+              status: job.status.wireName,
+              createdAt: toEpochMs(job.createdAt),
+              provider: Value<String?>(job.provider),
+              model: Value<String?>(job.model),
+              tokensUsed: Value<int?>(job.tokensUsed),
+              promptVersion: Value<String?>(job.promptVersion),
+              errorCode: Value<String?>(job.errorCode),
+              cardsCount: Value<int?>(job.cardsCount),
+              chunkCount: Value<int?>(job.chunkCount),
+              filesJson: Value<String?>(
+                job.files.isEmpty ? null : jsonEncode(job.files),
+              ),
+              resultDeckId: Value<String?>(job.resultDeckId),
             ),
-            resultDeckId: Value<String?>(job.resultDeckId),
-          ),
-        );
+          );
+    } on Object catch (error) {
+      throw _storageError('save generation_jobs', error);
+    }
   }
 
   @override
   Future<GenerationJob?> jobById(String id) async {
-    final GenerationJobRow? row = await (database.select(
-      database.generationJobs,
-    )..where((table) => table.id.equals(id))).getSingleOrNull();
-    if (row == null) return null;
-    return GenerationJob(
-      id: row.id,
-      status: GenerationJobStatus.fromWire(row.status),
-      createdAt: fromEpochMs(row.createdAt),
-      provider: row.provider,
-      model: row.model,
-      tokensUsed: row.tokensUsed,
-      promptVersion: row.promptVersion,
-      errorCode: row.errorCode,
-      cardsCount: row.cardsCount,
-      chunkCount: row.chunkCount,
-      files: _decodeFiles(row.filesJson),
-      resultDeckId: row.resultDeckId,
+    try {
+      final GenerationJobRow? row = await (database.select(
+        database.generationJobs,
+      )..where((table) => table.id.equals(id))).getSingleOrNull();
+      if (row == null) return null;
+      return GenerationJob(
+        id: row.id,
+        status: GenerationJobStatus.fromWire(row.status),
+        createdAt: fromEpochMs(row.createdAt),
+        provider: row.provider,
+        model: row.model,
+        tokensUsed: row.tokensUsed,
+        promptVersion: row.promptVersion,
+        errorCode: row.errorCode,
+        cardsCount: row.cardsCount,
+        chunkCount: row.chunkCount,
+        files: _decodeFiles(row.filesJson),
+        resultDeckId: row.resultDeckId,
+      );
+    } on Object catch (error) {
+      throw _storageError('read generation_jobs', error);
+    }
+  }
+
+  /// Сбой локального хранилища — доменный код, а не сырое исключение drift.
+  ///
+  /// Итерация «Диагностика и фикс пайплайна генерации»: раньше ошибка записи
+  /// `generation_jobs` (например, `SQLITE_READONLY`) доходила до экрана как
+  /// произвольное исключение и показывалась общей строкой. Теперь UI получает
+  /// `GenerationErrorCode.storageUnavailable` и говорит, что именно недоступно.
+  GenerationException _storageError(String action, Object error) {
+    return GenerationException(
+      GenerationErrorCode.storageUnavailable,
+      details: '$action: ${error.runtimeType}: $error',
+      failureReason: GenerationFailureReason.storage,
     );
   }
 

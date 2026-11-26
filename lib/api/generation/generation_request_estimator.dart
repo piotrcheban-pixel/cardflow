@@ -75,7 +75,7 @@ class GenerationRequestEstimator {
   /// Создаёт оценщик; по умолчанию — production-промпт и каноническая схема.
   const GenerationRequestEstimator({
     this.estimator = const HeuristicContentTokenEstimator(),
-    this.systemPrompt = systemPromptGenRuV8,
+    this.systemPrompt = systemPromptGenRuV9,
     this.responseSchema = canonicalCardsResponseSchema,
   });
 

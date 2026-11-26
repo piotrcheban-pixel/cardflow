@@ -56,7 +56,10 @@ enum GenerationFailureReason {
   cancelled('cancelled'),
 
   /// Непредвиденная ошибка адаптера/пайплайна.
-  unknown('unknown');
+  unknown('unknown'),
+
+  /// Локальное хранилище недоступно (журнал задания не читается/не пишется).
+  storage('storage_unavailable');
 
   const GenerationFailureReason(this.code);
 
@@ -86,6 +89,7 @@ enum GenerationFailureReason {
       GenerationErrorCode.truncated => truncated,
       GenerationErrorCode.refused => refusal,
       GenerationErrorCode.invalidResponse => providerResponse,
+      GenerationErrorCode.storageUnavailable => storage,
     };
   }
 

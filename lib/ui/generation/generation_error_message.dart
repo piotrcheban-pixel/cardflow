@@ -7,6 +7,7 @@ library;
 import 'dart:math' as math;
 
 import 'package:cardflow/domain/generation/generation_error.dart';
+import 'package:cardflow/domain/generation/storage_failure.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 
 /// Сообщение для кода ошибки генерации.
@@ -55,8 +56,16 @@ String generationErrorCodeMessage(
       l10n.generationErrorPdfScanVisionRequired,
     GenerationErrorCode.attachmentTooLarge =>
       l10n.generationErrorAttachmentTooLarge,
+    GenerationErrorCode.storageUnavailable =>
+      l10n.generationErrorStorageUnavailable,
   };
 }
+
+/// Признаки сбоя локального хранилища в тексте произвольного исключения.
+///
+/// Маркеры живут в домене (`storage_failure.dart`): их использует и пайплайн,
+/// когда оборачивает сырое исключение репозитория.
+bool isGenerationStorageFailure(Object error) => isStorageFailure(error);
 
 /// Сообщение для произвольной ошибки генерации (код или общая строка ARB).
 String generationErrorMessage(AppLocalizations l10n, Object error) {
@@ -67,6 +76,9 @@ String generationErrorMessage(AppLocalizations l10n, Object error) {
       retryAfter: error.retryAfter,
       providerReason: error.providerReason,
     );
+  }
+  if (isGenerationStorageFailure(error)) {
+    return l10n.generationErrorStorageUnavailable;
   }
   return l10n.generationErrorGeneric;
 }

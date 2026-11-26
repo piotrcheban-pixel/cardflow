@@ -229,7 +229,7 @@ void main() {
       );
       final GenerationPlanBuilder local = builder;
       final int promptTokens = local.estimator.estimateText(
-        systemPromptGenRuV8,
+        systemPromptGenRuV9,
       );
       expect(plan.budget.systemPromptTokens, promptTokens);
       expect(plan.budget.schemaTokens, greaterThan(0));

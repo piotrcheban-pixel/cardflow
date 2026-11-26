@@ -33,5 +33,6 @@ String generationFailureReasonMessage(
       l10n.generationReasonProviderResponse,
     GenerationFailureReason.cancelled => l10n.generationReasonCancelled,
     GenerationFailureReason.unknown => l10n.generationReasonUnknown,
+    GenerationFailureReason.storage => l10n.generationReasonStorage,
   };
 }

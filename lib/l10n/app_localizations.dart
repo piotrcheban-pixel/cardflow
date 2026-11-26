@@ -1102,6 +1102,12 @@ abstract class AppLocalizations {
   /// **'Запрос слишком большой для выбранной модели. Уменьшите объём материалов или изображений'**
   String get generationErrorPayloadTooLarge;
 
+  /// Генерация: не удалось прочитать/записать generation_jobs (права на каталог данных, диск, блокировка БД). Итерация «Диагностика и фикс пайплайна генерации».
+  ///
+  /// In ru, this message translates to:
+  /// **'Не удалось сохранить данные генерации: хранилище недоступно. Проверьте свободное место и права доступа к папке данных приложения'**
+  String get generationErrorStorageUnavailable;
+
   /// Генерация: HTTP 429 с Retry-After, пауза в секундах (SPEC A8.6).
   ///
   /// In ru, this message translates to:
@@ -1761,6 +1767,12 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'неизвестная ошибка фрагмента'**
   String get generationReasonUnknown;
+
+  /// Причина падения фрагмента: storage_unavailable (журнал задания не читается/не пишется).
+  ///
+  /// In ru, this message translates to:
+  /// **'хранилище данных недоступно'**
+  String get generationReasonStorage;
 
   /// Причина падения фрагмента: context_overflow (TASK 02B-FINAL).
   ///

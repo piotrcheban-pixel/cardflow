@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cardflow/domain/generation/generation_error.dart';
@@ -221,6 +223,33 @@ void main() {
     final message = generationErrorMessage(l10n, StateError('внутренний сбой'));
     expect(message, l10n.generationErrorGeneric);
     expect(message, isNot(contains('внутренний сбой')));
+  });
+
+  test('сбой локального хранилища — отдельная причина, не общая строка', () {
+    // Итерация «Диагностика и фикс пайплайна генерации»: SQLITE_READONLY и
+    // FileSystemException раньше тонули в «Не удалось получить карточки».
+    final messages = <Object>[
+      Exception('SqliteException(8): attempt to write a readonly database'),
+      const FileSystemException(
+        'Не удалось записать файл',
+        'cardflow.sqlite',
+        OSError('Отказано в доступе', 5),
+      ),
+      Exception('database is locked'),
+    ];
+    for (final error in messages) {
+      expect(
+        generationErrorMessage(l10n, error),
+        l10n.generationErrorStorageUnavailable,
+        reason: '$error',
+      );
+      expect(isGenerationStorageFailure(error), isTrue, reason: '$error');
+    }
+    expect(isGenerationStorageFailure(StateError('иное')), isFalse);
+    expect(
+      generationErrorCodeMessage(l10n, GenerationErrorCode.storageUnavailable),
+      l10n.generationErrorStorageUnavailable,
+    );
   });
 
   test('в ARB нет пустых строк генерации и нет сырых кодов', () {
