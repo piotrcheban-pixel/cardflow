@@ -49,8 +49,11 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   `docs/prompts/gen-ru-v5.txt`, тест сверяет байты), пользовательское сообщение —
   `generation_prompt.dart`: стабильный префикс `<materials>` → `<images>` →
   `<outline>` → `<wishes>` и изменяемый хвост `<task>` (`<part>`, `<focus>`,
-  `<cards>`, `<context_only>`, `<already_created>`), промпт `gen-ru-v8`;
-  каждый файл в `<materials>` начинается со строки `Файл: <имя>`.
+  `<cards>`, `<context_only>`, `<already_created>`); **production шлёт
+  `gen-ru-v9`** (`CardGenerationService`, `GenerationPlanBuilder`,
+  `GenerationRequestEstimator`, `count_tokens`; ADR-042/ADR-048, тест
+  `card_generation_service_test` сверяет v9 и блок сторон); каждый файл в
+  `<materials>` начинается со строки `Файл: <имя>`.
   **Планирование (ADR-039/040, итерация 7.18):** характеристики модели —
   `Sourced<T>` (`lib/domain/generation/sourced.dart`), `ModelLimits`, слоистый
   `resolveModelLimits` (пользователь > API > каталог > допущение > неизвестно);
@@ -621,3 +624,14 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   2425 passed + 16 skipped, покрытие 91.5 %, `cardflow.exe` 61,8 с, Windows smoke passed;
   CI run [`44924253292`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/44924253292) — 9/9.
   Ограничения L186–L193.
+
+- **Генерация: release-сеть Android, промпт v9 и ошибки хранилища (фикс-итерация, 2026-11-26, ADR-048):**
+  release-APK 1.0.1 был без `android.permission.INTERNET` (проверено `aapt2`) — разрешение добавлено в
+  `main`-манифест, guard `test/guards/android_manifest_internet_test.dart`; production шлёт `gen-ru-v9`
+  (`CardGenerationService`, `GenerationPlanBuilder`, `GenerationRequestEstimator`, `count_tokens`);
+  сбой локального хранилища → `GenerationErrorCode.storageUnavailable`/`GenerationFailureReason.storage`
+  (ARB `generationErrorStorageUnavailable`), репозитории и pipeline оборачивают drift/SQLite, UI-catch-all
+  показывает причину; `tool/debug_generation.dart` (ключ только из env); live-тест
+  `test/live/generation_pipeline_live_test.dart` (тег `live`, `CARDFLOW_LIVE_TESTS=1`). Гейты:
+  2745 passed + 17 skipped, покрытие 90,9 % (23153/25476), `analyze` 0, format 614/0,
+  `cardflow.exe` 98,1 с, APK 101,3 МБ с INTERNET. Ограничения L206–L209.

@@ -1,5 +1,77 @@
 # STATE — текущее состояние CardFlow
 
+**Дата:** 2026-11-26 · **Итерация:** «Диагностика и фикс пайплайна генерации»
+(`journal/fix-generation/{diagnosis,summary}.md`, ADR-048) — owner-note: на
+Windows и Android генерация падает общей строкой «Не удалось получить карточки».
+**Режим:** ИТЕРАЦИИ.
+
+**Старт:** `HEAD = origin/main = f8cc926`, ветка `main`, `git status` — только
+неотслеживаемые каталоги аудита. **Baseline:** `flutter test` **2739 passed +
+16 skipped**. **Гейты итогового снимка:** `flutter test --coverage
+--exclude-tags golden` → **2745 passed + 17 skipped** (+6 тестов), покрытие
+рукописного кода **90,9 % (23153/25476)**; `analyze` 0;
+`dart format --set-exit-if-changed lib test tool` 614/0;
+`flutter build windows --release --no-pub` → `cardflow.exe` (98,1 с);
+`flutter build apk --release --no-pub` → `app-release.apk` (101,3 МБ,
+`versionName 1.0.1`, versionCode 2), `aapt2 dump permissions` →
+**`android.permission.INTERNET`**. Схема БД/`schemaVersion`/`format_version` и
+FSRS-логика не менялись.
+
+**Причины (измерены, не гипотезы):**
+1. **Android release.** APK 1.0.1 собран **без `android.permission.INTERNET`**
+   (`aapt2`): `main`-манифест не объявлял разрешение, а debug/profile-манифесты
+   в release не попадают. На Android в release не мог выполниться ни один
+   сетевой запрос — генерация, поиск картинок, проверка ключа.
+2. **Промпт/схема.** Production слал **`gen-ru-v8`**, хотя
+   `systemPromptVersion` и схема ответа — **`gen-ru-v9`** (ADR-042): модель не
+   получала контракт сторон изображений (`question_image_ids`/
+   `answer_image_ids`/`image.side`).
+3. **Общая строка вместо причины.** В `generation_jobs` после 2026-11-22 нет
+   неудачных попыток: сбой шёл до/на первой записи журнала. `jobRepository.save`
+   начального задания стоял **вне** `try`, а drift/SQLite-исключения (в т.ч.
+   `SQLITE_READONLY`, L204) не переводились в доменный код — UI-catch `on Object`
+   показывал общую строку.
+4. **Запрос и парсинг исправны.** `tool/debug_generation.dart`: strict
+   `response_format` DeepSeek → штатный `400` (194 Б) → запрос без схемы `200`
+   (9166 Б) → `cards=10 rejected=0 rootInvalid=false`. Полный production-граф с
+   настоящей drift-БД (копия), кэшем характеристик, калибровкой и реальным
+   поиском картинок → `status=done cards=10 failures=0`; настоящий
+   `GenerationScreen` на Windows (реальный secure storage, копия БД, сеть)
+   запускает генерацию без общей ошибки.
+
+**Сделано:**
+- `INTERNET` в `android/app/src/main/AndroidManifest.xml` + guard
+  `test/guards/android_manifest_internet_test.dart`; APK пересобран и проверен
+  `aapt2`.
+- Production переведён на `gen-ru-v9` во всех точках (`CardGenerationService`,
+  `GenerationPlanBuilder`, `GenerationRequestEstimator`, `count_tokens` в
+  пайплайне); тесты `card_generation_service_test` (v9 + блок сторон),
+  `generation_plan_builder_test`, `generation_payload_bytes_test` обновлены.
+- `GenerationErrorCode.storageUnavailable` + `GenerationFailureReason.storage`
+  (`storage_unavailable`): `DriftGenerationJobRepository.save/jobById`,
+  `DriftGenerationCardStore.existingContentHashes` и пайплайн
+  (`storage_failure.dart`, `_unexpectedAsGeneration`) переводят сбои хранилища
+  в доменный код; начальная запись задания внутри `try`; ARB
+  `generationErrorStorageUnavailable`/`generationReasonStorage`; catch-all
+  экранов генерации и повтора показывает причину и пишет в debug-диагностику
+  только тип исключения (`GenerationDiagnostics.unexpectedFailure`).
+- `tool/debug_generation.dart` — постоянный инструмент: реальный запрос тем же
+  промптом/параметрами, статус + сырое тело, production-разбор; ключ только из
+  `DEEPSEEK_API_KEY`, не печатается.
+- Live-тест `test/live/generation_pipeline_live_test.dart` (тег `live`,
+  `CARDFLOW_LIVE_TESTS=1`) — production-пайплайн, тема «трансформаторы»,
+  10 карточек; прогон: `status=partial cards=9 failures=0 prompt=gen-ru-v9`.
+- Новые тесты: guard манифеста, storage-путь пайплайна (3), ошибка репозитория
+  на настоящей readonly-БД, строки ARB хранилища, живой pipeline-тест.
+  Диагностические временные тесты и `tool/debug_pipeline.dart` удалены.
+
+**Коммиты:** `2bd24a3` (INTERNET в main-манифесте + guard), `931a7e8`
+(production `gen-ru-v9`, `storageUnavailable` и понятные строки), `d4b594b`
+(live pipeline + `tool/debug_generation.dart`), далее docs/STATE.
+**Push:** — **CI:** —
+
+---
+
 **Дата:** 2026-11-25 · **Итерация:** «Фикс экспорта и сохранения настроек»
 (`journal/fix-export-settings/diagnosis.md`, ADR-047) — два дефекта из
 owner-note после установки 1.0.0. **Режим:** ИТЕРАЦИИ.

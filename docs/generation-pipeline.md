@@ -183,13 +183,17 @@ inputBudget = окно ? окно − reserved − fixed − safety
 | `contextOverflow` | дробление проблемного фрагмента (при `limit == 1` — последняя попытка с двумя частями по 1); иначе ошибка фрагмента (не повторяется) | «Материала слишком много…» |
 | `payloadTooLarge` | дробление/сокращение image-частей (последняя попытка с `limit == 1`); иначе ошибка (не повторяется) | «Запрос слишком большой…» |
 | `missingApiKey`, `providerNotConfigured`, `invalidApiKey` | fatal: остановка всего задания; если карточки уже получены — `partial` + `fatalErrorCode`, иначе исключение | переход в настройки / сообщение + предпросмотр |
+| `storageUnavailable` (фикс генерации, ADR-048) | fatal и неретраиваемый: запись/чтение `generation_jobs` или карточек не удались (SQLITE_READONLY, нет места, БД заблокирована). Репозитории и пайплайн переводят сырое исключение в этот код; debug-лог получает тип, `generation_jobs.error_code` — `unexpected` (best-effort) | «Не удалось сохранить данные генерации: хранилище недоступно…» — без общей строки |
 | `rateLimited`, `serverUnavailable`, `timeout`, `network`, `emptyResponse`, `refused`, `invalidResponse`, `visionUnsupported`, `fileWithoutTextAndVision`, `pdfScanUnsupported`, `pdfScanVisionRequired`, `attachmentTooLarge` | ошибка фрагмента, остальные фрагменты продолжаются; `rateLimited`/auth не дробятся; `Retry-After` (если был) — в сбое фрагмента | частичный успех + повтор (+ «повторите через N с») |
 | `noMaterials` | генерация не начинается | «Нет материалов для генерации: прикрепите файл или напишите тему» |
 
 `generation_jobs.error_code` — машинный код (имя `GenerationErrorCode`) или
-`unexpected` при сбое инфраструктуры/БД; не текст. Причины фрагментов —
+`unexpected` при прочем сбое инфраструктуры/БД; не текст. Причины фрагментов —
 `GenerationFailureReason` (`json_parse`, `schema_invalid`, `truncated`,
-`context_overflow`, `payload_too_large`, `unsupported_modality`, …).
+`context_overflow`, `payload_too_large`, `unsupported_modality`,
+`storage_unavailable`, …). Начальная запись задания выполняется **внутри**
+защищённого участка: сбой хранилища не теряется и доходит до UI конкретной
+причиной (`GenerationErrorCode.storageUnavailable`, ADR-048).
 
 **Разбор тела ответа (TASK 04).** Транспорт запрашивает `ResponseType.plain` и
 разбирает JSON сам (`_decodeJsonObject`): битый JSON провайдера — это
