@@ -1,4 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Итерация «Диагностика и фикс пайплайна генерации»: release-сборка
+         собирается только из main-манифеста (debug/profile-манифесты в неё не
+         попадают), поэтому без этой строки в APK не было INTERNET и генерация
+         ИИ на Android падала на первом же запросе к провайдеру. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="CardFlow"
         android:name="${applicationName}"
