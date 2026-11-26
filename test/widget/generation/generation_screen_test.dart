@@ -618,6 +618,55 @@ void main() {
     expect(find.textContaining('raw-provider-detail'), findsNothing);
   });
 
+  testWidgets('сбой локального хранилища — причина вместо общей строки', (
+    tester,
+  ) async {
+    // Итерация «Диагностика и фикс пайплайна генерации»: SQLITE_READONLY и
+    // сырые исключения drift больше не маскируются строкой «Не удалось
+    // получить карточки».
+    await pumpScreen(tester);
+    await attachTextFile(tester);
+    runner.error = const GenerationException(
+      GenerationErrorCode.storageUnavailable,
+      details: 'save generation_jobs: SqliteException(8)',
+    );
+    await tester.tap(find.byKey(const ValueKey<String>('generation-start')));
+    await tester.pumpAndSettle();
+    final l10n = l10nOf(tester);
+    expect(find.text(l10n.generationErrorStorageUnavailable), findsOneWidget);
+    expect(find.text(l10n.generationErrorGeneric), findsNothing);
+    expect(find.textContaining('SqliteException'), findsNothing);
+  });
+
+  testWidgets('сырое исключение хранилища в catch-all — та же причина', (
+    tester,
+  ) async {
+    await pumpScreen(tester);
+    await attachTextFile(tester);
+    runner.error = Exception(
+      'SqliteException(8): attempt to write a readonly database',
+    );
+    await tester.tap(find.byKey(const ValueKey<String>('generation-start')));
+    await tester.pumpAndSettle();
+    final l10n = l10nOf(tester);
+    expect(find.text(l10n.generationErrorStorageUnavailable), findsOneWidget);
+    expect(find.text(l10n.generationErrorGeneric), findsNothing);
+    expect(find.textContaining('readonly database'), findsNothing);
+  });
+
+  testWidgets('прочее непредвиденное исключение — общая строка ARB', (
+    tester,
+  ) async {
+    await pumpScreen(tester);
+    await attachTextFile(tester);
+    runner.error = StateError('внутренний сбой проводки');
+    await tester.tap(find.byKey(const ValueKey<String>('generation-start')));
+    await tester.pumpAndSettle();
+    final l10n = l10nOf(tester);
+    expect(find.text(l10n.generationErrorGeneric), findsOneWidget);
+    expect(find.textContaining('внутренний сбой'), findsNothing);
+  });
+
   testWidgets('целевая колода: имя показывается, поле имени скрыто', (
     tester,
   ) async {
