@@ -69,10 +69,15 @@ FSRS-логика не менялись.
   на настоящей readonly-БД, строки ARB хранилища, живой pipeline-тест.
   Диагностические временные тесты и `tool/debug_pipeline.dart` удалены.
 
-**Коммиты:** `2bd24a3` (INTERNET в main-манифесте + guard), `8a339c9` (UI-тесты причины), `931a7e8`
+**Коммиты:** `2bd24a3` (INTERNET в main-манифесте + guard), `931a7e8`
 (production `gen-ru-v9`, `storageUnavailable` и понятные строки), `d4b594b`
-(live pipeline + `tool/debug_generation.dart`), далее docs/STATE.
-**Push:** — **CI:** —
+(live pipeline + `tool/debug_generation.dart`), `b020c87`
+(диагностика/ADR-048/STATE), `8a339c9` (UI-тесты причины), `f411fe9`
+(HTTP 402 «нет баланса»), далее docs/CI.
+**Push:** `f8cc926..f411fe9` (ветка `main`, 2026-11-26). **CI:** прогон
+финального снимка после docs/CI-коммита (9 job: `format + analyze`,
+`test` × 3 ОС, `build desktop` × 3, `build mobile` Android + iOS); ссылка —
+в отчёте и вкладке Actions.
 
 ---
 

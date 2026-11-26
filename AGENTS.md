@@ -630,8 +630,9 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   `main`-манифест, guard `test/guards/android_manifest_internet_test.dart`; production шлёт `gen-ru-v9`
   (`CardGenerationService`, `GenerationPlanBuilder`, `GenerationRequestEstimator`, `count_tokens`);
   сбой локального хранилища → `GenerationErrorCode.storageUnavailable`/`GenerationFailureReason.storage`
-  (ARB `generationErrorStorageUnavailable`), репозитории и pipeline оборачивают drift/SQLite, UI-catch-all
+  (ARB `generationErrorStorageUnavailable`), HTTP **402** → `insufficientBalance` («проверьте баланс
+  или ключ API»), репозитории и pipeline оборачивают drift/SQLite, UI-catch-all
   показывает причину; `tool/debug_generation.dart` (ключ только из env); live-тест
   `test/live/generation_pipeline_live_test.dart` (тег `live`, `CARDFLOW_LIVE_TESTS=1`). Гейты:
-  2745 passed + 17 skipped, покрытие 90,9 % (23153/25476), `analyze` 0, format 614/0,
-  `cardflow.exe` 98,1 с, APK 101,3 МБ с INTERNET. Ограничения L206–L209.
+  2750 passed + 17 skipped, покрытие 90,9 % (23160/25483), `analyze` 0, format 614/0,
+  `cardflow.exe` 91,2 с, APK 101,3 МБ с INTERNET. Ограничения L206–L209.
