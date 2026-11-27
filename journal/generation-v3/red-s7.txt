@@ -1,0 +1,248 @@
+00:00 +0: loading C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/replenish_stage_test.dart
+00:00 +0: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/replenish_stage_test.dart: предохранители операции (п. 2) предел запросов — f(requested): запрос на карточку, минимум три
+00:00 +0 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/replenish_stage_test.dart: предохранители операции (п. 2) предел запросов — f(requested): запрос на карточку, минимум три [E]
+  Expected: <3>
+    Actual: <0>
+  
+  package:matcher                                             expect
+  package:flutter_test/src/widget_tester.dart 473:18          expect
+  test\unit\domain\generation\replenish_stage_test.dart 28:7  main.<fn>.<fn>
+  
+00:00 +0 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/replenish_stage_test.dart: предохранители операции (п. 2) предел запросов не убывает с заказом
+00:00 +1 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/replenish_stage_test.dart: предохранители операции (п. 2) бюджет токенов операции — оценки всех проходов плана
+00:00 +1 -2: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/replenish_stage_test.dart: предохранители операции (п. 2) бюджет токенов операции — оценки всех проходов плана [E]
+  Expected: <21600>
+    Actual: <0>
+  
+  package:matcher                                             expect
+  package:flutter_test/src/widget_tester.dart 473:18          expect
+  test\unit\domain\generation\replenish_stage_test.dart 56:7  main.<fn>.<fn>
+  
+00:00 +1 -2: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/replenish_stage_test.dart: предохранители операции (п. 2) политика по умолчанию: три прохода, запросы от заказа, время
+00:00 +1 -3: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/replenish_stage_test.dart: предохранители операции (п. 2) политика по умолчанию: три прохода, запросы от заказа, время [E]
+  Expected: <40>
+    Actual: <0>
+  
+  package:matcher                                             expect
+  package:flutter_test/src/widget_tester.dart 473:18          expect
+  test\unit\domain\generation\replenish_stage_test.dart 67:7  main.<fn>.<fn>
+  
+00:00 +1 -3: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/replenish_stage_test.dart: предохранители операции (п. 2) явные пределы политики перекрывают вычисленные
+00:00 +2 -3: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/replenish_stage_test.dart: добор — только единицы с недобором дозапрос идёт только по единицам долга, новые единицы не выдумываются
+00:00 +2 -4: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_report_test.dart: GenerationReport недобор: причины, покрытие единиц, расход по этапам, время
+00:00 +2 -4: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/replenish_stage_test.dart: добор — только единицы с недобором дозапрос идёт только по единицам долга, новые единицы не выдумываются [E]
+  Expected: GenerationStage:<GenerationStage.ready>
+    Actual: GenerationStage:<GenerationStage.partial>
+  
+  package:matcher                                              expect
+  package:flutter_test/src/widget_tester.dart 473:18           expect
+  test\unit\domain\generation\replenish_stage_test.dart 107:9  main.<fn>.<fn>
+  
+00:00 +2 -5: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_report_test.dart: GenerationReport недобор: причины, покрытие единиц, расход по этапам, время
+00:00 +2 -5: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/replenish_stage_test.dart: добор — только единицы с недобором план добора — ровно карточки долга, заказ равен долгу [E]
+  Bad state: No element
+  dart:core                                                     _Array.single
+  test\unit\domain\generation\replenish_stage_test.dart 155:49  main.<fn>.<fn>
+  
+00:00 +2 -6: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_report_test.dart: GenerationReport недобор: причины, покрытие единиц, расход по этапам, время
+00:00 +2 -6: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/replenish_stage_test.dart: добор — только единицы с недобором запрос добора несёт контекст принятого тех же единиц [E]
+  Bad state: No element
+  dart:core                                                     List.single
+  test\unit\domain\generation\replenish_stage_test.dart 191:45  main.<fn>.<fn>
+  
+00:00 +2 -7: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_report_test.dart: GenerationReport недобор: причины, покрытие единиц, расход по этапам, время
+00:00 +2 -7: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/replenish_stage_test.dart: добор — только единицы с недобором ответ перефразированием принятого не даёт прогресса [E]
+  Expected: ReplenishStopReason:<ReplenishStopReason.exhaustedMaterial>
+    Actual: ReplenishStopReason:<ReplenishStopReason.complete>
+  
+  package:matcher                                              expect
+  package:flutter_test/src/widget_tester.dart 473:18           expect
+  test\unit\domain\generation\replenish_stage_test.dart 219:7  main.<fn>.<fn>
+  
+00:00 +2 -8: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/replenish_stage_test.dart: DoD среза 7 40 запрошено, материал на 12 → partial, accepted=12, exhausted_material
+00:00 +2 -8: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_report_test.dart: GenerationReport недобор: причины, покрытие единиц, расход по этапам, время [E]
+  Expected: <40>
+    Actual: <0>
+  
+  package:matcher                                               expect
+  package:flutter_test/src/widget_tester.dart 473:18            expect
+  test\unit\domain\generation\generation_report_test.dart 51:7  main.<fn>.<fn>
+  
+00:00 +2 -9: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_report_test.dart: GenerationReport полный заказ: причин нет, материал не исчерпан, успех
+00:00 +2 -9: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/replenish_stage_test.dart: DoD среза 7 40 запрошено, материал на 12 → partial, accepted=12, exhausted_material [E]
+  Expected: <12>
+    Actual: <0>
+  
+  package:matcher                                              expect
+  package:flutter_test/src/widget_tester.dart 473:18           expect
+  test\unit\domain\generation\replenish_stage_test.dart 260:9  main.<fn>.<fn>
+  
+00:00 +2 -10: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/replenish_stage_test.dart: DoD среза 7 сбой на третьем батче → добор, accepted растёт
+00:00 +2 -10: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_report_test.dart: GenerationReport полный заказ: причин нет, материал не исчерпан, успех [E]
+  Expected: true
+    Actual: <false>
+  
+  package:matcher                                                expect
+  package:flutter_test/src/widget_tester.dart 473:18             expect
+  test\unit\domain\generation\generation_report_test.dart 122:7  main.<fn>.<fn>
+  
+00:00 +2 -11: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_report_test.dart: GenerationReport сбой провайдера — точная причина в отчёте
+00:00 +2 -11: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/replenish_stage_test.dart: DoD среза 7 сбой на третьем батче → добор, accepted растёт [E]
+  Expected: <6>
+    Actual: <0>
+  
+  package:matcher                                              expect
+  package:flutter_test/src/widget_tester.dart 473:18           expect
+  test\unit\domain\generation\replenish_stage_test.dart 289:7  main.<fn>.<fn>
+  
+00:00 +2 -12: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/replenish_stage_test.dart: DoD среза 7 бесконечный цикл невозможен: maxPasses останавливает добор
+00:00 +2 -12: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_report_test.dart: GenerationReport сбой провайдера — точная причина в отчёте [E]
+  Bad state: No element
+  dart:core                                                       _Array.first
+  test\unit\domain\generation\generation_report_test.dart 146:29  main.<fn>.<fn>
+  
+00:00 +2 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_report_test.dart: GenerationReport отброшенные карточки видны причиной, но не отменяют итог
+00:00 +2 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/replenish_stage_test.dart: DoD среза 7 бесконечный цикл невозможен: maxPasses останавливает добор [E]
+  Expected: ReplenishStopReason:<ReplenishStopReason.maxPasses>
+    Actual: ReplenishStopReason:<ReplenishStopReason.complete>
+  
+  package:matcher                                              expect
+  package:flutter_test/src/widget_tester.dart 473:18           expect
+  test\unit\domain\generation\replenish_stage_test.dart 329:9  main.<fn>.<fn>
+  
+00:00 +2 -14: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/replenish_stage_test.dart: DoD среза 7 отмена → partial с сохранением принятого
+00:00 +2 -14: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_report_test.dart: GenerationReport отброшенные карточки видны причиной, но не отменяют итог [E]
+  Expected: ['exhausted_material', 'validation_rejects']
+    Actual: []
+     Which: at location [0] is [] which shorter than expected
+  
+  package:matcher                                                expect
+  package:flutter_test/src/widget_tester.dart 473:18             expect
+  test\unit\domain\generation\generation_report_test.dart 168:7  main.<fn>.<fn>
+  
+00:00 +2 -15: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/replenish_stage_test.dart: DoD среза 7 отмена → partial с сохранением принятого [E]
+  Expected: ReplenishStopReason:<ReplenishStopReason.cancelled>
+    Actual: ReplenishStopReason:<ReplenishStopReason.complete>
+  
+  package:matcher                                              expect
+  package:flutter_test/src/widget_tester.dart 473:18           expect
+  test\unit\domain\generation\replenish_stage_test.dart 369:7  main.<fn>.<fn>
+  
+00:00 +2 -15: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/replenish_stage_test.dart: остановка предохранителем — точная причина maxRequests: предел запросов операции
+00:00 +2 -16: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/replenish_stage_test.dart: остановка предохранителем — точная причина maxRequests: предел запросов операции [E]
+  Expected: ReplenishStopReason:<ReplenishStopReason.maxRequests>
+    Actual: ReplenishStopReason:<ReplenishStopReason.complete>
+  
+  package:matcher                                              expect
+  package:flutter_test/src/widget_tester.dart 473:18           expect
+  test\unit\domain\generation\replenish_stage_test.dart 403:7  main.<fn>.<fn>
+  
+00:00 +2 -16: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/replenish_stage_test.dart: остановка предохранителем — точная причина tokenBudget: расход операции
+00:00 +2 -17: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/replenish_stage_test.dart: остановка предохранителем — точная причина tokenBudget: расход операции [E]
+  Expected: ReplenishStopReason:<ReplenishStopReason.tokenBudget>
+    Actual: ReplenishStopReason:<ReplenishStopReason.complete>
+  
+  package:matcher                                              expect
+  package:flutter_test/src/widget_tester.dart 473:18           expect
+  test\unit\domain\generation\replenish_stage_test.dart 433:7  main.<fn>.<fn>
+  
+00:00 +2 -17: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/replenish_stage_test.dart: остановка предохранителем — точная причина wallClock: предел времени операции
+00:00 +2 -18: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/replenish_stage_wiring_test.dart: сбой третьего батча в движке → добор закрывает заказ
+00:00 +2 -18: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/replenish_stage_test.dart: остановка предохранителем — точная причина wallClock: предел времени операции [E]
+  Expected: ReplenishStopReason:<ReplenishStopReason.wallClock>
+    Actual: ReplenishStopReason:<ReplenishStopReason.complete>
+  
+  package:matcher                                              expect
+  package:flutter_test/src/widget_tester.dart 473:18           expect
+  test\unit\domain\generation\replenish_stage_test.dart 469:7  main.<fn>.<fn>
+  
+00:00 +2 -19: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/replenish_stage_wiring_test.dart: сбой третьего батча в движке → добор закрывает заказ
+00:00 +2 -19: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/replenish_stage_test.dart: остановка предохранителем — точная причина план без единиц (prompt-only) — no_unit_plan без запросов [E]
+  Expected: ReplenishStopReason:<ReplenishStopReason.noUnitPlan>
+    Actual: ReplenishStopReason:<ReplenishStopReason.complete>
+  
+  package:matcher                                              expect
+  package:flutter_test/src/widget_tester.dart 473:18           expect
+  test\unit\domain\generation\replenish_stage_test.dart 488:7  main.<fn>.<fn>
+  
+00:00 +2 -20: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/replenish_stage_wiring_test.dart: сбой третьего батча в движке → добор закрывает заказ
+00:00 +2 -20: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/replenish_stage_test.dart: остановка предохранителем — точная причина сбой провайдера в доборе — provider_error, принятое сохранено [E]
+  Expected: ReplenishStopReason:<ReplenishStopReason.providerError>
+    Actual: ReplenishStopReason:<ReplenishStopReason.complete>
+  
+  package:matcher                                              expect
+  package:flutter_test/src/widget_tester.dart 473:18           expect
+  test\unit\domain\generation\replenish_stage_test.dart 516:9  main.<fn>.<fn>
+  
+00:00 +2 -21: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/replenish_stage_wiring_test.dart: сбой третьего батча в движке → добор закрывает заказ
+00:00 +2 -21: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/replenish_stage_test.dart: итог не выдаёт успех при недоборе ready только при закрытых слотах, а не по числу карточек [E]
+  Expected: <2>
+    Actual: <0>
+  
+  package:matcher                                              expect
+  package:flutter_test/src/widget_tester.dart 473:18           expect
+  test\unit\domain\generation\replenish_stage_test.dart 546:7  main.<fn>.<fn>
+  
+00:00 +2 -22: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/replenish_stage_test.dart: итог не выдаёт успех при недоборе полное закрытие: ready, isComplete, materialCapacity нет
+00:00 +2 -23: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/replenish_stage_test.dart: итог не выдаёт успех при недоборе полное закрытие: ready, isComplete, materialCapacity нет [E]
+  Expected: GenerationStage:<GenerationStage.ready>
+    Actual: GenerationStage:<GenerationStage.partial>
+  
+  package:matcher                                              expect
+  package:flutter_test/src/widget_tester.dart 473:18           expect
+  test\unit\domain\generation\replenish_stage_test.dart 569:7  main.<fn>.<fn>
+  
+00:00 +2 -23: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/replenish_stage_wiring_test.dart: сбой третьего батча в движке → добор закрывает заказ [E]
+  Expected: <6>
+    Actual: <0>
+  
+  package:matcher                                                 expect
+  package:flutter_test/src/widget_tester.dart 473:18              expect
+  test\unit\api\generation\replenish_stage_wiring_test.dart 86:5  main.<fn>
+  
+00:00 +2 -23: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/replenish_stage_test.dart: итог не выдаёт успех при недоборе исчерпание уже объявлено первым проходом — запросов нет
+00:00 +2 -24: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/replenish_stage_test.dart: итог не выдаёт успех при недоборе исчерпание уже объявлено первым проходом — запросов нет [E]
+  Expected: ReplenishStopReason:<ReplenishStopReason.exhaustedMaterial>
+    Actual: ReplenishStopReason:<ReplenishStopReason.complete>
+  
+  package:matcher                                              expect
+  package:flutter_test/src/widget_tester.dart 473:18           expect
+  test\unit\domain\generation\replenish_stage_test.dart 592:7  main.<fn>.<fn>
+  
+00:00 +2 -24: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/replenish_stage_test.dart: коды причин и учёт расхода операции причины — машинные коды: разбор строки и предохранители
+00:00 +3 -24: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/replenish_stage_test.dart: коды причин и учёт расхода операции политика сравнивается по всем пределам, отрицательные проходы — ошибка
+00:00 +3 -25: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/replenish_stage_test.dart: коды причин и учёт расхода операции политика сравнивается по всем пределам, отрицательные проходы — ошибка [E]
+  Expected: contains 'запросов 5'
+    Actual: 'Instance of \'ReplenishPolicy\''
+     Which: does not contain 'запросов 5'
+  
+  package:matcher                                              expect
+  package:flutter_test/src/widget_tester.dart 473:18           expect
+  test\unit\domain\generation\replenish_stage_test.dart 629:9  main.<fn>.<fn>
+  
+00:00 +3 -25: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/replenish_stage_test.dart: коды причин и учёт расхода операции отмена кодом провайдера — cancelled, принятое сохранено
+00:00 +3 -26: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/replenish_stage_test.dart: коды причин и учёт расхода операции отмена кодом провайдера — cancelled, принятое сохранено [E]
+  Expected: ReplenishStopReason:<ReplenishStopReason.cancelled>
+    Actual: ReplenishStopReason:<ReplenishStopReason.complete>
+  
+  package:matcher                                              expect
+  package:flutter_test/src/widget_tester.dart 473:18           expect
+  test\unit\domain\generation\replenish_stage_test.dart 656:7  main.<fn>.<fn>
+  
+00:00 +3 -26: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/replenish_stage_test.dart: коды причин и учёт расхода операции бюджет считает расход без totalTokens по слагаемым
+00:00 +3 -27: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/replenish_stage_test.dart: коды причин и учёт расхода операции бюджет считает расход без totalTokens по слагаемым [E]
+  Expected: ReplenishStopReason:<ReplenishStopReason.tokenBudget>
+    Actual: ReplenishStopReason:<ReplenishStopReason.complete>
+  
+  package:matcher                                              expect
+  package:flutter_test/src/widget_tester.dart 473:18           expect
+  test\unit\domain\generation\replenish_stage_test.dart 685:7  main.<fn>.<fn>
+  
+00:00 +3 -27: Some tests failed.
+
+Failing tests:
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/replenish_stage_wiring_test.dart: сбой третьего батча в движке → добор закрывает заказ
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_report_test.dart: GenerationReport недобор: причины, покрытие единиц, расход по этапам, время
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_report_test.dart: GenerationReport отброшенные карточки видны причиной, но не отменяют итог
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_report_test.dart: GenerationReport полный заказ: причин нет, материал не исчерпан, успех
+  ... and 23 more
