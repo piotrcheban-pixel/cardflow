@@ -8,8 +8,13 @@ import 'package:cardflow/l10n/app_localizations.dart';
 String parserErrorCodeMessage(AppLocalizations l10n, ParserErrorCode code) {
   return switch (code) {
     ParserErrorCode.unsupportedFormat => l10n.parserErrorUnsupportedFormat,
+    ParserErrorCode.docFormatNotSupported => l10n.parserErrorDocNotSupported,
+    ParserErrorCode.pptFormatNotSupported => l10n.parserErrorPptNotSupported,
     ParserErrorCode.fileTooLarge => l10n.parserErrorFileTooLarge,
+    ParserErrorCode.fileAccessDenied => l10n.parserErrorFileAccessDenied,
     ParserErrorCode.unreadableFile => l10n.parserErrorUnreadableFile,
+    ParserErrorCode.corruptFile => l10n.parserErrorCorruptFile,
+    ParserErrorCode.passwordProtected => l10n.parserErrorPasswordProtected,
     ParserErrorCode.scannedPdf => l10n.parserErrorScannedPdf,
     ParserErrorCode.emptyText => l10n.parserErrorEmptyText,
     ParserErrorCode.garbledText => l10n.parserErrorGarbledText,

@@ -15,6 +15,7 @@ import 'dart:typed_data';
 import 'package:image/image.dart' as image;
 import 'package:pdfrx/pdfrx.dart';
 
+import 'package:cardflow/api/parsers/pdfium_bootstrap.dart';
 import 'package:cardflow/domain/text/parser_exception.dart';
 
 /// Отрендеренная страница PDF с номером (с 1).
@@ -86,13 +87,27 @@ class PdfScanRenderer {
   /// 3 страницы (итерация 7.11, ADR-027): этого хватает модели для первых
   /// карточек, а размер запроса с PNG-страницами остаётся разумным;
   /// [maxWidth] — максимальная ширина PNG в пикселях.
-  const PdfScanRenderer({this.maxPages = 3, this.maxWidth = 1600});
+  const PdfScanRenderer({
+    this.maxPages = 3,
+    this.maxWidth = 1600,
+    this.cacheDirectory,
+  });
 
   /// Максимум рендерируемых страниц.
   final int maxPages;
 
   /// Максимальная ширина страницы в пикселях.
   final int maxWidth;
+
+  /// Каталог кэша PDFium (TASK 04): без него на Android pdfrx падал на `HOME`.
+  final String? cacheDirectory;
+
+  /// Копия рендерера с явным каталогом кэша PDFium.
+  PdfScanRenderer withCacheDirectory(String? value) => PdfScanRenderer(
+    maxPages: maxPages,
+    maxWidth: maxWidth,
+    cacheDirectory: value,
+  );
 
   /// Рендерит первые страницы [bytes] в PNG.
   ///
@@ -126,7 +141,7 @@ class PdfScanRenderer {
       );
     }
     try {
-      await pdfrxInitialize();
+      await ensurePdfiumInitialized(cacheDirectory: cacheDirectory);
     } on Object catch (error) {
       throw ParserException(
         ParserErrorCode.scannedPdf,

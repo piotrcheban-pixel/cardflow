@@ -14,8 +14,13 @@ void main() {
   test('каждый код ParserErrorCode покрыт отдельной непустой строкой ARB', () {
     final Map<ParserErrorCode, String> expected = <ParserErrorCode, String>{
       ParserErrorCode.unsupportedFormat: l10n.parserErrorUnsupportedFormat,
+      ParserErrorCode.docFormatNotSupported: l10n.parserErrorDocNotSupported,
+      ParserErrorCode.pptFormatNotSupported: l10n.parserErrorPptNotSupported,
       ParserErrorCode.fileTooLarge: l10n.parserErrorFileTooLarge,
+      ParserErrorCode.fileAccessDenied: l10n.parserErrorFileAccessDenied,
       ParserErrorCode.unreadableFile: l10n.parserErrorUnreadableFile,
+      ParserErrorCode.corruptFile: l10n.parserErrorCorruptFile,
+      ParserErrorCode.passwordProtected: l10n.parserErrorPasswordProtected,
       ParserErrorCode.scannedPdf: l10n.parserErrorScannedPdf,
       ParserErrorCode.emptyText: l10n.parserErrorEmptyText,
       ParserErrorCode.garbledText: l10n.parserErrorGarbledText,

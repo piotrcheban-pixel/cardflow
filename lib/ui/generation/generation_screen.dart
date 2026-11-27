@@ -465,18 +465,21 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
   }
 
   Future<void> _pickFiles() async {
+    final AppLocalizations l10n = AppLocalizations.of(context);
     try {
       final List<PickedDocument> picked = await ref
           .read(documentGatewayProvider)
           .pickDocuments();
       if (!mounted) return;
       if (picked.isNotEmpty) await _attach(picked);
+    } on ParserException catch (error) {
+      // TASK 04: у отказа доступа/размера есть собственный код и строка ARB;
+      // общая «Не удалось прочитать файл» скрывала причину.
+      if (!mounted) return;
+      showAppMessage(context, parserErrorCodeMessage(l10n, error.code));
     } on Object {
       if (!mounted) return;
-      showAppMessage(
-        context,
-        AppLocalizations.of(context).parserErrorUnreadableFile,
-      );
+      showAppMessage(context, l10n.parserErrorUnreadableFile);
     }
   }
 
@@ -518,11 +521,13 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
   }
 
   /// Парсит один файл; изображения и PDF-сканы сохраняются как вложения.
+  ///
+  /// Временная копия URI (`content://`) удаляется в `finally`: она нужна только
+  /// парсеру (TASK 04, часть 2).
   Future<void> _parse(_AttachedFile file) async {
+    final DocumentGateway gateway = ref.read(documentGatewayProvider);
     try {
-      final bytes = await ref
-          .read(documentGatewayProvider)
-          .readDocument(file.picked);
+      final bytes = await gateway.readDocument(file.picked);
       if (!mounted) return;
       final AttachmentMediaType? imageType = attachmentMediaTypeForFileName(
         file.picked.name,
@@ -551,7 +556,11 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
       final ParsingOutcome outcome = await ref
           .read(fileParsingServiceProvider)
           .parseFile(
-            FileParsingInput(fileName: file.picked.name, bytes: bytes),
+            FileParsingInput(
+              fileName: file.picked.name,
+              bytes: bytes,
+              mimeType: file.picked.mimeType,
+            ),
           );
       if (!mounted) return;
       if (outcome is ParsedFileSuccess) {
@@ -599,6 +608,9 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
           ..status = _FileStatus.failed
           ..errorCode = ParserErrorCode.unreadableFile;
       });
+    } finally {
+      // Временная копия URI больше не нужна: байты уже в памяти/парсере.
+      await gateway.releaseDocument(file.picked);
     }
   }
 
@@ -655,6 +667,8 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
   }
 
   void _removeFile(int index) {
+    final _AttachedFile file = _files[index];
+    unawaited(ref.read(documentGatewayProvider).releaseDocument(file.picked));
     setState(() => _files.removeAt(index));
   }
 
@@ -1765,7 +1779,9 @@ class _FileTile extends StatelessWidget {
       DocumentFormat.rtf ||
       DocumentFormat.txt ||
       DocumentFormat.md => Icons.text_snippet_outlined,
-      DocumentFormat.doc || DocumentFormat.xls => Icons.block_outlined,
+      DocumentFormat.doc ||
+      DocumentFormat.ppt ||
+      DocumentFormat.xls => Icons.block_outlined,
       null => Icons.insert_drive_file_outlined,
     };
   }

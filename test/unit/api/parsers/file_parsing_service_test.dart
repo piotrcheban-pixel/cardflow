@@ -43,6 +43,7 @@ class _FakeScanPages extends PdfScanPageExtractor {
     Uint8List bytes, {
     required String fileName,
     int? maxPages,
+    String? cacheDirectory,
   }) async {
     if (error != null) throw error!;
     return PdfScanDocument(fileName: fileName, pages: pages);
@@ -80,7 +81,8 @@ void main() {
         expect(outcomes[1], isA<ParsedFileFailure>());
         expect(
           (outcomes[1] as ParsedFileFailure).code,
-          ParserErrorCode.unsupportedFormat,
+          ParserErrorCode.docFormatNotSupported,
+          reason: 'TASK 04: у .doc свой код с советом пересохранить в .docx',
         );
         expect((outcomes[1] as ParsedFileFailure).fileName, 'старый.doc');
         expect(outcomes[2], isA<ParsedFileSuccess>());
@@ -114,6 +116,66 @@ void main() {
         ParserErrorCode.unsupportedFormat,
       );
       expect(_isolateRuns, 0, reason: 'Неподдерживаемые файлы не парсятся');
+    });
+
+    // TASK 04, часть 3: старые бинарные форматы получают собственный код и
+    // совет пересохранить файл в OOXML (ADR-049).
+    test('.doc и .ppt → отдельные коды с советом пересохранить', () async {
+      final FileParsingService service = FileParsingService(
+        isolateRunner: _recordingRunner,
+      );
+      final List<ParsingOutcome> outcomes = await service.parseAll(
+        <FileParsingInput>[
+          _input('старый.doc', <int>[0xD0, 0xCF, 0x11, 0xE0]),
+          _input('старый.ppt', <int>[0xD0, 0xCF, 0x11, 0xE0]),
+        ],
+      );
+      expect(
+        (outcomes[0] as ParsedFileFailure).code,
+        ParserErrorCode.docFormatNotSupported,
+      );
+      expect(
+        (outcomes[1] as ParsedFileFailure).code,
+        ParserErrorCode.pptFormatNotSupported,
+      );
+      expect(_isolateRuns, 0, reason: 'CFB-файлы не отправляются в парсер');
+    });
+
+    test('каталог кэша PDFium запрашивается только для PDF', () async {
+      int calls = 0;
+      final FileParsingService service = FileParsingService(
+        isolateRunner: _recordingRunner,
+        pdfCacheDirectory: () async {
+          calls++;
+          return '/tmp/cardflow-pdf-test';
+        },
+      );
+      final List<ParsingOutcome> outcomes = await service.parseAll(
+        <FileParsingInput>[
+          _input('заметки.txt', utf8Bytes('Текст')),
+          _input('материалы.pdf', buildPdf('PDF text')),
+        ],
+      );
+      expect(
+        outcomes.every((ParsingOutcome o) => o is ParsedFileSuccess),
+        isTrue,
+      );
+      expect(
+        calls,
+        1,
+        reason: 'Каталог PDFium нужен только PDF-парсеру (TASK 04)',
+      );
+    });
+
+    test('ошибка поставщика каталога PDFium не ломает разбор', () async {
+      final FileParsingService service = FileParsingService(
+        isolateRunner: _recordingRunner,
+        pdfCacheDirectory: () async => throw StateError('нет каталога'),
+      );
+      final ParsingOutcome outcome = await service.parseFile(
+        _input('материалы.pdf', buildPdf('PDF text')),
+      );
+      expect(outcome, isA<ParsedFileSuccess>());
     });
   });
 

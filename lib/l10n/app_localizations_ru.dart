@@ -588,6 +588,26 @@ class AppLocalizationsRu extends AppLocalizations {
       'PDF содержит нечитаемый текст. Сохраните файл в другом формате и попробуйте снова';
 
   @override
+  String get parserErrorDocNotSupported =>
+      'Формат .doc не поддерживается. Сохраните файл как .docx и попробуйте снова';
+
+  @override
+  String get parserErrorPptNotSupported =>
+      'Формат .ppt не поддерживается. Сохраните файл как .pptx и попробуйте снова';
+
+  @override
+  String get parserErrorFileAccessDenied =>
+      'Нет доступа к выбранному файлу. Скопируйте файл в память устройства и попробуйте снова';
+
+  @override
+  String get parserErrorCorruptFile =>
+      'Файл повреждён или не является документом этого формата';
+
+  @override
+  String get parserErrorPasswordProtected =>
+      'PDF защищён паролем. Снимите защиту и попробуйте снова';
+
+  @override
   String get generationErrorMissingApiKey =>
       'Ключ доступа не задан. Добавьте ключ в настройках';
 

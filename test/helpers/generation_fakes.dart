@@ -694,4 +694,12 @@ class FakeDocumentGateway implements DocumentGateway {
     return bytesByPath[document.path] ??
         Uint8List.fromList('Материал лекции'.codeUnits);
   }
+
+  /// Файлы, у которых освободили временную копию (TASK 04).
+  final List<PickedDocument> released = <PickedDocument>[];
+
+  @override
+  Future<void> releaseDocument(PickedDocument document) async {
+    released.add(document);
+  }
 }

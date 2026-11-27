@@ -1030,6 +1030,36 @@ abstract class AppLocalizations {
   /// **'PDF содержит нечитаемый текст. Сохраните файл в другом формате и попробуйте снова'**
   String get parserErrorGarbledText;
 
+  /// Ошибка парсинга: старый бинарный Word (.doc), CFB-парсера нет — просим пересохранить в DOCX (TASK 04, ADR-049).
+  ///
+  /// In ru, this message translates to:
+  /// **'Формат .doc не поддерживается. Сохраните файл как .docx и попробуйте снова'**
+  String get parserErrorDocNotSupported;
+
+  /// Ошибка парсинга: старый бинарный PowerPoint (.ppt), CFB-парсера нет — просим пересохранить в PPTX (TASK 04, ADR-049).
+  ///
+  /// In ru, this message translates to:
+  /// **'Формат .ppt не поддерживается. Сохраните файл как .pptx и попробуйте снова'**
+  String get parserErrorPptNotSupported;
+
+  /// Ошибка импорта: URI провайдера (content://) не читается и локальной копии нет (TASK 04, Android).
+  ///
+  /// In ru, this message translates to:
+  /// **'Нет доступа к выбранному файлу. Скопируйте файл в память устройства и попробуйте снова'**
+  String get parserErrorFileAccessDenied;
+
+  /// Ошибка парсинга: PDFium не открыл PDF — файл битый (TASK 04).
+  ///
+  /// In ru, this message translates to:
+  /// **'Файл повреждён или не является документом этого формата'**
+  String get parserErrorCorruptFile;
+
+  /// Ошибка парсинга: PDF запрашивает пароль, текстовый слой недоступен (TASK 04).
+  ///
+  /// In ru, this message translates to:
+  /// **'PDF защищён паролем. Снимите защиту и попробуйте снова'**
+  String get parserErrorPasswordProtected;
+
   /// Генерация: ключ API не задан (SPEC A8.6).
   ///
   /// In ru, this message translates to:

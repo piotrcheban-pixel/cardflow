@@ -8,6 +8,7 @@ import 'package:cardflow/api/parsers/pdf_page_classifier.dart';
 import 'package:cardflow/api/parsers/pdf_page_regions.dart';
 import 'package:cardflow/api/parsers/pdf_scan_renderer.dart';
 import 'package:cardflow/api/parsers/pdf_text_quality.dart';
+import 'package:cardflow/api/parsers/pdfium_bootstrap.dart';
 import 'package:cardflow/domain/generation/document_image.dart';
 import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/text/document_format.dart';
@@ -42,7 +43,27 @@ class PdfParser implements DocumentParser {
     this.imageFilter = const PdfImageFilter(),
     this.maxScanPages = 3,
     this.maxImages = 24,
+    this.cacheDirectory,
   });
+
+  /// Каталог кэша PDFium, вычисленный в main-изоляте (`path_provider`).
+  ///
+  /// Передаётся строкой, потому что из фонового изолята платформенный канал
+  /// недоступен. `null` — `Directory.systemTemp` (никогда не `HOME`: на
+  /// Android его нет, TASK 04).
+  final String? cacheDirectory;
+
+  /// Копия парсера с явным каталогом кэша PDFium.
+  PdfParser withCacheDirectory(String? value) => PdfParser(
+    sanitizer: sanitizer,
+    quality: quality,
+    imageExtractor: imageExtractor,
+    regionDetector: regionDetector,
+    imageFilter: imageFilter,
+    maxScanPages: maxScanPages,
+    maxImages: maxImages,
+    cacheDirectory: value,
+  );
 
   /// Санитайзер извлечённого текста (C1/суррогаты/BOM).
   final TextSanitizer sanitizer;
@@ -75,7 +96,9 @@ class PdfParser implements DocumentParser {
     required String fileName,
   }) async {
     try {
-      await pdfrxInitialize();
+      // TASK 04: явный каталог кэша — иначе на Android pdfrx уходит в ветку
+      // `Platform.environment['HOME']!` и падает до открытия документа.
+      await ensurePdfiumInitialized(cacheDirectory: cacheDirectory);
     } on Object catch (error) {
       throw ParserException(
         ParserErrorCode.unreadableFile,
@@ -92,17 +115,17 @@ class PdfParser implements DocumentParser {
       );
     } on PdfPasswordException catch (error) {
       throw ParserException(
-        ParserErrorCode.unreadableFile,
+        ParserErrorCode.passwordProtected,
         details: 'PDF защищён паролем: ${error.message}',
       );
     } on PdfException catch (error) {
       throw ParserException(
-        ParserErrorCode.unreadableFile,
+        ParserErrorCode.corruptFile,
         details: 'PDF повреждён: ${error.message}',
       );
     } on Object catch (error) {
       throw ParserException(
-        ParserErrorCode.unreadableFile,
+        ParserErrorCode.corruptFile,
         details: 'Не удалось открыть PDF: $error',
       );
     }
@@ -176,7 +199,9 @@ class PdfParser implements DocumentParser {
         document: document,
         fileName: fileName,
         pageTexts: cleanedTexts,
-        imageExtraction: await imageExtractor.extract(bytes),
+        imageExtraction: await imageExtractor
+            .withCacheDirectory(cacheDirectory)
+            .extract(bytes),
       );
       for (final _StagedImage staged in images) {
         builder.addImageToSection(

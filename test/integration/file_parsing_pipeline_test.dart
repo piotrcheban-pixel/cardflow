@@ -125,7 +125,9 @@ void main() {
     expect(
       failures.map((ParsedFileFailure f) => f.code).toList(),
       <ParserErrorCode>[
-        ParserErrorCode.unsupportedFormat,
+        // TASK 04: `.doc` — отдельный код с советом «Сохраните как .docx»
+        // (ADR-049), а не общее «формат не поддерживается».
+        ParserErrorCode.docFormatNotSupported,
         ParserErrorCode.unreadableFile,
       ],
       reason: 'Ошибки по файлам, остальные файлы разобраны',

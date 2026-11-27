@@ -426,7 +426,9 @@ void main() {
     );
     await tester.pumpAndSettle();
     final l10n = l10nOf(tester);
-    expect(find.text(l10n.parserErrorUnsupportedFormat), findsOneWidget);
+    // TASK 04, часть 3: для .doc показывается конкретный следующий шаг —
+    // «Сохраните файл как .docx», а не общее «формат не поддерживается».
+    expect(find.text(l10n.parserErrorDocNotSupported), findsOneWidget);
   });
 
   testWidgets('старт без файлов и без темы — кнопка неактивна, подсказка ARB', (
@@ -1518,6 +1520,7 @@ class _FakePdfScanRenderer extends PdfScanPageExtractor {
     Uint8List bytes, {
     required String fileName,
     int? maxPages,
+    String? cacheDirectory,
   }) async {
     if (error != null) throw error!;
     return PdfScanDocument(

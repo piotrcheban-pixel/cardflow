@@ -63,7 +63,7 @@ void main() {
     },
   );
 
-  test('битый PDF → ParserException(unreadableFile)', () async {
+  test('битый PDF → ParserException(corruptFile)', () async {
     await expectLater(
       parse(
         Uint8List.fromList(<int>[
@@ -75,7 +75,7 @@ void main() {
         isA<ParserException>().having(
           (ParserException e) => e.code,
           'code',
-          ParserErrorCode.unreadableFile,
+          ParserErrorCode.corruptFile,
         ),
       ),
     );
@@ -93,7 +93,7 @@ void main() {
     },
   );
 
-  test('запароленный PDF → ParserException(unreadableFile)', () async {
+  test('запароленный PDF → ParserException(passwordProtected)', () async {
     await expectLater(
       parse(
         buildEncryptedPdf(
@@ -105,7 +105,7 @@ void main() {
         isA<ParserException>().having(
           (ParserException e) => e.code,
           'code',
-          ParserErrorCode.unreadableFile,
+          ParserErrorCode.passwordProtected,
         ),
       ),
     );
@@ -147,5 +147,54 @@ void main() {
     );
 
     expect(document.text, 'AB');
+  });
+
+  // TASK 04, часть 2: обычный PDF с кириллицей — не ошибка и не мусор.
+  test('PDF с кириллицей: текст извлекается без замен', () async {
+    final ParsedDocument document = await parse(
+      buildType0UnicodePdf(<String>[
+        '041F',
+        '0440',
+        '0438',
+        '0432',
+        '0435',
+        '0442',
+        '0020',
+        '043C',
+        '0438',
+        '0440',
+      ]),
+    );
+
+    expect(document.text, 'Привет мир');
+    expect(document.text, isNot(contains('\uFFFD')));
+  });
+
+  // TASK 04, часть 2: большой документ разбирается целиком.
+  test('большой PDF (120 страниц): все страницы → разделы', () async {
+    final ParsedDocument document = await parse(
+      buildPdfPages(<String>[
+        for (int page = 1; page <= 120; page++) 'Page $page content',
+      ]),
+    );
+
+    expect(document.metadata.pageCount, 120);
+    expect(document.sections, hasLength(120));
+    expect(document.text, contains('Page 1 content'));
+    expect(document.text, contains('Page 120 content'));
+  });
+
+  // TASK 04, часть 2: пустой (0 байт) PDF не считается успехом.
+  test('пустой PDF → corruptFile, а не пустой документ', () async {
+    await expectLater(
+      parse(Uint8List(0)),
+      throwsA(
+        isA<ParserException>().having(
+          (ParserException e) => e.code,
+          'code',
+          ParserErrorCode.corruptFile,
+        ),
+      ),
+    );
   });
 }

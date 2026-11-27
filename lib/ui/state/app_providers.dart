@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
 
 import 'package:cardflow/api/generation/api_key_verifier.dart';
 import 'package:cardflow/api/generation/card_generation_service.dart';
@@ -16,6 +17,7 @@ import 'package:cardflow/api/images/image_search_service.dart';
 import 'package:cardflow/api/models/model_capability_service.dart';
 import 'package:cardflow/api/providers/generation_adapters.dart';
 import 'package:cardflow/api/parsers/file_parsing_service.dart';
+import 'package:cardflow/api/parsers/parser_diagnostics.dart';
 import 'package:cardflow/data/cards/card_image_refresher.dart';
 import 'package:cardflow/data/cards/drift_card_media_repository.dart';
 import 'package:cardflow/data/study/drift_match_best_store.dart';
@@ -384,13 +386,28 @@ final cardGenerationServiceProvider = Provider<CardGenerationService>((ref) {
 });
 
 /// Парсинг прикреплённых документов (SPEC A8.3, A8.5 шаг 3).
+///
+/// PDFium получает каталог кэша из main-изолята (`path_provider`): в фоновом
+/// изоляте платформенный канал недоступен, а неявный `HOME` в pdfrx на Android
+/// не задан — из-за этого любой PDF показывал «Не удалось прочитать файл»
+/// (TASK 04, часть 2).
 final fileParsingServiceProvider = Provider<FileParsingService>((ref) {
-  return FileParsingService();
+  return FileParsingService(
+    pdfCacheDirectory: () async => (await getTemporaryDirectory()).path,
+    diagnostics: ref.watch(parserDiagnosticsProvider),
+  );
+});
+
+/// Debug-диагностика импорта документов (TASK 04, часть 8).
+final parserDiagnosticsProvider = Provider<ParserDiagnostics>((ref) {
+  return const ParserDiagnostics();
 });
 
 /// Шлюз выбора/чтения документов генерации (A6.8).
 final documentGatewayProvider = Provider<DocumentGateway>((ref) {
-  return const FilePickerDocumentGateway();
+  return FilePickerDocumentGateway(
+    diagnostics: ref.watch(parserDiagnosticsProvider),
+  );
 });
 
 /// Задания генерации в `generation_jobs` (A5, ADR-015).

@@ -4,8 +4,11 @@ import 'package:cardflow/domain/text/parser_exception.dart';
 
 /// Форматы документов, которые принимает генерация карточек (SPEC A8.3).
 ///
-/// `.doc`/`.xls` присутствуют в перечислении, потому что пользователь может их
-/// прикрепить; нативный парсер для них не поддерживается (ADR-003).
+/// `.doc`/`.ppt`/`.xls` присутствуют в перечислении, потому что пользователь
+/// может их прикрепить; нативный парсер для них не поддерживается (ADR-003,
+/// ADR-049). В экосистеме Dart нет надёжного парсера CFB (Compound File
+/// Binary), поэтому приложение не пытается читать старые бинарные форматы, а
+/// просит пересохранить файл в OOXML.
 enum DocumentFormat {
   pdf('pdf'),
   docx('docx'),
@@ -16,6 +19,7 @@ enum DocumentFormat {
   md('md'),
   rtf('rtf'),
   doc('doc'),
+  ppt('ppt'),
   xls('xls');
 
   const DocumentFormat(this.extension);
@@ -23,8 +27,11 @@ enum DocumentFormat {
   /// Расширение файла без точки (нижний регистр).
   final String extension;
 
-  /// Поддерживается ли нативный парсинг этого формата (ADR-003).
-  bool get isSupportedForParsing => this != doc && this != xls;
+  /// Поддерживается ли нативный парсинг этого формата (ADR-003, ADR-049).
+  bool get isSupportedForParsing => this != doc && this != ppt && this != xls;
+
+  /// Старый бинарный формат Word/PowerPoint (CFB): нужен отдельный совет.
+  bool get isLegacyBinary => this == doc || this == ppt;
 }
 
 /// Определяет формат документа по расширению имени файла (регистр не важен).
@@ -83,6 +90,7 @@ void verifyDocumentSignature(DocumentFormat format, List<int> bytes) {
     case DocumentFormat.txt:
     case DocumentFormat.md:
     case DocumentFormat.doc:
+    case DocumentFormat.ppt:
     case DocumentFormat.xls:
       return;
   }

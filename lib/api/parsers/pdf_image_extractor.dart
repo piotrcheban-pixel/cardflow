@@ -24,6 +24,8 @@ import 'package:image/image.dart' as img;
 import 'package:pdfium_dart/pdfium_dart.dart' as pdfium;
 import 'package:pdfrx/pdfrx.dart';
 
+import 'package:cardflow/api/parsers/pdfium_bootstrap.dart';
+
 /// Минимальная сторона встроенного изображения, которую вообще извлекаем.
 ///
 /// Не является фильтром «мусора»: небольшие формулы и фрагменты схем важны.
@@ -182,6 +184,7 @@ class PdfImageExtractor {
   const PdfImageExtractor({
     this.maxImages = kMaxPdfImages,
     this.minSide = kMinPdfImageSide,
+    this.cacheDirectory,
   });
 
   /// Максимум изображений из одного PDF.
@@ -190,6 +193,16 @@ class PdfImageExtractor {
   /// Минимальная сторона изображения в пикселях.
   final int minSide;
 
+  /// Каталог кэша PDFium (TASK 04): на Android без него pdfrx падал на `HOME`.
+  final String? cacheDirectory;
+
+  /// Копия с явным каталогом кэша PDFium.
+  PdfImageExtractor withCacheDirectory(String? value) => PdfImageExtractor(
+    maxImages: maxImages,
+    minSide: minSide,
+    cacheDirectory: value,
+  );
+
   /// Возвращает изображения или `null`, если извлечение недоступно/упало.
   ///
   /// `null` — не ошибка файла: текст документа уже извлечён, изображения
@@ -197,7 +210,7 @@ class PdfImageExtractor {
   Future<PdfImageExtractionResult?> extract(Uint8List bytes) async {
     if (bytes.isEmpty) return null;
     try {
-      await pdfrxInitialize();
+      await ensurePdfiumInitialized(cacheDirectory: cacheDirectory);
     } on Object {
       return null;
     }

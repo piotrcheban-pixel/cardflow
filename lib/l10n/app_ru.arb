@@ -722,6 +722,26 @@
   "@parserErrorGarbledText": {
     "description": "Ошибка парсинга: текстовый слой PDF состоит из символов замены/битой кодировки (итерация 7.10, ADR-024)."
   },
+  "parserErrorDocNotSupported": "Формат .doc не поддерживается. Сохраните файл как .docx и попробуйте снова",
+  "@parserErrorDocNotSupported": {
+    "description": "Ошибка парсинга: старый бинарный Word (.doc), CFB-парсера нет — просим пересохранить в DOCX (TASK 04, ADR-049)."
+  },
+  "parserErrorPptNotSupported": "Формат .ppt не поддерживается. Сохраните файл как .pptx и попробуйте снова",
+  "@parserErrorPptNotSupported": {
+    "description": "Ошибка парсинга: старый бинарный PowerPoint (.ppt), CFB-парсера нет — просим пересохранить в PPTX (TASK 04, ADR-049)."
+  },
+  "parserErrorFileAccessDenied": "Нет доступа к выбранному файлу. Скопируйте файл в память устройства и попробуйте снова",
+  "@parserErrorFileAccessDenied": {
+    "description": "Ошибка импорта: URI провайдера (content://) не читается и локальной копии нет (TASK 04, Android)."
+  },
+  "parserErrorCorruptFile": "Файл повреждён или не является документом этого формата",
+  "@parserErrorCorruptFile": {
+    "description": "Ошибка парсинга: PDFium не открыл PDF — файл битый (TASK 04)."
+  },
+  "parserErrorPasswordProtected": "PDF защищён паролем. Снимите защиту и попробуйте снова",
+  "@parserErrorPasswordProtected": {
+    "description": "Ошибка парсинга: PDF запрашивает пароль, текстовый слой недоступен (TASK 04)."
+  },
   "generationErrorMissingApiKey": "Ключ доступа не задан. Добавьте ключ в настройках",
   "@generationErrorMissingApiKey": {
     "description": "Генерация: ключ API не задан (SPEC A8.6)."

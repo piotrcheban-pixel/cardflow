@@ -149,6 +149,7 @@ class PdfScanPageExtractor {
   const PdfScanPageExtractor({
     this.renderer = const PdfScanRenderer(),
     this.regions = const PdfPageRegionDetector(),
+    this.cacheDirectory,
   });
 
   /// Рендерер страниц (PDFium).
@@ -157,16 +158,26 @@ class PdfScanPageExtractor {
   /// Детектор визуальных областей.
   final PdfPageRegionDetector regions;
 
+  /// Каталог кэша PDFium (TASK 04): на Android без него рендер падал на `HOME`.
+  final String? cacheDirectory;
+
   /// Рендерит страницы и находит области.
   ///
+  /// [cacheDirectory] — каталог кэша PDFium из main-изолята (TASK 04);
+  /// `null` — каталог рендерера или `Directory.systemTemp`.
   /// Ошибки PDFium → `ParserException(scannedPdf)` (как у рендерера); ошибки
   /// областей не фатальны: страница остаётся без вырезок.
   Future<PdfScanDocument> extract(
     Uint8List bytes, {
     required String fileName,
     int? maxPages,
+    String? cacheDirectory,
   }) async {
-    final List<PdfScanPageRender> rendered = await renderer.renderPages(
+    final String? effectiveCache = cacheDirectory ?? this.cacheDirectory;
+    final PdfScanRenderer effective = effectiveCache == null
+        ? renderer
+        : renderer.withCacheDirectory(effectiveCache);
+    final List<PdfScanPageRender> rendered = await effective.renderPages(
       bytes,
       fileName: fileName,
       maxPages: maxPages,

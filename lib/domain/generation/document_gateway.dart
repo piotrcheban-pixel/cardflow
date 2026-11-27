@@ -13,6 +13,9 @@ class PickedDocument {
     required this.name,
     required this.sizeBytes,
     this.preloadedBytes,
+    this.temporaryPath,
+    this.mimeType,
+    this.sourceScheme,
   });
 
   /// Путь к файлу на диске (для `content://`/веба — синтетический `memory://`).
@@ -28,6 +31,23 @@ class PickedDocument {
   ///
   /// `null` — читать по [path] через [DocumentGateway.readDocument].
   final Uint8List? preloadedBytes;
+
+  /// Локальная временная копия файла, созданная из URI провайдера (TASK 04).
+  ///
+  /// Android отдаёт `content://`-URI; парсеру (и PDFium) нужен локальный
+  /// файл, поэтому байты копируются в каталог приложения
+  /// (`getTemporaryDirectory()`), а копия удаляется после разбора
+  /// ([DocumentGateway.releaseDocument]).
+  final String? temporaryPath;
+
+  /// MIME-тип, который сообщила платформа/провайдер (для диагностики).
+  final String? mimeType;
+
+  /// Схема исходного URI (`file`, `content`, `blob`, …) — для диагностики.
+  final String? sourceScheme;
+
+  /// Временная копия файла во временном каталоге приложения.
+  bool get isTemporaryCopy => temporaryPath != null;
 }
 
 /// Контракт файлового шлюза генерации.
@@ -40,4 +60,10 @@ abstract interface class DocumentGateway {
 
   /// Читает файл в память с проверкой [maxFileBytes] до чтения.
   Future<Uint8List> readDocument(PickedDocument document);
+
+  /// Освобождает ресурсы выбранного файла (временная копия URI).
+  ///
+  /// Ошибки удаления не пробрасываются: импорт уже завершён, а временный
+  /// каталог чистится ОС.
+  Future<void> releaseDocument(PickedDocument document);
 }
