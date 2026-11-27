@@ -45,6 +45,7 @@ class OpenAiCompatibleAdapter implements GenerationProviderAdapter {
     bool strictSchema = true,
     bool sendMaxTokens = true,
     List<GenerationAttachment> images = const <GenerationAttachment>[],
+    Map<String, Object?>? responseSchema,
   }) {
     for (final GenerationAttachment image in images) {
       if (image.isPdf) {
@@ -93,7 +94,7 @@ class OpenAiCompatibleAdapter implements GenerationProviderAdapter {
         'json_schema': <String, Object?>{
           'name': cardsResponseSchemaName,
           'strict': true,
-          'schema': openAiStrictCardSchema(),
+          'schema': responseSchema ?? openAiStrictCardSchema(),
         },
       };
     }

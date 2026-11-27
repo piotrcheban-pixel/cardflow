@@ -46,6 +46,7 @@ class AnthropicAdapter implements GenerationProviderAdapter {
     bool strictSchema = true,
     bool sendMaxTokens = true,
     List<GenerationAttachment> images = const <GenerationAttachment>[],
+    Map<String, Object?>? responseSchema,
   }) {
     final ProviderEndpoint endpoint = ProviderEndpoint.parse(
       protocol: ProviderProtocol.anthropicMessages,
@@ -88,7 +89,7 @@ class AnthropicAdapter implements GenerationProviderAdapter {
             'name': _emitCardsTool,
             'description':
                 'Emit the generated flashcards as JSON matching the schema.',
-            'input_schema': anthropicToolCardSchema(),
+            'input_schema': responseSchema ?? anthropicToolCardSchema(),
           },
         ],
         'tool_choice': <String, Object?>{

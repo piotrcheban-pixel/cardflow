@@ -13,7 +13,9 @@
 /// - `invalid` — сколько отброшено валидацией (структура/схема/контент);
 /// - `duplicates` — сколько отброшено как точный дубль колоды;
 /// - `accepted = generated − invalid − duplicates`;
-/// - `remaining = max(0, requested − accepted)` — долг.
+/// - `remaining = max(0, requested − accepted)` — долг;
+/// - `attempts` — сколько запросов ушло на партию (повторы и добор не живут в
+///   отдельном recovery-бюджете, TASK «Срез 5»).
 ///
 /// Инвариант: `invalid + duplicates <= generated` (нарушение — [AssertionError],
 /// ошибка программиста). Переполнение (`accepted > requested`) допустимо: план
@@ -79,12 +81,14 @@ class GenerationBatchLedger {
     this.generated = 0,
     this.invalid = 0,
     this.duplicates = 0,
+    this.attempts = 0,
     this.cause,
   }) : assert(batchIndex >= 0, 'Номер партии не может быть отрицательным'),
        assert(requested >= 0, 'Бюджет партии не может быть отрицательным'),
        assert(generated >= 0, 'Произведено не может быть отрицательным'),
        assert(invalid >= 0, 'Отброшено валидацией не может быть отрицательным'),
        assert(duplicates >= 0, 'Дублей не может быть отрицательным числом'),
+       assert(attempts >= 0, 'Число запросов не может быть отрицательным'),
        assert(
          invalid + duplicates <= generated,
          'Валидация и дубли вместе не могут превышать произведённое',
@@ -110,6 +114,13 @@ class GenerationBatchLedger {
 
   /// Сколько отброшено как точный дубль.
   final int duplicates;
+
+  /// Сколько запросов модели ушло на партию.
+  ///
+  /// Повторы (429/5xx/обрезка/добор по единицам) считаются **здесь**, а не в
+  /// отдельном recovery-бюджете: долг и расход запросов видны в одной
+  /// бухгалтерии (TASK «Срез 5», п. 3). Успешный первый запрос — тоже попытка.
+  final int attempts;
 
   /// Явная причина недобора; `null` — не задана (класс выводится из чисел).
   final ShortfallKind? cause;
@@ -141,7 +152,8 @@ class GenerationBatchLedger {
   /// Копия с добавленными счётчиками (партия продолжается).
   ///
   /// Отрицательные приращения — [AssertionError]; превышение
-  /// `invalid + duplicates` над `generated` — тоже.
+  /// `invalid + duplicates` над `generated` — тоже. Число запросов не
+  /// меняется: его считает [attempt].
   GenerationBatchLedger record({
     int generated = 0,
     int invalid = 0,
@@ -153,6 +165,27 @@ class GenerationBatchLedger {
       generated: this.generated + generated,
       invalid: this.invalid + invalid,
       duplicates: this.duplicates + duplicates,
+      attempts: attempts,
+      cause: cause,
+    );
+  }
+
+  /// Копия с [count] дополнительными запросами к модели (повтор или добор).
+  GenerationBatchLedger attempt([int count = 1]) {
+    if (count <= 0) {
+      throw ArgumentError.value(
+        count,
+        'count',
+        'Приращение попыток положительно',
+      );
+    }
+    return GenerationBatchLedger(
+      batchIndex: batchIndex,
+      requested: requested,
+      generated: generated,
+      invalid: invalid,
+      duplicates: duplicates,
+      attempts: attempts + count,
       cause: cause,
     );
   }
@@ -165,6 +198,7 @@ class GenerationBatchLedger {
       generated: generated,
       invalid: invalid,
       duplicates: duplicates,
+      attempts: attempts,
       cause: kind,
     );
   }
@@ -173,7 +207,7 @@ class GenerationBatchLedger {
   String toString() =>
       'GenerationBatchLedger(партия $batchIndex, произведено '
       '$generated/$requested, принято $accepted, валидация $invalid, '
-      'дубли $duplicates'
+      'дубли $duplicates, запросов $attempts'
       '${cause == null ? '' : ', причина ${cause!.wireName}'})';
 }
 
@@ -231,6 +265,9 @@ class GenerationLedger {
 
   /// Отброшено как точные дубли.
   int get duplicates => _sum((GenerationBatchLedger batch) => batch.duplicates);
+
+  /// Сколько запросов к модели ушло на прогон (включая повторы и добор).
+  int get attempts => _sum((GenerationBatchLedger batch) => batch.attempts);
 
   /// Принято карточек: сумма принятых по партиям.
   int get accepted => _sum((GenerationBatchLedger batch) => batch.accepted);
@@ -314,6 +351,19 @@ class GenerationLedger {
     );
   }
 
+  /// Записывает [count] запросов к модели по партии [batchIndex].
+  GenerationLedger attempt(int batchIndex, {int count = 1}) {
+    final GenerationBatchLedger? batch = this.batch(batchIndex);
+    if (batch == null) {
+      throw ArgumentError.value(
+        batchIndex,
+        'batchIndex',
+        'В журнале нет такой партии',
+      );
+    }
+    return replace(batch.attempt(count));
+  }
+
   /// Ставит явную причину недобора партии [batchIndex].
   GenerationLedger markCause(int batchIndex, ShortfallKind cause) {
     final GenerationBatchLedger? batch = this.batch(batchIndex);
@@ -330,7 +380,7 @@ class GenerationLedger {
   @override
   String toString() =>
       'GenerationLedger(партий ${batches.length}, принято '
-      '$accepted/$requested, долг $remaining'
+      '$accepted/$requested, долг $remaining, запросов $attempts'
       '${shortfall == null ? '' : ', причина ${shortfall!.wireName}'})';
 
   int _sum(int Function(GenerationBatchLedger batch) field) {

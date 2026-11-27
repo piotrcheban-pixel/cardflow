@@ -103,6 +103,9 @@ class GeneratedCard {
     this.isOcclusion = false,
     this.occlusionJson,
     this.sectionId,
+    this.unitId,
+    this.angle,
+    this.quoteRef,
   });
 
   /// Лицевая сторона (вопрос).
@@ -131,6 +134,22 @@ class GeneratedCard {
 
   /// Короткий id раздела плана (`section_id`, v8) — подсказка, не контракт.
   final String? sectionId;
+
+  /// id единицы карты знаний, по которой построена карточка (`unit_id`, v3).
+  ///
+  /// Приложение присваивает id на этапе Understanding, поэтому ответ модели
+  /// сопоставляется с пунктом карты, а не «где-то в тексте» (TASK «Срез 5»).
+  final String? unitId;
+
+  /// Угол карточки (`angle`, v3): `null` — основная (несёт утверждение),
+  /// иначе `reverse | cloze | application` — добор «вторым углом».
+  final String? angle;
+
+  /// Дословная цитата материала (`quote_ref`, v3), на которой стоит карточка.
+  ///
+  /// Проверка диапазона по offsets — этап Validation (S5); здесь хранится
+  /// ссылка, а не результат проверки.
+  final String? quoteRef;
 
   /// Краткий поисковый запрос на английском (`image.query`, v9).
   final String? imageQuery;
@@ -198,6 +217,9 @@ class GeneratedCard {
     List<GeneratedCardImage>? answerImages,
     bool? isOcclusion,
     String? occlusionJson,
+    String? unitId,
+    String? angle,
+    String? quoteRef,
   }) {
     return GeneratedCard(
       front: front ?? this.front,
@@ -218,6 +240,9 @@ class GeneratedCard {
       answerImages: answerImages ?? this.answerImages,
       isOcclusion: isOcclusion ?? this.isOcclusion,
       occlusionJson: occlusionJson ?? this.occlusionJson,
+      unitId: unitId ?? this.unitId,
+      angle: angle ?? this.angle,
+      quoteRef: quoteRef ?? this.quoteRef,
     );
   }
 
@@ -262,7 +287,10 @@ class GeneratedCard {
         identical(other.questionImages, questionImages) &&
         identical(other.answerImages, answerImages) &&
         other.isOcclusion == isOcclusion &&
-        other.occlusionJson == occlusionJson;
+        other.occlusionJson == occlusionJson &&
+        other.unitId == unitId &&
+        other.angle == angle &&
+        other.quoteRef == quoteRef;
   }
 
   @override
@@ -285,6 +313,7 @@ class GeneratedCard {
     identityHashCode(answerImages),
     isOcclusion,
     occlusionJson,
+    Object.hash(unitId, angle, quoteRef),
   );
 
   @override

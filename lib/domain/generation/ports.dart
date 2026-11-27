@@ -6,30 +6,46 @@
 /// импорты Dio, drift и Flutter (guard `test/guards/architecture_test.dart`),
 /// поэтому этап нельзя «потерять» из-за транспорта или БД.
 ///
-/// Реализации появятся в следующих срезах: `LlmPort` — срез 5 (поверх
-/// `CardGenerationService`), `CardSink` — срез 8 (журнал запуска), остальные —
-/// по мере подключения этапов.
+/// Реализации: `LlmPort` — срез 5 (`AdapterCardsBatchPort` поверх существующих
+/// адаптеров), `CardSink` — срез 8 (журнал запуска), остальные — по мере
+/// подключения этапов.
 library;
 
+import 'package:cardflow/domain/generation/cards_batch.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
 import 'package:cardflow/domain/generation/generation_ledger.dart';
-import 'package:cardflow/domain/generation/generation_request.dart';
 import 'package:cardflow/domain/generation/generation_result.dart';
 import 'package:cardflow/domain/generation/generation_run.dart';
+import 'package:cardflow/domain/generation/provider_account.dart';
 
 /// Порт вызова модели: один вызов на партию (этап Generation).
 ///
-/// [batchIndex] — номер партии в журнале прогона ([GenerationLedger]): ответ
-/// модели привязывается к партии, а не «к текущему запросу», поэтому недобор
-/// считается по партиям даже после восстановления. Ошибки — `GenerationException`
-/// (домен, `lib/domain/generation/generation_error.dart`): этап не видит
-/// HTTP-коды и тела ответов провайдера.
+/// Партия приходит как [CardsBatch] — единицы с якорями, карточки плана и
+/// принятое этого батча: ответ модели привязывается к `unit_id`, поэтому
+/// недобор считается по партиям и единицам, а не «к текущему запросу».
+/// Ошибки — `GenerationException` (домен,
+/// `lib/domain/generation/generation_error.dart`): этап не видит HTTP-коды и
+/// тела ответов провайдера.
 abstract interface class LlmPort {
-  /// Запрашивает карточки у модели по [request]; [batchIndex] — номер партии.
+  /// Запрашивает карточки у модели по партии [batch].
+  ///
+  /// [account] — аккаунт провайдера (протокол, адрес, модель); [maxOutputTokens]
+  /// — лимит ответа этой партии (`max_tokens`), `null` — лимит аккаунта.
   Future<GenerationResult> generate(
-    GenerationRequest request, {
-    required int batchIndex,
+    CardsBatch batch, {
+    required ProviderAccount account,
+    int? maxOutputTokens,
   });
+}
+
+/// Сигнал отмены прогона для этапов домена.
+///
+/// Этап не знает про Dio (`CancelToken`): он проверяет [isCancelled] между
+/// запросами и прекращает работу, сохраняя принятое. Поток отправки реализация
+/// порта отменяет своим транспортом.
+abstract interface class CancellationSignal {
+  /// true — пользователь отменил прогон.
+  bool get isCancelled;
 }
 
 /// Порт записи принятых карточек (этап Persistence, инвариант ARCH §3.5).

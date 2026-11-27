@@ -14,6 +14,17 @@ library;
 /// Имя схемы для `response_format.json_schema.name` (OpenAI).
 const String cardsResponseSchemaName = 'cards_response';
 
+/// Имя схемы ответа промпта `gen-cards-v3` (единицы карты знаний).
+const String cardsResponseSchemaV3Name = 'cards_response_v3';
+
+/// Углы карточки схемы `gen-cards-v3`: `primary` — основная карточка.
+const List<String> kCardAngleWires = <String>[
+  'primary',
+  'reverse',
+  'cloze',
+  'application',
+];
+
 /// Виды иллюстрации схемы `gen-ru-v6`/`gen-ru-v9`.
 const List<String> kImageKinds = <String>['photo', 'diagram', 'illustration'];
 
@@ -160,11 +171,76 @@ Map<String, Object?> localCardItemSchema() {
   };
 }
 
+/// Независимая копия произвольной JSON-схемы карточек (проекции провайдеров).
+Map<String, Object?> copyCardSchema(Map<String, Object?> source) =>
+    _copyMap(source);
+
 /// Возвращает независимую копию канонической схемы.
 ///
 /// Нужна, чтобы проекции провайдеров не могли случайно изменить канон.
 Map<String, Object?> copyCanonicalCardsResponseSchema() =>
     _copyMap(canonicalCardsResponseSchema);
+
+/// Схема ответа промпта `gen-cards-v3`: A8.4 + `unit_id`, `angle`, `quote_ref`.
+///
+/// TASK «Срез 5» разрешает единственное расширение схемы карточки A8.4 —
+/// привязку к единице карты знаний. Схема **отдельная** от канона: прежний
+/// промпт `gen-ru-v9` продолжает работать со своей схемой и не должен
+/// требовать полей, которых не знает (`examples/` и старый путь не трогаются).
+/// На каждом объекте `additionalProperties: false`, все свойства в `required` —
+/// требование strict-режима OpenAI.
+Map<String, Object?> cardsResponseSchemaV3() {
+  final Map<String, Object?> schema = copyCanonicalCardsResponseSchema();
+  final Map<String, Object?> properties =
+      schema['properties']! as Map<String, Object?>;
+  final Map<String, Object?> cards =
+      properties['cards']! as Map<String, Object?>;
+  final Map<String, Object?> items = cards['items']! as Map<String, Object?>;
+  final Map<String, Object?> cardProperties =
+      items['properties']! as Map<String, Object?>;
+  cardProperties['unit_id'] = <String, Object?>{'type': 'string'};
+  cardProperties['angle'] = <String, Object?>{
+    'type': 'string',
+    'enum': kCardAngleWires,
+  };
+  cardProperties['quote_ref'] = <String, Object?>{'type': 'string'};
+  final List<Object?> required = List<Object?>.of(
+    items['required']! as List<Object?>,
+  )..addAll(<String>['unit_id', 'angle', 'quote_ref']);
+  items['required'] = required;
+  return schema;
+}
+
+/// Схема одной карточки `gen-cards-v3` — независимая копия из расширения.
+Map<String, Object?> cardsResponseV3CardItemSchema() {
+  final Map<String, Object?> properties =
+      cardsResponseSchemaV3()['properties']! as Map<String, Object?>;
+  final Map<String, Object?> cards =
+      properties['cards']! as Map<String, Object?>;
+  return _copyMap(cards['items']! as Map<String, Object?>);
+}
+
+/// Локальная терпимая схема карточки v3: A8.4-поля плюс привязка к единице.
+///
+/// Обязательны `front`, `back`, `card_type`, `unit_id`, `angle`, `quote_ref`:
+/// карточка без привязки к единице не восстанавливает цитату и не считается
+/// принятой (TASK «Срез 5»). Остальные поля проверяет контентный валидатор.
+Map<String, Object?> localCardV3ItemSchema() {
+  final Map<String, Object?> base = localCardItemSchema();
+  final Map<String, Object?> properties =
+      base['properties']! as Map<String, Object?>;
+  properties['unit_id'] = <String, Object?>{'type': 'string'};
+  properties['angle'] = <String, Object?>{
+    'type': 'string',
+    'enum': kCardAngleWires,
+  };
+  properties['quote_ref'] = <String, Object?>{'type': 'string'};
+  final List<Object?> required = List<Object?>.of(
+    base['required']! as List<Object?>,
+  )..addAll(<String>['unit_id', 'angle', 'quote_ref']);
+  base['required'] = required;
+  return base;
+}
 
 Map<String, Object?> _copyMap(Map<String, Object?> source) {
   return <String, Object?>{

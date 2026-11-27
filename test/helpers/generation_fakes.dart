@@ -266,6 +266,7 @@ class FakeProviderAdapter implements GenerationProviderAdapter {
     bool strictSchema = true,
     bool sendMaxTokens = true,
     List<GenerationAttachment> images = const <GenerationAttachment>[],
+    Map<String, Object?>? responseSchema,
   }) {
     buildCalls++;
     buildArgs = RecordedBuildArgs(

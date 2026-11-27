@@ -23,30 +23,53 @@ enum ProviderSchemaFlavor {
 
 /// Проецирует каноническую схему A8.4 под [flavor].
 ///
+/// [canonicalSchema] — основа проекции; `null` — канон A8.4. Расширение
+/// среза 5 (`gen-cards-v3`: `unit_id`/`angle`/`quote_ref`) проецируется той же
+/// машинерией, поэтому адаптеры не получают второй набор правил.
+///
 /// Каждый вызов возвращает независимую копию: изменение результата не портит
 /// канон и проекции других провайдеров.
-Map<String, Object?> projectCardSchema(ProviderSchemaFlavor flavor) =>
-    switch (flavor) {
-      ProviderSchemaFlavor.openAi => copyCanonicalCardsResponseSchema(),
-      ProviderSchemaFlavor.gemini => _projectForGemini(
-        copyCanonicalCardsResponseSchema(),
-      ),
-      ProviderSchemaFlavor.anthropic => _projectForAnthropic(
-        copyCanonicalCardsResponseSchema(),
-      ),
-    };
+Map<String, Object?> projectCardSchema(
+  ProviderSchemaFlavor flavor, {
+  Map<String, Object?>? canonicalSchema,
+}) {
+  final Map<String, Object?> source = canonicalSchema == null
+      ? copyCanonicalCardsResponseSchema()
+      : copyCardSchema(canonicalSchema);
+  return switch (flavor) {
+    ProviderSchemaFlavor.openAi => source,
+    ProviderSchemaFlavor.gemini => _projectForGemini(source),
+    ProviderSchemaFlavor.anthropic => _projectForAnthropic(source),
+  };
+}
 
 /// Схема для `response_format.json_schema.schema` (OpenAI).
-Map<String, Object?> openAiStrictCardSchema() =>
-    projectCardSchema(ProviderSchemaFlavor.openAi);
+Map<String, Object?> openAiStrictCardSchema({
+  Map<String, Object?>? canonicalSchema,
+}) => projectCardSchema(
+  ProviderSchemaFlavor.openAi,
+  canonicalSchema: canonicalSchema,
+);
 
 /// Схема для `generationConfig.responseSchema` (Gemini).
-Map<String, Object?> geminiCardSchema() =>
-    projectCardSchema(ProviderSchemaFlavor.gemini);
+Map<String, Object?> geminiCardSchema({
+  Map<String, Object?>? canonicalSchema,
+}) => projectCardSchema(
+  ProviderSchemaFlavor.gemini,
+  canonicalSchema: canonicalSchema,
+);
 
 /// Схема для `tools[].input_schema` (Anthropic).
-Map<String, Object?> anthropicToolCardSchema() =>
-    projectCardSchema(ProviderSchemaFlavor.anthropic);
+Map<String, Object?> anthropicToolCardSchema({
+  Map<String, Object?>? canonicalSchema,
+}) => projectCardSchema(
+  ProviderSchemaFlavor.anthropic,
+  canonicalSchema: canonicalSchema,
+);
+
+/// Проекция расширения `gen-cards-v3` под возможности провайдера.
+Map<String, Object?> cardSchemaV3For(ProviderSchemaFlavor flavor) =>
+    projectCardSchema(flavor, canonicalSchema: cardsResponseSchemaV3());
 
 /// Типы `Schema` Gemini: JSON Schema → верхний регистр (SPEC A8.2).
 const Map<String, String> _geminiTypeNames = <String, String>{

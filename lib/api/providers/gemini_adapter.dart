@@ -47,6 +47,7 @@ class GeminiAdapter implements GenerationProviderAdapter {
     bool strictSchema = true,
     bool sendMaxTokens = true,
     List<GenerationAttachment> images = const <GenerationAttachment>[],
+    Map<String, Object?>? responseSchema,
   }) {
     final ProviderEndpoint endpoint = ProviderEndpoint.parse(
       protocol: ProviderProtocol.geminiGenerateContent,
@@ -81,7 +82,7 @@ class GeminiAdapter implements GenerationProviderAdapter {
         ],
         'generationConfig': <String, Object?>{
           'responseMimeType': 'application/json',
-          'responseSchema': geminiCardSchema(),
+          'responseSchema': responseSchema ?? geminiCardSchema(),
           'maxOutputTokens': maxOutputTokens,
         },
       },

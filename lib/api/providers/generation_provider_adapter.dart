@@ -84,6 +84,11 @@ abstract interface class GenerationProviderAdapter {
   /// [images] — вложения фрагмента (итерация 7.8). Адаптер сам строит
   /// провайдерские image/document-части; PDF, который протокол не принимает,
   /// отвергается `GenerationException(pdfScanUnsupported)`.
+  ///
+  /// [responseSchema] — готовая проекция JSON-схемы ответа; `null` — схема
+  /// канона A8.4. Срез 5 передаёт расширение `gen-cards-v3`
+  /// (`unit_id`/`angle`/`quote_ref`), уже спроецированное под протокол: адаптер
+  /// не смешивает два набора правил и не меняет логику запроса.
   ProviderRequest buildRequest({
     required String apiKey,
     required String model,
@@ -94,6 +99,7 @@ abstract interface class GenerationProviderAdapter {
     bool strictSchema = true,
     bool sendMaxTokens = true,
     List<GenerationAttachment> images = const <GenerationAttachment>[],
+    Map<String, Object?>? responseSchema,
   });
 
   /// Разбирает ответ провайдера; причины остановки/отказы → `GenerationException`.

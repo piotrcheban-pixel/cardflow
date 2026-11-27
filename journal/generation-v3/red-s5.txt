@@ -1,0 +1,357 @@
+00:00 +0: loading C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/request_ledger_test.dart
+test/unit/api/generation/request_ledger_test.dart:190:15: Error: Undefined name 'port'.
+          if (port.calls.length == 1) {
+              ^^^^
+test/unit/api/generation/request_ledger_test.dart:190:15: Error: Local variable 'port' can't be referenced before it is declared.
+          if (port.calls.length == 1) {
+              ^^^^
+test/unit/api/generation/request_ledger_test.dart:187:26: Context: This is the declaration of the variable 'port'.
+      final _FakeLlmPort port = _FakeLlmPort(
+                         ^^^^
+test/unit/api/generation/request_ledger_test.dart:204:9: Error: Undefined name 'port'.
+        port,
+        ^^^^
+test/unit/api/generation/request_ledger_test.dart:212:14: Error: Undefined name 'port'.
+      expect(port.calls.length, 3);
+             ^^^^
+test/unit/api/generation/request_ledger_test.dart:213:14: Error: Undefined name 'port'.
+      expect(port.calls[0].cards.length, 3);
+             ^^^^
+test/unit/api/generation/request_ledger_test.dart:215:14: Error: Undefined name 'port'.
+      expect(port.calls[1].unitIds, <String>['A']);
+             ^^^^
+test/unit/api/generation/request_ledger_test.dart:216:14: Error: Undefined name 'port'.
+      expect(port.calls[1].cards.length, 2);
+             ^^^^
+test/unit/api/generation/request_ledger_test.dart:217:14: Error: Undefined name 'port'.
+      expect(port.calls[2].unitIds, <String>['B']);
+             ^^^^
+test/unit/api/generation/request_ledger_test.dart:218:14: Error: Undefined name 'port'.
+      expect(port.calls[2].cards.length, 1);
+             ^^^^
+test/unit/api/generation/request_ledger_test.dart:220:14: Error: Undefined name 'port'.
+      expect(port.calls[2].accepted.length, 2);
+             ^^^^
+test/unit/api/generation/request_ledger_test.dart:221:14: Error: Undefined name 'port'.
+      expect(port.calls[2].accepted.first.front, isNotEmpty);
+             ^^^^
+test/unit/api/generation/request_ledger_test.dart:222:14: Error: Undefined name 'port'.
+      expect(port.calls[2].accepted.first.statement, unitA.statement);
+             ^^^^
+test/unit/api/generation/request_ledger_test.dart:261:15: Error: Undefined name 'port'.
+          if (port.calls.length == 1) {
+              ^^^^
+test/unit/api/generation/request_ledger_test.dart:261:15: Error: Local variable 'port' can't be referenced before it is declared.
+          if (port.calls.length == 1) {
+              ^^^^
+test/unit/api/generation/request_ledger_test.dart:259:26: Context: This is the declaration of the variable 'port'.
+      final _FakeLlmPort port = _FakeLlmPort(
+                         ^^^^
+test/unit/api/generation/request_ledger_test.dart:273:9: Error: Undefined name 'port'.
+        port,
+        ^^^^
+00:00 +0 -1: loading C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/request_ledger_test.dart [E]
+  Failed to load "C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/request_ledger_test.dart":
+  Compilation failed for testPath=C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/request_ledger_test.dart: test/unit/api/generation/request_ledger_test.dart:190:15: Error: Undefined name 'port'.
+            if (port.calls.length == 1) {
+                ^^^^
+  test/unit/api/generation/request_ledger_test.dart:190:15: Error: Local variable 'port' can't be referenced before it is declared.
+            if (port.calls.length == 1) {
+                ^^^^
+  test/unit/api/generation/request_ledger_test.dart:187:26: Context: This is the declaration of the variable 'port'.
+        final _FakeLlmPort port = _FakeLlmPort(
+                           ^^^^
+  test/unit/api/generation/request_ledger_test.dart:204:9: Error: Undefined name 'port'.
+          port,
+          ^^^^
+  test/unit/api/generation/request_ledger_test.dart:212:14: Error: Undefined name 'port'.
+        expect(port.calls.length, 3);
+               ^^^^
+  test/unit/api/generation/request_ledger_test.dart:213:14: Error: Undefined name 'port'.
+        expect(port.calls[0].cards.length, 3);
+               ^^^^
+  test/unit/api/generation/request_ledger_test.dart:215:14: Error: Undefined name 'port'.
+        expect(port.calls[1].unitIds, <String>['A']);
+               ^^^^
+  test/unit/api/generation/request_ledger_test.dart:216:14: Error: Undefined name 'port'.
+        expect(port.calls[1].cards.length, 2);
+               ^^^^
+  test/unit/api/generation/request_ledger_test.dart:217:14: Error: Undefined name 'port'.
+        expect(port.calls[2].unitIds, <String>['B']);
+               ^^^^
+  test/unit/api/generation/request_ledger_test.dart:218:14: Error: Undefined name 'port'.
+        expect(port.calls[2].cards.length, 1);
+               ^^^^
+  test/unit/api/generation/request_ledger_test.dart:220:14: Error: Undefined name 'port'.
+        expect(port.calls[2].accepted.length, 2);
+               ^^^^
+  test/unit/api/generation/request_ledger_test.dart:221:14: Error: Undefined name 'port'.
+        expect(port.calls[2].accepted.first.front, isNotEmpty);
+               ^^^^
+  test/unit/api/generation/request_ledger_test.dart:222:14: Error: Undefined name 'port'.
+        expect(port.calls[2].accepted.first.statement, unitA.statement);
+               ^^^^
+  test/unit/api/generation/request_ledger_test.dart:261:15: Error: Undefined name 'port'.
+            if (port.calls.length == 1) {
+                ^^^^
+  test/unit/api/generation/request_ledger_test.dart:261:15: Error: Local variable 'port' can't be referenced before it is declared.
+            if (port.calls.length == 1) {
+                ^^^^
+  test/unit/api/generation/request_ledger_test.dart:259:26: Context: This is the declaration of the variable 'port'.
+        final _FakeLlmPort port = _FakeLlmPort(
+                           ^^^^
+  test/unit/api/generation/request_ledger_test.dart:273:9: Error: Undefined name 'port'.
+          port,
+          ^^^^
+  .
+  Error: The Dart compiler exited unexpectedly.
+  package:flutter_tools/src/base/common.dart 34:3  throwToolExit
+  package:flutter_tools/src/compile.dart 1024:11   DefaultResidentCompiler._compile.<fn>
+  dart:async/zone_root.dart 48:47                  _rootRunUnary
+  dart:async/zone.dart 816:35                      _CustomZone.runUnary
+  dart:async/future_impl.dart 948:45               Future._propagateToListeners.handleValueCallback
+  dart:async/future_impl.dart 977:13               Future._propagateToListeners
+  dart:async/future_impl.dart 862:9                Future._propagateToListeners
+  dart:async/future_impl.dart 720:5                Future._completeWithValue
+  dart:async/future_impl.dart 804:7                Future._asyncCompleteWithValue.<fn>
+  dart:async/zone_root.dart 35:13                  _rootRun
+  dart:async/zone.dart 810:35                      _CustomZone.run
+  dart:async/zone.dart 702:7                       _CustomZone.runGuarded
+  dart:async/zone.dart 743:23                      _CustomZone.bindCallbackGuarded.<fn>
+  dart:async/schedule_microtask.dart 40:35         _microtaskLoop
+  dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
+  dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
+  dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
+  
+00:00 +0 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/cards_prompt_test.dart: системный промпт gen-cards-v3 версия закреплена и в тексте нет подстановок Dart
+00:00 +1 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/cards_prompt_test.dart: системный промпт gen-cards-v3 константа совпадает с docs/prompts/gen-cards-v3.txt байт в байт
+00:00 +1 -2: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/cards_prompt_test.dart: системный промпт gen-cards-v3 константа совпадает с docs/prompts/gen-cards-v3.txt байт в байт [E]
+  Expected: true
+    Actual: <false>
+  Копия промпта потеряна
+  
+  package:matcher                                       expect
+  package:flutter_test/src/widget_tester.dart 473:18    expect
+  test\unit\api\generation\cards_prompt_test.dart 22:7  main.<fn>.<fn>
+  
+00:00 +1 -2: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/cards_prompt_test.dart: системный промпт gen-cards-v3 требует привязку к единице и угол карточки
+00:00 +1 -3: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/cards_prompt_test.dart: системный промпт gen-cards-v3 требует привязку к единице и угол карточки [E]
+  Expected: contains 'РОЛЬ'
+    Actual: 'ЗАГЛУШКА'
+     Which: does not contain 'РОЛЬ'
+  В промпте нет фрагмента: РОЛЬ
+  
+  package:matcher                                       expect
+  package:flutter_test/src/widget_tester.dart 473:18    expect
+  test\unit\api\generation\cards_prompt_test.dart 48:9  main.<fn>.<fn>
+  
+00:00 +1 -3: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/cards_prompt_test.dart: системный промпт gen-cards-v3 не содержит сырых шаблонов разметки
+00:00 +2 -3: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/cards_prompt_test.dart: пользовательское сообщение партии единицы с утверждением и якорями, бюджет и углы
+00:00 +2 -4: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/cards_prompt_test.dart: пользовательское сообщение партии единицы с утверждением и якорями, бюджет и углы [E]
+  Expected: contains '<units>'
+    Actual: ''
+     Which: does not contain '<units>'
+  
+  package:matcher                                       expect
+  package:flutter_test/src/widget_tester.dart 473:18    expect
+  test\unit\api\generation\cards_prompt_test.dart 79:7  main.<fn>.<fn>
+  
+00:00 +2 -4: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/cards_prompt_test.dart: пользовательское сообщение партии контекст «уже принято» — только front и statement этого батча
+00:00 +2 -5: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/cards_prompt_test.dart: пользовательское сообщение партии контекст «уже принято» — только front и statement этого батча [E]
+  Expected: contains '<already_accepted>'
+    Actual: ''
+     Which: does not contain '<already_accepted>'
+  
+  package:matcher                                        expect
+  package:flutter_test/src/widget_tester.dart 473:18     expect
+  test\unit\api\generation\cards_prompt_test.dart 104:7  main.<fn>.<fn>
+  
+00:00 +2 -5: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/provider_result_test.dart: успешный ответ любого протокола даёт одинаковый результат OpenAI-совместимый: контент, stop и usage
+00:00 +3 -5: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/provider_result_test.dart: успешный ответ любого протокола даёт одинаковый результат OpenAI-совместимый: контент, stop и usage
+00:00 +4 -5: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/provider_result_test.dart: успешный ответ любого протокола даёт одинаковый результат OpenAI-совместимый: контент, stop и usage
+00:00 +4 -6: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/provider_result_test.dart: успешный ответ любого протокола даёт одинаковый результат OpenAI-совместимый: контент, stop и usage [E]
+  Expected: '{"cards":[],"source_exhausted":false}'
+    Actual: ''
+     Which: is different. Both strings start the same, but the actual value is missing the following trailing characters: {"cards":[ ...
+  
+  package:matcher                                          expect
+  package:flutter_test/src/widget_tester.dart 473:18       expect
+  test\unit\api\generation\provider_result_test.dart 46:9  main.<fn>.<fn>
+  
+00:00 +4 -6: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/provider_result_test.dart: успешный ответ любого протокола даёт одинаковый результат OpenAI: контент, stop и usage
+00:00 +4 -7: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/provider_result_test.dart: успешный ответ любого протокола даёт одинаковый результат OpenAI: контент, stop и usage [E]
+  Expected: '{"cards":[],"source_exhausted":false}'
+    Actual: ''
+     Which: is different. Both strings start the same, but the actual value is missing the following trailing characters: {"cards":[ ...
+  
+  package:matcher                                          expect
+  package:flutter_test/src/widget_tester.dart 473:18       expect
+  test\unit\api\generation\provider_result_test.dart 46:9  main.<fn>.<fn>
+  
+00:00 +4 -7: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/provider_result_test.dart: успешный ответ любого протокола даёт одинаковый результат Gemini: контент, stop и usage
+00:00 +4 -8: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/provider_result_test.dart: успешный ответ любого протокола даёт одинаковый результат Gemini: контент, stop и usage [E]
+  Expected: '{"cards":[],"source_exhausted":false}'
+    Actual: ''
+     Which: is different. Both strings start the same, but the actual value is missing the following trailing characters: {"cards":[ ...
+  
+  package:matcher                                          expect
+  package:flutter_test/src/widget_tester.dart 473:18       expect
+  test\unit\api\generation\provider_result_test.dart 46:9  main.<fn>.<fn>
+  
+00:00 +4 -8: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/provider_result_test.dart: успешный ответ любого протокола даёт одинаковый результат Anthropic: контент, stop и usage
+00:00 +4 -9: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/provider_result_test.dart: успешный ответ любого протокола даёт одинаковый результат Anthropic: контент, stop и usage [E]
+  Expected: '{"cards":[],"source_exhausted":false}'
+    Actual: ''
+     Which: is different. Both strings start the same, but the actual value is missing the following trailing characters: {"cards":[ ...
+  
+  package:matcher                                          expect
+  package:flutter_test/src/widget_tester.dart 473:18       expect
+  test\unit\api\generation\provider_result_test.dart 46:9  main.<fn>.<fn>
+  
+00:00 +4 -9: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/provider_result_test.dart: обрезка по лимиту вывода OpenAI-совместимый: finish_reason length → length + контент
+00:00 +4 -10: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/provider_result_test.dart: обрезка по лимиту вывода OpenAI-совместимый: finish_reason length → length + контент [E]
+  Expected: ProviderFinishReason:<ProviderFinishReason.length>
+    Actual: ProviderFinishReason:<ProviderFinishReason.stop>
+  
+  package:matcher                                          expect
+  package:flutter_test/src/widget_tester.dart 473:18       expect
+  test\unit\api\generation\provider_result_test.dart 64:7  main.<fn>.<fn>
+  
+00:00 +4 -10: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/provider_result_test.dart: обрезка по лимиту вывода Gemini: MAX_TOKENS → length
+00:00 +4 -11: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/provider_result_test.dart: обрезка по лимиту вывода Gemini: MAX_TOKENS → length [E]
+  Expected: ProviderFinishReason:<ProviderFinishReason.length>
+    Actual: ProviderFinishReason:<ProviderFinishReason.stop>
+  
+  package:matcher                                          expect
+  package:flutter_test/src/widget_tester.dart 473:18       expect
+  test\unit\api\generation\provider_result_test.dart 76:7  main.<fn>.<fn>
+  
+00:00 +4 -11: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/provider_result_test.dart: обрезка по лимиту вывода Anthropic: max_tokens без tool_use → length, контента нет
+00:00 +4 -12: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/provider_result_test.dart: обрезка по лимиту вывода Anthropic: max_tokens без tool_use → length, контента нет [E]
+  Expected: ProviderFinishReason:<ProviderFinishReason.length>
+    Actual: ProviderFinishReason:<ProviderFinishReason.stop>
+  
+  package:matcher                                          expect
+  package:flutter_test/src/widget_tester.dart 473:18       expect
+  test\unit\api\generation\provider_result_test.dart 92:7  main.<fn>.<fn>
+  
+00:00 +4 -12: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/provider_result_test.dart: отказ и пустой ответ refusal модели → refusal, без контента, код refused
+00:00 +4 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/provider_result_test.dart: отказ и пустой ответ refusal модели → refusal, без контента, код refused [E]
+  Expected: true
+    Actual: <false>
+  
+  package:matcher                                           expect
+  package:flutter_test/src/widget_tester.dart 473:18        expect
+  test\unit\api\generation\provider_result_test.dart 116:7  main.<fn>.<fn>
+  
+00:00 +4 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/provider_result_test.dart: отказ и пустой ответ пустой контент → empty, код emptyResponse
+00:00 +4 -14: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/provider_result_test.dart: отказ и пустой ответ пустой контент → empty, код emptyResponse [E]
+  Expected: ProviderFinishReason:<ProviderFinishReason.empty>
+    Actual: ProviderFinishReason:<ProviderFinishReason.stop>
+  
+  package:matcher                                           expect
+  package:flutter_test/src/widget_tester.dart 473:18        expect
+  test\unit\api\generation\provider_result_test.dart 135:7  main.<fn>.<fn>
+  
+00:00 +4 -14: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/cards_batch_port_test.dart: запрос: промпт gen-cards-v3, единицы с якорями и v3-схема ответа
+00:00 +4 -15: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/cards_batch_port_test.dart: запрос: промпт gen-cards-v3, единицы с якорями и v3-схема ответа
+00:00 +4 -15: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/provider_result_test.dart: отказ и пустой ответ ответ не по протоколу → error, код invalidResponse [E]
+  Expected: ProviderFinishReason:<ProviderFinishReason.error>
+    Actual: ProviderFinishReason:<ProviderFinishReason.stop>
+  
+  package:matcher                                           expect
+  package:flutter_test/src/widget_tester.dart 473:18        expect
+  test\unit\api\generation\provider_result_test.dart 145:7  main.<fn>.<fn>
+  
+00:00 +4 -16: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/cards_batch_port_test.dart: запрос: промпт gen-cards-v3, единицы с якорями и v3-схема ответа
+00:00 +4 -16: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/provider_result_test.dart: сбой транспорта ошибка провайдера становится результатом с кодом [E]
+  Expected: ProviderFinishReason:<ProviderFinishReason.error>
+    Actual: ProviderFinishReason:<ProviderFinishReason.stop>
+  
+  package:matcher                                           expect
+  package:flutter_test/src/widget_tester.dart 473:18        expect
+  test\unit\api\generation\provider_result_test.dart 160:7  main.<fn>.<fn>
+  
+00:00 +4 -17: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/cards_batch_port_test.dart: запрос: промпт gen-cards-v3, единицы с якорями и v3-схема ответа
+00:00 +4 -17: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/provider_result_test.dart: сбой транспорта отмена пробрасывается: прогон останавливается [E]
+  Expected: throws <Instance of 'GenerationException'> with `code`: GenerationErrorCode:<GenerationErrorCode.cancelled>
+    Actual: <Closure: () => ProviderResult>
+     Which: returned ProviderResult:<ProviderResult(stop, 0 симв.)>
+  
+  package:matcher                                           expect
+  package:flutter_test/src/widget_tester.dart 473:18        expect
+  test\unit\api\generation\provider_result_test.dart 166:7  main.<fn>.<fn>
+  
+00:00 +4 -18: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/cards_batch_port_test.dart: запрос: промпт gen-cards-v3, единицы с якорями и v3-схема ответа [E]
+  UnimplementedError: AdapterCardsBatchPort.generate: срез 5
+  package:cardflow/api/generation/cards_batch_port.dart 64:5  AdapterCardsBatchPort.generate
+  test\unit\api\generation\cards_batch_port_test.dart 42:16   main.<fn>
+  
+00:00 +4 -18: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/cards_batch_port_test.dart: ответ: карточки с unit_id/angle/quote_ref и фактом расхода
+00:00 +4 -19: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/cards_batch_port_test.dart: ответ: карточки с unit_id/angle/quote_ref и фактом расхода [E]
+  UnimplementedError: AdapterCardsBatchPort.generate: срез 5
+  package:cardflow/api/generation/cards_batch_port.dart 64:5  AdapterCardsBatchPort.generate
+  test\unit\api\generation\cards_batch_port_test.dart 86:48   main.<fn>
+  
+00:00 +4 -19: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/cards_batch_port_test.dart: карточка без unit_id/quote_ref отбрасывается поштучно
+00:00 +4 -20: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/cards_batch_port_test.dart: карточка без unit_id/quote_ref отбрасывается поштучно [E]
+  UnimplementedError: AdapterCardsBatchPort.generate: срез 5
+  package:cardflow/api/generation/cards_batch_port.dart 64:5  AdapterCardsBatchPort.generate
+  test\unit\api\generation\cards_batch_port_test.dart 113:48  main.<fn>
+  
+00:00 +4 -20: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/cards_batch_port_test.dart: неизвестный угол отбрасывает карточку, остальные остаются
+00:00 +4 -21: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/cards_batch_port_test.dart: неизвестный угол отбрасывает карточку, остальные остаются [E]
+  UnimplementedError: AdapterCardsBatchPort.generate: срез 5
+  package:cardflow/api/generation/cards_batch_port.dart 64:5  AdapterCardsBatchPort.generate
+  test\unit\api\generation\cards_batch_port_test.dart 128:48  main.<fn>
+  
+00:00 +4 -21: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/cards_batch_port_test.dart: обрезанный ответ: спасённые полные карточки, truncated
+00:00 +4 -22: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/ports_test.dart: Clock: время инжектируется, а не берётся из DateTime.now
+00:00 +4 -22: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/cards_batch_port_test.dart: обрезанный ответ: спасённые полные карточки, truncated [E]
+  UnimplementedError: AdapterCardsBatchPort.generate: срез 5
+  package:cardflow/api/generation/cards_batch_port.dart 64:5  AdapterCardsBatchPort.generate
+  test\unit\api\generation\cards_batch_port_test.dart 150:48  main.<fn>
+  
+00:00 +5 -22: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/cards_batch_port_test.dart: ответ без choices — GenerationException(invalidResponse), а не пусто
+00:00 +6 -22: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/cards_batch_port_test.dart: ответ без choices — GenerationException(invalidResponse), а не пусто
+00:00 +7 -22: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/cards_batch_port_test.dart: ответ без choices — GenerationException(invalidResponse), а не пусто
+00:00 +8 -22: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/cards_batch_port_test.dart: ответ без choices — GenerationException(invalidResponse), а не пусто
+00:00 +8 -23: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/ports_test.dart: KnowledgeMapCache читает и пишет карту по документу и хешу
+00:00 +8 -23: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/cards_batch_port_test.dart: ответ без choices — GenerationException(invalidResponse), а не пусто [E]
+  Expected: throws <Instance of 'GenerationException'> with `code`: GenerationErrorCode:<GenerationErrorCode.invalidResponse>
+    Actual: <Closure: () => Future<GenerationResult>>
+     Which: threw UnimplementedError:<UnimplementedError: AdapterCardsBatchPort.generate: срез 5>
+            stack package:cardflow/api/generation/cards_batch_port.dart 64:5  AdapterCardsBatchPort.generate
+                  test\unit\api\generation\cards_batch_port_test.dart 164:18  main.<fn>.<fn>
+                  package:matcher                                             expect
+                  package:flutter_test/src/widget_tester.dart 473:18          expect
+                  test\unit\api\generation\cards_batch_port_test.dart 163:5   main.<fn>
+                  ===== asynchronous gap ===========================
+                  package:matcher                                             expect
+                  package:flutter_test/src/widget_tester.dart 473:18          expect
+                  test\unit\api\generation\cards_batch_port_test.dart 163:5   main.<fn>
+                  
+            which is not an instance of 'GenerationException'
+  
+  package:matcher                                            expect
+  package:flutter_test/src/widget_tester.dart 473:18         expect
+  test\unit\api\generation\cards_batch_port_test.dart 163:5  main.<fn>
+  
+00:00 +9 -23: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/ports_test.dart: LlmPort принимает партию единиц и аккаунт, отдаёт GenerationResult
+00:00 +9 -24: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/ports_test.dart: LlmPort принимает партию единиц и аккаунт, отдаёт GenerationResult [E]
+  Expected: [1]
+    Actual: [0]
+     Which: at location [0] is <0> instead of <1>
+  
+  package:matcher                                     expect
+  package:flutter_test/src/widget_tester.dart 473:18  expect
+  test\unit\domain\generation\ports_test.dart 83:5    main.<fn>
+  
+00:00 +9 -24: Some tests failed.
+
+Failing tests:
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/cards_batch_port_test.dart: запрос: промпт gen-cards-v3, единицы с якорями и v3-схема ответа
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/cards_batch_port_test.dart: карточка без unit_id/quote_ref отбрасывается поштучно
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/cards_batch_port_test.dart: неизвестный угол отбрасывает карточку, остальные остаются
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/cards_batch_port_test.dart: обрезанный ответ: спасённые полные карточки, truncated
+  ... and 20 more

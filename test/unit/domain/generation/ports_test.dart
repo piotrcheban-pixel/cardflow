@@ -1,12 +1,14 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cardflow/domain/cards/card.dart';
+import 'package:cardflow/domain/generation/allocation.dart';
+import 'package:cardflow/domain/generation/cards_batch.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
 import 'package:cardflow/domain/generation/generation_ledger.dart';
 import 'package:cardflow/domain/generation/generation_provider.dart';
-import 'package:cardflow/domain/generation/generation_request.dart';
 import 'package:cardflow/domain/generation/generation_result.dart';
 import 'package:cardflow/domain/generation/generation_run.dart';
+import 'package:cardflow/domain/generation/knowledge_map.dart';
 import 'package:cardflow/domain/generation/ports.dart';
 import 'package:cardflow/domain/generation/provider_account.dart';
 import 'package:cardflow/domain/generation/provider_protocol.dart';
@@ -25,6 +27,13 @@ void main() {
   test('Clock: время инжектируется, а не берётся из DateTime.now', () {
     final Clock clock = _FixedClock(DateTime.utc(2026, 11, 27, 12));
     expect(clock.now(), DateTime.utc(2026, 11, 27, 12));
+  });
+
+  test('CancellationSignal: этап видит отмену, не зная про Dio', () {
+    final _FakeCancellation cancellation = _FakeCancellation();
+    expect(cancellation.isCancelled, isFalse);
+    cancellation.cancel();
+    expect(cancellation.isCancelled, isTrue);
   });
 
   test('ProgressSink получает этап и журнал прогона', () {
@@ -64,20 +73,40 @@ void main() {
     expect(await cache.read(documentId: 'doc-2', contentHash: 'hash'), isNull);
   });
 
-  test('LlmPort отдаёт GenerationResult и номер партии', () async {
-    final _StubLlmPort port = _StubLlmPort();
-    final GenerationRequest request = GenerationRequest(
-      account: account,
-      materialsText: 'материал',
-      limit: 3,
-    );
-    final GenerationResult result = await port.generate(request, batchIndex: 1);
-    expect(port.calls, <int>[1]);
-    expect(result.cards.single.front, 'Q1');
-    expect(result.provider, GenerationProvider.openaiCompatible);
-    expect(result.model, 'test-model');
-  });
+  test(
+    'LlmPort принимает партию единиц и аккаунт, отдаёт GenerationResult',
+    () async {
+      final _StubLlmPort port = _StubLlmPort();
+      final CardsBatch batch = _batch();
+      final GenerationResult result = await port.generate(
+        batch,
+        account: account,
+      );
+      expect(port.calls, <int>[0]);
+      expect(port.lastUnitIds, <String>['ku:doc#0']);
+      expect(result.cards.single.front, 'Q0');
+      expect(result.provider, GenerationProvider.openaiCompatible);
+      expect(result.model, 'test-model');
+    },
+  );
 }
+
+CardsBatch _batch() => CardsBatch(
+  index: 0,
+  units: <KnowledgeUnit>[_unit()],
+  cards: const <AllocatedCard>[AllocatedCard(unitId: 'ku:doc#0')],
+);
+
+KnowledgeUnit _unit() => KnowledgeUnit(
+  id: 'ku:doc#0',
+  sectionId: 'doc:файл.md#0',
+  topic: 'тема',
+  kind: KnowledgeUnitKind.definition,
+  statement: 'Моментом силы называют произведение силы на плечо.',
+  anchors: const <KnowledgeAnchor>[
+    KnowledgeAnchor(blockId: 'doc:файл.md#0#0', quote: 'Момент силы — …'),
+  ],
+);
 
 class _FixedClock implements Clock {
   _FixedClock(this.value);
@@ -86,6 +115,15 @@ class _FixedClock implements Clock {
 
   @override
   DateTime now() => value;
+}
+
+class _FakeCancellation implements CancellationSignal {
+  bool _cancelled = false;
+
+  @override
+  bool get isCancelled => _cancelled;
+
+  void cancel() => _cancelled = true;
 }
 
 class _RecordingProgressSink implements ProgressSink {
@@ -130,20 +168,23 @@ class _MemoryKnowledgeMapCache implements KnowledgeMapCache<String> {
 
 class _StubLlmPort implements LlmPort {
   final List<int> calls = <int>[];
+  List<String> lastUnitIds = const <String>[];
 
   @override
   Future<GenerationResult> generate(
-    GenerationRequest request, {
-    required int batchIndex,
+    CardsBatch batch, {
+    required ProviderAccount account,
+    int? maxOutputTokens,
   }) async {
-    calls.add(batchIndex);
+    calls.add(batch.index);
+    lastUnitIds = <String>[for (final unit in batch.units) unit.id];
     return GenerationResult(
       provider: GenerationProvider.openaiCompatible,
-      model: request.account.modelId,
+      model: account.modelId,
       promptVersion: 'test',
       cards: <GeneratedCard>[
         GeneratedCard(
-          front: 'Q$batchIndex',
+          front: 'Q${batch.index}',
           back: 'A',
           cardType: CardType.basic,
         ),
