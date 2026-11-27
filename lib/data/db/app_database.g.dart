@@ -4756,6 +4756,2782 @@ class SessionPresetsCompanion extends UpdateCompanion<SessionPresetRow> {
   }
 }
 
+class $GenerationRunsTable extends GenerationRuns
+    with TableInfo<$GenerationRunsTable, GenerationRunRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $GenerationRunsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _stageMeta = const VerificationMeta('stage');
+  @override
+  late final GeneratedColumn<String> stage = GeneratedColumn<String>(
+    'stage',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+    'status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<int> updatedAt = GeneratedColumn<int>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _providerMeta = const VerificationMeta(
+    'provider',
+  );
+  @override
+  late final GeneratedColumn<String> provider = GeneratedColumn<String>(
+    'provider',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _modelMeta = const VerificationMeta('model');
+  @override
+  late final GeneratedColumn<String> model = GeneratedColumn<String>(
+    'model',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _deckIdMeta = const VerificationMeta('deckId');
+  @override
+  late final GeneratedColumn<String> deckId = GeneratedColumn<String>(
+    'deck_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _promptVersionsJsonMeta =
+      const VerificationMeta('promptVersionsJson');
+  @override
+  late final GeneratedColumn<String> promptVersionsJson =
+      GeneratedColumn<String>(
+        'prompt_versions_json',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    stage,
+    status,
+    createdAt,
+    updatedAt,
+    provider,
+    model,
+    deckId,
+    promptVersionsJson,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'generation_runs';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<GenerationRunRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('stage')) {
+      context.handle(
+        _stageMeta,
+        stage.isAcceptableOrUnknown(data['stage']!, _stageMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_stageMeta);
+    }
+    if (data.containsKey('status')) {
+      context.handle(
+        _statusMeta,
+        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_statusMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    if (data.containsKey('provider')) {
+      context.handle(
+        _providerMeta,
+        provider.isAcceptableOrUnknown(data['provider']!, _providerMeta),
+      );
+    }
+    if (data.containsKey('model')) {
+      context.handle(
+        _modelMeta,
+        model.isAcceptableOrUnknown(data['model']!, _modelMeta),
+      );
+    }
+    if (data.containsKey('deck_id')) {
+      context.handle(
+        _deckIdMeta,
+        deckId.isAcceptableOrUnknown(data['deck_id']!, _deckIdMeta),
+      );
+    }
+    if (data.containsKey('prompt_versions_json')) {
+      context.handle(
+        _promptVersionsJsonMeta,
+        promptVersionsJson.isAcceptableOrUnknown(
+          data['prompt_versions_json']!,
+          _promptVersionsJsonMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  GenerationRunRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return GenerationRunRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      stage: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}stage'],
+      )!,
+      status: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}status'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}updated_at'],
+      )!,
+      provider: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}provider'],
+      ),
+      model: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}model'],
+      ),
+      deckId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}deck_id'],
+      ),
+      promptVersionsJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}prompt_versions_json'],
+      ),
+    );
+  }
+
+  @override
+  $GenerationRunsTable createAlias(String alias) {
+    return $GenerationRunsTable(attachedDatabase, alias);
+  }
+}
+
+class GenerationRunRow extends DataClass
+    implements Insertable<GenerationRunRow> {
+  /// Идентификатор прогона (совпадает с `generation_jobs.id`).
+  final String id;
+
+  /// Этап стейт-машины (`GenerationStage.wireName`, домен).
+  final String stage;
+
+  /// Статус задания для `generation_jobs.status` (совместимость, SPEC A5).
+  final String status;
+
+  /// Момент создания (epoch ms).
+  final int createdAt;
+
+  /// Момент последнего изменения (epoch ms).
+  final int updatedAt;
+
+  /// Провайдер API (id аккаунта, как в `generation_jobs`).
+  final String? provider;
+
+  /// Модель провайдера.
+  final String? model;
+
+  /// Колода, куда импортированы карточки (совместимо с `result_deck_id`).
+  final String? deckId;
+
+  /// Версии промптов прогона, JSON-объект (`{"understanding": ..., ...}`).
+  final String? promptVersionsJson;
+  const GenerationRunRow({
+    required this.id,
+    required this.stage,
+    required this.status,
+    required this.createdAt,
+    required this.updatedAt,
+    this.provider,
+    this.model,
+    this.deckId,
+    this.promptVersionsJson,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['stage'] = Variable<String>(stage);
+    map['status'] = Variable<String>(status);
+    map['created_at'] = Variable<int>(createdAt);
+    map['updated_at'] = Variable<int>(updatedAt);
+    if (!nullToAbsent || provider != null) {
+      map['provider'] = Variable<String>(provider);
+    }
+    if (!nullToAbsent || model != null) {
+      map['model'] = Variable<String>(model);
+    }
+    if (!nullToAbsent || deckId != null) {
+      map['deck_id'] = Variable<String>(deckId);
+    }
+    if (!nullToAbsent || promptVersionsJson != null) {
+      map['prompt_versions_json'] = Variable<String>(promptVersionsJson);
+    }
+    return map;
+  }
+
+  GenerationRunsCompanion toCompanion(bool nullToAbsent) {
+    return GenerationRunsCompanion(
+      id: Value(id),
+      stage: Value(stage),
+      status: Value(status),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+      provider: provider == null && nullToAbsent
+          ? const Value.absent()
+          : Value(provider),
+      model: model == null && nullToAbsent
+          ? const Value.absent()
+          : Value(model),
+      deckId: deckId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deckId),
+      promptVersionsJson: promptVersionsJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(promptVersionsJson),
+    );
+  }
+
+  factory GenerationRunRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return GenerationRunRow(
+      id: serializer.fromJson<String>(json['id']),
+      stage: serializer.fromJson<String>(json['stage']),
+      status: serializer.fromJson<String>(json['status']),
+      createdAt: serializer.fromJson<int>(json['createdAt']),
+      updatedAt: serializer.fromJson<int>(json['updatedAt']),
+      provider: serializer.fromJson<String?>(json['provider']),
+      model: serializer.fromJson<String?>(json['model']),
+      deckId: serializer.fromJson<String?>(json['deckId']),
+      promptVersionsJson: serializer.fromJson<String?>(
+        json['promptVersionsJson'],
+      ),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'stage': serializer.toJson<String>(stage),
+      'status': serializer.toJson<String>(status),
+      'createdAt': serializer.toJson<int>(createdAt),
+      'updatedAt': serializer.toJson<int>(updatedAt),
+      'provider': serializer.toJson<String?>(provider),
+      'model': serializer.toJson<String?>(model),
+      'deckId': serializer.toJson<String?>(deckId),
+      'promptVersionsJson': serializer.toJson<String?>(promptVersionsJson),
+    };
+  }
+
+  GenerationRunRow copyWith({
+    String? id,
+    String? stage,
+    String? status,
+    int? createdAt,
+    int? updatedAt,
+    Value<String?> provider = const Value.absent(),
+    Value<String?> model = const Value.absent(),
+    Value<String?> deckId = const Value.absent(),
+    Value<String?> promptVersionsJson = const Value.absent(),
+  }) => GenerationRunRow(
+    id: id ?? this.id,
+    stage: stage ?? this.stage,
+    status: status ?? this.status,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+    provider: provider.present ? provider.value : this.provider,
+    model: model.present ? model.value : this.model,
+    deckId: deckId.present ? deckId.value : this.deckId,
+    promptVersionsJson: promptVersionsJson.present
+        ? promptVersionsJson.value
+        : this.promptVersionsJson,
+  );
+  GenerationRunRow copyWithCompanion(GenerationRunsCompanion data) {
+    return GenerationRunRow(
+      id: data.id.present ? data.id.value : this.id,
+      stage: data.stage.present ? data.stage.value : this.stage,
+      status: data.status.present ? data.status.value : this.status,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      provider: data.provider.present ? data.provider.value : this.provider,
+      model: data.model.present ? data.model.value : this.model,
+      deckId: data.deckId.present ? data.deckId.value : this.deckId,
+      promptVersionsJson: data.promptVersionsJson.present
+          ? data.promptVersionsJson.value
+          : this.promptVersionsJson,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('GenerationRunRow(')
+          ..write('id: $id, ')
+          ..write('stage: $stage, ')
+          ..write('status: $status, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('provider: $provider, ')
+          ..write('model: $model, ')
+          ..write('deckId: $deckId, ')
+          ..write('promptVersionsJson: $promptVersionsJson')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    stage,
+    status,
+    createdAt,
+    updatedAt,
+    provider,
+    model,
+    deckId,
+    promptVersionsJson,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GenerationRunRow &&
+          other.id == this.id &&
+          other.stage == this.stage &&
+          other.status == this.status &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt &&
+          other.provider == this.provider &&
+          other.model == this.model &&
+          other.deckId == this.deckId &&
+          other.promptVersionsJson == this.promptVersionsJson);
+}
+
+class GenerationRunsCompanion extends UpdateCompanion<GenerationRunRow> {
+  final Value<String> id;
+  final Value<String> stage;
+  final Value<String> status;
+  final Value<int> createdAt;
+  final Value<int> updatedAt;
+  final Value<String?> provider;
+  final Value<String?> model;
+  final Value<String?> deckId;
+  final Value<String?> promptVersionsJson;
+  final Value<int> rowid;
+  const GenerationRunsCompanion({
+    this.id = const Value.absent(),
+    this.stage = const Value.absent(),
+    this.status = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.provider = const Value.absent(),
+    this.model = const Value.absent(),
+    this.deckId = const Value.absent(),
+    this.promptVersionsJson = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  GenerationRunsCompanion.insert({
+    required String id,
+    required String stage,
+    required String status,
+    required int createdAt,
+    required int updatedAt,
+    this.provider = const Value.absent(),
+    this.model = const Value.absent(),
+    this.deckId = const Value.absent(),
+    this.promptVersionsJson = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       stage = Value(stage),
+       status = Value(status),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<GenerationRunRow> custom({
+    Expression<String>? id,
+    Expression<String>? stage,
+    Expression<String>? status,
+    Expression<int>? createdAt,
+    Expression<int>? updatedAt,
+    Expression<String>? provider,
+    Expression<String>? model,
+    Expression<String>? deckId,
+    Expression<String>? promptVersionsJson,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (stage != null) 'stage': stage,
+      if (status != null) 'status': status,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (provider != null) 'provider': provider,
+      if (model != null) 'model': model,
+      if (deckId != null) 'deck_id': deckId,
+      if (promptVersionsJson != null)
+        'prompt_versions_json': promptVersionsJson,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  GenerationRunsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? stage,
+    Value<String>? status,
+    Value<int>? createdAt,
+    Value<int>? updatedAt,
+    Value<String?>? provider,
+    Value<String?>? model,
+    Value<String?>? deckId,
+    Value<String?>? promptVersionsJson,
+    Value<int>? rowid,
+  }) {
+    return GenerationRunsCompanion(
+      id: id ?? this.id,
+      stage: stage ?? this.stage,
+      status: status ?? this.status,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      provider: provider ?? this.provider,
+      model: model ?? this.model,
+      deckId: deckId ?? this.deckId,
+      promptVersionsJson: promptVersionsJson ?? this.promptVersionsJson,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (stage.present) {
+      map['stage'] = Variable<String>(stage.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<int>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<int>(updatedAt.value);
+    }
+    if (provider.present) {
+      map['provider'] = Variable<String>(provider.value);
+    }
+    if (model.present) {
+      map['model'] = Variable<String>(model.value);
+    }
+    if (deckId.present) {
+      map['deck_id'] = Variable<String>(deckId.value);
+    }
+    if (promptVersionsJson.present) {
+      map['prompt_versions_json'] = Variable<String>(promptVersionsJson.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('GenerationRunsCompanion(')
+          ..write('id: $id, ')
+          ..write('stage: $stage, ')
+          ..write('status: $status, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('provider: $provider, ')
+          ..write('model: $model, ')
+          ..write('deckId: $deckId, ')
+          ..write('promptVersionsJson: $promptVersionsJson, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $GenerationUnitsTable extends GenerationUnits
+    with TableInfo<$GenerationUnitsTable, GenerationUnitRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $GenerationUnitsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _runIdMeta = const VerificationMeta('runId');
+  @override
+  late final GeneratedColumn<String> runId = GeneratedColumn<String>(
+    'run_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES generation_runs (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _unitIdMeta = const VerificationMeta('unitId');
+  @override
+  late final GeneratedColumn<String> unitId = GeneratedColumn<String>(
+    'unit_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sectionIdMeta = const VerificationMeta(
+    'sectionId',
+  );
+  @override
+  late final GeneratedColumn<String> sectionId = GeneratedColumn<String>(
+    'section_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _topicMeta = const VerificationMeta('topic');
+  @override
+  late final GeneratedColumn<String> topic = GeneratedColumn<String>(
+    'topic',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _kindMeta = const VerificationMeta('kind');
+  @override
+  late final GeneratedColumn<String> kind = GeneratedColumn<String>(
+    'kind',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _statementMeta = const VerificationMeta(
+    'statement',
+  );
+  @override
+  late final GeneratedColumn<String> statement = GeneratedColumn<String>(
+    'statement',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _salienceMeta = const VerificationMeta(
+    'salience',
+  );
+  @override
+  late final GeneratedColumn<double> salience = GeneratedColumn<double>(
+    'salience',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _splittableMeta = const VerificationMeta(
+    'splittable',
+  );
+  @override
+  late final GeneratedColumn<int> splittable = GeneratedColumn<int>(
+    'splittable',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _anchorsJsonMeta = const VerificationMeta(
+    'anchorsJson',
+  );
+  @override
+  late final GeneratedColumn<String> anchorsJson = GeneratedColumn<String>(
+    'anchors_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _orderIndexMeta = const VerificationMeta(
+    'orderIndex',
+  );
+  @override
+  late final GeneratedColumn<int> orderIndex = GeneratedColumn<int>(
+    'order_index',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    runId,
+    unitId,
+    sectionId,
+    topic,
+    kind,
+    statement,
+    salience,
+    splittable,
+    anchorsJson,
+    orderIndex,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'generation_units';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<GenerationUnitRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('run_id')) {
+      context.handle(
+        _runIdMeta,
+        runId.isAcceptableOrUnknown(data['run_id']!, _runIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_runIdMeta);
+    }
+    if (data.containsKey('unit_id')) {
+      context.handle(
+        _unitIdMeta,
+        unitId.isAcceptableOrUnknown(data['unit_id']!, _unitIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_unitIdMeta);
+    }
+    if (data.containsKey('section_id')) {
+      context.handle(
+        _sectionIdMeta,
+        sectionId.isAcceptableOrUnknown(data['section_id']!, _sectionIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sectionIdMeta);
+    }
+    if (data.containsKey('topic')) {
+      context.handle(
+        _topicMeta,
+        topic.isAcceptableOrUnknown(data['topic']!, _topicMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_topicMeta);
+    }
+    if (data.containsKey('kind')) {
+      context.handle(
+        _kindMeta,
+        kind.isAcceptableOrUnknown(data['kind']!, _kindMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_kindMeta);
+    }
+    if (data.containsKey('statement')) {
+      context.handle(
+        _statementMeta,
+        statement.isAcceptableOrUnknown(data['statement']!, _statementMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_statementMeta);
+    }
+    if (data.containsKey('salience')) {
+      context.handle(
+        _salienceMeta,
+        salience.isAcceptableOrUnknown(data['salience']!, _salienceMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_salienceMeta);
+    }
+    if (data.containsKey('splittable')) {
+      context.handle(
+        _splittableMeta,
+        splittable.isAcceptableOrUnknown(data['splittable']!, _splittableMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_splittableMeta);
+    }
+    if (data.containsKey('anchors_json')) {
+      context.handle(
+        _anchorsJsonMeta,
+        anchorsJson.isAcceptableOrUnknown(
+          data['anchors_json']!,
+          _anchorsJsonMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_anchorsJsonMeta);
+    }
+    if (data.containsKey('order_index')) {
+      context.handle(
+        _orderIndexMeta,
+        orderIndex.isAcceptableOrUnknown(data['order_index']!, _orderIndexMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_orderIndexMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {runId, unitId};
+  @override
+  GenerationUnitRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return GenerationUnitRow(
+      runId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}run_id'],
+      )!,
+      unitId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}unit_id'],
+      )!,
+      sectionId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}section_id'],
+      )!,
+      topic: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}topic'],
+      )!,
+      kind: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}kind'],
+      )!,
+      statement: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}statement'],
+      )!,
+      salience: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}salience'],
+      )!,
+      splittable: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}splittable'],
+      )!,
+      anchorsJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}anchors_json'],
+      )!,
+      orderIndex: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}order_index'],
+      )!,
+    );
+  }
+
+  @override
+  $GenerationUnitsTable createAlias(String alias) {
+    return $GenerationUnitsTable(attachedDatabase, alias);
+  }
+}
+
+class GenerationUnitRow extends DataClass
+    implements Insertable<GenerationUnitRow> {
+  /// Прогон-владелец.
+  final String runId;
+
+  /// Стабильный id единицы (`ku:<fragmentId>#<индекс>`).
+  final String unitId;
+
+  /// id раздела `ContentModel`.
+  final String sectionId;
+
+  /// Короткая тема единицы.
+  final String topic;
+
+  /// Вид единицы (`KnowledgeUnitKind.wireName`).
+  final String kind;
+
+  /// Самодостаточное утверждение.
+  final String statement;
+
+  /// Важность (доля 0..1).
+  final double salience;
+
+  /// Составное утверждение (0/1).
+  final int splittable;
+
+  /// Якоря единицы, JSON-массив `{block_id, quote}`.
+  final String anchorsJson;
+
+  /// Порядок единицы в карте (стабилен между перезапусками).
+  final int orderIndex;
+  const GenerationUnitRow({
+    required this.runId,
+    required this.unitId,
+    required this.sectionId,
+    required this.topic,
+    required this.kind,
+    required this.statement,
+    required this.salience,
+    required this.splittable,
+    required this.anchorsJson,
+    required this.orderIndex,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['run_id'] = Variable<String>(runId);
+    map['unit_id'] = Variable<String>(unitId);
+    map['section_id'] = Variable<String>(sectionId);
+    map['topic'] = Variable<String>(topic);
+    map['kind'] = Variable<String>(kind);
+    map['statement'] = Variable<String>(statement);
+    map['salience'] = Variable<double>(salience);
+    map['splittable'] = Variable<int>(splittable);
+    map['anchors_json'] = Variable<String>(anchorsJson);
+    map['order_index'] = Variable<int>(orderIndex);
+    return map;
+  }
+
+  GenerationUnitsCompanion toCompanion(bool nullToAbsent) {
+    return GenerationUnitsCompanion(
+      runId: Value(runId),
+      unitId: Value(unitId),
+      sectionId: Value(sectionId),
+      topic: Value(topic),
+      kind: Value(kind),
+      statement: Value(statement),
+      salience: Value(salience),
+      splittable: Value(splittable),
+      anchorsJson: Value(anchorsJson),
+      orderIndex: Value(orderIndex),
+    );
+  }
+
+  factory GenerationUnitRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return GenerationUnitRow(
+      runId: serializer.fromJson<String>(json['runId']),
+      unitId: serializer.fromJson<String>(json['unitId']),
+      sectionId: serializer.fromJson<String>(json['sectionId']),
+      topic: serializer.fromJson<String>(json['topic']),
+      kind: serializer.fromJson<String>(json['kind']),
+      statement: serializer.fromJson<String>(json['statement']),
+      salience: serializer.fromJson<double>(json['salience']),
+      splittable: serializer.fromJson<int>(json['splittable']),
+      anchorsJson: serializer.fromJson<String>(json['anchorsJson']),
+      orderIndex: serializer.fromJson<int>(json['orderIndex']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'runId': serializer.toJson<String>(runId),
+      'unitId': serializer.toJson<String>(unitId),
+      'sectionId': serializer.toJson<String>(sectionId),
+      'topic': serializer.toJson<String>(topic),
+      'kind': serializer.toJson<String>(kind),
+      'statement': serializer.toJson<String>(statement),
+      'salience': serializer.toJson<double>(salience),
+      'splittable': serializer.toJson<int>(splittable),
+      'anchorsJson': serializer.toJson<String>(anchorsJson),
+      'orderIndex': serializer.toJson<int>(orderIndex),
+    };
+  }
+
+  GenerationUnitRow copyWith({
+    String? runId,
+    String? unitId,
+    String? sectionId,
+    String? topic,
+    String? kind,
+    String? statement,
+    double? salience,
+    int? splittable,
+    String? anchorsJson,
+    int? orderIndex,
+  }) => GenerationUnitRow(
+    runId: runId ?? this.runId,
+    unitId: unitId ?? this.unitId,
+    sectionId: sectionId ?? this.sectionId,
+    topic: topic ?? this.topic,
+    kind: kind ?? this.kind,
+    statement: statement ?? this.statement,
+    salience: salience ?? this.salience,
+    splittable: splittable ?? this.splittable,
+    anchorsJson: anchorsJson ?? this.anchorsJson,
+    orderIndex: orderIndex ?? this.orderIndex,
+  );
+  GenerationUnitRow copyWithCompanion(GenerationUnitsCompanion data) {
+    return GenerationUnitRow(
+      runId: data.runId.present ? data.runId.value : this.runId,
+      unitId: data.unitId.present ? data.unitId.value : this.unitId,
+      sectionId: data.sectionId.present ? data.sectionId.value : this.sectionId,
+      topic: data.topic.present ? data.topic.value : this.topic,
+      kind: data.kind.present ? data.kind.value : this.kind,
+      statement: data.statement.present ? data.statement.value : this.statement,
+      salience: data.salience.present ? data.salience.value : this.salience,
+      splittable: data.splittable.present
+          ? data.splittable.value
+          : this.splittable,
+      anchorsJson: data.anchorsJson.present
+          ? data.anchorsJson.value
+          : this.anchorsJson,
+      orderIndex: data.orderIndex.present
+          ? data.orderIndex.value
+          : this.orderIndex,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('GenerationUnitRow(')
+          ..write('runId: $runId, ')
+          ..write('unitId: $unitId, ')
+          ..write('sectionId: $sectionId, ')
+          ..write('topic: $topic, ')
+          ..write('kind: $kind, ')
+          ..write('statement: $statement, ')
+          ..write('salience: $salience, ')
+          ..write('splittable: $splittable, ')
+          ..write('anchorsJson: $anchorsJson, ')
+          ..write('orderIndex: $orderIndex')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    runId,
+    unitId,
+    sectionId,
+    topic,
+    kind,
+    statement,
+    salience,
+    splittable,
+    anchorsJson,
+    orderIndex,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GenerationUnitRow &&
+          other.runId == this.runId &&
+          other.unitId == this.unitId &&
+          other.sectionId == this.sectionId &&
+          other.topic == this.topic &&
+          other.kind == this.kind &&
+          other.statement == this.statement &&
+          other.salience == this.salience &&
+          other.splittable == this.splittable &&
+          other.anchorsJson == this.anchorsJson &&
+          other.orderIndex == this.orderIndex);
+}
+
+class GenerationUnitsCompanion extends UpdateCompanion<GenerationUnitRow> {
+  final Value<String> runId;
+  final Value<String> unitId;
+  final Value<String> sectionId;
+  final Value<String> topic;
+  final Value<String> kind;
+  final Value<String> statement;
+  final Value<double> salience;
+  final Value<int> splittable;
+  final Value<String> anchorsJson;
+  final Value<int> orderIndex;
+  final Value<int> rowid;
+  const GenerationUnitsCompanion({
+    this.runId = const Value.absent(),
+    this.unitId = const Value.absent(),
+    this.sectionId = const Value.absent(),
+    this.topic = const Value.absent(),
+    this.kind = const Value.absent(),
+    this.statement = const Value.absent(),
+    this.salience = const Value.absent(),
+    this.splittable = const Value.absent(),
+    this.anchorsJson = const Value.absent(),
+    this.orderIndex = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  GenerationUnitsCompanion.insert({
+    required String runId,
+    required String unitId,
+    required String sectionId,
+    required String topic,
+    required String kind,
+    required String statement,
+    required double salience,
+    required int splittable,
+    required String anchorsJson,
+    required int orderIndex,
+    this.rowid = const Value.absent(),
+  }) : runId = Value(runId),
+       unitId = Value(unitId),
+       sectionId = Value(sectionId),
+       topic = Value(topic),
+       kind = Value(kind),
+       statement = Value(statement),
+       salience = Value(salience),
+       splittable = Value(splittable),
+       anchorsJson = Value(anchorsJson),
+       orderIndex = Value(orderIndex);
+  static Insertable<GenerationUnitRow> custom({
+    Expression<String>? runId,
+    Expression<String>? unitId,
+    Expression<String>? sectionId,
+    Expression<String>? topic,
+    Expression<String>? kind,
+    Expression<String>? statement,
+    Expression<double>? salience,
+    Expression<int>? splittable,
+    Expression<String>? anchorsJson,
+    Expression<int>? orderIndex,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (runId != null) 'run_id': runId,
+      if (unitId != null) 'unit_id': unitId,
+      if (sectionId != null) 'section_id': sectionId,
+      if (topic != null) 'topic': topic,
+      if (kind != null) 'kind': kind,
+      if (statement != null) 'statement': statement,
+      if (salience != null) 'salience': salience,
+      if (splittable != null) 'splittable': splittable,
+      if (anchorsJson != null) 'anchors_json': anchorsJson,
+      if (orderIndex != null) 'order_index': orderIndex,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  GenerationUnitsCompanion copyWith({
+    Value<String>? runId,
+    Value<String>? unitId,
+    Value<String>? sectionId,
+    Value<String>? topic,
+    Value<String>? kind,
+    Value<String>? statement,
+    Value<double>? salience,
+    Value<int>? splittable,
+    Value<String>? anchorsJson,
+    Value<int>? orderIndex,
+    Value<int>? rowid,
+  }) {
+    return GenerationUnitsCompanion(
+      runId: runId ?? this.runId,
+      unitId: unitId ?? this.unitId,
+      sectionId: sectionId ?? this.sectionId,
+      topic: topic ?? this.topic,
+      kind: kind ?? this.kind,
+      statement: statement ?? this.statement,
+      salience: salience ?? this.salience,
+      splittable: splittable ?? this.splittable,
+      anchorsJson: anchorsJson ?? this.anchorsJson,
+      orderIndex: orderIndex ?? this.orderIndex,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (runId.present) {
+      map['run_id'] = Variable<String>(runId.value);
+    }
+    if (unitId.present) {
+      map['unit_id'] = Variable<String>(unitId.value);
+    }
+    if (sectionId.present) {
+      map['section_id'] = Variable<String>(sectionId.value);
+    }
+    if (topic.present) {
+      map['topic'] = Variable<String>(topic.value);
+    }
+    if (kind.present) {
+      map['kind'] = Variable<String>(kind.value);
+    }
+    if (statement.present) {
+      map['statement'] = Variable<String>(statement.value);
+    }
+    if (salience.present) {
+      map['salience'] = Variable<double>(salience.value);
+    }
+    if (splittable.present) {
+      map['splittable'] = Variable<int>(splittable.value);
+    }
+    if (anchorsJson.present) {
+      map['anchors_json'] = Variable<String>(anchorsJson.value);
+    }
+    if (orderIndex.present) {
+      map['order_index'] = Variable<int>(orderIndex.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('GenerationUnitsCompanion(')
+          ..write('runId: $runId, ')
+          ..write('unitId: $unitId, ')
+          ..write('sectionId: $sectionId, ')
+          ..write('topic: $topic, ')
+          ..write('kind: $kind, ')
+          ..write('statement: $statement, ')
+          ..write('salience: $salience, ')
+          ..write('splittable: $splittable, ')
+          ..write('anchorsJson: $anchorsJson, ')
+          ..write('orderIndex: $orderIndex, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $GenerationBatchesTable extends GenerationBatches
+    with TableInfo<$GenerationBatchesTable, GenerationBatchRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $GenerationBatchesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _runIdMeta = const VerificationMeta('runId');
+  @override
+  late final GeneratedColumn<String> runId = GeneratedColumn<String>(
+    'run_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES generation_runs (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _batchIndexMeta = const VerificationMeta(
+    'batchIndex',
+  );
+  @override
+  late final GeneratedColumn<int> batchIndex = GeneratedColumn<int>(
+    'batch_index',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+    'status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _requestedMeta = const VerificationMeta(
+    'requested',
+  );
+  @override
+  late final GeneratedColumn<int> requested = GeneratedColumn<int>(
+    'requested',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _generatedMeta = const VerificationMeta(
+    'generated',
+  );
+  @override
+  late final GeneratedColumn<int> generated = GeneratedColumn<int>(
+    'generated',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _invalidMeta = const VerificationMeta(
+    'invalid',
+  );
+  @override
+  late final GeneratedColumn<int> invalid = GeneratedColumn<int>(
+    'invalid',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _duplicatesMeta = const VerificationMeta(
+    'duplicates',
+  );
+  @override
+  late final GeneratedColumn<int> duplicates = GeneratedColumn<int>(
+    'duplicates',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _attemptsMeta = const VerificationMeta(
+    'attempts',
+  );
+  @override
+  late final GeneratedColumn<int> attempts = GeneratedColumn<int>(
+    'attempts',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _causeMeta = const VerificationMeta('cause');
+  @override
+  late final GeneratedColumn<String> cause = GeneratedColumn<String>(
+    'cause',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    runId,
+    batchIndex,
+    status,
+    requested,
+    generated,
+    invalid,
+    duplicates,
+    attempts,
+    cause,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'generation_batches';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<GenerationBatchRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('run_id')) {
+      context.handle(
+        _runIdMeta,
+        runId.isAcceptableOrUnknown(data['run_id']!, _runIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_runIdMeta);
+    }
+    if (data.containsKey('batch_index')) {
+      context.handle(
+        _batchIndexMeta,
+        batchIndex.isAcceptableOrUnknown(data['batch_index']!, _batchIndexMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_batchIndexMeta);
+    }
+    if (data.containsKey('status')) {
+      context.handle(
+        _statusMeta,
+        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_statusMeta);
+    }
+    if (data.containsKey('requested')) {
+      context.handle(
+        _requestedMeta,
+        requested.isAcceptableOrUnknown(data['requested']!, _requestedMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_requestedMeta);
+    }
+    if (data.containsKey('generated')) {
+      context.handle(
+        _generatedMeta,
+        generated.isAcceptableOrUnknown(data['generated']!, _generatedMeta),
+      );
+    }
+    if (data.containsKey('invalid')) {
+      context.handle(
+        _invalidMeta,
+        invalid.isAcceptableOrUnknown(data['invalid']!, _invalidMeta),
+      );
+    }
+    if (data.containsKey('duplicates')) {
+      context.handle(
+        _duplicatesMeta,
+        duplicates.isAcceptableOrUnknown(data['duplicates']!, _duplicatesMeta),
+      );
+    }
+    if (data.containsKey('attempts')) {
+      context.handle(
+        _attemptsMeta,
+        attempts.isAcceptableOrUnknown(data['attempts']!, _attemptsMeta),
+      );
+    }
+    if (data.containsKey('cause')) {
+      context.handle(
+        _causeMeta,
+        cause.isAcceptableOrUnknown(data['cause']!, _causeMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {runId, batchIndex};
+  @override
+  GenerationBatchRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return GenerationBatchRow(
+      runId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}run_id'],
+      )!,
+      batchIndex: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}batch_index'],
+      )!,
+      status: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}status'],
+      )!,
+      requested: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}requested'],
+      )!,
+      generated: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}generated'],
+      )!,
+      invalid: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}invalid'],
+      )!,
+      duplicates: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}duplicates'],
+      )!,
+      attempts: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}attempts'],
+      )!,
+      cause: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cause'],
+      ),
+    );
+  }
+
+  @override
+  $GenerationBatchesTable createAlias(String alias) {
+    return $GenerationBatchesTable(attachedDatabase, alias);
+  }
+}
+
+class GenerationBatchRow extends DataClass
+    implements Insertable<GenerationBatchRow> {
+  /// Прогон-владелец.
+  final String runId;
+
+  /// Номер партии в плане (с 0, без пропусков).
+  final int batchIndex;
+
+  /// Статус партии (`GenerationBatchStatus.wireName` домена).
+  final String status;
+
+  /// Бюджет партии: сколько карточек запрошено у модели.
+  final int requested;
+
+  /// Сколько карточек вернула модель.
+  final int generated;
+
+  /// Сколько отброшено валидацией.
+  final int invalid;
+
+  /// Сколько отброшено как точный дубль.
+  final int duplicates;
+
+  /// Сколько запросов модели ушло на партию (повторы и добор).
+  final int attempts;
+
+  /// Явная причина недобора (`ShortfallKind.wireName`), если объявлена.
+  final String? cause;
+  const GenerationBatchRow({
+    required this.runId,
+    required this.batchIndex,
+    required this.status,
+    required this.requested,
+    required this.generated,
+    required this.invalid,
+    required this.duplicates,
+    required this.attempts,
+    this.cause,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['run_id'] = Variable<String>(runId);
+    map['batch_index'] = Variable<int>(batchIndex);
+    map['status'] = Variable<String>(status);
+    map['requested'] = Variable<int>(requested);
+    map['generated'] = Variable<int>(generated);
+    map['invalid'] = Variable<int>(invalid);
+    map['duplicates'] = Variable<int>(duplicates);
+    map['attempts'] = Variable<int>(attempts);
+    if (!nullToAbsent || cause != null) {
+      map['cause'] = Variable<String>(cause);
+    }
+    return map;
+  }
+
+  GenerationBatchesCompanion toCompanion(bool nullToAbsent) {
+    return GenerationBatchesCompanion(
+      runId: Value(runId),
+      batchIndex: Value(batchIndex),
+      status: Value(status),
+      requested: Value(requested),
+      generated: Value(generated),
+      invalid: Value(invalid),
+      duplicates: Value(duplicates),
+      attempts: Value(attempts),
+      cause: cause == null && nullToAbsent
+          ? const Value.absent()
+          : Value(cause),
+    );
+  }
+
+  factory GenerationBatchRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return GenerationBatchRow(
+      runId: serializer.fromJson<String>(json['runId']),
+      batchIndex: serializer.fromJson<int>(json['batchIndex']),
+      status: serializer.fromJson<String>(json['status']),
+      requested: serializer.fromJson<int>(json['requested']),
+      generated: serializer.fromJson<int>(json['generated']),
+      invalid: serializer.fromJson<int>(json['invalid']),
+      duplicates: serializer.fromJson<int>(json['duplicates']),
+      attempts: serializer.fromJson<int>(json['attempts']),
+      cause: serializer.fromJson<String?>(json['cause']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'runId': serializer.toJson<String>(runId),
+      'batchIndex': serializer.toJson<int>(batchIndex),
+      'status': serializer.toJson<String>(status),
+      'requested': serializer.toJson<int>(requested),
+      'generated': serializer.toJson<int>(generated),
+      'invalid': serializer.toJson<int>(invalid),
+      'duplicates': serializer.toJson<int>(duplicates),
+      'attempts': serializer.toJson<int>(attempts),
+      'cause': serializer.toJson<String?>(cause),
+    };
+  }
+
+  GenerationBatchRow copyWith({
+    String? runId,
+    int? batchIndex,
+    String? status,
+    int? requested,
+    int? generated,
+    int? invalid,
+    int? duplicates,
+    int? attempts,
+    Value<String?> cause = const Value.absent(),
+  }) => GenerationBatchRow(
+    runId: runId ?? this.runId,
+    batchIndex: batchIndex ?? this.batchIndex,
+    status: status ?? this.status,
+    requested: requested ?? this.requested,
+    generated: generated ?? this.generated,
+    invalid: invalid ?? this.invalid,
+    duplicates: duplicates ?? this.duplicates,
+    attempts: attempts ?? this.attempts,
+    cause: cause.present ? cause.value : this.cause,
+  );
+  GenerationBatchRow copyWithCompanion(GenerationBatchesCompanion data) {
+    return GenerationBatchRow(
+      runId: data.runId.present ? data.runId.value : this.runId,
+      batchIndex: data.batchIndex.present
+          ? data.batchIndex.value
+          : this.batchIndex,
+      status: data.status.present ? data.status.value : this.status,
+      requested: data.requested.present ? data.requested.value : this.requested,
+      generated: data.generated.present ? data.generated.value : this.generated,
+      invalid: data.invalid.present ? data.invalid.value : this.invalid,
+      duplicates: data.duplicates.present
+          ? data.duplicates.value
+          : this.duplicates,
+      attempts: data.attempts.present ? data.attempts.value : this.attempts,
+      cause: data.cause.present ? data.cause.value : this.cause,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('GenerationBatchRow(')
+          ..write('runId: $runId, ')
+          ..write('batchIndex: $batchIndex, ')
+          ..write('status: $status, ')
+          ..write('requested: $requested, ')
+          ..write('generated: $generated, ')
+          ..write('invalid: $invalid, ')
+          ..write('duplicates: $duplicates, ')
+          ..write('attempts: $attempts, ')
+          ..write('cause: $cause')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    runId,
+    batchIndex,
+    status,
+    requested,
+    generated,
+    invalid,
+    duplicates,
+    attempts,
+    cause,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is GenerationBatchRow &&
+          other.runId == this.runId &&
+          other.batchIndex == this.batchIndex &&
+          other.status == this.status &&
+          other.requested == this.requested &&
+          other.generated == this.generated &&
+          other.invalid == this.invalid &&
+          other.duplicates == this.duplicates &&
+          other.attempts == this.attempts &&
+          other.cause == this.cause);
+}
+
+class GenerationBatchesCompanion extends UpdateCompanion<GenerationBatchRow> {
+  final Value<String> runId;
+  final Value<int> batchIndex;
+  final Value<String> status;
+  final Value<int> requested;
+  final Value<int> generated;
+  final Value<int> invalid;
+  final Value<int> duplicates;
+  final Value<int> attempts;
+  final Value<String?> cause;
+  final Value<int> rowid;
+  const GenerationBatchesCompanion({
+    this.runId = const Value.absent(),
+    this.batchIndex = const Value.absent(),
+    this.status = const Value.absent(),
+    this.requested = const Value.absent(),
+    this.generated = const Value.absent(),
+    this.invalid = const Value.absent(),
+    this.duplicates = const Value.absent(),
+    this.attempts = const Value.absent(),
+    this.cause = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  GenerationBatchesCompanion.insert({
+    required String runId,
+    required int batchIndex,
+    required String status,
+    required int requested,
+    this.generated = const Value.absent(),
+    this.invalid = const Value.absent(),
+    this.duplicates = const Value.absent(),
+    this.attempts = const Value.absent(),
+    this.cause = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : runId = Value(runId),
+       batchIndex = Value(batchIndex),
+       status = Value(status),
+       requested = Value(requested);
+  static Insertable<GenerationBatchRow> custom({
+    Expression<String>? runId,
+    Expression<int>? batchIndex,
+    Expression<String>? status,
+    Expression<int>? requested,
+    Expression<int>? generated,
+    Expression<int>? invalid,
+    Expression<int>? duplicates,
+    Expression<int>? attempts,
+    Expression<String>? cause,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (runId != null) 'run_id': runId,
+      if (batchIndex != null) 'batch_index': batchIndex,
+      if (status != null) 'status': status,
+      if (requested != null) 'requested': requested,
+      if (generated != null) 'generated': generated,
+      if (invalid != null) 'invalid': invalid,
+      if (duplicates != null) 'duplicates': duplicates,
+      if (attempts != null) 'attempts': attempts,
+      if (cause != null) 'cause': cause,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  GenerationBatchesCompanion copyWith({
+    Value<String>? runId,
+    Value<int>? batchIndex,
+    Value<String>? status,
+    Value<int>? requested,
+    Value<int>? generated,
+    Value<int>? invalid,
+    Value<int>? duplicates,
+    Value<int>? attempts,
+    Value<String?>? cause,
+    Value<int>? rowid,
+  }) {
+    return GenerationBatchesCompanion(
+      runId: runId ?? this.runId,
+      batchIndex: batchIndex ?? this.batchIndex,
+      status: status ?? this.status,
+      requested: requested ?? this.requested,
+      generated: generated ?? this.generated,
+      invalid: invalid ?? this.invalid,
+      duplicates: duplicates ?? this.duplicates,
+      attempts: attempts ?? this.attempts,
+      cause: cause ?? this.cause,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (runId.present) {
+      map['run_id'] = Variable<String>(runId.value);
+    }
+    if (batchIndex.present) {
+      map['batch_index'] = Variable<int>(batchIndex.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
+    }
+    if (requested.present) {
+      map['requested'] = Variable<int>(requested.value);
+    }
+    if (generated.present) {
+      map['generated'] = Variable<int>(generated.value);
+    }
+    if (invalid.present) {
+      map['invalid'] = Variable<int>(invalid.value);
+    }
+    if (duplicates.present) {
+      map['duplicates'] = Variable<int>(duplicates.value);
+    }
+    if (attempts.present) {
+      map['attempts'] = Variable<int>(attempts.value);
+    }
+    if (cause.present) {
+      map['cause'] = Variable<String>(cause.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('GenerationBatchesCompanion(')
+          ..write('runId: $runId, ')
+          ..write('batchIndex: $batchIndex, ')
+          ..write('status: $status, ')
+          ..write('requested: $requested, ')
+          ..write('generated: $generated, ')
+          ..write('invalid: $invalid, ')
+          ..write('duplicates: $duplicates, ')
+          ..write('attempts: $attempts, ')
+          ..write('cause: $cause, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $CardDraftsTable extends CardDrafts
+    with TableInfo<$CardDraftsTable, CardDraftRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CardDraftsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _runIdMeta = const VerificationMeta('runId');
+  @override
+  late final GeneratedColumn<String> runId = GeneratedColumn<String>(
+    'run_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES generation_runs (id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _batchIndexMeta = const VerificationMeta(
+    'batchIndex',
+  );
+  @override
+  late final GeneratedColumn<int> batchIndex = GeneratedColumn<int>(
+    'batch_index',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _contentHashMeta = const VerificationMeta(
+    'contentHash',
+  );
+  @override
+  late final GeneratedColumn<String> contentHash = GeneratedColumn<String>(
+    'content_hash',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _unitIdMeta = const VerificationMeta('unitId');
+  @override
+  late final GeneratedColumn<String> unitId = GeneratedColumn<String>(
+    'unit_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _angleMeta = const VerificationMeta('angle');
+  @override
+  late final GeneratedColumn<String> angle = GeneratedColumn<String>(
+    'angle',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _cardJsonMeta = const VerificationMeta(
+    'cardJson',
+  );
+  @override
+  late final GeneratedColumn<String> cardJson = GeneratedColumn<String>(
+    'card_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _importedCardIdMeta = const VerificationMeta(
+    'importedCardId',
+  );
+  @override
+  late final GeneratedColumn<String> importedCardId = GeneratedColumn<String>(
+    'imported_card_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _importedAtMeta = const VerificationMeta(
+    'importedAt',
+  );
+  @override
+  late final GeneratedColumn<int> importedAt = GeneratedColumn<int>(
+    'imported_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    runId,
+    batchIndex,
+    contentHash,
+    unitId,
+    angle,
+    cardJson,
+    createdAt,
+    importedCardId,
+    importedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'card_drafts';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CardDraftRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('run_id')) {
+      context.handle(
+        _runIdMeta,
+        runId.isAcceptableOrUnknown(data['run_id']!, _runIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_runIdMeta);
+    }
+    if (data.containsKey('batch_index')) {
+      context.handle(
+        _batchIndexMeta,
+        batchIndex.isAcceptableOrUnknown(data['batch_index']!, _batchIndexMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_batchIndexMeta);
+    }
+    if (data.containsKey('content_hash')) {
+      context.handle(
+        _contentHashMeta,
+        contentHash.isAcceptableOrUnknown(
+          data['content_hash']!,
+          _contentHashMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_contentHashMeta);
+    }
+    if (data.containsKey('unit_id')) {
+      context.handle(
+        _unitIdMeta,
+        unitId.isAcceptableOrUnknown(data['unit_id']!, _unitIdMeta),
+      );
+    }
+    if (data.containsKey('angle')) {
+      context.handle(
+        _angleMeta,
+        angle.isAcceptableOrUnknown(data['angle']!, _angleMeta),
+      );
+    }
+    if (data.containsKey('card_json')) {
+      context.handle(
+        _cardJsonMeta,
+        cardJson.isAcceptableOrUnknown(data['card_json']!, _cardJsonMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_cardJsonMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('imported_card_id')) {
+      context.handle(
+        _importedCardIdMeta,
+        importedCardId.isAcceptableOrUnknown(
+          data['imported_card_id']!,
+          _importedCardIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('imported_at')) {
+      context.handle(
+        _importedAtMeta,
+        importedAt.isAcceptableOrUnknown(data['imported_at']!, _importedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  CardDraftRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CardDraftRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      runId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}run_id'],
+      )!,
+      batchIndex: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}batch_index'],
+      )!,
+      contentHash: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}content_hash'],
+      )!,
+      unitId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}unit_id'],
+      ),
+      angle: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}angle'],
+      ),
+      cardJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}card_json'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}created_at'],
+      )!,
+      importedCardId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}imported_card_id'],
+      ),
+      importedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}imported_at'],
+      ),
+    );
+  }
+
+  @override
+  $CardDraftsTable createAlias(String alias) {
+    return $CardDraftsTable(attachedDatabase, alias);
+  }
+}
+
+class CardDraftRow extends DataClass implements Insertable<CardDraftRow> {
+  /// Уникальный идентификатор черновика.
+  final String id;
+
+  /// Прогон-владелец.
+  final String runId;
+
+  /// Партия, в которой карточка принята (для журнала и восстановления).
+  final int batchIndex;
+
+  /// Хеш содержимого `front + "\u0000" + back` — ключ идемпотентности импорта.
+  final String contentHash;
+
+  /// Единица карты знаний, по которой построена карточка (`unit_id`, v3).
+  final String? unitId;
+
+  /// Угол карточки (`angle`, v3); `NULL` — основная карточка.
+  final String? angle;
+
+  /// Структура карточки, JSON (без байтов изображений).
+  final String cardJson;
+
+  /// Момент принятия (epoch ms).
+  final int createdAt;
+
+  /// `cards.id`, если карточка импортирована в колоду.
+  final String? importedCardId;
+
+  /// Момент импорта (epoch ms), `NULL` — ещё не импортирована.
+  final int? importedAt;
+  const CardDraftRow({
+    required this.id,
+    required this.runId,
+    required this.batchIndex,
+    required this.contentHash,
+    this.unitId,
+    this.angle,
+    required this.cardJson,
+    required this.createdAt,
+    this.importedCardId,
+    this.importedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['run_id'] = Variable<String>(runId);
+    map['batch_index'] = Variable<int>(batchIndex);
+    map['content_hash'] = Variable<String>(contentHash);
+    if (!nullToAbsent || unitId != null) {
+      map['unit_id'] = Variable<String>(unitId);
+    }
+    if (!nullToAbsent || angle != null) {
+      map['angle'] = Variable<String>(angle);
+    }
+    map['card_json'] = Variable<String>(cardJson);
+    map['created_at'] = Variable<int>(createdAt);
+    if (!nullToAbsent || importedCardId != null) {
+      map['imported_card_id'] = Variable<String>(importedCardId);
+    }
+    if (!nullToAbsent || importedAt != null) {
+      map['imported_at'] = Variable<int>(importedAt);
+    }
+    return map;
+  }
+
+  CardDraftsCompanion toCompanion(bool nullToAbsent) {
+    return CardDraftsCompanion(
+      id: Value(id),
+      runId: Value(runId),
+      batchIndex: Value(batchIndex),
+      contentHash: Value(contentHash),
+      unitId: unitId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(unitId),
+      angle: angle == null && nullToAbsent
+          ? const Value.absent()
+          : Value(angle),
+      cardJson: Value(cardJson),
+      createdAt: Value(createdAt),
+      importedCardId: importedCardId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(importedCardId),
+      importedAt: importedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(importedAt),
+    );
+  }
+
+  factory CardDraftRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CardDraftRow(
+      id: serializer.fromJson<String>(json['id']),
+      runId: serializer.fromJson<String>(json['runId']),
+      batchIndex: serializer.fromJson<int>(json['batchIndex']),
+      contentHash: serializer.fromJson<String>(json['contentHash']),
+      unitId: serializer.fromJson<String?>(json['unitId']),
+      angle: serializer.fromJson<String?>(json['angle']),
+      cardJson: serializer.fromJson<String>(json['cardJson']),
+      createdAt: serializer.fromJson<int>(json['createdAt']),
+      importedCardId: serializer.fromJson<String?>(json['importedCardId']),
+      importedAt: serializer.fromJson<int?>(json['importedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'runId': serializer.toJson<String>(runId),
+      'batchIndex': serializer.toJson<int>(batchIndex),
+      'contentHash': serializer.toJson<String>(contentHash),
+      'unitId': serializer.toJson<String?>(unitId),
+      'angle': serializer.toJson<String?>(angle),
+      'cardJson': serializer.toJson<String>(cardJson),
+      'createdAt': serializer.toJson<int>(createdAt),
+      'importedCardId': serializer.toJson<String?>(importedCardId),
+      'importedAt': serializer.toJson<int?>(importedAt),
+    };
+  }
+
+  CardDraftRow copyWith({
+    String? id,
+    String? runId,
+    int? batchIndex,
+    String? contentHash,
+    Value<String?> unitId = const Value.absent(),
+    Value<String?> angle = const Value.absent(),
+    String? cardJson,
+    int? createdAt,
+    Value<String?> importedCardId = const Value.absent(),
+    Value<int?> importedAt = const Value.absent(),
+  }) => CardDraftRow(
+    id: id ?? this.id,
+    runId: runId ?? this.runId,
+    batchIndex: batchIndex ?? this.batchIndex,
+    contentHash: contentHash ?? this.contentHash,
+    unitId: unitId.present ? unitId.value : this.unitId,
+    angle: angle.present ? angle.value : this.angle,
+    cardJson: cardJson ?? this.cardJson,
+    createdAt: createdAt ?? this.createdAt,
+    importedCardId: importedCardId.present
+        ? importedCardId.value
+        : this.importedCardId,
+    importedAt: importedAt.present ? importedAt.value : this.importedAt,
+  );
+  CardDraftRow copyWithCompanion(CardDraftsCompanion data) {
+    return CardDraftRow(
+      id: data.id.present ? data.id.value : this.id,
+      runId: data.runId.present ? data.runId.value : this.runId,
+      batchIndex: data.batchIndex.present
+          ? data.batchIndex.value
+          : this.batchIndex,
+      contentHash: data.contentHash.present
+          ? data.contentHash.value
+          : this.contentHash,
+      unitId: data.unitId.present ? data.unitId.value : this.unitId,
+      angle: data.angle.present ? data.angle.value : this.angle,
+      cardJson: data.cardJson.present ? data.cardJson.value : this.cardJson,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      importedCardId: data.importedCardId.present
+          ? data.importedCardId.value
+          : this.importedCardId,
+      importedAt: data.importedAt.present
+          ? data.importedAt.value
+          : this.importedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CardDraftRow(')
+          ..write('id: $id, ')
+          ..write('runId: $runId, ')
+          ..write('batchIndex: $batchIndex, ')
+          ..write('contentHash: $contentHash, ')
+          ..write('unitId: $unitId, ')
+          ..write('angle: $angle, ')
+          ..write('cardJson: $cardJson, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('importedCardId: $importedCardId, ')
+          ..write('importedAt: $importedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    runId,
+    batchIndex,
+    contentHash,
+    unitId,
+    angle,
+    cardJson,
+    createdAt,
+    importedCardId,
+    importedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CardDraftRow &&
+          other.id == this.id &&
+          other.runId == this.runId &&
+          other.batchIndex == this.batchIndex &&
+          other.contentHash == this.contentHash &&
+          other.unitId == this.unitId &&
+          other.angle == this.angle &&
+          other.cardJson == this.cardJson &&
+          other.createdAt == this.createdAt &&
+          other.importedCardId == this.importedCardId &&
+          other.importedAt == this.importedAt);
+}
+
+class CardDraftsCompanion extends UpdateCompanion<CardDraftRow> {
+  final Value<String> id;
+  final Value<String> runId;
+  final Value<int> batchIndex;
+  final Value<String> contentHash;
+  final Value<String?> unitId;
+  final Value<String?> angle;
+  final Value<String> cardJson;
+  final Value<int> createdAt;
+  final Value<String?> importedCardId;
+  final Value<int?> importedAt;
+  final Value<int> rowid;
+  const CardDraftsCompanion({
+    this.id = const Value.absent(),
+    this.runId = const Value.absent(),
+    this.batchIndex = const Value.absent(),
+    this.contentHash = const Value.absent(),
+    this.unitId = const Value.absent(),
+    this.angle = const Value.absent(),
+    this.cardJson = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.importedCardId = const Value.absent(),
+    this.importedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CardDraftsCompanion.insert({
+    required String id,
+    required String runId,
+    required int batchIndex,
+    required String contentHash,
+    this.unitId = const Value.absent(),
+    this.angle = const Value.absent(),
+    required String cardJson,
+    required int createdAt,
+    this.importedCardId = const Value.absent(),
+    this.importedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       runId = Value(runId),
+       batchIndex = Value(batchIndex),
+       contentHash = Value(contentHash),
+       cardJson = Value(cardJson),
+       createdAt = Value(createdAt);
+  static Insertable<CardDraftRow> custom({
+    Expression<String>? id,
+    Expression<String>? runId,
+    Expression<int>? batchIndex,
+    Expression<String>? contentHash,
+    Expression<String>? unitId,
+    Expression<String>? angle,
+    Expression<String>? cardJson,
+    Expression<int>? createdAt,
+    Expression<String>? importedCardId,
+    Expression<int>? importedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (runId != null) 'run_id': runId,
+      if (batchIndex != null) 'batch_index': batchIndex,
+      if (contentHash != null) 'content_hash': contentHash,
+      if (unitId != null) 'unit_id': unitId,
+      if (angle != null) 'angle': angle,
+      if (cardJson != null) 'card_json': cardJson,
+      if (createdAt != null) 'created_at': createdAt,
+      if (importedCardId != null) 'imported_card_id': importedCardId,
+      if (importedAt != null) 'imported_at': importedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CardDraftsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? runId,
+    Value<int>? batchIndex,
+    Value<String>? contentHash,
+    Value<String?>? unitId,
+    Value<String?>? angle,
+    Value<String>? cardJson,
+    Value<int>? createdAt,
+    Value<String?>? importedCardId,
+    Value<int?>? importedAt,
+    Value<int>? rowid,
+  }) {
+    return CardDraftsCompanion(
+      id: id ?? this.id,
+      runId: runId ?? this.runId,
+      batchIndex: batchIndex ?? this.batchIndex,
+      contentHash: contentHash ?? this.contentHash,
+      unitId: unitId ?? this.unitId,
+      angle: angle ?? this.angle,
+      cardJson: cardJson ?? this.cardJson,
+      createdAt: createdAt ?? this.createdAt,
+      importedCardId: importedCardId ?? this.importedCardId,
+      importedAt: importedAt ?? this.importedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (runId.present) {
+      map['run_id'] = Variable<String>(runId.value);
+    }
+    if (batchIndex.present) {
+      map['batch_index'] = Variable<int>(batchIndex.value);
+    }
+    if (contentHash.present) {
+      map['content_hash'] = Variable<String>(contentHash.value);
+    }
+    if (unitId.present) {
+      map['unit_id'] = Variable<String>(unitId.value);
+    }
+    if (angle.present) {
+      map['angle'] = Variable<String>(angle.value);
+    }
+    if (cardJson.present) {
+      map['card_json'] = Variable<String>(cardJson.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<int>(createdAt.value);
+    }
+    if (importedCardId.present) {
+      map['imported_card_id'] = Variable<String>(importedCardId.value);
+    }
+    if (importedAt.present) {
+      map['imported_at'] = Variable<int>(importedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CardDraftsCompanion(')
+          ..write('id: $id, ')
+          ..write('runId: $runId, ')
+          ..write('batchIndex: $batchIndex, ')
+          ..write('contentHash: $contentHash, ')
+          ..write('unitId: $unitId, ')
+          ..write('angle: $angle, ')
+          ..write('cardJson: $cardJson, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('importedCardId: $importedCardId, ')
+          ..write('importedAt: $importedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $KnowledgeMapsTable extends KnowledgeMaps
+    with TableInfo<$KnowledgeMapsTable, KnowledgeMapRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $KnowledgeMapsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _documentIdMeta = const VerificationMeta(
+    'documentId',
+  );
+  @override
+  late final GeneratedColumn<String> documentId = GeneratedColumn<String>(
+    'document_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _contentHashMeta = const VerificationMeta(
+    'contentHash',
+  );
+  @override
+  late final GeneratedColumn<String> contentHash = GeneratedColumn<String>(
+    'content_hash',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _mapJsonMeta = const VerificationMeta(
+    'mapJson',
+  );
+  @override
+  late final GeneratedColumn<String> mapJson = GeneratedColumn<String>(
+    'map_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<int> createdAt = GeneratedColumn<int>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    documentId,
+    contentHash,
+    mapJson,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'knowledge_maps';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<KnowledgeMapRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('document_id')) {
+      context.handle(
+        _documentIdMeta,
+        documentId.isAcceptableOrUnknown(data['document_id']!, _documentIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_documentIdMeta);
+    }
+    if (data.containsKey('content_hash')) {
+      context.handle(
+        _contentHashMeta,
+        contentHash.isAcceptableOrUnknown(
+          data['content_hash']!,
+          _contentHashMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_contentHashMeta);
+    }
+    if (data.containsKey('map_json')) {
+      context.handle(
+        _mapJsonMeta,
+        mapJson.isAcceptableOrUnknown(data['map_json']!, _mapJsonMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_mapJsonMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {documentId, contentHash};
+  @override
+  KnowledgeMapRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return KnowledgeMapRow(
+      documentId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}document_id'],
+      )!,
+      contentHash: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}content_hash'],
+      )!,
+      mapJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}map_json'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $KnowledgeMapsTable createAlias(String alias) {
+    return $KnowledgeMapsTable(attachedDatabase, alias);
+  }
+}
+
+class KnowledgeMapRow extends DataClass implements Insertable<KnowledgeMapRow> {
+  /// id документа (`doc:<имя файла>`).
+  final String documentId;
+
+  /// Хеш содержимого документа.
+  final String contentHash;
+
+  /// JSON карты знаний (версия схемы — в самом JSON).
+  final String mapJson;
+
+  /// Момент записи (epoch ms).
+  final int createdAt;
+  const KnowledgeMapRow({
+    required this.documentId,
+    required this.contentHash,
+    required this.mapJson,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['document_id'] = Variable<String>(documentId);
+    map['content_hash'] = Variable<String>(contentHash);
+    map['map_json'] = Variable<String>(mapJson);
+    map['created_at'] = Variable<int>(createdAt);
+    return map;
+  }
+
+  KnowledgeMapsCompanion toCompanion(bool nullToAbsent) {
+    return KnowledgeMapsCompanion(
+      documentId: Value(documentId),
+      contentHash: Value(contentHash),
+      mapJson: Value(mapJson),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory KnowledgeMapRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return KnowledgeMapRow(
+      documentId: serializer.fromJson<String>(json['documentId']),
+      contentHash: serializer.fromJson<String>(json['contentHash']),
+      mapJson: serializer.fromJson<String>(json['mapJson']),
+      createdAt: serializer.fromJson<int>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'documentId': serializer.toJson<String>(documentId),
+      'contentHash': serializer.toJson<String>(contentHash),
+      'mapJson': serializer.toJson<String>(mapJson),
+      'createdAt': serializer.toJson<int>(createdAt),
+    };
+  }
+
+  KnowledgeMapRow copyWith({
+    String? documentId,
+    String? contentHash,
+    String? mapJson,
+    int? createdAt,
+  }) => KnowledgeMapRow(
+    documentId: documentId ?? this.documentId,
+    contentHash: contentHash ?? this.contentHash,
+    mapJson: mapJson ?? this.mapJson,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  KnowledgeMapRow copyWithCompanion(KnowledgeMapsCompanion data) {
+    return KnowledgeMapRow(
+      documentId: data.documentId.present
+          ? data.documentId.value
+          : this.documentId,
+      contentHash: data.contentHash.present
+          ? data.contentHash.value
+          : this.contentHash,
+      mapJson: data.mapJson.present ? data.mapJson.value : this.mapJson,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('KnowledgeMapRow(')
+          ..write('documentId: $documentId, ')
+          ..write('contentHash: $contentHash, ')
+          ..write('mapJson: $mapJson, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(documentId, contentHash, mapJson, createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is KnowledgeMapRow &&
+          other.documentId == this.documentId &&
+          other.contentHash == this.contentHash &&
+          other.mapJson == this.mapJson &&
+          other.createdAt == this.createdAt);
+}
+
+class KnowledgeMapsCompanion extends UpdateCompanion<KnowledgeMapRow> {
+  final Value<String> documentId;
+  final Value<String> contentHash;
+  final Value<String> mapJson;
+  final Value<int> createdAt;
+  final Value<int> rowid;
+  const KnowledgeMapsCompanion({
+    this.documentId = const Value.absent(),
+    this.contentHash = const Value.absent(),
+    this.mapJson = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  KnowledgeMapsCompanion.insert({
+    required String documentId,
+    required String contentHash,
+    required String mapJson,
+    required int createdAt,
+    this.rowid = const Value.absent(),
+  }) : documentId = Value(documentId),
+       contentHash = Value(contentHash),
+       mapJson = Value(mapJson),
+       createdAt = Value(createdAt);
+  static Insertable<KnowledgeMapRow> custom({
+    Expression<String>? documentId,
+    Expression<String>? contentHash,
+    Expression<String>? mapJson,
+    Expression<int>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (documentId != null) 'document_id': documentId,
+      if (contentHash != null) 'content_hash': contentHash,
+      if (mapJson != null) 'map_json': mapJson,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  KnowledgeMapsCompanion copyWith({
+    Value<String>? documentId,
+    Value<String>? contentHash,
+    Value<String>? mapJson,
+    Value<int>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return KnowledgeMapsCompanion(
+      documentId: documentId ?? this.documentId,
+      contentHash: contentHash ?? this.contentHash,
+      mapJson: mapJson ?? this.mapJson,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (documentId.present) {
+      map['document_id'] = Variable<String>(documentId.value);
+    }
+    if (contentHash.present) {
+      map['content_hash'] = Variable<String>(contentHash.value);
+    }
+    if (mapJson.present) {
+      map['map_json'] = Variable<String>(mapJson.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<int>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('KnowledgeMapsCompanion(')
+          ..write('documentId: $documentId, ')
+          ..write('contentHash: $contentHash, ')
+          ..write('mapJson: $mapJson, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -4769,6 +7545,14 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $GenerationJobsTable generationJobs = $GenerationJobsTable(this);
   late final $AppSettingsTable appSettings = $AppSettingsTable(this);
   late final $SessionPresetsTable sessionPresets = $SessionPresetsTable(this);
+  late final $GenerationRunsTable generationRuns = $GenerationRunsTable(this);
+  late final $GenerationUnitsTable generationUnits = $GenerationUnitsTable(
+    this,
+  );
+  late final $GenerationBatchesTable generationBatches =
+      $GenerationBatchesTable(this);
+  late final $CardDraftsTable cardDrafts = $CardDraftsTable(this);
+  late final $KnowledgeMapsTable knowledgeMaps = $KnowledgeMapsTable(this);
   late final Index idxCardsDeckDue = Index(
     'idx_cards_deck_due',
     'CREATE INDEX idx_cards_deck_due ON cards (deck_id, due)',
@@ -4780,6 +7564,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final Index idxReviewLogsCard = Index(
     'idx_review_logs_card',
     'CREATE INDEX idx_review_logs_card ON review_logs (card_id)',
+  );
+  late final Index idxCardDraftsRunHash = Index(
+    'idx_card_drafts_run_hash',
+    'CREATE UNIQUE INDEX idx_card_drafts_run_hash ON card_drafts (run_id, content_hash)',
   );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
@@ -4796,9 +7584,15 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     generationJobs,
     appSettings,
     sessionPresets,
+    generationRuns,
+    generationUnits,
+    generationBatches,
+    cardDrafts,
+    knowledgeMaps,
     idxCardsDeckDue,
     idxCardsHash,
     idxReviewLogsCard,
+    idxCardDraftsRunHash,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -4808,6 +7602,27 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         limitUpdateKind: UpdateKind.delete,
       ),
       result: [TableUpdate('cards', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'generation_runs',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('generation_units', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'generation_runs',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('generation_batches', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'generation_runs',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('card_drafts', kind: UpdateKind.delete)],
     ),
   ]);
 }
@@ -7506,6 +10321,2040 @@ typedef $$SessionPresetsTableProcessedTableManager =
       SessionPresetRow,
       PrefetchHooks Function()
     >;
+typedef $$GenerationRunsTableCreateCompanionBuilder =
+    GenerationRunsCompanion Function({
+      required String id,
+      required String stage,
+      required String status,
+      required int createdAt,
+      required int updatedAt,
+      Value<String?> provider,
+      Value<String?> model,
+      Value<String?> deckId,
+      Value<String?> promptVersionsJson,
+      Value<int> rowid,
+    });
+typedef $$GenerationRunsTableUpdateCompanionBuilder =
+    GenerationRunsCompanion Function({
+      Value<String> id,
+      Value<String> stage,
+      Value<String> status,
+      Value<int> createdAt,
+      Value<int> updatedAt,
+      Value<String?> provider,
+      Value<String?> model,
+      Value<String?> deckId,
+      Value<String?> promptVersionsJson,
+      Value<int> rowid,
+    });
+
+final class $$GenerationRunsTableReferences
+    extends
+        BaseReferences<_$AppDatabase, $GenerationRunsTable, GenerationRunRow> {
+  $$GenerationRunsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static MultiTypedResultKey<$GenerationUnitsTable, List<GenerationUnitRow>>
+  _generationUnitsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.generationUnits,
+    aliasName: 'generation_runs__id__generation_units__run_id',
+  );
+
+  $$GenerationUnitsTableProcessedTableManager get generationUnitsRefs {
+    final manager = $$GenerationUnitsTableTableManager(
+      $_db,
+      $_db.generationUnits,
+    ).filter((f) => f.runId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _generationUnitsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$GenerationBatchesTable, List<GenerationBatchRow>>
+  _generationBatchesRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.generationBatches,
+        aliasName: 'generation_runs__id__generation_batches__run_id',
+      );
+
+  $$GenerationBatchesTableProcessedTableManager get generationBatchesRefs {
+    final manager = $$GenerationBatchesTableTableManager(
+      $_db,
+      $_db.generationBatches,
+    ).filter((f) => f.runId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _generationBatchesRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$CardDraftsTable, List<CardDraftRow>>
+  _cardDraftsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.cardDrafts,
+    aliasName: 'generation_runs__id__card_drafts__run_id',
+  );
+
+  $$CardDraftsTableProcessedTableManager get cardDraftsRefs {
+    final manager = $$CardDraftsTableTableManager(
+      $_db,
+      $_db.cardDrafts,
+    ).filter((f) => f.runId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_cardDraftsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
+
+class $$GenerationRunsTableFilterComposer
+    extends Composer<_$AppDatabase, $GenerationRunsTable> {
+  $$GenerationRunsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get stage => $composableBuilder(
+    column: $table.stage,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get provider => $composableBuilder(
+    column: $table.provider,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get model => $composableBuilder(
+    column: $table.model,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get deckId => $composableBuilder(
+    column: $table.deckId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get promptVersionsJson => $composableBuilder(
+    column: $table.promptVersionsJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  Expression<bool> generationUnitsRefs(
+    Expression<bool> Function($$GenerationUnitsTableFilterComposer f) f,
+  ) {
+    final $$GenerationUnitsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.generationUnits,
+      getReferencedColumn: (t) => t.runId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$GenerationUnitsTableFilterComposer(
+            $db: $db,
+            $table: $db.generationUnits,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> generationBatchesRefs(
+    Expression<bool> Function($$GenerationBatchesTableFilterComposer f) f,
+  ) {
+    final $$GenerationBatchesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.generationBatches,
+      getReferencedColumn: (t) => t.runId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$GenerationBatchesTableFilterComposer(
+            $db: $db,
+            $table: $db.generationBatches,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> cardDraftsRefs(
+    Expression<bool> Function($$CardDraftsTableFilterComposer f) f,
+  ) {
+    final $$CardDraftsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.cardDrafts,
+      getReferencedColumn: (t) => t.runId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CardDraftsTableFilterComposer(
+            $db: $db,
+            $table: $db.cardDrafts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$GenerationRunsTableOrderingComposer
+    extends Composer<_$AppDatabase, $GenerationRunsTable> {
+  $$GenerationRunsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get stage => $composableBuilder(
+    column: $table.stage,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get provider => $composableBuilder(
+    column: $table.provider,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get model => $composableBuilder(
+    column: $table.model,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get deckId => $composableBuilder(
+    column: $table.deckId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get promptVersionsJson => $composableBuilder(
+    column: $table.promptVersionsJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$GenerationRunsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $GenerationRunsTable> {
+  $$GenerationRunsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get stage =>
+      $composableBuilder(column: $table.stage, builder: (column) => column);
+
+  GeneratedColumn<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<int> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<int> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get provider =>
+      $composableBuilder(column: $table.provider, builder: (column) => column);
+
+  GeneratedColumn<String> get model =>
+      $composableBuilder(column: $table.model, builder: (column) => column);
+
+  GeneratedColumn<String> get deckId =>
+      $composableBuilder(column: $table.deckId, builder: (column) => column);
+
+  GeneratedColumn<String> get promptVersionsJson => $composableBuilder(
+    column: $table.promptVersionsJson,
+    builder: (column) => column,
+  );
+
+  Expression<T> generationUnitsRefs<T extends Object>(
+    Expression<T> Function($$GenerationUnitsTableAnnotationComposer a) f,
+  ) {
+    final $$GenerationUnitsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.generationUnits,
+      getReferencedColumn: (t) => t.runId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$GenerationUnitsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.generationUnits,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> generationBatchesRefs<T extends Object>(
+    Expression<T> Function($$GenerationBatchesTableAnnotationComposer a) f,
+  ) {
+    final $$GenerationBatchesTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.generationBatches,
+          getReferencedColumn: (t) => t.runId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$GenerationBatchesTableAnnotationComposer(
+                $db: $db,
+                $table: $db.generationBatches,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
+
+  Expression<T> cardDraftsRefs<T extends Object>(
+    Expression<T> Function($$CardDraftsTableAnnotationComposer a) f,
+  ) {
+    final $$CardDraftsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.cardDrafts,
+      getReferencedColumn: (t) => t.runId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CardDraftsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.cardDrafts,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$GenerationRunsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $GenerationRunsTable,
+          GenerationRunRow,
+          $$GenerationRunsTableFilterComposer,
+          $$GenerationRunsTableOrderingComposer,
+          $$GenerationRunsTableAnnotationComposer,
+          $$GenerationRunsTableCreateCompanionBuilder,
+          $$GenerationRunsTableUpdateCompanionBuilder,
+          (GenerationRunRow, $$GenerationRunsTableReferences),
+          GenerationRunRow,
+          PrefetchHooks Function({
+            bool generationUnitsRefs,
+            bool generationBatchesRefs,
+            bool cardDraftsRefs,
+          })
+        > {
+  $$GenerationRunsTableTableManager(
+    _$AppDatabase db,
+    $GenerationRunsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$GenerationRunsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$GenerationRunsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$GenerationRunsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> stage = const Value.absent(),
+                Value<String> status = const Value.absent(),
+                Value<int> createdAt = const Value.absent(),
+                Value<int> updatedAt = const Value.absent(),
+                Value<String?> provider = const Value.absent(),
+                Value<String?> model = const Value.absent(),
+                Value<String?> deckId = const Value.absent(),
+                Value<String?> promptVersionsJson = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => GenerationRunsCompanion(
+                id: id,
+                stage: stage,
+                status: status,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                provider: provider,
+                model: model,
+                deckId: deckId,
+                promptVersionsJson: promptVersionsJson,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String stage,
+                required String status,
+                required int createdAt,
+                required int updatedAt,
+                Value<String?> provider = const Value.absent(),
+                Value<String?> model = const Value.absent(),
+                Value<String?> deckId = const Value.absent(),
+                Value<String?> promptVersionsJson = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => GenerationRunsCompanion.insert(
+                id: id,
+                stage: stage,
+                status: status,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                provider: provider,
+                model: model,
+                deckId: deckId,
+                promptVersionsJson: promptVersionsJson,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$GenerationRunsTable, GenerationRunRow>(table),
+                  $$GenerationRunsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback:
+              ({
+                generationUnitsRefs = false,
+                generationBatchesRefs = false,
+                cardDraftsRefs = false,
+              }) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (generationUnitsRefs) db.generationUnits,
+                    if (generationBatchesRefs) db.generationBatches,
+                    if (cardDraftsRefs) db.cardDrafts,
+                  ],
+                  addJoins: null,
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (generationUnitsRefs)
+                        await $_getPrefetchedDataByColumns<
+                          GenerationRunRow,
+                          $GenerationRunsTable,
+                          GenerationUnitRow,
+                          $GenerationUnitsTable
+                        >(
+                          currentTable: table,
+                          referencedTable: $$GenerationRunsTableReferences
+                              ._generationUnitsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$GenerationRunsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).generationUnitsRefs,
+                          currentColumn: 'id',
+                          referencedColumn: 'run_id',
+                          typedResults: items,
+                        ),
+                      if (generationBatchesRefs)
+                        await $_getPrefetchedDataByColumns<
+                          GenerationRunRow,
+                          $GenerationRunsTable,
+                          GenerationBatchRow,
+                          $GenerationBatchesTable
+                        >(
+                          currentTable: table,
+                          referencedTable: $$GenerationRunsTableReferences
+                              ._generationBatchesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$GenerationRunsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).generationBatchesRefs,
+                          currentColumn: 'id',
+                          referencedColumn: 'run_id',
+                          typedResults: items,
+                        ),
+                      if (cardDraftsRefs)
+                        await $_getPrefetchedDataByColumns<
+                          GenerationRunRow,
+                          $GenerationRunsTable,
+                          CardDraftRow,
+                          $CardDraftsTable
+                        >(
+                          currentTable: table,
+                          referencedTable: $$GenerationRunsTableReferences
+                              ._cardDraftsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$GenerationRunsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).cardDraftsRefs,
+                          currentColumn: 'id',
+                          referencedColumn: 'run_id',
+                          typedResults: items,
+                        ),
+                    ];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$GenerationRunsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $GenerationRunsTable,
+      GenerationRunRow,
+      $$GenerationRunsTableFilterComposer,
+      $$GenerationRunsTableOrderingComposer,
+      $$GenerationRunsTableAnnotationComposer,
+      $$GenerationRunsTableCreateCompanionBuilder,
+      $$GenerationRunsTableUpdateCompanionBuilder,
+      (GenerationRunRow, $$GenerationRunsTableReferences),
+      GenerationRunRow,
+      PrefetchHooks Function({
+        bool generationUnitsRefs,
+        bool generationBatchesRefs,
+        bool cardDraftsRefs,
+      })
+    >;
+typedef $$GenerationUnitsTableCreateCompanionBuilder =
+    GenerationUnitsCompanion Function({
+      required String runId,
+      required String unitId,
+      required String sectionId,
+      required String topic,
+      required String kind,
+      required String statement,
+      required double salience,
+      required int splittable,
+      required String anchorsJson,
+      required int orderIndex,
+      Value<int> rowid,
+    });
+typedef $$GenerationUnitsTableUpdateCompanionBuilder =
+    GenerationUnitsCompanion Function({
+      Value<String> runId,
+      Value<String> unitId,
+      Value<String> sectionId,
+      Value<String> topic,
+      Value<String> kind,
+      Value<String> statement,
+      Value<double> salience,
+      Value<int> splittable,
+      Value<String> anchorsJson,
+      Value<int> orderIndex,
+      Value<int> rowid,
+    });
+
+final class $$GenerationUnitsTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $GenerationUnitsTable,
+          GenerationUnitRow
+        > {
+  $$GenerationUnitsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $GenerationRunsTable _runIdTable(_$AppDatabase db) => db.generationRuns
+      .createAlias('generation_units__run_id__generation_runs__id');
+
+  $$GenerationRunsTableProcessedTableManager get runId {
+    final $_column = $_itemColumn<String>('run_id')!;
+
+    final manager = $$GenerationRunsTableTableManager(
+      $_db,
+      $_db.generationRuns,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_runIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$GenerationUnitsTableFilterComposer
+    extends Composer<_$AppDatabase, $GenerationUnitsTable> {
+  $$GenerationUnitsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get unitId => $composableBuilder(
+    column: $table.unitId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get sectionId => $composableBuilder(
+    column: $table.sectionId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get topic => $composableBuilder(
+    column: $table.topic,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get statement => $composableBuilder(
+    column: $table.statement,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get salience => $composableBuilder(
+    column: $table.salience,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get splittable => $composableBuilder(
+    column: $table.splittable,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get anchorsJson => $composableBuilder(
+    column: $table.anchorsJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get orderIndex => $composableBuilder(
+    column: $table.orderIndex,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$GenerationRunsTableFilterComposer get runId {
+    final $$GenerationRunsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.runId,
+      referencedTable: $db.generationRuns,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$GenerationRunsTableFilterComposer(
+            $db: $db,
+            $table: $db.generationRuns,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$GenerationUnitsTableOrderingComposer
+    extends Composer<_$AppDatabase, $GenerationUnitsTable> {
+  $$GenerationUnitsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get unitId => $composableBuilder(
+    column: $table.unitId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get sectionId => $composableBuilder(
+    column: $table.sectionId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get topic => $composableBuilder(
+    column: $table.topic,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get statement => $composableBuilder(
+    column: $table.statement,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get salience => $composableBuilder(
+    column: $table.salience,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get splittable => $composableBuilder(
+    column: $table.splittable,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get anchorsJson => $composableBuilder(
+    column: $table.anchorsJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get orderIndex => $composableBuilder(
+    column: $table.orderIndex,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$GenerationRunsTableOrderingComposer get runId {
+    final $$GenerationRunsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.runId,
+      referencedTable: $db.generationRuns,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$GenerationRunsTableOrderingComposer(
+            $db: $db,
+            $table: $db.generationRuns,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$GenerationUnitsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $GenerationUnitsTable> {
+  $$GenerationUnitsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get unitId =>
+      $composableBuilder(column: $table.unitId, builder: (column) => column);
+
+  GeneratedColumn<String> get sectionId =>
+      $composableBuilder(column: $table.sectionId, builder: (column) => column);
+
+  GeneratedColumn<String> get topic =>
+      $composableBuilder(column: $table.topic, builder: (column) => column);
+
+  GeneratedColumn<String> get kind =>
+      $composableBuilder(column: $table.kind, builder: (column) => column);
+
+  GeneratedColumn<String> get statement =>
+      $composableBuilder(column: $table.statement, builder: (column) => column);
+
+  GeneratedColumn<double> get salience =>
+      $composableBuilder(column: $table.salience, builder: (column) => column);
+
+  GeneratedColumn<int> get splittable => $composableBuilder(
+    column: $table.splittable,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get anchorsJson => $composableBuilder(
+    column: $table.anchorsJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get orderIndex => $composableBuilder(
+    column: $table.orderIndex,
+    builder: (column) => column,
+  );
+
+  $$GenerationRunsTableAnnotationComposer get runId {
+    final $$GenerationRunsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.runId,
+      referencedTable: $db.generationRuns,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$GenerationRunsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.generationRuns,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$GenerationUnitsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $GenerationUnitsTable,
+          GenerationUnitRow,
+          $$GenerationUnitsTableFilterComposer,
+          $$GenerationUnitsTableOrderingComposer,
+          $$GenerationUnitsTableAnnotationComposer,
+          $$GenerationUnitsTableCreateCompanionBuilder,
+          $$GenerationUnitsTableUpdateCompanionBuilder,
+          (GenerationUnitRow, $$GenerationUnitsTableReferences),
+          GenerationUnitRow,
+          PrefetchHooks Function({bool runId})
+        > {
+  $$GenerationUnitsTableTableManager(
+    _$AppDatabase db,
+    $GenerationUnitsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$GenerationUnitsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$GenerationUnitsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$GenerationUnitsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> runId = const Value.absent(),
+                Value<String> unitId = const Value.absent(),
+                Value<String> sectionId = const Value.absent(),
+                Value<String> topic = const Value.absent(),
+                Value<String> kind = const Value.absent(),
+                Value<String> statement = const Value.absent(),
+                Value<double> salience = const Value.absent(),
+                Value<int> splittable = const Value.absent(),
+                Value<String> anchorsJson = const Value.absent(),
+                Value<int> orderIndex = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => GenerationUnitsCompanion(
+                runId: runId,
+                unitId: unitId,
+                sectionId: sectionId,
+                topic: topic,
+                kind: kind,
+                statement: statement,
+                salience: salience,
+                splittable: splittable,
+                anchorsJson: anchorsJson,
+                orderIndex: orderIndex,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String runId,
+                required String unitId,
+                required String sectionId,
+                required String topic,
+                required String kind,
+                required String statement,
+                required double salience,
+                required int splittable,
+                required String anchorsJson,
+                required int orderIndex,
+                Value<int> rowid = const Value.absent(),
+              }) => GenerationUnitsCompanion.insert(
+                runId: runId,
+                unitId: unitId,
+                sectionId: sectionId,
+                topic: topic,
+                kind: kind,
+                statement: statement,
+                salience: salience,
+                splittable: splittable,
+                anchorsJson: anchorsJson,
+                orderIndex: orderIndex,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$GenerationUnitsTable, GenerationUnitRow>(table),
+                  $$GenerationUnitsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({runId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (runId) {
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.runId,
+                        referencedTable: $$GenerationUnitsTableReferences
+                            ._runIdTable(db),
+                        referencedColumn: $$GenerationUnitsTableReferences
+                            ._runIdTable(db)
+                            .id,
+                      ) as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$GenerationUnitsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $GenerationUnitsTable,
+      GenerationUnitRow,
+      $$GenerationUnitsTableFilterComposer,
+      $$GenerationUnitsTableOrderingComposer,
+      $$GenerationUnitsTableAnnotationComposer,
+      $$GenerationUnitsTableCreateCompanionBuilder,
+      $$GenerationUnitsTableUpdateCompanionBuilder,
+      (GenerationUnitRow, $$GenerationUnitsTableReferences),
+      GenerationUnitRow,
+      PrefetchHooks Function({bool runId})
+    >;
+typedef $$GenerationBatchesTableCreateCompanionBuilder =
+    GenerationBatchesCompanion Function({
+      required String runId,
+      required int batchIndex,
+      required String status,
+      required int requested,
+      Value<int> generated,
+      Value<int> invalid,
+      Value<int> duplicates,
+      Value<int> attempts,
+      Value<String?> cause,
+      Value<int> rowid,
+    });
+typedef $$GenerationBatchesTableUpdateCompanionBuilder =
+    GenerationBatchesCompanion Function({
+      Value<String> runId,
+      Value<int> batchIndex,
+      Value<String> status,
+      Value<int> requested,
+      Value<int> generated,
+      Value<int> invalid,
+      Value<int> duplicates,
+      Value<int> attempts,
+      Value<String?> cause,
+      Value<int> rowid,
+    });
+
+final class $$GenerationBatchesTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $GenerationBatchesTable,
+          GenerationBatchRow
+        > {
+  $$GenerationBatchesTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $GenerationRunsTable _runIdTable(_$AppDatabase db) => db.generationRuns
+      .createAlias('generation_batches__run_id__generation_runs__id');
+
+  $$GenerationRunsTableProcessedTableManager get runId {
+    final $_column = $_itemColumn<String>('run_id')!;
+
+    final manager = $$GenerationRunsTableTableManager(
+      $_db,
+      $_db.generationRuns,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_runIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$GenerationBatchesTableFilterComposer
+    extends Composer<_$AppDatabase, $GenerationBatchesTable> {
+  $$GenerationBatchesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get batchIndex => $composableBuilder(
+    column: $table.batchIndex,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get requested => $composableBuilder(
+    column: $table.requested,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get generated => $composableBuilder(
+    column: $table.generated,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get invalid => $composableBuilder(
+    column: $table.invalid,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get duplicates => $composableBuilder(
+    column: $table.duplicates,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get attempts => $composableBuilder(
+    column: $table.attempts,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get cause => $composableBuilder(
+    column: $table.cause,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$GenerationRunsTableFilterComposer get runId {
+    final $$GenerationRunsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.runId,
+      referencedTable: $db.generationRuns,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$GenerationRunsTableFilterComposer(
+            $db: $db,
+            $table: $db.generationRuns,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$GenerationBatchesTableOrderingComposer
+    extends Composer<_$AppDatabase, $GenerationBatchesTable> {
+  $$GenerationBatchesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get batchIndex => $composableBuilder(
+    column: $table.batchIndex,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get requested => $composableBuilder(
+    column: $table.requested,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get generated => $composableBuilder(
+    column: $table.generated,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get invalid => $composableBuilder(
+    column: $table.invalid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get duplicates => $composableBuilder(
+    column: $table.duplicates,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get attempts => $composableBuilder(
+    column: $table.attempts,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get cause => $composableBuilder(
+    column: $table.cause,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$GenerationRunsTableOrderingComposer get runId {
+    final $$GenerationRunsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.runId,
+      referencedTable: $db.generationRuns,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$GenerationRunsTableOrderingComposer(
+            $db: $db,
+            $table: $db.generationRuns,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$GenerationBatchesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $GenerationBatchesTable> {
+  $$GenerationBatchesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get batchIndex => $composableBuilder(
+    column: $table.batchIndex,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<int> get requested =>
+      $composableBuilder(column: $table.requested, builder: (column) => column);
+
+  GeneratedColumn<int> get generated =>
+      $composableBuilder(column: $table.generated, builder: (column) => column);
+
+  GeneratedColumn<int> get invalid =>
+      $composableBuilder(column: $table.invalid, builder: (column) => column);
+
+  GeneratedColumn<int> get duplicates => $composableBuilder(
+    column: $table.duplicates,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get attempts =>
+      $composableBuilder(column: $table.attempts, builder: (column) => column);
+
+  GeneratedColumn<String> get cause =>
+      $composableBuilder(column: $table.cause, builder: (column) => column);
+
+  $$GenerationRunsTableAnnotationComposer get runId {
+    final $$GenerationRunsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.runId,
+      referencedTable: $db.generationRuns,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$GenerationRunsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.generationRuns,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$GenerationBatchesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $GenerationBatchesTable,
+          GenerationBatchRow,
+          $$GenerationBatchesTableFilterComposer,
+          $$GenerationBatchesTableOrderingComposer,
+          $$GenerationBatchesTableAnnotationComposer,
+          $$GenerationBatchesTableCreateCompanionBuilder,
+          $$GenerationBatchesTableUpdateCompanionBuilder,
+          (GenerationBatchRow, $$GenerationBatchesTableReferences),
+          GenerationBatchRow,
+          PrefetchHooks Function({bool runId})
+        > {
+  $$GenerationBatchesTableTableManager(
+    _$AppDatabase db,
+    $GenerationBatchesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$GenerationBatchesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$GenerationBatchesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$GenerationBatchesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> runId = const Value.absent(),
+                Value<int> batchIndex = const Value.absent(),
+                Value<String> status = const Value.absent(),
+                Value<int> requested = const Value.absent(),
+                Value<int> generated = const Value.absent(),
+                Value<int> invalid = const Value.absent(),
+                Value<int> duplicates = const Value.absent(),
+                Value<int> attempts = const Value.absent(),
+                Value<String?> cause = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => GenerationBatchesCompanion(
+                runId: runId,
+                batchIndex: batchIndex,
+                status: status,
+                requested: requested,
+                generated: generated,
+                invalid: invalid,
+                duplicates: duplicates,
+                attempts: attempts,
+                cause: cause,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String runId,
+                required int batchIndex,
+                required String status,
+                required int requested,
+                Value<int> generated = const Value.absent(),
+                Value<int> invalid = const Value.absent(),
+                Value<int> duplicates = const Value.absent(),
+                Value<int> attempts = const Value.absent(),
+                Value<String?> cause = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => GenerationBatchesCompanion.insert(
+                runId: runId,
+                batchIndex: batchIndex,
+                status: status,
+                requested: requested,
+                generated: generated,
+                invalid: invalid,
+                duplicates: duplicates,
+                attempts: attempts,
+                cause: cause,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$GenerationBatchesTable, GenerationBatchRow>(
+                    table,
+                  ),
+                  $$GenerationBatchesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({runId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (runId) {
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.runId,
+                        referencedTable: $$GenerationBatchesTableReferences
+                            ._runIdTable(db),
+                        referencedColumn: $$GenerationBatchesTableReferences
+                            ._runIdTable(db)
+                            .id,
+                      ) as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$GenerationBatchesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $GenerationBatchesTable,
+      GenerationBatchRow,
+      $$GenerationBatchesTableFilterComposer,
+      $$GenerationBatchesTableOrderingComposer,
+      $$GenerationBatchesTableAnnotationComposer,
+      $$GenerationBatchesTableCreateCompanionBuilder,
+      $$GenerationBatchesTableUpdateCompanionBuilder,
+      (GenerationBatchRow, $$GenerationBatchesTableReferences),
+      GenerationBatchRow,
+      PrefetchHooks Function({bool runId})
+    >;
+typedef $$CardDraftsTableCreateCompanionBuilder = CardDraftsCompanion Function({
+  required String id,
+  required String runId,
+  required int batchIndex,
+  required String contentHash,
+  Value<String?> unitId,
+  Value<String?> angle,
+  required String cardJson,
+  required int createdAt,
+  Value<String?> importedCardId,
+  Value<int?> importedAt,
+  Value<int> rowid,
+});
+typedef $$CardDraftsTableUpdateCompanionBuilder = CardDraftsCompanion Function({
+  Value<String> id,
+  Value<String> runId,
+  Value<int> batchIndex,
+  Value<String> contentHash,
+  Value<String?> unitId,
+  Value<String?> angle,
+  Value<String> cardJson,
+  Value<int> createdAt,
+  Value<String?> importedCardId,
+  Value<int?> importedAt,
+  Value<int> rowid,
+});
+
+final class $$CardDraftsTableReferences
+    extends BaseReferences<_$AppDatabase, $CardDraftsTable, CardDraftRow> {
+  $$CardDraftsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $GenerationRunsTable _runIdTable(_$AppDatabase db) =>
+      db.generationRuns.createAlias('card_drafts__run_id__generation_runs__id');
+
+  $$GenerationRunsTableProcessedTableManager get runId {
+    final $_column = $_itemColumn<String>('run_id')!;
+
+    final manager = $$GenerationRunsTableTableManager(
+      $_db,
+      $_db.generationRuns,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_runIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$CardDraftsTableFilterComposer
+    extends Composer<_$AppDatabase, $CardDraftsTable> {
+  $$CardDraftsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get batchIndex => $composableBuilder(
+    column: $table.batchIndex,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get contentHash => $composableBuilder(
+    column: $table.contentHash,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get unitId => $composableBuilder(
+    column: $table.unitId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get angle => $composableBuilder(
+    column: $table.angle,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get cardJson => $composableBuilder(
+    column: $table.cardJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get importedCardId => $composableBuilder(
+    column: $table.importedCardId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get importedAt => $composableBuilder(
+    column: $table.importedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$GenerationRunsTableFilterComposer get runId {
+    final $$GenerationRunsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.runId,
+      referencedTable: $db.generationRuns,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$GenerationRunsTableFilterComposer(
+            $db: $db,
+            $table: $db.generationRuns,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CardDraftsTableOrderingComposer
+    extends Composer<_$AppDatabase, $CardDraftsTable> {
+  $$CardDraftsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get batchIndex => $composableBuilder(
+    column: $table.batchIndex,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get contentHash => $composableBuilder(
+    column: $table.contentHash,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get unitId => $composableBuilder(
+    column: $table.unitId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get angle => $composableBuilder(
+    column: $table.angle,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get cardJson => $composableBuilder(
+    column: $table.cardJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get importedCardId => $composableBuilder(
+    column: $table.importedCardId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get importedAt => $composableBuilder(
+    column: $table.importedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$GenerationRunsTableOrderingComposer get runId {
+    final $$GenerationRunsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.runId,
+      referencedTable: $db.generationRuns,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$GenerationRunsTableOrderingComposer(
+            $db: $db,
+            $table: $db.generationRuns,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CardDraftsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CardDraftsTable> {
+  $$CardDraftsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get batchIndex => $composableBuilder(
+    column: $table.batchIndex,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get contentHash => $composableBuilder(
+    column: $table.contentHash,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get unitId =>
+      $composableBuilder(column: $table.unitId, builder: (column) => column);
+
+  GeneratedColumn<String> get angle =>
+      $composableBuilder(column: $table.angle, builder: (column) => column);
+
+  GeneratedColumn<String> get cardJson =>
+      $composableBuilder(column: $table.cardJson, builder: (column) => column);
+
+  GeneratedColumn<int> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<String> get importedCardId => $composableBuilder(
+    column: $table.importedCardId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get importedAt => $composableBuilder(
+    column: $table.importedAt,
+    builder: (column) => column,
+  );
+
+  $$GenerationRunsTableAnnotationComposer get runId {
+    final $$GenerationRunsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.runId,
+      referencedTable: $db.generationRuns,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$GenerationRunsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.generationRuns,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$CardDraftsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CardDraftsTable,
+          CardDraftRow,
+          $$CardDraftsTableFilterComposer,
+          $$CardDraftsTableOrderingComposer,
+          $$CardDraftsTableAnnotationComposer,
+          $$CardDraftsTableCreateCompanionBuilder,
+          $$CardDraftsTableUpdateCompanionBuilder,
+          (CardDraftRow, $$CardDraftsTableReferences),
+          CardDraftRow,
+          PrefetchHooks Function({bool runId})
+        > {
+  $$CardDraftsTableTableManager(_$AppDatabase db, $CardDraftsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$CardDraftsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$CardDraftsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$CardDraftsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> runId = const Value.absent(),
+                Value<int> batchIndex = const Value.absent(),
+                Value<String> contentHash = const Value.absent(),
+                Value<String?> unitId = const Value.absent(),
+                Value<String?> angle = const Value.absent(),
+                Value<String> cardJson = const Value.absent(),
+                Value<int> createdAt = const Value.absent(),
+                Value<String?> importedCardId = const Value.absent(),
+                Value<int?> importedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CardDraftsCompanion(
+                id: id,
+                runId: runId,
+                batchIndex: batchIndex,
+                contentHash: contentHash,
+                unitId: unitId,
+                angle: angle,
+                cardJson: cardJson,
+                createdAt: createdAt,
+                importedCardId: importedCardId,
+                importedAt: importedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String runId,
+                required int batchIndex,
+                required String contentHash,
+                Value<String?> unitId = const Value.absent(),
+                Value<String?> angle = const Value.absent(),
+                required String cardJson,
+                required int createdAt,
+                Value<String?> importedCardId = const Value.absent(),
+                Value<int?> importedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CardDraftsCompanion.insert(
+                id: id,
+                runId: runId,
+                batchIndex: batchIndex,
+                contentHash: contentHash,
+                unitId: unitId,
+                angle: angle,
+                cardJson: cardJson,
+                createdAt: createdAt,
+                importedCardId: importedCardId,
+                importedAt: importedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$CardDraftsTable, CardDraftRow>(table),
+                  $$CardDraftsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({runId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (runId) {
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.runId,
+                        referencedTable: $$CardDraftsTableReferences
+                            ._runIdTable(db),
+                        referencedColumn: $$CardDraftsTableReferences
+                            ._runIdTable(db)
+                            .id,
+                      ) as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$CardDraftsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CardDraftsTable,
+      CardDraftRow,
+      $$CardDraftsTableFilterComposer,
+      $$CardDraftsTableOrderingComposer,
+      $$CardDraftsTableAnnotationComposer,
+      $$CardDraftsTableCreateCompanionBuilder,
+      $$CardDraftsTableUpdateCompanionBuilder,
+      (CardDraftRow, $$CardDraftsTableReferences),
+      CardDraftRow,
+      PrefetchHooks Function({bool runId})
+    >;
+typedef $$KnowledgeMapsTableCreateCompanionBuilder =
+    KnowledgeMapsCompanion Function({
+      required String documentId,
+      required String contentHash,
+      required String mapJson,
+      required int createdAt,
+      Value<int> rowid,
+    });
+typedef $$KnowledgeMapsTableUpdateCompanionBuilder =
+    KnowledgeMapsCompanion Function({
+      Value<String> documentId,
+      Value<String> contentHash,
+      Value<String> mapJson,
+      Value<int> createdAt,
+      Value<int> rowid,
+    });
+
+class $$KnowledgeMapsTableFilterComposer
+    extends Composer<_$AppDatabase, $KnowledgeMapsTable> {
+  $$KnowledgeMapsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get documentId => $composableBuilder(
+    column: $table.documentId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get contentHash => $composableBuilder(
+    column: $table.contentHash,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get mapJson => $composableBuilder(
+    column: $table.mapJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$KnowledgeMapsTableOrderingComposer
+    extends Composer<_$AppDatabase, $KnowledgeMapsTable> {
+  $$KnowledgeMapsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get documentId => $composableBuilder(
+    column: $table.documentId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get contentHash => $composableBuilder(
+    column: $table.contentHash,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get mapJson => $composableBuilder(
+    column: $table.mapJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$KnowledgeMapsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $KnowledgeMapsTable> {
+  $$KnowledgeMapsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get documentId => $composableBuilder(
+    column: $table.documentId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get contentHash => $composableBuilder(
+    column: $table.contentHash,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get mapJson =>
+      $composableBuilder(column: $table.mapJson, builder: (column) => column);
+
+  GeneratedColumn<int> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$KnowledgeMapsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $KnowledgeMapsTable,
+          KnowledgeMapRow,
+          $$KnowledgeMapsTableFilterComposer,
+          $$KnowledgeMapsTableOrderingComposer,
+          $$KnowledgeMapsTableAnnotationComposer,
+          $$KnowledgeMapsTableCreateCompanionBuilder,
+          $$KnowledgeMapsTableUpdateCompanionBuilder,
+          (
+            KnowledgeMapRow,
+            BaseReferences<_$AppDatabase, $KnowledgeMapsTable, KnowledgeMapRow>,
+          ),
+          KnowledgeMapRow,
+          PrefetchHooks Function()
+        > {
+  $$KnowledgeMapsTableTableManager(_$AppDatabase db, $KnowledgeMapsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$KnowledgeMapsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$KnowledgeMapsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$KnowledgeMapsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> documentId = const Value.absent(),
+                Value<String> contentHash = const Value.absent(),
+                Value<String> mapJson = const Value.absent(),
+                Value<int> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => KnowledgeMapsCompanion(
+                documentId: documentId,
+                contentHash: contentHash,
+                mapJson: mapJson,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String documentId,
+                required String contentHash,
+                required String mapJson,
+                required int createdAt,
+                Value<int> rowid = const Value.absent(),
+              }) => KnowledgeMapsCompanion.insert(
+                documentId: documentId,
+                contentHash: contentHash,
+                mapJson: mapJson,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$KnowledgeMapsTable, KnowledgeMapRow>(table),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $KnowledgeMapsTable,
+                    KnowledgeMapRow
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$KnowledgeMapsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $KnowledgeMapsTable,
+      KnowledgeMapRow,
+      $$KnowledgeMapsTableFilterComposer,
+      $$KnowledgeMapsTableOrderingComposer,
+      $$KnowledgeMapsTableAnnotationComposer,
+      $$KnowledgeMapsTableCreateCompanionBuilder,
+      $$KnowledgeMapsTableUpdateCompanionBuilder,
+      (
+        KnowledgeMapRow,
+        BaseReferences<_$AppDatabase, $KnowledgeMapsTable, KnowledgeMapRow>,
+      ),
+      KnowledgeMapRow,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -7530,4 +12379,14 @@ class $AppDatabaseManager {
       $$AppSettingsTableTableManager(_db, _db.appSettings);
   $$SessionPresetsTableTableManager get sessionPresets =>
       $$SessionPresetsTableTableManager(_db, _db.sessionPresets);
+  $$GenerationRunsTableTableManager get generationRuns =>
+      $$GenerationRunsTableTableManager(_db, _db.generationRuns);
+  $$GenerationUnitsTableTableManager get generationUnits =>
+      $$GenerationUnitsTableTableManager(_db, _db.generationUnits);
+  $$GenerationBatchesTableTableManager get generationBatches =>
+      $$GenerationBatchesTableTableManager(_db, _db.generationBatches);
+  $$CardDraftsTableTableManager get cardDrafts =>
+      $$CardDraftsTableTableManager(_db, _db.cardDrafts);
+  $$KnowledgeMapsTableTableManager get knowledgeMaps =>
+      $$KnowledgeMapsTableTableManager(_db, _db.knowledgeMaps);
 }

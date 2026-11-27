@@ -1,5 +1,6 @@
-// Schema-тест SPEC A5: все 10 таблиц, колонки/типы/NOT NULL/DEFAULT,
-// 3 индекса, PRAGMA foreign_keys=ON, каскад, открытие БД (ADR-005).
+// Schema-тест SPEC A5: 10 таблиц A5 + 5 таблиц прогона генерации (ADR-051),
+// колонки/типы/NOT NULL/DEFAULT, индексы, PRAGMA foreign_keys=ON, каскад,
+// открытие БД (ADR-005).
 import 'dart:io';
 
 import 'package:drift/drift.dart';
@@ -49,11 +50,11 @@ void main() {
   });
 
   group('SPEC A5: таблицы и колонки', () {
-    test('schemaVersion == 1 (ADR-005)', () {
-      expect(db.schemaVersion, 1);
+    test('schemaVersion == 2 (ADR-051: таблицы прогона генерации)', () {
+      expect(db.schemaVersion, 2);
     });
 
-    test('созданы ровно 10 таблиц SPEC A5', () async {
+    test('созданы 10 таблиц SPEC A5 и 5 таблиц прогона генерации', () async {
       final rows = await db
           .customSelect(
             "SELECT name FROM sqlite_master "
@@ -63,9 +64,14 @@ void main() {
       final names = rows.map((row) => row.read<String>('name')).toList();
       expect(names, <String>[
         'app_settings',
+        'card_drafts',
         'cards',
         'decks',
+        'generation_batches',
         'generation_jobs',
+        'generation_runs',
+        'generation_units',
+        'knowledge_maps',
         'media',
         'practice_logs',
         'review_logs',
@@ -194,10 +200,77 @@ void main() {
         'created_at INTEGER NOT NULL',
       ]);
     });
+
+    test('generation_runs: колонки соответствуют ADR-051', () async {
+      expect(await _columnsOf(db, 'generation_runs'), <String>[
+        'id TEXT NOT NULL PK',
+        'stage TEXT NOT NULL',
+        'status TEXT NOT NULL',
+        'created_at INTEGER NOT NULL',
+        'updated_at INTEGER NOT NULL',
+        'provider TEXT',
+        'model TEXT',
+        'deck_id TEXT',
+        'prompt_versions_json TEXT',
+      ]);
+    });
+
+    test('generation_units: колонки соответствуют ADR-051', () async {
+      expect(await _columnsOf(db, 'generation_units'), <String>[
+        'run_id TEXT NOT NULL PK',
+        'unit_id TEXT NOT NULL PK',
+        'section_id TEXT NOT NULL',
+        'topic TEXT NOT NULL',
+        'kind TEXT NOT NULL',
+        'statement TEXT NOT NULL',
+        'salience REAL NOT NULL',
+        'splittable INTEGER NOT NULL',
+        'anchors_json TEXT NOT NULL',
+        'order_index INTEGER NOT NULL',
+      ]);
+    });
+
+    test('generation_batches: колонки соответствуют ADR-051', () async {
+      expect(await _columnsOf(db, 'generation_batches'), <String>[
+        'run_id TEXT NOT NULL PK',
+        'batch_index INTEGER NOT NULL PK',
+        'status TEXT NOT NULL',
+        'requested INTEGER NOT NULL',
+        'generated INTEGER NOT NULL DEFAULT 0',
+        'invalid INTEGER NOT NULL DEFAULT 0',
+        'duplicates INTEGER NOT NULL DEFAULT 0',
+        'attempts INTEGER NOT NULL DEFAULT 0',
+        'cause TEXT',
+      ]);
+    });
+
+    test('card_drafts: колонки соответствуют ADR-051', () async {
+      expect(await _columnsOf(db, 'card_drafts'), <String>[
+        'id TEXT NOT NULL PK',
+        'run_id TEXT NOT NULL',
+        'batch_index INTEGER NOT NULL',
+        'content_hash TEXT NOT NULL',
+        'unit_id TEXT',
+        'angle TEXT',
+        'card_json TEXT NOT NULL',
+        'created_at INTEGER NOT NULL',
+        'imported_card_id TEXT',
+        'imported_at INTEGER',
+      ]);
+    });
+
+    test('knowledge_maps: колонки соответствуют ADR-051', () async {
+      expect(await _columnsOf(db, 'knowledge_maps'), <String>[
+        'document_id TEXT NOT NULL PK',
+        'content_hash TEXT NOT NULL PK',
+        'map_json TEXT NOT NULL',
+        'created_at INTEGER NOT NULL',
+      ]);
+    });
   });
 
   group('SPEC A5: индексы', () {
-    test('созданы 3 индекса из A5 с нужными колонками', () async {
+    test('созданы индексы A5 и уникальный индекс черновиков ADR-051', () async {
       final rows = await db
           .customSelect(
             "SELECT name, tbl_name FROM sqlite_master "
@@ -210,6 +283,7 @@ void main() {
           row.read<String>('name'): row.read<String>('tbl_name'),
       };
       expect(byName, <String, String>{
+        'idx_card_drafts_run_hash': 'card_drafts',
         'idx_cards_deck_due': 'cards',
         'idx_cards_hash': 'cards',
         'idx_review_logs_card': 'review_logs',
@@ -229,6 +303,10 @@ void main() {
         'content_hash',
       ]);
       expect(await indexColumns('idx_review_logs_card'), <String>['card_id']);
+      expect(await indexColumns('idx_card_drafts_run_hash'), <String>[
+        'run_id',
+        'content_hash',
+      ]);
     });
   });
 
@@ -276,9 +354,11 @@ void main() {
   });
 
   group('открытие БД (ADR-005)', () {
-    test('onUpgrade на версии 1 — fail-fast StateError (ADR-005)', () async {
+    test('onUpgrade на неизвестную версию — fail-fast StateError', () async {
+      // Миграция 1 → 2 реализована (ADR-051); fail-fast остаётся для версий
+      // без шага миграции: данные не «досоздаются» молча.
       await expectLater(
-        db.migration.onUpgrade(Migrator(db), 1, 2),
+        db.migration.onUpgrade(Migrator(db), 2, 3),
         throwsA(
           isA<StateError>().having(
             (error) => error.message,
@@ -343,6 +423,91 @@ void main() {
       addTearDown(reopened.close);
       final decks = await reopened.select(reopened.decks).get();
       expect(decks.map((row) => row.name), <String>['Испанский']);
+    });
+
+    test(
+      'файл БД версии 1 копируется в .bak и мигрирует с данными (ADR-005 §5)',
+      () async {
+        final tempDir = await Directory.systemTemp.createTemp('cardflow-db-v1');
+        addTearDown(() async {
+          await tempDir.delete(recursive: true);
+        });
+        final Directory dataDirectory = Directory(
+          '${tempDir.path}${Platform.pathSeparator}cardflow',
+        )..createSync(recursive: true);
+        final File dbFile = File(
+          '${dataDirectory.path}${Platform.pathSeparator}cardflow.sqlite',
+        );
+
+        // Файл «старой» версии: таблица колод периода schemaVersion = 1.
+        final Database v1 = sqlite3.open(dbFile.path);
+        v1.execute('''
+        CREATE TABLE decks (
+          id TEXT NOT NULL PRIMARY KEY,
+          name TEXT NOT NULL,
+          settings_json TEXT NOT NULL DEFAULT '{}',
+          archived_at INTEGER,
+          created_at INTEGER NOT NULL,
+          updated_at INTEGER NOT NULL
+        )
+      ''');
+        v1.execute('''
+        INSERT INTO decks (id, name, created_at, updated_at)
+        VALUES ('deck-old', 'Колода версии 1', 1, 1)
+      ''');
+        v1.execute('PRAGMA user_version = 1');
+        v1.close();
+
+        final AppDatabase db = await openAppDatabase(baseDirectory: tempDir);
+        addTearDown(db.close);
+
+        final File backup = File('${dbFile.path}$appDatabaseBackupSuffix');
+        expect(backup.existsSync(), isTrue, reason: 'копия до миграции');
+
+        // Копия — именно состояние «до»: в ней нет новых таблиц.
+        final Database snapshot = sqlite3.open(backup.path);
+        addTearDown(snapshot.close);
+        final List<String> backupTables = snapshot
+            .select(
+              "SELECT name FROM sqlite_master WHERE type = 'table' "
+              "AND name NOT LIKE 'sqlite_%'",
+            )
+            .map((row) => row['name'] as String)
+            .toList();
+        expect(backupTables, <String>['decks']);
+        expect(snapshot.select('PRAGMA user_version').first.columnAt(0), 1);
+
+        // Данные на месте, миграция выполнена.
+        final List<DeckRow> decks = await db.select(db.decks).get();
+        expect(decks.map((row) => row.name), <String>['Колода версии 1']);
+        final List<QueryRow> tables = await db
+            .customSelect(
+              "SELECT name FROM sqlite_master WHERE type = 'table' "
+              "AND name = 'generation_runs'",
+            )
+            .get();
+        expect(tables, hasLength(1));
+      },
+    );
+
+    test('актуальная БД не копируется повторно при каждом старте', () async {
+      final tempDir = await Directory.systemTemp.createTemp('cardflow-db-v2');
+      addTearDown(() async {
+        await tempDir.delete(recursive: true);
+      });
+      final AppDatabase first = await openAppDatabase(baseDirectory: tempDir);
+      await first.close();
+
+      final File dbFile = File(
+        '${tempDir.path}${Platform.pathSeparator}cardflow'
+        '${Platform.pathSeparator}cardflow.sqlite',
+      );
+      final File backup = File('${dbFile.path}$appDatabaseBackupSuffix');
+      expect(backup.existsSync(), isFalse);
+
+      final AppDatabase second = await openAppDatabase(baseDirectory: tempDir);
+      addTearDown(second.close);
+      expect(backup.existsSync(), isFalse);
     });
   });
 }
