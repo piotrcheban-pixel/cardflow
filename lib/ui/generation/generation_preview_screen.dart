@@ -538,6 +538,7 @@ class _GenerationPreviewScreenState
         child: ConstrainedBox(
           constraints: BoxConstraints(maxWidth: AppSizes.formWidth(context)),
           child: ListView(
+            key: const ValueKey<String>('generation-preview-list'),
             padding: const EdgeInsets.fromLTRB(
               AppSpacing.md,
               AppSpacing.sm,
@@ -1310,6 +1311,18 @@ List<Widget> previewMarks(AppLocalizations l10n, GeneratedCard card) {
       ),
     );
   }
+  // Срез 10: карточка без цитаты — «без источника». Это пометка, а не
+  // блокировка: prompt-only материал не имеет якорей, и карточка остаётся.
+  if (card.quoteRef == null) {
+    marks.add(
+      AppStatusChip(
+        key: const ValueKey<String>('generation-mark-no-source'),
+        label: l10n.generationMarkNoSource,
+        tone: AppStatusTone.neutral,
+        dense: true,
+      ),
+    );
+  }
   return marks;
 }
 
@@ -1322,6 +1335,7 @@ String shortfallReasonLabel(AppLocalizations l10n, ShortfallKind kind) {
     ShortfallKind.truncated => l10n.generationShortfallTruncated,
     ShortfallKind.validationRejects =>
       l10n.generationShortfallValidationRejects,
+    ShortfallKind.duplicates => l10n.generationShortfallDuplicates,
     ShortfallKind.cancelled => l10n.generationShortfallCancelled,
   };
 }

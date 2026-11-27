@@ -38,7 +38,12 @@ void main() {
     await tester.scrollUntilVisible(
       finder,
       240,
-      scrollable: find.byType(Scrollable).last,
+      scrollable: find
+          .descendant(
+            of: find.byKey(const ValueKey<String>('generation-preview-list')),
+            matching: find.byType(Scrollable),
+          )
+          .first,
     );
     await tester.pumpAndSettle();
   }

@@ -28,6 +28,9 @@ const Map<KnowledgeUnitKind, double> kKnowledgeKindWeights =
       KnowledgeUnitKind.relation: 1.1,
       KnowledgeUnitKind.procedure: 1.05,
       KnowledgeUnitKind.fact: 1,
+      // Тема prompt-only — единственная единица карты: вес не нулевой, иначе
+      // план не построить (паритет с «фактом»).
+      KnowledgeUnitKind.topic: 1,
     };
 
 /// Постоянные накладные расходы запроса: системный промпт и инструкции.
@@ -181,6 +184,7 @@ AllocationAngle preferredAngleForKind(KnowledgeUnitKind kind) => switch (kind) {
   KnowledgeUnitKind.relation => AllocationAngle.reverse,
   KnowledgeUnitKind.formula => AllocationAngle.cloze,
   KnowledgeUnitKind.procedure => AllocationAngle.application,
+  KnowledgeUnitKind.topic => AllocationAngle.reverse,
 };
 
 /// Распределение заказа по единицам: минимум 1 карточка каждой отобранной,

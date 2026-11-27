@@ -72,10 +72,15 @@ class GenerationReport {
     this.duplicates = 0,
     this.materialCapacity,
     this.unfilledSlots = 0,
+    Map<ShortfallKind, int> shortfallReasons = const <ShortfallKind, int>{},
+    this.guards,
   }) : reasons = List<String>.unmodifiable(reasons),
        unitCoverage = List<UnitCoverage>.unmodifiable(unitCoverage),
        tokensByStage = Map<GenerationStage, TokenUsage>.unmodifiable(
          tokensByStage,
+       ),
+       shortfallReasons = Map<ShortfallKind, int>.unmodifiable(
+         shortfallReasons,
        ),
        promptVersions = Map<String, String>.unmodifiable(promptVersions);
 
@@ -139,7 +144,35 @@ class GenerationReport {
       duplicates: outcome.duplicates,
       materialCapacity: outcome.materialCapacity,
       unfilledSlots: outcome.unfilledSlots,
+      shortfallReasons: _shortfallReasonsOf(outcome),
+      guards: outcome.guards,
     );
+  }
+
+  /// Причины недобора **множеством с числами** (TASK срез 10, п. 5).
+  ///
+  /// Прежний `reasons` — список кодов без чисел и без «сколько»; отчёт теперь
+  /// отвечает на вопрос «сколько карточек потеряно и почему»: отброшенные
+  /// валидацией и дубли — своими счётчиками, причина остановки — остатком.
+  /// Остаток, полностью объяснённый счётчиками, не дублируется причиной
+  /// остановки (иначе дубли выглядели бы ещё и как исчерпание материала).
+  static Map<ShortfallKind, int> _shortfallReasonsOf(ReplenishOutcome outcome) {
+    if (outcome.remaining <= 0) return const <ShortfallKind, int>{};
+    final Map<ShortfallKind, int> found = <ShortfallKind, int>{};
+    if (outcome.duplicates > 0) {
+      found[ShortfallKind.duplicates] = outcome.duplicates;
+    }
+    if (outcome.invalid > 0) {
+      found[ShortfallKind.validationRejects] = outcome.invalid;
+    }
+    final ShortfallKind? stopKind = outcome.shortfall;
+    final int explained = outcome.invalid + outcome.duplicates;
+    if (stopKind != null && outcome.remaining > explained) {
+      found[stopKind] = outcome.remaining;
+    } else if (found.isEmpty && outcome.remaining > explained) {
+      found[ShortfallKind.exhaustedMaterial] = outcome.remaining;
+    }
+    return found;
   }
 
   /// Запрошено карточек (заказ плана).
@@ -191,6 +224,14 @@ class GenerationReport {
 
   /// Слотов заказа без принятой карточки.
   final int unfilledSlots;
+
+  /// Причины недобора с числами: сколько карточек потеряно по каждой (п. 5
+  /// среза 10). Пустая карта — недобора нет.
+  final Map<ShortfallKind, int> shortfallReasons;
+
+  /// Фактические предохранители операции добора (п. 4 среза 10); `null` —
+  /// операция шла мимо [ReplenishStage] и пределов не объявляла.
+  final ReplenishGuards? guards;
 
   /// true — заказ выполнен: этап [GenerationStage.ready], все слоты заполнены и
   /// принято не меньше запрошенного (недобор успехом не считается).

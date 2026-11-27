@@ -44,8 +44,8 @@ void main() {
   }
 
   group('ShortfallKind', () {
-    test('wire-имена классов недобора — как в TASK.txt', () {
-      expect(ShortfallKind.values.length, 5);
+    test('wire-имена классов недобора — как в TASK.txt (срез 10: дубли)', () {
+      expect(ShortfallKind.values.length, 6);
       expect(
         ShortfallKind.values
             .map((ShortfallKind kind) => kind.wireName)
@@ -55,6 +55,7 @@ void main() {
           'provider_error',
           'truncated',
           'validation_rejects',
+          'duplicates',
           'cancelled',
         ],
       );

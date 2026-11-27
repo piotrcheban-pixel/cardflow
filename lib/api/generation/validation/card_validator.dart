@@ -33,6 +33,10 @@ enum CardVerdict {
   /// Годна с пометками качества; карточка остаётся в предпросмотре.
   warning('warning'),
 
+  /// Жёсткий дефект: карточка не идёт в колоду, но не исчезает — доступна в
+  /// «показать отброшенные» (`TASK.txt` срез 10, п. 2; Q22).
+  blocked('blocked'),
+
   /// Непригодна: отброшена с кодом причины, запись сохранена в отчёте.
   rejected('rejected');
 
@@ -67,8 +71,9 @@ enum CardReasonCode {
   /// Теги скорректированы: обрезаны до 3, убраны пустые и `#` (A8.4).
   tagsAdjusted('tags_adjusted'),
 
-  /// Формула не парсится (A8.4: пометка, а не отбрасывание).
-  latexBroken('latex_broken'),
+  /// Формула не парсится (A8.4). Жёсткий дефект среза 10: карточка с
+  /// нечитаемой формулой не идёт в колоду (Q22).
+  unparseableLatex('unparseable_latex'),
 
   /// Ответ (или формула из ответа) целиком содержится во `front` — карточка
   /// проверяет вопрос, в котором уже есть ответ.
@@ -85,8 +90,18 @@ enum CardReasonCode {
   /// пропуски, нумерация не с `c1`.
   clozeMeaningless('cloze_meaningless'),
 
-  /// Текст не на русском (нет кириллицы при латинице).
-  languageNotRussian('language_not_russian'),
+  /// Текст не на русском (нет кириллицы при латинице). Жёсткий дефект среза 10
+  /// (`TASK.txt` п. 2): карточка не на языке колоды не идёт в колоду (Q22).
+  wrongLanguage('wrong_language'),
+
+  /// После нормализации не осталось ни букв, ни цифр хотя бы на одной стороне:
+  /// учить нечего (`TASK.txt` срез 10, п. 2). Жёсткий дефект.
+  emptyAfterNormalization('empty_after_normalization'),
+
+  /// Цитаты нет, а у единицы знания нет якорей (prompt-only, `kind=topic`):
+  /// проверить нечего, карточка помечается «без источника», но остаётся
+  /// (`TASK.txt` срез 10, п. 3; Q22).
+  quoteUnverified('quote_unverified'),
 
   /// `quote_ref` не найден в материале — цитата обнулена.
   quoteOutOfRange('quote_out_of_range'),
@@ -109,6 +124,21 @@ enum CardReasonCode {
   /// true, если код — причина отбрасывания, а не пометки.
   bool get isRejecting => switch (this) {
     missingRequiredField || unknownCardType || emptyFront => true,
+    _ => false,
+  };
+
+  /// true, если код — жёсткий дефект: карточка блокируется ([CardVerdict.blocked]).
+  ///
+  /// Список задан владельцем (`TASK.txt` срез 10, п. 2): цитата вне материала,
+  /// ответ внутри вопроса, чужой язык, пустое после нормализации, нечитаемая
+  /// формула. Остальные содержательные проверки A8.4 остаются пометками —
+  /// «не отбрасывать молча» (A8.4) сохраняется для них.
+  bool get isBlocking => switch (this) {
+    quoteOutOfRange ||
+    answerInQuestion ||
+    wrongLanguage ||
+    emptyAfterNormalization ||
+    unparseableLatex => true,
     _ => false,
   };
 }
@@ -174,7 +204,7 @@ class CardCandidate {
   /// Карточка домена (A8.4 + поля v3).
   final GeneratedCard card;
 
-  /// `accepted` или `warning`.
+  /// `accepted`, `warning` или `blocked`.
   final CardVerdict verdict;
 
   /// Причины пометок в порядке объявления [CardReasonCode].
@@ -188,6 +218,12 @@ class CardCandidate {
 
   /// true, если вердикт — `accepted`.
   bool get isAccepted => verdict == CardVerdict.accepted;
+
+  /// true — жёсткий дефект: в колоду не идёт, но показывается в «отброшенных».
+  bool get isBlocked => verdict == CardVerdict.blocked;
+
+  /// true — карточку можно импортировать (принятая или помеченная).
+  bool get isImportable => !isBlocked;
 
   @override
   String toString() => 'CardCandidate(${verdict.wireName}, $reasons)';
@@ -244,15 +280,29 @@ class CardValidationReport {
   }) : candidates = List<CardCandidate>.unmodifiable(candidates),
        rejected = List<RejectedCard>.unmodifiable(rejected);
 
-  /// Принятые и помеченные карточки в порядке ответа.
+  /// Принятые и помеченные карточки в порядке ответа (блокированные — отдельно).
   final List<CardCandidate> candidates;
 
   /// Отброшенные записи в порядке ответа (не исчезают).
   final List<RejectedCard> rejected;
 
-  /// Карточки для предпросмотра (принятые и помеченные).
+  /// Заблокированные жёсткими дефектами карточки (`TASK.txt` срез 10, п. 2):
+  /// в колоду не идут, но не исчезают — показываются в «показать отброшенные».
+  List<CardCandidate> get blocked => <CardCandidate>[
+    for (final CardCandidate candidate in candidates)
+      if (candidate.isBlocked) candidate,
+  ];
+
+  /// Карточки для предпросмотра и импорта (только принятые и помеченные).
   List<GeneratedCard> get cards => <GeneratedCard>[
-    for (final CardCandidate candidate in candidates) candidate.card,
+    for (final CardCandidate candidate in candidates)
+      if (candidate.isImportable) candidate.card,
+  ];
+
+  /// Заблокированные карточки — для листа «показать отброшенные».
+  List<GeneratedCard> get blockedCards => <GeneratedCard>[
+    for (final CardCandidate candidate in candidates)
+      if (candidate.isBlocked) candidate.card,
   ];
 
   /// Помеченные кандидаты.
@@ -260,12 +310,18 @@ class CardValidationReport {
       candidates.where((CardCandidate candidate) => candidate.hasWarnings);
 
   /// Сколько принято без пометок.
-  int get acceptedCount => candidates.length - warningCount;
+  int get acceptedCount => candidates
+      .where((CardCandidate candidate) => candidate.isAccepted)
+      .length;
 
   /// Сколько помечено.
   int get warningCount => candidates
       .where((CardCandidate candidate) => candidate.hasWarnings)
       .length;
+
+  /// Сколько заблокировано жёсткими дефектами.
+  int get blockedCount =>
+      candidates.where((CardCandidate candidate) => candidate.isBlocked).length;
 
   /// Сколько отброшено.
   int get rejectedCount => rejected.length;
@@ -360,11 +416,14 @@ class CardValidator {
   /// [document] — модель материала для проверки цитаты по offsets (`null` —
   /// цитата не проверяется). [knownUnitIds]/[knownSectionIds] — id единиц и
   /// разделов партии: id вне набора помечается, но не принимается как факт.
+  /// [unanchoredUnitIds] — единицы без якорей (prompt-only, `kind=topic`):
+  /// карточка без цитаты получает пометку «без источника» (п. 3 среза 10).
   CardValidationReport validate(
     Object? json, {
     Document? document,
     Set<String> knownUnitIds = const <String>{},
     Set<String> knownSectionIds = const <String>{},
+    Set<String> unanchoredUnitIds = const <String>{},
   }) {
     if (json is! Map) throw _invalidResponse();
     final Object? rawCards = json['cards'];
@@ -390,6 +449,7 @@ class CardValidator {
         document: document,
         knownUnitIds: knownUnitIds,
         knownSectionIds: knownSectionIds,
+        unanchoredUnitIds: unanchoredUnitIds,
         rejected: rejected,
       );
       if (candidate != null) candidates.add(candidate);
@@ -404,6 +464,7 @@ class CardValidator {
     required Document? document,
     required Set<String> knownUnitIds,
     required Set<String> knownSectionIds,
+    required Set<String> unanchoredUnitIds,
     required List<RejectedCard> rejected,
   }) {
     final Object? rawFront = raw['front'];
@@ -456,6 +517,11 @@ class CardValidator {
     }
 
     final List<CardReasonCode> reasons = <CardReasonCode>[];
+    // У cloze ответа-стороны нет (A8.4): проверяется только вопрос.
+    if (!_hasPlainText(front) ||
+        (cardType != CardType.cloze && !_hasPlainText(back))) {
+      reasons.add(CardReasonCode.emptyAfterNormalization);
+    }
     if (front.length > maxFrontLength) {
       reasons.add(CardReasonCode.frontTooLong);
     }
@@ -471,10 +537,10 @@ class CardValidator {
     }
     final bool Function(String) isLatexOk = latexChecker ?? latexIsValid;
     if (!isLatexOk(front) || !isLatexOk(back)) {
-      reasons.add(CardReasonCode.latexBroken);
+      reasons.add(CardReasonCode.unparseableLatex);
     }
     if (_looksNotRussian(front, back)) {
-      reasons.add(CardReasonCode.languageNotRussian);
+      reasons.add(CardReasonCode.wrongLanguage);
     }
     if (cardType != CardType.cloze && _answerAppearsInFront(front, back)) {
       reasons.add(CardReasonCode.answerInQuestion);
@@ -515,6 +581,12 @@ class CardValidator {
               : CardReasonCode.quoteOutOfRange,
         );
       }
+    } else if (quoteRef == null &&
+        unitId != null &&
+        unanchoredUnitIds.contains(unitId)) {
+      // Единица без якорей (prompt-only, тема): цитаты нет и проверить её
+      // не по чему — карточка помечается «без источника», а не молчит.
+      reasons.add(CardReasonCode.quoteUnverified);
     }
 
     reasons.sort(
@@ -523,6 +595,8 @@ class CardValidator {
     );
     final CardVerdict verdict = reasons.isEmpty
         ? CardVerdict.accepted
+        : reasons.any((CardReasonCode reason) => reason.isBlocking)
+        ? CardVerdict.blocked
         : CardVerdict.warning;
 
     return CardCandidate(
@@ -709,6 +783,11 @@ class CardValidator {
         .replaceAll(RegExp(r'\$\$[\s\S]*?\$\$'), ' ')
         .replaceAll(RegExp(r'\$[^$]*\$'), ' ');
   }
+
+  /// true — после нормализации (без LaTeX, разметки и пунктуации) остались
+  /// буквы или цифры: карточке есть что учить (`emptyAfterNormalization`).
+  static bool _hasPlainText(String text) =>
+      _normalizeForCompare(text).isNotEmpty;
 
   /// Нормализация для сравнения: без LaTeX-разметки, регистра и пунктуации.
   static String _normalizeForCompare(String value) {

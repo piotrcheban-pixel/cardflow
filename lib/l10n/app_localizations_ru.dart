@@ -976,6 +976,9 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String get generationMarkNoSource => 'Без источника';
+
+  @override
   String get generationStageTitle => 'Этапы генерации';
 
   @override
@@ -1005,7 +1008,11 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get generationShortfallValidationRejects =>
-      'часть карточек отброшена проверкой или дублями';
+      'часть карточек отброшена проверкой';
+
+  @override
+  String get generationShortfallDuplicates =>
+      'часть карточек оказалась дублями уже в колоде';
 
   @override
   String get generationShortfallCancelled => 'генерация отменена';

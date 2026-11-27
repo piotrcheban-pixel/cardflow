@@ -2,6 +2,52 @@
 
 ## Сделано
 
+**Срез 10 (2026-11-28) — сквозное включение v3 и правки по решениям владельца.**
+- `ShortfallKind.duplicates` — шестой класс недобора: долг только из-за дублей
+  даёт `duplicates`, а не `validationRejects` (`generation_ledger.dart`).
+- `CardVerdict.blocked` — четвёртый вердикт; жёсткие коды `quoteOutOfRange`,
+  `answerInQuestion`, `wrongLanguage` (было `languageNotRussian`),
+  `emptyAfterNormalization` (новый), `unparseableLatex` (было `latexBroken`)
+  блокируют карточку: в колоду не идёт, в «показать отброшенные» остаётся
+  (`card_validator.dart`, `CardValidationReport.blocked/blockedCards`).
+- `quote_ref == null` + единица без якорей → `CardReasonCode.quoteUnverified`
+  («без источника», warning). `KnowledgeUnitKind.topic` и единица без якорей
+  разрешены для prompt-only; `KnowledgeMap.unanchoredUnitIds`.
+- `ReplenishPolicy.wallClock` — `max(10 мин, 2 с × requested)` от заказа
+  (`wallClockFor`, `wallClockForRequested`); `ReplenishGuards` в итоге добора и
+  в `GenerationReport.guards`.
+- `GenerationReport.shortfallReasons` — причины недобора **множеством с
+  числами** (дубли и валидация своими счётчиками, остаток — причиной остановки).
+- `lib/api/generation/generation_v3_facade.dart` — тонкий фасад: Understanding →
+  Allocation → Generation → Validation → Dedup/Replenish → журнал/импорт →
+  отчёт, без бюджетов/калибровок/recovery. Сквозные тесты (без сети):
+  `test/integration/generation_v3_facade_flow_test.dart` — «40 из 40»,
+  «12 из 40 exhausted_material», blocked-карточка вне колоды, prompt-only
+  «без источника».
+- UI: пометка «Без источника» (`generation-mark-no-source`), ARB-строка и
+  причина недобора `duplicates`; литералов нет.
+
+**Срез 9 (2026-11-28) — флаг, UI, «Почему?» по anchors, метрики, отчёт.**
+- `AppSettings.generationPipelineV3` (JSON `generation_pipeline_v3`, по умолчанию
+  `false`, ADR-052) → `generationRunnerProvider` → `GenerationPipeline(pipelineV3:)`;
+  переключатель `settings-generation-pipeline-v3` на экране «Провайдеры».
+- `lib/domain/generation/completion_verdict.dart`: `done` ⟺ `принято ≥ заказано`,
+  отмена с принятым → `partial`, сбой без карточек → `failed`, причины —
+  `ShortfallKind`, `jobStatus` из вердикта (на пути v3).
+- `lib/domain/generation/generation_metrics.dart`: yield/1000 вх. токенов,
+  acceptance/duplicate rate (в т.ч. по уровням каскада), покрытие единиц,
+  запросов на 10 карточек, p50/p95; `GenerationRunResult.metrics/verdict/
+  possibleDuplicates`, `GenerationDiagnostics.runMetrics`.
+- Путь v3: почти-дубль помечается и остаётся (`CardIssueCode.possibleDuplicate`),
+  точный отбрасывается; `lib/api/generation/source_anchor.dart` даёт блок
+  источника для «Почему?» (`sourceAnchorText/SourceSection`).
+- UI: `generation_v3_progress.dart` (4 этапа, «принято N из M»); предпросмотр —
+  вердикт + причины недобора, группы по первому тегу, пометки «Возможный дубль»,
+  «Обратная сторона», «Предупреждение: N», лист «Почему?» с текстом блока.
+- Отчёт «было → стало»: `journal/iteration-8/summary.md`; метрики 4 сценариев —
+  `journal/generation-v3/scenarios-s9.txt` (v1 vs v3 на одной проводке).
+- Legacy не удалён (флаг выключен по умолчанию, Q21); этапы v3 к проводке не
+  подключены (Q19).
 **Срез 8 (2026-11-28) — Persistence: черновики, миграция, идемпотентный импорт.**
 - **Схема v2** (ADR-051, `lib/data/db/tables.dart`, `app_database.dart`):
   `generation_runs`, `generation_units`, `generation_batches`, `card_drafts`,
@@ -248,6 +294,20 @@
 
 ## Проверено
 
+**Срез 9.** Гейты: `.fvm\versions\3.47.9\bin\flutter.bat analyze --no-pub lib
+test` → **No issues found!**; `.fvm\versions\3.47.9\bin\dart.bat format
+--set-exit-if-changed lib test` → **0 changed**; `.fvm\versions\3.47.9\bin\flutter.bat
+test --no-pub --coverage --exclude-tags golden` → **3155 passed + 17 skipped** (baseline 3109 + 17; +46 новых), `exit 0`.
+Красная фаза — `journal/generation-v3/red-s9.txt` (**3 прошло / 17 упало**,
+assertion-level: `Expected: <40> Actual: <null>`). Новые тесты:
+`completion_verdict_test` (13), `generation_metrics_test` (8),
+`app_settings_pipeline_flag_test` (4), `source_anchor_test` (5),
+`generation_pipeline_v3_flag_test` (4), `generation_v3_progress_test` (4),
+`generation_v3_preview_test` (5), `generation_paths_compare_test` (4 — те же 4
+сценария на v1/v3, таблица «было → стало»). Guard `ru_strings_test` поймал
+латиницу «v3» в заголовке настройки — переименовано, тест зелёный. Полные логи —
+`journal/generation-v3/{red-s9.txt,scenarios-s9.txt,green-s9-full.txt,
+analyze-s9.txt,format-s9.txt}`, отчёт — `journal/iteration-8/summary.md`.
 **Срез 8.** Гейты: `.fvm\versions\3.47.9\bin\flutter.bat analyze --no-pub lib
 test` → **No issues found!**; `.fvm\versions\3.47.9\bin\dart.bat format
 --set-exit-if-changed lib test` → **681 files, 0 changed**;
@@ -373,6 +433,24 @@ DoD-тесты: property «Σ бюджетов == requested» на 200 случ�
   модель без исключения. Итоги — `journal/generation-v3/verify-s1.md`.
 
 ## НЕ ПОВТОРЯТЬ
+
+- **Флаг «переключает путь» проверять на одной проводке и в двух прогонах.**
+  Сценарии среза 9 сравнивают `pipelineV3: false/true` на одном `GenerationPipeline`
+  с одним и тем же фейком: иначе «было → стало» сравнивает разные тесты, а не пути.
+  Моменты времени в фейках (`p50=0 мс`) в отчёт идут с оговоркой, что это не сеть.
+- **Не давать фейку возвращать похожие `front` в каждом ответе.** Срез 9 сначала
+  получил `marked=19 из 20` и `accept=1.00` в сценарии «материала достаточно»:
+  триграммы одинаковых заготовок давали почти-дубли чаще, чем сценарий предполагал.
+  Короткие непохожие факты + намеренная почти-пара — только тогда числа читаемы.
+- **`Object.hash` в Dart принимает до 20 позиционных аргументов.** Добавление двух
+  полей `GeneratedCard` в `hashCode` дало `Too many positional arguments` — поля
+  складывать вложенным `Object.hash(...)`, а не дописывать в конец.
+- **ARB-строки не содержат латиницу вне allow-list.** `ru_strings_test` поймал «(v3)»
+  в заголовке настройки; технические имена (`pipelineV3`, `basic_reversed`) живут в
+  коде, а не в тексте для пользователя.
+- **Форматировать перед полным прогоном, а не во время.** `dart format` пишет файлы:
+  запушенный вместе с `flutter test` он меняет `test/` под работающим прогоном
+  (ретроспектива итерации 4). В срезе 9 формат шёл до теста в одной команде.
 
 - **`CardsBatchEngine._addUsage` нельзя начинать с `const TokenUsage()` по
   правилу «неизвестное слагаемое обнуляет сумму»**: накопитель — «расхода ещё
@@ -583,27 +661,30 @@ DoD-тесты: property «Σ бюджетов == requested» на 200 случ�
 
 ## СЛЕДУЮЩЕЕ ДЕЙСТВИЕ
 
-Срез 8 закрыт, коммиты — `test`/`feat`/`docs` в `main`. Следующий прогон:
-`read TASK.txt` (верхний блок) → верхний блок `journal/STATE.md`
-(«Генерация v3 — срез 8») → `journal/generation-v3/verify-s8.md` (раздел
-«Ограничения») → `docs/generation/BACKLOG.md` (S9 Completion: `done` ⟺
-`принято ≥ requested`, подключение нового пути за флагом `generationV3`).
+Срез 10 закрыт: контракты (duplicates/blocked/quoteUnverified/wallClock/
+shortfallReasons), тонкий фасад `GenerationV3Facade` и четыре сквозных теста.
+Следующий прогон: `read TASK.txt` (верхний блок) → верхний блок
+`journal/STATE.md` («срез 10») → `journal/QUESTIONS.md` Q22 →
+`journal/generation-v3/verify-s10.md`.
 
-Если в TASK.txt снова «Срез 8» — **не повторять**: схема v2, миграция и
-`drift_schemas/*` готовы (ADR-051), `drift_generation_run_store_test.dart` (12),
-`drift_run_import_test.dart` (5), `drift_knowledge_map_cache_test.dart` (12)
-зелёные. Следующий шаг — S9: `test/unit/domain/generation/completion_verdict_test.dart`,
-затем `.fvm\versions\3.47.9\bin\flutter.bat test --no-pub test/unit/domain/generation/completion_verdict_test.dart`.
+Не делать без нового среза:
+- **не включать `generationPipelineV3` по умолчанию** и не удалять legacy:
+  флаг выключен, старый путь — production (Q21);
+- **не подключать `GenerationV3Facade` к `GenerationPipeline`** без HTTP
+  `KnowledgeMapCaller`: у Understanding нет реализации порта, а флаг,
+  включающий несуществующую проводку, — мёртвая заглушка (Q19/Q22);
+- **`CardValidator` в доборе.** Сейчас фасад проверяет и карточки добора, но
+  `ReplenishStage` закрывает слот карточкой, которую потом заблокирует
+  валидация: слот остаётся незакрытым, хотя вердикт добора этого не видит
+  (в тесте blocked-карточка заменяется на следующем проходе). Правильное
+  место — валидация внутри добора (отдельный срез, нужен порт `CardGate`).
+- **UI из `GenerationReport`.** «Принято N из M» в предпросмотре по-прежнему из
+  `CompletionVerdict`: отчёта в `GenerationRunResult` нет, пока фасад не
+  подключён к раннеру (см. выше). Строки и пометки под отчёт готовы.
 
-Не подключать `ReplenishStage`/`GenerationReport`/валидатор/дедуп/журнал прогона
-к `GenerationPipeline`, не переводить UI на новый путь, не включать
-`generationV3` и не удалять старый путь: включение — S9 за флагом
-(ADR-050, протокол §9). Prompt-only остаётся на старом пути (`no_unit_plan`).
-
-Baseline текущего снимка: `flutter test --no-pub --exclude-tags golden` —
-**3109 passed + 17 skipped**; `analyze` 0; `dart format` 0 changed;
-схема БД — **v2** (не откатывать `schemaVersion` и не удалять
-`drift_schema_v1.json`; следующая схема — только новым ADR по ADR-005).
+Baseline снимка: `flutter test --no-pub --exclude-tags golden` —
+**см. `journal/generation-v3/green-s10-full.txt`**; `analyze` 0, `dart format`
+0 changed; схема БД — **v2** (не менялась).
 
 ---
 

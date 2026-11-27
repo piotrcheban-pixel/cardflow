@@ -24,7 +24,12 @@ enum KnowledgeUnitKind {
   formula('formula'),
 
   /// Порядок действий, алгоритм, правило.
-  procedure('procedure');
+  procedure('procedure'),
+
+  /// Тема без материала (prompt-only): единственная единица карты, у которой
+  /// нет якорей — модель делает карточки по общим знаниям (`TASK.txt` срез 10,
+  /// п. 3; Q22).
+  topic('topic');
 
   /// Создаёт значение с wire-именем.
   const KnowledgeUnitKind(this.wireName);
@@ -48,6 +53,7 @@ const List<String> kKnowledgeUnitKindWires = <String>[
   'relation',
   'formula',
   'procedure',
+  'topic',
 ];
 
 /// Имя схемы ответа модели (`response_format.json_schema.name`).
@@ -166,7 +172,10 @@ class KnowledgeUnit {
        assert(id != '', 'У единицы обязан быть id'),
        assert(sectionId != '', 'У единицы обязан быть раздел'),
        assert(statement != '', 'У единицы обязано быть утверждение'),
-       assert(anchors.isNotEmpty, 'Единица обязана опираться на якорь'),
+       assert(
+         anchors.isNotEmpty || kind == KnowledgeUnitKind.topic,
+         'Единица обязана опираться на якорь (кроме темы prompt-only)',
+       ),
        assert(salience >= 0 && salience <= 1, 'Важность — доля в 0..1');
 
   /// Стабильный id (`ku:<fragmentId>#<индекс ответа>`), присваивает парсер.
@@ -197,6 +206,9 @@ class KnowledgeUnit {
   Set<String> get blockIds => <String>{
     for (final KnowledgeAnchor anchor in anchors) anchor.blockId,
   };
+
+  /// true — у единицы есть якоря на материал (у `topic` их нет по смыслу).
+  bool get hasAnchors => anchors.isNotEmpty;
 
   @override
   String toString() =>
@@ -236,6 +248,12 @@ class KnowledgeMap {
   /// Единицы, которые модель пометила составными (`splittable`).
   Iterable<KnowledgeUnit> get splittableUnits =>
       units.where((KnowledgeUnit unit) => unit.splittable);
+
+  /// id единиц без якорей (prompt-only): их карточки проверяются без цитаты.
+  Set<String> get unanchoredUnitIds => <String>{
+    for (final KnowledgeUnit unit in units)
+      if (!unit.hasAnchors) unit.id,
+  };
 
   /// Число единиц.
   int get length => units.length;

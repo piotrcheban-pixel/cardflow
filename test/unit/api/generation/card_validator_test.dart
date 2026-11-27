@@ -181,24 +181,27 @@ void main() {
       expect(clean.candidates.single.reasons, isEmpty);
     });
 
-    test('LaTeX: непарсящаяся формула — latexBroken, корректная — без', () {
-      final CardValidationReport broken = validator.validate(
-        _response(<Map<String, Object?>>[
-          _card(front: 'Чему равно \$\\broken{1}\$?'),
-        ]),
-      );
-      expect(
-        broken.candidates.single.reasons,
-        contains(CardReasonCode.latexBroken),
-      );
+    test(
+      'LaTeX: непарсящаяся формула — unparseableLatex, корректная — без',
+      () {
+        final CardValidationReport broken = validator.validate(
+          _response(<Map<String, Object?>>[
+            _card(front: 'Чему равно \$\\broken{1}\$?'),
+          ]),
+        );
+        expect(
+          broken.candidates.single.reasons,
+          contains(CardReasonCode.unparseableLatex),
+        );
 
-      final CardValidationReport ok = validator.validate(
-        _response(<Map<String, Object?>>[
-          _card(front: 'Чему равно \$x^2\$ при \$x = 2\$?', back: '4'),
-        ]),
-      );
-      expect(ok.candidates.single.reasons, isEmpty);
-    });
+        final CardValidationReport ok = validator.validate(
+          _response(<Map<String, Object?>>[
+            _card(front: 'Чему равно \$x^2\$ при \$x = 2\$?', back: '4'),
+          ]),
+        );
+        expect(ok.candidates.single.reasons, isEmpty);
+      },
+    );
 
     test('корень ответа не объект с cards — GenerationException', () {
       expect(
@@ -359,7 +362,7 @@ void main() {
       );
     });
 
-    test('язык ru: латиница без кириллицы — languageNotRussian', () {
+    test('язык ru: латиница без кириллицы — wrongLanguage', () {
       final CardValidationReport english = validator.validate(
         _response(<Map<String, Object?>>[
           _card(
@@ -371,7 +374,7 @@ void main() {
       );
       expect(
         english.candidates.single.reasons,
-        contains(CardReasonCode.languageNotRussian),
+        contains(CardReasonCode.wrongLanguage),
       );
 
       final CardValidationReport russianWithLatin = validator.validate(
@@ -385,7 +388,7 @@ void main() {
       );
       expect(
         russianWithLatin.candidates.single.reasons,
-        isNot(contains(CardReasonCode.languageNotRussian)),
+        isNot(contains(CardReasonCode.wrongLanguage)),
       );
     });
 
@@ -440,7 +443,7 @@ void main() {
       expect(candidate.quote, isNull);
     });
 
-    test('цитаты нет в материале — quoteOutOfRange, карточка остаётся', () {
+    test('цитаты нет в материале — quoteOutOfRange и blocked', () {
       final CardValidationReport report = validator.validate(
         _response(<Map<String, Object?>>[
           _card(quoteRef: 'квантовая запутанность фотонов'),
@@ -449,10 +452,16 @@ void main() {
       );
 
       final CardCandidate candidate = report.candidates.single;
-      expect(candidate.verdict, CardVerdict.warning);
+      expect(candidate.verdict, CardVerdict.blocked);
+      expect(candidate.isBlocked, isTrue);
       expect(candidate.reasons, contains(CardReasonCode.quoteOutOfRange));
       expect(candidate.quote, isNull);
-      expect(report.cards, hasLength(1), reason: 'карточка не исчезает');
+      expect(report.cards, isEmpty, reason: 'в колоду не идёт');
+      expect(
+        report.blockedCards,
+        hasLength(1),
+        reason: '«показать отброшенные» карточку сохраняет',
+      );
     });
 
     test('без документа цитата не проверяется и не помечается', () {
@@ -480,10 +489,15 @@ void main() {
       );
 
       expect(report.acceptedCount, 1);
-      expect(report.warningCount, 1);
+      expect(report.warningCount, 0);
+      expect(report.blockedCount, 1);
       expect(report.rejectedCount, 1);
-      expect(report.cards, hasLength(2));
-      expect(report.warnings.single.verdict, CardVerdict.warning);
+      expect(
+        report.cards,
+        hasLength(1),
+        reason: 'заблокированная карточка в колоду не идёт',
+      );
+      expect(report.blocked.single.verdict, CardVerdict.blocked);
       expect(report.warningCounts[CardReasonCode.answerInQuestion], 1);
       expect(report.hasRejects, isTrue);
       expect(report.rejected.single.rawMap!['front'], 'нет обратной стороны');
@@ -499,6 +513,122 @@ void main() {
 
       expect(report.cards.first.angle, isNull);
       expect(report.cards.last.angle, 'reverse');
+    });
+  });
+
+  group('срез 10 — жёсткие коды блокируют карточку', () {
+    /// Каждый жёсткий код: вердикт «blocked», карточка вне колоды, но в отчёте.
+    void expectBlocked(
+      CardValidationReport report,
+      CardReasonCode code, {
+      Document? document,
+    }) {
+      final CardCandidate candidate = report.candidates.single;
+      expect(candidate.verdict, CardVerdict.blocked, reason: code.wireName);
+      expect(candidate.reasons, contains(code));
+      expect(
+        report.cards,
+        isEmpty,
+        reason: '${code.wireName}: в колоду не идёт',
+      );
+      expect(report.blockedCards, hasLength(1), reason: 'не исчезает');
+      expect(report.blockedCount, 1);
+    }
+
+    test('answerInQuestion — blocked', () {
+      final CardValidationReport report = validator.validate(
+        _response(<Map<String, Object?>>[
+          _card(
+            front: 'Что такое мера рассеяния энергии в системе?',
+            back: 'Мера рассеяния энергии.',
+            quoteRef: null,
+          ),
+        ]),
+      );
+      expectBlocked(report, CardReasonCode.answerInQuestion);
+    });
+
+    test('wrongLanguage — blocked', () {
+      final CardValidationReport report = validator.validate(
+        _response(<Map<String, Object?>>[
+          _card(
+            front: 'What is entropy?',
+            back: 'A measure of energy dispersion.',
+            quoteRef: null,
+          ),
+        ]),
+      );
+      expectBlocked(report, CardReasonCode.wrongLanguage);
+    });
+
+    test('emptyAfterNormalization — blocked', () {
+      final CardValidationReport report = validator.validate(
+        _response(<Map<String, Object?>>[
+          _card(front: '?! ...', back: '— ???', quoteRef: null),
+        ]),
+      );
+      expectBlocked(report, CardReasonCode.emptyAfterNormalization);
+    });
+
+    test('unparseableLatex — blocked', () {
+      final CardValidationReport report = validator.validate(
+        _response(<Map<String, Object?>>[
+          _card(front: r'Чему равно $\broken{1}$?', quoteRef: null),
+        ]),
+      );
+      expectBlocked(report, CardReasonCode.unparseableLatex);
+    });
+
+    test('quoteOutOfRange — blocked (цитата вне материала)', () {
+      final CardValidationReport report = validator.validate(
+        _response(<Map<String, Object?>>[
+          _card(quoteRef: 'квантовая запутанность фотонов'),
+        ]),
+        document: _document(<String>['Энтропия — мера рассеяния энергии.']),
+      );
+      expectBlocked(report, CardReasonCode.quoteOutOfRange);
+    });
+
+    test('остальные содержательные коды остаются warning', () {
+      final CardValidationReport report = validator.validate(
+        _response(<Map<String, Object?>>[
+          _card(front: '${'а' * 501}?', quoteRef: null),
+        ]),
+      );
+      final CardCandidate candidate = report.candidates.single;
+      expect(candidate.verdict, CardVerdict.warning);
+      expect(candidate.reasons, contains(CardReasonCode.frontTooLong));
+      expect(report.cards, hasLength(1));
+      expect(report.blockedCount, 0);
+    });
+  });
+
+  group('срез 10 — карточка из единицы без якорей', () {
+    test(
+      'quote_ref == null и единица без якорей — quoteUnverified, warning',
+      () {
+        final CardValidationReport report = validator.validate(
+          _response(<Map<String, Object?>>[_card(quoteRef: null)]),
+          unanchoredUnitIds: <String>{'ku:1'},
+        );
+
+        final CardCandidate candidate = report.candidates.single;
+        expect(candidate.verdict, CardVerdict.warning);
+        expect(candidate.reasons, contains(CardReasonCode.quoteUnverified));
+        expect(
+          report.cards,
+          hasLength(1),
+          reason: '«без источника» — пометка, а не блокировка',
+        );
+      },
+    );
+
+    test('единица с якорями — пометки нет', () {
+      final CardValidationReport report = validator.validate(
+        _response(<Map<String, Object?>>[_card(quoteRef: null)]),
+        unanchoredUnitIds: <String>{'ku:other'},
+      );
+      expect(report.candidates.single.reasons, isEmpty);
     });
   });
 }

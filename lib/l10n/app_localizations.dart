@@ -1642,6 +1642,12 @@ abstract class AppLocalizations {
   /// **'Предупреждение: {count}'**
   String generationMarkWarning(int count);
 
+  /// Пометка среза 10: у карточки нет цитаты (единица без якорей, prompt-only).
+  ///
+  /// In ru, this message translates to:
+  /// **'Без источника'**
+  String get generationMarkNoSource;
+
   /// Заголовок степпера этапов на пути v3 (TASK «Срез 9»).
   ///
   /// In ru, this message translates to:
@@ -1696,11 +1702,17 @@ abstract class AppLocalizations {
   /// **'материал исчерпан'**
   String get generationShortfallExhaustedMaterial;
 
-  /// Причина недобора: валидация и дедупликация отбросили карточки.
+  /// Причина недобора: валидация отбросила карточки.
   ///
   /// In ru, this message translates to:
-  /// **'часть карточек отброшена проверкой или дублями'**
+  /// **'часть карточек отброшена проверкой'**
   String get generationShortfallValidationRejects;
+
+  /// Причина недобора: точные дубли колоды (срез 10, ShortfallKind.duplicates).
+  ///
+  /// In ru, this message translates to:
+  /// **'часть карточек оказалась дублями уже в колоде'**
+  String get generationShortfallDuplicates;
 
   /// Причина недобора: пользователь отменил генерацию.
   ///

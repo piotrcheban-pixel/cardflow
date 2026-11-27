@@ -1,5 +1,58 @@
 # STATE — текущее состояние CardFlow
 
+## Генерация v3 — срез 10: сквозной фасад, blocked-карточки, причины числами (2026-11-28)
+
+**Срез:** `TASK.txt` «Срез 10. Сквозное включение v3 + правки по решениям
+владельца» (план — `docs/generation/ARCH.md` уточнение среза 10; толкования —
+`journal/QUESTIONS.md` Q22: решения владельца по Q5/Q13/Q16/Q17 и «Ограничениям»
+приоритетнее прежних; отчёт — `journal/generation-v3/verify-s10.md`).
+
+**Факты старта:** ветка `main`, `HEAD = 23766df` (docs среза 9); baseline
+`flutter test --no-pub --exclude-tags golden` — 3155 passed + 17 skipped.
+
+**Сделано (TDD):**
+- `ShortfallKind.duplicates` — шестой класс недобора; «долг только из-за дублей»
+  даёт `duplicates`, а не `validationRejects` (`generation_ledger.dart`).
+- `CardVerdict.blocked` + `CardReasonCode.isBlocking` (жёсткие коды
+  `quoteOutOfRange`, `answerInQuestion`, `wrongLanguage`,
+  `emptyAfterNormalization`, `unparseableLatex`); блокированная карточка не
+  удаляется — `CardValidationReport.blocked/blockedCards`, в `cards` её нет.
+  Переименования под имена владельца: `languageNotRussian` → `wrongLanguage`,
+  `latexBroken` → `unparseableLatex`.
+- `quoteUnverified` («без источника», warning) для карточки из единицы без
+  якорей; `KnowledgeUnitKind.topic` + единица без якорей только для prompt-only;
+  `KnowledgeMap.unanchoredUnitIds`.
+- `ReplenishPolicy.wallClock = max(10 мин, 2 с × requested)` (`wallClockFor`);
+  `ReplenishGuards` в `ReplenishOutcome.guards` и `GenerationReport.guards`.
+- `GenerationReport.shortfallReasons` — `Map<ShortfallKind,int>`: дубли и
+  валидация своими счётчиками, остаток — причиной остановки.
+- `lib/api/generation/generation_v3_facade.dart` — тонкий фасад этапов из портов
+  (Understanding → Allocation → Generation → Validation → Replenish → журнал/
+  импорт → отчёт), без бюджетов/калибровок/recovery. Сквозные тесты без сети:
+  `test/integration/generation_v3_facade_flow_test.dart` — «40 из 40»,
+  «12 из 40 exhausted_material», blocked-карточка не в колоде (числом),
+  prompt-only «без источника».
+- UI: пометка «Без источника» (`generation-mark-no-source`), ARB-строка
+  `generationMarkNoSource`, причина недобора `duplicates`; литералов нет.
+
+**Чем проверено:** `flutter analyze --no-pub` → **No issues found**;
+`dart format --set-exit-if-changed lib test` → 0 changed;
+`flutter test --no-pub --coverage --exclude-tags golden` → **3174 passed +
+17 skipped** (+19 к baseline), покрытие рукописного кода **90.4 %
+(26354/29138)**, exit 0; лог — `journal/generation-v3/green-s10-full.txt`;
+отчёт — `journal/generation-v3/verify-s10.md`. Новые тесты: срез 10 в
+`card_validator_test` (+8), `generation_report_test` (+5),
+`replenish_stage_test` (+3), `generation_ledger_test`/`knowledge_map_test`
+(обновлены), `generation_v3_facade_flow_test` (+4).
+
+**Ограничения (осознанные, не маскируются):** `GenerationV3Facade` к
+production-раннеру не подключён — нет HTTP-реализации `KnowledgeMapCaller`,
+флаг `generationPipelineV3` выключен, legacy не удалён (Q19/Q21/Q22); добор
+закрывает слот карточкой, которую потом заблокирует валидатор (нужен порт
+`CardGate` внутри добора); «принято N из M» в UI — из вердикта, а не из
+`GenerationReport` (отчёта в `GenerationRunResult` нет до проводки фасада).
+
+---
 ## Генерация v3 — срез 9: флаг, UI, «Почему?» по anchors, метрики, отчёт (2026-11-28)
 
 **Срез:** `TASK.txt` «Срез 9. Флаг, UI, удаление legacy, отчёт с метриками»

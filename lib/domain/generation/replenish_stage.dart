@@ -146,7 +146,7 @@ class ReplenishPolicy {
     this.maxPasses = defaultMaxPasses,
     this.maxRequests,
     this.tokenBudget,
-    this.wallClock = defaultWallClock,
+    this.wallClock,
   }) : assert(maxPasses > 0, 'Число проходов положительно'),
        assert(
          maxRequests == null || maxRequests > 0,
@@ -160,8 +160,19 @@ class ReplenishPolicy {
   /// Число проходов добора по умолчанию (TASK: `maxPasses = 3`).
   static const int defaultMaxPasses = 3;
 
-  /// Предел времени операции по умолчанию.
+  /// Минимальный предел времени операции.
   static const Duration defaultWallClock = Duration(minutes: 10);
+
+  /// Сколько времени операции даётся на заказ [requested].
+  ///
+  /// `max(10 мин, 2 с × requested)` — решение владельца среза 10
+  /// (`TASK.txt` п. 4): большие заказы не должны упираться в десять минут, а
+  /// маленькие не получают меньше прежнего предела. Прежнее толкование
+  /// (фиксированные 10 минут, Q17) заменено — см. Q22.
+  static Duration wallClockForRequested(int requested) {
+    final Duration scaled = Duration(seconds: 2 * math.max(0, requested));
+    return scaled > defaultWallClock ? scaled : defaultWallClock;
+  }
 
   /// Сколько проходов добора допускается после первого прохода Generation.
   final int maxPasses;
@@ -172,11 +183,15 @@ class ReplenishPolicy {
   /// Бюджет токенов операции; `null` — [tokenBudgetForPlan].
   final int? tokenBudget;
 
-  /// Предел времени операции.
+  /// Предел времени операции; `null` — [wallClockForRequested] от заказа.
   ///
   /// Положительность — обязанность вызывающего: сравнение `Duration` не
   /// вычисляется в const-конструкторе, поэтому проверки в `assert` нет.
-  final Duration wallClock;
+  final Duration? wallClock;
+
+  /// Предел времени операции для заказа [requested].
+  Duration wallClockFor(int requested) =>
+      wallClock ?? wallClockForRequested(requested);
 
   /// Предел запросов операции для заказа [requested].
   int requestsLimit(int requested) =>
@@ -203,7 +218,59 @@ class ReplenishPolicy {
   String toString() =>
       'ReplenishPolicy(проходов $maxPasses, запросов '
       '${maxRequests ?? 'от заказа'}, токенов '
-      '${tokenBudget ?? 'от плана'}, время $wallClock)';
+      '${tokenBudget ?? 'от плана'}, время '
+      '${wallClock ?? 'от заказа (max(10 мин, 2 с × N))'})';
+}
+
+/// Фактические предохранители операции добора (TASK срез 10, п. 4).
+///
+/// Значения после подстановки «от заказа»/«от плана» — то, что реально
+/// ограничивало прогон, а не то, что было записано в политике. [hit] — какой
+/// предохранитель сработал (`null` — ни один); отчёт прогона показывает эти
+/// числа вместе с причинами недобора.
+class ReplenishGuards {
+  /// Создаёт снимок предохранителей.
+  const ReplenishGuards({
+    required this.maxPasses,
+    required this.maxRequests,
+    required this.tokenBudget,
+    required this.wallClock,
+    this.hit,
+  }) : assert(maxPasses > 0, 'Число проходов положительно'),
+       assert(maxRequests > 0, 'Предел запросов положителен');
+
+  /// Сколько проходов добора допускалось.
+  final int maxPasses;
+
+  /// Предел запросов операции.
+  final int maxRequests;
+
+  /// Бюджет токенов операции.
+  final int tokenBudget;
+
+  /// Предел времени операции (после подстановки «от заказа»).
+  final Duration wallClock;
+
+  /// Сработавший предохранитель; `null` — ни один не сработал.
+  final ReplenishStopReason? hit;
+
+  /// true — прогон остановил предохранитель.
+  bool get hitsGuard => hit?.isGuard ?? false;
+
+  /// Копия со сработавшим предохранителем [reason].
+  ReplenishGuards withHit(ReplenishStopReason reason) => ReplenishGuards(
+    maxPasses: maxPasses,
+    maxRequests: maxRequests,
+    tokenBudget: tokenBudget,
+    wallClock: wallClock,
+    hit: reason.isGuard ? reason : null,
+  );
+
+  @override
+  String toString() =>
+      'ReplenishGuards(проходов $maxPasses, запросов $maxRequests, '
+      'токенов $tokenBudget, время $wallClock'
+      '${hit == null ? '' : ', сработал ${hit!.wireName}'})';
 }
 
 /// Один проход добора: план (только единицы с долгом), журнал и принятое.
@@ -277,6 +344,7 @@ class ReplenishOutcome {
     this.usage = const TokenUsage(),
     this.duration = Duration.zero,
     this.unfilledSlots = 0,
+    this.guards,
   }) : acceptedCards = List<GeneratedCard>.unmodifiable(acceptedCards),
        passes = List<ReplenishPass>.unmodifiable(passes);
 
@@ -314,6 +382,10 @@ class ReplenishOutcome {
 
   /// Сколько слотов заказа осталось без принятой карточки.
   final int unfilledSlots;
+
+  /// Фактические предохранители операции (TASK срез 10, п. 4); `null` — этап
+  /// шёл не из [ReplenishStage.run] и предохранителей не объявлял.
+  final ReplenishGuards? guards;
 
   /// Принято карточек.
   int get accepted => acceptedCards.length;
@@ -410,6 +482,13 @@ class ReplenishStage {
 
     final int requestsLimit = policy.requestsLimit(plan.requested);
     final int tokenLimit = policy.tokenLimit(plan);
+    final Duration wallClock = policy.wallClockFor(plan.requested);
+    final ReplenishGuards guards = ReplenishGuards(
+      maxPasses: policy.maxPasses,
+      maxRequests: requestsLimit,
+      tokenBudget: tokenLimit,
+      wallClock: wallClock,
+    );
 
     final Map<String, KnowledgeUnit> unitsById = <String, KnowledgeUnit>{
       for (final UnitBudget budget in plan.units) budget.unit.id: budget.unit,
@@ -472,7 +551,7 @@ class ReplenishStage {
             cancellation: cancellation,
             now: clock.now(),
             startedAt: start,
-            wallClock: policy.wallClock,
+            wallClock: wallClock,
             requests: requests,
             requestsLimit: requestsLimit,
             spent: spent,
@@ -494,6 +573,7 @@ class ReplenishStage {
             spent: spent,
             requestsLimit: requestsLimit,
             tokenLimit: tokenLimit,
+            wallClock: wallClock,
             startedAt: start,
             cancellation: cancellation,
           );
@@ -544,6 +624,7 @@ class ReplenishStage {
       usage: usage,
       duration: clock.now().difference(start),
       unfilledSlots: unfilled,
+      guards: guards.withHit(reason),
     );
   }
 
@@ -572,6 +653,7 @@ class ReplenishStage {
     required int spent,
     required int requestsLimit,
     required int tokenLimit,
+    required Duration wallClock,
     required DateTime startedAt,
     required CancellationSignal? cancellation,
   }) async {
@@ -592,7 +674,7 @@ class ReplenishStage {
         cancellation: cancellation,
         now: clock.now(),
         startedAt: startedAt,
-        wallClock: policy.wallClock,
+        wallClock: wallClock,
         requests: requestsNow,
         requestsLimit: requestsLimit,
         spent: spentNow,

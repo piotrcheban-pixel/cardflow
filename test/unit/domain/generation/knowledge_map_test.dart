@@ -141,13 +141,14 @@ void main() {
   });
 
   group('KnowledgeUnitKind', () {
-    test('wire-имена закреплены и разбираются обратно', () {
+    test('wire-имена закреплены и разбираются обратно (срез 10: topic)', () {
       expect(kKnowledgeUnitKindWires, <String>[
         'definition',
         'fact',
         'relation',
         'formula',
         'procedure',
+        'topic',
       ]);
       expect(
         KnowledgeUnitKind.values.map((KnowledgeUnitKind kind) => kind.wireName),

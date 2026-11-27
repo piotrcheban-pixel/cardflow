@@ -58,7 +58,7 @@ void main() {
       expect(tokenBudgetForPlan(plan, passes: 0), 5400);
     });
 
-    test('политика по умолчанию: три прохода, запросы от заказа, время', () {
+    test('политика по умолчанию: три прохода, запросы и время от заказа', () {
       final AllocationPlan plan = _plan(<int>[2, 3, 4]);
       const ReplenishPolicy policy = ReplenishPolicy();
 
@@ -66,7 +66,19 @@ void main() {
       expect(ReplenishPolicy.defaultMaxPasses, 3);
       expect(policy.requestsLimit(40), 40);
       expect(policy.tokenLimit(plan), 21600);
-      expect(policy.wallClock, ReplenishPolicy.defaultWallClock);
+      // Срез 10: время операции — max(10 мин, 2 с × заказ), а не константа.
+      expect(policy.wallClock, isNull);
+      expect(policy.wallClockFor(4), const Duration(minutes: 10));
+      expect(policy.wallClockFor(40), const Duration(minutes: 10));
+      expect(policy.wallClockFor(600), const Duration(minutes: 20));
+      expect(
+        ReplenishPolicy.wallClockForRequested(300),
+        const Duration(minutes: 10),
+      );
+      expect(
+        ReplenishPolicy.wallClockForRequested(0),
+        const Duration(minutes: 10),
+      );
     });
 
     test('явные пределы политики перекрывают вычисленные', () {
@@ -82,6 +94,7 @@ void main() {
       expect(policy.requestsLimit(40), 7);
       expect(policy.tokenLimit(plan), 1000);
       expect(policy.wallClock, const Duration(seconds: 30));
+      expect(policy.wallClockFor(600), const Duration(seconds: 30));
     });
   });
 
@@ -469,6 +482,54 @@ void main() {
       expect(outcome.reason, ReplenishStopReason.wallClock);
       expect(port.calls.length, 1);
       expect(outcome.duration, const Duration(minutes: 11));
+    });
+
+    test('срез 10: предохранители в итоге, wallClock — от заказа', () async {
+      final AllocationPlan plan = _plan(<int>[2, 2, 2]);
+      final GenerationLedger ledger = _ledgerFor(
+        plan,
+        acceptedByBatch: <int, int>{0: 2},
+        causes: <int, ShortfallKind>{
+          1: ShortfallKind.providerError,
+          2: ShortfallKind.providerError,
+        },
+        attempts: false,
+      );
+      final _FakeClock clock = _FakeClock(DateTime.utc(2026, 11, 27, 12));
+      final _FakeLlmPort port = _FakeLlmPort(
+        onGenerate: (CardsBatch batch) {
+          clock.advance(const Duration(minutes: 11));
+          return _success(batch);
+        },
+      );
+
+      final ReplenishOutcome outcome =
+          await _stage(port, clock: clock, outputTokensPerCard: 5000).run(
+            plan: plan,
+            ledger: ledger,
+            acceptedCards: _cardsOf(plan, <int>[0]),
+          );
+
+      // Политика по умолчанию: заказ 6 → max(10 мин, 2 с × 6) = 10 минут.
+      expect(outcome.reason, ReplenishStopReason.wallClock);
+      final ReplenishGuards guards = outcome.guards!;
+      expect(guards.hit, ReplenishStopReason.wallClock);
+      expect(guards.hitsGuard, isTrue);
+      expect(guards.maxPasses, ReplenishPolicy.defaultMaxPasses);
+      expect(guards.maxRequests, 6);
+      expect(guards.wallClock, const Duration(minutes: 10));
+      expect(guards.tokenBudget, greaterThan(0));
+    });
+
+    test('срез 10: wallClock растёт с заказом (2 с на карточку)', () {
+      expect(
+        ReplenishPolicy.wallClockForRequested(40),
+        const Duration(minutes: 10),
+      );
+      expect(
+        ReplenishPolicy.wallClockForRequested(900),
+        const Duration(minutes: 30),
+      );
     });
 
     test('план без единиц (prompt-only) — no_unit_plan без запросов', () async {

@@ -1204,6 +1204,10 @@
       }
     }
   },
+  "generationMarkNoSource": "Без источника",
+  "@generationMarkNoSource": {
+    "description": "Пометка среза 10: у карточки нет цитаты (единица без якорей, prompt-only)."
+  },
   "generationStageTitle": "Этапы генерации",
   "@generationStageTitle": {
     "description": "Заголовок степпера этапов на пути v3 (TASK «Срез 9»)."
@@ -1240,9 +1244,13 @@
   "@generationShortfallExhaustedMaterial": {
     "description": "Причина недобора: карточки не выдумывались, материал кончился."
   },
-  "generationShortfallValidationRejects": "часть карточек отброшена проверкой или дублями",
+  "generationShortfallValidationRejects": "часть карточек отброшена проверкой",
   "@generationShortfallValidationRejects": {
-    "description": "Причина недобора: валидация и дедупликация отбросили карточки."
+    "description": "Причина недобора: валидация отбросила карточки."
+  },
+  "generationShortfallDuplicates": "часть карточек оказалась дублями уже в колоде",
+  "@generationShortfallDuplicates": {
+    "description": "Причина недобора: точные дубли колоды (срез 10, ShortfallKind.duplicates)."
   },
   "generationShortfallCancelled": "генерация отменена",
   "@generationShortfallCancelled": {

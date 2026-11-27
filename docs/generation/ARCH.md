@@ -135,6 +135,25 @@ Allocation/Generation/Validation/Dedup/Replenish **к production-исполне�
 моста к `AllocationPlan`; флаг, включающий несуществующую проводку, был бы
 мёртвой заглушкой. Старый путь не удалён — флаг выключен по умолчанию (протокол
 §9). Толкования — Q19–Q21, отчёт «было → стало» — `journal/iteration-8/summary.md`.
+**Уточнение среза 10 (TASK.txt):** сквозное включение v3 собрано **тонким
+фасадом** `GenerationV3Facade` (`lib/api/generation/generation_v3_facade.dart`):
+Understanding (порт `UnderstandingStage` или единственная единица `kind=topic`
+для prompt-only) → `planAllocation` → `CardsBatchEngine` → `CardValidator` →
+`ReplenishStage` → `CardSink`/импорт → `GenerationReport`. Бюджетов,
+калибровок и recovery-логики в фасаде нет; `GenerationPipeline` не растёт
+(флаг выключен, legacy — production, Q19/Q21). Контракты среза: шестой класс
+недобора `ShortfallKind.duplicates` (долг только из-за дублей), вердикт
+`CardVerdict.blocked` с пятью жёсткими кодами (`quoteOutOfRange`,
+`answerInQuestion`, `wrongLanguage`, `emptyAfterNormalization`,
+`unparseableLatex`), `quoteUnverified` для карточки из единицы без якорей,
+`ReplenishPolicy.wallClock = max(10 мин, 2 с × requested)` и предохранители в
+отчёте (`ReplenishGuards`), причины недобора **множеством с числами**
+(`GenerationReport.shortfallReasons`). Сквозные тесты без сети —
+`test/integration/generation_v3_facade_flow_test.dart` («40 из 40»,
+«12 из 40 exhausted_material», blocked-карточка вне колоды, prompt-only).
+К production-раннеру фасад не подключён: нет HTTP-реализации
+`KnowledgeMapCaller`; ограничения — `journal/QUESTIONS.md` Q22 и
+`journal/generation-v3/verify-s10.md` §4.
 **Поток данных.** `MaterialUnit` несут offsets — единственный источник истины о
 тексте; `KnowledgeMap` ссылается на них, а не копирует текст; партия несёт id
 пунктов, поэтому ответ модели привязан к материалу; `CardCandidate` сохраняет

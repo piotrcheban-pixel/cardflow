@@ -4,6 +4,7 @@ import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/generation/allocation.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
 import 'package:cardflow/domain/generation/generation_report.dart';
+import 'package:cardflow/domain/generation/generation_ledger.dart';
 import 'package:cardflow/domain/generation/generation_result.dart';
 import 'package:cardflow/domain/generation/generation_run.dart';
 import 'package:cardflow/domain/generation/knowledge_map.dart';
@@ -170,6 +171,109 @@ void main() {
         'validation_rejects',
       ]);
       expect(report.invalid, 1);
+    });
+  });
+
+  group('срез 10 — причины недобора с числами и предохранители', () {
+    test('долг только из-за дублей — причина duplicates, а не validation', () {
+      final AllocationPlan plan = _plan(<int>[4, 6]);
+      final GenerationReport report = GenerationReport.fromReplenish(
+        plan: plan,
+        outcome: _outcome(
+          stage: GenerationStage.partial,
+          reason: ReplenishStopReason.exhaustedMaterial,
+          requested: 10,
+          acceptedCards: _cardsOf(plan, <int>[0, 1]).take(8).toList(),
+          duplicates: 2,
+          unfilledSlots: 2,
+        ),
+      );
+
+      expect(report.shortfallReasons, <ShortfallKind, int>{
+        ShortfallKind.duplicates: 2,
+      });
+    });
+
+    test('валидация и дубли считаются отдельно, каждая своим числом', () {
+      final AllocationPlan plan = _plan(<int>[4, 6]);
+      final GenerationReport report = GenerationReport.fromReplenish(
+        plan: plan,
+        outcome: _outcome(
+          stage: GenerationStage.partial,
+          reason: ReplenishStopReason.exhaustedMaterial,
+          requested: 10,
+          acceptedCards: _cardsOf(plan, <int>[0, 1]).take(8).toList(),
+          invalid: 1,
+          duplicates: 1,
+          unfilledSlots: 2,
+        ),
+      );
+
+      expect(report.shortfallReasons, <ShortfallKind, int>{
+        ShortfallKind.duplicates: 1,
+        ShortfallKind.validationRejects: 1,
+      });
+    });
+
+    test('исчерпанный материал — число недобора', () {
+      final AllocationPlan plan = _plan(<int>[6, 6, 6, 6, 6, 6, 4]);
+      final GenerationReport report = GenerationReport.fromReplenish(
+        plan: plan,
+        outcome: _outcome(
+          stage: GenerationStage.partial,
+          reason: ReplenishStopReason.exhaustedMaterial,
+          requested: 40,
+          acceptedCards: _cardsOf(plan, <int>[0, 1]),
+          unfilledSlots: 28,
+        ),
+      );
+
+      expect(report.shortfallReasons, <ShortfallKind, int>{
+        ShortfallKind.exhaustedMaterial: 28,
+      });
+    });
+
+    test('предохранители операции попадают в отчёт', () {
+      final AllocationPlan plan = _plan(<int>[4, 6]);
+      const ReplenishGuards guards = ReplenishGuards(
+        maxPasses: 3,
+        maxRequests: 10,
+        tokenBudget: 5000,
+        wallClock: Duration(minutes: 10),
+      );
+      final GenerationReport report = GenerationReport.fromReplenish(
+        plan: plan,
+        outcome: ReplenishOutcome(
+          stage: GenerationStage.partial,
+          reason: ReplenishStopReason.maxPasses,
+          requested: 10,
+          acceptedCards: _cardsOf(plan, <int>[0]),
+          unfilledSlots: 6,
+          guards: guards.withHit(ReplenishStopReason.maxPasses),
+        ),
+      );
+
+      expect(report.guards, isNotNull);
+      expect(report.guards!.maxPasses, 3);
+      expect(report.guards!.maxRequests, 10);
+      expect(report.guards!.wallClock, const Duration(minutes: 10));
+      expect(report.guards!.hit, ReplenishStopReason.maxPasses);
+      expect(report.guards!.hitsGuard, isTrue);
+    });
+
+    test('успех не имеет причин недобора', () {
+      final AllocationPlan plan = _plan(<int>[10]);
+      final GenerationReport report = GenerationReport.fromReplenish(
+        plan: plan,
+        outcome: _outcome(
+          stage: GenerationStage.ready,
+          reason: ReplenishStopReason.complete,
+          requested: 10,
+          acceptedCards: _cardsOf(plan, <int>[0]),
+        ),
+      );
+
+      expect(report.shortfallReasons, isEmpty);
     });
   });
 }

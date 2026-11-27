@@ -488,10 +488,78 @@ ADR-052 и `journal/iteration-8/summary.md` §4.
 показывать пустое обещание.
 
 ## Q21. Почему legacy не удалён в срезе 9?
-
 **Вопрос.** TASK п. 5 требует удалить старый chunker, recovery-бюджеты и
 калибровку «только после зелёного флага».
 **Решение.** Флаг по умолчанию **выключен** (и TASK запрещает включать его без
 отчёта), поэтому старый путь — production; его удаление сломало бы приложение по
 умолчанию. Удаление откладывается до перевода флага в default-on отдельным срезом;
 каждое удаление сопровождается ссылкой на тест (протокол §9).
+
+## Q22 (срез 10, 2026-11-28) — решения владельца против прежних толкований
+
+**Вопрос.** `TASK.txt` среза 10 приказывает читать Q5, Q13, Q16, Q17 и «раздел
+Ограничения» как решения владельца, которые приоритетнее прежних толкований, и
+вводит контракты, которых в коде срезов 2, 5, 6 и 7 не было (дубли как класс,
+вердикт `blocked`, `quote_ref == null`, `wallClock` от заказа, причины недобора
+с числами). «Раздела Ограничения» в `QUESTIONS.md` нет — принят
+`journal/iteration-8/summary.md` §4 «Остаточные ограничения» и блок
+«Ограничения» в `journal/STATE.md` (срез 9).
+
+**Решения (приняты).**
+- **Q5 заменён (п. 1 TASK):** `duplicates` — шестой `ShortfallKind`; «долг
+  остался только из-за дублей» → `duplicates`, а не `validationRejects`.
+  Приоритет прогона: `cancelled → provider_error → truncated →
+  exhausted_material → validation_rejects → duplicates`. Смысловой дубль
+  (S6) по-прежнему не потеря: он помечается и считается принятым.
+- **Q16 заменён (п. 2 TASK):** вердиктов четыре — `accepted | warning |
+  blocked | rejected`. Жёсткие коды: `quoteOutOfRange`, `answerInQuestion`,
+  `wrongLanguage`, `emptyAfterNormalization`, `unparseableLatex`. Два кода
+  переименованы под имена владельца (`languageNotRussian` → `wrongLanguage`,
+  `latexBroken` → `unparseableLatex`); `emptyAfterNormalization` — новый:
+  после нормализации (без LaTeX и пунктуации) на стороне не остаётся букв и
+  цифр (у `cloze` проверяется только вопрос — у cloze нет обратной стороны,
+  A8.4). `isRejecting` остаётся структурным (`missingRequiredField`,
+  `unknownCardType`, `emptyFront`), `isBlocking` — единственное место списка
+  жёстких кодов. Блокированная карточка **не удаляется**: она в
+  `CardValidationReport.blocked/blockedCards`, в `cards` (импорт) её нет.
+  Остальные содержательные проверки A8.4 остаются `warning`.
+- **Q13 уточнён (п. 3 TASK):** `quote_ref == null` + карточка из единицы без
+  якорей → `CardReasonCode.quoteUnverified` («без источника», warning, не
+  блокировка). Для prompt-only введён `KnowledgeUnitKind.topic` и разрешена
+  единица без якорей **только** этого вида; `KnowledgeMap.unanchoredUnitIds`
+  — вход валидатора (`unanchoredUnitIds`).
+- **Q17 уточнён (п. 4 TASK):** `ReplenishPolicy.wallClock` по умолчанию не
+  константа, а `max(10 мин, 2 с × requested)` (`wallClockForRequested`,
+  `wallClockFor`); явное значение политики перекрывает формулу. Фактические
+  предохранители (`maxPasses`, `maxRequests`, `tokenBudget`, `wallClock`,
+  сработавший `hit`) — `ReplenishGuards` в `ReplenishOutcome.guards` и
+  `GenerationReport.guards`.
+- **П. 5 TASK:** `GenerationReport.shortfallReasons` — `Map<ShortfallKind,int>`
+  «сколько карточек потеряно и почему»: дубли и валидация — своими
+  счётчиками, остаток — причиной остановки; полностью объяснённый счётчиками
+  остаток причиной остановки не дублируется. Старый `reasons` (список кодов)
+  сохранён для журнала и UI.
+- **П. 6 TASK («GenerationPipeline = тонкий фасад»):** фасад реализован
+  отдельным классом `GenerationV3Facade`
+  (`lib/api/generation/generation_v3_facade.dart`), а не переписыванием
+  `GenerationPipeline`: флаг выключен, старый путь — production, а полная
+  проводка требует HTTP-реализации `KnowledgeMapCaller` (Q19). Фасад не растёт
+  от срезов: он собирает этапы из портов, без бюджетов/калибровок/recovery.
+  Файлы >300 строк, оставшиеся осознанно: `generation_pipeline.dart` (2440
+  строк — legacy production-путь, удаляется только после default-on флага,
+  Q21), `replenish_stage.dart` (833 — исполнитель добора с проходами и
+  журналом, дробить без второго исполнителя нечего), `card_validator.dart`
+  (731 — правила проверок и цитаты живут одним списком, порядок кодов —
+  контракт отчёта). Список — в `verify-s10.md` §4.
+- **П. 8 TASK (UI из `GenerationReport`):** сделано частично и осознанно —
+  пометка «Без источника» и причина `duplicates` в ARB; «принято N из M»
+  остаётся из `CompletionVerdict`, потому что отчёта в `GenerationRunResult`
+  нет до подключения фасада к раннеру. Это ограничение среза, а не скрытая
+  недоделка (`verify-s10.md` §4).
+
+**Что меняется, если толкование неверно.** Дубли: одна константа-список и
+одна ветка `GenerationBatchLedger.shortfall`. Жёсткие коды: `isBlocking` и
+несколько ожиданий в `card_validator_test`/`quote_offsets_test`. «Без
+источника»: один код причины и одна проверка в валидаторе. `wallClock`: две
+константы и функция `f`. Отчёт: функция `_shortfallReasonsOf`. Фасад:
+переименование класса и перенос в `generation_pipeline.dart`.

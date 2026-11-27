@@ -45,8 +45,16 @@ enum ShortfallKind {
   /// Ответ модели оборван по лимиту вывода (спасённые карточки учтены).
   truncated('truncated'),
 
-  /// Карточки произведены, но отброшены валидацией или как точные дубли.
+  /// Карточки произведены, но отброшены валидацией.
   validationRejects('validation_rejects'),
+
+  /// Карточки произведены, но оказались точными дублями колоды.
+  ///
+  /// Отдельный класс — решение владельца среза 10 (`TASK.txt` п. 1): если долг
+  /// остался **только** из-за дублей, причина `duplicates`, а не
+  /// `validation_rejects`. Прежнее толкование (`journal/QUESTIONS.md` Q5)
+  /// заменено, см. Q22.
+  duplicates('duplicates'),
 
   /// Прогон отменён пользователем.
   cancelled('cancelled');
@@ -137,15 +145,18 @@ class GenerationBatchLedger {
 
   /// Класс недобора партии; `null` — долга нет или причина ещё неизвестна.
   ///
-  /// Приоритет: явная [cause] → отброшенные карточки
-  /// ([ShortfallKind.validationRejects]) → короткий ответ без ошибок
-  /// ([ShortfallKind.exhaustedMaterial]; остальные причины этап объявляет
-  /// явно). Партия без событий возвращает `null`: она могла ещё не начаться.
+  /// Приоритет: явная [cause] → отброшенные валидацией
+  /// ([ShortfallKind.validationRejects]) → точные дубли
+  /// ([ShortfallKind.duplicates], если валидация ничего не отбрасывала) →
+  /// короткий ответ без ошибок ([ShortfallKind.exhaustedMaterial]; остальные
+  /// причины этап объявляет явно). Партия без событий возвращает `null`: она
+  /// могла ещё не начаться.
   ShortfallKind? get shortfall {
     if (!hasDebt) return null;
     final ShortfallKind? declared = cause;
     if (declared != null) return declared;
-    if (invalid > 0 || duplicates > 0) return ShortfallKind.validationRejects;
+    if (invalid > 0) return ShortfallKind.validationRejects;
+    if (duplicates > 0) return ShortfallKind.duplicates;
     if (generated == 0) return null;
     return ShortfallKind.exhaustedMaterial;
   }
@@ -297,8 +308,9 @@ class GenerationLedger {
   ///
   /// Приоритет (сначала более корневая причина, затем более «внутренняя»):
   /// отмена → ошибка провайдера → обрезка ответа → исчерпание материала →
-  /// отброшенные карточки. Дубли отдельного класса не имеют: они входят в
-  /// `validation_rejects` (см. `journal/QUESTIONS.md` Q5).
+  /// отброшенные валидацией → точные дубли. Дубли — отдельный класс среза 10
+  /// (`TASK.txt` п. 1): если долг остался только из-за них, причина
+  /// [ShortfallKind.duplicates] (Q22), а не `validation_rejects`.
   ShortfallKind? get shortfall {
     if (!hasDebt) return null;
     const List<ShortfallKind> priority = <ShortfallKind>[
@@ -307,6 +319,7 @@ class GenerationLedger {
       ShortfallKind.truncated,
       ShortfallKind.exhaustedMaterial,
       ShortfallKind.validationRejects,
+      ShortfallKind.duplicates,
     ];
     for (final ShortfallKind kind in priority) {
       for (final GenerationBatchLedger batch in batches) {
