@@ -84,7 +84,11 @@
 полноэкранный просмотр декодирует оригинал; тень выключена во время движения;
 «Отмена» диалога недобора не сохраняет карточки; диагностика — debug-only).
 
-**Push/CI:** не выполнялись (по заданию — только с разрешения).
+**Push/CI:** push в `origin/main` выполнен по разрешению владельца
+(`ddfdde0..5d0327a`). CI run
+[`46000290063`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/46000290063)
+(`5d0327a`) — **9/9 job success** (`format + analyze`, `test` × 3 ОС,
+`build desktop` × 3, `build mobile` Android + iOS), 14,3 мин.
 
 ---
 
