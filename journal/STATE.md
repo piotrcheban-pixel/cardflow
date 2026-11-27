@@ -1,5 +1,95 @@
 # STATE — текущее состояние CardFlow
 
+## TASK 04 — импорт файлов, генерация, изображения, производительность (2026-11-27)
+
+**Дата:** 2026-11-27 · **Итерация:** TASK 04 «Исправление импорта файлов,
+генерации, изображений и производительности». Документы —
+`journal/task04/import-audit/{audit.md,report.md}`, ADR-049
+(`docs/decisions/ADR-049-file-import-and-truncated-response.md`). Прежние
+документы TASK 04 (мобильный UX/UI) не перезаписывались.
+
+**Старт:** ветка `main`, `HEAD = ddfdde0`, `git status` — только прежние
+неотслеживаемые каталоги аудитов (`audit/`, `review_visual/`, …).
+**Baseline:** `fvm flutter test --no-pub --exclude-tags golden` →
+**2750 passed + 17 skipped**, `exit 0`.
+
+**Первопричины (измерены по исходникам зависимостей и коду):**
+1. **PDF на Android.** `PdfParser`/`PdfScanRenderer`/`PdfImageExtractor`
+   вызывали `pdfrxInitialize()` без `tmpPath`; в `pdfrx_engine 0.9.1`
+   не-Windows-ветка читает `Platform.environment['HOME']!`. В Android-процессе
+   `HOME` не задан → `null check` **до** открытия документа →
+   `unreadableFile` («Не удалось прочитать файл»). На Windows ветка
+   `LOCALAPPDATA`, поэтому ни локально, ни в CI дефект не воспроизводился.
+   Проверено по `android_file_picker 2.1.5`: выбранный файл уже копируется в
+   кэш, `content://` до парсера не доходит — гипотеза о `content://` как
+   первопричине не подтвердилась (устойчивости всё равно не было: URI без
+   пути/ошибка чтения роняли весь выбор).
+2. **Форматы.** `.ppt` отсутствовал в `DocumentFormat`; `.doc`/`.xls` давали
+   общее «формат не поддерживается»; на Android MIME-фильтр `FileType.custom`
+   скрывал `.md`/`.rtf`; ошибка пикера показывалась общей строкой.
+3. **«Запрошено 50, получено 32».** Обрыв ответа по лимиту вывода
+   (`finish_reason: length`/`MAX_TOKENS`/`max_tokens`) адаптер превращал в
+   `GenerationException(truncated)` **до** разбора тела — все уже полученные
+   карточки фрагмента выбрасывались, восстановление дробило лимит заново, а
+   причина недобора не доходила до UI.
+4. **Картинки.** Поиск был best effort, но исключение при разрешении
+   изображений вне `findImage` могло выйти из цикла партии и оборвать запуск.
+5. **Лента.** `FeedCardView` уменьшал фото (`max(96, min(160, h·0,24))`) против
+   классики (`max(140, h·0,42)`); «рядом с текстом» включалось по ширине окна,
+   а не карточки.
+6. **Лаги.** `AnimatedBuilder` перестраивал всё содержимое карточки каждый
+   кадр, `BoxShadow` пересчитывался каждый кадр, `Image.memory` декодировал
+   оригинал 4K, `_FeedFace` ставил post-frame колбэк в `build`.
+
+**Сделано (3 коммита):**
+- `cb88425` `fix(import)`: `pdfium_bootstrap.dart` (`ensurePdfiumInitialized`
+  с явным `tmpPath`, каталог из `path_provider` в main-изоляте),
+  `withCacheDirectory` в парсерах/рендерере/экстракторе, guard
+  `pdfium_android_cache_test`, материализация `content://` во временный файл +
+  `releaseDocument`, коды `fileAccessDenied`/`corruptFile`/`passwordProtected`/
+  `docFormatNotSupported`/`pptFormatNotSupported`, `.ppt` в форматах и пикере,
+  `FileType.any` на мобильных, `ParserDiagnostics`, показ причины пикера.
+- `cf4cf33` `fix(generation)`: `ProviderRawResponse.truncated` (4 адаптера),
+  `CardsJsonExtractor.salvageCards`, `truncated/salvagedCards` в результате и
+  ран-результате, `truncatedChunks`/`imageResolveFailures`, защищённый участок
+  вокруг разрешения картинок, `GenerationDiagnostics.runSummary`/
+  `partialResponse`, диалог «Создано меньше, чем запрошено» + строка
+  предпросмотра об обрывах.
+- `4c9605b` `fix(ui)`: `CardImageBudget.side` (общий бюджет для классики/ленты/
+  тренировки, порог `cardWidth >= 760`), `RepaintBoundary` + `cacheWidth` в
+  `CardImageView`, переворот без перестройки содержимого (`_showBack` по
+  listener, transform-only `AnimatedBuilder`), тень только в покое, лента не
+  планирует проверку переполнения каждый кадр.
+- `docs`: ADR-049, `journal/task04/import-audit/{audit,report}.md`,
+  `docs/generation-pipeline.md`, `KNOWN_LIMITATIONS` (L210–L218), `AGENTS.md`.
+
+**Новые тесты:** `pdfium_android_cache_test` (guard), `pdfium_bootstrap_test`,
+`formats_task04_test`, `generation_truncation_task04_test`,
+`generation_task04_resilience_test`, `card_image_parity_test`,
+`card_animation_performance_test`; обновлены `pdf_parser_test`,
+`file_parsing_service_test`, `file_picker_document_gateway_test`,
+`cards_json_extractor_test`, адаптерные тесты, ARB-тесты,
+`generation_screen_test`, `order_batches_7_20_test`.
+
+**Гейты итогового снимка:** `fvm flutter test --no-pub --coverage
+--exclude-tags golden` → **2801 passed + 17 skipped** (+51 к baseline);
+покрытие рукописного кода **90,8 % (23 484/25 868)** (порог 80 % пройден);
+`fvm flutter analyze --no-pub lib test` → **0 issues**;
+`fvm dart format --set-exit-if-changed lib test` → **0 changed**;
+`fvm flutter build windows --release --no-pub` → `cardflow.exe`. Схема БД,
+`schemaVersion`, `format_version` и FSRS-логика **не менялись**.
+
+**Ограничения:** L210–L218 (нет Android-устройства для живой проверки PDF;
+`.doc/.ppt` не поддерживаются осознанно; спасаются только закрытые карточки;
+полноэкранный просмотр декодирует оригинал; тень выключена во время движения;
+«Отмена» диалога недобора не сохраняет карточки; диагностика — debug-only).
+
+**Push/CI:** не выполнялись (по заданию — только с разрешения).
+
+---
+
+## Предыдущая итерация (2026-11-26)
+
 **Дата:** 2026-11-26 · **Итерация:** «Диагностика и фикс пайплайна генерации»
 (`journal/fix-generation/{diagnosis,summary}.md`, ADR-048) — owner-note: на
 Windows и Android генерация падает общей строкой «Не удалось получить карточки».

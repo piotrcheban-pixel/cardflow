@@ -9,10 +9,15 @@ ADR-011/012/013; адаптивное планирование — `docs/adaptiv
 
 ```
 файлы (picker / drag-n-drop) — необязательны (ADR-024)
+  → выбранный файл: локальный путь или копия URI (`content://`) во временном
+    каталоге приложения; копия удаляется после разбора (TASK 04, ADR-049)
   → изображения JPG/PNG и PDF-сканы: GenerationAttachment (Vision)
   → PDF-скан: первые ≤ 3 страницы → PNG (pdfrx + image, изолят), groupKey
   → FileParsingService (изолят, ParsedDocument, ошибки по файлу) + TextSanitizer
+      → PDF: каталог кэша PDFium передаётся строкой из main-изолята
+        (`path_provider`); `pdfrxInitialize(tmpPath:)`, не `HOME` (ADR-049)
       → PDF: нечитаемый текстовый слой (U+FFFD/битая кодировка) → garbledText
+      → .doc/.ppt → docFormatNotSupported/pptFormatNotSupported (ADR-003/049)
   → GenerationRunRequest (документы, вложения, documentImages, тема/пожелания,
        requestedCards, аккаунт)
   → GenerationPlan (до первого запроса):
@@ -185,7 +190,28 @@ inputBudget = окно ? окно − reserved − fixed − safety
 | `missingApiKey`, `providerNotConfigured`, `invalidApiKey` | fatal: остановка всего задания; если карточки уже получены — `partial` + `fatalErrorCode`, иначе исключение | переход в настройки / сообщение + предпросмотр |
 | `storageUnavailable` (фикс генерации, ADR-048) | fatal и неретраиваемый: запись/чтение `generation_jobs` или карточек не удались (SQLITE_READONLY, нет места, БД заблокирована). Репозитории и пайплайн переводят сырое исключение в этот код; debug-лог получает тип, `generation_jobs.error_code` — `unexpected` (best-effort) | «Не удалось сохранить данные генерации: хранилище недоступно…» — без общей строки |
 | `rateLimited`, `serverUnavailable`, `timeout`, `network`, `emptyResponse`, `refused`, `invalidResponse`, `visionUnsupported`, `fileWithoutTextAndVision`, `pdfScanUnsupported`, `pdfScanVisionRequired`, `attachmentTooLarge` | ошибка фрагмента, остальные фрагменты продолжаются; `rateLimited`/auth не дробятся; `Retry-After` (если был) — в сбое фрагмента | частичный успех + повтор (+ «повторите через N с») |
-| `noMaterials` | генерация не начинается | «Нет материалов для генерации: прикрепите файл или напишите тему» |
+| `noMaterials` | генерация не начинается; пустой план (в т.ч. пустой `ContentInventory`) — не «успех с 0 карточек», а ошибка задания | «Нет материалов для генерации: прикрепите файл или напишите тему» |
+
+**Оборванный ответ модели (TASK 04, ADR-049).** `finish_reason: length`
+(OpenAI/OpenAI-compatible), `MAX_TOKENS` (Gemini), `max_tokens` (Anthropic) —
+это **не** ошибка фрагмента: адаптер отдаёт тело с `ProviderRawResponse
+.truncated`, `CardGenerationService` спасает из прерванного JSON все
+**полностью закрытые** карточки (`CardsJsonExtractor.salvageCards`), остальные
+проходят схему A8.4 и контентные правила. Числа: `GenerationResult
+.truncated/salvagedCards`, `GenerationRunResult.truncatedChunks/
+salvagedCards`; недостача уходит в существующие раунды `top-up` (ADR-040 §8),
+поэтому заказ добирается, а не срезается. Если спасать нечего (тело пустое или
+обрыв до первой карточки) — прежнее восстановление: уменьшение лимита →
+подъём резерва → дробление. `GenerationDiagnostics.runSummary` пишет итог
+(`запрошено/создано/партий/упало/оборвано/спасено/сбоев картинок/исчерпанных
+разделов`).
+
+**Изображения — best effort (TASK 04).** Разрешение картинок карточки
+(`_withCardImages`) выполняется в защищённом участке: исключение сохраняет
+карточку **без** изображения (пометка `CardIssueCode.imageNotFound`),
+увеличивает `imageResolveFailures`, пишет диагностику и не обрывает партию.
+Неудачный поиск по `image_query` не отменяет карточку и не считается ошибкой
+фрагмента.
 
 `generation_jobs.error_code` — машинный код (имя `GenerationErrorCode`) или
 `unexpected` при прочем сбое инфраструктуры/БД; не текст. Причины фрагментов —
@@ -260,6 +286,12 @@ inputBudget = окно ? окно − reserved − fixed − safety
   «Частичный результат: обработано K, с ошибкой L» и «Генерация остановлена: …»
   (fatal с уже полученными карточками), а не только краткое сообщение на
   предыдущем экране.
+- **Честный недобор (TASK 04):** если создано меньше заказа, экран генерации
+  **до** предпросмотра показывает диалог «Создано меньше, чем запрошено» с
+  числами и причиной (обрыв ответа по лимиту контекста / материал исчерпан /
+  иное) и кнопками «Продолжить»/«Отмена»; предпросмотр отдельной строкой
+  сообщает «оборвано N раз, спасено M карточек». Недобор больше не выглядит как
+  полный успех и не объясняется догадкой.
 - **Изображения (TASK 03):** строка «передано модели / только в каталоге / без
   поддержки изображений / исключено» строится из `GenerationPlan.images`;
   «осталось в каталоге» не выдаётся за «модель видела». `Retry-After` — в
@@ -286,6 +318,13 @@ inputBudget = окно ? окно − reserved − fixed − safety
 - Бюджет восстановления — предохранитель `max(12, fragments/8)` до 64; при
   массовых переполнениях часть фрагментов остаётся с ошибкой, успешные
   сохраняются (L128).
+- Оборванный ответ спасает только полностью закрытые карточки: частично
+  записанная последняя карточка теряется (L213), недостача добирается
+  `top-up`; потокового разбора (`stream`) нет.
+- Форматы: `.doc`/`.ppt` не поддерживаются осознанно (ADR-003/ADR-049, L211);
+  `.docx/.pptx/.xlsx/.odt/.pdf/.txt/.md/.rtf` читаются нативно.
+- Диагностика импорта (`ParserDiagnostics`) и итога генерации
+  (`GenerationDiagnostics.runSummary`) — только debug/profile (L218).
 - Живые вызовы OpenAI/Gemini/Anthropic не проверены (L1); DeepSeek success-путь —
   L30 (3b).
 - Реальные файлы с устройств (L23), 25 МБ/OOM (L25), платформенный secure

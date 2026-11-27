@@ -14,18 +14,36 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
 - `domain/` — сущности, оценки `Rating` (Again/Hard/Good/Easy), FSRS-адаптер, бизнес-правила. **Без импортов Flutter.**
 - `data/` — drift, репозитории, импорт/экспорт.
 - `api/` — провайдеры, DTO, валидация, промпты, парсеры файлов.
-- **Парсеры документов** — `lib/api/parsers/` (SPEC A8.3, ADR-010): результат всегда `ParsedDocument`
+- **Парсеры документов** — `lib/api/parsers/` (SPEC A8.3, ADR-010, ADR-049): результат всегда `ParsedDocument`
   (`lib/domain/text/`) — нормализованный текст + границы разделов `start/end` + метаданные; между разделами
   ровно пустая строка. ZIP-форматы (DOCX/PPTX/ODT/**XLSX**) проходят `SecureZip` с лимитами (10 000 записей /
   32 МБ запись / 120 МБ сумма) до разбора; ошибки — только `ParserErrorCode` → строка ARB
-  (`lib/ui/generation/parser_error_message.dart`), `details`/сырые исключения в UI не попадают. `.doc/.xls`
-  не поддерживаются (ADR-003). Парсинг — в `Isolate.run`; ошибка файла не блокирует остальные.
+  (`lib/ui/generation/parser_error_message.dart`), `details`/сырые исключения в UI не попадают. `.doc/.ppt/.xls`
+  не поддерживаются (ADR-003/ADR-049): для `.doc/.ppt` — **отдельные** коды
+  `docFormatNotSupported`/`pptFormatNotSupported` с советом пересохранить файл, CFB-парсер не пишем.
+  Парсинг — в `Isolate.run`; ошибка файла не блокирует остальные. **PDFium — только через
+  `ensurePdfiumInitialized(cacheDirectory:)`** (`pdfium_bootstrap.dart`): `pdfrxInitialize()` без `tmpPath` на
+  не-Windows читает `Platform.environment['HOME']!`, а на Android `HOME` нет — PDF переставал читаться вообще.
+  Каталог кэша разрешается в **main-изоляте** (`path_provider`) и передаётся строкой в изолят; guard
+  `test/guards/pdfium_android_cache_test.dart` запрещает прямой вызов. Пикер на Android/iOS — `FileType.any`
+  (MIME-фильтр теряет `.md`/`.rtf`); URI без локального пути (`content://`) материализуется во временный файл
+  приложения и удаляется после разбора (`DocumentGateway.releaseDocument`), нечитаемый URI →
+  `fileAccessDenied`. Ошибки PDF различаются кодами: `passwordProtected`, `corruptFile`, `scannedPdf`,
+  `garbledText`, `fileAccessDenied`, `fileTooLarge`. `ParserDiagnostics` (debug-only) пишет имя/формат/MIME/
+  парсер/страницы/изображения, без текста документа.
 - **API-слой генерации** (SPEC A8.1/A8.2/A8.4–A8.6, ADR-011/ADR-012/ADR-013/ADR-015):
   канон-схема ответа и её проекции — `lib/api/generation/` (`card_json_schema.dart`, `provider_schema.dart`);
   адаптеры провайдеров — `lib/api/providers/` (OpenAI, Gemini, Anthropic и OpenAI-compatible; чистые
   `buildRequest`/`parseResponse`, без сети и UI). Пайплайн генерации — `lib/api/generation/generation_pipeline.dart`
   (`GenerationPipeline`: `GenerationPlan` до первого запроса, последовательные вызовы по `PlannedChunk`,
   восстановление context overflow/413/truncated, прогресс/отмена, дедуп, `generation_jobs`, partial/retry);
+  **обрыв ответа по лимиту вывода — не ошибка фрагмента (TASK 04, ADR-049):** адаптеры отдают
+  `ProviderRawResponse.truncated`, `CardsJsonExtractor.salvageCards` спасает полностью закрытые карточки,
+  недостача добирается `top-up`; `GenerationResult.truncated/salvagedCards`,
+  `GenerationRunResult.truncatedChunks/salvagedCards/imageResolveFailures`,
+  `GenerationDiagnostics.runSummary` (числа запросо/создано/упало/оборвано/спасено); UI показывает диалог
+  «Создано меньше, чем запрошено» с причиной. Разрешение изображений — best effort в защищённом участке:
+  карточка сохраняется без картинки, партия продолжается;
   чистые правила — `lib/domain/generation/` (`generation_budget.dart`, `generation_chunk_planner.dart`,
   `generation_plan.dart`, `generation_plan_entry.dart`, `generation_plan_splitter.dart`,
   `content_token_estimator.dart`, `generation_job.dart`, `generation_run.dart`).
@@ -185,6 +203,15 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   Анимации — одна шкала (`AppDurations`, `AppMotion.reduce`), постоянных (пульс/авто-таймер)
   анимаций в приложении нет. «Найти колоду» в оболочке обязана передавать фокус полю
   (`decksSearchFocusProvider` + `FocusNode`), а не только показывать его.
+  **Изображение карточки и анимации (TASK 04, часть 6–7, ADR-049):** размер фото стороны считает
+  **одна** функция `CardImageBudget.side` (`lib/ui/cards/content/card_image_view.dart`) для «Классики»,
+  «Ленты» и «Тренировки»: 42 % доступной высоты (минимум 140/160), ширина колонки до 560; рядом с
+  текстом — 36 % колонки (до 420) и полная высота; порог раскладки «рядом» — `cardWidth >= 760` в обоих
+  режимах. `CardImageView` декодирует с `cacheWidth` по слоту и DPR (≤ 4096 px, без апскейла) и стоит в
+  `RepaintBoundary`. Переворот не пересобирает содержимое: сторона выбирается один раз на середине
+  анимации (`_showBack` в listener контроллера), `AnimatedBuilder` двигает только `Transform` над
+  `RepaintBoundary(child: face)`; `BoxShadow` рисуется **только в покое** (`_animating` на статусах
+  контроллеров); `_FeedFace` планирует проверку переполнения не чаще раза на кадр.
 - **Мобильные правила TASK 04** (ADR-046; не заменяют ADR-045, а уточняют композицию `< 600 px`):
   панель оценок — сетка 2×2, высота 48, кегль 16, `FittedBox` (никакого `ellipsis` на названиях
   действий, цель ≥44); второстепенные объяснения — `AppInfoButton`/`AppSectionHeader` (по нажатию
@@ -346,6 +373,21 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   не завершается) + `FontLoader` из `assets/fonts` и `materialicons-regular.otf` из SDK
   (`$FLUTTER_ROOT/bin/cache/artifacts/material_fonts`); `setSurfaceSize` **не** меняет `MediaQuery` —
   размер задавать через `tester.view.physicalSize` + `devicePixelRatio: 1`.
+- **Ретроспектива TASK 04 «Импорт файлов, генерация, изображения,
+  производительность» (2026-11-27):** платформенный дефект «PDF не читается только на Android»
+  искали по исходникам зависимостей, а не по догадкам: `pdfrxInitialize()` без `tmpPath` читает
+  `Platform.environment['HOME']!`, которого на Android нет (на Windows ветка другая — потому баг
+  невидим локально и в CI). Правило: **вызов платформенного/нативного API в фоновом изоляте
+  проверять по коду пакета и закреплять guard-тестом** («нет прямого вызова вне bootstrap»), а
+  конфигурацию передавать строкой из main-изолята. Второе правило — «тихий недобор»: если
+  модель/парсер отдаёт меньше, чем просили, это должно быть **числом в UI и в диагностике**, а не
+  только баннером в предпросмотре; обрезка ответа по `finish_reason` — это не ошибка фрагмента,
+  а частичный результат (полные карточки спасаются, недостача добирается). Третье — анимации:
+  проверять перф не «на глаз», а тестом, что тяжёлый `CardContentView` **один и тот же экземпляр**
+  между кадрами, стоит в `RepaintBoundary`, а `BoxShadow` отсутствует во время движения; размер
+  фото в разных режимах считать одной функцией (`CardImageBudget`), иначе режимы расходятся.
+  Widget-тест анимации запускать тапом по **тексту**, а не по центру карточки: центр может попасть
+  в `InkWell` изображения и открыть полноэкранный просмотр (тест «не падал», но анимации не было).
 
 ## Факты хоста (обновлять при изменении)
 
