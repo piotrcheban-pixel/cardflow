@@ -32,6 +32,78 @@ const ValueKey<String> kCardImageRetryKey = ValueKey<String>(
   'card-image-retry',
 );
 
+/// Бюджет изображения стороны карточки — единый для «Классики», «Ленты» и
+/// «Тренировки» (TASK 04, часть 6).
+///
+/// Дефект: `FeedCardView` передавал `imageMaxHeight = max(96, min(160,
+/// availableHeight * 0.24))`, а `SessionCard` — `max(140, availableHeight *
+/// 0.42)`. На одинаковом окне картинка в ленте была в 2,5–3 раза меньше, чем в
+/// классике, и это выглядело как «в ленте фото уменьшили». Теперь доля высоты,
+/// минимум и ширина слота считаются **одной** функцией; режим передаёт только
+/// доступную высоту/ширину колонки и раскладку.
+class CardImageBudget {
+  /// Создаёт бюджет.
+  const CardImageBudget({required this.maxWidth, required this.maxHeight});
+
+  /// Максимальная ширина слота изображения.
+  final double maxWidth;
+
+  /// Максимальная высота изображения.
+  final double maxHeight;
+
+  /// Бюджет для стороны с изображениями.
+  ///
+  /// * `sideBySide` — текст и картинка рядом: картинке отдаётся ширина слота
+  ///   (`36 %` колонки, но не шире 420) и вся доступная высота;
+  /// * иначе — доля высоты контента (`42 %`), минимум 140 (вопрос) / 160
+  ///   (ответ) и ширина колонки до 560. Значения совпадают с прежней
+  ///   «Классикой»: она была эталоном для ленты.
+  static CardImageBudget side({
+    required double availableHeight,
+    required double columnWidth,
+    required bool sideBySide,
+    bool isAnswer = false,
+  }) {
+    final double safeHeight = availableHeight.isFinite && availableHeight > 0
+        ? availableHeight
+        : 320;
+    final double safeColumn = columnWidth.isFinite && columnWidth > 0
+        ? columnWidth
+        : 560;
+    if (sideBySide) {
+      return CardImageBudget(
+        maxWidth: math.min(safeColumn * 0.36, 420),
+        maxHeight: safeHeight,
+      );
+    }
+    return CardImageBudget(
+      maxWidth: math.min(safeColumn, 560),
+      maxHeight: math.max(isAnswer ? 160 : 140, safeHeight * 0.42),
+    );
+  }
+
+  /// Бюджет в отдельном листе/оверлее («Открыть полностью», предпросмотр).
+  static const CardImageBudget sheet = CardImageBudget(
+    maxWidth: 520,
+    maxHeight: 320,
+  );
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CardImageBudget &&
+          other.maxWidth == maxWidth &&
+          other.maxHeight == maxHeight;
+
+  @override
+  int get hashCode => Object.hash(maxWidth, maxHeight);
+
+  @override
+  String toString() =>
+      'CardImageBudget(${maxWidth.toStringAsFixed(1)}×'
+      '${maxHeight.toStringAsFixed(1)})';
+}
+
 /// Картинка карточки: пропорции по факту файла, скругление, fade-in.
 ///
 /// Аудит v7 (G4/V7-04/G11): раньше рамка была жёстко 16:9 (4:3 для схем), а
@@ -133,6 +205,14 @@ class _CardImageViewState extends State<CardImageView> {
       context,
       AppDurations.base,
     );
+    // TASK 04, часть 7: декодировать 4K-оригинал в память ради слота 320 px —
+    // микро-фриз на первом кадре переворота. `cacheWidth` ограничивает
+    // декодирование фактическим размером слота с учётом DPR; апскейла нет
+    // (`ResizeImage` не увеличивает), поэтому маленькие файлы не страдают.
+    final double dpr = MediaQuery.devicePixelRatioOf(context);
+    final int? decodeWidth = width.isFinite && width > 0 && dpr > 0
+        ? math.min(4096, (width * dpr).ceil())
+        : null;
     return Semantics(
       image: true,
       label: label,
@@ -140,56 +220,61 @@ class _CardImageViewState extends State<CardImageView> {
       child: SizedBox(
         width: width,
         height: height,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(kCardImageCornerRadius),
-          child: Material(
-            // F08: у изображения нет «палевого» фона-заглушки: вокруг картинки
-            // остаётся поверхность карточки, а не цветная плитка letterbox'а.
-            color: widget.bytes.isEmpty
-                ? theme.colorScheme.surfaceContainerHighest
-                : Colors.transparent,
-            child: widget.bytes.isEmpty
-                ? _ImageErrorState(onRetry: _retry)
-                : InkWell(
-                    onTap:
-                        widget.onTap ??
-                        () => showCardImageFullscreen(
-                          context,
-                          bytes: widget.bytes,
-                          kind: widget.kind,
-                          metadata: meta,
-                        ),
-                    child: Image.memory(
-                      widget.bytes,
-                      key: ValueKey<String>('card-image-attempt-$_attempt'),
-                      // G4: пользовательское изображение никогда не обрезается.
-                      fit: BoxFit.contain,
-                      gaplessPlayback: true,
-                      frameBuilder:
-                          (
-                            BuildContext context,
-                            Widget child,
-                            int? frame,
-                            bool wasSynchronouslyLoaded,
-                          ) {
-                            if (wasSynchronouslyLoaded ||
-                                fadeDuration == Duration.zero) {
-                              return child;
-                            }
-                            return AnimatedSwitcher(
-                              duration: fadeDuration,
-                              child: frame == null
-                                  ? const _ImageSkeleton()
-                                  : SizedBox.expand(child: child),
-                            );
-                          },
-                      errorBuilder: (
-                        BuildContext context,
-                        Object error,
-                        StackTrace? stack,
-                      ) => _ImageErrorState(onRetry: _retry),
+        // Изображение изолировано: переворот/свайп карточки трансформирует
+        // готовый растр, а не перерисовывает декодированную картинку.
+        child: RepaintBoundary(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(kCardImageCornerRadius),
+            child: Material(
+              // F08: у изображения нет «палевого» фона-заглушки: вокруг картинки
+              // остаётся поверхность карточки, а не цветная плитка letterbox'а.
+              color: widget.bytes.isEmpty
+                  ? theme.colorScheme.surfaceContainerHighest
+                  : Colors.transparent,
+              child: widget.bytes.isEmpty
+                  ? _ImageErrorState(onRetry: _retry)
+                  : InkWell(
+                      onTap:
+                          widget.onTap ??
+                          () => showCardImageFullscreen(
+                            context,
+                            bytes: widget.bytes,
+                            kind: widget.kind,
+                            metadata: meta,
+                          ),
+                      child: Image.memory(
+                        widget.bytes,
+                        key: ValueKey<String>('card-image-attempt-$_attempt'),
+                        // G4: пользовательское изображение никогда не обрезается.
+                        fit: BoxFit.contain,
+                        cacheWidth: decodeWidth,
+                        gaplessPlayback: true,
+                        frameBuilder:
+                            (
+                              BuildContext context,
+                              Widget child,
+                              int? frame,
+                              bool wasSynchronouslyLoaded,
+                            ) {
+                              if (wasSynchronouslyLoaded ||
+                                  fadeDuration == Duration.zero) {
+                                return child;
+                              }
+                              return AnimatedSwitcher(
+                                duration: fadeDuration,
+                                child: frame == null
+                                    ? const _ImageSkeleton()
+                                    : SizedBox.expand(child: child),
+                              );
+                            },
+                        errorBuilder: (
+                          BuildContext context,
+                          Object error,
+                          StackTrace? stack,
+                        ) => _ImageErrorState(onRetry: _retry),
+                      ),
                     ),
-                  ),
+            ),
           ),
         ),
       ),

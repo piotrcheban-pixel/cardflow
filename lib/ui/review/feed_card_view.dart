@@ -7,6 +7,7 @@ import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/cards/media_metadata.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/cards/content/card_content_view.dart';
+import 'package:cardflow/ui/cards/content/card_image_view.dart';
 import 'package:cardflow/ui/components/app_dialogs.dart';
 import 'package:cardflow/ui/motion.dart';
 import 'package:cardflow/ui/review/session_card.dart';
@@ -85,6 +86,34 @@ class _FeedCardViewState extends State<FeedCardView>
   bool _hovered = false;
   bool _overflow = false;
 
+  /// Какая сторона нарисована (TASK 04, часть 7): переключается один раз на
+  /// середине переворота, а не пересобирает содержимое каждый кадр.
+  bool _showBack = false;
+
+  /// Идёт переворот: тяжёлая тень выключается (часть 7).
+  bool _animating = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _showBack = widget.revealed;
+    _flip.addListener(_handleFlipTick);
+    _flip.addStatusListener(_handleStatus);
+  }
+
+  void _handleFlipTick() {
+    final bool showBack = _flip.value >= 0.5;
+    if (showBack == _showBack) return;
+    _showBack = showBack;
+    if (mounted) setState(() {});
+  }
+
+  void _handleStatus(AnimationStatus status) {
+    final bool animating = _flip.isAnimating;
+    if (animating == _animating || !mounted) return;
+    setState(() => _animating = animating);
+  }
+
   @override
   void didUpdateWidget(FeedCardView oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -92,6 +121,7 @@ class _FeedCardViewState extends State<FeedCardView>
       final Duration duration = AppMotion.duration(context, AppDurations.flip);
       if (duration == Duration.zero) {
         _flip.value = widget.revealed ? 1 : 0;
+        _showBack = widget.revealed;
       } else {
         _flip.animateTo(
           widget.revealed ? 1 : 0,
@@ -104,6 +134,8 @@ class _FeedCardViewState extends State<FeedCardView>
 
   @override
   void dispose() {
+    _flip.removeListener(_handleFlipTick);
+    _flip.removeStatusListener(_handleStatus);
     _flip.dispose();
     super.dispose();
   }
@@ -132,8 +164,46 @@ class _FeedCardViewState extends State<FeedCardView>
     final double answerSize = veryShort
         ? (narrow ? 19 : 22)
         : SessionCard.answerSizeFor(questionSize);
-    final bool wideMedia = windowWidth >= 1000;
+    // Та же раскладка «текст + картинка рядом», что в «Классике»: правило
+    // `cardWidth >= 760` (TASK 04, часть 6) — иначе лента уменьшала фото.
+    final bool wideMedia = cardWidth >= 760;
     final Color borderColor = _hovered ? scheme.primary : scheme.outlineVariant;
+    // Сторона выбирается один раз на середине переворота; кадры двигают только
+    // кэшированный растр (часть 7).
+    final Widget face = _FeedFace(
+      // Ключ стабилен, как и раньше: при смене стороны обновляется `builder`,
+      // а прокрутка/переполнение сохраняют состояние (тесты и семантика).
+      key: const ValueKey<String>('feed-face'),
+      padH: padH,
+      padV: padV,
+      textColumn: textColumn,
+      onOverflowChanged: (bool value) {
+        if (value != _overflow && mounted) {
+          setState(() => _overflow = value);
+        }
+      },
+      builder: (double availableHeight) => _showBack
+          ? _answerBody(
+              theme,
+              l10n,
+              answerSize: answerSize,
+              availableHeight: availableHeight,
+              wideMedia: wideMedia,
+              textColumn: textColumn,
+              cardWidth: cardWidth,
+            )
+          : _questionBody(
+              theme,
+              l10n,
+              questionSize: questionSize,
+              answerSize: answerSize,
+              availableHeight: availableHeight,
+              wideMedia: wideMedia,
+              textColumn: textColumn,
+              cardWidth: cardWidth,
+              narrow: narrow,
+            ),
+    );
     return Padding(
       padding: EdgeInsets.symmetric(
         horizontal: narrow ? AppSpacing.sm : AppSpacing.lg,
@@ -149,7 +219,9 @@ class _FeedCardViewState extends State<FeedCardView>
           child: DecoratedBox(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(AppRadii.panel),
-              boxShadow: AppShadows.card(theme.brightness),
+              // Тень — только в покое: во время переворота BoxShadow не
+              // пересчитывается каждый кадр (часть 7).
+              boxShadow: _animating ? null : AppShadows.card(theme.brightness),
             ),
             child: Material(
               color: scheme.surfaceContainerLowest,
@@ -173,56 +245,27 @@ class _FeedCardViewState extends State<FeedCardView>
                     ),
                     child: _FeedSideLabel(
                       key: const ValueKey<String>('feed-side-label'),
-                      label: widget.revealed
+                      label: _showBack
                           ? l10n.reviewAnswerLabel
                           : l10n.reviewQuestionLabel,
-                      revealed: widget.revealed,
+                      revealed: _showBack,
                     ),
                   ),
                   Expanded(
                     child: AnimatedBuilder(
                       animation: _flip,
+                      child: RepaintBoundary(child: face),
                       builder: (BuildContext context, Widget? child) {
                         final double value = _flip.value.clamp(0.0, 1.0);
-                        final bool showBack = value >= 0.5;
                         final Matrix4 transform = Matrix4.identity()
                           ..setEntry(3, 2, 0.0015)
                           ..rotateY(math.pi * value);
-                        if (showBack) transform.rotateY(math.pi);
+                        if (_showBack) transform.rotateY(math.pi);
                         return Transform(
                           key: const ValueKey<String>('feed-flip-transform'),
                           alignment: Alignment.center,
                           transform: transform,
-                          child: _FeedFace(
-                            key: const ValueKey<String>('feed-face'),
-                            padH: padH,
-                            padV: padV,
-                            textColumn: textColumn,
-                            onOverflowChanged: (bool value) {
-                              if (value != _overflow && mounted) {
-                                setState(() => _overflow = value);
-                              }
-                            },
-                            builder: (double availableHeight) => showBack
-                                ? _answerBody(
-                                    theme,
-                                    l10n,
-                                    answerSize: answerSize,
-                                    availableHeight: availableHeight,
-                                    wideMedia: wideMedia,
-                                    textColumn: textColumn,
-                                  )
-                                : _questionBody(
-                                    theme,
-                                    l10n,
-                                    questionSize: questionSize,
-                                    answerSize: answerSize,
-                                    availableHeight: availableHeight,
-                                    wideMedia: wideMedia,
-                                    textColumn: textColumn,
-                                    narrow: narrow,
-                                  ),
-                          ),
+                          child: child,
                         );
                       },
                     ),
@@ -306,7 +349,15 @@ class _FeedCardViewState extends State<FeedCardView>
     required bool narrow,
     required bool wideMedia,
     required double textColumn,
+    required double cardWidth,
   }) {
+    // TASK 04, часть 6: тот же бюджет изображения, что в «Классике»
+    // (`CardImageBudget.side`) — в ленте фото больше не уменьшено.
+    final CardImageBudget imageBudget = CardImageBudget.side(
+      availableHeight: availableHeight,
+      columnWidth: textColumn,
+      sideBySide: wideMedia,
+    );
     final Card? card = widget.card;
     final TextStyle questionStyle = theme.textTheme.headlineMedium!.copyWith(
       fontSize: questionSize,
@@ -342,12 +393,8 @@ class _FeedCardViewState extends State<FeedCardView>
         mediaBytes: widget.mediaBytes,
         mediaMetadata: widget.mediaMetadata,
         onRetryMedia: widget.onRetryMedia,
-        // TASK 04: изображение — компактная галерея, а не второй экран.
-        // Текст вопроса остаётся главным; картинки полностью вписаны.
-        imageMaxHeight: math.max(96, math.min(160, availableHeight * 0.24)),
-        imageMaxWidth: wideMedia
-            ? math.min(textColumn * 0.5, 420)
-            : math.min(textColumn, 560),
+        imageMaxHeight: imageBudget.maxHeight,
+        imageMaxWidth: imageBudget.maxWidth,
         sideBySide: wideMedia,
         mediaAfterText: true,
       ),
@@ -362,7 +409,14 @@ class _FeedCardViewState extends State<FeedCardView>
     required double availableHeight,
     required bool wideMedia,
     required double textColumn,
+    required double cardWidth,
   }) {
+    final CardImageBudget imageBudget = CardImageBudget.side(
+      availableHeight: availableHeight,
+      columnWidth: textColumn,
+      sideBySide: wideMedia,
+      isAnswer: true,
+    );
     final Card? card = widget.card;
     final TextStyle answerStyle = theme.textTheme.bodyLarge!.copyWith(
       fontSize: answerSize,
@@ -393,10 +447,8 @@ class _FeedCardViewState extends State<FeedCardView>
         mediaMetadata: widget.mediaMetadata,
         onRetryMedia: widget.onRetryMedia,
         includeClozeFront: false,
-        imageMaxHeight: math.max(110, math.min(220, availableHeight * 0.34)),
-        imageMaxWidth: wideMedia
-            ? math.min(textColumn * 0.5, 420)
-            : math.min(textColumn, 560),
+        imageMaxHeight: imageBudget.maxHeight,
+        imageMaxWidth: imageBudget.maxWidth,
         sideBySide: wideMedia,
         mediaAfterText: true,
       ),
@@ -468,8 +520,8 @@ class _FeedCardViewState extends State<FeedCardView>
                               mediaBytes: widget.mediaBytes,
                               mediaMetadata: widget.mediaMetadata,
                               onRetryMedia: widget.onRetryMedia,
-                              imageMaxHeight: 320,
-                              imageMaxWidth: 520,
+                              imageMaxHeight: CardImageBudget.sheet.maxHeight,
+                              imageMaxWidth: CardImageBudget.sheet.maxWidth,
                             ),
                           ],
                         ),
@@ -512,6 +564,13 @@ class _FeedFaceState extends State<_FeedFace> {
   final ScrollController _scroll = ScrollController();
   bool _overflow = false;
 
+  /// Проверка переполнения уже запланирована на этот кадр.
+  ///
+  /// TASK 04, часть 7: `addPostFrameCallback` в `build` без этого флага
+  /// добавлял колбэк **каждый кадр** анимации переворота — лишние layout-
+  /// проверки и `setState` во время вращения были частью микро-фризов.
+  bool _checkScheduled = false;
+
   @override
   void dispose() {
     _scroll.dispose();
@@ -531,10 +590,19 @@ class _FeedFaceState extends State<_FeedFace> {
     widget.onOverflowChanged(overflow);
   }
 
+  void _scheduleOverflowCheck() {
+    if (_checkScheduled) return;
+    _checkScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkScheduled = false;
+      _checkOverflow();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
-    WidgetsBinding.instance.addPostFrameCallback((_) => _checkOverflow());
+    _scheduleOverflowCheck();
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         final double availableHeight = math.max(

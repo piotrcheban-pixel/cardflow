@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter/physics.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'package:cardflow/domain/cards/card.dart' as domain;
@@ -9,6 +10,7 @@ import 'package:cardflow/domain/cards/media_metadata.dart';
 import 'package:cardflow/domain/scheduling/rating.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/cards/content/card_content_view.dart';
+import 'package:cardflow/ui/cards/content/card_image_view.dart';
 import 'package:cardflow/ui/motion.dart';
 import 'package:cardflow/ui/review/feed_swipe.dart';
 import 'package:cardflow/ui/theme/app_tokens.dart';
@@ -202,8 +204,51 @@ class _SessionCardState extends State<SessionCard>
   double _width = 0;
   Rating? _commitRating;
 
+  /// Какая сторона сейчас нарисована.
+  ///
+  /// TASK 04 (часть 7): раньше `AnimatedBuilder` перестраивал ВСЁ содержимое
+  /// карточки на каждом кадре переворота (включая `CardContentView` и разбор
+  /// заголовка изображения) — отсюда микро-фризы. Теперь сторона выбирается по
+  /// значению контроллера **один раз** на середине переворота, а кадры двигают
+  /// только готовый растр через `Transform`.
+  bool _showBack = false;
+
+  /// Идёт переворот/свайп: тяжёлая тень выключается (часть 7).
+  bool _animating = false;
+
   ScrollController get _scroll =>
       widget.scrollController ?? (_internalScroll ??= ScrollController());
+
+  @override
+  void initState() {
+    super.initState();
+    _showBack = widget.revealed;
+    _flip.addListener(_handleFlipTick);
+    _flip.addStatusListener(_handleAnimationStatus);
+    _swipe.addStatusListener(_handleAnimationStatus);
+  }
+
+  /// Переключает сторону на середине переворота (одна перестройка).
+  void _handleFlipTick() {
+    final bool showBack = _flip.value >= 0.5;
+    if (showBack == _showBack) return;
+    _showBack = showBack;
+    if (!mounted) return;
+    // Во время сборки/раскладки перестройка уже идёт (например, reduced
+    // motion выставил значение синхронно из `didUpdateWidget`).
+    if (SchedulerBinding.instance.schedulerPhase ==
+        SchedulerPhase.persistentCallbacks) {
+      return;
+    }
+    setState(() {});
+  }
+
+  /// Включает/выключает «анимацию в покое» (тень).
+  void _handleAnimationStatus(AnimationStatus status) {
+    final bool animating = _flip.isAnimating || _swipe.isAnimating;
+    if (animating == _animating || !mounted) return;
+    setState(() => _animating = animating);
+  }
 
   @override
   void didUpdateWidget(SessionCard oldWidget) {
@@ -213,11 +258,17 @@ class _SessionCardState extends State<SessionCard>
     }
     if (oldWidget.revealed != widget.revealed) {
       _animateFlip();
+      // Синхронный (reduced motion) переход не даёт тика — сторону выставляем
+      // здесь, чтобы текущая сборка уже рисовала нужную грань.
+      if (AppMotion.reduce(context)) _showBack = widget.revealed;
     }
   }
 
   @override
   void dispose() {
+    _flip.removeListener(_handleFlipTick);
+    _flip.removeStatusListener(_handleAnimationStatus);
+    _swipe.removeStatusListener(_handleAnimationStatus);
     _flip.dispose();
     _swipe.dispose();
     _internalScroll?.dispose();
@@ -377,86 +428,172 @@ class _SessionCardState extends State<SessionCard>
           ),
         );
         final double columnInset = math.max(padH, (width - columnWidth) / 2);
-        return AnimatedBuilder(
-          animation: Listenable.merge(<Listenable>[_flip, _swipe]),
+        // TASK 04 (часть 7): тяжёлое содержимое строится ОДИН раз на сторону.
+        // AnimatedBuilder ниже двигает только готовый (кэшированный
+        // RepaintBoundary) растр — ни CardContentView, ни разбор изображения не
+        // пересобираются на каждом кадре переворота.
+        final Widget face = _showBack
+            ? _buildRevealed(
+                context,
+                theme,
+                questionSize: questionSize,
+                answerSize: answerSize,
+                echoSize: echoSize,
+                padH: padH,
+                padV: padV,
+                narrow: narrow,
+                columnWidth: columnWidth,
+                columnInset: columnInset,
+                cardWidth: width,
+              )
+            : _buildQuestion(
+                context,
+                theme,
+                questionSize: questionSize,
+                padH: padH,
+                padV: padV,
+                narrow: narrow,
+                columnWidth: columnWidth,
+                columnInset: columnInset,
+                cardWidth: width,
+              );
+        Widget flipped = AnimatedBuilder(
+          animation: _flip,
+          child: RepaintBoundary(child: face),
           builder: (BuildContext context, Widget? child) {
             final double flipValue = _flip.value.clamp(0.0, 1.0);
-            final bool showBack = flipValue >= 0.5;
-            final double dx = widget.enableSwipe ? _swipe.value : 0;
-            final bool committing = _commitRating != null;
-            final double fraction = !widget.enableSwipe || width <= 0
-                ? 0
-                : (dx.abs() / (width * feedLongSwipeFraction)).clamp(0.0, 1.0);
-            final double radius = !widget.enableSwipe
-                ? AppRadii.card
-                : committing
-                ? 999
-                : AppRadii.card - 6 * fraction;
-            final BorderRadius shape = BorderRadius.circular(radius);
-            final Rating? preview = !widget.enableSwipe
-                ? widget.rating
-                : _commitRating ?? _directionRating(dx, width);
-            final Color cardColor = widget.enableSwipe
-                ? _cardColor(scheme, preview, fraction)
-                : scheme.surfaceContainerLowest;
-            final Widget face = showBack
-                ? _buildRevealed(
-                    context,
-                    theme,
-                    questionSize: questionSize,
-                    answerSize: answerSize,
-                    echoSize: echoSize,
-                    padH: padH,
-                    padV: padV,
-                    narrow: narrow,
-                    columnWidth: columnWidth,
-                    columnInset: columnInset,
-                    cardWidth: width,
-                  )
-                : _buildQuestion(
-                    context,
-                    theme,
-                    questionSize: questionSize,
-                    padH: padH,
-                    padV: padV,
-                    narrow: narrow,
-                    columnWidth: columnWidth,
-                    columnInset: columnInset,
-                    cardWidth: width,
-                  );
             final Matrix4 transform = Matrix4.identity()
               ..setEntry(3, 2, 0.0015)
               ..rotateY(math.pi * flipValue);
             // Обратная сторона уже повёрнута на π от наблюдателя: без второго
             // поворота её текст рисуется зеркально (итерация 7.9).
-            if (showBack) transform.rotateY(math.pi);
-            Widget flipped = Transform(
+            if (_showBack) transform.rotateY(math.pi);
+            return Transform(
               key: widget.flipTransformKey,
               alignment: Alignment.center,
               transform: transform,
-              child: face,
+              child: child,
             );
-            final String? semanticLabel = widget.semanticLabel;
-            if (semanticLabel != null) {
-              flipped = Semantics(
-                button: true,
-                label: semanticLabel,
-                hint: widget.semanticHint,
+          },
+        );
+        final String? semanticLabel = widget.semanticLabel;
+        if (semanticLabel != null) {
+          flipped = Semantics(
+            button: true,
+            label: semanticLabel,
+            hint: widget.semanticHint,
+            child: flipped,
+          );
+        }
+        final Widget stacked = Stack(
+          children: <Widget>[
+            Positioned.fill(child: flipped),
+            if (widget.ratedOverlay != null)
+              Positioned(
+                top: AppSpacing.sm,
+                right: AppSpacing.sm,
+                child: widget.ratedOverlay!,
+              ),
+          ],
+        );
+        final double dx = widget.enableSwipe ? _swipe.value : 0;
+        final bool committing = _commitRating != null;
+        final double fraction = !widget.enableSwipe || width <= 0
+            ? 0
+            : (dx.abs() / (width * feedLongSwipeFraction)).clamp(0.0, 1.0);
+        final double radius = !widget.enableSwipe
+            ? AppRadii.card
+            : committing
+            ? 999
+            : AppRadii.card - 6 * fraction;
+        final BorderRadius shape = BorderRadius.circular(radius);
+        final Rating? preview = !widget.enableSwipe
+            ? widget.rating
+            : _commitRating ?? _directionRating(dx, width);
+        final Color cardColor = widget.enableSwipe
+            ? _cardColor(scheme, preview, fraction)
+            : scheme.surfaceContainerLowest;
+        // Тень — только в покое: во время переворота/свайпа BoxShadow не
+        // пересчитывается каждый кадр (TASK 04, часть 7).
+        final List<BoxShadow>? shadow = _animating
+            ? null
+            : AppShadows.card(theme.brightness);
+        final Widget surface = DecoratedBox(
+          decoration: BoxDecoration(borderRadius: shape, boxShadow: shadow),
+          child: Material(
+            color: cardColor,
+            elevation: 0,
+            clipBehavior: Clip.antiAlias,
+            shape: RoundedRectangleBorder(
+              borderRadius: shape,
+              side: BorderSide(
+                color: _hovered ? scheme.primary : scheme.outline,
+                width: AppSizes.borderWidth,
+              ),
+            ),
+            child: stacked,
+          ),
+        );
+        final Widget card = widget.enableSwipe
+            ? AnimatedBuilder(
+                animation: _swipe,
                 child: flipped,
-              );
-            }
-            flipped = Stack(
-              children: <Widget>[
-                Positioned.fill(child: flipped),
-                if (widget.ratedOverlay != null)
-                  Positioned(
-                    top: AppSpacing.sm,
-                    right: AppSpacing.sm,
-                    child: widget.ratedOverlay!,
-                  ),
-              ],
-            );
-            final Widget surface = MouseRegion(
+                builder: (BuildContext context, Widget? child) {
+                  final double drag = _swipe.value;
+                  final bool committingNow = _commitRating != null;
+                  final double dragFraction = width <= 0
+                      ? 0
+                      : (drag.abs() / (width * feedLongSwipeFraction)).clamp(
+                          0.0,
+                          1.0,
+                        );
+                  final double dragRadius = committingNow
+                      ? 999
+                      : AppRadii.card - 6 * dragFraction;
+                  final Rating? dragPreview =
+                      _commitRating ?? _directionRating(drag, width);
+                  return Transform.translate(
+                    key: widget.swipeTransformKey,
+                    offset: Offset(drag, 0),
+                    child: Transform.rotate(
+                      angle: width <= 0 ? 0 : (drag / width) * 0.04,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(dragRadius),
+                          boxShadow: _animating
+                              ? null
+                              : AppShadows.card(theme.brightness),
+                        ),
+                        child: Material(
+                          color: _cardColor(scheme, dragPreview, dragFraction),
+                          elevation: 0,
+                          clipBehavior: Clip.antiAlias,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(dragRadius),
+                            side: BorderSide(
+                              color: _hovered ? scheme.primary : scheme.outline,
+                              width: AppSizes.borderWidth,
+                            ),
+                          ),
+                          child: child,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              )
+            : surface;
+        return Center(
+          // heightFactor: 1 — в свободных ограничениях («Классика»)
+          // карточка отдаёт наружу свою высоту, а не растягивается на всю
+          // рабочую область; в тесных («Лента») Center сам заполняет
+          // страницу и центрирует карточку.
+          heightFactor: 1,
+          child: SizedBox(
+            key: widget.cardKey,
+            width: width,
+            height: cardHeight,
+            child: MouseRegion(
               cursor: SystemMouseCursors.click,
               onEnter: (_) {
                 if (!_hovered) setState(() => _hovered = true);
@@ -476,51 +613,10 @@ class _SessionCardState extends State<SessionCard>
                     ? _onDragUpdate
                     : null,
                 onHorizontalDragEnd: widget.enableSwipe ? _onDragEnd : null,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    borderRadius: shape,
-                    boxShadow: AppShadows.card(theme.brightness),
-                  ),
-                  child: Material(
-                    color: cardColor,
-                    elevation: 0,
-                    clipBehavior: Clip.antiAlias,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: shape,
-                      side: BorderSide(
-                        color: _hovered ? scheme.primary : scheme.outline,
-                        width: AppSizes.borderWidth,
-                      ),
-                    ),
-                    child: flipped,
-                  ),
-                ),
-              ),
-            );
-            final Widget card = widget.enableSwipe
-                ? Transform.translate(
-                    key: widget.swipeTransformKey,
-                    offset: Offset(dx, 0),
-                    child: Transform.rotate(
-                      angle: width <= 0 ? 0 : (dx / width) * 0.04,
-                      child: surface,
-                    ),
-                  )
-                : surface;
-            return Center(
-              // heightFactor: 1 — в свободных ограничениях («Классика»)
-              // карточка отдаёт наружу свою высоту, а не растягивается на всю
-              // рабочую область; в тесных («Лента») Center сам заполняет
-              // страницу и центрирует карточку.
-              heightFactor: 1,
-              child: SizedBox(
-                key: widget.cardKey,
-                width: width,
-                height: cardHeight,
                 child: card,
               ),
-            );
-          },
+            ),
+          ),
         );
       },
     );
@@ -580,24 +676,30 @@ class _SessionCardState extends State<SessionCard>
               scroll: _scroll,
               padding: EdgeInsets.fromLTRB(padH, padV, padH, padV),
               columnWidth: columnWidth,
-              builder: (double availableHeight) => <Widget>[
-                _content(
-                  theme,
-                  context,
-                  side: widget.front,
-                  revealed: false,
-                  style: questionStyle,
-                  media: true,
-                  imageMaxHeight: sideBySide
-                      ? availableHeight
-                      : math.max(140, availableHeight * 0.42),
-                  imageMaxWidth: sideBySide
-                      ? math.min(columnWidth * 0.36, 420)
-                      : math.min(columnWidth, 560),
+              builder: (double availableHeight) {
+                // TASK 04, часть 6: единый бюджет изображения с «Лентой»
+                // (`CardImageBudget.side`) — правила BoxFit/AspectRatio/maxHeight
+                // одинаковы во всех режимах.
+                final CardImageBudget imageBudget = CardImageBudget.side(
+                  availableHeight: availableHeight,
+                  columnWidth: columnWidth,
                   sideBySide: sideBySide,
-                  mediaAfterText: !sideBySide,
-                ),
-              ],
+                );
+                return <Widget>[
+                  _content(
+                    theme,
+                    context,
+                    side: widget.front,
+                    revealed: false,
+                    style: questionStyle,
+                    media: true,
+                    imageMaxHeight: imageBudget.maxHeight,
+                    imageMaxWidth: imageBudget.maxWidth,
+                    sideBySide: sideBySide,
+                    mediaAfterText: !sideBySide,
+                  ),
+                ];
+              },
             ),
           ),
         ),
@@ -720,7 +822,11 @@ class _SessionCardState extends State<SessionCard>
                   // ответа 30–40 % высоты. Исключение — occlusion: там холст
                   // с масками и есть содержание карточки.
                   media: occlusion,
-                  imageMaxHeight: math.max(120, availableHeight * 0.34),
+                  imageMaxHeight: CardImageBudget.side(
+                    availableHeight: availableHeight,
+                    columnWidth: columnWidth,
+                    sideBySide: sideBySide,
+                  ).maxHeight,
                   imageMaxWidth: math.min(columnWidth * 0.62, 520),
                   faceKey: widget.echoFaceKey ?? widget.faceKey,
                 ),
@@ -748,12 +854,20 @@ class _SessionCardState extends State<SessionCard>
                   style: answerStyle,
                   media: !occlusion,
                   includeClozeFront: false,
-                  imageMaxHeight: sideBySide
-                      ? availableHeight
-                      : math.max(160, availableHeight * 0.42),
-                  imageMaxWidth: sideBySide
-                      ? math.min(columnWidth * 0.36, 420)
-                      : math.min(columnWidth, 560),
+                  // TASK 04, часть 6: бюджет ответа — та же функция, что в
+                  // «Ленте»: доля высоты и ширина слота совпадают.
+                  imageMaxHeight: CardImageBudget.side(
+                    availableHeight: availableHeight,
+                    columnWidth: columnWidth,
+                    sideBySide: sideBySide && hasAnswerMedia,
+                    isAnswer: true,
+                  ).maxHeight,
+                  imageMaxWidth: CardImageBudget.side(
+                    availableHeight: availableHeight,
+                    columnWidth: columnWidth,
+                    sideBySide: sideBySide && hasAnswerMedia,
+                    isAnswer: true,
+                  ).maxWidth,
                   sideBySide: sideBySide && hasAnswerMedia,
                   mediaAfterText: !sideBySide,
                 ),
