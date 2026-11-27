@@ -320,12 +320,17 @@ class CardsBatchEngine {
       '$unitId\u0000${angle ?? ''}';
 
   /// Сумма фактического расхода; неизвестное слагаемое — `null`, а не 0.
+  ///
+  /// Накопитель стартует с `const TokenUsage()` (все поля `null`) — это
+  /// «расхода ещё нет», а не «неизвестный расход»: иначе первое успешное
+  /// сложение обнуляло бы всю сумму, и `CardsBatchRun.usage` всегда был бы
+  /// `null` (находка среза 7: отчёт по этапам без расхода бесполезен).
   static TokenUsage _addUsage(TokenUsage a, TokenUsage b) {
     int? sum(int? Function(TokenUsage usage) pick) {
       final int? left = pick(a);
       final int? right = pick(b);
-      if (left == null || right == null) return null;
-      return left + right;
+      if (left == null && right == null) return null;
+      return (left ?? 0) + (right ?? 0);
     }
 
     return TokenUsage(
