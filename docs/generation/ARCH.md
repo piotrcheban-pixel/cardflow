@@ -72,6 +72,23 @@ A8.4 не изменён, расширение живёт отдельной п�
 на запрос» из BACKLOG S4 по смыслу — журнал прогона с числом попыток
 (`lib/domain/generation/generation_ledger.dart`). Толкования — Q12–Q14.
 
+**Уточнение среза 6 (TASK.txt):** Validation реализуется как `CardValidator`
+(`lib/api/generation/validation/card_validator.dart`): структурные проверки
+A8.4 (длины, cloze, теги, LaTeX) и семантические эвристики (ответ не в вопросе,
+вопрос самостоятелен, атомарность, осмысленный cloze, язык ru, `quote_ref` по
+offsets `ContentModel`, `section_id`/`unit_id` из партии) дают одну из трёх
+величин — `accepted | warning | rejected(code)`; отброшенная запись хранится в
+`RejectedCard` («показать отброшенные»), карточка с пометкой остаётся. Цитата
+принимается только дословно (`substring(start, end) == quote_ref`); почти-цитата
+— `quoteNotLiteral` без offsets, отсутствие — `quoteOutOfRange` с обнулением
+цитаты (§3.3). Dedup реализуется как `SemanticMatcher`
+(`lib/domain/generation/validation/semantic_matcher.dart`): каскад точный ключ →
+нормализованный ключ (SPEC A8.5, шаг 9) → символьные шинглы + Жаккар →
+эмбеддинги за необязательным `TextEmbeddingProvider`; дубль — **пара**
+(`DedupPair`), а не удаление, отчёт по уровням (`DedupReport`) живёт в
+`GenerationLedger.dedup`. Новый путь не подключён к конвейеру/UI до S7/S9
+(протокол §9). Толкования — Q15–Q16.
+
 **Поток данных.** `MaterialUnit` несут offsets — единственный источник истины о
 тексте; `KnowledgeMap` ссылается на них, а не копирует текст; партия несёт id
 пунктов, поэтому ответ модели привязан к материалу; `CardCandidate` сохраняет

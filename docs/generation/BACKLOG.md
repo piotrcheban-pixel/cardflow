@@ -113,6 +113,15 @@ prompt-only и старых записей.
 **DoD-команда (одна):**
 `.fvm\versions\3.47.9\bin\flutter.bat test --no-pub test/unit/api/generation/quote_offsets_test.dart`
 
+**Сделано в срезе 6 TASK.txt (2026-11-27).** Цитата проверяется по offsets
+`ContentModel` в `lib/api/generation/validation/card_validator.dart`:
+`text.substring(start, end) == quote_ref` (буквально), почти-цитата —
+`quoteNotLiteral` без offsets, отсутствие — `quoteOutOfRange` с обнулением;
+`section_id`/`unit_id` вне наборов партии — `sectionUnknown`/`unitUnknown`.
+Старый `contains`-валидатор не удалён (fallback prompt-only и старых записей).
+DoD-команда — 7 тестов в `test/unit/api/generation/quote_offsets_test.dart`.
+Детали — `journal/generation-v3/verify-s6.md`; толкования — Q15–Q16.
+
 ## S6 — Dedup: вердикт вместо удаления
 
 **Цель.** `DedupVerdict.exact` (отбросить — не потеря), `.semantic` (**пометить,
@@ -127,6 +136,15 @@ prompt-only и старых записей.
 
 **DoD-команда (одна):**
 `.fvm\versions\3.47.9\bin\flutter.bat test --no-pub test/unit/domain/cards/dedup_verdict_test.dart`
+
+**Сделано в срезе 6 TASK.txt (2026-11-27).** Каскад
+`lib/domain/generation/validation/semantic_matcher.dart`: точный ключ →
+нормализованный ключ → символьные шинглы + Жаккар (порог 0.7) → эмбеддинги за
+необязательным `TextEmbeddingProvider`; дубль — пара (`DedupPair`), а не
+удаление; отчёт по уровням — `DedupReport` и `GenerationLedger.dedup`
+(`dedup_report_test.dart`, фикстура `test/fixtures/validation/duplicate_pairs.json`).
+Перевод `_acceptCard` конвейера на вердикт — S7/S9 за флагом (протокол §9).
+Детали — `journal/generation-v3/verify-s6.md`; толкования — Q16.
 
 ## S7 — Replenish: долг и добор как этап
 

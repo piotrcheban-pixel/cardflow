@@ -2,6 +2,33 @@
 
 ## Сделано
 
+**Срез 6 (2026-11-27) — Validation и каскад дедупликации.**
+- `lib/api/generation/validation/card_validator.dart`: `CardValidator` —
+  структурные проверки A8.4 (длины 500/2000, cloze, теги до 3, LaTeX) и
+  семантические эвристики с машинным кодом `CardReasonCode` (ответ не в
+  вопросе; вопрос самостоятелен — «этот»/«выше»/«см. рис.»; атомарность —
+  перечисление >3; осмысленный cloze; язык ru; `quote_ref` по offsets;
+  `section_id`/`unit_id` из партии). Вердикт `accepted | warning | rejected`;
+  отброшенное не исчезает (`RejectedCard` хранит исходный JSON). Цитата
+  принимается только дословно (`substring(start, end) == quote_ref`),
+  почти-цитата — `quoteNotLiteral` без offsets, отсутствие — `quoteOutOfRange`
+  с обнулением (ARCH §3.3); ищутся только содержательные блоки.
+- `lib/domain/generation/validation/semantic_matcher.dart`: каскад точный ключ →
+  нормализованный ключ → символьные шинглы + Жаккар (0.7) → эмбеддинги за
+  интерфейсом `TextEmbeddingProvider`; дубль — пара (`DedupPair`), карточки не
+  удаляются; сверка с колодой через `existing`.
+- `lib/domain/generation/dedup_report.dart`: `DedupLevel` (wire-коды),
+  `DedupPair`, `DedupReport` (пары, счётчики по уровням, сильнейший уровень по
+  порядку каскада).
+- `lib/domain/generation/generation_ledger.dart`: `dedup`/`withDedup` — отчёт по
+  уровням в журнале, переживает `record`/`attempt`/`markCause`/`replace`;
+  арифметика заказа не менялась.
+- Старый валидатор, конвейер, UI, адаптеры и схема БД **не менялись**; новый
+  путь не подключён (флаг `generationV3` — S7/S9, протокол §9).
+- Тесты (+51): `card_validator_test.dart` (24), `quote_offsets_test.dart` (7),
+  `semantic_matcher_test.dart` (14), `dedup_report_test.dart` (6), фикстура
+  `test/fixtures/validation/duplicate_pairs.json`.
+
 **Срез 5 (2026-11-27) — Generation: батчи по единицам через существующие
 адаптеры.**
 - `lib/api/generation/provider_result.dart`: `ProviderResult` (content,
@@ -157,6 +184,24 @@
 
 ## Проверено
 
+**Срез 6.** Красная фаза — `journal/generation-v3/red-s6.txt` (**6 прошло /
+45 упало**, assertion-level: `Expected: <1> Actual: <0>`,
+`Expected: DedupLevel:<DedupLevel.exact> Actual: <null>`,
+`Expected: <3> Actual: <0>`, `Expected: throws GenerationException
+Actual: <Closure…>`). Гейты: `.\.fvm\versions\3.47.9\bin\flutter.bat analyze
+--no-pub lib test` → **No issues found!**; `.\.fvm\versions\3.47.9\bin\dart.bat
+format --set-exit-if-changed lib test` → **660 files, 0 changed**;
+`.\.fvm\versions\3.47.9\bin\flutter.bat test --no-pub --coverage
+--exclude-tags golden` → **3043 passed + 17 skipped**, `exit 0` (baseline
+2992 + 17 + 51); покрытие рукописного кода **90.8 % (24989/27535)** при
+пороге 80 %; `card_validator.dart` — 87.7 % (214/244), `semantic_matcher.dart` —
+96.4 % (81/84), `dedup_report.dart` — 70.8 % (34/48, непокрыты
+`fromWire`/`==`/`toString`), `generation_ledger.dart` — 99.2 % (120/121).
+DoD: тест на каждую проверку + ложные срабатывания; фикстура — 3 пары на своих
+уровнях, 2 «ловушки» без пар; отчёт по уровням в `GenerationLedger.dedup`.
+Полный лог — `journal/generation-v3/green-s6-full.txt`, покрытие —
+`coverage-s6.txt`, итоги — `verify-s6.md`.
+
 **Срез 5.** Красная фаза — `journal/generation-v3/red-s5.txt` (**9 прошло /
 24 упало**, assertion-level: `Expected: <10> Actual: <null>`, `Expected: true
 Actual: <false>` для копии промпта, `GenerationException не брошен`).
@@ -231,6 +276,38 @@ DoD-тесты: property «Σ бюджетов == requested» на 200 случ�
   модель без исключения. Итоги — `journal/generation-v3/verify-s1.md`.
 
 ## НЕ ПОВТОРЯТЬ
+
+- **Валидатор и дедуп среза 6 не подключать к конвейеру/UI.** Это отдельные
+  этапы, как Allocation/Generation: подключение — S7 (добор/долг) и S9
+  (предпросмотр «показать отброшенные») за флагом `generationV3` (протокол §9).
+  Валидатор не переписывает `card_content_validator.dart`: тот обслуживает
+  production `gen-ru-v9` и остаётся fallback `contains` для prompt-only.
+- **«Буквально совпадает» — это `substring(start, end) == quote_ref`.** Не
+  сравнивать через `contains`/нормализацию и не писать offsets для
+  почти-цитаты: регистр/«ё»/тире/пробелы дают `quoteNotLiteral` без offsets
+  (нормализация меняет длину строки), отсутствие — `quoteOutOfRange` с
+  обнулением. Цитату искать только в `contentBlocks`: подпись рисунка — мусор.
+- **Шинглы — символьные, не словесные.** На словесных 3-шинглах одна вставка
+  слова роняет Жаккара до ≈0,55 при пороге 0,7 — почти-дубль не ловится.
+  Проверено на фикстуре; порог `similarityThreshold = 0.7`.
+- **«Выше/ниже» ловить только в текстовых ссылках.** Голое «выше» даёт ложное
+  срабатывание на «давление выше уровня моря». Рабочая форма —
+  `(?:сказан|описан|указан|приведен|приведён|рассмотрен)\p{L}*\s+(?:выше|ниже)`;
+  первый зелёный прогон поймал баг: «описан выше» (муж. род) не совпадал с
+  формой «описано».
+- **`Document` требует, чтобы блок был указан в `section.blockIds`.** Тестовая
+  фикстура «строка = блок» падала `Invalid argument(s): Блок … принадлежит …,
+  но не указан в blockIds раздела`, а не на логике валидатора.
+- **`CardReasonCode.isRejecting` — единственное место, где живёт деление
+  «отбросить/пометить».** Не размазывать по проверкам: rejected — только
+  структурно непригодная запись (нет строк, неизвестный тип, пустой front),
+  всё содержательное — warning (A8.4: не отбрасывать молча).
+- **Фикстура дедупа не должна переиспользовать один и тот же текст в разных
+  парах**: одинаковые карточки дадут лишние пары (exact вместо normalized),
+  и «ловушка» перестанет быть ловушкой.
+- **Не создавать `const GenerationLedger(...)`.** После среза 6 конструктор
+  не const (`dedup` по умолчанию — `DedupReport.empty()`); `replace` обязан
+  передавать `dedup: dedup`, иначе отчёт теряется на первом же `record`.
 
 - **Канон A8.4 не расширять ради `gen-cards-v3`.** Три поля живут в отдельной
   схеме `cardsResponseSchemaV3()` (Q12): добавить их в канон и `required` —
@@ -357,24 +434,27 @@ DoD-тесты: property «Σ бюджетов == requested» на 200 случ�
 
 ## СЛЕДУЮЩЕЕ ДЕЙСТВИЕ
 
-Срез 5 закрыт, коммиты — `feat`/`docs` в `main`. Следующий прогон:
+Срез 6 закрыт, коммиты — `test`(red)/`feat`/`docs` в `main`. Следующий прогон:
 `read TASK.txt` (верхний блок) → верхний блок `journal/STATE.md`
-(«Генерация v3 — срез 5») → `journal/generation-v3/verify-s5.md` (раздел
+(«Генерация v3 — срез 6») → `journal/generation-v3/verify-s6.md` (раздел
 «Ограничения и толкования») → `docs/generation/BACKLOG.md` (следующий этап —
-S5 Validation: `quote_offsets.dart`, `CardCandidate.unitId/start/end`).
+S7 Replenish: `replenish_planner.dart`, долг из ledger'ов).
 
-Если в TASK.txt снова «Срез 5» — **не повторять** `cards_batch_engine.dart` /
-`cards_batch_port.dart` / `cards_prompt.dart` (44 теста зелёные, Q12–Q14
-закрыты); следующий шаг — S5 Validation по BACKLOG: red-тест
-`test/unit/api/generation/quote_offsets_test.dart`, затем
-`.\.fvm\versions\3.47.9\bin\flutter.bat test --no-pub test/unit/api/generation/quote_offsets_test.dart`.
+Если в TASK.txt снова «Срез 6» — **не повторять** `validation/card_validator.dart`,
+`validation/semantic_matcher.dart`, `dedup_report.dart` (51 тест зелёные,
+Q15–Q16 закрыты); следующий шаг — S7 Replenish по BACKLOG: red-тест
+`test/unit/domain/generation/replenish_planner_test.dart`, затем
+`.\.fvm\versions\3.47.9\bin\flutter.bat test --no-pub test/unit/domain/generation/replenish_planner_test.dart`.
 
-Не подключать `CardsBatchEngine` к `GenerationPipeline` и не переводить UI на
-новый путь: включение — S7/S9 за флагом `GenerationSettings.generationV3`
-(BACKLOG, ADR-050), иначе старый и новый пути разойдутся.
+Не подключать `CardValidator`/`SemanticMatcher`/`CardsBatchEngine` к
+`GenerationPipeline`, не переводить UI на новый путь и не удалять старый
+валидатор: включение — S7/S9 за флагом `GenerationSettings.generationV3`
+(BACKLOG, ADR-050), иначе старый и новый пути разойдутся. Отчёт дедупа уже
+в журнале (`GenerationLedger.dedup`), его достаточно прочитать в вердикте
+Completion (S9).
 Baseline текущего снимка: `flutter test --no-pub --exclude-tags golden` —
-**2992 passed + 17 skipped**; `analyze` 0; `dart format` 0 changed;
-покрытие 90.8 %.
+**3043 passed + 17 skipped**; `analyze` 0; `dart format` 0 changed;
+покрытие 90.8 % (24989/27535).
 
 ---
 

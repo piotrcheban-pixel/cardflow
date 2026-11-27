@@ -1,5 +1,65 @@
 # STATE — текущее состояние CardFlow
 
+## Генерация v3 — срез 6: Validation и каскад дедупликации (2026-11-27)
+
+**Срез:** `TASK.txt` «Срез 6. Validation и каскад дедупликации» (план этапов —
+`docs/generation/ARCH.md` §Validation/§Dedup, BACKLOG S5/S6, ADR-050;
+расхождения и толкования — `journal/QUESTIONS.md` Q15–Q16).
+**Факты старта:** ветка `main`, `HEAD = d413247` (docs среза 5); baseline
+`flutter test --no-pub --exclude-tags golden` — **2992 passed + 17 skipped**.
+
+**Сделано (TDD, red → green):**
+- `lib/api/generation/validation/card_validator.dart` — `CardValidator`:
+  структурные проверки A8.4 (длины, cloze, теги, LaTeX) и семантические
+  эвристики с машинным кодом `CardReasonCode` (ответ не в вопросе; вопрос
+  самостоятелен — «этот»/«выше»/«см. рис.»; атомарность — перечисление >3;
+  осмысленный cloze; язык ru; `quote_ref` по offsets; `section_id`/`unit_id` из
+  партии). Результат — `accepted | warning | rejected(code)`; отброшенная запись
+  хранится в `RejectedCard` (исходный JSON, «показать отброшенные»), помеченная
+  остаётся кандидатом. Цитата принимается только дословно
+  (`text.substring(start, end) == quote_ref`); почти-цитата — `quoteNotLiteral`
+  без offsets, отсутствие — `quoteOutOfRange` с обнулением цитаты; ищутся только
+  содержательные блоки.
+- `lib/domain/generation/validation/semantic_matcher.dart` — `SemanticMatcher`:
+  каскад точный ключ → нормализованный ключ (регистр, ё→е, пунктуация, пробелы)
+  → символьные шинглы + Жаккар (порог 0.7) → эмбеддинги за необязательным
+  `TextEmbeddingProvider` (ML-зависимостей нет). Дубль — **пара** (`DedupPair`),
+  карточки не удаляются; сверка с колодой — `existing` (левая сторона пары).
+- `lib/domain/generation/dedup_report.dart` — `DedupLevel` (wire-коды),
+  `DedupPair`, `DedupReport` (пары, счётчики по всем уровням, сильнейший уровень
+  карточки по порядку каскада).
+- `lib/domain/generation/generation_ledger.dart` — `dedup`/`withDedup`: отчёт по
+  уровням живёт в журнале и переживает `record`/`attempt`/`markCause`/`replace`;
+  арифметика заказа не менялась.
+- Старый `card_content_validator.dart`, конвейер, адаптеры, UI и схема БД
+  **не менялись**: новый путь не подключён (флаг `generationV3` — S7/S9).
+
+**Тесты (+51):** `card_validator_test.dart` (24: каждая проверка + ложные
+срабатывания на корректных карточках), `quote_offsets_test.dart` (7 — DoD-команда
+S5 BACKLOG: offsets, почти-цитата, граница блоков, мусорный блок),
+`semantic_matcher_test.dart` (14: уровни каскада, колода, эмбеддинги, метрики,
+фикстура `test/fixtures/validation/duplicate_pairs.json` — 3 известные пары
+ловятся, 2 «ловушки» нет), `dedup_report_test.dart` (6: счётчики, сильнейший
+уровень, ledger). Красная фаза с assertion-level выводом —
+`journal/generation-v3/red-s6.txt` (**6 прошло / 45 упало**).
+
+**Гейты итогового снимка:** `flutter analyze --no-pub lib test` → **0 issues**;
+`dart format --set-exit-if-changed lib test` → **660 файлов, 0 changed**;
+`flutter test --no-pub --coverage --exclude-tags golden` → **3043 passed + 17
+skipped**, `exit 0`; покрытие рукописного кода **90.8 % (24989/27535)** при
+пороге 80 %; `card_validator.dart` — 87.7 %, `semantic_matcher.dart` — 96.4 %,
+`dedup_report.dart` — 70.8 % (нетривиальных правил не покрыто нет: только
+`fromWire`/`toString`/`==`), `generation_ledger.dart` — 99.2 %. Подробно —
+`journal/generation-v3/verify-s6.md`.
+
+**Ограничения:** к конвейеру и UI не подключено (S7 — добор/долг, S9 —
+предпросмотр «показать отброшенные»); цитата через границу блоков не
+принимается (якоря единиц — внутри блока, Q13); `sectionUnknown`/`unitUnknown`
+проверяются только при переданных наборах id; сравнение пар O(n²) для партии;
+эмбеддинги в production не используются (только интерфейс).
+
+---
+
 ## Генерация v3 — срез 5: Generation через адаптеры, gen-cards-v3, батчи по единицам (2026-11-27)
 
 **Срез:** `TASK.txt` «Срез 5. Generation: батчи по единицам через существующие
