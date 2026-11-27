@@ -1,5 +1,66 @@
 # STATE — текущее состояние CardFlow
 
+## Генерация v3 — срез 3: Understanding через модель, gen-map-v1, разбор и кэш (2026-11-27)
+
+**Срез:** `TASK.txt` «Срез 3. Understanding: KnowledgeMap» (план этапов —
+`docs/generation/ARCH.md`, BACKLOG, ADR-050; расхождение с BACKLOG S2 и
+толкования Q8–Q9 — `journal/QUESTIONS.md`).
+**Факты старта:** ветка `main`, `HEAD = 74ec413` (docs среза 2); baseline
+`flutter test --no-pub --exclude-tags golden` — **2863 passed + 17 skipped**.
+
+**Сделано (TDD, red → green):**
+- `lib/domain/generation/knowledge_map.dart` — `KnowledgeUnit` (`id`,
+  `sectionId`, `topic`, `kind`, `statement`, `anchors`, `salience`,
+  `splittable`), `KnowledgeAnchor`, `KnowledgeMap` (индекс по id **O(1)**,
+  `unitsOfSection`, `splittableUnits`, дубли id — `ArgumentError`),
+  `KnowledgeUnitKind` (5 wire-значений: `definition/fact/relation/formula/
+  procedure`) и каноническая JSON-схема `gen-map-v1` по образцу A8.4 (все поля
+  в `required`, nullable `section_id`, `additionalProperties: false`).
+- `lib/api/prompts/understanding_prompt.dart` — отдельная версия `gen-map-v1`:
+  только извлечение атомарных единиц (роль, вход `<section>`/`<materials>` с
+  `<block id="…">`, правила statement/kind/salience/splittable/anchors,
+  LaTeX, запрет инструкций из материала), `buildUnderstandingUserContent`;
+  дословная копия — `docs/prompts/gen-map-v1.txt` (тест сверяет байты).
+- `lib/api/generation/knowledge_map_caller.dart` — узкий контракт вызова модели
+  (`KnowledgeMapRequest`, `KnowledgeMapRawResponse` с `usage` и `truncated`);
+  HTTP-подключение — следующий шаг.
+- `lib/api/generation/knowledge_map_parser.dart` — разбор ответа: id единицы
+  присваивает приложение (`ku:<fragmentId>#<индекс>`), `section_id` модели —
+  подсказка, поштучная проверка единиц (схема, `salience` 0..1, непустые
+  якоря, блоки из запроса), причины `json_parse`/`schema_invalid`.
+- `lib/api/generation/understanding_service.dart` — этап Understanding:
+  фрагмент = раздел `ContentModel`, содержательные блоки без мусора,
+  последовательные вызовы, битый/обрезанный ответ или сбой провайдера
+  **помечают фрагмент** и не останавливают прогон, отмена пробрасывается;
+  кэш только полной карты, ключ — документ + хеш содержимого и версии промпта;
+  `usage` — только факт из ответов, отсутствующее слагаемое делает сумму
+  `null`, а не нулём.
+- `lib/data/generation/in_memory_knowledge_map_cache.dart` — in-memory
+  реализация порта `KnowledgeMapCache<KnowledgeMap>` (миграция БД — срез 7).
+- Старый конвейер, UI, схема БД и публичные типы провайдеров **не менялись**.
+
+**Тесты (+42):** `test/unit/domain/generation/knowledge_map_test.dart` (8),
+`test/unit/api/generation/knowledge_map_parser_test.dart` (13, golden-фикстура
+`test/fixtures/understanding/gen-map-v1-response.json`),
+`understanding_prompt_test.dart` (4, байтовая сверка копии промпта),
+`understanding_service_test.dart` (11: успех, кэш, фолбэк, отмена, пустые
+разделы, `usage`), `test/unit/data/generation/in_memory_knowledge_map_cache_test.dart`
+(5). Красная фаза с assertion-level выводом — `journal/generation-v3/red-s3.txt`.
+
+**Гейты итогового снимка:** `flutter analyze --no-pub lib test` → **0 issues**;
+`dart format --set-exit-if-changed lib test` → **639 файлов, 0 changed**;
+`flutter test --no-pub --coverage --exclude-tags golden` → **2905 passed + 17
+skipped**, `exit 0`; покрытие рукописного кода **90.8 % (24082/26524)** при
+пороге 80 %; `knowledge_map_parser.dart` — **100 %**, `understanding_service.dart`
+— 95.0 %. Подробно — `journal/generation-v3/verify-s3.md`.
+
+**Ограничения:** вызов понимания не подключён к адаптерам/HTTP (контракт
+`KnowledgeMapCaller`); якоря проверяются по принадлежности блоку запроса, но не
+по offsets — это S5; кэш только в памяти до среза 7; дедуп единиц и пересчёт
+`salience` по структуре — следующие шаги Understanding (ADR-050 §2).
+
+---
+
 ## Генерация v3 — срез 2: журнал прогона, стейт-машина, порты (2026-11-27)
 
 **Срез:** `TASK.txt` «Срез 2. Ledger, стейт-машина прогона, порты» (план

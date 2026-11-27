@@ -2,6 +2,37 @@
 
 ## Сделано
 
+**Срез 3 (2026-11-27) — Understanding: KnowledgeMap, промпт gen-map-v1, разбор
+и кэш.**
+- `lib/domain/generation/knowledge_map.dart`: `KnowledgeUnit` (`id`,
+  `sectionId`, `topic`, `kind`, `statement`, `anchors`, `salience`,
+  `splittable`), `KnowledgeAnchor`, `KnowledgeMap` (индекс по id **O(1)**,
+  `unitsOfSection`, `splittableUnits`, дубли id — `ArgumentError`),
+  `KnowledgeUnitKind` (`definition/fact/relation/formula/procedure`) и
+  каноническая JSON-схема `gen-map-v1` по образцу A8.4 (strict: все поля в
+  `required`, nullable `section_id`, `additionalProperties: false`).
+- `lib/api/prompts/understanding_prompt.dart`: отдельная версия `gen-map-v1` —
+  только извлечение атомарных единиц, без правил оформления карточек;
+  `buildUnderstandingUserContent` (`<section>` + `<block id>`); копия —
+  `docs/prompts/gen-map-v1.txt` (тест сверяет байты).
+- `lib/api/generation/knowledge_map_caller.dart`: контракт вызова модели
+  (`KnowledgeMapRequest`, `KnowledgeMapRawResponse` с `usage`/`truncated`).
+- `lib/api/generation/knowledge_map_parser.dart`: id единицы присваивает
+  приложение (`ku:<fragmentId>#<индекс ответа>`), `section_id` — подсказка,
+  поштучная проверка единиц (схема, `salience` 0..1, якоря из запроса),
+  причины `json_parse` / `schema_invalid`.
+- `lib/api/generation/understanding_service.dart`: фрагмент = раздел
+  `ContentModel`; невалидный/обрезанный ответ или сбой провайдера **помечают
+  фрагмент**, остальные обрабатываются; отмена пробрасывается; кэш только
+  полной карты; `usage` — только факт из ответов (неизвестное слагаемое делает
+  сумму `null`, а не нулём).
+- `lib/data/generation/in_memory_knowledge_map_cache.dart`: in-memory
+  реализация порта `KnowledgeMapCache<KnowledgeMap>` (БД — срез 7).
+- Тесты (+42): `knowledge_map_test.dart` (8), `knowledge_map_parser_test.dart`
+  (13 + golden-фикстура), `understanding_prompt_test.dart` (4),
+  `understanding_service_test.dart` (11),
+  `in_memory_knowledge_map_cache_test.dart` (5).
+
 **Срез 2 (2026-11-27) — журнал прогона, стейт-машина этапов, порты.**
 - `lib/domain/generation/generation_ledger.dart`: `GenerationLedger` (суммарно)
   и `GenerationBatchLedger` (по партиям) — `requested`, `generated`, `invalid`,
@@ -57,6 +88,21 @@
 
 ## Проверено
 
+**Срез 3.** Красная фаза — `journal/generation-v3/red-s3.txt` (29 падений
+assertion-level: `Expected: <3> Actual: <0>`, `Expected: true Actual: <false>`,
+`Expected: 'gen-map-v1' Actual: 'gen-map-v0'`). Гейты:
+`.\.fvm\versions\3.47.9\bin\flutter.bat analyze --no-pub lib test` → **No issues
+found!**; `.\.fvm\versions\3.47.9\bin\dart.bat format --set-exit-if-changed
+lib test` → **639 files, 0 changed**;
+`.\.fvm\versions\3.47.9\bin\flutter.bat test --no-pub --coverage --exclude-tags
+golden` → **2905 passed + 17 skipped**, `exit 0` (baseline 2863 + 17 + 42);
+покрытие рукописного кода **90.8 % (24082/26524)** при пороге 80 %;
+`knowledge_map_parser.dart` — **100 % (61/61)**, `understanding_service.dart` —
+95.0 % (95/100), `knowledge_map.dart` — 75 % (48/64, непокрыты только
+`==`/`hashCode`/`toString`/`blockIds`), `knowledge_map_caller.dart` — 33.3 %
+(2/6, объявления контракта; прецедент `ports.dart`). Полный лог —
+`journal/generation-v3/green-s3-full.txt`, итоги — `verify-s3.md`.
+
 **Срез 2.** Красная фаза — `journal/generation-v3/red-s2.txt`: 28 падений
 assertion-level (`Expected: <211> Actual: <0>`, `Expected: throws
 <Instance of 'AssertionError'>`, `Expected: contains 'принято 3/8'`), а не
@@ -86,6 +132,24 @@ DoD-тесты: property «Σ бюджетов == requested» на 200 случ�
 
 ## НЕ ПОВТОРЯТЬ
 
+- **Негативный тест с `const`-конструктором и `assert` — ошибка компиляции, а
+  не проверка.** `const KnowledgeAnchor(blockId: '', ...)` внутри `const`-списка
+  вычисляется на этапе компиляции: тест не загружается («Constant evaluation
+  error»), а не падает assertion-level. Негативные кейсы конструировать без
+  `const` (см. `knowledge_map_test.dart`, инварианты).
+- **`prefer_initializing_formals` и приватные именованные параметры.**
+  Конструктор с `required KnowledgeMapCaller caller` + `_caller = caller` даёт
+  info-замечание; `this._caller` в именованном параметре запрещён языком.
+  Коллабораторы сервиса/парсера — публичные `final`-поля (`this.caller`,
+  `this.cache`, `this.parser`), тесты и последующие этапы читают их напрямую.
+- **`KnowledgeMapCache` не дублировать новым интерфейсом.** Порт уже объявлен в
+  `lib/domain/generation/ports.dart` (`KnowledgeMapCache<M>`, срез 2, Q6);
+  срез 3 добавляет только реализацию `InMemoryKnowledgeMapCache` и подставляет
+  `KnowledgeMapCache<KnowledgeMap>`.
+- **Кэш карты писать только при полном успехе.** Иначе битый/упавший фрагмент
+  «запомнится» как готовая карта, и повторный прогон не позовёт модель.
+  Ключ кэша включает версию промпта (`gen-map-v1`), иначе смена промпта вернёт
+  карту, построенную другой инструкцией.
 - **Не использовать `\b` в регулярках после кириллицы.** В ECMAScript-регулярках
   (Dart `RegExp`) граница слова считается по ASCII: `^\s*(?:рис)\b\.` **не
   ловит** «Рис. 4» — на этом упал первый зелёный прогон. Подпись рисунка
@@ -129,11 +193,16 @@ DoD-тесты: property «Σ бюджетов == requested» на 200 случ�
 
 ## СЛЕДУЮЩЕЕ ДЕЙСТВИЕ
 
-Срез 3 — ждать обновлённый `TASK.txt` владельца: `read TASK.txt` → верхний
-блок `journal/STATE.md` («Генерация v3 — срез 2») → `docs/generation/BACKLOG.md`.
-Если в TASK.txt снова «Срез 2»/пусто — брать S2 из BACKLOG (`KnowledgeMap`):
-red-тест `test/unit/domain/generation/knowledge_map_test.dart`, команда
-`.\.fvm\versions\3.47.9\bin\flutter.bat test --no-pub test/unit/domain/generation/knowledge_map_test.dart`.
+Срез 4 — ждать обновлённый `TASK.txt` владельца: `read TASK.txt` → верхний
+блок `journal/STATE.md` («Генерация v3 — срез 3») → `docs/generation/BACKLOG.md`
+и `journal/QUESTIONS.md` (Q8/Q9).
+Если в TASK.txt снова «Срез 3»/пусто — брать следующий этап из BACKLOG (S3,
+`OrderBudget`): red-тест `test/unit/domain/generation/order_budget_test.dart`,
+команда
+`.\.fvm\versions\3.47.9\bin\flutter.bat test --no-pub test/unit/domain/generation/order_budget_test.dart`.
+Не начинай с подключения `KnowledgeMapCaller` к адаптерам: это отдельный шаг
+(проекция схемы `gen-map-v1`, см. `journal/generation-v3/verify-s3.md`, раздел
+«Ограничения»).
 
 ---
 
