@@ -1,5 +1,69 @@
 # STATE — текущее состояние CardFlow
 
+## Генерация v3 — срез 4: Allocation — веса, Гамильтон, упаковка батчей (2026-11-27)
+
+**Срез:** `TASK.txt` «Срез 4. Allocation: веса, Гамильтон, упаковка батчей»
+(план этапов — `docs/generation/ARCH.md`, BACKLOG, ADR-050; расхождение с
+BACKLOG S3 `OrderBudget` и толкования — `journal/QUESTIONS.md` Q10–Q11).
+**Факты старта:** ветка `main`, `HEAD = b926b28` (docs среза 3); baseline
+`flutter test --no-pub --exclude-tags golden` — **2905 passed + 17 skipped**.
+
+**Сделано (TDD, red → green):**
+- `lib/domain/generation/model_profile.dart` — `ModelProfile` (`id`, `provider`,
+  `contextWindow`, `maxOutputTokens`, `supportsJsonSchema`, `supportsVision`,
+  `concurrency`), `batchTokenBudget` = окно × 40 % (доля —
+  `ModelProfile.batchWindowShare`), `maxCardsPerBatch`, `fitsBatch` (выход в
+  пределе профиля **и** вход + выход ≤ бюджета батча). Каталог `kModelProfiles`
+  — данные для **4 провайдеров** (DeepSeek, OpenAI, Anthropic, Gemini; 8
+  моделей с id из `kProviderPresets`, согласованность окна/Vision сверяет
+  тест), консервативный профиль для неизвестной модели. Магических чисел в
+  логике упаковки нет.
+- `lib/domain/generation/allocation.dart` — вес единицы
+  `salience × unitDensity × kindWeight` (плотность — доля значимых слов
+  утверждения с полом 0,25, а не длина в символах); распределение методом
+  наибольших остатков на `BigInt` (точная сумма, минимум 1 карточка на
+  отобранную единицу, отбор самых весомых при заказе меньше числа единиц,
+  равные остатки — по порядку карты); `AllocationAngle`
+  (`reverse/cloze/application`) и `AllocatedCard.angle`: основная карточка —
+  `angle == null`, добор идёт только углами, угол выбирается по виду единицы и
+  циклом; `packBatches` — батчи **по единицам** (`вход + оценка выхода ≤ 40 %
+  окна`, выход ≤ `maxOutputTokens`, карточки одной единицы делят вход, резерв
+  схемы — только при `supportsJsonSchema`); единица, не влезающая в бюджет
+  одного батча, — `ArgumentError`; `AllocationPlan` — инвариант «Σ бюджетов ==
+  заказ», `materialLimited`/`shortfall`, `waves` по `concurrency`.
+- Старый планировщик (`CardAllocator`, `GenerationChunkPlanner`,
+  `OutputBatchPlanner`), конвейер, UI, схема БД и публичные типы провайдеров
+  **не менялись** — новый этап не подключён к старому пути (протокол §9).
+
+**Тесты (+43):** `test/unit/domain/generation/model_profile_test.dart` (9:
+бюджет 40 %, границы `fitsBatch`, `maxCardsPerBatch`, инварианты, 3+
+провайдера, согласованность с пресетами, fallback, DeepSeek без strict-схемы),
+`allocation_test.dart` (34: плотность и пол, множители видов, вес,
+распределение на равных/разных весах, отбор, 1 000 000 карточек, крошечный вес,
+углы и цикл, упаковка по пределу вывода/40 % окна/резерву схемы, общий вход
+единиц, ошибки, волны, инварианты типов, два DoD-property-теста — 200 случайных
+карт: сумма == заказ, минимум 1, детерминизм, ни один батч не превышает
+профиль). Красная фаза с assertion-level выводом —
+`journal/generation-v3/red-s4.txt` (9 прошло / 33 упало).
+
+**Гейты итогового снимка:** `flutter analyze --no-pub lib test` → **0 issues**;
+`dart format --set-exit-if-changed lib test` → **643 файла, 0 changed**;
+`flutter test --no-pub --coverage --exclude-tags golden` → **2948 passed + 17
+skipped**, `exit 0`; покрытие рукописного кода **90.9 % (24302/26744)** при
+пороге 80 %; `allocation.dart` — **100.0 % (190/190)** (DoD ≥ 95 %),
+`model_profile.dart` — 100.0 % (30/30). Подробно —
+`journal/generation-v3/verify-s4.md`.
+
+**Ограничения:** этап не подключён к `GenerationChunkPlanner`/конвейеру и не
+включён флагом (подключение — после Generation/Replenish, BACKLOG S4/S7);
+`OrderBudget` из BACKLOG S3 отдельным типом не создавался — его контракт несёт
+`AllocationPlan` (Q10); оценка входа/выхода — `TokenEstimator` + константы
+обвязки (точный `count_tokens` — за существующим пайплайном); плотность
+считается по `statement`, смысловая насыщенность якорей не пересчитывается;
+сетевых вызовов и живой проверки профилей среза нет (TASK: без сети и БД).
+
+---
+
 ## Генерация v3 — срез 3: Understanding через модель, gen-map-v1, разбор и кэш (2026-11-27)
 
 **Срез:** `TASK.txt` «Срез 3. Understanding: KnowledgeMap» (план этапов —

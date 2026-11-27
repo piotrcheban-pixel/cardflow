@@ -2,6 +2,34 @@
 
 ## Сделано
 
+**Срез 4 (2026-11-27) — Allocation: веса, Гамильтон, упаковка батчей.**
+- `lib/domain/generation/model_profile.dart`: `ModelProfile` (`id`,
+  `provider`, `contextWindow`, `maxOutputTokens`, `supportsJsonSchema`,
+  `supportsVision`, `concurrency`), `batchTokenBudget` (`contextWindow × 40 %`,
+  доля — `batchWindowShare`), `maxCardsPerBatch`, `fitsBatch` (выход ≤ предела
+  и вход + выход ≤ бюджета); каталог `kModelProfiles` — **4 провайдера**
+  (DeepSeek, OpenAI, Anthropic, Gemini; 8 моделей с id из `kProviderPresets`),
+  консервативный профиль для неизвестной модели. В логике упаковки чисел нет.
+- `lib/domain/generation/allocation.dart`: `unitDensity` (доля значимых слов
+  утверждения, пол `kMinUnitDensity = 0.25`), `kindWeight` (множители вида),
+  `unitWeight` = `salience × плотность × тип`; `allocateUnits` — метод
+  наибольших остатков на `BigInt` (точная сумма, минимум 1 на отобранную
+  единицу, отбор самых весомых при заказе меньше числа единиц, равные
+  остатки — по порядку карты); `AllocationAngle`
+  (`reverse/cloze/application`), `AllocatedCard.angle` — основная карточка
+  `angle == null`, добор только углами, предпочтение по виду единицы и цикл;
+  `packBatches` — батчи по единицам (`вход + оценка выхода ≤ 40 % окна`,
+  выход ≤ `maxOutputTokens`, общий вход карточек одной единицы, резерв схемы
+  только при `supportsJsonSchema`), батч, не влезающий в профиль, —
+  `ArgumentError`; `AllocationPlan` — инвариант «Σ бюджетов == заказ»,
+  `materialLimited`/`shortfall`, `waves` по `concurrency`.
+- Старый планировщик (`CardAllocator`/`GenerationChunkPlanner`/
+  `OutputBatchPlanner`), конвейер, UI и схема БД **не менялись**: новый этап не
+  подключён к старому пути (протокол §9).
+- Тесты (+43): `model_profile_test.dart` (9), `allocation_test.dart` (34), в
+  том числе два DoD-property-теста (200 случайных карт; сумма == заказ, минимум
+  1, детерминизм, ни один батч не превышает профиль, добор только углами).
+
 **Срез 3 (2026-11-27) — Understanding: KnowledgeMap, промпт gen-map-v1, разбор
 и кэш.**
 - `lib/domain/generation/knowledge_map.dart`: `KnowledgeUnit` (`id`,
@@ -87,6 +115,21 @@
   PDF, DOCX, PPTX, MD, скан без текстового слоя).
 
 ## Проверено
+
+**Срез 4.** Красная фаза — `journal/generation-v3/red-s4.txt` (**9 прошло /
+33 упало**, падения assertion-level: `Expected: <40000> Actual: <0>`,
+`Expected: a numeric value within <1e-9> of <0.8333…> Actual: <0.0>`,
+`Expected: [5, 3, 2] Actual: []`, `Expected: <1000000> Actual: <0>`,
+`Expected: AllocationAngle.<cloze> Actual: AllocationAngle.<reverse>`). Гейты:
+`.\.fvm\versions\3.47.9\bin\flutter.bat analyze --no-pub lib test` → **No issues
+found!**; `.\.fvm\versions\3.47.9\bin\dart.bat format --set-exit-if-changed
+lib test` → **643 files, 0 changed**; `.\.fvm\versions\3.47.9\bin\flutter.bat
+test --no-pub --coverage --exclude-tags golden` → **2948 passed + 17 skipped**,
+`exit 0` (baseline 2905 + 17 + 43); покрытие рукописного кода **90.9 %
+(24302/26744)** при пороге 80 %; `allocation.dart` — **100.0 % (190/190)** ≥
+DoD-порога 95 %, `model_profile.dart` — 100.0 % (30/30). Полный лог —
+`journal/generation-v3/green-s4-full.txt`, покрытие —
+`coverage-s4.txt`, итоги — `verify-s4.md`.
 
 **Срез 3.** Красная фаза — `journal/generation-v3/red-s3.txt` (29 падений
 assertion-level: `Expected: <3> Actual: <0>`, `Expected: true Actual: <false>`,
@@ -190,19 +233,52 @@ DoD-тесты: property «Σ бюджетов == requested» на 200 случ�
 - **`ports.dart` не попадает в lcov** (только объявления портов, 0 исполняемых
   строк) — ожидаемо, прецедент `api_key_store.dart` и репозитории портов.
   Не «чинить» это пустыми реализациями ради процента.
+- **«Плотность» единицы — отношение, а не длина.** Доля значимых слов в
+  `statement` (пол 0,25), не число символов: иначе нарушается запрет среза 4
+  «никакого распределения по числу символов», а короткая формула `PV = nRT`
+  проигрывала бы длинной фразе из предлогов. Служебные слова — список
+  `_stopWords` в `allocation.dart`.
+- **40 % окна — бюджет одного батча, и он не единственный предел.**
+  `ModelProfile.fitsBatch` проверяет **и** `output ≤ maxOutputTokens`, **и**
+  `input + output ≤ batchTokenBudget`; тест с `outputTokens: 10000` при
+  `maxOutputTokens: 8192` — ложное ожидание, которое упало уже после
+  реализации (в красной фазе оно маскировалось нулевым стабом).
+- **Отрицательные кейсы конструкторов с `assert` конструировать без `const`.**
+  Повтор урока среза 3 (там был `KnowledgeAnchor`): `const ModelProfile(...)` с
+  нарушенным инвариантом — ошибка компиляции, а не `throwsAssertionError`.
+  В срезе 4 так проверяются `ModelProfile`, `UnitBudget`, `AllocationBatch`,
+  `AllocationPlan`.
+- **Красную фазу не снимать через `Tee-Object | Select-Object -First N`.**
+  `Select-Object -First` закрывает пайплайн и обрывает запись лога (в срезе 4
+  лог обрезался на 201 строке из 358). Полный вывод — редиректом в файл
+  (`flutter test ... > file 2>&1`), хвост — отдельной командой.
+- **Инвариант «Σ бюджетов == заказ» — `assert` в `AllocationPlan`, а не
+  проверка в сервисе.** План с недобором при непустых единицах
+  неконструируем; «материала нет вовсе» — только `units.isEmpty`
+  (`materialLimited`). Не добавлять «мягкий» путь, который разрешит
+  `cards.length < requested`.
+- **Срез 4 не подключает `AllocationPlan` к `GenerationChunkPlanner`.** Старый
+  путь планирования остаётся до этапов Generation/Replenish (BACKLOG S4/S7):
+  подключение раньше создаст два расходящихся плана.
 
 ## СЛЕДУЮЩЕЕ ДЕЙСТВИЕ
 
-Срез 4 — ждать обновлённый `TASK.txt` владельца: `read TASK.txt` → верхний
-блок `journal/STATE.md` («Генерация v3 — срез 3») → `docs/generation/BACKLOG.md`
-и `journal/QUESTIONS.md` (Q8/Q9).
-Если в TASK.txt снова «Срез 3»/пусто — брать следующий этап из BACKLOG (S3,
-`OrderBudget`): red-тест `test/unit/domain/generation/order_budget_test.dart`,
-команда
-`.\.fvm\versions\3.47.9\bin\flutter.bat test --no-pub test/unit/domain/generation/order_budget_test.dart`.
-Не начинай с подключения `KnowledgeMapCaller` к адаптерам: это отдельный шаг
-(проекция схемы `gen-map-v1`, см. `journal/generation-v3/verify-s3.md`, раздел
-«Ограничения»).
+Срез 4 закрыт, коммиты — `test`/`feat`/`docs` в `main`. Следующий прогон:
+`read TASK.txt` (верхний блок) → верхний блок `journal/STATE.md` («Генерация v3
+— срез 4») → `journal/generation-v3/verify-s4.md` (раздел «Ограничения») →
+`docs/generation/BACKLOG.md` (следующий этап — S4 Generation, `RequestLedger`:
+произведено/валидно/принято; вход — `AllocationPlan`).
+
+Если в TASK.txt снова «Срез 4» — **не повторять** `allocation.dart`/
+`model_profile.dart` (покрытие 100 %, Q10/Q11 закрыты); брать следующий этап
+BACKLOG S4: red-тест `test/unit/api/generation/request_ledger_test.dart`, затем
+`.\.fvm\versions\3.47.9\bin\flutter.bat test --no-pub test/unit/api/generation/request_ledger_test.dart`.
+
+Не начинать с подключения `AllocationPlan` к `GenerationChunkPlanner`: новый
+этап подключается после S4–S7 и за флагом `GenerationSettings.generationV3`
+(BACKLOG, ADR-050), иначе старый и новый планы разойдутся.
+Baseline текущего снимка: `flutter test --no-pub --exclude-tags golden` —
+**2948 passed + 17 skipped**; `analyze` 0; `dart format` 643 файла / 0 changed.
 
 ---
 
