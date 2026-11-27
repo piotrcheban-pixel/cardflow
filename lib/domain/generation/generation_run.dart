@@ -338,3 +338,170 @@ class GenerationRunResult {
   /// true, если генерация шла без материалов (prompt-only, ADR-024).
   bool get promptOnly => plan?.isPromptOnly ?? false;
 }
+
+/// Этап прогона генерации v3 (ARCH §2, ADR-050).
+///
+/// Порядок: `planned → understanding → generating → validating → dedup →
+/// replenishing → ready | partial | failed | cancelled`. `replenishing` —
+/// этап решения о доборе: оттуда можно вернуться в [generating] (новая
+/// партия), завершить прогон ([ready]/[partial]) или упасть/отмениться.
+/// [failed] и [cancelled] допустимы с любого незавершённого этапа.
+enum GenerationStage {
+  /// План построен, работа ещё не началась.
+  planned,
+
+  /// Понимание материала (карта знаний/кандидаты утверждений).
+  understanding,
+
+  /// Запросы партий к модели.
+  generating,
+
+  /// Проверка структуры, цитат и качества карточек.
+  validating,
+
+  /// Вердикт на дубли: точный отбрасывается, смысловой помечается.
+  dedup,
+
+  /// Решение о доборе: долг, причина и новый бюджет на добор.
+  replenishing,
+
+  /// Заказ выполнен: принято не меньше, чем запрошено.
+  ready,
+
+  /// Недобор: принято меньше, чем запрошено (число и причина — в журнале).
+  partial,
+
+  /// Прогон упал: карточек нет или ошибка фатальна.
+  failed,
+
+  /// Прогон отменён пользователем.
+  cancelled;
+
+  /// true — этап завершает прогон: дальше переходов нет.
+  bool get isTerminal => switch (this) {
+    GenerationStage.ready ||
+    GenerationStage.partial ||
+    GenerationStage.failed ||
+    GenerationStage.cancelled => true,
+    _ => false,
+  };
+
+  /// Статус задания для `generation_jobs.status` (SPEC A5, A8.5 шаг 12).
+  ///
+  /// Терминальные этапы ложатся в статусы по смыслу: [ready] — `done`,
+  /// [partial] — `partial`, [failed] — `error`, [cancelled] — `cancelled`;
+  /// промежуточные этапы пишутся как `running`.
+  GenerationJobStatus get jobStatus => switch (this) {
+    GenerationStage.ready => GenerationJobStatus.done,
+    GenerationStage.partial => GenerationJobStatus.partial,
+    GenerationStage.failed => GenerationJobStatus.error,
+    GenerationStage.cancelled => GenerationJobStatus.cancelled,
+    _ => GenerationJobStatus.running,
+  };
+}
+
+/// Допустимые переходы стейт-машины прогона ([GenerationRunState.advanceTo]).
+///
+/// Этапы не перескакивают: `understanding` нельзя пропустить, а [ready] и
+/// [partial] достижимы только из [replenishing] — после решения о доборе.
+/// Терминальные этапы не имеют исходящих переходов. Самопереход запрещён.
+const Map<GenerationStage, Set<GenerationStage>> _stageTransitions =
+    <GenerationStage, Set<GenerationStage>>{
+      GenerationStage.planned: <GenerationStage>{
+        GenerationStage.understanding,
+        GenerationStage.failed,
+        GenerationStage.cancelled,
+      },
+      GenerationStage.understanding: <GenerationStage>{
+        GenerationStage.generating,
+        GenerationStage.failed,
+        GenerationStage.cancelled,
+      },
+      GenerationStage.generating: <GenerationStage>{
+        GenerationStage.validating,
+        GenerationStage.failed,
+        GenerationStage.cancelled,
+      },
+      GenerationStage.validating: <GenerationStage>{
+        GenerationStage.dedup,
+        GenerationStage.failed,
+        GenerationStage.cancelled,
+      },
+      GenerationStage.dedup: <GenerationStage>{
+        GenerationStage.replenishing,
+        GenerationStage.failed,
+        GenerationStage.cancelled,
+      },
+      GenerationStage.replenishing: <GenerationStage>{
+        GenerationStage.generating,
+        GenerationStage.ready,
+        GenerationStage.partial,
+        GenerationStage.failed,
+        GenerationStage.cancelled,
+      },
+      GenerationStage.ready: <GenerationStage>{},
+      GenerationStage.partial: <GenerationStage>{},
+      GenerationStage.failed: <GenerationStage>{},
+      GenerationStage.cancelled: <GenerationStage>{},
+    };
+
+/// Недопустимый переход стейт-машины прогона.
+///
+/// Бросается вместо «молчаливого» перехода: пропущенный этап или `done` без
+/// добора — ошибка программиста, а не сценарий (ARCH §3.2: ложный успех
+/// запрещён).
+class InvalidGenerationStageTransition implements Exception {
+  /// Создаёт исключение пары [from] → [to].
+  const InvalidGenerationStageTransition({
+    required this.from,
+    required this.to,
+  });
+
+  /// Этап, с которого пытались уйти.
+  final GenerationStage from;
+
+  /// Этап, на который пытались перейти.
+  final GenerationStage to;
+
+  @override
+  String toString() => 'Недопустимый переход этапа: ${from.name} → ${to.name}';
+}
+
+/// Стейт-машина прогона генерации v3 (ARCH §2).
+///
+/// Неизменяемое состояние: [advanceTo] возвращает новое состояние или бросает
+/// [InvalidGenerationStageTransition]. Машина проверяет **форму** пути, а не
+/// числа: `ready` при долге не отличить от `ready` без долга — это делает
+/// вердикт Completion (S9) по журналу, здесь же невозможно перескочить этап
+/// (например, `generating → ready`).
+class GenerationRunState {
+  /// Состояние на этапе [stage] (возобновление из журнала/теста).
+  const GenerationRunState(this.stage);
+
+  /// Начальное состояние: план построен.
+  const GenerationRunState.planned() : stage = GenerationStage.planned;
+
+  /// Текущий этап.
+  final GenerationStage stage;
+
+  /// true — прогон завершён (дальше переходов нет).
+  bool get isTerminal => stage.isTerminal;
+
+  /// Допустимые следующие этапы (пусто у терминальных).
+  Set<GenerationStage> get allowedNext =>
+      _stageTransitions[stage] ?? const <GenerationStage>{};
+
+  /// true, если переход [next] разрешён из текущего этапа.
+  bool canAdvanceTo(GenerationStage next) => allowedNext.contains(next);
+
+  /// Переходит на этап [next]; недопустимый переход — исключение.
+  GenerationRunState advanceTo(GenerationStage next) {
+    if (!canAdvanceTo(next)) {
+      throw InvalidGenerationStageTransition(from: stage, to: next);
+    }
+    return GenerationRunState(next);
+  }
+
+  @override
+  String toString() => 'GenerationRunState(${stage.name})';
+}

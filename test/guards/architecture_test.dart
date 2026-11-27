@@ -7,7 +7,8 @@ import 'guard_utils.dart';
 /// Архитектурные guard-правила из AGENTS.md и ADR-001:
 /// 1) `package:flutter/material.dart` в `lib/` запрещён — Material-база только `material_ui`;
 /// 2) `material_3_expressive` импортируется только через `lib/ui/m3e/`;
-/// 3) `lib/domain/` не зависит от Flutter/Material/UI-пакетов.
+/// 3) `lib/domain/` не зависит от Flutter/Material/UI-пакетов, а также от
+///    Dio и drift (ADR-050: этапы генерации v3 зависят только от портов).
 const String frameworkMaterialImport = 'package:flutter/material.dart';
 const String m3ePackagePrefix = 'package:material_3_expressive/';
 
@@ -16,6 +17,8 @@ const List<String> domainForbiddenPrefixes = <String>[
   'package:material_ui/',
   'package:material_3_expressive/',
   'package:cupertino_ui/',
+  'package:dio/',
+  'package:drift/',
 ];
 
 /// Все импорты пакетов из исходника Dart.
@@ -118,6 +121,30 @@ void main() {
         architectureViolations(
           'lib/domain/scheduling/rating.dart',
           "import 'package:fsrs/fsrs.dart';",
+        ),
+        isEmpty,
+      );
+    });
+
+    test('ловит Dio и drift в domain (этапы — только порты)', () {
+      expect(
+        architectureViolations(
+          'lib/domain/generation/generation_ledger.dart',
+          "import 'package:dio/dio.dart';",
+        ),
+        isNotEmpty,
+      );
+      expect(
+        architectureViolations(
+          'lib/domain/generation/generation_ledger.dart',
+          "import 'package:drift/drift.dart';",
+        ),
+        isNotEmpty,
+      );
+      expect(
+        architectureViolations(
+          'lib/domain/generation/ports.dart',
+          "import 'dart:async';\nimport 'package:cardflow/domain/generation/generation_run.dart';",
         ),
         isEmpty,
       );
