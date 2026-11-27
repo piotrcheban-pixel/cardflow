@@ -86,6 +86,16 @@ card_generation_service.dart:125`), конвейер пробрасывает е
 **DoD-команда (одна):**
 `.fvm\versions\3.47.9\bin\flutter.bat test --no-pub test/unit/api/generation/request_ledger_test.dart`
 
+**Сделано в срезе 5 TASK.txt (2026-11-27).** Generation выполняется
+`CardsBatchEngine` поверх `AdapterCardsBatchPort` (существующие адаптеры) и
+промпта `gen-cards-v3`; «`RequestLedger`» по смыслу — журнал
+`GenerationLedger` с `attempts` (повторы и добор не живут в отдельном
+recovery-бюджете), ответ привязывается к `unit_id`/`angle`, цитата —
+`quote_ref`. DoD-команда закрывает 17 тестов (20/40/80 карточек, обрезка по
+единицам, 429 `Retry-After`, 400/401 без повторов, отмена с сохранением
+принятого, версия промпта в задании). Детали —
+`journal/generation-v3/verify-s5.md`; толкования — Q12–Q14.
+
 ## S5 — Validation: цитата по offsets
 
 **Цель.** `CardCandidate` хранит `unitId + start/end`; проверка — границы +

@@ -2,6 +2,47 @@
 
 ## Сделано
 
+**Срез 5 (2026-11-27) — Generation: батчи по единицам через существующие
+адаптеры.**
+- `lib/api/generation/provider_result.dart`: `ProviderResult` (content,
+  `ProviderFinishReason` stop/length/refusal/empty/error, usage, refusal,
+  rawError, detail) + `ProviderResponseNormalizer` — исход любого из четырёх
+  адаптеров в один тип; отмена пробрасывается, остальные исключения —
+  результат с кодом. Адаптеры не переписаны.
+- `lib/api/generation/cards_batch_port.dart`: `AdapterCardsBatchPort
+  implements LlmPort` поверх существующих `buildRequest`/`parseResponse` и
+  `GenerationTransport`: промпт `gen-cards-v3`, проекция схемы v3, поштучная
+  проверка карточек (обязательные `unit_id`/`angle`/`quote_ref`), спасение
+  полных карточек из оборванного ответа, ошибки — `GenerationException`.
+- `lib/api/prompts/cards_prompt.dart`: `gen-cards-v3` (единицы с утверждением
+  и якорями, `<budget cards>` со строками `<card unit_id angle>`,
+  `<already_accepted>` только текущего батча, правила четырёх углов, LaTeX,
+  запрет инструкций из материала); копия — `docs/prompts/gen-cards-v3.txt`
+  (байтовая сверка тестом).
+- `lib/api/generation/cards_batch_engine.dart`: `CardsBatchEngine` —
+  последовательный проход по `AllocationPlan`, принятое в `CardSink` по ходу,
+  повторы по `RetryPolicy` (429 `Retry-After`, 5xx/таймаут/сеть), 400/401/413/
+  402 без повторов, обрезка — деление **по единицам** и добор остатка (для
+  неделимой единицы одна повторная попытка), отмена сохраняет принятое;
+  `CardsBatchRun` несёт журнал, карточки, `promptVersion`, `cancelled`.
+- `lib/api/generation/batch_job_recorder.dart`: `gen-cards-v3` →
+  `generation_jobs.prompt_version`; статус задания не меняется (S9).
+- `lib/domain/generation/cards_batch.dart`: `CardsBatch`, `AcceptedCard`,
+  `splitBatchByUnits` (деление по границе единиц, а не по половине карточек).
+- `lib/domain/generation/generation_ledger.dart`: `attempts` у партии и
+  прогона (повторы и добор в журнале, не в recovery-бюджете).
+- `lib/domain/generation/ports.dart`: `LlmPort.generate(CardsBatch, …)`,
+  `CancellationSignal`; `generated_card.dart`: `unitId`/`angle`/`quoteRef`.
+- `lib/api/generation/card_json_schema.dart` + `provider_schema.dart` +
+  4 адаптера: расширение `gen-cards-v3` отдельной схемой
+  (`cardsResponseSchemaV3`), канон A8.4 не изменён, адаптеры получили
+  необязательную `responseSchema`.
+- Старый конвейер, UI и схема БД не менялись; путь не подключён (флаг
+  `GenerationSettings.generationV3` — S7).
+- Тесты (+44): `request_ledger_test.dart` (17), `cards_prompt_test.dart` (8),
+  `provider_result_test.dart` (12), `cards_batch_port_test.dart` (6),
+  `ports_test.dart` (+1).
+
 **Срез 4 (2026-11-27) — Allocation: веса, Гамильтон, упаковка батчей.**
 - `lib/domain/generation/model_profile.dart`: `ModelProfile` (`id`,
   `provider`, `contextWindow`, `maxOutputTokens`, `supportsJsonSchema`,
@@ -116,6 +157,22 @@
 
 ## Проверено
 
+**Срез 5.** Красная фаза — `journal/generation-v3/red-s5.txt` (**9 прошло /
+24 упало**, assertion-level: `Expected: <10> Actual: <null>`, `Expected: true
+Actual: <false>` для копии промпта, `GenerationException не брошен`).
+Гейты: `.\.fvm\versions\3.47.9\bin\flutter.bat analyze --no-pub lib test` →
+**No issues found!**; `.\.fvm\versions\3.47.9\bin\dart.bat format
+--set-exit-if-changed lib test` → **0 changed**;
+`.\.fvm\versions\3.47.9\bin\flutter.bat test --no-pub --coverage
+--exclude-tags golden` → **2992 passed + 17 skipped**, `exit 0` (baseline
+2948 + 17 + 44); покрытие рукописного кода **90.8 % (24657/27156)** при
+пороге 80 %; `cards_prompt.dart` — 100 %, `batch_job_recorder.dart` — 100 %,
+`cards_batch_port.dart` — 93.5 %, `cards_batch_engine.dart` — 88.5 %,
+`generation_ledger.dart` — 99.2 %. DoD-команда S4
+(`test/unit/api/generation/request_ledger_test.dart`) — **17 passed**. Полный
+лог — `journal/generation-v3/green-s5-full.txt`, покрытие —
+`coverage-s5.txt`, итоги — `verify-s5.md`.
+
 **Срез 4.** Красная фаза — `journal/generation-v3/red-s4.txt` (**9 прошло /
 33 упало**, падения assertion-level: `Expected: <40000> Actual: <0>`,
 `Expected: a numeric value within <1e-9> of <0.8333…> Actual: <0.0>`,
@@ -175,6 +232,43 @@ DoD-тесты: property «Σ бюджетов == requested» на 200 случ�
 
 ## НЕ ПОВТОРЯТЬ
 
+- **Канон A8.4 не расширять ради `gen-cards-v3`.** Три поля живут в отдельной
+  схеме `cardsResponseSchemaV3()` (Q12): добавить их в канон и `required` —
+  значит потребовать их и от старого промпта `gen-ru-v9`, который их не знает
+  (strict-схема отвергнет ответ, и production-генерация сломается до
+  включения нового пути). Адаптеры получили только необязательную
+  `responseSchema`.
+- **Обрезку делить по остатку долга, а не по всем карточкам единицы.** После
+  `truncated` принятые карточки уже есть; повторный запрос целой единицы
+  заказал бы их снова (дубли в бюджете). `splitBatchByUnits` получает долг
+  (`_debtOf`: пара `unit_id` + `angle`), а не исходные карточки партии.
+- **Контекст «уже принято» собирать на момент запроса.** Партия в очереди
+  создаётся до ответа предыдущей части: её `accepted` — снимок, поэтому перед
+  `port.generate` делается `slice.withAcceptedContext(context)`; без этого
+  вторая часть партии видит устаревший контекст (тест поймал: 1 вместо 2).
+- **`GenerationLedger.fromPlan` — про старый `GenerationPlan`.** Для
+  `AllocationPlan` бюджеты партий берутся
+  `GenerationLedger.fromBudgets(plan.batches.map((b) => b.cards.length))`.
+- **`ProviderResult.isError` — «нет контента для разбора», а не
+  `finishReason == error`.** Иначе обрезанный ответ без контента (Anthropic
+  бросает `truncated` до `tool_use`) считался бы не ошибкой, а обрезанный с
+  контентом — ошибкой; оба случая важны движку по-разному.
+- **Не ждать `usage` от исключения адаптера.** Anthropic при `max_tokens` без
+  `tool_use` бросает до разбора расхода: `ProviderResult.usage` — `null`, а не
+  выдуманные числа.
+- **В тестах фейка-порта, который в обработчике читает `port.calls`, — только
+  `late final port; port = _FakeLlmPort(onGenerate: …)`.** Обычный
+  `final port = _FakeLlmPort(onGenerate: (b) { if (port.calls…) })` — ошибка
+  компиляции «local variable referenced before it is declared».
+- **Не изобретать маркер отмены через фиктивный `GenerationResult`.** Цикл
+  повторов держать в `run` с локальным флагом `cancelledNow`: иначе появляется
+  «магический» результат-заглушка и путаница с причиной партии.
+- **Фикстура обрезанного ответа обязана содержать `finish_reason: length`.**
+  Иначе порт считает ответ успешным и падает `json_parse` на оборванном JSON
+  (наш первый зелёный прогон это поймал).
+- **Промпт `gen-cards-v3` не должен содержать подстановок Dart и сырых
+  шаблонов** (`$`, `${`, `TODO`); cloze-разметка `{{c1::…}}` в тексте
+  допустима и проверяется тестом копии байт в байт.
 - **Негативный тест с `const`-конструктором и `assert` — ошибка компиляции, а
   не проверка.** `const KnowledgeAnchor(blockId: '', ...)` внутри `const`-списка
   вычисляется на этапе компиляции: тест не загружается («Constant evaluation
@@ -263,22 +357,24 @@ DoD-тесты: property «Σ бюджетов == requested» на 200 случ�
 
 ## СЛЕДУЮЩЕЕ ДЕЙСТВИЕ
 
-Срез 4 закрыт, коммиты — `test`/`feat`/`docs` в `main`. Следующий прогон:
-`read TASK.txt` (верхний блок) → верхний блок `journal/STATE.md` («Генерация v3
-— срез 4») → `journal/generation-v3/verify-s4.md` (раздел «Ограничения») →
-`docs/generation/BACKLOG.md` (следующий этап — S4 Generation, `RequestLedger`:
-произведено/валидно/принято; вход — `AllocationPlan`).
+Срез 5 закрыт, коммиты — `feat`/`docs` в `main`. Следующий прогон:
+`read TASK.txt` (верхний блок) → верхний блок `journal/STATE.md`
+(«Генерация v3 — срез 5») → `journal/generation-v3/verify-s5.md` (раздел
+«Ограничения и толкования») → `docs/generation/BACKLOG.md` (следующий этап —
+S5 Validation: `quote_offsets.dart`, `CardCandidate.unitId/start/end`).
 
-Если в TASK.txt снова «Срез 4» — **не повторять** `allocation.dart`/
-`model_profile.dart` (покрытие 100 %, Q10/Q11 закрыты); брать следующий этап
-BACKLOG S4: red-тест `test/unit/api/generation/request_ledger_test.dart`, затем
-`.\.fvm\versions\3.47.9\bin\flutter.bat test --no-pub test/unit/api/generation/request_ledger_test.dart`.
+Если в TASK.txt снова «Срез 5» — **не повторять** `cards_batch_engine.dart` /
+`cards_batch_port.dart` / `cards_prompt.dart` (44 теста зелёные, Q12–Q14
+закрыты); следующий шаг — S5 Validation по BACKLOG: red-тест
+`test/unit/api/generation/quote_offsets_test.dart`, затем
+`.\.fvm\versions\3.47.9\bin\flutter.bat test --no-pub test/unit/api/generation/quote_offsets_test.dart`.
 
-Не начинать с подключения `AllocationPlan` к `GenerationChunkPlanner`: новый
-этап подключается после S4–S7 и за флагом `GenerationSettings.generationV3`
-(BACKLOG, ADR-050), иначе старый и новый планы разойдутся.
+Не подключать `CardsBatchEngine` к `GenerationPipeline` и не переводить UI на
+новый путь: включение — S7/S9 за флагом `GenerationSettings.generationV3`
+(BACKLOG, ADR-050), иначе старый и новый пути разойдутся.
 Baseline текущего снимка: `flutter test --no-pub --exclude-tags golden` —
-**2948 passed + 17 skipped**; `analyze` 0; `dart format` 643 файла / 0 changed.
+**2992 passed + 17 skipped**; `analyze` 0; `dart format` 0 changed;
+покрытие 90.8 %.
 
 ---
 

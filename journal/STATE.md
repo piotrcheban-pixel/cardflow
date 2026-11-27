@@ -1,5 +1,84 @@
 # STATE — текущее состояние CardFlow
 
+## Генерация v3 — срез 5: Generation через адаптеры, gen-cards-v3, батчи по единицам (2026-11-27)
+
+**Срез:** `TASK.txt` «Срез 5. Generation: батчи по единицам через существующие
+адаптеры» (план этапов — `docs/generation/ARCH.md`, BACKLOG S4, ADR-050;
+расхождения и толкования — `journal/QUESTIONS.md` Q12–Q14).
+**Факты старта:** ветка `main`, `HEAD = 6fd31bb` (docs среза 4); baseline
+`flutter test --no-pub --exclude-tags golden` — **2948 passed + 17 skipped**.
+
+**Сделано (TDD, red → green):**
+- `lib/api/generation/provider_result.dart` — `ProviderResult` (content,
+  `ProviderFinishReason`: stop/length/refusal/empty/error, usage, refusal,
+  rawError, detail) и `ProviderResponseNormalizer`: исход **любого** из четырёх
+  адаптеров — один тип; отмена пробрасывается, остальные исключения становятся
+  результатом с кодом. Адаптеры не переписаны.
+- `lib/api/generation/cards_batch_port.dart` — `AdapterCardsBatchPort
+  implements LlmPort` поверх существующих `buildRequest`/`parseResponse` и
+  `GenerationTransport`: промпт `gen-cards-v3`, проекция схемы v3 под протокол,
+  поштучная проверка карточек (обязательные `unit_id`/`angle`/`quote_ref`),
+  спасение полных карточек из оборванного ответа (`salvagedCards`), ошибки —
+  `GenerationException` для движка.
+- `lib/api/prompts/cards_prompt.dart` — версия `gen-cards-v3`: вход — единицы
+  карты знаний (`<unit id kind topic cards>` с `<statement>` и `<anchor
+  block>`), `<budget cards>` со строками `<card unit_id angle>`,
+  `<already_accepted>` (front + утверждение **текущего** батча); правила
+  четырёх углов, LaTeX, запрет инструкций из материала; дословная копия —
+  `docs/prompts/gen-cards-v3.txt` (тест сверяет байты).
+- `lib/api/generation/cards_batch_engine.dart` — `CardsBatchEngine` и
+  `CardsBatchRun`: последовательный проход по `AllocationPlan` (без
+  параллельных запросов), принятое — в `CardSink` по ходу, повторы по
+  `RetryPolicy` (429 `Retry-After`, 5xx/таймаут/сеть), 400/401/413/402 — без
+  повторов, обрезка ответа — деление **по единицам** и добор остатка (для
+  неделимой единицы ровно одна повторная попытка), отмена посреди батча
+  сохраняет принятое; `CardsBatchRun.promptVersion`.
+- `lib/domain/generation/cards_batch.dart` — `CardsBatch` (единицы с якорями,
+  карточки плана, принятое батча, `topUp`), `AcceptedCard` (front +
+  statement), `splitBatchByUnits` (деление по границе единиц, а не по половине
+  карточек).
+- `lib/domain/generation/generation_ledger.dart` — `attempts` у партии и
+  прогона: повторы и добор считаются в журнале, а не в отдельном
+  recovery-бюджете; `record` счётчик не сбрасывает.
+- `lib/domain/generation/ports.dart` — `LlmPort.generate(CardsBatch, {account,
+  maxOutputTokens})`, `CancellationSignal` (домен без Dio);
+  `lib/domain/generation/generated_card.dart` — `unitId`/`angle`/`quoteRef`.
+- `lib/api/generation/batch_job_recorder.dart` — `gen-cards-v3` в
+  `generation_jobs.prompt_version` (статус задания не меняется — S9).
+- `lib/api/generation/card_json_schema.dart` + `provider_schema.dart` +
+  адаптеры — расширение `gen-cards-v3` **отдельной** схемой
+  (`cardsResponseSchemaV3`); канон A8.4 для `gen-ru-v9` не изменён; адаптеры
+  получили необязательную `responseSchema` (логика запроса та же).
+- Старый конвейер, UI и схема БД **не менялись**; новый путь не подключён
+  (флаг `GenerationSettings.generationV3` — S7, протокол §9).
+
+**Тесты (+44):** `request_ledger_test.dart` (17 — DoD-команда S4: 20/40/80;
+truncated → деление по единицам → добор; обрез одной единицы; 429 →
+`Retry-After`; 400/401 без повторов; отмена посреди батча; версия промпта в
+задании; счётчики журнала), `cards_prompt_test.dart` (8, байтовая копия
+промпта), `provider_result_test.dart` (12, 4 протокола), `cards_batch_port_test.dart`
+(6), `ports_test.dart` (+1 `CancellationSignal`). Красная фаза с
+assertion-level выводом — `journal/generation-v3/red-s5.txt` (**9 прошло /
+24 упало**).
+
+**Гейты итогового снимка:** `flutter analyze --no-pub lib test` → **0 issues**;
+`dart format --set-exit-if-changed lib test` → **0 changed**;
+`flutter test --no-pub --coverage --exclude-tags golden` → **2992 passed + 17
+skipped**, `exit 0`; покрытие рукописного кода **90.8 % (24657/27156)** при
+пороге 80 %; `cards_prompt.dart` — 100 %, `batch_job_recorder.dart` — 100 %,
+`cards_batch_port.dart` — 93.5 %, `cards_batch_engine.dart` — 88.5 %,
+`generation_ledger.dart` — 99.2 %. Подробно —
+`journal/generation-v3/verify-s5.md`.
+
+**Ограничения:** путь не подключён к конвейеру/UI и не включён флагом;
+`quote_ref` — цитата, проверка offsets — этап Validation (следующий срез);
+обрыв уже отправленного HTTP-запроса порт не умеет (отмена проверяется между
+запросами, транспортная — после проводки S7); живых вызовов `gen-cards-v3` нет
+(TASK: фейковый порт, без сети и ключей); глобальный добор между партиями —
+S7.
+
+---
+
 ## Генерация v3 — срез 4: Allocation — веса, Гамильтон, упаковка батчей (2026-11-27)
 
 **Срез:** `TASK.txt` «Срез 4. Allocation: веса, Гамильтон, упаковка батчей»
