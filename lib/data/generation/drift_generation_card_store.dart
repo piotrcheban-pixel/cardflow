@@ -16,6 +16,7 @@ import 'package:cardflow/domain/cards/content_hash.dart';
 import 'package:cardflow/domain/cards/media_metadata.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
 import 'package:cardflow/domain/generation/generated_card_image.dart';
+import 'package:cardflow/domain/generation/generated_card_json.dart';
 import 'package:cardflow/domain/generation/generation_card_store.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
 import 'package:cardflow/domain/generation/generation_failure_reason.dart';
@@ -87,31 +88,11 @@ class DriftGenerationCardStore implements GenerationCardStore {
     final List<String> writtenPaths = <String>[];
     try {
       return await database.transaction<GenerationImportResult>(() async {
-        final String resolvedDeckId;
-        if (deckId == null) {
-          resolvedDeckId = _uuid.v4();
-          await database
-              .into(database.decks)
-              .insert(
-                DecksCompanion.insert(
-                  id: resolvedDeckId,
-                  name: trimmedName,
-                  createdAt: epochNow,
-                  updatedAt: epochNow,
-                ),
-              );
-        } else {
-          final DeckRow? deck = await (database.select(
-            database.decks,
-          )..where((table) => table.id.equals(deckId))).getSingleOrNull();
-          if (deck == null) {
-            throw StateError('Колода не найдена: $deckId');
-          }
-          resolvedDeckId = deckId;
-          await (database.update(database.decks)
-                ..where((table) => table.id.equals(resolvedDeckId)))
-              .write(DecksCompanion(updatedAt: Value<int>(epochNow)));
-        }
+        final String resolvedDeckId = await _resolveDeck(
+          deckId: deckId,
+          trimmedName: trimmedName,
+          epochNow: epochNow,
+        );
 
         final Set<String> existing = await existingContentHashes(
           resolvedDeckId,
@@ -182,8 +163,184 @@ class DriftGenerationCardStore implements GenerationCardStore {
     }
   }
 
-  /// Пишет иллюстрацию в `MediaStore` и готовит строку `media`.
+  /// Импортирует в колоду черновики прогона [runId] — одной транзакцией.
   ///
+  /// TASK «Срез 8»: импорт идемпотентен по (`run_id`, `content_hash`).
+  /// Импортируются только ещё не импортированные черновики (второй рубеж —
+  /// дедупликация по хешу колоды, как у [importGeneratedCards]); отметка об
+  /// импорте (`imported_card_id`, `imported_at`) пишется в **той же**
+  /// транзакции, поэтому повторный вызов не создаёт дублей, а первый —
+  /// атомарен: либо карточки и отметки, либо ничего.
+  Future<GenerationImportResult> importRunCards({
+    required String runId,
+    required String? deckId,
+    required String deckName,
+    required DateTime now,
+  }) async {
+    final String trimmedName = deckName.trim();
+    if (deckId == null && trimmedName.isEmpty) {
+      throw ArgumentError.value(
+        deckName,
+        'deckName',
+        'Имя новой колоды обязательно',
+      );
+    }
+    final DateTime utcNow = now.toUtc();
+    final int epochNow = toEpochMs(utcNow);
+
+    final List<String> writtenPaths = <String>[];
+    try {
+      return await database.transaction<GenerationImportResult>(() async {
+        final List<CardDraftRow> pendingRows =
+            await (database.select(database.cardDrafts)..where(
+                  (table) =>
+                      table.runId.equals(runId) & table.importedAt.isNull(),
+                ))
+                .get();
+        final GenerationRunRow? run = await (database.select(
+          database.generationRuns,
+        )..where((table) => table.id.equals(runId))).getSingleOrNull();
+        if (run == null) {
+          throw StateError('Прогон не найден: $runId');
+        }
+        // Порядок — порядок принятия карточек: стабилен между вызовами.
+        pendingRows.sort((CardDraftRow a, CardDraftRow b) {
+          final int byTime = a.createdAt.compareTo(b.createdAt);
+          return byTime != 0 ? byTime : a.id.compareTo(b.id);
+        });
+
+        final String resolvedDeckId = await _resolveDeck(
+          deckId: deckId,
+          trimmedName: trimmedName,
+          epochNow: epochNow,
+        );
+        final Set<String> existing = await existingContentHashes(
+          resolvedDeckId,
+        );
+        final List<CardDraftRow> accepted = <CardDraftRow>[];
+        var skippedDuplicates = 0;
+        for (final CardDraftRow row in pendingRows) {
+          final GeneratedCard card = _decodeDraft(row);
+          if (_isDuplicate(card, existing)) {
+            skippedDuplicates++;
+            continue;
+          }
+          accepted.add(row);
+        }
+
+        for (final CardDraftRow row in accepted) {
+          final GeneratedCard card = _decodeDraft(row);
+          final List<_PreparedImage> questionImages = <_PreparedImage>[];
+          for (final GeneratedCardImage image in card.questionImages) {
+            final _PreparedImage? prepared = await _writeImage(
+              image,
+              writtenPaths,
+            );
+            if (prepared != null) questionImages.add(prepared);
+          }
+          final List<_PreparedImage> answerImages = <_PreparedImage>[];
+          for (final GeneratedCardImage image in card.answerImages) {
+            final _PreparedImage? prepared = await _writeImage(
+              image,
+              writtenPaths,
+            );
+            if (prepared != null) answerImages.add(prepared);
+          }
+          final String cardId = await _insertCard(
+            card: card,
+            deckId: resolvedDeckId,
+            epochNow: epochNow,
+            questionMediaIds: <String>[
+              for (final _PreparedImage image in questionImages) image.id,
+            ],
+            answerMediaIds: <String>[
+              for (final _PreparedImage image in answerImages) image.id,
+            ],
+          );
+          for (final _PreparedImage image in questionImages) {
+            await _insertMedia(image, cardId);
+          }
+          for (final _PreparedImage image in answerImages) {
+            await _insertMedia(image, cardId);
+          }
+          await (database.update(
+            database.cardDrafts,
+          )..where((table) => table.id.equals(row.id))).write(
+            CardDraftsCompanion(
+              importedCardId: Value<String>(cardId),
+              importedAt: Value<int>(epochNow),
+            ),
+          );
+        }
+
+        await (database.update(
+          database.generationRuns,
+        )..where((table) => table.id.equals(runId))).write(
+          GenerationRunsCompanion(
+            deckId: Value<String>(resolvedDeckId),
+            updatedAt: Value<int>(epochNow),
+          ),
+        );
+        await (database.update(
+          database.generationJobs,
+        )..where((table) => table.id.equals(runId))).write(
+          GenerationJobsCompanion(resultDeckId: Value<String>(resolvedDeckId)),
+        );
+
+        return GenerationImportResult(
+          deckId: resolvedDeckId,
+          importedCards: accepted.length,
+          skippedDuplicates: skippedDuplicates,
+        );
+      });
+    } catch (_) {
+      await _deleteFiles(writtenPaths);
+      rethrow;
+    }
+  }
+
+  /// Карточка из строки черновика; битый JSON — [StateError] вызывающего слоя.
+  GeneratedCard _decodeDraft(CardDraftRow row) {
+    final Object? decoded = jsonDecode(row.cardJson);
+    if (decoded is! Map<String, Object?>) {
+      throw StateError('Черновик карточки повреждён: ${row.id}');
+    }
+    return decodeGeneratedCardJson(decoded);
+  }
+
+  /// Колода результата: существующая [deckId] или новая с именем [trimmedName].
+  Future<String> _resolveDeck({
+    required String? deckId,
+    required String trimmedName,
+    required int epochNow,
+  }) async {
+    if (deckId == null) {
+      final String resolvedDeckId = _uuid.v4();
+      await database
+          .into(database.decks)
+          .insert(
+            DecksCompanion.insert(
+              id: resolvedDeckId,
+              name: trimmedName,
+              createdAt: epochNow,
+              updatedAt: epochNow,
+            ),
+          );
+      return resolvedDeckId;
+    }
+    final DeckRow? deck = await (database.select(
+      database.decks,
+    )..where((table) => table.id.equals(deckId))).getSingleOrNull();
+    if (deck == null) {
+      throw StateError('Колода не найдена: $deckId');
+    }
+    await (database.update(database.decks)
+          ..where((table) => table.id.equals(deckId)))
+        .write(DecksCompanion(updatedAt: Value<int>(epochNow)));
+    return deckId;
+  }
+
+  /// Пишет иллюстрацию в `MediaStore` и готовит строку `media`.
   /// С 7.14 рядом с файлом пишутся метаданные атрибуции и флаг заглушки
   /// (`<путь>.meta.json`): провайдер, ссылка, автор, лицензия, запрос модели.
   Future<_PreparedImage?> _writeImage(

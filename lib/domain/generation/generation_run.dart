@@ -386,6 +386,20 @@ enum GenerationStage {
     _ => false,
   };
 
+  /// Wire-имя этапа для журнала запуска и `generation_runs.stage`.
+  String get wireName => name;
+
+  /// Разбирает этап из wire-имени; неизвестное имя — [FormatException].
+  ///
+  /// Повреждённая запись прогона не должна «угадываться» как ближайший этап:
+  /// восстановление обязано либо знать этап, либо явно сообщить о порче.
+  static GenerationStage fromWire(String value) {
+    for (final GenerationStage stage in values) {
+      if (stage.name == value) return stage;
+    }
+    throw FormatException('Неизвестный этап прогона: $value');
+  }
+
   /// Статус задания для `generation_jobs.status` (SPEC A5, A8.5 шаг 12).
   ///
   /// Терминальные этапы ложатся в статусы по смыслу: [ready] — `done`,
