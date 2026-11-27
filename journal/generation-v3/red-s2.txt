@@ -1,0 +1,304 @@
+
+┌─────────────────────────────────────────────────────────┐
+│ A new version of Flutter is available!                  │
+│                                                         │
+│ To update to the latest version, run "flutter upgrade". │
+└─────────────────────────────────────────────────────────┘
+00:00 +0: loading C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_ledger_test.dart
+00:00 +0: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_ledger_test.dart: ShortfallKind wire-имена классов недобора — как в TASK.txt
+00:00 +0 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_stage_test.dart: канонический путь planned → understanding → generating → validating → dedup → replenishing → ready
+00:00 +0 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_ledger_test.dart: ShortfallKind wire-имена классов недобора — как в TASK.txt [E]
+  Expected: [
+              'exhausted_material',
+              'provider_error',
+              'truncated',
+              'validation_rejects',
+              'cancelled'
+            ]
+    Actual: ['', '', '', '', '']
+     Which: at location [0] is '' instead of 'exhausted_material'
+  
+  package:matcher                                               expect
+  package:flutter_test/src/widget_tester.dart 473:18            expect
+  test\unit\domain\generation\generation_ledger_test.dart 49:7  main.<fn>.<fn>
+  
+00:00 +0 -2: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_stage_test.dart: канонический путь planned → understanding → generating → validating → dedup → replenishing → ready
+00:00 +0 -2: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_ledger_test.dart: ShortfallKind fromWire разбирает класс недобора и бросает FormatException [E]
+  Expected: ShortfallKind:<ShortfallKind.truncated>
+    Actual: ShortfallKind:<ShortfallKind.exhaustedMaterial>
+  
+  package:matcher                                               expect
+  package:flutter_test/src/widget_tester.dart 473:18            expect
+  test\unit\domain\generation\generation_ledger_test.dart 62:7  main.<fn>.<fn>
+  
+00:00 +1 -2: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_stage_test.dart: канонический путь planned → understanding → generating → validating → dedup → replenishing → ready
+00:00 +1 -3: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_stage_test.dart: канонический путь planned → understanding → generating → validating → dedup → replenishing → ready
+00:00 +1 -3: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_ledger_test.dart: GenerationBatchLedger принятое = произведено − валидация − дубли; долг уменьшается [E]
+  Expected: <5>
+    Actual: <0>
+  
+  package:matcher                                               expect
+  package:flutter_test/src/widget_tester.dart 473:18            expect
+  test\unit\domain\generation\generation_ledger_test.dart 99:7  main.<fn>.<fn>
+  
+00:00 +1 -4: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_ledger_test.dart: GenerationBatchLedger переполнение партии: принято больше бюджета, долга нет
+00:00 +1 -4: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_stage_test.dart: канонический путь planned → understanding → generating → validating → dedup → replenishing → ready [E]
+  Expected: true
+    Actual: <false>
+  
+  package:matcher                                              expect
+  package:flutter_test/src/widget_tester.dart 473:18           expect
+  test\unit\domain\generation\generation_stage_test.dart 49:5  main.<fn>
+  
+00:00 +1 -5: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_stage_test.dart: DoD: переход generating → ready невозможен
+00:00 +1 -5: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_ledger_test.dart: GenerationBatchLedger переполнение партии: принято больше бюджета, долга нет [E]
+  Expected: <5>
+    Actual: <0>
+  
+  package:matcher                                                expect
+  package:flutter_test/src/widget_tester.dart 473:18             expect
+  test\unit\domain\generation\generation_ledger_test.dart 120:7  main.<fn>.<fn>
+  
+00:00 +1 -6: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_ledger_test.dart: GenerationBatchLedger явная причина важнее выведенной из чисел
+00:00 +1 -6: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_stage_test.dart: DoD: переход generating → ready невозможен [E]
+  Expected: throws <Instance of 'InvalidGenerationStageTransition'> with `from`: GenerationStage:<GenerationStage.generating> and `to`: GenerationStage:<GenerationStage.ready>
+    Actual: <Closure: () => GenerationRunState>
+     Which: returned GenerationRunState:<GenerationRunState()>
+  
+  package:matcher                                              expect
+  package:flutter_test/src/widget_tester.dart 473:18           expect
+  test\unit\domain\generation\generation_stage_test.dart 56:5  main.<fn>
+  
+00:00 +1 -7: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_stage_test.dart: этапы нельзя перескакивать: planned → generating запрещён
+00:00 +1 -7: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_ledger_test.dart: GenerationBatchLedger явная причина важнее выведенной из чисел [E]
+  Expected: ShortfallKind:<ShortfallKind.validationRejects>
+    Actual: <null>
+  выведено из invalid
+  
+  package:matcher                                                expect
+  package:flutter_test/src/widget_tester.dart 473:18             expect
+  test\unit\domain\generation\generation_ledger_test.dart 131:7  main.<fn>.<fn>
+  
+00:00 +1 -8: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_ledger_test.dart: GenerationBatchLedger короткая, но без ошибок партия — материал исчерпан
+00:00 +1 -8: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_stage_test.dart: этапы нельзя перескакивать: planned → generating запрещён [E]
+  Expected: throws <Instance of 'InvalidGenerationStageTransition'>
+    Actual: <Closure: () => GenerationRunState>
+     Which: returned GenerationRunState:<GenerationRunState()>
+  
+  package:matcher                                              expect
+  package:flutter_test/src/widget_tester.dart 473:18           expect
+  test\unit\domain\generation\generation_stage_test.dart 76:5  main.<fn>
+  
+00:00 +1 -9: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_stage_test.dart: добор возвращает прогон в generating
+00:00 +1 -9: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_ledger_test.dart: GenerationBatchLedger короткая, но без ошибок партия — материал исчерпан [E]
+  Expected: <3>
+    Actual: <5>
+  
+  package:matcher                                                expect
+  package:flutter_test/src/widget_tester.dart 473:18             expect
+  test\unit\domain\generation\generation_ledger_test.dart 151:7  main.<fn>.<fn>
+  
+00:00 +2 -9: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_ledger_test.dart: GenerationBatchLedger нарушения инвариантов — AssertionError
+00:00 +2 -10: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_ledger_test.dart: GenerationBatchLedger нарушения инвариантов — AssertionError
+00:00 +2 -10: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_stage_test.dart: ready и partial достижимы только после решения о доборе [E]
+  Expected: throws <Instance of 'InvalidGenerationStageTransition'>
+    Actual: <Closure: () => GenerationRunState>
+     Which: returned GenerationRunState:<GenerationRunState()>
+  
+  package:matcher                                               expect
+  package:flutter_test/src/widget_tester.dart 473:18            expect
+  test\unit\domain\generation\generation_stage_test.dart 107:5  main.<fn>
+  
+00:00 +2 -11: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_stage_test.dart: cancelled и failed допустимы с любого незавершённого этапа
+00:00 +2 -11: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_ledger_test.dart: GenerationBatchLedger нарушения инвариантов — AssertionError [E]
+  Expected: throws <Instance of 'AssertionError'>
+    Actual: <Closure: () => GenerationBatchLedger>
+     Which: returned GenerationBatchLedger:<GenerationBatchLedger()>
+  
+  package:matcher                                                expect
+  package:flutter_test/src/widget_tester.dart 473:18             expect
+  test\unit\domain\generation\generation_ledger_test.dart 160:7  main.<fn>.<fn>
+  
+00:00 +3 -11: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_ledger_test.dart: GenerationBatchLedger toString содержит числа партии
+00:00 +4 -11: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_ledger_test.dart: GenerationBatchLedger toString содержит числа партии
+00:00 +4 -12: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_stage_test.dart: полная матрица переходов согласована
+00:00 +4 -12: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_ledger_test.dart: GenerationBatchLedger toString содержит числа партии [E]
+  Expected: contains 'партия 1'
+    Actual: 'GenerationBatchLedger()'
+     Which: does not contain 'партия 1'
+  
+  package:matcher                                                expect
+  package:flutter_test/src/widget_tester.dart 473:18             expect
+  test\unit\domain\generation\generation_ledger_test.dart 181:7  main.<fn>.<fn>
+  
+00:00 +4 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_ledger_test.dart: GenerationLedger пустой журнал: запрошено 0, долга нет, класса нет
+00:00 +4 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_stage_test.dart: полная матрица переходов согласована [E]
+  Expected: <true>
+    Actual: <false>
+  GenerationStage.planned → GenerationStage.planned: allowedNext и canAdvanceTo расходятся
+  
+  package:matcher                                               expect
+  package:flutter_test/src/widget_tester.dart 473:18            expect
+  test\unit\domain\generation\generation_stage_test.dart 173:9  main.<fn>
+  
+00:00 +4 -14: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_stage_test.dart: allowedNext — путь вперёд и терминалы, без возвратов
+00:00 +4 -14: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_ledger_test.dart: GenerationLedger пустой журнал: запрошено 0, долга нет, класса нет [E]
+  Expected: contains 'партий 0'
+    Actual: 'GenerationLedger()'
+     Which: does not contain 'партий 0'
+  
+  package:matcher                                                expect
+  package:flutter_test/src/widget_tester.dart 473:18             expect
+  test\unit\domain\generation\generation_ledger_test.dart 200:7  main.<fn>.<fn>
+  
+00:00 +4 -15: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_ledger_test.dart: GenerationLedger fromBudgets: requested — сумма бюджетов, партии нумеруются по порядку
+00:00 +4 -15: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_stage_test.dart: allowedNext — путь вперёд и терминалы, без возвратов [E]
+  Expected: Set:[
+              GenerationStage:GenerationStage.understanding,
+              GenerationStage:GenerationStage.failed,
+              GenerationStage:GenerationStage.cancelled
+            ]
+    Actual: Set:[]
+     Which: does not contain GenerationStage:<GenerationStage.understanding>
+  
+  package:matcher                                               expect
+  package:flutter_test/src/widget_tester.dart 473:18            expect
+  test\unit\domain\generation\generation_stage_test.dart 196:5  main.<fn>
+  
+00:00 +4 -16: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_stage_test.dart: терминальные этапы сопоставлены статусам generation_jobs (SPEC A5)
+00:00 +4 -16: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_ledger_test.dart: GenerationLedger fromBudgets: requested — сумма бюджетов, партии нумеруются по порядку [E]
+  Expected: <3>
+    Actual: <0>
+  
+  package:matcher                                                expect
+  package:flutter_test/src/widget_tester.dart 473:18             expect
+  test\unit\domain\generation\generation_ledger_test.dart 205:7  main.<fn>.<fn>
+  
+00:00 +4 -17: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_ledger_test.dart: GenerationLedger события партий суммируются в итоги
+00:00 +4 -17: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_stage_test.dart: терминальные этапы сопоставлены статусам generation_jobs (SPEC A5) [E]
+  Expected: GenerationJobStatus:<GenerationJobStatus.done>
+    Actual: GenerationJobStatus:<GenerationJobStatus.running>
+  
+  package:matcher                                               expect
+  package:flutter_test/src/widget_tester.dart 473:18            expect
+  test\unit\domain\generation\generation_stage_test.dart 233:5  main.<fn>
+  
+00:00 +4 -18: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/ports_test.dart: Clock: время инжектируется, а не берётся из DateTime.now
+00:00 +4 -18: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_ledger_test.dart: GenerationLedger события партий суммируются в итоги [E]
+  Expected: <3>
+    Actual: <null>
+  
+  package:matcher                                                expect
+  package:flutter_test/src/widget_tester.dart 473:18             expect
+  test\unit\domain\generation\generation_ledger_test.dart 224:7  main.<fn>.<fn>
+  
+00:00 +4 -19: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/ports_test.dart: Clock: время инжектируется, а не берётся из DateTime.now
+00:00 +4 -19: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_ledger_test.dart: GenerationLedger DoD: после сбоя батча принятое сохраняется [E]
+  Expected: <3>
+    Actual: <0>
+  
+  package:matcher                                                expect
+  package:flutter_test/src/widget_tester.dart 473:18             expect
+  test\unit\domain\generation\generation_ledger_test.dart 237:7  main.<fn>.<fn>
+  
+00:00 +4 -20: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/ports_test.dart: Clock: время инжектируется, а не берётся из DateTime.now
+00:00 +5 -20: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_ledger_test.dart: GenerationLedger приоритет класса недобора прогона
+00:00 +5 -20: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_stage_test.dart: исключение недопустимого перехода называет этапы [E]
+  Expected: <Instance of 'InvalidGenerationStageTransition'>
+    Actual: <null>
+     Which: is not an instance of 'InvalidGenerationStageTransition'
+  
+  package:matcher                                               expect
+  package:flutter_test/src/widget_tester.dart 473:18            expect
+  test\unit\domain\generation\generation_stage_test.dart 258:5  main.<fn>
+  
+00:00 +6 -20: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_ledger_test.dart: GenerationLedger приоритет класса недобора прогона
+00:00 +6 -21: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/ports_test.dart: CardSink принимает карточку вместе с номером партии
+00:00 +6 -21: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_ledger_test.dart: GenerationLedger приоритет класса недобора прогона [E]
+  Expected: ShortfallKind:<ShortfallKind.cancelled>
+    Actual: <null>
+  
+  package:matcher                                                expect
+  package:flutter_test/src/widget_tester.dart 473:18             expect
+  test\unit\domain\generation\generation_ledger_test.dart 269:7  main.<fn>.<fn>
+  
+00:00 +7 -21: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_ledger_test.dart: GenerationLedger долга нет — класса недобора нет даже при отброшенных карточках
+00:00 +8 -21: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_ledger_test.dart: GenerationLedger долга нет — класса недобора нет даже при отброшенных карточках
+00:00 +8 -22: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/ports_test.dart: LlmPort отдаёт GenerationResult и номер партии
+00:00 +8 -22: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_ledger_test.dart: GenerationLedger долга нет — класса недобора нет даже при отброшенных карточках [E]
+  Expected: <3>
+    Actual: <0>
+  
+  package:matcher                                                expect
+  package:flutter_test/src/widget_tester.dart 473:18             expect
+  test\unit\domain\generation\generation_ledger_test.dart 306:7  main.<fn>.<fn>
+  
+00:00 +9 -22: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_ledger_test.dart: GenerationLedger replace и record проверяют номер партии
+00:00 +9 -23: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_ledger_test.dart: GenerationLedger replace и record проверяют номер партии [E]
+  Expected: throws <Instance of 'ArgumentError'>
+    Actual: <Closure: () => GenerationLedger>
+     Which: returned GenerationLedger:<GenerationLedger()>
+  
+  package:matcher                                                expect
+  package:flutter_test/src/widget_tester.dart 473:18             expect
+  test\unit\domain\generation\generation_ledger_test.dart 314:7  main.<fn>.<fn>
+  
+00:00 +9 -23: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_ledger_test.dart: GenerationLedger партии журнала неизменяемы и нумеруются без пропусков
+00:00 +9 -24: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_ledger_test.dart: GenerationLedger партии журнала неизменяемы и нумеруются без пропусков [E]
+  Expected: throws <Instance of 'AssertionError'>
+    Actual: <Closure: () => GenerationLedger>
+     Which: returned GenerationLedger:<GenerationLedger()>
+  
+  package:matcher                                                expect
+  package:flutter_test/src/widget_tester.dart 473:18             expect
+  test\unit\domain\generation\generation_ledger_test.dart 338:7  main.<fn>.<fn>
+  
+00:00 +9 -24: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_ledger_test.dart: GenerationLedger fromPlan: бюджеты партий — лимиты фрагментов плана
+00:00 +9 -25: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_ledger_test.dart: GenerationLedger fromPlan: бюджеты партий — лимиты фрагментов плана [E]
+  Expected: <10>
+    Actual: <0>
+  
+  package:matcher                                                expect
+  package:flutter_test/src/widget_tester.dart 473:18             expect
+  test\unit\domain\generation\generation_ledger_test.dart 355:7  main.<fn>.<fn>
+  
+00:00 +9 -25: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_ledger_test.dart: GenerationLedger toString показывает принято/запрошено и долг
+00:00 +9 -26: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/guards/architecture_test.dart: architecture: реальный репозиторий lib/ не содержит запрещённых импортов
+00:00 +9 -26: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_ledger_test.dart: GenerationLedger toString показывает принято/запрошено и долг [E]
+  Expected: contains 'принято 3/8'
+    Actual: 'GenerationLedger()'
+     Which: does not contain 'принято 3/8'
+  
+  package:matcher                                                expect
+  package:flutter_test/src/widget_tester.dart 473:18             expect
+  test\unit\domain\generation\generation_ledger_test.dart 367:7  main.<fn>.<fn>
+  
+00:00 +9 -27: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/guards/architecture_test.dart: architecture: реальный репозиторий lib/ не содержит запрещённых импортов
+00:00 +9 -27: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_ledger_test.dart: DoD: property-тесты сумма бюджетов партий == requested на случайных планах [E]
+  Expected: <211>
+    Actual: <0>
+  
+  package:matcher                                                expect
+  package:flutter_test/src/widget_tester.dart 473:18             expect
+  test\unit\domain\generation\generation_ledger_test.dart 387:9  main.<fn>.<fn>
+  
+00:00 +9 -28: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/guards/architecture_test.dart: architecture: реальный репозиторий lib/ не содержит запрещённых импортов
+00:00 +9 -28: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_ledger_test.dart: DoD: property-тесты случайные события не нарушают бухгалтерию журнала [E]
+  RangeError (max): Must be positive and <= 2^32: Not in inclusive range 1..4294967296: 0
+  dart:math                                                       _Random.nextInt
+  test\unit\domain\generation\generation_ledger_test.dart 406:36  main.<fn>.<fn>
+  
+00:00 +10 -28: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/guards/architecture_test.dart: architecture: самопроверка детектора ловит framework Material в lib/
+00:00 +11 -28: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/guards/architecture_test.dart: architecture: самопроверка детектора ловит M3E-импорт вне lib/ui/m3e/
+00:00 +12 -28: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/guards/architecture_test.dart: architecture: самопроверка детектора ловит Flutter-импорт в domain
+00:00 +13 -28: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/guards/architecture_test.dart: architecture: самопроверка детектора ловит Dio и drift в domain (этапы — только порты)
+00:00 +14 -28: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/guards/architecture_test.dart: architecture: самопроверка детектора не ловит material_ui в ui
+00:00 +15 -28: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/guards/architecture_test.dart: architecture: самопроверка детектора извлекает импорты и игнорирует экспорт
+00:00 +16 -28: Some tests failed.
+
+Failing tests:
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_ledger_test.dart: DoD: property-тесты случайные события не нарушают бухгалтерию журнала
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_ledger_test.dart: DoD: property-тесты сумма бюджетов партий == requested на случайных планах
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_ledger_test.dart: GenerationBatchLedger toString содержит числа партии
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_ledger_test.dart: GenerationBatchLedger короткая, но без ошибок партия — материал исчерпан
+  ... and 24 more
