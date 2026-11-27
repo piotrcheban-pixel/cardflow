@@ -1,0 +1,18 @@
+00:00 +0: loading C:/Users/piotr/OneDrive/Desktop/CardFlow/test/integration/generation_paths_compare_test.dart
+00:00 +0: заказ 20, материала достаточно: было → стало
+СЦЕНАРИЙ «заказ 20, материала достаточно»
+  v1: status=done, accepted=20/20, marked=0, dupsDropped=0, done=true, yield1k=20.00, accept=1.00, dupRate=0.00, req10=0.50, p50=1ms
+  v3: status=done, accepted=20/20, marked=0, dupsDropped=0, done=true, yield1k=20.00, accept=1.00, dupRate=0.00, req10=0.50, p50=0ms
+00:00 +1: заказ 40, модель отдаёт меньше: было → стало
+СЦЕНАРИЙ «заказ 40, модель отдаёт меньше»
+  v1: status=partial, accepted=27/40, marked=0, dupsDropped=0, done=false, yield1k=9.00, accept=1.00, dupRate=0.00, req10=1.48, p50=0ms
+  v3: status=partial, accepted=27/40, marked=0, dupsDropped=0, done=false, yield1k=9.00, accept=1.00, dupRate=0.00, req10=1.48, p50=0ms
+00:00 +2: заказ 20, дубли и почти-дубли: было → стало
+СЦЕНАРИЙ «заказ 20, дубли и почти-дубли»
+  v1: status=partial, accepted=9/20, marked=0, dupsDropped=2, done=false, yield1k=4.50, accept=0.82, dupRate=0.18, req10=3.33, p50=0ms
+  v3: status=partial, accepted=10/20, marked=1, dupsDropped=1, done=false, yield1k=5.00, accept=0.91, dupRate=0.18, req10=3.00, p50=0ms
+00:00 +3: заказ 20, сбой второго запроса: было → стало
+СЦЕНАРИЙ «заказ 20, сбой второго запроса»
+  v1: status=partial, accepted=4/20, marked=0, dupsDropped=0, done=false, yield1k=4.00, accept=1.00, dupRate=0.00, req10=7.50, p50=0ms
+  v3: status=partial, accepted=4/20, marked=0, dupsDropped=0, done=false, yield1k=4.00, accept=1.00, dupRate=0.00, req10=7.50, p50=0ms
+00:00 +4: All tests passed!

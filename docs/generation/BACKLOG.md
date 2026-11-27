@@ -215,6 +215,16 @@ DoD-команда — 7 тестов в `test/unit/api/generation/quote_offsets
 **DoD-команда (одна):**
 `.fvm\versions\3.47.9\bin\flutter.bat test --no-pub test/integration/generation_completion_verdict_test.dart`
 
+**Сделано (срез 9, 2026-11-28).** Флаг `generationPipelineV3` в `app_settings`
+(ADR-052): вердикт по журналу (`CompletionVerdict`, `done` ⟺ `принято ≥ requested`),
+пометка почти-дублей вместо удаления, «Почему?» по блоку `ContentModel`, метрики
+(`GenerationMetrics`), UI этапов/итога/групп/пометок. Этапы v3 к production-
+исполнению не подключены (Q19); legacy не удалён, потому что флаг выключен по
+умолчанию (Q21). Отчёт «было → стало» — `journal/iteration-8/summary.md`.
+DoD-команда среза: `.fvm\versions\3.47.9\bin\flutter.bat test --no-pub
+test/unit/domain/generation/completion_verdict_test.dart
+test/integration/generation_paths_compare_test.dart` (13 + 4 теста).
+
 ---
 
 ## Что уже сделано до S1 (не переделывать)

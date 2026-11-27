@@ -120,6 +120,21 @@ Understanding. Форматы хранения — `knowledge_map_json.dart` и
 `generated_card_json.dart` (версия 1, строгий разбор). К конвейеру и UI не
 подключено (S9, протокол §9). Толкование расхождения с BACKLOG S8 — Q18.
 
+**Уточнение среза 9 (TASK.txt):** Completion и включение пути реализованы как
+**флаг `generationPipelineV3` в `app_settings`** (ADR-052): включённый флаг
+переключает слой завершения — вердикт `CompletionVerdict` по журналу (`done` ⟺
+`принято ≥ заказано`, иначе `partial` с числом и `ShortfallKind`), пометку
+почти-дублей вместо удаления (`CardIssueCode.possibleDuplicate`, ARCH §3.4),
+«Почему?» по блоку `ContentModel` (`SourceAnchorResolver`, а не склеенная
+цитата), метрики прогона (`GenerationMetrics`: yield/1000 входных токенов,
+acceptance/duplicate rate по уровням, покрытие единиц, запросов на 10 карточек,
+p50/p95 батча) и UI (этапы анализ → план → генерация → проверка, «принято N из M»,
+итог и причины недобора, группы по темам, пометки). Этапы Understanding/
+Allocation/Generation/Validation/Dedup/Replenish **к production-исполнению не
+подключены** этим срезом: у Understanding нет HTTP-вызова, у `GenerationPlan` нет
+моста к `AllocationPlan`; флаг, включающий несуществующую проводку, был бы
+мёртвой заглушкой. Старый путь не удалён — флаг выключен по умолчанию (протокол
+§9). Толкования — Q19–Q21, отчёт «было → стало» — `journal/iteration-8/summary.md`.
 **Поток данных.** `MaterialUnit` несут offsets — единственный источник истины о
 тексте; `KnowledgeMap` ссылается на них, а не копирует текст; партия несёт id
 пунктов, поэтому ответ модели привязан к материалу; `CardCandidate` сохраняет

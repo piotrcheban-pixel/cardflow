@@ -1,5 +1,43 @@
 # STATE — текущее состояние CardFlow
 
+## Генерация v3 — срез 9: флаг, UI, «Почему?» по anchors, метрики, отчёт (2026-11-28)
+
+**Срез:** `TASK.txt` «Срез 9. Флаг, UI, удаление legacy, отчёт с метриками»
+(план — `docs/generation/ARCH.md`, `BACKLOG.md` S9, ADR-052; толкования —
+`journal/QUESTIONS.md` Q19–Q21; отчёт — `journal/iteration-8/summary.md`).
+
+**Сделано (TDD, red → green):**
+- **Флаг `generationPipelineV3`** (`lib/domain/settings/app_settings.dart`, JSON
+  `generation_pipeline_v3`, по умолчанию `false`) → `generationRunnerProvider` →
+  `GenerationPipeline(pipelineV3:)`; переключатель на экране «Провайдеры»
+  (`settings-generation-pipeline-v3`), без пересборки.
+- `lib/domain/generation/completion_verdict.dart` — `CompletionVerdict`:
+  `done` ⟺ `принято ≥ заказано`; отмена с принятым → `partial`; сбой без
+  карточек → `failed`; причины — `ShortfallKind`; `jobStatus` (A5). На пути v3
+  статус задания берётся из вердикта.
+- `lib/domain/generation/generation_metrics.dart` — yield на 1000 входных
+  токенов, acceptance/duplicate rate по уровням, покрытие единиц, запросов на
+  10 карточек, p50/p95 (ближайший ранг), JSON без текстов;
+  `GenerationDiagnostics.runMetrics`, `GenerationRunResult.verdict/metrics`.
+- Путь v3 в проводке: почти-дубль **помечается и остаётся**
+  (`CardIssueCode.possibleDuplicate`), точный отбрасывается; «Почему?» —
+  `lib/api/generation/source_anchor.dart` даёт **блок** `ContentModel`
+  (`sourceAnchorText/Section`), а не склеенную цитату.
+- UI: `generation_v3_progress.dart` (этапы анализ → план → генерация → проверка,
+  «принято N из M»), предпросмотр — итог и причины недобора, группировка по
+  темам, пометки «Возможный дубль»/«Обратная сторона»/«Предупреждение: N»,
+  лист «Почему эта карточка?» с блоком источника. Все строки — ARB.
+- Отчёт «было → стало» по 7 гипотезам и метрикам 4 сценариев —
+  `journal/iteration-8/summary.md`; сырые логи — `journal/generation-v3/`
+  (`red-s9.txt`, `scenarios-s9.txt`, `green-s9-full.txt`).
+
+**Ограничения:** этапы v3 (Understanding/Allocation/Batch/Replenish) к
+production-исполнению не подключены — флаг переключает слой завершения (Q19,
+ADR-052); legacy не удалён, потому что флаг выключен по умолчанию (Q21);
+маркер «Обратная сторона» — `basic_reversed` (Q20); p50/p95 в отчёте — фейковые
+вызовы, живых прогонов не было.
+
+---
 ## Генерация v3 — срез 8: Persistence — черновики, миграция, идемпотентный импорт (2026-11-28)
 
 **Срез:** `TASK.txt` «Срез 8. Persistence: черновики, миграция, идемпотентный
