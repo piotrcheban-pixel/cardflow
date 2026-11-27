@@ -1,0 +1,358 @@
+00:00 +0: loading C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/model_profile_test.dart
+00:00 +0: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/model_profile_test.dart: ModelProfile бюджет батча — 40 % окна контекста
+00:00 +0 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/model_profile_test.dart: ModelProfile бюджет батча — 40 % окна контекста [E]
+  Expected: <40000>
+    Actual: <0>
+  
+  package:matcher                                           expect
+  package:flutter_test/src/widget_tester.dart 473:18        expect
+  test\unit\domain\generation\model_profile_test.dart 21:7  main.<fn>.<fn>
+  
+00:00 +0 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/model_profile_test.dart: ModelProfile fitsBatch: выход в пределе и вход + выход в бюджете батча
+00:00 +0 -2: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/model_profile_test.dart: ModelProfile fitsBatch: выход в пределе и вход + выход в бюджете батча [E]
+  Expected: false
+    Actual: <true>
+  41000 > 40000 — батч не влезает в 40 % окна
+  
+  package:matcher                                           expect
+  package:flutter_test/src/widget_tester.dart 473:18        expect
+  test\unit\domain\generation\model_profile_test.dart 43:7  main.<fn>.<fn>
+  
+00:00 +0 -2: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/model_profile_test.dart: ModelProfile maxCardsPerBatch — по пределу вывода
+00:00 +0 -3: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/model_profile_test.dart: ModelProfile maxCardsPerBatch — по пределу вывода [E]
+  Expected: <27>
+    Actual: <0>
+  
+  package:matcher                                           expect
+  package:flutter_test/src/widget_tester.dart 473:18        expect
+  test\unit\domain\generation\model_profile_test.dart 63:7  main.<fn>.<fn>
+  
+00:00 +0 -3: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/model_profile_test.dart: ModelProfile инварианты конструктора
+00:00 +1 -3: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/model_profile_test.dart: ModelProfile равенство и строка — по id
+00:00 +2 -3: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/model_profile_test.dart: Каталог профилей данные для 3+ провайдеров, id уникальны, значения согласованы
+00:00 +2 -4: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/model_profile_test.dart: Каталог профилей данные для 3+ провайдеров, id уникальны, значения согласованы [E]
+  Expected: a value greater than or equal to <3>
+    Actual: <0>
+     Which: is not a value greater than or equal to <3>
+  TASK: данные для 3+ провайдеров
+  
+  package:matcher                                            expect
+  package:flutter_test/src/widget_tester.dart 473:18         expect
+  test\unit\domain\generation\model_profile_test.dart 177:7  main.<fn>.<fn>
+  
+00:00 +2 -4: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/model_profile_test.dart: Каталог профилей профили согласованы с каталогом пресетов провайдеров
+00:00 +2 -5: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: Вес единицы: salience × плотность × тип плотность — доля значимых слов утверждения
+00:00 +2 -5: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/model_profile_test.dart: Каталог профилей профили согласованы с каталогом пресетов провайдеров [E]
+  Expected: a value greater than or equal to <4>
+    Actual: <0>
+     Which: is not a value greater than or equal to <4>
+  Профили покрывают модели из каталога пресетов
+  
+  package:matcher                                            expect
+  package:flutter_test/src/widget_tester.dart 473:18         expect
+  test\unit\domain\generation\model_profile_test.dart 223:7  main.<fn>.<fn>
+  
+00:00 +2 -6: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: Вес единицы: salience × плотность × тип плотность — доля значимых слов утверждения
+00:00 +2 -6: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/model_profile_test.dart: Каталог профилей поиск по id; неизвестная модель — null [E]
+  Expected: not null
+    Actual: <null>
+  
+  package:matcher                                            expect
+  package:flutter_test/src/widget_tester.dart 473:18         expect
+  test\unit\domain\generation\model_profile_test.dart 232:7  main.<fn>.<fn>
+  
+00:00 +2 -7: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: Вес единицы: salience × плотность × тип плотность — доля значимых слов утверждения
+00:00 +2 -7: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/model_profile_test.dart: Каталог профилей неизвестная модель получает консервативный профиль [E]
+  Expected: 'gpt-4o'
+    Actual: 'unknown'
+     Which: is different.
+            Expected: gpt-4o
+              Actual: unknown
+                      ^
+             Differ at offset 0
+  
+  package:matcher                                            expect
+  package:flutter_test/src/widget_tester.dart 473:18         expect
+  test\unit\domain\generation\model_profile_test.dart 246:7  main.<fn>.<fn>
+  
+00:00 +3 -7: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: Вес единицы: salience × плотность × тип плотность — доля значимых слов утверждения
+00:00 +3 -8: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: Вес единицы: salience × плотность × тип плотность — доля значимых слов утверждения [E]
+  Expected: a numeric value within <1e-9> of <0.8333333333333334>
+    Actual: <0.0>
+     Which:  differs by <0.8333333333333334>
+  «в» — служебное слово, остальные значимые
+  
+  package:matcher                                        expect
+  package:flutter_test/src/widget_tester.dart 473:18     expect
+  test\unit\domain\generation\allocation_test.dart 69:7  main.<fn>.<fn>
+  
+00:00 +3 -8: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: Вес единицы: salience × плотность × тип плотность не падает ниже пола и не зависит от длины
+00:00 +3 -9: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: Вес единицы: salience × плотность × тип плотность не падает ниже пола и не зависит от длины [E]
+  Expected: <0.25>
+    Actual: <0.0>
+  Только служебные слова — пол 0,25, а не 0
+  
+  package:matcher                                        expect
+  package:flutter_test/src/widget_tester.dart 473:18     expect
+  test\unit\domain\generation\allocation_test.dart 83:7  main.<fn>.<fn>
+  
+00:00 +3 -9: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: Вес единицы: salience × плотность × тип множители вида: ключевые единицы весят больше фактов
+00:00 +4 -9: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: Вес единицы: salience × плотность × тип вес = salience × плотность × тип
+00:00 +4 -10: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: Вес единицы: salience × плотность × тип вес = salience × плотность × тип [E]
+  Expected: a numeric value within <1e-12> of <0.625>
+    Actual: <0.0>
+     Which:  differs by <0.625>
+  
+  package:matcher                                         expect
+  package:flutter_test/src/widget_tester.dart 473:18      expect
+  test\unit\domain\generation\allocation_test.dart 127:7  main.<fn>.<fn>
+  
+00:00 +4 -10: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: Распределение наибольшими остатками по одной карточке, когда заказ равен числу единиц
+00:00 +4 -11: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: Распределение наибольшими остатками по одной карточке, когда заказ равен числу единиц [E]
+  Expected: an object with length of <3>
+    Actual: []
+     Which: has length of <0>
+  
+  package:matcher                                         expect
+  package:flutter_test/src/widget_tester.dart 473:18      expect
+  test\unit\domain\generation\allocation_test.dart 149:7  main.<fn>.<fn>
+  
+00:00 +4 -11: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: Распределение наибольшими остатками остаток делится пропорционально весам, сумма равна заказу
+00:00 +4 -12: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: Распределение наибольшими остатками остаток делится пропорционально весам, сумма равна заказу [E]
+  Expected: [5, 3, 2]
+    Actual: []
+     Which: at location [0] is [] which shorter than expected
+  Минимум 1 + остаток 7 по весам 1 : 0,5 : 0,25
+  
+  package:matcher                                         expect
+  package:flutter_test/src/widget_tester.dart 473:18      expect
+  test\unit\domain\generation\allocation_test.dart 166:7  main.<fn>.<fn>
+  
+00:00 +4 -12: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: Распределение наибольшими остатками равные остатки раздаются по порядку единиц (детерминизм)
+00:00 +4 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: Распределение наибольшими остатками равные остатки раздаются по порядку единиц (детерминизм) [E]
+  Expected: [2, 2, 1]
+    Actual: []
+     Which: at location [0] is [] which shorter than expected
+  
+  package:matcher                                         expect
+  package:flutter_test/src/widget_tester.dart 473:18      expect
+  test\unit\domain\generation\allocation_test.dart 187:7  main.<fn>.<fn>
+  
+00:00 +4 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: Распределение наибольшими остатками заказ меньше числа единиц — отбираются самые весомые
+00:00 +4 -14: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: Распределение наибольшими остатками заказ меньше числа единиц — отбираются самые весомые [E]
+  Expected: ['ku:2', 'ku:3']
+    Actual: []
+     Which: at location [0] is [] which shorter than expected
+  
+  package:matcher                                         expect
+  package:flutter_test/src/widget_tester.dart 473:18      expect
+  test\unit\domain\generation\allocation_test.dart 203:7  main.<fn>.<fn>
+  
+00:00 +4 -14: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: Распределение наибольшими остатками заказ меньше единиц: равные веса — первые по порядку
+00:00 +4 -15: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: Распределение наибольшими остатками заказ меньше единиц: равные веса — первые по порядку [E]
+  Expected: ['ku:1', 'ku:2']
+    Actual: []
+     Which: at location [0] is [] which shorter than expected
+  
+  package:matcher                                         expect
+  package:flutter_test/src/widget_tester.dart 473:18      expect
+  test\unit\domain\generation\allocation_test.dart 223:7  main.<fn>.<fn>
+  
+00:00 +4 -15: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: Распределение наибольшими остатками большой заказ не теряет карточки (BigInt-арифметика)
+00:00 +4 -16: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: Распределение наибольшими остатками большой заказ не теряет карточки (BigInt-арифметика) [E]
+  Expected: <1000000>
+    Actual: <0>
+  
+  package:matcher                                         expect
+  package:flutter_test/src/widget_tester.dart 473:18      expect
+  test\unit\domain\generation\allocation_test.dart 239:7  main.<fn>.<fn>
+  
+00:00 +4 -16: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: Распределение наибольшими остатками крошечный вес не обнуляется и не съедает заказ
+00:00 +4 -17: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: Распределение наибольшими остатками крошечный вес не обнуляется и не съедает заказ [E]
+  Expected: <4>
+    Actual: <0>
+  
+  package:matcher                                         expect
+  package:flutter_test/src/widget_tester.dart 473:18      expect
+  test\unit\domain\generation\allocation_test.dart 259:7  main.<fn>.<fn>
+  
+00:00 +4 -17: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: Распределение наибольшими остатками единицы с нулевым весом не отбираются
+00:00 +5 -17: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: Распределение наибольшими остатками неположительный заказ — ArgumentError
+00:00 +5 -18: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: Распределение наибольшими остатками неположительный заказ — ArgumentError [E]
+  Expected: throws <Instance of 'ArgumentError'>
+    Actual: <Closure: () => List<UnitBudget>>
+     Which: returned []
+  
+  package:matcher                                         expect
+  package:flutter_test/src/widget_tester.dart 473:18      expect
+  test\unit\domain\generation\allocation_test.dart 280:7  main.<fn>.<fn>
+  
+00:00 +5 -18: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: Добор «вторым углом» угол по виду единицы: reverse | cloze | application
+00:00 +5 -19: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: Добор «вторым углом» угол по виду единицы: reverse | cloze | application [E]
+  Expected: AllocationAngle:<AllocationAngle.cloze>
+    Actual: AllocationAngle:<AllocationAngle.reverse>
+  
+  package:matcher                                         expect
+  package:flutter_test/src/widget_tester.dart 473:18      expect
+  test\unit\domain\generation\allocation_test.dart 309:7  main.<fn>.<fn>
+  
+00:00 +5 -19: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: Добор «вторым углом» единиц меньше заказа — добор только флагами angle
+00:00 +5 -20: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: Добор «вторым углом» единиц меньше заказа — добор только флагами angle [E]
+  Expected: <5>
+    Actual: <0>
+  
+  package:matcher                                         expect
+  package:flutter_test/src/widget_tester.dart 473:18      expect
+  test\unit\domain\generation\allocation_test.dart 340:7  main.<fn>.<fn>
+  
+00:00 +5 -20: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: Добор «вторым углом» углы идут циклом, а не повторяют основную карточку
+00:00 +5 -21: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: Добор «вторым углом» углы идут циклом, а не повторяют основную карточку [E]
+  Expected: [
+              'ku:a',
+              null,
+              'ku:a',
+              'reverse',
+              'ku:a',
+              'cloze',
+              'ku:a',
+              'application',
+              'ku:a',
+              'reverse'
+            ]
+    Actual: []
+     Which: at location [0] is [] which shorter than expected
+  
+  package:matcher                                         expect
+  package:flutter_test/src/widget_tester.dart 473:18      expect
+  test\unit\domain\generation\allocation_test.dart 388:7  main.<fn>.<fn>
+  
+00:00 +5 -21: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: Упаковка батчей батч ограничен пределом вывода профиля
+00:00 +5 -22: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: Упаковка батчей батч ограничен пределом вывода профиля [E]
+  Expected: [3, 3, 3, 1]
+    Actual: []
+     Which: at location [0] is [] which shorter than expected
+  900 / 300 = 3 карточки на ответ
+  
+  package:matcher                                         expect
+  package:flutter_test/src/widget_tester.dart 473:18      expect
+  test\unit\domain\generation\allocation_test.dart 426:7  main.<fn>.<fn>
+  
+00:00 +5 -22: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: Упаковка батчей батч ограничен 40 % окна контекста
+00:00 +5 -23: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: Упаковка батчей батч ограничен 40 % окна контекста [E]
+  Expected: <2000>
+    Actual: <0>
+  
+  package:matcher                                         expect
+  package:flutter_test/src/widget_tester.dart 473:18      expect
+  test\unit\domain\generation\allocation_test.dart 464:7  main.<fn>.<fn>
+  
+00:00 +5 -23: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: Упаковка батчей резерв схемы входа — только при supportsJsonSchema
+00:00 +5 -24: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: Упаковка батчей резерв схемы входа — только при supportsJsonSchema [E]
+  Expected: [9, 1]
+    Actual: []
+     Which: at location [0] is [] which shorter than expected
+  
+  package:matcher                                         expect
+  package:flutter_test/src/widget_tester.dart 473:18      expect
+  test\unit\domain\generation\allocation_test.dart 508:7  main.<fn>.<fn>
+  
+00:00 +5 -24: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: Упаковка батчей разные единицы в одном батче суммируются по входу
+00:00 +5 -25: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: Упаковка батчей разные единицы в одном батче суммируются по входу [E]
+  Expected: an object with length of <1>
+    Actual: []
+     Which: has length of <0>
+  
+  package:matcher                                         expect
+  package:flutter_test/src/widget_tester.dart 473:18      expect
+  test\unit\domain\generation\allocation_test.dart 535:7  main.<fn>.<fn>
+  
+00:00 +5 -25: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: Упаковка батчей карточки одной единицы переиспользуют вход батча
+00:00 +5 -26: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: Упаковка батчей карточки одной единицы переиспользуют вход батча [E]
+  Expected: an object with length of <1>
+    Actual: []
+     Which: has length of <0>
+  
+  package:matcher                                         expect
+  package:flutter_test/src/widget_tester.dart 473:18      expect
+  test\unit\domain\generation\allocation_test.dart 556:7  main.<fn>.<fn>
+  
+00:00 +5 -26: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: Упаковка батчей единица, не влезающая в бюджет, — ArgumentError
+00:00 +5 -27: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: Упаковка батчей единица, не влезающая в бюджет, — ArgumentError [E]
+  Expected: throws <Instance of 'ArgumentError'>
+    Actual: <Closure: () => AllocationPlan>
+     Which: returned AllocationPlan:<AllocationPlan(2, 0 карт., 0 батч.)>
+  Даже одна карточка не влезает в 40 % окна
+  
+  package:matcher                                         expect
+  package:flutter_test/src/widget_tester.dart 473:18      expect
+  test\unit\domain\generation\allocation_test.dart 581:7  main.<fn>.<fn>
+  
+00:00 +5 -27: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: Упаковка батчей неположительная оценка выхода карточки — ArgumentError
+00:00 +5 -28: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: Упаковка батчей неположительная оценка выхода карточки — ArgumentError [E]
+  Expected: throws <Instance of 'ArgumentError'>
+    Actual: <Closure: () => List<AllocationBatch>>
+     Which: returned []
+  
+  package:matcher                                         expect
+  package:flutter_test/src/widget_tester.dart 473:18      expect
+  test\unit\domain\generation\allocation_test.dart 594:7  main.<fn>.<fn>
+  
+00:00 +5 -28: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: Упаковка батчей пустой план карточек — нет батчей
+00:00 +6 -28: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: Упаковка батчей батчи сохраняют все карточки и их порядок
+00:00 +7 -28: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: Упаковка батчей волны исполнения — по profile.concurrency
+00:00 +7 -29: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: Упаковка батчей волны исполнения — по profile.concurrency [E]
+  Expected: an object with length of <5>
+    Actual: []
+     Which: has length of <0>
+  
+  package:matcher                                         expect
+  package:flutter_test/src/widget_tester.dart 473:18      expect
+  test\unit\domain\generation\allocation_test.dart 658:7  main.<fn>.<fn>
+  
+00:00 +7 -29: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: Инварианты типов UnitBudget: минимум одна карточка, число доборных
+00:00 +8 -29: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: Инварианты типов AllocatedCard: равенство, основная/доборная, строка
+00:00 +9 -29: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: Инварианты типов AllocationBatch: инварианты профиля и строка
+00:00 +9 -30: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: Инварианты типов AllocationBatch: инварианты профиля и строка [E]
+  Expected: throws <Instance of 'AssertionError'>
+    Actual: <Closure: () => AllocationBatch>
+     Which: returned AllocationBatch:<AllocationBatch(0, 1 карт., 100+2001 т.)>
+  Выход больше maxOutputTokens
+  
+  package:matcher                                         expect
+  package:flutter_test/src/widget_tester.dart 473:18      expect
+  test\unit\domain\generation\allocation_test.dart 758:7  main.<fn>.<fn>
+  
+00:00 +9 -30: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: Инварианты типов AllocationPlan: заказ положителен, сумма карточек равна заказу
+00:00 +9 -31: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: Инварианты типов AllocationPlan: заказ положителен, сумма карточек равна заказу [E]
+  'package:cardflow/domain/generation/allocation.dart': Failed assertion: line 163 pos 15: 'cards.length > 0': Батч не пуст
+  dart:core                                                  _AssertionError._throwNew
+  package:cardflow/domain/generation/allocation.dart 163:15  new AllocationBatch
+  test\unit\domain\generation\allocation_test.dart 784:37    main.<fn>.<fn>
+  
+00:00 +9 -31: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: DoD: property-тесты плана сумма == цель, минимум 1, детерминизм, профиль соблюдён
+00:00 +9 -32: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: DoD: property-тесты плана сумма == цель, минимум 1, детерминизм, профиль соблюдён [E]
+  Expected: <125>
+    Actual: <0>
+  Сумма карточек равна заказу (итерация 0)
+  
+  package:matcher                                         expect
+  package:flutter_test/src/widget_tester.dart 473:18      expect
+  test\unit\domain\generation\allocation_test.dart 869:9  main.<fn>.<fn>
+  
+00:00 +9 -32: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: DoD: property-тесты плана полный план: бюджет единиц == заказ, добор углами
+00:00 +9 -33: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: DoD: property-тесты плана полный план: бюджет единиц == заказ, добор углами [E]
+  Expected: <40>
+    Actual: <0>
+  
+  package:matcher                                         expect
+  package:flutter_test/src/widget_tester.dart 473:18      expect
+  test\unit\domain\generation\allocation_test.dart 944:7  main.<fn>.<fn>
+  
+00:00 +9 -33: Some tests failed.
+
+Failing tests:
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: DoD: property-тесты плана полный план: бюджет единиц == заказ, добор углами
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: DoD: property-тесты плана сумма == цель, минимум 1, детерминизм, профиль соблюдён
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: Вес единицы: salience × плотность × тип вес = salience × плотность × тип
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_test.dart: Вес единицы: salience × плотность × тип плотность не падает ниже пола и не зависит от длины
+  ... and 29 more
