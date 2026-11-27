@@ -1,0 +1,355 @@
+00:00 +0: loading C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/card_validator_test.dart
+00:00 +0: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/card_validator_test.dart: корректная карточка принята: ни одной причины, цитата по offsets
+00:00 +0 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/card_validator_test.dart: корректная карточка принята: ни одной причины, цитата по offsets [E]
+  Invalid argument(s): Блок doc:конспект.md#0#0 принадлежит doc:конспект.md#0, но не указан в blockIds раздела
+  package:cardflow/api/generation/content_model.dart 372:11  Document._validate
+  package:cardflow/api/generation/content_model.dart 188:5   new Document
+  test\unit\api\generation\card_validator_test.dart 553:10   _document
+  test\unit\api\generation\card_validator_test.dart 21:31    main.<fn>
+  
+00:00 +0 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/card_validator_test.dart: структурные проверки A8.4 нет front — отброшено с причиной, запись сохранена
+00:00 +0 -2: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/card_validator_test.dart: структурные проверки A8.4 нет front — отброшено с причиной, запись сохранена [E]
+  Bad state: No element
+  dart:core                                                _Array.single
+  test\unit\api\generation\card_validator_test.dart 60:53  main.<fn>.<fn>
+  
+00:00 +0 -2: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/card_validator_test.dart: структурные проверки A8.4 нет back — отброшено с причиной
+00:00 +0 -3: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/quote_offsets_test.dart: буквальная цитата offset точный: substring(start, end) == quote_ref
+00:00 +0 -3: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/card_validator_test.dart: структурные проверки A8.4 нет back — отброшено с причиной [E]
+  Bad state: No element
+  dart:core                                                _Array.single
+  test\unit\api\generation\card_validator_test.dart 74:30  main.<fn>.<fn>
+  
+00:00 +0 -4: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/quote_offsets_test.dart: буквальная цитата offset точный: substring(start, end) == quote_ref
+00:00 +0 -4: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/card_validator_test.dart: структурные проверки A8.4 неизвестный card_type отброшен, occlusion отображён в basic [E]
+  Bad state: No element
+  dart:core                                                _Array.single
+  test\unit\api\generation\card_validator_test.dart 81:31  main.<fn>.<fn>
+  
+00:00 +0 -5: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/quote_offsets_test.dart: буквальная цитата offset точный: substring(start, end) == quote_ref
+00:00 +0 -5: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/card_validator_test.dart: структурные проверки A8.4 пустой front отброшен с причиной emptyFront [E]
+  Bad state: No element
+  dart:core                                                _Array.single
+  test\unit\api\generation\card_validator_test.dart 97:30  main.<fn>.<fn>
+  
+00:00 +0 -6: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/card_validator_test.dart: структурные проверки A8.4 длины front/back: граница 500/2000 без пометки, больше — пометка
+00:00 +0 -7: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/quote_offsets_test.dart: буквальная цитата offset точный: substring(start, end) == quote_ref [E]
+  Invalid argument(s): Блок doc:конспект.md#0#0 принадлежит doc:конспект.md#0, но не указан в blockIds раздела
+  package:cardflow/api/generation/content_model.dart 372:11  Document._validate
+  package:cardflow/api/generation/content_model.dart 188:5   new Document
+  test\unit\api\generation\quote_offsets_test.dart 210:10    _document
+  test\unit\api\generation\quote_offsets_test.dart 20:33     main.<fn>.<fn>
+  
+00:00 +0 -7: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/card_validator_test.dart: структурные проверки A8.4 длины front/back: граница 500/2000 без пометки, больше — пометка [E]
+  Bad state: No element
+  dart:core                                                 _Array.single
+  test\unit\api\generation\card_validator_test.dart 108:28  main.<fn>.<fn>
+  
+00:00 +0 -7: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/card_validator_test.dart: структурные проверки A8.4 cloze без пропуска — пометка clozeMissing
+00:00 +0 -8: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/card_validator_test.dart: структурные проверки A8.4 cloze без пропуска — пометка clozeMissing
+00:00 +0 -9: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/card_validator_test.dart: структурные проверки A8.4 cloze без пропуска — пометка clozeMissing [E]
+  Bad state: No element
+  dart:core                                                 _Array.single
+  test\unit\api\generation\card_validator_test.dart 141:32  main.<fn>.<fn>
+  
+00:00 +0 -9: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/card_validator_test.dart: структурные проверки A8.4 осмысленный cloze проходит без пометок
+00:00 +0 -9: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/quote_offsets_test.dart: буквальная цитата повтор цитаты в двух блоках — первый блок по порядку документа [E]
+  Invalid argument(s): Блок doc:конспект.md#0#0 принадлежит doc:конспект.md#0, но не указан в blockIds раздела
+  package:cardflow/api/generation/content_model.dart 372:11  Document._validate
+  package:cardflow/api/generation/content_model.dart 188:5   new Document
+  test\unit\api\generation\quote_offsets_test.dart 210:10    _document
+  test\unit\api\generation\quote_offsets_test.dart 37:33     main.<fn>.<fn>
+  
+00:00 +0 -10: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/quote_offsets_test.dart: почти-цитата и отсутствие двойной пробел в цитате — quoteNotLiteral, offsets не пишутся
+00:00 +0 -10: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/card_validator_test.dart: структурные проверки A8.4 осмысленный cloze проходит без пометок [E]
+  Bad state: No element
+  dart:core                                                 _Array.single
+  test\unit\api\generation\card_validator_test.dart 159:32  main.<fn>.<fn>
+  
+00:00 +0 -11: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/card_validator_test.dart: структурные проверки A8.4 теги: 4 тега или «#» — tagsAdjusted, нормальный список — без
+00:00 +0 -11: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/quote_offsets_test.dart: почти-цитата и отсутствие двойной пробел в цитате — quoteNotLiteral, offsets не пишутся [E]
+  Invalid argument(s): Блок doc:конспект.md#0#0 принадлежит doc:конспект.md#0, но не указан в blockIds раздела
+  package:cardflow/api/generation/content_model.dart 372:11  Document._validate
+  package:cardflow/api/generation/content_model.dart 188:5   new Document
+  test\unit\api\generation\quote_offsets_test.dart 210:10    _document
+  test\unit\api\generation\quote_offsets_test.dart 61:33     main.<fn>.<fn>
+  
+00:00 +0 -12: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/quote_offsets_test.dart: почти-цитата и отсутствие другая буква «ё»/тире в цитате — quoteNotLiteral
+00:00 +0 -12: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/card_validator_test.dart: структурные проверки A8.4 теги: 4 тега или «#» — tagsAdjusted, нормальный список — без [E]
+  Bad state: No element
+  dart:core                                                 _Array.single
+  test\unit\api\generation\card_validator_test.dart 170:29  main.<fn>.<fn>
+  
+00:00 +0 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/card_validator_test.dart: структурные проверки A8.4 LaTeX: непарсящаяся формула — latexBroken, корректная — без
+00:00 +0 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/quote_offsets_test.dart: почти-цитата и отсутствие другая буква «ё»/тире в цитате — quoteNotLiteral [E]
+  Invalid argument(s): Блок doc:конспект.md#0#0 принадлежит doc:конспект.md#0, но не указан в blockIds раздела
+  package:cardflow/api/generation/content_model.dart 372:11  Document._validate
+  package:cardflow/api/generation/content_model.dart 188:5   new Document
+  test\unit\api\generation\quote_offsets_test.dart 210:10    _document
+  test\unit\api\generation\quote_offsets_test.dart 77:33     main.<fn>.<fn>
+  
+00:00 +0 -14: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/card_validator_test.dart: структурные проверки A8.4 LaTeX: непарсящаяся формула — latexBroken, корректная — без
+00:00 +0 -14: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/quote_offsets_test.dart: почти-цитата и отсутствие цитата через границу блоков не принимается: quoteOutOfRange [E]
+  Invalid argument(s): Блок doc:конспект.md#0#0 принадлежит doc:конспект.md#0, но не указан в blockIds раздела
+  package:cardflow/api/generation/content_model.dart 372:11  Document._validate
+  package:cardflow/api/generation/content_model.dart 188:5   new Document
+  test\unit\api\generation\quote_offsets_test.dart 210:10    _document
+  test\unit\api\generation\quote_offsets_test.dart 91:33     main.<fn>.<fn>
+  
+00:00 +0 -15: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/card_validator_test.dart: структурные проверки A8.4 LaTeX: непарсящаяся формула — latexBroken, корректная — без [E]
+  Bad state: No element
+  dart:core                                                 _Array.single
+  test\unit\api\generation\card_validator_test.dart 190:27  main.<fn>.<fn>
+  
+00:00 +0 -15: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/quote_offsets_test.dart: почти-цитата и отсутствие цитата из мусорного блока (подпись рисунка) не принимается
+00:00 +0 -16: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/card_validator_test.dart: структурные проверки A8.4 корень ответа не объект с cards — GenerationException
+00:00 +0 -16: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/quote_offsets_test.dart: почти-цитата и отсутствие цитата из мусорного блока (подпись рисунка) не принимается [E]
+  Invalid argument(s): Блок doc:конспект.md#0#0 принадлежит doc:конспект.md#0, но не указан в blockIds раздела
+  package:cardflow/api/generation/content_model.dart 372:11  Document._validate
+  package:cardflow/api/generation/content_model.dart 188:5   new Document
+  test\unit\api\generation\quote_offsets_test.dart 108:33    main.<fn>.<fn>
+  
+00:00 +0 -17: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/semantic_matcher_test.dart: точный дубль: уровень exact, similarity 1, пара, а не удаление
+00:00 +0 -17: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/card_validator_test.dart: структурные проверки A8.4 корень ответа не объект с cards — GenerationException [E]
+  Expected: throws <Instance of 'GenerationException'> with `code`: GenerationErrorCode:<GenerationErrorCode.invalidResponse>
+    Actual: <Closure: () => CardValidationReport>
+     Which: returned CardValidationReport:<CardValidationReport(принято 0, помечено 0, отброшено 0)>
+  
+  package:matcher                                          expect
+  package:flutter_test/src/widget_tester.dart 473:18       expect
+  test\unit\api\generation\card_validator_test.dart 203:7  main.<fn>.<fn>
+  
+00:00 +0 -18: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/semantic_matcher_test.dart: точный дубль: уровень exact, similarity 1, пара, а не удаление
+00:00 +0 -18: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/quote_offsets_test.dart: почти-цитата и отсутствие пустой quote_ref — проверка не выполняется [E]
+  Invalid argument(s): Блок doc:конспект.md#0#0 принадлежит doc:конспект.md#0, но не указан в blockIds раздела
+  package:cardflow/api/generation/content_model.dart 372:11  Document._validate
+  package:cardflow/api/generation/content_model.dart 188:5   new Document
+  test\unit\api\generation\quote_offsets_test.dart 210:10    _document
+  test\unit\api\generation\quote_offsets_test.dart 149:33    main.<fn>.<fn>
+  
+00:00 +0 -19: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/semantic_matcher_test.dart: точный дубль: уровень exact, similarity 1, пара, а не удаление
+00:00 +0 -19: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/card_validator_test.dart: семантические эвристики ответ внутри вопроса — answerInQuestion [E]
+  Bad state: No element
+  dart:core                                                 _Array.single
+  test\unit\api\generation\card_validator_test.dart 233:27  main.<fn>.<fn>
+  
+00:00 +0 -20: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/semantic_matcher_test.dart: точный дубль: уровень exact, similarity 1, пара, а не удаление
+00:00 +0 -20: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/card_validator_test.dart: семантические эвристики ответ не в вопросе у корректной карточки — нет пометки [E]
+  Bad state: No element
+  dart:core                                                 _Array.single
+  test\unit\api\generation\card_validator_test.dart 244:27  main.<fn>.<fn>
+  
+00:00 +0 -21: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/card_validator_test.dart: семантические эвристики вопрос несамостоятелен: «этот», «выше», «см. рис.» — пометка
+00:00 +0 -21: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/semantic_matcher_test.dart: точный дубль: уровень exact, similarity 1, пара, а не удаление [E]
+  Expected: an object with length of <1>
+    Actual: []
+     Which: has length of <0>
+  
+  package:matcher                                              expect
+  package:flutter_test/src/widget_tester.dart 473:18           expect
+  test\unit\domain\generation\semantic_matcher_test.dart 35:5  main.<fn>
+  
+00:00 +0 -22: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/semantic_matcher_test.dart: нормализованный дубль: регистр, ё, пунктуация, пробелы
+00:00 +0 -22: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/card_validator_test.dart: семантические эвристики вопрос несамостоятелен: «этот», «выше», «см. рис.» — пометка [E]
+  Bad state: No element
+  dart:core                                                 _Array.single
+  test\unit\api\generation\card_validator_test.dart 261:29  main.<fn>.<fn>
+  
+00:00 +0 -23: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/card_validator_test.dart: семантические эвристики самостоятельный вопрос без ложных срабатываний
+00:00 +0 -23: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/semantic_matcher_test.dart: нормализованный дубль: регистр, ё, пунктуация, пробелы [E]
+  Bad state: No element
+  dart:core                                                     _Array.single
+  test\unit\domain\generation\semantic_matcher_test.dart 61:25  main.<fn>
+  
+00:00 +0 -24: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/semantic_matcher_test.dart: почти-дубль: уровень semantic с коэффициентом Жаккара
+00:00 +0 -24: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/card_validator_test.dart: семантические эвристики самостоятельный вопрос без ложных срабатываний [E]
+  Bad state: No element
+  dart:core                                                 _Array.single
+  test\unit\api\generation\card_validator_test.dart 280:29  main.<fn>.<fn>
+  
+00:00 +0 -25: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/semantic_matcher_test.dart: почти-дубль: уровень semantic с коэффициентом Жаккара [E]
+  Bad state: No element
+  dart:core                                                     _Array.single
+  test\unit\domain\generation\semantic_matcher_test.dart 86:25  main.<fn>
+  
+00:00 +0 -25: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/card_validator_test.dart: семантические эвристики атомарность: перечисление больше трёх — notAtomic, ровно три — без
+00:00 +1 -25: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/card_validator_test.dart: семантические эвристики атомарность: перечисление больше трёх — notAtomic, ровно три — без
+00:00 +1 -26: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/semantic_matcher_test.dart: каскад не понижает уровень: exact важнее semantic
+00:00 +1 -26: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/card_validator_test.dart: семантические эвристики атомарность: перечисление больше трёх — notAtomic, ровно три — без [E]
+  Bad state: No element
+  dart:core                                                 _Array.single
+  test\unit\api\generation\card_validator_test.dart 299:25  main.<fn>.<fn>
+  
+00:00 +1 -27: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/card_validator_test.dart: семантические эвристики cloze осмысленный: пропуск не на весь вопрос и номера с c1
+00:00 +1 -27: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/semantic_matcher_test.dart: каскад не понижает уровень: exact важнее semantic [E]
+  Expected: DedupLevel:<DedupLevel.exact>
+    Actual: <null>
+  
+  package:matcher                                               expect
+  package:flutter_test/src/widget_tester.dart 473:18            expect
+  test\unit\domain\generation\semantic_matcher_test.dart 120:5  main.<fn>
+  
+00:00 +1 -28: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/semantic_matcher_test.dart: сверка с колодой: существующая карточка — левая сторона пары
+00:00 +1 -28: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/card_validator_test.dart: семантические эвристики cloze осмысленный: пропуск не на весь вопрос и номера с c1 [E]
+  Bad state: No element
+  dart:core                                                 _Array.single
+  test\unit\api\generation\card_validator_test.dart 332:29  main.<fn>.<fn>
+  
+00:00 +1 -29: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/dedup_report_test.dart: DedupReport пустой отчёт: ни пар, ни дублей, нули по всем уровням
+00:00 +1 -29: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/semantic_matcher_test.dart: сверка с колодой: существующая карточка — левая сторона пары [E]
+  Bad state: No element
+  dart:core                                                      _Array.single
+  test\unit\domain\generation\semantic_matcher_test.dart 146:25  main.<fn>
+  
+00:00 +1 -30: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/dedup_report_test.dart: DedupReport пустой отчёт: ни пар, ни дублей, нули по всем уровням
+00:00 +1 -30: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/card_validator_test.dart: семантические эвристики язык ru: латиница без кириллицы — languageNotRussian [E]
+  Bad state: No element
+  dart:core                                                 _Array.single
+  test\unit\api\generation\card_validator_test.dart 365:28  main.<fn>.<fn>
+  
+00:00 +2 -30: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/semantic_matcher_test.dart: эмбеддинги необязательны: без интерфейса пары нет, с ним — есть
+00:00 +2 -31: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/card_validator_test.dart: семантические эвристики unit_id и section_id вне партии — unitUnknown/sectionUnknown
+00:00 +2 -31: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/semantic_matcher_test.dart: эмбеддинги необязательны: без интерфейса пары нет, с ним — есть [E]
+  Bad state: No element
+  dart:core                                                      _Array.single
+  test\unit\domain\generation\semantic_matcher_test.dart 172:33  main.<fn>
+  
+00:00 +2 -32: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/dedup_report_test.dart: DedupReport счётчики по уровням и уровень карточки — сильнейший
+00:00 +2 -32: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/card_validator_test.dart: семантические эвристики unit_id и section_id вне партии — unitUnknown/sectionUnknown [E]
+  Bad state: No element
+  dart:core                                                 _Array.single
+  test\unit\api\generation\card_validator_test.dart 394:27  main.<fn>.<fn>
+  
+00:00 +3 -32: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/dedup_report_test.dart: DedupReport счётчики по уровням и уровень карточки — сильнейший
+00:00 +3 -33: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/dedup_report_test.dart: DedupReport счётчики по уровням и уровень карточки — сильнейший
+00:00 +3 -33: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/semantic_matcher_test.dart: повторные id карточек — ArgumentError (пара неоднозначна) [E]
+  Expected: throws <Instance of 'ArgumentError'>
+    Actual: <Closure: () => DedupReport>
+     Which: returned DedupReport:<DedupReport(пар 0)>
+  
+  package:matcher                                               expect
+  package:flutter_test/src/widget_tester.dart 473:18            expect
+  test\unit\domain\generation\semantic_matcher_test.dart 188:5  main.<fn>
+  
+00:00 +3 -34: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/dedup_report_test.dart: DedupReport счётчики по уровням и уровень карточки — сильнейший
+00:00 +3 -34: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/card_validator_test.dart: цитата по offsets цитата, отличающаяся пробелами/тире/регистром, — не буквальная [E]
+  Invalid argument(s): Блок doc:конспект.md#0#0 принадлежит doc:конспект.md#0, но не указан в blockIds раздела
+  package:cardflow/api/generation/content_model.dart 372:11  Document._validate
+  package:cardflow/api/generation/content_model.dart 188:5   new Document
+  test\unit\api\generation\card_validator_test.dart 553:10   _document
+  test\unit\api\generation\card_validator_test.dart 418:18   main.<fn>.<fn>
+  
+00:00 +4 -34: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/dedup_report_test.dart: DedupReport счётчики по уровням и уровень карточки — сильнейший
+00:00 +4 -35: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/card_validator_test.dart: цитата по offsets цитаты нет в материале — quoteOutOfRange, карточка остаётся
+00:00 +4 -35: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/dedup_report_test.dart: DedupReport счётчики по уровням и уровень карточки — сильнейший [E]
+  Expected: <3>
+    Actual: <0>
+  
+  package:matcher                                          expect
+  package:flutter_test/src/widget_tester.dart 473:18       expect
+  test\unit\domain\generation\dedup_report_test.dart 49:7  main.<fn>.<fn>
+  
+00:00 +4 -36: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/semantic_matcher_test.dart: нормализация и метрики normalizeForDedup: регистр, ё, пунктуация, пробелы
+00:00 +4 -36: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/card_validator_test.dart: цитата по offsets цитаты нет в материале — quoteOutOfRange, карточка остаётся [E]
+  Invalid argument(s): Блок doc:конспект.md#0#0 принадлежит doc:конспект.md#0, но не указан в blockIds раздела
+  package:cardflow/api/generation/content_model.dart 372:11  Document._validate
+  package:cardflow/api/generation/content_model.dart 188:5   new Document
+  test\unit\api\generation\card_validator_test.dart 553:10   _document
+  test\unit\api\generation\card_validator_test.dart 418:18   main.<fn>.<fn>
+  
+00:00 +5 -36: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/semantic_matcher_test.dart: нормализация и метрики normalizeForDedup: регистр, ё, пунктуация, пробелы
+00:00 +5 -37: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/card_validator_test.dart: цитата по offsets без документа цитата не проверяется и не помечается
+00:00 +5 -37: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/semantic_matcher_test.dart: нормализация и метрики normalizeForDedup: регистр, ё, пунктуация, пробелы [E]
+  Expected: 'емкость отношение'
+    Actual: '  Ёмкость — «отношение»!  '
+     Which: is different.
+            Expected: емкость от ...
+              Actual:   Ёмкость  ...
+                      ^
+             Differ at offset 0
+  
+  package:matcher                                               expect
+  package:flutter_test/src/widget_tester.dart 473:18            expect
+  test\unit\domain\generation\semantic_matcher_test.dart 210:7  main.<fn>.<fn>
+  
+00:00 +6 -37: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/card_validator_test.dart: цитата по offsets без документа цитата не проверяется и не помечается
+00:00 +6 -38: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/semantic_matcher_test.dart: нормализация и метрики шинглы и Жаккар: одинаковый текст — 1, разные — 0
+00:00 +6 -39: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/dedup_report_test.dart: журнал прогона отчёт дедупа живёт в ledger, арифметика заказа не меняется
+00:00 +6 -39: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/semantic_matcher_test.dart: нормализация и метрики шинглы и Жаккар: одинаковый текст — 1, разные — 0 [E]
+  Expected: <1.0>
+    Actual: <0.0>
+  
+  package:matcher                                               expect
+  package:flutter_test/src/widget_tester.dart 473:18            expect
+  test\unit\domain\generation\semantic_matcher_test.dart 222:7  main.<fn>.<fn>
+  
+00:00 +6 -39: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/card_validator_test.dart: цитата по offsets без документа цитата не проверяется и не помечается [E]
+  Invalid argument(s): Блок doc:конспект.md#0#0 принадлежит doc:конспект.md#0, но не указан в blockIds раздела
+  package:cardflow/api/generation/content_model.dart 372:11  Document._validate
+  package:cardflow/api/generation/content_model.dart 188:5   new Document
+  test\unit\api\generation\card_validator_test.dart 553:10   _document
+  test\unit\api\generation\card_validator_test.dart 418:18   main.<fn>.<fn>
+  
+00:00 +6 -40: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/card_validator_test.dart: отчёт принятые, помеченные и отброшенные не смешиваются
+00:00 +6 -40: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/dedup_report_test.dart: журнал прогона отчёт дедупа живёт в ledger, арифметика заказа не меняется [E]
+  Expected: <1>
+    Actual: <0>
+  
+  package:matcher                                          expect
+  package:flutter_test/src/widget_tester.dart 473:18       expect
+  test\unit\domain\generation\dedup_report_test.dart 99:7  main.<fn>.<fn>
+  
+00:00 +6 -41: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/semantic_matcher_test.dart: нормализация и метрики косинус векторов: одинаковые — 1, ортогональные — 0
+00:00 +6 -41: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/card_validator_test.dart: отчёт принятые, помеченные и отброшенные не смешиваются [E]
+  Expected: <1>
+    Actual: <0>
+  
+  package:matcher                                          expect
+  package:flutter_test/src/widget_tester.dart 473:18       expect
+  test\unit\api\generation\card_validator_test.dart 475:7  main.<fn>.<fn>
+  
+00:00 +6 -42: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/dedup_report_test.dart: журнал прогона события партии и причины не теряют отчёт дедупа
+00:00 +6 -42: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/semantic_matcher_test.dart: нормализация и метрики косинус векторов: одинаковые — 1, ортогональные — 0 [E]
+  Expected: <1.0>
+    Actual: <0.0>
+  
+  package:matcher                                               expect
+  package:flutter_test/src/widget_tester.dart 473:18            expect
+  test\unit\domain\generation\semantic_matcher_test.dart 229:7  main.<fn>.<fn>
+  
+00:00 +6 -43: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/card_validator_test.dart: отчёт угол карточки: primary → null, reverse сохраняется
+00:00 +6 -43: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/dedup_report_test.dart: журнал прогона события партии и причины не теряют отчёт дедупа [E]
+  Expected: same instance as DedupReport:<DedupReport(пар 0)>
+    Actual: DedupReport:<DedupReport(пар 0)>
+  
+  package:matcher                                           expect
+  package:flutter_test/src/widget_tester.dart 473:18        expect
+  test\unit\domain\generation\dedup_report_test.dart 114:7  main.<fn>.<fn>
+  
+00:00 +6 -44: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/semantic_matcher_test.dart: фикстура: все известные пары ловятся, ложных нет
+00:00 +6 -44: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/card_validator_test.dart: отчёт угол карточки: primary → null, reverse сохраняется [E]
+  Bad state: No element
+  dart:core                                                 List.first
+  test\unit\api\generation\card_validator_test.dart 493:27  main.<fn>.<fn>
+  
+00:00 +6 -45: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/semantic_matcher_test.dart: фикстура: все известные пары ловятся, ложных нет [E]
+  Expected: Set:[
+              'exact-1|exact-2|exact',
+              'normalized-1|normalized-2|normalized',
+              'semantic-1|semantic-2|semantic'
+            ]
+    Actual: Set:[]
+     Which: does not contain 'exact-1|exact-2|exact'
+  
+  package:matcher                                               expect
+  package:flutter_test/src/widget_tester.dart 473:18            expect
+  test\unit\domain\generation\semantic_matcher_test.dart 270:5  main.<fn>
+  
+00:00 +6 -45: Some tests failed.
+
+Failing tests:
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/card_validator_test.dart: корректная карточка принята: ни одной причины, цитата по offsets
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/card_validator_test.dart: отчёт принятые, помеченные и отброшенные не смешиваются
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/card_validator_test.dart: отчёт угол карточки: primary → null, reverse сохраняется
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/card_validator_test.dart: семантические эвристики cloze осмысленный: пропуск не на весь вопрос и номера с c1
+  ... and 41 more

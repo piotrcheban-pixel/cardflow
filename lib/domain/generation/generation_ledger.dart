@@ -28,6 +28,7 @@
 /// а не подменяет бюджеты журнала.
 library;
 
+import 'package:cardflow/domain/generation/dedup_report.dart';
 import 'package:cardflow/domain/generation/generation_plan.dart';
 
 /// Класс недобора: почему принято меньше, чем запрошено.
@@ -218,8 +219,15 @@ class GenerationBatchLedger {
 /// ([AssertionError]). Список партий неизменяемый.
 class GenerationLedger {
   /// Создаёт журнал из [batches]; партии должны идти подряд с 0.
-  GenerationLedger({required List<GenerationBatchLedger> batches})
-    : batches = List<GenerationBatchLedger>.unmodifiable(batches) {
+  ///
+  /// [dedup] — отчёт каскада дедупликации (TASK «Срез 6»): журнал отвечает за
+  /// арифметику заказа, отчёт — за то, на каком уровне карточка помечена
+  /// дублем. По умолчанию отчёт пуст.
+  GenerationLedger({
+    required List<GenerationBatchLedger> batches,
+    DedupReport? dedup,
+  }) : batches = List<GenerationBatchLedger>.unmodifiable(batches),
+       dedup = dedup ?? DedupReport.empty() {
     assert(
       _numberedFromZero(this.batches),
       'Партии журнала обязаны нумероваться подряд с 0',
@@ -253,6 +261,13 @@ class GenerationLedger {
 
   /// Партии журнала в порядке плана (для UI «по партиям» и журнала запуска).
   final List<GenerationBatchLedger> batches;
+
+  /// Отчёт каскада дедупликации: сколько пар на каждом уровне (TASK «Срез 6»).
+  final DedupReport dedup;
+
+  /// Копия журнала с отчётом дедупа [report].
+  GenerationLedger withDedup(DedupReport report) =>
+      GenerationLedger(batches: batches, dedup: report);
 
   /// Запрошено карточек: сумма бюджетов партий.
   int get requested => _sum((GenerationBatchLedger batch) => batch.requested);
