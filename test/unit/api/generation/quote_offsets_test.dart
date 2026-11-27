@@ -1,6 +1,5 @@
 import 'package:cardflow/api/generation/content_model.dart';
 import 'package:cardflow/api/generation/validation/card_validator.dart';
-import 'package:cardflow/domain/generation/generated_card.dart';
 import 'package:cardflow/domain/text/document_format.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -23,7 +22,11 @@ void main() {
       ]);
       const String quote = 'запрещает вечный двигатель';
 
-      final CardCandidate candidate = _validateQuote(validator, document, quote);
+      final CardCandidate candidate = _validateQuote(
+        validator,
+        document,
+        quote,
+      );
 
       expect(candidate.verdict, CardVerdict.accepted);
       final QuoteMatch match = candidate.quote!;
@@ -47,10 +50,7 @@ void main() {
 
       expect(candidate.quote!.blockId, 'doc:конспект.md#0#0');
       expect(
-        document.text.substring(
-          candidate.quote!.start,
-          candidate.quote!.end,
-        ),
+        document.text.substring(candidate.quote!.start, candidate.quote!.end),
         'энергия сохраняется',
       );
     });
@@ -115,6 +115,10 @@ void main() {
             index: 0,
             start: 0,
             end: text.length,
+            blockIds: const <String>[
+              'doc:конспект.md#0#0',
+              'doc:конспект.md#0#1',
+            ],
           ),
         ],
         blocks: <Block>[
@@ -162,23 +166,20 @@ CardCandidate _validateQuote(
   Document document,
   String quote,
 ) {
-  final CardValidationReport report = validator.validate(
-    <String, Object?>{
-      'cards': <Map<String, Object?>>[
-        <String, Object?>{
-          'front': 'Что такое энтропия?',
-          'back': 'Мера необратимого рассеяния энергии.',
-          'hint': null,
-          'tags': <Object?>['термодинамика'],
-          'card_type': 'basic',
-          'unit_id': 'ku:1',
-          'angle': 'primary',
-          'quote_ref': quote,
-        },
-      ],
-    },
-    document: document,
-  );
+  final CardValidationReport report = validator.validate(<String, Object?>{
+    'cards': <Map<String, Object?>>[
+      <String, Object?>{
+        'front': 'Что такое энтропия?',
+        'back': 'Мера необратимого рассеяния энергии.',
+        'hint': null,
+        'tags': <Object?>['термодинамика'],
+        'card_type': 'basic',
+        'unit_id': 'ku:1',
+        'angle': 'primary',
+        'quote_ref': quote,
+      },
+    ],
+  }, document: document);
   return report.candidates.single;
 }
 
@@ -212,7 +213,13 @@ Document _document(List<String> lines) {
     format: DocumentFormat.md,
     text: text,
     sections: <Section>[
-      Section(id: sectionId, index: 0, start: 0, end: text.length),
+      Section(
+        id: sectionId,
+        index: 0,
+        start: 0,
+        end: text.length,
+        blockIds: <String>[for (final Block block in blocks) block.id],
+      ),
     ],
     blocks: blocks,
   );

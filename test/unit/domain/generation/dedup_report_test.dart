@@ -64,10 +64,7 @@ void main() {
     test('список пар неизменяем', () {
       final DedupReport report = DedupReport(pairs: const <DedupPair>[exact]);
 
-      expect(
-        () => report.pairs.add(semantic),
-        throwsUnsupportedError,
-      );
+      expect(() => report.pairs.add(semantic), throwsUnsupportedError);
     });
 
     test('пара с одинаковыми id или пустым id неконструируема', () {
@@ -102,9 +99,8 @@ void main() {
 
     test('события партии и причины не теряют отчёт дедупа', () {
       final DedupReport report = DedupReport(pairs: const <DedupPair>[exact]);
-      final GenerationLedger ledger = GenerationLedger.fromBudgets(
-        <int>[2],
-      ).withDedup(report);
+      final GenerationLedger ledger = GenerationLedger.fromBudgets(<int>[2])
+          .withDedup(report);
 
       final GenerationLedger recorded = ledger.record(
         0,

@@ -102,10 +102,7 @@ void main() {
       ),
     ];
 
-    expect(
-      const SemanticMatcher().match(cards).pairs,
-      isEmpty,
-    );
+    expect(const SemanticMatcher().match(cards).pairs, isEmpty);
   });
 
   test('каскад не понижает уровень: exact важнее semantic', () {
@@ -174,12 +171,13 @@ void main() {
   });
 
   test('провайдер без вектора (null) не даёт пары', () {
-    final DedupReport report = const SemanticMatcher(
-      embeddingProvider: _NullEmbeddings(),
-    ).match(<DedupCard>[
-      const DedupCard(id: 'a', front: 'Вопрос один?', back: 'Ответ один.'),
-      const DedupCard(id: 'b', front: 'Вопрос два?', back: 'Ответ два.'),
-    ]);
+    final DedupReport report =
+        const SemanticMatcher(
+          embeddingProvider: _NullEmbeddings(),
+        ).match(<DedupCard>[
+          const DedupCard(id: 'a', front: 'Вопрос один?', back: 'Ответ один.'),
+          const DedupCard(id: 'b', front: 'Вопрос два?', back: 'Ответ два.'),
+        ]);
 
     expect(report.pairs, isEmpty);
   });
@@ -294,7 +292,8 @@ class _Fixture {
         jsonDecode(File(path).readAsStringSync()) as Map<String, Object?>;
     final List<Object?> rawCards = json['cards']! as List<Object?>;
     final List<Object?> rawPairs = json['expectedPairs']! as List<Object?>;
-    final List<Object?> rawDistinct = json['expectedDistinct']! as List<Object?>;
+    final List<Object?> rawDistinct =
+        json['expectedDistinct']! as List<Object?>;
     final List<DedupCard> cards = <DedupCard>[];
     for (final Object? raw in rawCards) {
       final Map<String, Object?> map = raw! as Map<String, Object?>;

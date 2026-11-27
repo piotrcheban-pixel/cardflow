@@ -45,10 +45,7 @@ class DedupPair {
   }) : assert(leftId != '', 'У пары левая карточка обязана иметь id'),
        assert(rightId != '', 'У пары правая карточка обязана иметь id'),
        assert(leftId != rightId, 'Пара не может ссылаться на одну карточку'),
-       assert(
-         similarity >= 0 && similarity <= 1,
-         'Схожесть — доля в 0..1',
-       );
+       assert(similarity >= 0 && similarity <= 1, 'Схожесть — доля в 0..1');
 
   /// id карточки, встретившейся раньше (или карточки колоды).
   final String leftId;
@@ -94,31 +91,61 @@ class DedupReport {
   final List<DedupPair> pairs;
 
   /// Число пар.
-  int get pairCount => 0;
+  int get pairCount => pairs.length;
 
   /// Счётчики по уровням каскада (все уровни присутствуют, включая нулевые).
-  Map<DedupLevel, int> get byLevel => <DedupLevel, int>{
-    DedupLevel.exact: 0,
-    DedupLevel.normalized: 0,
-    DedupLevel.semantic: 0,
-    DedupLevel.embeddings: 0,
-  };
+  Map<DedupLevel, int> get byLevel {
+    final Map<DedupLevel, int> counts = <DedupLevel, int>{
+      for (final DedupLevel level in DedupLevel.values) level: 0,
+    };
+    for (final DedupPair pair in pairs) {
+      counts[pair.level] = counts[pair.level]! + 1;
+    }
+    return Map<DedupLevel, int>.unmodifiable(counts);
+  }
 
   /// Сколько пар найдено на уровне [level].
-  int countOf(DedupLevel level) => 0;
+  int countOf(DedupLevel level) {
+    var count = 0;
+    for (final DedupPair pair in pairs) {
+      if (pair.level == level) count++;
+    }
+    return count;
+  }
 
   /// Сильнейший уровень, на котором карточка [id] признана дублем.
-  DedupLevel? levelOf(String id) => null;
+  ///
+  /// Уровни упорядочены от точного к приблизительному ([DedupLevel.exact] —
+  /// сильнейший): карточка, совпавшая с одной дословно, а с другой «почти»,
+  /// помечается как `exact`.
+  DedupLevel? levelOf(String id) {
+    DedupLevel? strongest;
+    for (final DedupPair pair in pairs) {
+      if (!pair.involves(id)) continue;
+      if (strongest == null || pair.level.index < strongest.index) {
+        strongest = pair.level;
+      }
+    }
+    return strongest;
+  }
 
   /// true, если карточка [id] участвует хотя бы в одной паре.
-  bool isDuplicate(String id) => false;
+  bool isDuplicate(String id) => levelOf(id) != null;
 
   /// id всех карточек, помеченных дублями.
-  Set<String> get duplicateIds => const <String>{};
+  Set<String> get duplicateIds => <String>{
+    for (final DedupPair pair in pairs) ...<String>[pair.leftId, pair.rightId],
+  };
 
   /// Пары карточки [id].
-  List<DedupPair> pairsOf(String id) => const <DedupPair>[];
+  List<DedupPair> pairsOf(String id) => List<DedupPair>.unmodifiable(
+    pairs.where((DedupPair pair) => pair.involves(id)),
+  );
 
   @override
-  String toString() => 'DedupReport(пар $pairCount)';
+  String toString() =>
+      'DedupReport(пар $pairCount, exact ${countOf(DedupLevel.exact)}, '
+      'normalized ${countOf(DedupLevel.normalized)}, '
+      'semantic ${countOf(DedupLevel.semantic)}, '
+      'embeddings ${countOf(DedupLevel.embeddings)})';
 }

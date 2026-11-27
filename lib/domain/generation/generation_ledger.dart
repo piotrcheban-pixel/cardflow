@@ -339,7 +339,7 @@ class GenerationLedger {
       batches,
     );
     next[index] = batch;
-    return GenerationLedger(batches: next);
+    return GenerationLedger(batches: next, dedup: dedup);
   }
 
   /// Записывает события партии [batchIndex] и возвращает новый журнал.

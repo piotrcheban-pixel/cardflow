@@ -25,9 +25,7 @@ void main() {
     const String quote = 'мера необратимого рассеяния энергии';
 
     final CardValidationReport report = validator.validate(
-      _response(<Map<String, Object?>>[
-        _card(quoteRef: quote),
-      ]),
+      _response(<Map<String, Object?>>[_card(quoteRef: quote)]),
       document: document,
       knownUnitIds: const <String>{'ku:1'},
       knownSectionIds: const <String>{'doc:конспект.md#0'},
@@ -67,7 +65,11 @@ void main() {
     test('нет back — отброшено с причиной', () {
       final CardValidationReport report = validator.validate(
         _response(<Object?>[
-          <String, Object?>{'front': 'Вопрос?', 'back': 7, 'card_type': 'basic'},
+          <String, Object?>{
+            'front': 'Вопрос?',
+            'back': 7,
+            'card_type': 'basic',
+          },
         ]),
       );
 
@@ -98,43 +100,42 @@ void main() {
       expect(report.cards, isEmpty);
     });
 
-    test('длины front/back: граница 500/2000 без пометки, больше — пометка', () {
-      final CardValidationReport atLimit = validator.validate(
-        _response(<Map<String, Object?>>[
-          _card(front: '${'Вопрос? ' * 62}', back: '${'Ответ ' * 333}'),
-        ]),
-      );
-      expect(
-        atLimit.candidates.single.reasons,
-        isNot(contains(CardReasonCode.frontTooLong)),
-      );
-      expect(
-        atLimit.candidates.single.reasons,
-        isNot(contains(CardReasonCode.backTooLong)),
-      );
+    test(
+      'длины front/back: граница 500/2000 без пометки, больше — пометка',
+      () {
+        final CardValidationReport atLimit = validator.validate(
+          _response(<Map<String, Object?>>[
+            _card(front: 'Вопрос? ' * 62, back: 'Ответ ' * 333),
+          ]),
+        );
+        expect(
+          atLimit.candidates.single.reasons,
+          isNot(contains(CardReasonCode.frontTooLong)),
+        );
+        expect(
+          atLimit.candidates.single.reasons,
+          isNot(contains(CardReasonCode.backTooLong)),
+        );
 
-      final CardValidationReport overLimit = validator.validate(
-        _response(<Map<String, Object?>>[
-          _card(front: '${'Вопрос? ' * 63}', back: '${'Ответ ' * 334}'),
-        ]),
-      );
-      expect(
-        overLimit.candidates.single.reasons,
-        containsAll(<CardReasonCode>[
-          CardReasonCode.frontTooLong,
-          CardReasonCode.backTooLong,
-        ]),
-      );
-    });
+        final CardValidationReport overLimit = validator.validate(
+          _response(<Map<String, Object?>>[
+            _card(front: 'Вопрос? ' * 63, back: 'Ответ ' * 334),
+          ]),
+        );
+        expect(
+          overLimit.candidates.single.reasons,
+          containsAll(<CardReasonCode>[
+            CardReasonCode.frontTooLong,
+            CardReasonCode.backTooLong,
+          ]),
+        );
+      },
+    );
 
     test('cloze без пропуска — пометка clozeMissing', () {
       final CardValidationReport report = validator.validate(
         _response(<Map<String, Object?>>[
-          _card(
-            front: 'Столица Франции — Париж.',
-            cardType: 'cloze',
-            back: '',
-          ),
+          _card(front: 'Столица Франции — Париж.', cardType: 'cloze', back: ''),
         ]),
       );
 
@@ -255,7 +256,9 @@ void main() {
       ];
       for (final String front in dangling) {
         final CardValidationReport report = validator.validate(
-          _response(<Map<String, Object?>>[_card(front: front, quoteRef: null)]),
+          _response(<Map<String, Object?>>[
+            _card(front: front, quoteRef: null),
+          ]),
         );
         expect(
           report.candidates.single.reasons,
@@ -274,7 +277,9 @@ void main() {
       ];
       for (final String front in selfContained) {
         final CardValidationReport report = validator.validate(
-          _response(<Map<String, Object?>>[_card(front: front, quoteRef: null)]),
+          _response(<Map<String, Object?>>[
+            _card(front: front, quoteRef: null),
+          ]),
         );
         expect(
           report.candidates.single.reasons,
@@ -284,37 +289,40 @@ void main() {
       }
     });
 
-    test('атомарность: перечисление больше трёх — notAtomic, ровно три — без', () {
-      final CardValidationReport many = validator.validate(
-        _response(<Map<String, Object?>>[
-          _card(
-            front:
-                'Назовите виды теплопередачи: 1) теплопроводность '
-                '2) конвекция 3) излучение 4) испарение?',
-            quoteRef: null,
-          ),
-        ]),
-      );
-      expect(
-        many.candidates.single.reasons,
-        contains(CardReasonCode.notAtomic),
-      );
+    test(
+      'атомарность: перечисление больше трёх — notAtomic, ровно три — без',
+      () {
+        final CardValidationReport many = validator.validate(
+          _response(<Map<String, Object?>>[
+            _card(
+              front:
+                  'Назовите виды теплопередачи: 1) теплопроводность '
+                  '2) конвекция 3) излучение 4) испарение?',
+              quoteRef: null,
+            ),
+          ]),
+        );
+        expect(
+          many.candidates.single.reasons,
+          contains(CardReasonCode.notAtomic),
+        );
 
-      final CardValidationReport three = validator.validate(
-        _response(<Map<String, Object?>>[
-          _card(
-            front:
-                'Назовите виды теплопередачи: 1) теплопроводность '
-                '2) конвекция 3) излучение?',
-            quoteRef: null,
-          ),
-        ]),
-      );
-      expect(
-        three.candidates.single.reasons,
-        isNot(contains(CardReasonCode.notAtomic)),
-      );
-    });
+        final CardValidationReport three = validator.validate(
+          _response(<Map<String, Object?>>[
+            _card(
+              front:
+                  'Назовите виды теплопередачи: 1) теплопроводность '
+                  '2) конвекция 3) излучение?',
+              quoteRef: null,
+            ),
+          ]),
+        );
+        expect(
+          three.candidates.single.reasons,
+          isNot(contains(CardReasonCode.notAtomic)),
+        );
+      },
+    );
 
     test('cloze осмысленный: пропуск не на весь вопрос и номера с c1', () {
       const List<String> meaningless = <String>[
@@ -423,9 +431,7 @@ void main() {
 
     test('цитата, отличающаяся пробелами/тире/регистром, — не буквальная', () {
       final CardValidationReport report = validator.validate(
-        _response(<Map<String, Object?>>[
-          _card(quoteRef: 'энтропия - мера'),
-        ]),
+        _response(<Map<String, Object?>>[_card(quoteRef: 'энтропия - мера')]),
         document: document,
       );
 
@@ -451,9 +457,7 @@ void main() {
 
     test('без документа цитата не проверяется и не помечается', () {
       final CardValidationReport report = validator.validate(
-        _response(<Map<String, Object?>>[
-          _card(quoteRef: 'чего угодно'),
-        ]),
+        _response(<Map<String, Object?>>[_card(quoteRef: 'чего угодно')]),
       );
 
       expect(report.candidates.single.reasons, isEmpty);
@@ -466,8 +470,11 @@ void main() {
       final CardValidationReport report = validator.validate(
         _response(<Object?>[
           _card(quoteRef: null),
-          _card(front: 'Что такое энтропия — мера рассеяния энергии?',
-              back: 'Мера рассеяния энергии.', quoteRef: null),
+          _card(
+            front: 'Что такое энтропия — мера рассеяния энергии?',
+            back: 'Мера рассеяния энергии.',
+            quoteRef: null,
+          ),
           <String, Object?>{'front': 'нет обратной стороны'},
         ]),
       );
@@ -499,8 +506,9 @@ void main() {
 /// Проверка LaTeX в тестах: «\broken» считается ошибкой разметки.
 bool _latexIsValidForTest(String text) => !text.contains(r'\broken');
 
-Map<String, Object?> _response(List<Object?> cards) =>
-    <String, Object?>{'cards': cards};
+Map<String, Object?> _response(List<Object?> cards) => <String, Object?>{
+  'cards': cards,
+};
 
 Map<String, Object?> _card({
   Object? front = 'Что такое энтропия?',
@@ -522,7 +530,7 @@ Map<String, Object?> _card({
   'unit_id': unitId,
   'angle': angle,
   'quote_ref': quoteRef,
-  if (sectionId != null) 'section_id': sectionId,
+  'section_id': ?sectionId,
 };
 
 /// Документ из строк: блок = строка, раздел — весь текст.
@@ -555,7 +563,13 @@ Document _document(List<String> lines) {
     format: DocumentFormat.md,
     text: text,
     sections: <Section>[
-      Section(id: sectionId, index: 0, start: 0, end: text.length),
+      Section(
+        id: sectionId,
+        index: 0,
+        start: 0,
+        end: text.length,
+        blockIds: <String>[for (final Block block in blocks) block.id],
+      ),
     ],
     blocks: blocks,
   );
