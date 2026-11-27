@@ -121,4 +121,53 @@ void main() {
       expect(CardsJsonExtractor.extractJsonObject('{"a":1'), isNull);
     });
   });
+
+  // TASK 04: модель, упёршаяся в лимит вывода, присылает незакрытый JSON.
+  // Раньше это была доменная ошибка `truncated` и ВСЕ карточки фрагмента
+  // терялись (заказ 50 → «сгенерировано 32»). Теперь полные карточки спасаются.
+  group('спасение карточек из оборванного ответа (TASK 04)', () {
+    test('полный JSON: карточки возвращаются как есть', () {
+      final List<Map<String, Object?>> cards = extractor.salvageCards(
+        '{"cards":[{"front":"a","back":"b"},{"front":"c","back":"d"}]}',
+      );
+      expect(cards, hasLength(2));
+      expect(cards.first['front'], 'a');
+    });
+
+    test('оборванный JSON: спасаются только закрытые карточки', () {
+      const raw =
+          '{"cards":['
+          '{"front":"Вопрос 1","back":"Ответ 1"},'
+          '{"front":"Вопрос 2","back":"Ответ 2"},'
+          '{"front":"Вопрос 3","back":"Отв';
+      final List<Map<String, Object?>> cards = extractor.salvageCards(raw);
+      expect(cards, hasLength(2));
+      expect(cards.map((Map<String, Object?> c) => c['front']), <String>[
+        'Вопрос 1',
+        'Вопрос 2',
+      ]);
+    });
+
+    test('скобки и запятые внутри строк не ломают разбор', () {
+      const raw =
+          '{"cards":[{"front":"a {б} c","back":"x, y"},'
+          '{"front":"b","back":"d';
+      final List<Map<String, Object?>> cards = extractor.salvageCards(raw);
+      expect(cards, hasLength(1));
+      expect(cards.single['front'], 'a {б} c');
+    });
+
+    test('обрыв до первой карточки → пусто (восстановление пайплайна)', () {
+      expect(extractor.salvageCards('{"cards":['), isEmpty);
+      expect(extractor.salvageCards('{"cards":[{"front":'), isEmpty);
+      expect(extractor.salvageCards('модель молчит'), isEmpty);
+    });
+
+    test('невалидные карточки отбрасываются поштучно, полные остаются', () {
+      const raw = '{"cards":[{"front":"a"},{"front":"b","back":"c"},{"fron';
+      final List<Map<String, Object?>> cards = extractor.salvageCards(raw);
+      // Обе закрытые карточки возвращены: строгость проверяет схема сервиса.
+      expect(cards, hasLength(2));
+    });
+  });
 }

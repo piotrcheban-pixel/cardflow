@@ -115,10 +115,10 @@ class GeminiAdapter implements GenerationProviderAdapter {
       throw invalidProviderResponse('Gemini', 'candidates[0] не объект');
     }
 
+    // TASK 04: `MAX_TOKENS` — обрыв вывода, а не отказ: полные карточки из
+    // прерванного JSON спасает сервис.
     final finishReason = candidate['finishReason'];
-    if (finishReason == 'MAX_TOKENS') {
-      throw const GenerationException(GenerationErrorCode.truncated);
-    }
+    final bool truncated = finishReason == 'MAX_TOKENS';
     if (finishReason is String &&
         _refusalFinishReasons.contains(finishReason)) {
       throw const GenerationException(
@@ -129,10 +129,16 @@ class GeminiAdapter implements GenerationProviderAdapter {
 
     final content = jsonObjectOrNull(candidate['content']);
     if (content == null) {
+      if (truncated) {
+        throw const GenerationException(GenerationErrorCode.truncated);
+      }
       throw const GenerationException(GenerationErrorCode.emptyResponse);
     }
     final rawParts = content['parts'];
     if (rawParts == null) {
+      if (truncated) {
+        throw const GenerationException(GenerationErrorCode.truncated);
+      }
       throw const GenerationException(GenerationErrorCode.emptyResponse);
     }
     final parts = jsonListOrNull(rawParts);
@@ -163,11 +169,15 @@ class GeminiAdapter implements GenerationProviderAdapter {
     }
     final cardsJson = buffer.toString();
     if (cardsJson.trim().isEmpty) {
+      if (truncated) {
+        throw const GenerationException(GenerationErrorCode.truncated);
+      }
       throw const GenerationException(GenerationErrorCode.emptyResponse);
     }
     return ProviderRawResponse(
       cardsJson: cardsJson,
       usage: _parseUsage(json['usageMetadata']),
+      truncated: truncated,
     );
   }
 }

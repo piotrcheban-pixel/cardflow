@@ -578,6 +578,23 @@ class _GenerationPreviewScreenState
                     ),
                   ),
                 ),
+              // TASK 04, часть 4: обрыв ответа модели по лимиту вывода больше
+              // не прячется — видно, сколько раз это было и сколько карточек
+              // спасено (остальное добиралось отдельными запросами).
+              if (_result.truncatedChunks > 0)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(
+                    l10n.generationPreviewTruncated(
+                      _result.truncatedChunks,
+                      _result.salvagedCards,
+                    ),
+                    key: const ValueKey<String>('generation-preview-truncated'),
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.tertiary,
+                    ),
+                  ),
+                ),
               if (_result.sectionCoverage.isNotEmpty &&
                   emptyCoverageSections > 0)
                 Padding(

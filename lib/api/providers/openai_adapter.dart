@@ -102,9 +102,9 @@ class OpenAiAdapter implements GenerationProviderAdapter {
     if (choice == null) {
       throw invalidProviderResponse('OpenAI', 'choices[0] не объект');
     }
-    if (choice['finish_reason'] == 'length') {
-      throw const GenerationException(GenerationErrorCode.truncated);
-    }
+    // TASK 04: обрыв по лимиту вывода — не исключение: полные карточки из
+    // прерванного JSON спасает сервис, а пайплайн добирает недостачу.
+    final bool truncated = choice['finish_reason'] == 'length';
     final message = jsonObjectOrNull(choice['message']);
     if (message == null) {
       throw invalidProviderResponse('OpenAI', 'choices[0].message не объект');
@@ -114,6 +114,9 @@ class OpenAiAdapter implements GenerationProviderAdapter {
     }
     final content = message['content'];
     if (content == null) {
+      if (truncated) {
+        throw const GenerationException(GenerationErrorCode.truncated);
+      }
       throw const GenerationException(GenerationErrorCode.emptyResponse);
     }
     if (content is! String) {
@@ -123,9 +126,16 @@ class OpenAiAdapter implements GenerationProviderAdapter {
       );
     }
     if (content.trim().isEmpty) {
+      if (truncated) {
+        throw const GenerationException(GenerationErrorCode.truncated);
+      }
       throw const GenerationException(GenerationErrorCode.emptyResponse);
     }
-    return ProviderRawResponse(cardsJson: content, usage: _parseUsage(json));
+    return ProviderRawResponse(
+      cardsJson: content,
+      usage: _parseUsage(json),
+      truncated: truncated,
+    );
   }
 }
 

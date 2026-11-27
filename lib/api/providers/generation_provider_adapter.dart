@@ -38,13 +38,27 @@ int serializedRequestBytes(ProviderRequest request) =>
 /// Ответ провайдера после проверки причины остановки.
 class ProviderRawResponse {
   /// Создаёт разобранный ответ.
-  const ProviderRawResponse({required this.cardsJson, required this.usage});
+  const ProviderRawResponse({
+    required this.cardsJson,
+    required this.usage,
+    this.truncated = false,
+  });
 
   /// JSON-строка с ответом модели по канонической схеме A8.4.
   final String cardsJson;
 
   /// Расход токенов (если провайдер сообщил).
   final TokenUsage usage;
+
+  /// Ответ оборван по лимиту вывода (`finish_reason: length`,
+  /// `MAX_TOKENS`, `stop_reason: max_tokens`).
+  ///
+  /// TASK 04: раньше адаптер бросал `GenerationException(truncated)`, и **все
+  /// уже полученные карточки фрагмента терялись** — при заказе 50 карточек это
+  /// давало «сгенерировано 32». Теперь обрезанный ответ доходит до сервиса,
+  /// который спасает полные карточки из прерванного JSON, а пайплайн
+  /// добирает недостачу следующими партиями.
+  final bool truncated;
 }
 
 /// Адаптер одного провайдера.

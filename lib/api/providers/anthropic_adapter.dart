@@ -102,9 +102,10 @@ class AnthropicAdapter implements GenerationProviderAdapter {
   @override
   ProviderRawResponse parseResponse(Map<String, Object?> json) {
     final stopReason = json['stop_reason'];
-    if (stopReason == 'max_tokens') {
-      throw const GenerationException(GenerationErrorCode.truncated);
-    }
+    // TASK 04: `max_tokens` — обрыв вывода. У Anthropic JSON карточек приходит
+    // уже разобранным внутри `tool_use.input`, поэтому частичного текста нет:
+    // если блока нет, сервис получит `truncated` и включит восстановление.
+    final bool truncated = stopReason == 'max_tokens';
     if (stopReason == 'refusal') {
       throw const GenerationException(GenerationErrorCode.refused);
     }
@@ -135,7 +136,11 @@ class AnthropicAdapter implements GenerationProviderAdapter {
       return ProviderRawResponse(
         cardsJson: jsonEncode(input),
         usage: _parseUsage(json['usage']),
+        truncated: truncated,
       );
+    }
+    if (truncated) {
+      throw const GenerationException(GenerationErrorCode.truncated);
     }
     throw invalidProviderResponse(
       'Anthropic',

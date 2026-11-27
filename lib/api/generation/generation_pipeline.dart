@@ -727,6 +727,10 @@ class GenerationPipeline implements GenerationRunner {
     var shortfall = 0;
     var skippedBatches = 0;
     var topUpRounds = 0;
+    // TASK 04: диагностика честного недобора и best-effort изображений.
+    var truncatedChunks = 0;
+    var salvagedCards = 0;
+    var imageResolveFailures = 0;
     // Стоп добора, если предыдущий раунд не дал ни одной новой карточки.
     var topUpBaseline = -1;
     var requestsSent = 0;
@@ -970,6 +974,12 @@ class GenerationPipeline implements GenerationRunner {
       }
 
       rejected += result.rejectedCards;
+      // TASK 04: оборванный ответ модели не считается падением партии: полные
+      // карточки уже в результате, а недостача добирается следующими партиями.
+      if (result.truncated) {
+        truncatedChunks++;
+        salvagedCards += result.salvagedCards;
+      }
       tokensUsed += result.usage.totalTokens ?? 0;
       processed++;
       sentDocumentImageIds.addAll(result.sentDocumentImageIds);
@@ -1053,12 +1063,30 @@ class GenerationPipeline implements GenerationRunner {
         imageIndex < cards.length;
         imageIndex++
       ) {
-        cards[imageIndex] = await _withCardImages(
-          cards[imageIndex],
-          documentImages,
-          cancellation,
-          wishes: request.wishes,
-        );
+        // TASK 04, часть 5: поиск/разрешение изображений — best effort.
+        // Исключение при разрешении картинок раньше могло выбраться из цикла
+        // партии и оборвать весь запуск; теперь карточка сохраняется без
+        // изображения, а генерация продолжается.
+        final GeneratedCard beforeImages = cards[imageIndex];
+        try {
+          cards[imageIndex] = await _withCardImages(
+            beforeImages,
+            documentImages,
+            cancellation,
+            wishes: request.wishes,
+          );
+        } on Object catch (error) {
+          imageResolveFailures++;
+          diagnostics.imageSearch(
+            query: beforeImages.imageQuery ?? '',
+            outcome:
+                'разрешение изображений упало (${error.runtimeType}): '
+                'карточка сохранена без картинки',
+          );
+          cards[imageIndex] = _withoutImages(
+            beforeImages.clearedImageSelection(),
+          );
+        }
         onProgress?.call(
           GenerationProgress(
             phase: GenerationProgressPhase.receiving,
@@ -1182,6 +1210,17 @@ class GenerationPipeline implements GenerationRunner {
       failedRequests: failedRequests,
     );
     diagnostics.tokenCalibration(calibration);
+    // TASK 04: итог «запрошено/создано/почему меньше» — по числам, без текстов.
+    diagnostics.runSummary(
+      requested: requestedTotal,
+      created: cards.length,
+      chunks: processed,
+      failedChunks: failures.length,
+      truncatedChunks: truncatedChunks,
+      salvagedCards: salvagedCards,
+      imageResolveFailures: imageResolveFailures,
+      exhaustedSections: exhaustedSections.length,
+    );
     return GenerationRunResult(
       jobId: job.id,
       status: status,
@@ -1207,6 +1246,9 @@ class GenerationPipeline implements GenerationRunner {
       sectionCoverage: List<GenerationSectionCoverage>.unmodifiable(
         sectionCoverage,
       ),
+      truncatedChunks: truncatedChunks,
+      salvagedCards: salvagedCards,
+      imageResolveFailures: imageResolveFailures,
     );
   }
 

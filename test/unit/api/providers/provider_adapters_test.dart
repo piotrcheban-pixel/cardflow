@@ -162,18 +162,19 @@ void main() {
       );
     });
 
-    test('finish_reason length → truncated', () {
-      expect(
-        () => adapter.parseResponse(<String, Object?>{
-          'choices': <Object?>[
-            <String, Object?>{
-              'message': <String, Object?>{'content': '{"cards":['},
-              'finish_reason': 'length',
-            },
-          ],
-        }),
-        throwsGeneration(GenerationErrorCode.truncated),
-      );
+    test('finish_reason length → truncated-ответ, не исключение', () {
+      // TASK 04: полные карточки из оборванного ответа спасает сервис,
+      // поэтому адаптер отдаёт тело с флагом `truncated`.
+      final response = adapter.parseResponse(<String, Object?>{
+        'choices': <Object?>[
+          <String, Object?>{
+            'message': <String, Object?>{'content': '{"cards":['},
+            'finish_reason': 'length',
+          },
+        ],
+      });
+      expect(response.truncated, isTrue);
+      expect(response.cardsJson, '{"cards":[');
     });
 
     test('пустой/отсутствующий content → emptyResponse', () {
@@ -334,22 +335,23 @@ void main() {
       expect(response.usage.totalTokens, 15);
     });
 
-    test('finishReason MAX_TOKENS → truncated', () {
-      expect(
-        () => adapter.parseResponse(<String, Object?>{
-          'candidates': <Object?>[
-            <String, Object?>{
-              'content': <String, Object?>{
-                'parts': <Object?>[
-                  <String, Object?>{'text': '{"cards":['},
-                ],
-              },
-              'finishReason': 'MAX_TOKENS',
+    test('finishReason MAX_TOKENS → truncated-ответ с телом', () {
+      // TASK 04: обрыв вывода не теряет уже прочитанный текст — сервис
+      // спасает полные карточки, пайплайн добирает недостачу.
+      final response = adapter.parseResponse(<String, Object?>{
+        'candidates': <Object?>[
+          <String, Object?>{
+            'content': <String, Object?>{
+              'parts': <Object?>[
+                <String, Object?>{'text': '{"cards":['},
+              ],
             },
-          ],
-        }),
-        throwsGeneration(GenerationErrorCode.truncated),
-      );
+            'finishReason': 'MAX_TOKENS',
+          },
+        ],
+      });
+      expect(response.truncated, isTrue);
+      expect(response.cardsJson, '{"cards":[');
     });
 
     test('safety finishReason и blockReason → refused', () {

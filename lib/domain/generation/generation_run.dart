@@ -225,6 +225,9 @@ class GenerationRunResult {
     this.trimmedCards = 0,
     this.exhaustedSectionIds = const <String>[],
     this.sectionCoverage = const <GenerationSectionCoverage>[],
+    this.truncatedChunks = 0,
+    this.salvagedCards = 0,
+    this.imageResolveFailures = 0,
   });
 
   /// Идентификатор задания `generation_jobs`.
@@ -262,6 +265,20 @@ class GenerationRunResult {
 
   /// Покрытие разделов материала принятыми карточками (TASK 5).
   final List<GenerationSectionCoverage> sectionCoverage;
+
+  /// Сколько партий модель оборвала по лимиту вывода (TASK 04).
+  ///
+  /// Часть этих партий не потеряна: полные карточки спасены из прерванного
+  /// JSON ([salvagedCards]), остаток добирается следующими партиями.
+  final int truncatedChunks;
+
+  /// Сколько карточек спасено из оборванных ответов (TASK 04).
+  final int salvagedCards;
+
+  /// Сколько раз не удалось разрешить изображения карточки (TASK 04).
+  ///
+  /// Карточка при этом сохранена без картинки: поиск иллюстраций — best effort.
+  final int imageResolveFailures;
 
   /// Сколько фрагментов обработано.
   final int chunkCount;

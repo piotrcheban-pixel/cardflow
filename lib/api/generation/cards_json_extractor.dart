@@ -74,6 +74,107 @@ class CardsJsonExtractor {
     return text.substring(start, end + 1);
   }
 
+  /// Спасает **полные** карточки из оборванного ответа модели (TASK 04).
+  ///
+  /// Модель, упёршаяся в лимит вывода (`finish_reason: length`), присылает
+  /// JSON без закрывающих `]`/`}` — обычный разбор падает, и раньше все
+  /// полученные карточки фрагмента терялись (заказ 50 → «сгенерировано 32»).
+  /// Здесь из массива `cards` собираются только целиком закрытые объекты:
+  /// незавершённая карточка отбрасывается, всё предыдущее сохраняется и
+  /// проверяется по схеме обычным путём.
+  ///
+  /// Возвращает пустой список, если карточек нет или структура не найдена.
+  List<Map<String, Object?>> salvageCards(String raw) {
+    final String text = stripBom(repairLatexJsonEscapes(raw));
+    // Полный валидный JSON спасать не нужно — берём карточки как есть.
+    final direct = _tryDecode(text);
+    final List<Map<String, Object?>> result = <Map<String, Object?>>[];
+    if (direct.ok && _appendCardsOf(direct.value, result)) return result;
+    result.clear();
+
+    final int cardsKey = text.indexOf('"cards"');
+    if (cardsKey < 0) return const <Map<String, Object?>>[];
+    final int arrayStart = text.indexOf('[', cardsKey);
+    if (arrayStart < 0) return const <Map<String, Object?>>[];
+    var index = arrayStart + 1;
+    while (index < text.length) {
+      // Пропускаем пробелы и запятые между карточками.
+      while (index < text.length &&
+          (text[index] == ' ' ||
+              text[index] == '\n' ||
+              text[index] == '\r' ||
+              text[index] == '\t' ||
+              text[index] == ',')) {
+        index++;
+      }
+      if (index >= text.length || text[index] != '{') break;
+      final int end = _objectEnd(text, index);
+      if (end < 0) break;
+      final String chunk = text.substring(index, end + 1);
+      final decoded = _tryDecode(chunk);
+      if (decoded.ok && decoded.value is Map) {
+        result.add(<String, Object?>{
+          for (final MapEntry<Object?, Object?> entry
+              in (decoded.value! as Map).entries)
+            if (entry.key is String) entry.key! as String: entry.value,
+        });
+      }
+      index = end + 1;
+    }
+    return List<Map<String, Object?>>.unmodifiable(result);
+  }
+
+  /// Индекс закрывающей `}` объекта, начавшегося в [start] (`-1` — нет).
+  ///
+  /// Учитывает строки и экранирование: `}` внутри строки не считается концом.
+  static int _objectEnd(String text, int start) {
+    var depth = 0;
+    var inString = false;
+    var escaped = false;
+    for (var index = start; index < text.length; index++) {
+      final String char = text[index];
+      if (inString) {
+        if (escaped) {
+          escaped = false;
+          continue;
+        }
+        if (char == r'\') {
+          escaped = true;
+        } else if (char == '"') {
+          inString = false;
+        }
+        continue;
+      }
+      if (char == '"') {
+        inString = true;
+        continue;
+      }
+      if (char == '{' || char == '[') {
+        depth++;
+        continue;
+      }
+      if (char == '}' || char == ']') {
+        depth--;
+        if (depth == 0) return char == '}' ? index : -1;
+      }
+    }
+    return -1;
+  }
+
+  bool _appendCardsOf(Object? json, List<Map<String, Object?>> target) {
+    if (json is! Map) return false;
+    final Object? cards = json['cards'];
+    if (cards is! List) return false;
+    for (final Object? card in cards) {
+      if (card is! Map) continue;
+      target.add(<String, Object?>{
+        for (final MapEntry<Object?, Object?> entry in card.entries)
+          if (entry.key is String) entry.key! as String: entry.value,
+      });
+    }
+    return true;
+  }
+
   /// Пытается декодировать [value]; не бросает исключений.
   ({bool ok, Object? value}) _tryDecode(String value) {
     try {

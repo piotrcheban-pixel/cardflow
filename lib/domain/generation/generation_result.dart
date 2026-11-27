@@ -56,6 +56,8 @@ class GenerationResult {
     this.skippedDocumentImageIds = const <String>[],
     this.sourceExhausted = false,
     this.requestBytes,
+    this.truncated = false,
+    this.salvagedCards = 0,
   });
 
   /// Провайдер ответа.
@@ -103,9 +105,21 @@ class GenerationResult {
   /// оценка плана: по нему проверяется `maxRequestBytes`.
   final int? requestBytes;
 
+  /// Ответ модели оборван по лимиту вывода (TASK 04).
+  ///
+  /// Раньше обрезанный ответ превращался в `GenerationException(truncated)` и
+  /// **все** полученные карточки фрагмента терялись. Теперь сервис отдаёт
+  /// полные карточки из прерванного JSON, а пайплайн добирает недостачу.
+  final bool truncated;
+
+  /// Сколько карточек спасено из оборванного JSON (TASK 04, диагностика).
+  ///
+  /// `0` — ответ не был оборван или полных частей не нашлось.
+  final int salvagedCards;
+
   @override
   String toString() =>
       'GenerationResult(provider: ${provider.wireName}, model: $model, '
       'cards: ${cards.length}, rejected: $rejectedCards, '
-      'promptVersion: $promptVersion)';
+      'truncated: $truncated, promptVersion: $promptVersion)';
 }

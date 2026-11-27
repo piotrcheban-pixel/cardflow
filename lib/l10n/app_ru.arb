@@ -1655,6 +1655,62 @@
       }
     }
   },
+  "generationPreviewTruncated": "Ответ модели обрывался по лимиту вывода {chunks} раз(а): из обрывов сохранено {cards} карточек. Недостающие карточки запрашивались отдельно.",
+  "@generationPreviewTruncated": {
+    "description": "Предпросмотр: модель обрывала ответ по лимиту вывода, полные карточки спасены (TASK 04, часть 4).",
+    "placeholders": {
+      "chunks": {
+        "type": "int"
+      },
+      "cards": {
+        "type": "int"
+      }
+    }
+  },
+  "generationShortfallTitle": "Создано меньше, чем запрошено",
+  "@generationShortfallTitle": {
+    "description": "Заголовок диалога честного недобора карточек (TASK 04, часть 4)."
+  },
+  "generationShortfallContext": "Запрошено {requested} карточек, сгенерировано {created}: модель обрывала ответ по лимиту контекста. Продолжить?",
+  "@generationShortfallContext": {
+    "description": "Диалог недобора: причина — обрыв ответа по лимиту контекста (TASK 04).",
+    "placeholders": {
+      "requested": {
+        "type": "int"
+      },
+      "created": {
+        "type": "int"
+      }
+    }
+  },
+  "generationShortfallMaterial": "Запрошено {requested} карточек, создано {created}: материал исчерпан, лишние карточки не выдумывались. Продолжить?",
+  "@generationShortfallMaterial": {
+    "description": "Диалог недобора: причина — материал исчерпан (TASK 04).",
+    "placeholders": {
+      "requested": {
+        "type": "int"
+      },
+      "created": {
+        "type": "int"
+      }
+    }
+  },
+  "generationShortfallGeneric": "Запрошено {requested} карточек, создано {created}. Продолжить?",
+  "@generationShortfallGeneric": {
+    "description": "Диалог недобора без установленной причины: числа запроса и результата (TASK 04).",
+    "placeholders": {
+      "requested": {
+        "type": "int"
+      },
+      "created": {
+        "type": "int"
+      }
+    }
+  },
+  "generationShortfallContinue": "Продолжить",
+  "@generationShortfallContinue": {
+    "description": "Кнопка диалога недобора: открыть предпросмотр с созданными карточками (TASK 04)."
+  },
   "generationPreviewCoverage": "Разделов без единой карточки: {empty} из {total}. Проверьте покрытие материала.",
   "@generationPreviewCoverage": {
     "description": "Отчёт покрытия разделов материала принятыми карточками (TASK 5).",

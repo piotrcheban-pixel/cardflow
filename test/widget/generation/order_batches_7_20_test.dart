@@ -379,4 +379,74 @@ void main() {
     );
     expect(l10n.generationPlanRequestedCount(40), 'Запрошено: 40 карточек');
   });
+
+  // TASK 04, часть 4: обрыв ответа по лимиту вывода виден в предпросмотре —
+  // числа «сброшено/спасено», а не молчаливое «32 из 50».
+  testWidgets('предпросмотр: обрыв ответа модели показан числами', (
+    WidgetTester tester,
+  ) async {
+    final ParsedDocument document = ParsedDocument(
+      format: DocumentFormat.txt,
+      fileName: 'лекция.txt',
+      text: lectureText(1200),
+      sections: <ParsedSection>[
+        ParsedSection(start: 0, end: lectureText(1200).length),
+      ],
+    );
+    final ProviderAccount account = testProviderAccount(
+      modelId: 'deepseek-chat',
+    );
+    final GenerationPlan plan = const GenerationPlanBuilder().build(
+      documents: <ParsedDocument>[document],
+      capabilities: const ModelCapabilities(
+        contextWindowTokens: 128000,
+        contextSource: CapabilitySource.officialCatalog,
+        maxOutputTokens: 8192,
+      ),
+      requestedCards: 40,
+    );
+    final GenerationRunResult result = GenerationRunResult(
+      jobId: 'job-truncated',
+      status: GenerationJobStatus.done,
+      cards: const <GeneratedCard>[
+        GeneratedCard(
+          front: 'Первая карточка',
+          back: 'Ответ',
+          cardType: CardType.basic,
+        ),
+      ],
+      failures: const <GenerationChunkFailure>[],
+      tokensUsed: 100,
+      estimatedTokens: 200,
+      duplicatesRemoved: 0,
+      chunkCount: plan.chunks.length,
+      cancelled: false,
+      plan: plan,
+      truncatedChunks: 2,
+      salvagedCards: 27,
+    );
+    await tester.pumpWidget(
+      appWithHome(
+        overrides: overrides(),
+        home: GenerationPreviewScreen(
+          request: GenerationRunRequest(
+            documents: <ParsedDocument>[document],
+            account: account,
+            deckName: 'Новая колода',
+            requestedCards: 40,
+          ),
+          result: result,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final Finder truncated = find.byKey(
+      const ValueKey<String>('generation-preview-truncated'),
+    );
+    expect(truncated, findsOneWidget);
+    expect(tester.widget<Text>(truncated).data, contains('2'));
+    expect(tester.widget<Text>(truncated).data, contains('27'));
+    expect(tester.widget<Text>(truncated).data, contains('лимиту вывода'));
+  });
 }

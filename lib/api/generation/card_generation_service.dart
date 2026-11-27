@@ -235,10 +235,33 @@ class CardGenerationService implements GenerationCaller {
     // image_query; в release метод — no-op.
     diagnostics.modelResponse(rawResponse.cardsJson);
 
-    final decoded = jsonExtractor.decode(
-      rawResponse.cardsJson,
-      tolerant: tolerantFallback,
-    );
+    final bool truncated = rawResponse.truncated;
+    Object? decoded;
+    var salvaged = 0;
+    if (truncated) {
+      // TASK 04: оборванный ответ не выбрасываем целиком — спасаем полные
+      // карточки из прерванного JSON. Незавершённая карточка отбрасывается,
+      // остальные проходят обычную проверку схемы/правил ниже.
+      final List<Map<String, Object?>> rescued = jsonExtractor.salvageCards(
+        rawResponse.cardsJson,
+      );
+      if (rescued.isNotEmpty) {
+        decoded = <String, Object?>{'cards': rescued};
+        salvaged = rescued.length;
+        diagnostics.partialResponse(
+          keptCards: rescued.length,
+          rawLength: rawResponse.cardsJson.length,
+        );
+      } else {
+        // Спасать нечего — прежнее восстановление (уменьшение лимита/резерв).
+        throw const GenerationException(GenerationErrorCode.truncated);
+      }
+    } else {
+      decoded = jsonExtractor.decode(
+        rawResponse.cardsJson,
+        tolerant: tolerantFallback,
+      );
+    }
 
     // Поштучная проверка схемы (fix-gen, Д6): одна невалидная карточка не
     // отбрасывает весь фрагмент.
@@ -274,6 +297,8 @@ class CardGenerationService implements GenerationCaller {
       skippedDocumentImageIds: parts.skippedIds,
       sourceExhausted: sourceExhausted,
       requestBytes: _lastRequestBytes,
+      truncated: truncated,
+      salvagedCards: salvaged,
     );
   }
 

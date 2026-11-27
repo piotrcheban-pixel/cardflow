@@ -824,6 +824,10 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
         showAppMessage(context, l10n.generationNoCardsFound);
         return;
       }
+      // TASK 04, часть 4: если карточек меньше заказа, сообщаем это до
+      // предпросмотра и просим подтверждение — без молчаливого «32 из 50».
+      final bool proceed = await _confirmShortfallIfNeeded(result);
+      if (!mounted || !proceed) return;
       await _openPreview(request, result);
     } on GenerationException catch (error) {
       if (!mounted) return;
@@ -858,6 +862,59 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
         });
       }
     }
+  }
+
+  /// Подтверждение честного недобора (TASK 04, часть 4).
+  ///
+  /// Пользователь видит «запрошено/создано» и причину (обрыв ответа по лимиту
+  /// контекста, исчерпанный материал или иное) **до** предпросмотра: недобор
+  /// больше не выглядит как полный успех. `false` — пользователь отказался
+  /// продолжать (карточки не импортируются).
+  Future<bool> _confirmShortfallIfNeeded(GenerationRunResult result) async {
+    final int requested = result.requestedCards;
+    final int created = result.cards.length;
+    if (requested <= 0 || created >= requested) return true;
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final bool contextLimited =
+        result.truncatedChunks > 0 ||
+        result.failures.any(
+          (GenerationChunkFailure failure) =>
+              failure.code == GenerationErrorCode.truncated ||
+              failure.code == GenerationErrorCode.contextOverflow,
+        );
+    final bool materialLimited =
+        result.exhaustedSectionIds.isNotEmpty || result.skippedBatches > 0;
+    final String message = contextLimited
+        ? l10n.generationShortfallContext(requested, created)
+        : materialLimited
+        ? l10n.generationShortfallMaterial(requested, created)
+        : l10n.generationShortfallGeneric(requested, created);
+    final ThemeData theme = Theme.of(context);
+    final bool? proceed = await showAppDialog<bool>(
+      context: context,
+      title: l10n.generationShortfallTitle,
+      bodyBuilder: (BuildContext dialogContext) => Padding(
+        padding: const EdgeInsets.only(top: AppSpacing.sm),
+        child: Text(
+          message,
+          key: const ValueKey<String>('generation-shortfall-message'),
+          style: theme.textTheme.bodyMedium,
+        ),
+      ),
+      actionsBuilder: (BuildContext dialogContext) => <Widget>[
+        TextButton(
+          key: const ValueKey<String>('generation-shortfall-cancel'),
+          onPressed: () => Navigator.of(dialogContext).pop(false),
+          child: Text(l10n.cancel),
+        ),
+        FilledButton(
+          key: const ValueKey<String>('generation-shortfall-continue'),
+          onPressed: () => Navigator.of(dialogContext).pop(true),
+          child: Text(l10n.generationShortfallContinue),
+        ),
+      ],
+    );
+    return proceed ?? false;
   }
 
   /// Открывает предпросмотр и переходит в колоду после импорта.

@@ -137,7 +137,7 @@ void main() {
       expect(response.usage.totalTokens, 33);
     });
 
-    test('refusal → refused; length → truncated', () {
+    test('refusal → refused; length → truncated-ответ, не исключение', () {
       expect(
         () => adapter.parseResponse(<String, Object?>{
           'choices': <Object?>[
@@ -152,11 +152,24 @@ void main() {
         }),
         throwsGeneration(GenerationErrorCode.refused),
       );
+      // TASK 04: обрыв по лимиту вывода больше не выбрасывает уже полученные
+      // карточки — сервис спасает полные карточки из прерванного JSON.
+      final response = adapter.parseResponse(<String, Object?>{
+        'choices': <Object?>[
+          <String, Object?>{
+            'message': <String, Object?>{'content': '{"cards":['},
+            'finish_reason': 'length',
+          },
+        ],
+      });
+      expect(response.truncated, isTrue);
+      expect(response.cardsJson, '{"cards":[');
+      // Без контента спасать нечего — остаётся доменная ошибка восстановления.
       expect(
         () => adapter.parseResponse(<String, Object?>{
           'choices': <Object?>[
             <String, Object?>{
-              'message': <String, Object?>{'content': '{"cards":['},
+              'message': <String, Object?>{'content': null},
               'finish_reason': 'length',
             },
           ],

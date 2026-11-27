@@ -16,6 +16,7 @@ import 'package:cardflow/domain/decks/deck_summary.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
 import 'package:cardflow/domain/generation/generated_card_image.dart';
 import 'package:cardflow/domain/generation/generation_attachment.dart';
+import 'package:cardflow/domain/generation/generation_chunker.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
 import 'package:cardflow/domain/generation/generation_job.dart';
 import 'package:cardflow/domain/generation/generation_run.dart';
@@ -34,6 +35,7 @@ import 'package:cardflow/ui/state/app_providers.dart';
 
 import '../../helpers/decks_fakes.dart';
 import '../../helpers/generation_fakes.dart';
+import '../../helpers/generation_plan_fakes.dart';
 import '../../helpers/pump_app.dart';
 import '../../helpers/settings_fakes.dart';
 
@@ -1450,6 +1452,122 @@ void main() {
     );
     expect(runner.lastRequest!.account.supportsVision, isTrue);
     expect(runner.lastRequest!.account.visionConfigured, isTrue);
+  });
+
+  // TASK 04, часть 4: «запрошено 50, получено 32» больше не выглядит как
+  // полный успех. Диалог показывает числа и причину, и только по «Продолжить»
+  // открывается предпросмотр.
+  group('честный недобор карточек', () {
+    GenerationRunResult shortfallResult({
+      int requested = 5,
+      int created = 3,
+      int truncatedChunks = 1,
+      int salvaged = 2,
+    }) {
+      return GenerationRunResult(
+        jobId: 'job-shortfall',
+        status: GenerationJobStatus.partial,
+        cards: <GeneratedCard>[
+          for (var index = 0; index < created; index++)
+            GeneratedCard(
+              front: 'Вопрос $index',
+              back: 'Ответ $index',
+              cardType: CardType.basic,
+            ),
+        ],
+        failures: const <GenerationChunkFailure>[],
+        tokensUsed: 42,
+        estimatedTokens: 100,
+        duplicatesRemoved: 0,
+        chunkCount: 1,
+        cancelled: false,
+        plan: testPlanFromChunks(<GenerationChunk>[
+          GenerationChunk(
+            index: 1,
+            materialsText: 'материал',
+            sourceFiles: const <String>['лекция.txt'],
+            limit: requested,
+          ),
+        ], requestedCards: requested),
+        truncatedChunks: truncatedChunks,
+        salvagedCards: salvaged,
+      );
+    }
+
+    testWidgets('обрыв по лимиту: диалог «Продолжить?» с числами', (
+      WidgetTester tester,
+    ) async {
+      await pumpScreen(tester);
+      await attachTextFile(tester);
+      runner.result = shortfallResult();
+      final l10n = l10nOf(tester);
+
+      await tester.tap(find.byKey(const ValueKey<String>('generation-start')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const ValueKey<String>('generation-shortfall-message')),
+        findsOneWidget,
+      );
+      expect(
+        find.text(l10n.generationShortfallContext(5, 3)),
+        findsOneWidget,
+        reason: 'причина — обрыв ответа по лимиту контекста',
+      );
+      expect(find.text(l10n.generationShortfallTitle), findsOneWidget);
+      expect(
+        find.text(l10n.generationPreviewTitle),
+        findsNothing,
+        reason: 'без подтверждения предпросмотр не открывается',
+      );
+
+      await tester.tap(
+        find.byKey(const ValueKey<String>('generation-shortfall-continue')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text(l10n.generationPreviewTitle), findsOneWidget);
+    });
+
+    testWidgets('отмена: остаёмся на экране генерации, предпросмотра нет', (
+      WidgetTester tester,
+    ) async {
+      await pumpScreen(tester);
+      await attachTextFile(tester);
+      runner.result = shortfallResult();
+      final l10n = l10nOf(tester);
+
+      await tester.tap(find.byKey(const ValueKey<String>('generation-start')));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(const ValueKey<String>('generation-shortfall-cancel')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.generationPreviewTitle), findsNothing);
+      expect(
+        find.byKey(const ValueKey<String>('generation-start')),
+        findsOneWidget,
+        reason: 'экран генерации остаётся доступным',
+      );
+    });
+
+    testWidgets('полный заказ: диалога недобора нет', (
+      WidgetTester tester,
+    ) async {
+      await pumpScreen(tester);
+      await attachTextFile(tester);
+      runner.result = shortfallResult(created: 5, truncatedChunks: 0);
+      final l10n = l10nOf(tester);
+
+      await tester.tap(find.byKey(const ValueKey<String>('generation-start')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const ValueKey<String>('generation-shortfall-message')),
+        findsNothing,
+      );
+      expect(find.text(l10n.generationPreviewTitle), findsOneWidget);
+    });
   });
 }
 

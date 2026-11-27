@@ -89,6 +89,41 @@ class GenerationDiagnostics {
     );
   }
 
+  /// Оборванный ответ модели: сколько полных карточек удалось спасти (TASK 04).
+  ///
+  /// Только числа: ни текста материалов, ни тела ответа.
+  void partialResponse({required int keptCards, required int rawLength}) {
+    if (!enabled) return;
+    _write(
+      'Генерация: ответ оборван по лимиту вывода: спасено $keptCards '
+      'карточек из тела $rawLength симв.',
+    );
+  }
+
+  /// Итог запуска генерации (TASK 04): запрошено/создано и причины недобора.
+  ///
+  /// Только числа: сколько партий упало, сколько оборвано по лимиту вывода,
+  /// сколько карточек спасено, сколько раз не удалось разрешить картинку.
+  /// Тексты материалов и ответы модели сюда не попадают.
+  void runSummary({
+    required int requested,
+    required int created,
+    required int chunks,
+    required int failedChunks,
+    required int truncatedChunks,
+    required int salvagedCards,
+    required int imageResolveFailures,
+    required int exhaustedSections,
+  }) {
+    if (!enabled) return;
+    _write(
+      'Генерация: итог: запрошено=$requested, создано=$created, '
+      'партий=$chunks, упало=$failedChunks, оборвано=$truncatedChunks, '
+      'спасено=$salvagedCards, сбоев картинок=$imageResolveFailures, '
+      'исчерпанных разделов=$exhaustedSections',
+    );
+  }
+
   /// Сводка калибровки токенов (TASK 03): оценка vs фактический `usage`.
   ///
   /// Пишутся только числа/отношения и версия оценщика; тексты материалов и
@@ -133,8 +168,7 @@ class GenerationDiagnostics {
     );
   }
 
-  /// Результат нативного подсчёта входа (7.18.1 §2.2).
-  ///
+  /// Результат нативного подсчёта входа (7.18.1 §2.2).  ///
   /// Только источник/код/число: тело запроса и ключи сюда не попадают.
   void tokenCount({required String source, int? tokens, String? errorCode}) {
     if (!enabled) return;

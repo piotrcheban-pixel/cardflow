@@ -1419,6 +1419,32 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String generationPreviewTruncated(int chunks, int cards) {
+    return 'Ответ модели обрывался по лимиту вывода $chunks раз(а): из обрывов сохранено $cards карточек. Недостающие карточки запрашивались отдельно.';
+  }
+
+  @override
+  String get generationShortfallTitle => 'Создано меньше, чем запрошено';
+
+  @override
+  String generationShortfallContext(int requested, int created) {
+    return 'Запрошено $requested карточек, сгенерировано $created: модель обрывала ответ по лимиту контекста. Продолжить?';
+  }
+
+  @override
+  String generationShortfallMaterial(int requested, int created) {
+    return 'Запрошено $requested карточек, создано $created: материал исчерпан, лишние карточки не выдумывались. Продолжить?';
+  }
+
+  @override
+  String generationShortfallGeneric(int requested, int created) {
+    return 'Запрошено $requested карточек, создано $created. Продолжить?';
+  }
+
+  @override
+  String get generationShortfallContinue => 'Продолжить';
+
+  @override
   String generationPreviewCoverage(int empty, int total) {
     return 'Разделов без единой карточки: $empty из $total. Проверьте покрытие материала.';
   }

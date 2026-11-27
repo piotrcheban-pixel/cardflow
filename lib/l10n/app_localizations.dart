@@ -2276,6 +2276,42 @@ abstract class AppLocalizations {
   /// **'Лишние карточек сверх заказа не добавлено: {count}.'**
   String generationPreviewTrimmed(int count);
 
+  /// Предпросмотр: модель обрывала ответ по лимиту вывода, полные карточки спасены (TASK 04, часть 4).
+  ///
+  /// In ru, this message translates to:
+  /// **'Ответ модели обрывался по лимиту вывода {chunks} раз(а): из обрывов сохранено {cards} карточек. Недостающие карточки запрашивались отдельно.'**
+  String generationPreviewTruncated(int chunks, int cards);
+
+  /// Заголовок диалога честного недобора карточек (TASK 04, часть 4).
+  ///
+  /// In ru, this message translates to:
+  /// **'Создано меньше, чем запрошено'**
+  String get generationShortfallTitle;
+
+  /// Диалог недобора: причина — обрыв ответа по лимиту контекста (TASK 04).
+  ///
+  /// In ru, this message translates to:
+  /// **'Запрошено {requested} карточек, сгенерировано {created}: модель обрывала ответ по лимиту контекста. Продолжить?'**
+  String generationShortfallContext(int requested, int created);
+
+  /// Диалог недобора: причина — материал исчерпан (TASK 04).
+  ///
+  /// In ru, this message translates to:
+  /// **'Запрошено {requested} карточек, создано {created}: материал исчерпан, лишние карточки не выдумывались. Продолжить?'**
+  String generationShortfallMaterial(int requested, int created);
+
+  /// Диалог недобора без установленной причины: числа запроса и результата (TASK 04).
+  ///
+  /// In ru, this message translates to:
+  /// **'Запрошено {requested} карточек, создано {created}. Продолжить?'**
+  String generationShortfallGeneric(int requested, int created);
+
+  /// Кнопка диалога недобора: открыть предпросмотр с созданными карточками (TASK 04).
+  ///
+  /// In ru, this message translates to:
+  /// **'Продолжить'**
+  String get generationShortfallContinue;
+
   /// Отчёт покрытия разделов материала принятыми карточками (TASK 5).
   ///
   /// In ru, this message translates to:
