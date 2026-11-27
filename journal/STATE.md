@@ -1,5 +1,66 @@
 # STATE — текущее состояние CardFlow
 
+## Генерация v3 — срез 7: Replenish и partial (2026-11-28)
+
+**Срез:** `TASK.txt` «Срез 7. Replenish и partial» (план этапов —
+`docs/generation/ARCH.md` этапы 7/9, BACKLOG S7, ADR-050; толкования — Q17).
+**Факты старта:** ветка `main`, `HEAD = edaf80d` (docs среза 6); baseline
+`flutter test --no-pub --exclude-tags golden` — **3043 passed + 17 skipped**.
+
+**Сделано (TDD, red → green):**
+- `lib/domain/generation/replenish_stage.dart` — `ReplenishStage`: долг — слоты
+  заказа без принятой пары (`unit_id` + `angle`), добор идёт только по единицам
+  **исходного** плана (новые единицы не выдумываются), каждая партия несёт
+  `<already_accepted>` своих единиц. В принятое идёт только карточка, закрывающая
+  слот; повтор принятого/чужой угол — `surplus` (не уменьшает долг и не даёт
+  прогресса). Предохранители: `maxPasses = 3`, `maxRequests = max(3, requested)`
+  (вся операция, включая первый проход), `tokenBudget` от оценок плана (факт
+  `usage`, при неизвестном — оценка партии), `wallClock` 10 минут от начала.
+  Исчерпание → `partial` с точной причиной `ReplenishStopReason`
+  (`max_passes`/`max_requests`/`token_budget`/`wall_clock`/`provider_error`/
+  `cancelled`/`no_unit_plan`). `exhausted_material` — не ошибка и не повод
+  добирать: уже объявленные исчерпанными единицы не запрашиваются, проход без
+  закрытых слотов останавливает добор, число — `materialCapacity`. `ready` —
+  только при закрытых слотах и `accepted ≥ requested`; отмена сохраняет
+  принятое (`partial`; `cancelled` — только без принятого). Отмена кодом
+  провайдера и расход без `totalTokens` (по слагаемым) тоже покрыты тестами.
+- `lib/domain/generation/generation_report.dart` — `GenerationReport`
+  (`fromReplenish`): `requested`, `accepted`, причины машинными кодами,
+  покрытие единиц (`UnitCoverage`), расход токенов по этапам (`generating`,
+  `replenishing`), версии промптов (подставляет вызывающий слой),
+  длительность; `isComplete` требует закрытых слотов — ложный успех невозможен.
+- `lib/api/generation/cards_batch_engine.dart` — фикс среза 5:
+  `_addUsage` начинал сумму с `const TokenUsage()` и по правилу «неизвестное
+  слагаемое обнуляет сумму» всегда давал `null`; теперь «ещё нет расхода» ≠
+  «неизвестно», сумма успешных партий сохраняется.
+- Старый конвейер, UI, схема БД и `generationV3` **не менялись**: новый путь не
+  подключён (S9, протокол §9). Prompt-only — `no_unit_plan` без запросов.
+
+**Тесты (+30):** `replenish_stage_test.dart` (25: f(requested), бюджет,
+политика, добор по единицам долга, контекст принятого, перефразирование без
+прогресса, четыре DoD-теста, предохранители с точной причиной, «успех только
+при закрытых слотах», коды причин, бюджет без `totalTokens`),
+`generation_report_test.dart` (4: недобор, полный заказ, `provider_error`,
+отброшенные карточки), `replenish_stage_wiring_test.dart` (1: движок со сбоем
+3-го батча → этап → отчёт на production-проводке). Красная фаза
+(`journal/generation-v3/red-s7.txt`) — **3 прошло / 27 упало**, падения
+assertion-level, 0 ошибок компиляции.
+
+**Гейты итогового снимка:** `flutter analyze --no-pub lib test` → **0 issues**;
+`dart format --set-exit-if-changed lib test` → **665 файлов, 0 changed**;
+`flutter test --no-pub --coverage --exclude-tags golden` → **3073 passed + 17
+skipped**, `exit 0`; покрытие рукописного кода **90.9 % (25300/27847)** при
+пороге 80 %; `replenish_stage.dart` — **98.8 % (241/244)**,
+`generation_report.dart` — **100 % (68/68)**, `cards_batch_engine.dart` — 90.2 %.
+Подробно — `journal/generation-v3/verify-s7.md`.
+
+**Ограничения:** к конвейеру и UI не подключено (S9); `maxRequests` — толкование
+Q17 (`max(3, requested)` на всю операцию); повторы (`RetryPolicy`) — в
+`CardsBatchEngine`, не в доборе; prompt-only — `no_unit_plan`; версии промптов
+подставляет вызывающий слой.
+
+---
+
 ## Генерация v3 — срез 6: Validation и каскад дедупликации (2026-11-27)
 
 **Срез:** `TASK.txt` «Срез 6. Validation и каскад дедупликации» (план этапов —

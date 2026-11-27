@@ -157,8 +157,27 @@ DoD-команда — 7 тестов в `test/unit/api/generation/quote_offsets
 **Write-scope.** `lib/domain/generation/replenish_planner.dart` (новый); включение
 `generationV3` для S1–S7; конвейер: долг вместо `shortfall`.
 
-**DoD-команда (одна):**
-`.fvm\versions\3.47.9\bin\flutter.bat test --no-pub test/unit/domain/generation/replenish_planner_test.dart`
+**DoD-команда (обновлена в срезе 7 TASK.txt — имя файла из TASK):**
+`.fvm\versions\3.47.9\bin\flutter.bat test --no-pub test/unit/domain/generation/replenish_stage_test.dart`
+
+**Сделано в срезе 7 TASK.txt (2026-11-27).** Этап —
+`lib/domain/generation/replenish_stage.dart` (`ReplenishStage`): добор идёт
+только по карточкам долга (`unit_id` + `angle`) и только по единицам карты
+(новые единицы не выдумываются), каждая партия несёт `<already_accepted>`
+своих единиц; `exhausted_material` — не ошибка и не повод добирать (число —
+`ReplenishOutcome.materialCapacity`); предохранители `maxPasses = 3`,
+`maxRequests = max(3, requested)`, `tokenBudget` от оценок плана и `wallClock`
+останавливают добор с точной причиной (`ReplenishStopReason`); `ready` — только
+при закрытых слотах, иначе `partial` (недобор успехом не становится); отмена
+сохраняет принятое. Отчёт прогона — `lib/domain/generation/generation_report.dart`
+(`GenerationReport.fromReplenish`: заказ, принятое, причины, покрытие единиц,
+расход по этапам, версии промптов, длительность). Подключения к конвейеру и UI
+нет (S9, протокол §9); prompt-only — `no_unit_plan` без запросов. DoD-команда —
+**25 тестов** `test/unit/domain/generation/replenish_stage_test.dart`; стык
+`CardsBatchEngine → ReplenishStage → GenerationReport` — 1 тест
+`test/unit/api/generation/replenish_stage_wiring_test.dart`.
+Детали — `journal/generation-v3/verify-s7.md`; толкования — Q17.
+
 
 ## S8 — Persistence: журнал принятого
 

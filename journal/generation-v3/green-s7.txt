@@ -1,0 +1,28 @@
+00:00 +0: loading C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/replenish_stage_test.dart
+00:00 +0: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/replenish_stage_test.dart: предохранители операции (п. 2) предел запросов — f(requested): запрос на карточку, минимум три
+00:00 +1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/replenish_stage_test.dart: предохранители операции (п. 2) предел запросов не убывает с заказом
+00:00 +2: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/replenish_stage_test.dart: предохранители операции (п. 2) бюджет токенов операции — оценки всех проходов плана
+00:00 +3: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/replenish_stage_test.dart: предохранители операции (п. 2) политика по умолчанию: три прохода, запросы от заказа, время
+00:00 +4: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/replenish_stage_test.dart: предохранители операции (п. 2) явные пределы политики перекрывают вычисленные
+00:00 +5: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/replenish_stage_test.dart: добор — только единицы с недобором дозапрос идёт только по единицам долга, новые единицы не выдумываются
+00:00 +6: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/replenish_stage_test.dart: добор — только единицы с недобором план добора — ровно карточки долга, заказ равен долгу
+00:00 +7: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/replenish_stage_test.dart: добор — только единицы с недобором запрос добора несёт контекст принятого тех же единиц
+00:00 +8: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/replenish_stage_test.dart: добор — только единицы с недобором ответ перефразированием принятого не даёт прогресса
+00:00 +9: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/replenish_stage_test.dart: DoD среза 7 40 запрошено, материал на 12 → partial, accepted=12, exhausted_material
+00:00 +10: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/replenish_stage_test.dart: DoD среза 7 сбой на третьем батче → добор, accepted растёт
+00:00 +11: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/replenish_stage_test.dart: DoD среза 7 бесконечный цикл невозможен: maxPasses останавливает добор
+00:00 +12: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/replenish_stage_test.dart: DoD среза 7 отмена → partial с сохранением принятого
+00:00 +13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/replenish_stage_test.dart: остановка предохранителем — точная причина maxRequests: предел запросов операции
+00:00 +14: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/replenish_stage_test.dart: остановка предохранителем — точная причина tokenBudget: расход операции
+00:00 +15: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/replenish_stage_test.dart: остановка предохранителем — точная причина wallClock: предел времени операции
+00:00 +16: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/replenish_stage_test.dart: остановка предохранителем — точная причина план без единиц (prompt-only) — no_unit_plan без запросов
+00:00 +17: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/replenish_stage_test.dart: остановка предохранителем — точная причина сбой провайдера в доборе — provider_error, принятое сохранено
+00:00 +18: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/replenish_stage_test.dart: итог не выдаёт успех при недоборе ready только при закрытых слотах, а не по числу карточек
+00:00 +19: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/replenish_stage_test.dart: итог не выдаёт успех при недоборе полное закрытие: ready, isComplete, materialCapacity нет
+00:00 +20: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/replenish_stage_test.dart: итог не выдаёт успех при недоборе исчерпание уже объявлено первым проходом — запросов нет
+00:00 +21: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_report_test.dart: GenerationReport недобор: причины, покрытие единиц, расход по этапам, время
+00:00 +22: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_report_test.dart: GenerationReport полный заказ: причин нет, материал не исчерпан, успех
+00:00 +23: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_report_test.dart: GenerationReport сбой провайдера — точная причина в отчёте
+00:00 +24: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_report_test.dart: GenerationReport отброшенные карточки видны причиной, но не отменяют итог
+00:00 +25: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/replenish_stage_wiring_test.dart: сбой третьего батча в движке → добор закрывает заказ
+00:00 +26: All tests passed!
