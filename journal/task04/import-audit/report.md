@@ -124,11 +124,13 @@
   выполнена в этой сессии, вывод — в `journal/STATE.md`).
 - Android-сборка — CI (Android SDK/устройства на хосте нет, L198/L206/L210);
   локально `flutter build apk` недоступен.
-- **CI (pull-request-less push в `main`):** run
+- **CI (push в `main` по разрешению владельца):** run
   [`46000290063`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/46000290063)
   (`5d0327a`) — **9/9 job success** (`format + analyze`, `test` ×
   ubuntu/macos/windows, `build desktop` × 3, `build mobile` Android + iOS),
-  14,3 мин.
+  14,3 мин; run
+  [`46002354163`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/46002354163)
+  (`495f6e9`, docs-журнал) — **9/9 job success**.
 
 **Новые тесты (31+):**
 `pdfium_android_cache_test` (guard, 2), `pdfium_bootstrap_test` (3),

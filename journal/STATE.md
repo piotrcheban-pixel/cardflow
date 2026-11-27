@@ -85,10 +85,12 @@
 «Отмена» диалога недобора не сохраняет карточки; диагностика — debug-only).
 
 **Push/CI:** push в `origin/main` выполнен по разрешению владельца
-(`ddfdde0..5d0327a`). CI run
+(`ddfdde0..5d0327a`, затем docs `495f6e9`). CI run
 [`46000290063`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/46000290063)
 (`5d0327a`) — **9/9 job success** (`format + analyze`, `test` × 3 ОС,
-`build desktop` × 3, `build mobile` Android + iOS), 14,3 мин.
+`build desktop` × 3, `build mobile` Android + iOS), 14,3 мин; CI run
+[`46002354163`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/46002354163)
+(`495f6e9`, docs-журнал) — **9/9 job success**.
 
 ---
 
