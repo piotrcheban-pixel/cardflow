@@ -1,5 +1,62 @@
 # STATE — текущее состояние CardFlow
 
+## Генерация v3 — срез 2: журнал прогона, стейт-машина, порты (2026-11-27)
+
+**Срез:** `TASK.txt` «Срез 2. Ledger, стейт-машина прогона, порты» (план
+этапов — `docs/generation/ARCH.md`, BACKLOG, ADR-050; расхождение с BACKLOG S2
+«Understanding/KnowledgeMap» — TASK.txt приоритетнее, толкования Q5–Q7).
+**Факты старта:** ветка `main`, `HEAD = fe76629` (docs среза 1); baseline
+`flutter test --no-pub --exclude-tags golden` — **2825 passed + 17 skipped**.
+
+**Сделано (TDD, red → green):**
+- `lib/domain/generation/generation_ledger.dart` — `GenerationLedger` (суммарно)
+  и `GenerationBatchLedger` (по партиям): `requested`, `generated`, `invalid`,
+  `duplicates`, `accepted`, `remaining`. Неизменяемые значения, события через
+  `record`/`withCause`/`markCause`, `replace`; `requested` — **сумма бюджетов**
+  (`fromBudgets`, `fromPlan`), партии нумеруются подряд с 0, список неизменяем.
+  Класс недобора — `ShortfallKind` с wire-кодами TASK (`exhausted_material`,
+  `provider_error`, `truncated`, `validation_rejects`, `cancelled`);
+  приоритет прогона — Q7, дубли в классе `validation_rejects` (Q5), у партии без
+  событий `shortfall == null`.
+- `lib/domain/generation/generation_run.dart` — стейт-машина прогона:
+  `GenerationStage` (`planned → understanding → generating → validating →
+  dedup → replenishing → ready | partial | failed | cancelled`),
+  `GenerationRunState.advanceTo` с проверкой переходов,
+  `InvalidGenerationStageTransition`, `GenerationStage.jobStatus` (SPEC A5:
+  ready→done, partial→partial, failed→error, cancelled→cancelled, остальные —
+  running). `ready`/`partial` достижимы только из `replenishing`; `failed` и
+  `cancelled` — с любого незавершённого этапа.
+- `lib/domain/generation/ports.dart` — `LlmPort` (один вызов на партию,
+  `batchIndex`), `CardSink` (принятое пишется по ходу прогона), `ProgressSink`
+  (этап + журнал), `Clock`, `KnowledgeMapCache<M>` (ключ — документ + хеш; тип
+  карты — параметр, Q6). Этапы зависят только от портов.
+- Guard `test/guards/architecture_test.dart` расширен: `lib/domain/` не
+  импортирует `package:dio/` и `package:drift/` (ADR-050), +1 self-test.
+- Старый конвейер, UI, схема БД и публичные типы провайдеров **не менялись**.
+
+**Тесты (+38):** `test/unit/domain/generation/generation_ledger_test.dart` (21:
+бухгалтерия, классы недобора, приоритет, DoD-property «Σ бюджетов ==
+requested» на 200 случайных планах и «события не нарушают бухгалтерию»),
+`generation_stage_test.dart` (11: канонический путь, DoD `generating → ready`
+невозможно, полная матрица 10×10, `jobStatus`), `ports_test.dart` (5: порты
+реализуются фейками без Dio/drift), +1 guard-тест Dio/drift в домене.
+Красная фаза с assertion-level выводом — `journal/generation-v3/red-s2.txt`.
+
+**Гейты итогового снимка:** `flutter analyze --no-pub lib test` → **0 issues**;
+`dart format --set-exit-if-changed lib test` → **628 файлов, 0 changed**;
+`flutter test --no-pub --coverage --exclude-tags golden` → **2863 passed + 17
+skipped**, `exit 0`; покрытие рукописного кода **90.8 % (23860/26277)** при
+пороге 80 %; `generation_ledger.dart` — **100 % (99/99)**. Подробно —
+`journal/generation-v3/verify-s2.md`.
+
+**Ограничения:** `ports.dart` — только контракты, исполняемых строк нет,
+поэтому lcov его не измеряет (прецедент — `api_key_store.dart`, репозитории
+портов); `generation_run.dart` — 94.7 %, непокрытыми остались прежние
+`planWarnings` (к срезу не относятся). Класс недобора для дублей и приоритет
+прогона — толкования Q5/Q7.
+
+---
+
 ## Генерация v3 — срез 1: ContentModel документа (2026-11-27)
 
 **Срез:** `TASK.txt` «Срез 1. ContentModel: Document → Section → Block с
