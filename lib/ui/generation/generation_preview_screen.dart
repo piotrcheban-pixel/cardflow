@@ -20,12 +20,15 @@ import 'package:cardflow/domain/generation/generation_card_store.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
 import 'package:cardflow/domain/generation/generation_failure_reason.dart';
 import 'package:cardflow/domain/generation/generation_job.dart';
+import 'package:cardflow/domain/generation/generation_ledger.dart';
+import 'package:cardflow/domain/generation/completion_verdict.dart';
 import 'package:cardflow/domain/generation/generation_plan.dart';
 import 'package:cardflow/domain/generation/generation_run.dart';
 import 'package:cardflow/domain/generation/document_gateway.dart'
     show PickedDocument;
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/cards/content/card_image_view.dart';
+import 'package:cardflow/ui/components/app_dialogs.dart';
 import 'package:cardflow/ui/components/app_surfaces.dart';
 import 'package:cardflow/ui/decks/deck_actions.dart' show showAppMessage;
 import 'package:cardflow/ui/generation/generation_error_message.dart';
@@ -467,6 +470,58 @@ class _GenerationPreviewScreenState
     return widgets;
   }
 
+  /// Карточки, сгруппированные по темам (срез 9).
+  ///
+  /// Тема — первый тег карточки; группа без тегов называется отдельно. Порядок
+  /// групп — по первому появлению, чтобы список не «прыгал» после правки.
+  List<Widget> _buildCardGroups(AppLocalizations l10n) {
+    final ThemeData theme = Theme.of(context);
+    final Map<String, List<int>> groups = <String, List<int>>{};
+    for (var index = 0; index < _cards.length; index++) {
+      final List<String> tags = _cards[index].original.tags;
+      final String topic = tags.isEmpty ? '' : tags.first;
+      (groups[topic] ??= <int>[]).add(index);
+    }
+    final List<Widget> widgets = <Widget>[];
+    for (final MapEntry<String, List<int>> group in groups.entries) {
+      final String title = group.key.isEmpty
+          ? l10n.generationPreviewTopicUntitled
+          : l10n.generationPreviewTopicTitle(group.key);
+      widgets.add(
+        Padding(
+          padding: const EdgeInsets.only(
+            top: AppSpacing.xxs,
+            bottom: AppSpacing.xxs,
+          ),
+          child: Text(
+            title,
+            key: ValueKey<String>(
+              'generation-preview-topic-'
+              '${group.key.isEmpty ? 'untitled' : group.key}',
+            ),
+            style: theme.textTheme.titleSmall,
+          ),
+        ),
+      );
+      for (final int index in group.value) {
+        widgets.add(
+          _PreviewCardTile(
+            key: ValueKey<String>('generation-preview-card-$index'),
+            card: _cards[index],
+            index: index,
+            onSelected: (bool selected) =>
+                setState(() => _cards[index].selected = selected),
+            onRemoveImage: (bool question, int imageIndex) =>
+                _removeImage(question: question, index: imageIndex),
+            onReplaceImage: (bool question, int imageIndex) =>
+                _replaceImage(question: question, index: imageIndex),
+          ),
+        );
+      }
+    }
+    return widgets;
+  }
+
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
@@ -805,19 +860,11 @@ class _GenerationPreviewScreenState
                 ),
                 const SizedBox(height: 16),
               ],
-              if (_result.cards.isNotEmpty)
-                for (var i = 0; i < _cards.length; i++)
-                  _PreviewCardTile(
-                    key: ValueKey<String>('generation-preview-card-$i'),
-                    card: _cards[i],
-                    index: i,
-                    onSelected: (bool selected) =>
-                        setState(() => _cards[i].selected = selected),
-                    onRemoveImage: (bool question, int imageIndex) =>
-                        _removeImage(question: question, index: imageIndex),
-                    onReplaceImage: (bool question, int imageIndex) =>
-                        _replaceImage(question: question, index: imageIndex),
-                  ),
+              if (_result.verdict != null) ...<Widget>[
+                _RunVerdictSummary(verdict: _result.verdict!, l10n: l10n),
+                const SizedBox(height: AppSpacing.xs),
+              ],
+              if (_result.cards.isNotEmpty) ..._buildCardGroups(l10n),
             ],
           ),
         ),
@@ -977,6 +1024,14 @@ class _PreviewCardTile extends StatelessWidget {
                     ),
                   ),
                 ),
+                if (card.original.sourceAnchorText != null)
+                  IconButton(
+                    key: ValueKey<String>('generation-preview-why-$index'),
+                    tooltip: l10n.reviewWhyTooltip,
+                    onPressed: () =>
+                        showGenerationSourceBlock(context, card.original),
+                    icon: const Icon(Icons.format_quote, size: 20),
+                  ),
                 IconButton(
                   key: ValueKey<String>(
                     'generation-preview-replace-image-$index',
@@ -990,6 +1045,15 @@ class _PreviewCardTile extends StatelessWidget {
                 ),
               ],
             ),
+            if (previewMarks(l10n, card.original).isNotEmpty) ...<Widget>[
+              const SizedBox(height: AppSpacing.xxs),
+              Wrap(
+                key: ValueKey<String>('generation-preview-marks-$index'),
+                spacing: 8,
+                runSpacing: 4,
+                children: previewMarks(l10n, card.original),
+              ),
+            ],
             _PreviewSide(
               l10n: l10n,
               question: true,
@@ -1031,17 +1095,23 @@ class _PreviewCardTile extends StatelessWidget {
                 border: _fieldBorder,
               ),
             ),
-            if (card.original.issues.isNotEmpty) ...<Widget>[
+            if (card.original.issues
+                .where(
+                  (CardIssueCode issue) =>
+                      issue != CardIssueCode.possibleDuplicate,
+                )
+                .isNotEmpty) ...<Widget>[
               const SizedBox(height: 8),
               Wrap(
                 spacing: 8,
                 runSpacing: 4,
                 children: <Widget>[
                   for (final CardIssueCode issue in card.original.issues)
-                    Chip(
-                      label: Text(issueLabel(l10n, issue)),
-                      visualDensity: VisualDensity.compact,
-                    ),
+                    if (issue != CardIssueCode.possibleDuplicate)
+                      Chip(
+                        label: Text(issueLabel(l10n, issue)),
+                        visualDensity: VisualDensity.compact,
+                      ),
                 ],
               ),
             ],
@@ -1197,5 +1267,195 @@ String issueLabel(AppLocalizations l10n, CardIssueCode issue) {
     CardIssueCode.backOnlyNotation => l10n.generationIssueBackOnlyNotation,
     CardIssueCode.unicodeMath => l10n.generationIssueUnicodeMath,
     CardIssueCode.markdownInText => l10n.generationIssueMarkdownInText,
+    CardIssueCode.possibleDuplicate => l10n.generationIssuePossibleDuplicate,
   };
+}
+
+/// Пометки карточки в предпросмотре (TASK «Срез 9», п. 2).
+///
+/// «Возможный дубль» — почти-дубль **оставлен** (ARCH §3.4); «обратная сторона»
+/// — карточка `basic_reversed` даст обратный вопрос; «предупреждение: N» —
+/// пометки качества A8.4, у которых нет собственного повода для отдельного чипа.
+List<Widget> previewMarks(AppLocalizations l10n, GeneratedCard card) {
+  final List<Widget> marks = <Widget>[];
+  if (card.issues.contains(CardIssueCode.possibleDuplicate)) {
+    marks.add(
+      AppStatusChip(
+        key: const ValueKey<String>('generation-mark-possible-duplicate'),
+        label: l10n.generationIssuePossibleDuplicate,
+        tone: AppStatusTone.info,
+        dense: true,
+      ),
+    );
+  }
+  if (card.cardType == CardType.basicReversed) {
+    marks.add(
+      AppStatusChip(
+        key: const ValueKey<String>('generation-mark-reverse-side'),
+        label: l10n.generationMarkReverseSide,
+        dense: true,
+      ),
+    );
+  }
+  final int warnings = card.issues
+      .where((CardIssueCode issue) => issue != CardIssueCode.possibleDuplicate)
+      .length;
+  if (warnings > 0) {
+    marks.add(
+      AppStatusChip(
+        key: const ValueKey<String>('generation-mark-warning'),
+        label: l10n.generationMarkWarning(warnings),
+        tone: AppStatusTone.warning,
+        dense: true,
+      ),
+    );
+  }
+  return marks;
+}
+
+/// Подпись машинной причины недобора (срез 9): только строки ARB.
+String shortfallReasonLabel(AppLocalizations l10n, ShortfallKind kind) {
+  return switch (kind) {
+    ShortfallKind.exhaustedMaterial =>
+      l10n.generationShortfallExhaustedMaterial,
+    ShortfallKind.providerError => l10n.generationShortfallProviderError,
+    ShortfallKind.truncated => l10n.generationShortfallTruncated,
+    ShortfallKind.validationRejects =>
+      l10n.generationShortfallValidationRejects,
+    ShortfallKind.cancelled => l10n.generationShortfallCancelled,
+  };
+}
+
+/// Итог прогона v3 в предпросмотре: «принято N из M» и причины недобора.
+class _RunVerdictSummary extends StatelessWidget {
+  const _RunVerdictSummary({required this.verdict, required this.l10n});
+
+  final CompletionVerdict verdict;
+  final AppLocalizations l10n;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
+    final bool done = verdict.isDone;
+    final String text = verdict.requested > 0
+        ? (done
+              ? l10n.generationVerdictDone(verdict.accepted, verdict.requested)
+              : l10n.generationVerdictPartial(
+                  verdict.accepted,
+                  verdict.requested,
+                ))
+        : l10n.generationVerdictAuto(verdict.accepted);
+    return Column(
+      key: const ValueKey<String>('generation-preview-verdict'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          text,
+          key: const ValueKey<String>('generation-preview-verdict-text'),
+          style: theme.textTheme.labelLarge?.copyWith(
+            color: done ? scheme.primary : scheme.onSurface,
+          ),
+        ),
+        if (verdict.reasons.isNotEmpty || verdict.requestsWithoutCards > 0) ...[
+          const SizedBox(height: AppSpacing.xxs),
+          Text(
+            l10n.generationShortfallReasonsTitle,
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+          for (final ShortfallKind reason in verdict.reasons)
+            _VerdictLine(
+              text: shortfallReasonLabel(l10n, reason),
+              color: scheme.onSurfaceVariant,
+            ),
+          if (verdict.requestsWithoutCards > 0)
+            _VerdictLine(
+              text: l10n.generationShortfallNoCards,
+              color: scheme.onSurfaceVariant,
+            ),
+        ],
+      ],
+    );
+  }
+}
+
+/// Строка причины недобора с точкой-маркером (без литералов в UI).
+class _VerdictLine extends StatelessWidget {
+  const _VerdictLine({required this.text, required this.color});
+
+  final String text;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Icon(Icons.circle, size: 6, color: color),
+        const SizedBox(width: AppSpacing.xxs),
+        Expanded(
+          child: Text(
+            text,
+            style: Theme.of(context).textTheme.bodySmall
+                ?.copyWith(color: color),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Bottom sheet «Почему эта карточка?» с **блоком** источника (срез 9).
+///
+/// Показывается текст `Block` из `ContentModel` — дословно, без склейки строк
+/// (TASK «Срез 9», п. 3). Нет блока — кнопка не появляется.
+Future<void> showGenerationSourceBlock(
+  BuildContext context,
+  GeneratedCard card,
+) {
+  final AppLocalizations l10n = AppLocalizations.of(context);
+  final String text = card.sourceAnchorText ?? '';
+  final String? section = card.sourceAnchorSection;
+  return showAppSheet<void>(
+    context: context,
+    builder: (BuildContext sheetContext) {
+      final ThemeData theme = Theme.of(sheetContext);
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          0,
+          AppSpacing.lg,
+          AppSpacing.lg,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            AppSheetHeader(
+              title: l10n.reviewWhySheetTitle,
+              icon: Icons.format_quote,
+            ),
+            if (section != null && section.trim().isNotEmpty) ...<Widget>[
+              Text(
+                l10n.generationWhySourceSection(section),
+                key: const ValueKey<String>('generation-why-section'),
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xxs),
+            ],
+            SingleChildScrollView(
+              child: Text(
+                text,
+                key: const ValueKey<String>('generation-why-block'),
+              ),
+            ),
+          ],
+        ),
+      );
+    },
+  );
 }

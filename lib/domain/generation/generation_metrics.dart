@@ -69,11 +69,16 @@ class GenerationMetrics {
       inputTokens <= 0 ? 0 : accepted * 1000 / inputTokens;
 
   /// Доля принятых от произведённых; `null` — модель ничего не произвела.
-  double? get acceptanceRate =>
-      generated <= 0 ? null : accepted / generated;
+  double? get acceptanceRate => generated <= 0 ? null : accepted / generated;
 
-  /// Доля дублей от произведённых; `null` — данных нет.
-  double? get duplicateRate => generated <= 0 ? null : duplicates / generated;
+  /// Всего дублей: по уровням каскада, иначе — счётчик точных дублей.
+  int get duplicatePairs => duplicatesByLevel.isEmpty
+      ? duplicates
+      : duplicatesByLevel.values.fold(0, (int sum, int value) => sum + value);
+
+  /// Доля дублей от произведённых (по всем уровням каскада); `null` — нет данных.
+  double? get duplicateRate =>
+      generated <= 0 ? null : duplicatePairs / generated;
 
   /// Доля дублей по уровням каскада (уровень без пар не попадает в карту).
   Map<DedupLevel, double> get duplicateRateByLevel {

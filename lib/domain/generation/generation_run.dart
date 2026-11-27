@@ -4,12 +4,14 @@
 /// `lib/api/generation/`.
 library;
 
+import 'package:cardflow/domain/generation/completion_verdict.dart';
 import 'package:cardflow/domain/generation/document_image.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
 import 'package:cardflow/domain/generation/generation_attachment.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
 import 'package:cardflow/domain/generation/generation_failure_reason.dart';
 import 'package:cardflow/domain/generation/generation_job.dart';
+import 'package:cardflow/domain/generation/generation_metrics.dart';
 import 'package:cardflow/domain/generation/generation_plan.dart';
 import 'package:cardflow/domain/generation/provider_account.dart';
 import 'package:cardflow/domain/generation/token_accounting.dart';
@@ -228,6 +230,9 @@ class GenerationRunResult {
     this.truncatedChunks = 0,
     this.salvagedCards = 0,
     this.imageResolveFailures = 0,
+    this.verdict,
+    this.metrics = GenerationMetrics.empty,
+    this.possibleDuplicates = 0,
   });
 
   /// Идентификатор задания `generation_jobs`.
@@ -279,6 +284,19 @@ class GenerationRunResult {
   ///
   /// Карточка при этом сохранена без картинки: поиск иллюстраций — best effort.
   final int imageResolveFailures;
+
+  /// Вердикт завершения по журналу (срез 9, ARCH §3.2).
+  ///
+  /// `null` — результат старого пути/теста без вердикта: статус задания
+  /// вычислен прежними правилами.
+  final CompletionVerdict? verdict;
+
+  /// Метрики прогона (срез 9): выход на 1000 входных токенов, acceptance и
+  /// duplicate rate, покрытие единиц, запросы на 10 карточек, p50/p95 батча.
+  final GenerationMetrics metrics;
+
+  /// Сколько почти-дублей помечено и **оставлено** (путь v3, ARCH §3.4).
+  final int possibleDuplicates;
 
   /// Сколько фрагментов обработано.
   final int chunkCount;

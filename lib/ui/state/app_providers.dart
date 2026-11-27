@@ -465,8 +465,13 @@ final matchBestStoreProvider = Provider<MatchBestStore>((ref) {
 });
 
 /// Пайплайн генерации: чанкинг, вызовы, прогресс/отмена, дедупликация.
+///
+/// Флаг `generationPipelineV3` читается из настроек (срез 9): включённый путь
+/// помечает возможные дубли вместо удаления, считает вердикт по журналу и
+/// собирает метрики; выключенный — прежнее поведение без изменений.
 final generationRunnerProvider = Provider<GenerationRunner>((ref) {
   final ApiKeyStore keyStore = ref.watch(apiKeyStoreProvider);
+  final AppSettings settings = ref.watch(effectiveAppSettingsProvider);
   return GenerationPipeline(
     caller: ref.watch(cardGenerationServiceProvider),
     // Нативный подсчёт входа: только Anthropic/Gemini (ADR-040 §3.5.1).
@@ -480,6 +485,7 @@ final generationRunnerProvider = Provider<GenerationRunner>((ref) {
     diagnostics: ref.watch(generationDiagnosticsProvider),
     capabilityCache: ref.watch(modelCapabilityCacheProvider),
     calibrationStore: ref.watch(tokenCalibrationStoreProvider),
+    pipelineV3: settings.generationPipelineV3,
   );
 });
 

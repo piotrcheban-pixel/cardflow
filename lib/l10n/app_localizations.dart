@@ -1624,6 +1624,144 @@ abstract class AppLocalizations {
   /// **'Изображение повреждено и не сохранено'**
   String get generationIssueImageInvalid;
 
+  /// Пометка среза 9: почти-дубль оставлен в карточках, решение за пользователем (ARCH §3.4).
+  ///
+  /// In ru, this message translates to:
+  /// **'Возможный дубль'**
+  String get generationIssuePossibleDuplicate;
+
+  /// Пометка предпросмотра: карточка basic_reversed даст вторую, обратную сторону.
+  ///
+  /// In ru, this message translates to:
+  /// **'Обратная сторона'**
+  String get generationMarkReverseSide;
+
+  /// Пометка предпросмотра: у карточки есть пометки качества A8.4.
+  ///
+  /// In ru, this message translates to:
+  /// **'Предупреждение: {count}'**
+  String generationMarkWarning(int count);
+
+  /// Заголовок степпера этапов на пути v3 (TASK «Срез 9»).
+  ///
+  /// In ru, this message translates to:
+  /// **'Этапы генерации'**
+  String get generationStageTitle;
+
+  /// Этап v3: разбор материалов и построение модели документа.
+  ///
+  /// In ru, this message translates to:
+  /// **'Анализ материала'**
+  String get generationStageAnalysis;
+
+  /// Этап v3: план частей и партий до первого запроса.
+  ///
+  /// In ru, this message translates to:
+  /// **'План'**
+  String get generationStagePlanning;
+
+  /// Этап v3: запросы к модели и приём карточек.
+  ///
+  /// In ru, this message translates to:
+  /// **'Генерация'**
+  String get generationStageGenerating;
+
+  /// Этап v3: проверка карточек, дедупликация и вердикт.
+  ///
+  /// In ru, this message translates to:
+  /// **'Проверка'**
+  String get generationStageValidation;
+
+  /// Заголовок списка машинных причин недобора в предпросмотре.
+  ///
+  /// In ru, this message translates to:
+  /// **'Причины недобора'**
+  String get generationShortfallReasonsTitle;
+
+  /// Причина недобора: провайдер вернул ошибку.
+  ///
+  /// In ru, this message translates to:
+  /// **'запрос к модели не удался'**
+  String get generationShortfallProviderError;
+
+  /// Причина недобора: ответ обрывался по лимиту.
+  ///
+  /// In ru, this message translates to:
+  /// **'ответ модели обрезан по лимиту вывода'**
+  String get generationShortfallTruncated;
+
+  /// Причина недобора: карточки не выдумывались, материал кончился.
+  ///
+  /// In ru, this message translates to:
+  /// **'материал исчерпан'**
+  String get generationShortfallExhaustedMaterial;
+
+  /// Причина недобора: валидация и дедупликация отбросили карточки.
+  ///
+  /// In ru, this message translates to:
+  /// **'часть карточек отброшена проверкой или дублями'**
+  String get generationShortfallValidationRejects;
+
+  /// Причина недобора: пользователь отменил генерацию.
+  ///
+  /// In ru, this message translates to:
+  /// **'генерация отменена'**
+  String get generationShortfallCancelled;
+
+  /// Причина недобора: запросы не дали ни одной карточки.
+  ///
+  /// In ru, this message translates to:
+  /// **'модель не вернула карточки'**
+  String get generationShortfallNoCards;
+
+  /// Группа карточек в предпросмотре без тегов.
+  ///
+  /// In ru, this message translates to:
+  /// **'Без темы'**
+  String get generationPreviewTopicUntitled;
+
+  /// Заголовок группы карточек предпросмотра по теме (первому тегу).
+  ///
+  /// In ru, this message translates to:
+  /// **'Тема: {topic}'**
+  String generationPreviewTopicTitle(String topic);
+
+  /// Подпись раздела источника в листе «Почему?» (блок текста, а не склейка).
+  ///
+  /// In ru, this message translates to:
+  /// **'Раздел: {section}'**
+  String generationWhySourceSection(String section);
+
+  /// Итог прогона v3: недобор, заказ не закрыт (ARCH §3.2).
+  ///
+  /// In ru, this message translates to:
+  /// **'Принято {accepted} из {requested}: заказ не закрыт'**
+  String generationVerdictPartial(int accepted, int requested);
+
+  /// Итог прогона v3: заказ закрыт.
+  ///
+  /// In ru, this message translates to:
+  /// **'Заказ закрыт: принято {accepted} из {requested}'**
+  String generationVerdictDone(int accepted, int requested);
+
+  /// Итог прогона v3 в авто-режиме (заказ не задан).
+  ///
+  /// In ru, this message translates to:
+  /// **'Создано карточек: {accepted}'**
+  String generationVerdictAuto(int accepted);
+
+  /// Переключатель флага generationPipelineV3 в настройках генерации.
+  ///
+  /// In ru, this message translates to:
+  /// **'Новый путь генерации'**
+  String get settingsGenerationPipelineV3Title;
+
+  /// Пояснение к переключателю нового пути генерации.
+  ///
+  /// In ru, this message translates to:
+  /// **'Этапы, вердикт по журналу, пометки дублей и метрики. Выключено — прежний путь.'**
+  String get settingsGenerationPipelineV3Hint;
+
   /// Пометка fix-gen: image_id модели не найден в каталоге <images>.
   ///
   /// In ru, this message translates to:

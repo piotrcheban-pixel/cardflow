@@ -965,6 +965,90 @@ class AppLocalizationsRu extends AppLocalizations {
       'Изображение повреждено и не сохранено';
 
   @override
+  String get generationIssuePossibleDuplicate => 'Возможный дубль';
+
+  @override
+  String get generationMarkReverseSide => 'Обратная сторона';
+
+  @override
+  String generationMarkWarning(int count) {
+    return 'Предупреждение: $count';
+  }
+
+  @override
+  String get generationStageTitle => 'Этапы генерации';
+
+  @override
+  String get generationStageAnalysis => 'Анализ материала';
+
+  @override
+  String get generationStagePlanning => 'План';
+
+  @override
+  String get generationStageGenerating => 'Генерация';
+
+  @override
+  String get generationStageValidation => 'Проверка';
+
+  @override
+  String get generationShortfallReasonsTitle => 'Причины недобора';
+
+  @override
+  String get generationShortfallProviderError => 'запрос к модели не удался';
+
+  @override
+  String get generationShortfallTruncated =>
+      'ответ модели обрезан по лимиту вывода';
+
+  @override
+  String get generationShortfallExhaustedMaterial => 'материал исчерпан';
+
+  @override
+  String get generationShortfallValidationRejects =>
+      'часть карточек отброшена проверкой или дублями';
+
+  @override
+  String get generationShortfallCancelled => 'генерация отменена';
+
+  @override
+  String get generationShortfallNoCards => 'модель не вернула карточки';
+
+  @override
+  String get generationPreviewTopicUntitled => 'Без темы';
+
+  @override
+  String generationPreviewTopicTitle(String topic) {
+    return 'Тема: $topic';
+  }
+
+  @override
+  String generationWhySourceSection(String section) {
+    return 'Раздел: $section';
+  }
+
+  @override
+  String generationVerdictPartial(int accepted, int requested) {
+    return 'Принято $accepted из $requested: заказ не закрыт';
+  }
+
+  @override
+  String generationVerdictDone(int accepted, int requested) {
+    return 'Заказ закрыт: принято $accepted из $requested';
+  }
+
+  @override
+  String generationVerdictAuto(int accepted) {
+    return 'Создано карточек: $accepted';
+  }
+
+  @override
+  String get settingsGenerationPipelineV3Title => 'Новый путь генерации';
+
+  @override
+  String get settingsGenerationPipelineV3Hint =>
+      'Этапы, вердикт по журналу, пометки дублей и метрики. Выключено — прежний путь.';
+
+  @override
   String get generationIssueImageIdUnknown =>
       'Изображение не найдено в файлах — карточка без картинки';
 

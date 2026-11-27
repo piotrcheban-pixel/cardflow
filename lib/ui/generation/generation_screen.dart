@@ -57,6 +57,7 @@ import 'package:cardflow/ui/decks/deck_actions.dart' show showAppMessage;
 import 'package:cardflow/ui/settings/provider_labels.dart';
 import 'package:cardflow/ui/generation/generation_error_message.dart';
 import 'package:cardflow/ui/generation/generation_preview_screen.dart';
+import 'package:cardflow/ui/generation/generation_v3_progress.dart';
 import 'package:cardflow/ui/generation/parser_error_message.dart';
 import 'package:cardflow/ui/router/app_router.dart';
 import 'package:cardflow/ui/state/app_providers.dart';
@@ -1153,7 +1154,13 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          _ProgressView(progress: _progress, l10n: l10n),
+          _ProgressView(
+            progress: _progress,
+            l10n: l10n,
+            pipelineV3: ref
+                .watch(effectiveAppSettingsProvider)
+                .generationPipelineV3,
+          ),
           const SizedBox(height: AppSpacing.sm),
           // Во время генерации главное на экране — прогресс; «Отмена» —
           // вторичное действие и не спорит с ним по весу (аудит v4, V32).
@@ -2024,10 +2031,17 @@ class _KeyBanner extends StatelessWidget {
 
 /// Индикатор прогресса генерации.
 class _ProgressView extends StatelessWidget {
-  const _ProgressView({required this.progress, required this.l10n});
+  const _ProgressView({
+    required this.progress,
+    required this.l10n,
+    this.pipelineV3 = false,
+  });
 
   final GenerationProgress? progress;
   final AppLocalizations l10n;
+
+  /// Флаг пути v3: степпер этапов и счётчик «принято N из M» (срез 9).
+  final bool pipelineV3;
 
   @override
   Widget build(BuildContext context) {
@@ -2058,7 +2072,17 @@ class _ProgressView extends StatelessWidget {
           textAlign: TextAlign.center,
           style: theme.textTheme.bodyMedium?.copyWith(color: scheme.onSurface),
         ),
-        if (value != null && (value.requestedCards ?? 0) > 0) ...<Widget>[
+        if (pipelineV3) ...<Widget>[
+          const SizedBox(height: AppSpacing.xs),
+          GenerationV3ProgressView(
+            phase: value?.phase,
+            accepted: value?.cards.length ?? 0,
+            requested: value?.requestedCards ?? 0,
+          ),
+        ],
+        if (!pipelineV3 &&
+            value != null &&
+            (value.requestedCards ?? 0) > 0) ...<Widget>[
           const SizedBox(height: AppSpacing.xxs),
           Text(
             l10n.generationProgressCardsCount(

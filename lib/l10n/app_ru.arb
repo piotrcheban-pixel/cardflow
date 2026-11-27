@@ -1187,6 +1187,134 @@
   "@generationIssueImageInvalid": {
     "description": "Пометка: пустые байты или MIME не по сигнатуре (7.19)."
   },
+  "generationIssuePossibleDuplicate": "Возможный дубль",
+  "@generationIssuePossibleDuplicate": {
+    "description": "Пометка среза 9: почти-дубль оставлен в карточках, решение за пользователем (ARCH §3.4)."
+  },
+  "generationMarkReverseSide": "Обратная сторона",
+  "@generationMarkReverseSide": {
+    "description": "Пометка предпросмотра: карточка basic_reversed даст вторую, обратную сторону."
+  },
+  "generationMarkWarning": "Предупреждение: {count}",
+  "@generationMarkWarning": {
+    "description": "Пометка предпросмотра: у карточки есть пометки качества A8.4.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "generationStageTitle": "Этапы генерации",
+  "@generationStageTitle": {
+    "description": "Заголовок степпера этапов на пути v3 (TASK «Срез 9»)."
+  },
+  "generationStageAnalysis": "Анализ материала",
+  "@generationStageAnalysis": {
+    "description": "Этап v3: разбор материалов и построение модели документа."
+  },
+  "generationStagePlanning": "План",
+  "@generationStagePlanning": {
+    "description": "Этап v3: план частей и партий до первого запроса."
+  },
+  "generationStageGenerating": "Генерация",
+  "@generationStageGenerating": {
+    "description": "Этап v3: запросы к модели и приём карточек."
+  },
+  "generationStageValidation": "Проверка",
+  "@generationStageValidation": {
+    "description": "Этап v3: проверка карточек, дедупликация и вердикт."
+  },
+  "generationShortfallReasonsTitle": "Причины недобора",
+  "@generationShortfallReasonsTitle": {
+    "description": "Заголовок списка машинных причин недобора в предпросмотре."
+  },
+  "generationShortfallProviderError": "запрос к модели не удался",
+  "@generationShortfallProviderError": {
+    "description": "Причина недобора: провайдер вернул ошибку."
+  },
+  "generationShortfallTruncated": "ответ модели обрезан по лимиту вывода",
+  "@generationShortfallTruncated": {
+    "description": "Причина недобора: ответ обрывался по лимиту."
+  },
+  "generationShortfallExhaustedMaterial": "материал исчерпан",
+  "@generationShortfallExhaustedMaterial": {
+    "description": "Причина недобора: карточки не выдумывались, материал кончился."
+  },
+  "generationShortfallValidationRejects": "часть карточек отброшена проверкой или дублями",
+  "@generationShortfallValidationRejects": {
+    "description": "Причина недобора: валидация и дедупликация отбросили карточки."
+  },
+  "generationShortfallCancelled": "генерация отменена",
+  "@generationShortfallCancelled": {
+    "description": "Причина недобора: пользователь отменил генерацию."
+  },
+  "generationShortfallNoCards": "модель не вернула карточки",
+  "@generationShortfallNoCards": {
+    "description": "Причина недобора: запросы не дали ни одной карточки."
+  },
+  "generationPreviewTopicUntitled": "Без темы",
+  "@generationPreviewTopicUntitled": {
+    "description": "Группа карточек в предпросмотре без тегов."
+  },
+  "generationPreviewTopicTitle": "Тема: {topic}",
+  "@generationPreviewTopicTitle": {
+    "description": "Заголовок группы карточек предпросмотра по теме (первому тегу).",
+    "placeholders": {
+      "topic": {
+        "type": "String"
+      }
+    }
+  },
+  "generationWhySourceSection": "Раздел: {section}",
+  "@generationWhySourceSection": {
+    "description": "Подпись раздела источника в листе «Почему?» (блок текста, а не склейка).",
+    "placeholders": {
+      "section": {
+        "type": "String"
+      }
+    }
+  },
+  "generationVerdictPartial": "Принято {accepted} из {requested}: заказ не закрыт",
+  "@generationVerdictPartial": {
+    "description": "Итог прогона v3: недобор, заказ не закрыт (ARCH §3.2).",
+    "placeholders": {
+      "accepted": {
+        "type": "int"
+      },
+      "requested": {
+        "type": "int"
+      }
+    }
+  },
+  "generationVerdictDone": "Заказ закрыт: принято {accepted} из {requested}",
+  "@generationVerdictDone": {
+    "description": "Итог прогона v3: заказ закрыт.",
+    "placeholders": {
+      "accepted": {
+        "type": "int"
+      },
+      "requested": {
+        "type": "int"
+      }
+    }
+  },
+  "generationVerdictAuto": "Создано карточек: {accepted}",
+  "@generationVerdictAuto": {
+    "description": "Итог прогона v3 в авто-режиме (заказ не задан).",
+    "placeholders": {
+      "accepted": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsGenerationPipelineV3Title": "Новый путь генерации",
+  "@settingsGenerationPipelineV3Title": {
+    "description": "Переключатель флага generationPipelineV3 в настройках генерации."
+  },
+  "settingsGenerationPipelineV3Hint": "Этапы, вердикт по журналу, пометки дублей и метрики. Выключено — прежний путь.",
+  "@settingsGenerationPipelineV3Hint": {
+    "description": "Пояснение к переключателю нового пути генерации."
+  },
   "generationIssueImageIdUnknown": "Изображение не найдено в файлах — карточка без картинки",
   "@generationIssueImageIdUnknown": {
     "description": "Пометка fix-gen: image_id модели не найден в каталоге <images>."

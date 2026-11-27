@@ -67,7 +67,10 @@ void main() {
     expect(value.duplicateRateByLevel[DedupLevel.exact], 4 / 20);
     expect(value.duplicateRateByLevel[DedupLevel.normalized], 1 / 20);
     expect(value.duplicateRateByLevel[DedupLevel.semantic], 1 / 20);
-    expect(value.duplicateRateByLevel.containsKey(DedupLevel.embeddings), isFalse);
+    expect(
+      value.duplicateRateByLevel.containsKey(DedupLevel.embeddings),
+      isFalse,
+    );
   });
 
   test('покрытие единиц карты и запросов на 10 карточек', () {

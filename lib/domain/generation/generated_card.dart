@@ -74,6 +74,10 @@ enum CardIssueCode {
   /// Байты изображения пустые или не совпадают с заявленным MIME: изображение
   /// не сохранено (7.19).
   imageInvalid,
+
+  /// Возможный смысловой дубль (v3, срез 9): карточка **оставлена** и помечена,
+  /// а не удалена (ARCH §3.4, BACKLOG S6).
+  possibleDuplicate,
 }
 
 /// Карточка, полученная от модели и прошедшая локальную валидацию (SPEC A8.4).
@@ -106,6 +110,8 @@ class GeneratedCard {
     this.unitId,
     this.angle,
     this.quoteRef,
+    this.sourceAnchorText,
+    this.sourceAnchorSection,
   });
 
   /// Лицевая сторона (вопрос).
@@ -150,6 +156,16 @@ class GeneratedCard {
   /// Проверка диапазона по offsets — этап Validation (S5); здесь хранится
   /// ссылка, а не результат проверки.
   final String? quoteRef;
+
+  /// Блок источника для «Почему?» (TASK «Срез 9», п. 3).
+  ///
+  /// Текст `Block` из `ContentModel` — дословно, без склейки строк. `null` —
+  /// блок не найден: «Почему?» не показывается (выдуманный текст не
+  /// подставляется). В БД/экспорт не пишется: это представление предпросмотра.
+  final String? sourceAnchorText;
+
+  /// Заголовок раздела блока [sourceAnchorText] (если у раздела он есть).
+  final String? sourceAnchorSection;
 
   /// Краткий поисковый запрос на английском (`image.query`, v9).
   final String? imageQuery;
@@ -220,6 +236,8 @@ class GeneratedCard {
     String? unitId,
     String? angle,
     String? quoteRef,
+    String? sourceAnchorText,
+    String? sourceAnchorSection,
   }) {
     return GeneratedCard(
       front: front ?? this.front,
@@ -243,6 +261,8 @@ class GeneratedCard {
       unitId: unitId ?? this.unitId,
       angle: angle ?? this.angle,
       quoteRef: quoteRef ?? this.quoteRef,
+      sourceAnchorText: sourceAnchorText ?? this.sourceAnchorText,
+      sourceAnchorSection: sourceAnchorSection ?? this.sourceAnchorSection,
     );
   }
 
@@ -290,7 +310,9 @@ class GeneratedCard {
         other.occlusionJson == occlusionJson &&
         other.unitId == unitId &&
         other.angle == angle &&
-        other.quoteRef == quoteRef;
+        other.quoteRef == quoteRef &&
+        other.sourceAnchorText == sourceAnchorText &&
+        other.sourceAnchorSection == sourceAnchorSection;
   }
 
   @override
@@ -314,6 +336,7 @@ class GeneratedCard {
     isOcclusion,
     occlusionJson,
     Object.hash(unitId, angle, quoteRef),
+    Object.hash(sourceAnchorText, sourceAnchorSection),
   );
 
   @override

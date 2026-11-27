@@ -67,6 +67,7 @@ class AppSettings {
     this.learningSteps = defaultLearningSteps,
     this.dailyNewLimit = 20,
     this.dailyReviewLimit = 200,
+    this.generationPipelineV3 = false,
   });
 
   /// Версия контракта JSON.
@@ -138,6 +139,14 @@ class AppSettings {
   /// Дневной лимит повторных карточек (0 — без лимита).
   final int dailyReviewLimit;
 
+  /// Путь генерации v3 (TASK «Срез 9», ADR-050): этапы, вердикт по журналу,
+  /// пометки дублей вместо удаления и метрики прогона.
+  ///
+  /// По умолчанию **выключен**: старый путь остаётся рабочим и не меняется
+  /// (протокол §9). Флаг читается из `app_settings` и переключает путь без
+  /// пересборки приложения.
+  final bool generationPipelineV3;
+
   /// Сериализация в `app_settings.value_json`.
   Map<String, Object?> toJson() => <String, Object?>{
     'version': version,
@@ -154,6 +163,7 @@ class AppSettings {
     ],
     'daily_new_limit': dailyNewLimit,
     'daily_review_limit': dailyReviewLimit,
+    'generation_pipeline_v3': generationPipelineV3,
   };
 
   /// Разбирает JSON; неизвестные ключи игнорируются (ADR-019 §1).
@@ -203,6 +213,10 @@ class AppSettings {
         0,
         maxDailyLimit,
       ),
+      generationPipelineV3: _bool(
+        json['generation_pipeline_v3'],
+        AppSettings.defaults.generationPipelineV3,
+      ),
     );
   }
 
@@ -219,6 +233,7 @@ class AppSettings {
     List<Duration>? learningSteps,
     int? dailyNewLimit,
     int? dailyReviewLimit,
+    bool? generationPipelineV3,
   }) {
     return AppSettings(
       theme: theme ?? this.theme,
@@ -250,6 +265,7 @@ class AppSettings {
         0,
         maxDailyLimit,
       ),
+      generationPipelineV3: generationPipelineV3 ?? this.generationPipelineV3,
     );
   }
 
@@ -356,7 +372,8 @@ class AppSettings {
       other.desiredRetention == desiredRetention &&
       _stepsEqual(other.learningSteps) &&
       other.dailyNewLimit == dailyNewLimit &&
-      other.dailyReviewLimit == dailyReviewLimit;
+      other.dailyReviewLimit == dailyReviewLimit &&
+      other.generationPipelineV3 == generationPipelineV3;
 
   bool _stepsEqual(List<Duration> other) {
     if (other.length != learningSteps.length) return false;
@@ -379,6 +396,7 @@ class AppSettings {
     Object.hashAll(learningSteps),
     dailyNewLimit,
     dailyReviewLimit,
+    generationPipelineV3,
   );
 
   @override

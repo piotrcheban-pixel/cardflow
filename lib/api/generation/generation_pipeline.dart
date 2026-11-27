@@ -15,16 +15,21 @@ import 'dart:math' as math;
 
 import 'package:uuid/uuid.dart';
 
+import 'package:cardflow/api/generation/content_model.dart';
+import 'package:cardflow/api/generation/content_model_builder.dart';
 import 'package:cardflow/api/generation/generation_caller.dart';
 import 'package:cardflow/api/generation/generation_cancellation.dart';
 import 'package:cardflow/api/generation/generation_diagnostics.dart';
 import 'package:cardflow/api/generation/generation_plan_builder.dart';
 import 'package:cardflow/api/generation/generation_plan_entry.dart';
+import 'package:cardflow/api/generation/source_anchor.dart';
 import 'package:cardflow/api/generation/system_prompt.dart';
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/cards/content_hash.dart';
 import 'package:cardflow/domain/cards/occlusion.dart';
 import 'package:cardflow/domain/generation/card_image_finder.dart';
+import 'package:cardflow/domain/generation/completion_verdict.dart';
+import 'package:cardflow/domain/generation/dedup_report.dart';
 import 'package:cardflow/domain/generation/document_image.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
 import 'package:cardflow/domain/generation/generated_card_image.dart';
@@ -36,6 +41,8 @@ import 'package:cardflow/domain/generation/generation_continuity.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
 import 'package:cardflow/domain/generation/generation_failure_reason.dart';
 import 'package:cardflow/domain/generation/generation_job.dart';
+import 'package:cardflow/domain/generation/generation_ledger.dart';
+import 'package:cardflow/domain/generation/generation_metrics.dart';
 import 'package:cardflow/domain/generation/generation_plan.dart';
 import 'package:cardflow/domain/generation/generation_request.dart';
 import 'package:cardflow/domain/generation/generation_request_budget.dart';
@@ -48,6 +55,7 @@ import 'package:cardflow/domain/generation/image_query.dart';
 import 'package:cardflow/domain/generation/model_capabilities.dart';
 import 'package:cardflow/domain/generation/model_capability_cache.dart';
 import 'package:cardflow/domain/generation/output_batch_planner.dart';
+import 'package:cardflow/domain/text/parsed_document.dart';
 import 'package:cardflow/domain/generation/provider_account.dart';
 import 'package:cardflow/domain/generation/provider_protocol.dart';
 import 'package:cardflow/domain/generation/token_calibration.dart';
@@ -128,7 +136,14 @@ class GenerationPipeline implements GenerationRunner {
     this.maxOperationRequests = 0,
     this.maxOperationTokens = 0,
     this.maxOperationSeconds = 0,
+    this.pipelineV3 = false,
   }) : assert(maxRecoveryRequests >= 0);
+
+  /// Путь генерации v3 (TASK «Срез 9», флаг `generationPipelineV3` в
+  /// `app_settings`): пометка возможных дублей вместо удаления, вердикт
+  /// завершения по журналу и метрики прогона. **Выключен** — прежнее поведение
+  /// не меняется (протокол §9).
+  final bool pipelineV3;
 
   /// Вызов модели на фрагмент.
   final GenerationCaller caller;
@@ -731,6 +746,12 @@ class GenerationPipeline implements GenerationRunner {
     var truncatedChunks = 0;
     var salvagedCards = 0;
     var imageResolveFailures = 0;
+    // Срез 9: метрики прогона — длительности успешных батчей, помеченные
+    // возможные дубли и факт расхода по слагаемым.
+    final List<Duration> batchDurations = <Duration>[];
+    var possibleDuplicates = 0;
+    var promptTokens = 0;
+    var completionTokens = 0;
     // Стоп добора, если предыдущий раунд не дал ни одной новой карточки.
     var topUpBaseline = -1;
     var requestsSent = 0;
@@ -797,6 +818,7 @@ class GenerationPipeline implements GenerationRunner {
       );
 
       GenerationResult result;
+      final Stopwatch callWatch = Stopwatch()..start();
       try {
         result = await caller.generate(
           GenerationRequest(
@@ -972,6 +994,8 @@ class GenerationPipeline implements GenerationRunner {
         index++;
         continue;
       }
+      callWatch.stop();
+      batchDurations.add(callWatch.elapsed);
 
       rejected += result.rejectedCards;
       // TASK 04: оборванный ответ модели не считается падением партии: полные
@@ -981,6 +1005,8 @@ class GenerationPipeline implements GenerationRunner {
         salvagedCards += result.salvagedCards;
       }
       tokensUsed += result.usage.totalTokens ?? 0;
+      promptTokens += result.usage.promptTokens ?? 0;
+      completionTokens += result.usage.completionTokens ?? 0;
       processed++;
       sentDocumentImageIds.addAll(result.sentDocumentImageIds);
       calibrationSamples.add(
@@ -1010,10 +1036,23 @@ class GenerationPipeline implements GenerationRunner {
           trimmed++;
           continue;
         }
-        if (_acceptCard(card, seen, cards)) {
-          cards.add(card);
-        } else {
-          duplicates++;
+        switch (_acceptCard(card, seen, cards)) {
+          case _CardAcceptance.accepted:
+            cards.add(card);
+          case _CardAcceptance.possibleDuplicate:
+            // ARCH §3.4: смысловой дубль помечается, а не удаляется — решение
+            // за пользователем в предпросмотре.
+            cards.add(
+              card.copyWith(
+                issues: <CardIssueCode>[
+                  ...card.issues,
+                  CardIssueCode.possibleDuplicate,
+                ],
+              ),
+            );
+            possibleDuplicates++;
+          case _CardAcceptance.duplicate:
+            duplicates++;
         }
       }
       final int acceptedInChunk = cards.length - imageStart;
@@ -1146,6 +1185,11 @@ class GenerationPipeline implements GenerationRunner {
       }
     }
 
+    // Срез 9: «Почему?» по якорям — блок источника из `ContentModel`, а не
+    // склеенная цитата. Только на пути v3 и best effort: сбой разбора не
+    // отменяет уже принятые карточки.
+    if (pipelineV3 && cards.isNotEmpty) _resolveAnchors(cards, request);
+
     final GenerationPlan? planForCoverage = activePlan;
     final List<GenerationSectionCoverage> sectionCoverage =
         <GenerationSectionCoverage>[
@@ -1166,8 +1210,40 @@ class GenerationPipeline implements GenerationRunner {
     final int requestedTotal = activePlan?.requestedCards ?? 0;
     final bool targetReached =
         requestedTotal > 0 && cards.length >= requestedTotal;
+    final int producedTotal = cards.length + duplicates + rejected;
+    // Срез 9: вердикт считается по журналу (ARCH §3.2), а не по «сколько
+    // вернулось сейчас»; на старом пути статус остаётся прежним.
+    final GenerationLedger ledgerOfRun = GenerationLedger(
+      batches: <GenerationBatchLedger>[
+        GenerationBatchLedger(
+          batchIndex: 0,
+          requested: requestedTotal,
+          generated: producedTotal,
+          invalid: rejected,
+          duplicates: duplicates,
+          attempts: processed + recoveryRequests,
+          cause: _causeOfRun(fatal: fatal, failures: failures),
+        ),
+      ],
+    );
+    final CompletionVerdict verdict = requestedTotal > 0
+        ? CompletionVerdict.fromLedger(
+            ledgerOfRun,
+            cancelled: cancelled,
+            failed: fatal != null,
+            materialCapacity: activePlan?.materialCapacity ?? 0,
+          )
+        : CompletionVerdict.auto(
+            accepted: cards.length,
+            requests: processed + recoveryRequests,
+            failedRequests: failedRequests + (fatal != null ? 1 : 0),
+            cancelled: cancelled,
+            materialCapacity: activePlan?.materialCapacity ?? 0,
+          );
     final GenerationJobStatus status;
-    if (cancelled) {
+    if (pipelineV3) {
+      status = verdict.jobStatus;
+    } else if (cancelled) {
       status = GenerationJobStatus.cancelled;
     } else if (fatal != null) {
       status = hasCards
@@ -1184,6 +1260,26 @@ class GenerationPipeline implements GenerationRunner {
     } else {
       status = GenerationJobStatus.partial;
     }
+    final GenerationMetrics metrics = GenerationMetrics(
+      requested: requestedTotal,
+      accepted: cards.length,
+      generated: producedTotal,
+      invalid: rejected,
+      duplicates: duplicates,
+      // Факт `usage`; без него — оценка входа плана (иначе yield был бы 0).
+      inputTokens: promptTokens > 0 ? promptTokens : estimate,
+      outputTokens: completionTokens,
+      requests: processed + recoveryRequests,
+      batchDurations: List<Duration>.unmodifiable(batchDurations),
+      duplicatesByLevel: <DedupLevel, int>{
+        if (duplicates > 0) DedupLevel.exact: duplicates,
+        if (possibleDuplicates > 0) DedupLevel.semantic: possibleDuplicates,
+      },
+      coveredUnits: sectionCoverage
+          .where((GenerationSectionCoverage c) => c.produced > 0)
+          .length,
+      totalUnits: sectionCoverage.length,
+    );
     final String? errorCode = fatal != null
         ? fatal.code.name
         : failures.isEmpty
@@ -1221,6 +1317,7 @@ class GenerationPipeline implements GenerationRunner {
       imageResolveFailures: imageResolveFailures,
       exhaustedSections: exhaustedSections.length,
     );
+    diagnostics.runMetrics(metrics.toJson());
     return GenerationRunResult(
       jobId: job.id,
       status: status,
@@ -1249,7 +1346,57 @@ class GenerationPipeline implements GenerationRunner {
       truncatedChunks: truncatedChunks,
       salvagedCards: salvagedCards,
       imageResolveFailures: imageResolveFailures,
+      verdict: verdict,
+      metrics: metrics,
+      possibleDuplicates: possibleDuplicates,
     );
+  }
+
+  /// Причина недобора прогона для журнала (ARCH §2): одна на весь прогон.
+  static ShortfallKind? _causeOfRun({
+    required GenerationException? fatal,
+    required List<GenerationChunkFailure> failures,
+  }) {
+    if (fatal != null || failures.isNotEmpty) {
+      return ShortfallKind.providerError;
+    }
+    return null;
+  }
+
+  /// Дописывает карточкам блок источника для «Почему?» (срез 9).
+  ///
+  /// Best effort: модель не должна падать на разборе документа; карточка без
+  /// найденного блока остаётся без «Почему?» (выдуманный текст не подставляется).
+  void _resolveAnchors(
+    List<GeneratedCard> cards,
+    GenerationRunRequest request,
+  ) {
+    if (request.documents.isEmpty) return;
+    final List<Document> documents = <Document>[];
+    try {
+      const ContentModelBuilder builder = ContentModelBuilder();
+      for (final ParsedDocument document in request.documents) {
+        documents.add(builder.build(document));
+      }
+    } on Object {
+      return;
+    }
+    const SourceAnchorResolver resolver = SourceAnchorResolver();
+    for (var index = 0; index < cards.length; index++) {
+      final GeneratedCard card = cards[index];
+      if (card.sourceAnchorText != null) continue;
+      final SourceAnchor? anchor = resolver.resolve(
+        documents,
+        quote: card.quoteRef,
+        excerpt: card.sourceExcerpt,
+        fileName: card.sourceFile,
+      );
+      if (anchor == null) continue;
+      cards[index] = card.copyWith(
+        sourceAnchorText: anchor.text,
+        sourceAnchorSection: anchor.sectionTitle,
+      );
+    }
   }
 
   /// Действующий бюджет восстановления (F.2, L128).
@@ -1926,11 +2073,12 @@ class GenerationPipeline implements GenerationRunner {
     return List<String>.unmodifiable(names);
   }
 
-  /// Принимает карточку, если её хеш новый и нет почти-дубля (ADR-040 §8).
+  /// Принимает карточку, если её хеш новый (ADR-040 §8).
   ///
-  /// Точный дубль — по `content_hash` (и обратному для reversed); почти-дубль —
-  /// сходство триграмм `front` ≥ 0.85 в пределах запуска.
-  bool _acceptCard(
+  /// Точный дубль — по `content_hash` (и обратному для reversed). Почти-дубль
+  /// (сходство триграмм `front` ≥ 0.85 в пределах запуска) на старом пути
+  /// отбрасывается, на пути v3 **помечается и остаётся** (ARCH §3.4).
+  _CardAcceptance _acceptCard(
     GeneratedCard card,
     Set<String> seen,
     List<GeneratedCard> accepted,
@@ -1940,14 +2088,21 @@ class GenerationPipeline implements GenerationRunner {
         ? contentHashOf(front: card.back, back: card.front)
         : null;
     if (seen.contains(hash) || (reversed != null && seen.contains(reversed))) {
-      return false;
+      return _CardAcceptance.duplicate;
     }
+    var nearDuplicate = false;
     for (final GeneratedCard other in accepted) {
-      if (_frontSimilarity(card.front, other.front) >= 0.85) return false;
+      if (_frontSimilarity(card.front, other.front) >= 0.85) {
+        nearDuplicate = true;
+        break;
+      }
     }
+    if (nearDuplicate && !pipelineV3) return _CardAcceptance.duplicate;
     seen.add(hash);
     if (reversed != null) seen.add(reversed);
-    return true;
+    return nearDuplicate
+        ? _CardAcceptance.possibleDuplicate
+        : _CardAcceptance.accepted;
   }
 
   /// Сходство `front` по триграммам (Jaccard, 0..1).
@@ -2173,6 +2328,11 @@ class GenerationPipeline implements GenerationRunner {
 ///
 /// Тело запроса наружу не отдаётся: числа идут в план, байты — только в
 /// `count_tokens`; в диагностику попадает источник и число, не содержимое.
+/// Исход дедупликации карточки (срез 9, ARCH §3.4).
+///
+/// Точный дубль отбрасывается (не потеря), возможный — помечается и остаётся.
+enum _CardAcceptance { accepted, possibleDuplicate, duplicate }
+
 class _CountedRequest {
   const _CountedRequest({required this.userContent, required this.attachments});
 

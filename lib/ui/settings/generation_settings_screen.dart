@@ -16,6 +16,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:cardflow/api/generation/api_key_verifier.dart';
 import 'package:cardflow/domain/generation/api_key_store.dart';
 import 'package:cardflow/domain/generation/provider_account.dart';
+import 'package:cardflow/domain/settings/app_settings.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
 import 'package:cardflow/ui/components/app_dialogs.dart';
 import 'package:cardflow/ui/components/app_surfaces.dart';
@@ -522,9 +523,37 @@ class _GenerationSettingsScreenState
                 },
               ),
             ],
+            const SizedBox(height: AppSpacing.md),
+            const _PipelineSwitch(),
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Переключатель пути генерации v3 (TASK «Срез 9», флаг `generationPipelineV3`).
+///
+/// Настройка живёт в `app_settings` (ADR-019): включение не требует пересборки,
+/// выключение возвращает прежнее поведение без изменений (протокол §9).
+class _PipelineSwitch extends ConsumerWidget {
+  const _PipelineSwitch();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final AppSettings settings = ref.watch(effectiveAppSettingsProvider);
+    return SwitchListTile(
+      key: const ValueKey<String>('settings-generation-pipeline-v3'),
+      contentPadding: EdgeInsets.zero,
+      title: Text(l10n.settingsGenerationPipelineV3Title),
+      subtitle: Text(l10n.settingsGenerationPipelineV3Hint),
+      value: settings.generationPipelineV3,
+      onChanged: (bool value) async {
+        await ref
+            .read(appSettingsProvider.notifier)
+            .save(settings.copyWith(generationPipelineV3: value));
+      },
     );
   }
 }

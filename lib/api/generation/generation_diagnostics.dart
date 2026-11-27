@@ -124,6 +124,22 @@ class GenerationDiagnostics {
     );
   }
 
+  /// Метрики прогона (TASK «Срез 9», п. 4): yield, acceptance/duplicate rate,
+  /// покрытие единиц, запросы на 10 карточек, p50/p95 батча.
+  ///
+  /// Только числа и машинные коды: ни текстов материалов, ни цитат, ни ключей.
+  void runMetrics(Map<String, Object?> metrics) {
+    if (!enabled) return;
+    final StringBuffer buffer = StringBuffer('Генерация: метрики:');
+    for (final MapEntry<String, Object?> entry in metrics.entries) {
+      final Object? value = entry.value;
+      if (value == null) continue;
+      if (value is Map) continue;
+      buffer.write(' ${entry.key}=$value;');
+    }
+    _write(buffer.toString());
+  }
+
   /// Сводка калибровки токенов (TASK 03): оценка vs фактический `usage`.
   ///
   /// Пишутся только числа/отношения и версия оценщика; тексты материалов и

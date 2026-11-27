@@ -98,9 +98,8 @@ class CompletionVerdict {
 
     final ShortfallKind? kind = ledger.shortfall;
     if (kind != null) reasons.add(kind);
-    final int requestsWithoutCards = ledger.generated == 0 && ledger.attempts > 0
-        ? ledger.attempts
-        : 0;
+    final int requestsWithoutCards =
+        ledger.generated == 0 && ledger.attempts > 0 ? ledger.attempts : 0;
     return CompletionVerdict(
       outcome: CompletionOutcome.partial,
       requested: requested,
@@ -179,8 +178,7 @@ class CompletionVerdict {
   int get shortfall => requested > accepted ? requested - accepted : 0;
 
   /// true — цель достигнута (в авто-режиме совпадает с [isDone]).
-  bool get targetReached =>
-      requested > 0 ? accepted >= requested : isDone;
+  bool get targetReached => requested > 0 ? accepted >= requested : isDone;
 
   /// Статус задания `generation_jobs` (SPEC A5).
   GenerationJobStatus get jobStatus => switch (outcome) {
