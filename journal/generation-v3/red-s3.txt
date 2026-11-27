@@ -1,0 +1,324 @@
+00:00 +0: loading C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/knowledge_map_test.dart
+test/unit/domain/generation/knowledge_map_test.dart:62:20: Error: Constant evaluation error:
+          anchors: const <KnowledgeAnchor>[
+                   ^
+lib/domain/generation/knowledge_map.dart:55:22: Context: This assertion failed with message: У якоря обязан быть блок
+    : assert(blockId != '', 'У якоря обязан быть блок'),
+                     ^
+test/unit/domain/generation/knowledge_map_test.dart:70:20: Error: Constant evaluation error:
+          anchors: const <KnowledgeAnchor>[
+                   ^
+lib/domain/generation/knowledge_map.dart:56:20: Context: This assertion failed with message: У якоря обязана быть цитата
+      assert(quote != '', 'У якоря обязана быть цитата');
+                   ^
+00:00 +0 -1: loading C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/knowledge_map_test.dart [E]
+  Failed to load "C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/knowledge_map_test.dart":
+  Compilation failed for testPath=C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/knowledge_map_test.dart: test/unit/domain/generation/knowledge_map_test.dart:62:20: Error: Constant evaluation error:
+            anchors: const <KnowledgeAnchor>[
+                     ^
+  lib/domain/generation/knowledge_map.dart:55:22: Context: This assertion failed with message: У якоря обязан быть блок
+      : assert(blockId != '', 'У якоря обязан быть блок'),
+                       ^
+  test/unit/domain/generation/knowledge_map_test.dart:70:20: Error: Constant evaluation error:
+            anchors: const <KnowledgeAnchor>[
+                     ^
+  lib/domain/generation/knowledge_map.dart:56:20: Context: This assertion failed with message: У якоря обязана быть цитата
+        assert(quote != '', 'У якоря обязана быть цитата');
+                     ^
+  .
+  Error: The Dart compiler exited unexpectedly.
+  package:flutter_tools/src/base/common.dart 34:3  throwToolExit
+  package:flutter_tools/src/compile.dart 1024:11   DefaultResidentCompiler._compile.<fn>
+  dart:async/zone_root.dart 48:47                  _rootRunUnary
+  dart:async/zone.dart 816:35                      _CustomZone.runUnary
+  dart:async/future_impl.dart 948:45               Future._propagateToListeners.handleValueCallback
+  dart:async/future_impl.dart 977:13               Future._propagateToListeners
+  dart:async/future_impl.dart 862:9                Future._propagateToListeners
+  dart:async/future_impl.dart 720:5                Future._completeWithValue
+  dart:async/future_impl.dart 804:7                Future._asyncCompleteWithValue.<fn>
+  dart:async/zone_root.dart 35:13                  _rootRun
+  dart:async/zone.dart 810:35                      _CustomZone.run
+  dart:async/zone.dart 702:7                       _CustomZone.runGuarded
+  dart:async/zone.dart 743:23                      _CustomZone.bindCallbackGuarded.<fn>
+  dart:async/schedule_microtask.dart 40:35         _microtaskLoop
+  dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
+  dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
+  dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
+  
+00:00 +0 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/knowledge_map_parser_test.dart: golden-фикстура gen-map-v1 валидный ответ разбирается в единицы с якорями
+00:00 +0 -2: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/knowledge_map_parser_test.dart: golden-фикстура gen-map-v1 валидный ответ разбирается в единицы с якорями [E]
+  Expected: true
+    Actual: <false>
+  KnowledgeMapFailureReason.jsonParse
+  
+  package:matcher                                               expect
+  package:flutter_test/src/widget_tester.dart 473:18            expect
+  test\unit\api\generation\knowledge_map_parser_test.dart 39:7  main.<fn>.<fn>
+  
+00:00 +0 -2: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/knowledge_map_parser_test.dart: валидные ответы пустой список единиц — валидный ответ
+00:00 +0 -3: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/knowledge_map_parser_test.dart: валидные ответы пустой список единиц — валидный ответ [E]
+  Expected: true
+    Actual: <false>
+  
+  package:matcher                                               expect
+  package:flutter_test/src/widget_tester.dart 473:18            expect
+  test\unit\api\generation\knowledge_map_parser_test.dart 84:7  main.<fn>.<fn>
+  
+00:00 +0 -3: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/knowledge_map_parser_test.dart: валидные ответы salience на границах 0 и 1 допустим
+00:00 +0 -4: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/knowledge_map_parser_test.dart: валидные ответы salience на границах 0 и 1 допустим [E]
+  Expected: true
+    Actual: <false>
+  
+  package:matcher                                               expect
+  package:flutter_test/src/widget_tester.dart 473:18            expect
+  test\unit\api\generation\knowledge_map_parser_test.dart 98:7  main.<fn>.<fn>
+  
+00:00 +0 -4: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/knowledge_map_parser_test.dart: валидные ответы id строятся по индексу ответа и стабильны
+00:00 +0 -5: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/knowledge_map_parser_test.dart: валидные ответы id строятся по индексу ответа и стабильны [E]
+  Expected: [
+              'ku:doc:конспект.docx#0#0',
+              'ku:doc:конспект.docx#0#1',
+              'ku:doc:конспект.docx#0#2'
+            ]
+    Actual: MappedListIterable<KnowledgeUnit, String>:[]
+     Which: at location [0] is MappedListIterable<KnowledgeUnit, String>:[] which shorter than expected
+  
+  package:matcher                                                expect
+  package:flutter_test/src/widget_tester.dart 473:18             expect
+  test\unit\api\generation\knowledge_map_parser_test.dart 113:7  main.<fn>.<fn>
+  
+00:00 +0 -5: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/knowledge_map_parser_test.dart: валидные ответы section_id принимается только для известного раздела
+00:00 +0 -6: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/knowledge_map_parser_test.dart: валидные ответы section_id принимается только для известного раздела [E]
+  Bad state: No element
+  dart:core                                                       _Array.single
+  test\unit\api\generation\knowledge_map_parser_test.dart 139:26  main.<fn>.<fn>
+  
+00:00 +0 -6: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/knowledge_map_parser_test.dart: валидные ответы markdown-ограждение разбирается только в терпимом режиме
+00:00 +0 -7: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/knowledge_map_parser_test.dart: валидные ответы markdown-ограждение разбирается только в терпимом режиме [E]
+  Expected: true
+    Actual: <false>
+  
+  package:matcher                                                expect
+  package:flutter_test/src/widget_tester.dart 473:18             expect
+  test\unit\api\generation\knowledge_map_parser_test.dart 166:7  main.<fn>.<fn>
+  
+00:00 +0 -7: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/knowledge_map_parser_test.dart: невалидные ответы помечают фрагмент не JSON, пустая строка и текст без JSON — jsonParse
+00:00 +1 -7: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/understanding_prompt_test.dart: системный промпт gen-map-v1 версия закреплена и не содержит подстановок Dart
+00:00 +1 -8: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/understanding_prompt_test.dart: системный промпт gen-map-v1 версия закреплена и не содержит подстановок Dart
+00:00 +1 -8: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/knowledge_map_parser_test.dart: невалидные ответы помечают фрагмент корень не {"units": [...]} — schemaInvalid [E]
+  Expected: KnowledgeMapFailureReason:<KnowledgeMapFailureReason.schemaInvalid>
+    Actual: KnowledgeMapFailureReason:<KnowledgeMapFailureReason.jsonParse>
+  
+  package:matcher                                                expect
+  package:flutter_test/src/widget_tester.dart 473:18             expect
+  test\unit\api\generation\knowledge_map_parser_test.dart 208:9  main.<fn>.<fn>
+  
+00:00 +2 -8: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/knowledge_map_parser_test.dart: поштучная проверка единиц одна невалидная единица не отменяет остальные
+00:00 +2 -9: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/understanding_prompt_test.dart: системный промпт gen-map-v1 константа совпадает с docs/prompts/gen-map-v1.txt байт в байт
+00:00 +2 -9: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/knowledge_map_parser_test.dart: поштучная проверка единиц одна невалидная единица не отменяет остальные [E]
+  Expected: true
+    Actual: <false>
+  
+  package:matcher                                                expect
+  package:flutter_test/src/widget_tester.dart 473:18             expect
+  test\unit\api\generation\knowledge_map_parser_test.dart 224:7  main.<fn>.<fn>
+  
+00:00 +2 -10: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/understanding_prompt_test.dart: системный промпт gen-map-v1 константа совпадает с docs/prompts/gen-map-v1.txt байт в байт
+00:00 +2 -10: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/knowledge_map_parser_test.dart: поштучная проверка единиц без обязательного поля и с неизвестным kind — отбрасываются [E]
+  Expected: true
+    Actual: <false>
+  
+  package:matcher                                                expect
+  package:flutter_test/src/widget_tester.dart 473:18             expect
+  test\unit\api\generation\knowledge_map_parser_test.dart 243:7  main.<fn>.<fn>
+  
+00:00 +2 -11: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/understanding_prompt_test.dart: системный промпт gen-map-v1 константа совпадает с docs/prompts/gen-map-v1.txt байт в байт
+00:00 +2 -11: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/knowledge_map_parser_test.dart: поштучная проверка единиц якорь на блок вне запроса отбрасывается, но единица остаётся [E]
+  Expected: true
+    Actual: <false>
+  
+  package:matcher                                                expect
+  package:flutter_test/src/widget_tester.dart 473:18             expect
+  test\unit\api\generation\knowledge_map_parser_test.dart 267:7  main.<fn>.<fn>
+  
+00:00 +2 -12: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/knowledge_map_parser_test.dart: поштучная проверка единиц без валидных якорей и с пустой цитатой единица отбрасывается
+00:00 +2 -12: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/understanding_prompt_test.dart: системный промпт gen-map-v1 константа совпадает с docs/prompts/gen-map-v1.txt байт в байт [E]
+  Expected: true
+    Actual: <false>
+  Копия промпта потеряна
+  
+  package:matcher                                               expect
+  package:flutter_test/src/widget_tester.dart 473:18            expect
+  test\unit\api\generation\understanding_prompt_test.dart 19:7  main.<fn>.<fn>
+  
+00:00 +2 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/understanding_prompt_test.dart: системный промпт gen-map-v1 только извлечение единиц знания: нет правил оформления карточек
+00:00 +2 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/knowledge_map_parser_test.dart: поштучная проверка единиц без валидных якорей и с пустой цитатой единица отбрасывается [E]
+  Expected: true
+    Actual: <false>
+  
+  package:matcher                                                expect
+  package:flutter_test/src/widget_tester.dart 473:18             expect
+  test\unit\api\generation\knowledge_map_parser_test.dart 295:7  main.<fn>.<fn>
+  
+00:00 +2 -14: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/knowledge_map_parser_test.dart: поштучная проверка единиц пробелы вокруг полей обрезаются
+00:00 +2 -15: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/knowledge_map_parser_test.dart: поштучная проверка единиц пробелы вокруг полей обрезаются [E]
+  Bad state: No element
+  dart:core                                                       _Array.single
+  test\unit\api\generation\knowledge_map_parser_test.dart 318:48  main.<fn>.<fn>
+  
+00:00 +2 -15: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/understanding_prompt_test.dart: системный промпт gen-map-v1 только извлечение единиц знания: нет правил оформления карточек [E]
+  Expected: contains 'РОЛЬ'
+    Actual: 'ЗАГЛУШКА'
+     Which: does not contain 'РОЛЬ'
+  В промпте нет фрагмента: РОЛЬ
+  
+  package:matcher                                               expect
+  package:flutter_test/src/widget_tester.dart 473:18            expect
+  test\unit\api\generation\understanding_prompt_test.dart 44:9  main.<fn>.<fn>
+  
+00:00 +2 -15: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/understanding_prompt_test.dart: пользовательское сообщение фрагмента содержит id и заголовок раздела, строки блоков с id
+00:00 +2 -16: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/understanding_prompt_test.dart: пользовательское сообщение фрагмента содержит id и заголовок раздела, строки блоков с id [E]
+  Expected: a string starting with '<section id="doc:файл.md#0">Основы</section>'
+    Actual: ''
+  
+  package:matcher                                               expect
+  package:flutter_test/src/widget_tester.dart 473:18            expect
+  test\unit\api\generation\understanding_prompt_test.dart 79:7  main.<fn>.<fn>
+  
+00:00 +2 -16: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/understanding_prompt_test.dart: пользовательское сообщение фрагмента раздел без заголовка остаётся с пустым телом тега
+00:00 +2 -17: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/understanding_prompt_test.dart: пользовательское сообщение фрагмента раздел без заголовка остаётся с пустым телом тега [E]
+  Expected: a string starting with '<section id="doc:файл.md#1"></section>'
+    Actual: ''
+  
+  package:matcher                                                expect
+  package:flutter_test/src/widget_tester.dart 473:18             expect
+  test\unit\api\generation\understanding_prompt_test.dart 101:7  main.<fn>.<fn>
+  
+00:00 +2 -17: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/understanding_service_test.dart: UnderstandingService: успешный прогон вызывает модель по фрагментам по порядку и суммирует usage
+00:00 +2 -18: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/understanding_service_test.dart: UnderstandingService: успешный прогон вызывает модель по фрагментам по порядку и суммирует usage [E]
+  Expected: <2>
+    Actual: <0>
+  
+  package:matcher                                                expect
+  package:flutter_test/src/widget_tester.dart 473:18             expect
+  test\unit\api\generation\understanding_service_test.dart 43:7  main.<fn>.<fn>
+  
+00:00 +2 -18: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/understanding_service_test.dart: UnderstandingService: успешный прогон второй вызов берёт карту из кэша и не идёт в LLM
+00:00 +2 -19: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/understanding_service_test.dart: UnderstandingService: успешный прогон второй вызов берёт карту из кэша и не идёт в LLM [E]
+  Expected: <2>
+    Actual: <0>
+  Повторный прогон не должен звонить
+  
+  package:matcher                                                expect
+  package:flutter_test/src/widget_tester.dart 473:18             expect
+  test\unit\api\generation\understanding_service_test.dart 98:7  main.<fn>.<fn>
+  
+00:00 +2 -19: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/understanding_service_test.dart: UnderstandingService: успешный прогон правка документа даёт новый ключ кэша
+00:00 +2 -20: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/understanding_service_test.dart: UnderstandingService: успешный прогон правка документа даёт новый ключ кэша [E]
+  Expected: <4>
+    Actual: <0>
+  Содержимое изменилось — новый ключ
+  
+  package:matcher                                                 expect
+  package:flutter_test/src/widget_tester.dart 473:18              expect
+  test\unit\api\generation\understanding_service_test.dart 126:7  main.<fn>.<fn>
+  
+00:00 +2 -20: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/understanding_service_test.dart: UnderstandingService: фолбэк по фрагменту битый ответ помечает фрагмент, остальные обрабатываются
+00:00 +2 -21: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/understanding_service_test.dart: UnderstandingService: фолбэк по фрагменту битый ответ помечает фрагмент, остальные обрабатываются [E]
+  Expected: <2>
+    Actual: <0>
+  
+  package:matcher                                                 expect
+  package:flutter_test/src/widget_tester.dart 473:18              expect
+  test\unit\api\generation\understanding_service_test.dart 157:7  main.<fn>.<fn>
+  
+00:00 +2 -21: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/understanding_service_test.dart: UnderstandingService: фолбэк по фрагменту сбой провайдера помечает фрагмент, прогон продолжается
+00:00 +2 -22: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/understanding_service_test.dart: UnderstandingService: фолбэк по фрагменту сбой провайдера помечает фрагмент, прогон продолжается [E]
+  Expected: <2>
+    Actual: <0>
+  
+  package:matcher                                                 expect
+  package:flutter_test/src/widget_tester.dart 473:18              expect
+  test\unit\api\generation\understanding_service_test.dart 215:7  main.<fn>.<fn>
+  
+00:00 +2 -22: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/understanding_service_test.dart: UnderstandingService: фолбэк по фрагменту обрезанный ответ — невалидный фрагмент
+00:00 +2 -23: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/understanding_service_test.dart: UnderstandingService: фолбэк по фрагменту обрезанный ответ — невалидный фрагмент [E]
+  Expected: true
+    Actual: <false>
+  
+  package:matcher                                                 expect
+  package:flutter_test/src/widget_tester.dart 473:18              expect
+  test\unit\api\generation\understanding_service_test.dart 242:7  main.<fn>.<fn>
+  
+00:00 +2 -23: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/understanding_service_test.dart: UnderstandingService: фолбэк по фрагменту отмена пробрасывается наружу, а не «продолжается без фрагмента»
+00:00 +2 -24: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/understanding_service_test.dart: UnderstandingService: фолбэк по фрагменту отмена пробрасывается наружу, а не «продолжается без фрагмента» [E]
+  Expected: throws <Instance of 'GenerationException'> with `code`: GenerationErrorCode:<GenerationErrorCode.cancelled>
+    Actual: <Instance of 'Future<UnderstandingResult>'>
+     Which: emitted <Instance of 'UnderstandingResult'>
+  
+  package:matcher                                                  expectLater
+  package:flutter_test/src/widget_tester.dart 507:8                expectLater
+  test\unit\api\generation\understanding_service_test.dart 260:13  main.<fn>.<fn>
+  
+00:00 +2 -24: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/understanding_service_test.dart: UnderstandingService: пустые ответы и пустые разделы пустой список единиц — валидный пустой фрагмент
+00:00 +2 -25: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/understanding_service_test.dart: UnderstandingService: пустые ответы и пустые разделы пустой список единиц — валидный пустой фрагмент [E]
+  Expected: [
+              KnowledgeMapFragmentStatus:KnowledgeMapFragmentStatus.empty,
+              KnowledgeMapFragmentStatus:KnowledgeMapFragmentStatus.understood
+            ]
+    Actual: MappedListIterable<KnowledgeMapFragmentOutcome, KnowledgeMapFragmentStatus>:[]
+     Which: at location [0] is MappedListIterable<KnowledgeMapFragmentOutcome, KnowledgeMapFragmentStatus>:[] which shorter than expected
+  
+  package:matcher                                                 expect
+  package:flutter_test/src/widget_tester.dart 473:18              expect
+  test\unit\api\generation\understanding_service_test.dart 293:7  main.<fn>.<fn>
+  
+00:00 +2 -25: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/understanding_service_test.dart: UnderstandingService: пустые ответы и пустые разделы раздел без содержательных блоков не отправляется
+00:00 +2 -26: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/understanding_service_test.dart: UnderstandingService: пустые ответы и пустые разделы раздел без содержательных блоков не отправляется [E]
+  Expected: <1>
+    Actual: <0>
+  Номер страницы — мусор, не материал
+  
+  package:matcher                                                 expect
+  package:flutter_test/src/widget_tester.dart 473:18              expect
+  test\unit\api\generation\understanding_service_test.dart 322:7  main.<fn>.<fn>
+  
+00:00 +2 -26: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/understanding_service_test.dart: UnderstandingService: пустые ответы и пустые разделы пустой документ — без запросов, кэша и usage
+00:00 +3 -26: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/understanding_service_test.dart: UnderstandingService: пустые ответы и пустые разделы частично невалидные единицы считаются, валидные принимаются
+00:00 +3 -27: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/understanding_service_test.dart: UnderstandingService: пустые ответы и пустые разделы частично невалидные единицы считаются, валидные принимаются [E]
+  Expected: <2>
+    Actual: <0>
+  
+  package:matcher                                                 expect
+  package:flutter_test/src/widget_tester.dart 473:18              expect
+  test\unit\api\generation\understanding_service_test.dart 370:7  main.<fn>.<fn>
+  
+00:00 +3 -27: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/data/generation/in_memory_knowledge_map_cache_test.dart: InMemoryKnowledgeMapCache пустой кэш возвращает null
+00:00 +4 -27: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/data/generation/in_memory_knowledge_map_cache_test.dart: InMemoryKnowledgeMapCache пишет и читает ту же карту по ключу документа и хеша
+00:00 +4 -28: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/data/generation/in_memory_knowledge_map_cache_test.dart: InMemoryKnowledgeMapCache пишет и читает ту же карту по ключу документа и хеша [E]
+  Expected: true
+    Actual: <false>
+  
+  package:matcher                                                         expect
+  package:flutter_test/src/widget_tester.dart 473:18                      expect
+  test\unit\data\generation\in_memory_knowledge_map_cache_test.dart 32:7  main.<fn>.<fn>
+  
+00:00 +4 -28: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/data/generation/in_memory_knowledge_map_cache_test.dart: InMemoryKnowledgeMapCache другой хеш или документ — другой ключ
+00:00 +5 -28: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/data/generation/in_memory_knowledge_map_cache_test.dart: InMemoryKnowledgeMapCache повторная запись заменяет карту и не плодит ключи
+00:00 +5 -29: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/data/generation/in_memory_knowledge_map_cache_test.dart: InMemoryKnowledgeMapCache повторная запись заменяет карту и не плодит ключи [E]
+  Expected: <1>
+    Actual: <0>
+  
+  package:matcher                                                         expect
+  package:flutter_test/src/widget_tester.dart 473:18                      expect
+  test\unit\data\generation\in_memory_knowledge_map_cache_test.dart 79:7  main.<fn>.<fn>
+  
+00:00 +5 -29: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/data/generation/in_memory_knowledge_map_cache_test.dart: InMemoryKnowledgeMapCache clear очищает кэш
+00:00 +6 -29: Some tests failed.
+
+Failing tests:
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/knowledge_map_parser_test.dart: golden-фикстура gen-map-v1 валидный ответ разбирается в единицы с якорями
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/knowledge_map_parser_test.dart: валидные ответы id строятся по индексу ответа и стабильны
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/knowledge_map_parser_test.dart: валидные ответы markdown-ограждение разбирается только в терпимом режиме
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/knowledge_map_parser_test.dart: валидные ответы salience на границах 0 и 1 допустим
+  ... and 25 more
