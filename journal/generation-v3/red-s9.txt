@@ -1,0 +1,165 @@
+00:00 +0: loading C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/completion_verdict_test.dart
+00:00 +0: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/completion_verdict_test.dart: CompletionVerdict.fromLedger — «ложный успех запрещён» done только при «принято ≥ заказано»
+00:00 +1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/completion_verdict_test.dart: CompletionVerdict.fromLedger — «ложный успех запрещён» недобор — partial с числом и классом причины
+00:00 +1 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/completion_verdict_test.dart: CompletionVerdict.fromLedger — «ложный успех запрещён» недобор — partial с числом и классом причины [E]
+  Expected: CompletionOutcome:<CompletionOutcome.partial>
+    Actual: CompletionOutcome:<CompletionOutcome.done>
+  
+  package:matcher                                                expect
+  package:flutter_test/src/widget_tester.dart 473:18             expect
+  test\unit\domain\generation\completion_verdict_test.dart 55:7  main.<fn>.<fn>
+  
+00:00 +1 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/completion_verdict_test.dart: CompletionVerdict.fromLedger — «ложный успех запрещён» «принято 20 из 20» — done, даже если модель произвела больше
+00:00 +1 -2: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/completion_verdict_test.dart: CompletionVerdict.fromLedger — «ложный успех запрещён» «принято 20 из 20» — done, даже если модель произвела больше [E]
+  Expected: <20>
+    Actual: <0>
+  
+  package:matcher                                                expect
+  package:flutter_test/src/widget_tester.dart 473:18             expect
+  test\unit\domain\generation\completion_verdict_test.dart 71:7  main.<fn>.<fn>
+  
+00:00 +1 -2: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/completion_verdict_test.dart: CompletionVerdict.fromLedger — «ложный успех запрещён» дубли и отбросы не делают недобор успехом
+00:00 +1 -3: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/completion_verdict_test.dart: CompletionVerdict.fromLedger — «ложный успех запрещён» дубли и отбросы не делают недобор успехом [E]
+  Expected: CompletionOutcome:<CompletionOutcome.partial>
+    Actual: CompletionOutcome:<CompletionOutcome.done>
+  
+  package:matcher                                                expect
+  package:flutter_test/src/widget_tester.dart 473:18             expect
+  test\unit\domain\generation\completion_verdict_test.dart 87:7  main.<fn>.<fn>
+  
+00:00 +1 -3: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/completion_verdict_test.dart: CompletionVerdict — отмена и сбой отмена без принятого — cancelled
+00:00 +1 -4: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/completion_verdict_test.dart: CompletionVerdict — отмена и сбой отмена без принятого — cancelled [E]
+  Expected: CompletionOutcome:<CompletionOutcome.cancelled>
+    Actual: CompletionOutcome:<CompletionOutcome.done>
+  
+  package:matcher                                                 expect
+  package:flutter_test/src/widget_tester.dart 473:18              expect
+  test\unit\domain\generation\completion_verdict_test.dart 101:7  main.<fn>.<fn>
+  
+00:00 +1 -4: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_metrics_test.dart: yield на 1000 входных токенов: принятые карточки / вход
+00:00 +1 -5: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_metrics_test.dart: yield на 1000 входных токенов: принятые карточки / вход
+00:00 +1 -5: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/completion_verdict_test.dart: CompletionVerdict — отмена и сбой отмена с принятым — partial: принятое не теряется (срез 7) [E]
+  Expected: CompletionOutcome:<CompletionOutcome.partial>
+    Actual: CompletionOutcome:<CompletionOutcome.done>
+  
+  package:matcher                                                 expect
+  package:flutter_test/src/widget_tester.dart 473:18              expect
+  test\unit\domain\generation\completion_verdict_test.dart 113:7  main.<fn>.<fn>
+  
+00:00 +1 -6: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_metrics_test.dart: yield на 1000 входных токенов: принятые карточки / вход
+00:00 +1 -6: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/completion_verdict_test.dart: CompletionVerdict — отмена и сбой сбой без карточек — failed, с карточками — partial [E]
+  Expected: CompletionOutcome:<CompletionOutcome.failed>
+    Actual: CompletionOutcome:<CompletionOutcome.done>
+  
+  package:matcher                                                 expect
+  package:flutter_test/src/widget_tester.dart 473:18              expect
+  test\unit\domain\generation\completion_verdict_test.dart 120:7  main.<fn>.<fn>
+  
+00:00 +1 -7: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_metrics_test.dart: yield на 1000 входных токенов: принятые карточки / вход
+00:00 +1 -7: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/completion_verdict_test.dart: CompletionVerdict — отмена и сбой ёмкость материала доходит до вердикта числом [E]
+  Expected: <12>
+    Actual: <0>
+  
+  package:matcher                                                 expect
+  package:flutter_test/src/widget_tester.dart 473:18              expect
+  test\unit\domain\generation\completion_verdict_test.dart 142:7  main.<fn>.<fn>
+  
+00:00 +2 -7: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_metrics_test.dart: yield на 1000 входных токенов: принятые карточки / вход
+00:00 +2 -8: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/completion_verdict_test.dart: CompletionVerdict.auto — заказ не задан (BACKLOG S9) упавший запрос не даёт done даже с карточками
+00:00 +2 -8: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_metrics_test.dart: yield на 1000 входных токенов: принятые карточки / вход [E]
+  Expected: <5>
+    Actual: <0.0>
+  
+  package:matcher                                                expect
+  package:flutter_test/src/widget_tester.dart 473:18             expect
+  test\unit\domain\generation\generation_metrics_test.dart 37:5  main.<fn>
+  
+00:00 +2 -9: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_metrics_test.dart: acceptance rate: принято / произведено; нет произведённого — null
+00:00 +2 -9: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/completion_verdict_test.dart: CompletionVerdict.auto — заказ не задан (BACKLOG S9) упавший запрос не даёт done даже с карточками [E]
+  Expected: CompletionOutcome:<CompletionOutcome.partial>
+    Actual: CompletionOutcome:<CompletionOutcome.done>
+  
+  package:matcher                                                 expect
+  package:flutter_test/src/widget_tester.dart 473:18              expect
+  test\unit\domain\generation\completion_verdict_test.dart 164:7  main.<fn>.<fn>
+  
+00:00 +2 -10: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/completion_verdict_test.dart: CompletionVerdict.auto — заказ не задан (BACKLOG S9) пустой ответ — не done, но и не failed
+00:00 +2 -11: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/completion_verdict_test.dart: CompletionVerdict.auto — заказ не задан (BACKLOG S9) пустой ответ — не done, но и не failed [E]
+  Expected: CompletionOutcome:<CompletionOutcome.partial>
+    Actual: CompletionOutcome:<CompletionOutcome.done>
+  
+  package:matcher                                                 expect
+  package:flutter_test/src/widget_tester.dart 473:18              expect
+  test\unit\domain\generation\completion_verdict_test.dart 174:7  main.<fn>.<fn>
+  
+00:00 +2 -11: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/completion_verdict_test.dart: CompletionVerdict.auto — заказ не задан (BACKLOG S9) отмена без принятого — cancelled
+00:00 +2 -11: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_metrics_test.dart: acceptance rate: принято / произведено; нет произведённого — null [E]
+  Expected: <0.75>
+    Actual: <null>
+  
+  package:matcher                                                expect
+  package:flutter_test/src/widget_tester.dart 473:18             expect
+  test\unit\domain\generation\generation_metrics_test.dart 50:5  main.<fn>
+  
+00:00 +2 -12: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_metrics_test.dart: duplicate rate по уровням каскада
+00:00 +2 -12: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/completion_verdict_test.dart: CompletionVerdict.auto — заказ не задан (BACKLOG S9) отмена без принятого — cancelled [E]
+  Expected: CompletionOutcome:<CompletionOutcome.cancelled>
+    Actual: CompletionOutcome:<CompletionOutcome.done>
+  
+  package:matcher                                                 expect
+  package:flutter_test/src/widget_tester.dart 473:18              expect
+  test\unit\domain\generation\completion_verdict_test.dart 186:7  main.<fn>.<fn>
+  
+00:00 +2 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_metrics_test.dart: duplicate rate по уровням каскада [E]
+  Expected: <0.3>
+    Actual: <null>
+  
+  package:matcher                                                expect
+  package:flutter_test/src/widget_tester.dart 473:18             expect
+  test\unit\domain\generation\generation_metrics_test.dart 66:5  main.<fn>
+  
+00:00 +2 -13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_metrics_test.dart: покрытие единиц карты и запросов на 10 карточек
+00:00 +2 -14: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_metrics_test.dart: покрытие единиц карты и запросов на 10 карточек [E]
+  Expected: <0.75>
+    Actual: <null>
+  
+  package:matcher                                                expect
+  package:flutter_test/src/widget_tester.dart 473:18             expect
+  test\unit\domain\generation\generation_metrics_test.dart 80:5  main.<fn>
+  
+00:00 +2 -14: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_metrics_test.dart: p50/p95 длительности батчей — методом ближайшего ранга
+00:00 +2 -15: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_metrics_test.dart: p50/p95 длительности батчей — методом ближайшего ранга [E]
+  Expected: Duration:<0:00:00.030000>
+    Actual: <null>
+  
+  package:matcher                                                expect
+  package:flutter_test/src/widget_tester.dart 473:18             expect
+  test\unit\domain\generation\generation_metrics_test.dart 96:5  main.<fn>
+  
+00:00 +2 -15: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_metrics_test.dart: p50/p95 на чётном числе батчей и пустом списке
+00:00 +2 -16: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_metrics_test.dart: p50/p95 на чётном числе батчей и пустом списке [E]
+  Expected: Duration:<0:00:00.200000>
+    Actual: <null>
+  
+  package:matcher                                                 expect
+  package:flutter_test/src/widget_tester.dart 473:18              expect
+  test\unit\domain\generation\generation_metrics_test.dart 110:5  main.<fn>
+  
+00:00 +2 -16: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_metrics_test.dart: пустые метрики не бросают и дают нулевые/неопределённые значения
+00:00 +3 -16: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_metrics_test.dart: JSON метрик: машинные числа и проценты, без строк текста
+00:00 +3 -17: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_metrics_test.dart: JSON метрик: машинные числа и проценты, без строк текста [E]
+  Expected: <40>
+    Actual: <null>
+  
+  package:matcher                                                 expect
+  package:flutter_test/src/widget_tester.dart 473:18              expect
+  test\unit\domain\generation\generation_metrics_test.dart 140:5  main.<fn>
+  
+00:00 +3 -17: Some tests failed.
+
+Failing tests:
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/completion_verdict_test.dart: CompletionVerdict — отмена и сбой отмена без принятого — cancelled
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/completion_verdict_test.dart: CompletionVerdict — отмена и сбой отмена с принятым — partial: принятое не теряется (срез 7)
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/completion_verdict_test.dart: CompletionVerdict — отмена и сбой сбой без карточек — failed, с карточками — partial
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/completion_verdict_test.dart: CompletionVerdict — отмена и сбой ёмкость материала доходит до вердикта числом
+  ... and 13 more
