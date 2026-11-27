@@ -2,63 +2,82 @@
 
 ## Сделано
 
-**Срез 0 (2026-11-27) — аудит и контракт архитектуры. Код `lib/` не менялся.**
-- `docs/generation/AUDIT.md` — 7 гипотез TASK.txt с вердиктами и `файл:метод:строка`
-  + сценарий по каждой; сводная таблица.
-- `docs/generation/ARCH.md` — 9 этапов (вход/выход/владелец/тесты), поток данных,
-  5 инвариантов, границы. ≈970 слов.
-- `docs/decisions/ADR-050-generation-v3-knowledge-map.md` — решение + 4 альтернативы
-  с причиной отказа + последствия.
-- `docs/generation/BACKLOG.md` — 9 срезов S1–S9, у каждого ровно одна команда DoD.
-- `journal/STATE.md` — новая ветка работ «Генерация v3», срез 0.
-- `journal/QUESTIONS.md` — Q1 (список 9 срезов в TASK.txt отсутствует; принято
-  «срез = этап»), Q2 (хранение журнала — S8).
+**Срез 1 (2026-11-27) — ContentModel: Document → Section → Block с якорями.**
+- `lib/api/generation/content_model.dart`: `Document`, `Section`, `Block`,
+  `NoiseKind`. Инварианты проверяются в конструкторе `Document` (offsets точные
+  `text.substring(start, end) == text`, блоки не пересекаются, каждый блок
+  целиком в одном разделе, разделы не пересекаются, иерархия замкнута).
+  `block(id)`/`section(id)` — индексные карты (**O(1)**), `blockAt(offset)` —
+  двоичный поиск, `blocksOfSection`, `childrenOf`, `contentBlocks`/
+  `noiseBlocks`, `contentLength`, `Document.empty`.
+- `lib/api/generation/content_normalizer.dart`: `ContentNormalizer` — пробелы
+  (включая NBSP, типографские и нулевой ширины), `ё→е`, кавычки, тире/дефисы и
+  мягкий перенос. Нормализация **не** меняет offsets: `Block.text` — текст
+  источника, сравнивается `Block.normalizedText`.
+- `lib/api/generation/content_model_builder.dart`: `ContentModelBuilder`
+  (`ParsedDocument → Document`; `buildFromOutcome` — ошибка файла даёт пустую
+  модель без исключения) и `ContentNoiseDetector` (номер страницы, подпись
+  «Рис./Fig. N», оглавление по заголовку раздела и по отточию с номером,
+  колонтитул — строка, повторяющаяся в ≥2 разделах первой или последней).
+  Блок = строка источника; границы разделов расширены до границ блоков —
+  поэтому раздел не рвёт абзац. Иерархия — по нумерации заголовков (`1.` → 0,
+  `1.1` → 1), скачок уровня сглаживается, разрыв нумерации делает раздел
+  корневым.
+- Парсеры и их публичные типы **не менялись**, генерация и LLM не тронуты.
+- Тесты (+24): `test/unit/api/generation/content_model_test.dart` (13),
+  `content_normalizer_test.dart` (6), `content_model_parsers_test.dart` (5 фикстур:
+  PDF, DOCX, PPTX, MD, скан без текстового слоя).
 
 ## Проверено
 
-- Чтение по протоколу: TASK.txt → journal/STATE.md (хвост) → SPEC A5/A8.1–A8.6 →
-  код точечно (grep по объявлениям + окна чтения). Файлы >300 строк читались не
-  подряд: `generation_pipeline.dart` — оглавление методов, затем участки
-  205–354, 600–669, 671–1050, 1051–1270, 1900–2129.
-- DoD среза 0: `ARCH.md` 968 слов (≤2 страниц), 7/7 гипотез с вердиктом и
-  строкой, ADR — 4 альтернативы (≥3), в BACKLOG ровно 9 команд DoD
-  (`Select-String 'flutter\.bat'` → 9, `DoD-команда` → 9).
-- `flutter analyze`/`flutter test` **не запускались**: `lib/` не менялся (так
-  требует DoD среза 0). Это не «заявка без команды»: проверка — отсутствие diff
-  по `lib/`, `git status --short lib` пуст.
+- Красная фаза — `journal/generation-v3/red-s1.txt` (assertion-level падения,
+  не только ошибка компиляции).
+- `.\.fvm\versions\3.47.9\bin\flutter.bat analyze --no-pub lib test` →
+  **No issues found!** (0 issues).
+- `.\.fvm\versions\3.47.9\bin\dart.bat format --set-exit-if-changed lib test` →
+  **623 files, 0 changed**.
+- `.\.fvm\versions\3.47.9\bin\flutter.bat test --no-pub --exclude-tags golden` →
+  **2825 passed + 17 skipped**, `exit 0` (baseline 2801 + 17; +24 новых).
+- Пять фикстур DoD: offsets точные, блок восстанавливается по id (`same(...)`),
+  раздел не рвёт абзац (блоки в границах своего раздела), скан даёт пустую
+  модель без исключения. Итоги — `journal/generation-v3/verify-s1.md`.
 
 ## НЕ ПОВТОРЯТЬ
 
-- **Не читать `docs/adaptive-generation-architecture.md` (169 КБ) и
-  `journal/STATE.md` целиком** — нужные факты получены точечно; линейное чтение
-  съедает бюджет шагов.
-- **Не искать «9 срезов» в TASK.txt второй раз** — списка нет, толкование в
-  `journal/QUESTIONS.md` Q1.
-- **Не перепроверять гипотезу (г) как «только хеш»** — триграммы есть
-  (`generation_pipeline.dart:_frontSimilarity:1958`); суть дефекта в том, что
-  почти-дубль **удаляется** и только по `front` внутри запуска.
-- **Не утверждать, что план режет цель бюджетом одного запроса** — ADR-043
-  снял это для планирования; проблема в исполнении (`_topUpChunk` ≤1 партия за
-  раунд, `retryFailed` без недобора).
-- **Не запускать `fvm flutter test` без `--no-pub`** (AGENTS.md: зависает на
-  `pub get --example`). В срезах 1+ — только
-  `.fvm\versions\3.47.9\bin\flutter.bat … --no-pub`.
-- **Не менять `lib/` в срезах 0** — запрет TASK.txt; старый путь удаляется только
-  в S9 после зелёных тестов и включённого флага.
+- **Не использовать `\b` в регулярках после кириллицы.** В ECMAScript-регулярках
+  (Dart `RegExp`) граница слова считается по ASCII: `^\s*(?:рис)\b\.` **не
+  ловит** «Рис. 4» — на этом упал первый зелёный прогон. Подпись рисунка
+  детектируется без `\b` (`_figureCaption` в `content_model_builder.dart`).
+- **PDF-фикстуры — только латиница.** `document_fixtures.dart` собирает PDF в
+  latin1 (`_pdfEscape` + `latin1.encode`), кириллица падает с
+  `Invalid argument (string): Contains invalid characters`. Русский текст — в
+  DOCX/PPTX/MD-фикстурах, PDF-сценарий берёт латинские строки.
+- **Многострочная страница PDF — только `buildPdfFromFixturePages`.**
+  `buildPdfPages` пишет текст страницы одной `Tj`-строкой (переводы строк в
+  литерал не вставляются); `PdfFixturePage(text: 'line1\nline2')` пишет каждую
+  строку отдельной `Tj`, и pdfrx отдаёт их через `\n` (проверено пробой).
+- **Не проверять «раздел не рвёт абзац» через `ParsedDocumentBuilder`:**
+  он всегда разделяет разделы `\n\n`, граница внутри строки не возникнет.
+  Такой случай задаётся вручную `ParsedSection(start: 20, end: 43)` — см.
+  тест «граница раздела внутри строки не рвёт абзац».
+- **Не считать падение `settings_persistence_file_db_test.dart` регрессией.**
+  На полном прогоне под нагрузкой он падает `TimeoutException 30s` (файловая
+  drift-БД в OneDrive); отдельно и на повторном полном прогоне — зелёный.
+- **Не читать `journal/STATE.md` целиком** и не искать «9 срезов» в TASK.txt
+  (Q1 в `journal/QUESTIONS.md`): срез 1 = `ContentModel`, а не `MaterialUnit`
+  из `BACKLOG.md` (Q3).
 
 ## СЛЕДУЮЩЕЕ ДЕЙСТВИЕ
 
-Срез S1 — начать с красного теста:
-создать `test/unit/domain/generation/material_unit_test.dart`, в нём — контракт
-`MaterialUnit` (текст восстанавливается по `start/end` нормализованного
-документа, `id` стабилен, `sectionId`/`documentId` сохраняются),
-затем `lib/domain/generation/material_unit.dart`.
-Проверка DoD:
-`.fvm\versions\3.47.9\bin\flutter.bat test --no-pub test/unit/domain/generation/material_unit_test.dart`.
-Детали и запреты — `docs/generation/BACKLOG.md`, S1.
+Срез 2 — новое задание владельца: `read TASK.txt` (файл обновляется под каждый
+срез) → верхний блок `journal/STATE.md` («Генерация v3») →
+`docs/generation/BACKLOG.md` S2 (`KnowledgeMap`). Если в TASK.txt снова
+«Срез 1»/пусто — брать S2 из BACKLOG: red-тест
+`test/unit/domain/generation/knowledge_map_test.dart`, команда
+`.\.fvm\versions\3.47.9\bin\flutter.bat test --no-pub test/unit/domain/generation/knowledge_map_test.dart`.
 
 ---
 
 **Архив прежнего (незавершённого, другой заход) прогона:**
-`PROGRESS_slow_20261122.md` (120 КБ) — читать целиком не нужно, к срезу 0
+`PROGRESS_slow_20261122.md` (120 КБ) — читать целиком не нужно, к срезам 0–1
 отношения не имеет.

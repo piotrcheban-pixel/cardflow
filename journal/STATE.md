@@ -1,5 +1,57 @@
 # STATE — текущее состояние CardFlow
 
+## Генерация v3 — срез 1: ContentModel документа (2026-11-27)
+
+**Срез:** `TASK.txt` «Срез 1. ContentModel: Document → Section → Block с
+якорями» (план этапов — `docs/generation/ARCH.md`, BACKLOG, ADR-050;
+расхождение с BACKLOG S1 — `journal/QUESTIONS.md` Q3).
+**Факты старта:** ветка `main`, `HEAD = fbdd1c3` (docs среза 0), `lib/` не
+менялся с TASK 04; baseline `fvm flutter test --no-pub --exclude-tags golden` —
+**2801 passed + 17 skipped**.
+
+**Сделано (TDD, red → green):**
+- `lib/api/generation/content_model.dart` — `Document`/`Section`/`Block`,
+  `NoiseKind`. Инварианты проверяются в конструкторе `Document`: offsets точные
+  (`text.substring(start, end) == text`), блоки не пересекаются, каждый блок
+  целиком в одном разделе, разделы не пересекаются, иерархия замкнута.
+  `block(id)`/`section(id)` — индексные карты (**O(1)**, без поиска подстроки),
+  `blockAt(offset)` — двоичный поиск, `blocksOfSection`, `childrenOf`,
+  `contentBlocks`/`noiseBlocks`, `contentLength`, `Document.empty` (скан или
+  нечитаемый файл).
+- `lib/api/generation/content_normalizer.dart` — `ContentNormalizer`: пробелы
+  (NBSP, типографские, нулевой ширины), `ё→е`, кавычки, тире/дефисы, мягкий
+  перенос. Якоря считаются по исходному тексту, сравнение — `Block.normalizedText`.
+- `lib/api/generation/content_model_builder.dart` — `ContentModelBuilder`
+  (`ParsedDocument → Document`, `buildFromOutcome`: ошибка файла → пустая модель
+  без исключения) и `ContentNoiseDetector` (номер страницы, «Рис./Fig. N»,
+  оглавление по заголовку раздела и по отточию с номером, колонтитул — строка,
+  повторяющаяся в ≥2 разделах первой/последней). Блок = строка источника;
+  границы разделов расширены до границ блоков («раздел не рвёт абзац»);
+  иерархия — по нумерации заголовков (`1.` → 0, `1.1` → 1), скачок уровня
+  сглаживается, разрыв нумерации делает раздел корневым.
+- Парсеры и их публичные типы **не менялись**; генерация, LLM и схема БД не
+  тронуты.
+
+**Тесты (+24):** `test/unit/api/generation/content_model_test.dart` (13),
+`content_normalizer_test.dart` (6), `content_model_parsers_test.dart` (5 фикстур
+DoD: PDF, DOCX, PPTX, MD, скан без текстового слоя — offsets точные,
+блок восстанавливается по id, раздел не рвёт абзац, скан → пустая модель).
+Красная фаза с assertion-level выводом — `journal/generation-v3/red-s1.txt`.
+
+**Гейты итогового снимка:** `flutter analyze --no-pub lib test` → **0 issues**;
+`dart format --set-exit-if-changed lib test` → **623 файла, 0 changed**;
+`flutter test --no-pub --exclude-tags golden` → **2825 passed + 17 skipped**
+(+24 к baseline), `exit 0`. Подробно — `journal/generation-v3/verify-s1.md`.
+
+**Ограничения:** `MaterialUnit` из BACKLOG S1 в этом срезе не создаётся (Q3);
+подписи таблиц мусором не считаются (Q4); блоки строковые, склейка переносов
+PDF в абзацы — задача следующих этапов. На первом полном прогоне
+`settings_persistence_file_db_test.dart` упал `TimeoutException 30s` под
+нагрузкой (файловая drift-БД в OneDrive) — отдельно и на повторном полном
+прогоне зелёный.
+
+---
+
 ## TASK 04 — импорт файлов, генерация, изображения, производительность (2026-11-27)
 
 **Дата:** 2026-11-27 · **Итерация:** TASK 04 «Исправление импорта файлов,

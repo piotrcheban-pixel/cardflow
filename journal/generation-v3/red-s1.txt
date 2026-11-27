@@ -1,0 +1,80 @@
+00:00 +0: loading C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/content_model_test.dart
+00:00 +0: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/content_model_test.dart: блоки и якоря блок = строка; offsets точные, id стабильны, блок по id — O(1)
+00:00 +0 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/content_model_test.dart: блоки и якоря блок = строка; offsets точные, id стабильны, блок по id — O(1) [E]
+  Expected: an object with length of <4>
+    Actual: []
+     Which: has length of <0>
+  
+  package:matcher                                        expect
+  package:flutter_test/src/widget_tester.dart 473:18     expect
+  test\unit\api\generation\content_model_test.dart 29:7  main.<fn>.<fn>
+  
+00:00 +0 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/content_model_test.dart: блоки и якоря пустые строки разделяют блоки и не попадают в модель
+00:00 +0 -2: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/content_model_test.dart: блоки и якоря пустые строки разделяют блоки и не попадают в модель [E]
+  Expected: ['Первый абзац.', 'Второй абзац.']
+    Actual: MappedListIterable<Block, String>:[]
+     Which: at location [0] is MappedListIterable<Block, String>:[] which shorter than expected
+  
+  package:matcher                                        expect
+  package:flutter_test/src/widget_tester.dart 473:18     expect
+  test\unit\api\generation\content_model_test.dart 67:7  main.<fn>.<fn>
+  
+00:00 +0 -2: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/content_model_test.dart: блоки и якоря blockAt находит блок по смещению и молчит в промежутке
+00:00 +0 -3: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/content_model_test.dart: блоки и якоря blockAt находит блок по смещению и молчит в промежутке [E]
+  Expected: 'Первый абзац.'
+    Actual: <null>
+     Which: not an <Instance of 'String'>
+  
+  package:matcher                                        expect
+  package:flutter_test/src/widget_tester.dart 473:18     expect
+  test\unit\api\generation\content_model_test.dart 81:7  main.<fn>.<fn>
+  
+00:00 +0 -3: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/content_model_test.dart: блоки и якоря нормализация не меняет ни текст, ни offsets блока
+00:00 +0 -4: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/content_model_test.dart: блоки и якоря нормализация не меняет ни текст, ни offsets блока [E]
+  Bad state: No element
+  dart:core                                               _Array.single
+  test\unit\api\generation\content_model_test.dart 96:40  main.<fn>.<fn>
+  
+00:00 +0 -4: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/content_model_test.dart: отсев мусора колонтитул, номер страницы, оглавление и подпись — флагом, а не удалением
+00:00 +0 -5: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/content_model_test.dart: отсев мусора колонтитул, номер страницы, оглавление и подпись — флагом, а не удалением [E]
+  Expected: NoiseKind:<NoiseKind.runningHeaderFooter>
+    Actual: <null>
+  
+  package:matcher                                         expect
+  package:flutter_test/src/widget_tester.dart 473:18      expect
+  test\unit\api\generation\content_model_test.dart 119:7  main.<fn>.<fn>
+  
+00:00 +0 -5: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/content_model_test.dart: отсев мусора похожие, но содержательные строки мусором не считаются
+00:00 +0 -6: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/content_model_test.dart: отсев мусора похожие, но содержательные строки мусором не считаются [E]
+  Expected: an object with length of <4>
+    Actual: WhereIterable<Block>:[]
+     Which: has length of <0>
+  
+  package:matcher                                         expect
+  package:flutter_test/src/widget_tester.dart 473:18      expect
+  test\unit\api\generation\content_model_test.dart 149:7  main.<fn>.<fn>
+  
+00:00 +0 -6: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/content_model_test.dart: разделы и иерархия граница раздела внутри строки не рвёт абзац
+00:00 +0 -7: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/content_model_test.dart: разделы и иерархия граница раздела внутри строки не рвёт абзац [E]
+  Expected: ['Введение', 'Первый абзац текста.', 'Второй абзац.']
+    Actual: MappedListIterable<Block, String>:[]
+     Which: at location [0] is MappedListIterable<Block, String>:[] which shorter than expected
+  
+  package:matcher                                         expect
+  package:flutter_test/src/widget_tester.dart 473:18      expect
+  test\unit\api\generation\content_model_test.dart 172:7  main.<fn>.<fn>
+  
+00:00 +0 -7: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/content_model_test.dart: разделы и иерархия иерархия строится по нумерации заголовков
+00:00 +0 -8: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/content_normalizer_test.dart: пробелы: повторы, табуляции и NBSP → один пробел, края обрезаны
+00:00 +0 -8: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/content_model_test.dart: разделы и иерархия иерархия строится по нумерации заголовков [E]
+  Expected: [0, 1, 1, 0]
+    Actual: MappedListIterable<Section, int>:[]
+     Which: at location [0] is MappedListIterable<Section, int>:[] which shorter than expected
+  
+  package:matcher                                         expect
+  package:flutter_test/src/widget_tester.dart 473:18      expect
+  test\unit\api\generation\content_model_test.dart 223:7  main.<fn>.<fn>
+  
+00:00 +0 -9: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/content_normalizer_test.dart: пробелы: повторы, табуляции и NBSP → один пробел, края обрезаны
+00:00 +0 -9: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/content_model_test.dart: разделы и иерархия раздел без заголовка — корневой [E]
+  Bad state: No element
