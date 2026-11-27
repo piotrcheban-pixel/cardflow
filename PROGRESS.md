@@ -2,6 +2,39 @@
 
 ## Сделано
 
+**Срез 8 (2026-11-28) — Persistence: черновики, миграция, идемпотентный импорт.**
+- **Схема v2** (ADR-051, `lib/data/db/tables.dart`, `app_database.dart`):
+  `generation_runs`, `generation_units`, `generation_batches`, `card_drafts`,
+  `knowledge_maps`; таблицы SPEC A5 не менялись, `generation_jobs` продолжает
+  заполняться (совместимое представление для UI). `schemaVersion = 2`,
+  шаговая миграция 1 → 2 (`createTable` + явный `createIndex` — `Migrator`
+  индексы сам не создаёт), понижение/неизвестная версия — fail-fast.
+  Снимки: `drift_schemas/drift_schema_v2.json` (`schema dump`),
+  `test/unit/data/db/migrations/generated/*` и `test/migrations/generated/*`
+  (`schema steps` + `schema generate`). `.bak` перед миграцией —
+  `backupBeforeMigration` в `database_opener.dart` (ADR-005 §5).
+- `lib/data/generation/drift_generation_run_store.dart`: `openRun` (идемпотентен
+  по `runId`, не сбрасывает принятое), `saveStage`, `saveBatch`, `saveDraft`
+  (`InsertMode.insertOrIgnore` + уникальный `idx_card_drafts_run_hash`),
+  `saveDeckId`, `loadRun`, `unitsOfRun`, `latestResumableRunId`;
+  `GenerationRunCardSink implements CardSink` — карточка пишется в момент
+  принятия, сбой на 5-м батче не теряет первые 4.
+- `lib/domain/generation/generation_run_snapshot.dart` + `run_resume.dart`:
+  `GenerationBatchStatus` (`pending|running|done|failed`), `GenerationBatchRecord`,
+  `RunCardDraft`, `GenerationRunSnapshot` (`resumeBatchIndex`, `resumeStage`,
+  `isResumable`), `planGenerationResume` — выполненные партии не
+  перезапрашиваются; без единиц карты → `understanding`; все партии выполнены →
+  `replenishing`; завершённый прогон не восстанавливается.
+- `lib/data/generation/drift_knowledge_map_cache.dart`: `DriftKnowledgeMapCache`
+  на `knowledge_maps` — повторный материал не платит за Understanding после
+  перезапуска; повреждённая строка — промах. Форматы `knowledge_map_json.dart`
+  и `generated_card_json.dart` (v1, строгий разбор).
+- `DriftGenerationCardStore.importRunCards`: импорт черновиков **одной
+  транзакцией**, идемпотентно по (`run_id`, `content_hash`), отметки
+  `imported_card_id`/`imported_at` в той же транзакции; `_resolveDeck` общий с
+  `importGeneratedCards`.
+- Конвейер, UI и `generationV3` **не менялись** (подключение — S9).
+
 **Срез 7 (2026-11-28) — Replenish и partial.**
 - `lib/domain/generation/replenish_stage.dart`: `ReplenishStage` — долг это
   слоты заказа без принятой пары (`unit_id` + `angle`); добор идёт только по
@@ -215,6 +248,21 @@
 
 ## Проверено
 
+**Срез 8.** Гейты: `.fvm\versions\3.47.9\bin\flutter.bat analyze --no-pub lib
+test` → **No issues found!**; `.fvm\versions\3.47.9\bin\dart.bat format
+--set-exit-if-changed lib test` → **681 files, 0 changed**;
+`.fvm\versions\3.47.9\bin\flutter.bat test --no-pub --exclude-tags golden` →
+**3109 passed + 17 skipped**, `exit 0` (baseline 3073 + 17 skipped, +36).
+DoD-команды: `schema_migration_v2_test.dart` 4 passed,
+`drift_generation_run_store_test.dart` 12 passed, `drift_run_import_test.dart`
+5 passed, `drift_knowledge_map_cache_test.dart` 12 passed, `schema_test.dart`
+27 passed, `test/migrations/migration_test.dart` 5 passed. Красная фаза:
+`SchemaVerifier` — «comparing idx_card_drafts_run_hash: The actual schema does
+not contain anything with this name» (индекс не создавался `createTable`) и
+`Bad state: Too many elements` в тесте восстановления. Итоги —
+`journal/generation-v3/verify-s8.md`. БД-тесты только in-memory drift + одна
+файловая БД для `.bak`; полный прогон — 3:13.
+
 **Срез 7.** Красная фаза — `journal/generation-v3/red-s7.txt` (**3 прошло /
 27 упало**, 0 ошибок компиляции, 51 assertion-level маркер:
 `Expected: <3> Actual: <0>`, `Expected: ReplenishStopReason:<…complete>
@@ -335,6 +383,29 @@ DoD-тесты: property «Σ бюджетов == requested» на 200 случ�
   а не по числу вернувшихся карточек: иначе повтор принятого закрывает долг и
   `accepted ≥ requested` даёт ложный `ready`. Лишние карточки —
   `ReplenishPass.surplus`, они не входят в accepted.
+- **`Migrator.createTable` не создаёт объявленные `@TableIndex`.** Шаг миграции
+  обязан вызывать `m.createIndex(idxCardDraftsRunHash)`; иначе `SchemaVerifier`
+  падает на «The actual schema does not contain anything with this name», а
+  уникальность ключа идемпотентности импорта держится только на коде.
+- **`SchemaVerifier.startAt(1)` + `AppDatabase` автоматически делает onUpgrade
+  до v2.** Нельзя «поставить» БД на версию 1, открыв `AppDatabase`; для данных
+  «до миграции» — `testWithDataIntegrity` (createItems в `Batch`, `RawValuesInsertable`
+  + `Variable<Object>(value)`: `Value<T>` — не Expression, а `Expression<D extends Object>`).
+- **`generation_jobs` — не view, а живая таблица.** Совместимое с UI
+  представление поддерживается записью в обе сущности (`openRun`/`saveStage`/
+  `saveDeckId`); не переименовывать и не удалять её поля, даже когда
+  `generation_runs` стала источником восстановления.
+- **Ключ идемпотентности — `contentHashOf(front, back)`,** а не хеш JSON
+  черновика: иначе повторный импорт прогона и дедуп колоды считались бы по
+  разным ключам (`cards.content_hash`).
+- **Не писать байты изображений в черновик.** `card_drafts.card_json` —
+  структура без картинок; байты раздувают транзакцию и дублируют `MediaStore`
+  (L220). После перезапуска картинка разрешается заново.
+- **Не персистить `DedupReport`.** В БД только счётчики партий; пары живут в
+  памяти прогона (L219). Вердикт Completion читает числа журнала.
+- **`sqlite3` в 3.9: `Database.dispose()` устарел** — использовать `close()`
+  (иначе `analyze` даёт `deprecated_member_use`); drift-`isNull`/`isNotNull`
+  конфликтуют с matcher — прятать в импорте или не импортировать drift вовсе.
 - **`maxRequests` должен включать первый проход.** Доля `ceil(requested/2)`
   при 3 батчах и 6 карточках равна числу уже сделанных запросов — добор
   запрещён ещё до старта (поймано тестом `maxPasses`). Принято
@@ -512,26 +583,27 @@ DoD-тесты: property «Σ бюджетов == requested» на 200 случ�
 
 ## СЛЕДУЮЩЕЕ ДЕЙСТВИЕ
 
-Срез 7 закрыт, коммиты — `test`(red)/`feat`/`docs` в `main`. Следующий прогон:
+Срез 8 закрыт, коммиты — `test`/`feat`/`docs` в `main`. Следующий прогон:
 `read TASK.txt` (верхний блок) → верхний блок `journal/STATE.md`
-(«Генерация v3 — срез 7») → `journal/generation-v3/verify-s7.md` (раздел
-«Ограничения и толкования») → `docs/generation/BACKLOG.md` (следующий этап —
-S8 Persistence: журнал принятого в `generation_jobs`, идемпотентный импорт;
-затем S9 Completion + подключение флага).
+(«Генерация v3 — срез 8») → `journal/generation-v3/verify-s8.md` (раздел
+«Ограничения») → `docs/generation/BACKLOG.md` (S9 Completion: `done` ⟺
+`принято ≥ requested`, подключение нового пути за флагом `generationV3`).
 
-Если в TASK.txt снова «Срез 7» — **не повторять** `replenish_stage.dart`,
-`generation_report.dart` (30 тестов зелёные, Q17 закрыт). Следующий шаг — S8:
-red-тест `test/unit/data/generation/generation_ledger_store_test.dart`, затем
-`.\.fvm\versions\3.47.9\bin\flutter.bat test --no-pub test/unit/data/generation/generation_ledger_store_test.dart`.
+Если в TASK.txt снова «Срез 8» — **не повторять**: схема v2, миграция и
+`drift_schemas/*` готовы (ADR-051), `drift_generation_run_store_test.dart` (12),
+`drift_run_import_test.dart` (5), `drift_knowledge_map_cache_test.dart` (12)
+зелёные. Следующий шаг — S9: `test/unit/domain/generation/completion_verdict_test.dart`,
+затем `.fvm\versions\3.47.9\bin\flutter.bat test --no-pub test/unit/domain/generation/completion_verdict_test.dart`.
 
-Не подключать `ReplenishStage`/`GenerationReport`/валидатор/дедуп к
-`GenerationPipeline`, не переводить UI на новый путь, не включать
+Не подключать `ReplenishStage`/`GenerationReport`/валидатор/дедуп/журнал прогона
+к `GenerationPipeline`, не переводить UI на новый путь, не включать
 `generationV3` и не удалять старый путь: включение — S9 за флагом
 (ADR-050, протокол §9). Prompt-only остаётся на старом пути (`no_unit_plan`).
 
 Baseline текущего снимка: `flutter test --no-pub --exclude-tags golden` —
-**3073 passed + 17 skipped**; `analyze` 0; `dart format` 0 changed;
-покрытие 90.9 % (25300/27847).
+**3109 passed + 17 skipped**; `analyze` 0; `dart format` 0 changed;
+схема БД — **v2** (не откатывать `schemaVersion` и не удалять
+`drift_schema_v1.json`; следующая схема — только новым ADR по ADR-005).
 
 ---
 

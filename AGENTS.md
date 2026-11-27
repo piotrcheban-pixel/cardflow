@@ -123,6 +123,23 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   упавших фрагментах, невалидные карточки пропускает, картинку можно убрать/заменить; ошибки фрагментов —
   списком «Фрагмент K из M: причина» + «Повторить неудавшиеся»; при невыполнимом заказе видно
   «запрошено/достижимо».
+  **Журнал прогона v3 и схема БД v2 (срез 8, ADR-051):** `schemaVersion = 2`,
+  новые таблицы `generation_runs`, `generation_units`, `generation_batches`,
+  `card_drafts`, `knowledge_maps`; `generation_jobs` — по-прежнему живое
+  совместимое представление для UI (поля не удаляются и синхронизируются).
+  Миграция 1 → 2 — `onUpgrade` в `app_database.dart` (`createTable` **и**
+  `createIndex`: `Migrator` индексы сам не создаёт), снимки схемы —
+  `drift_schemas/drift_schema_v{1,2}.json`, перед миграцией файл БД копируется
+  в `cardflow.sqlite.bak` (`backupBeforeMigration`). Принятая карточка пишется в
+  момент принятия (`DriftGenerationRunStore` + `GenerationRunCardSink`, порт
+  `CardSink`) — сбой на 5-м батче не теряет первые 4; импорт — одной
+  транзакцией и идемпотентно по (`run_id`, `content_hash`) уникальным индексом
+  `idx_card_drafts_run_hash` (`importRunCards`); восстановление —
+  `GenerationRunSnapshot` + `planGenerationResume` (выполненные партии не
+  перезапрашиваются, без единиц карты → `understanding`); кэш карты знаний —
+  `DriftKnowledgeMapCache`. Форматы хранения — `knowledge_map_json.dart` и
+  `generated_card_json.dart` (v1, строгий разбор; байты изображений в БД не
+  пишутся). К конвейеру/UI не подключено до S9.
   **Prompt-only и диагностика (ADR-024, TASK 02B-FINAL):** файлы необязательны — без вложений, но с темой
   план строит `PromptOnlyPlanner` (`ChunkKind.promptOnly`, `GenerationMode.promptOnly`) без фиктивных
   `ContentUnit`; сервис шлёт пустой `<materials>`, тема — в `<wishes>`; большие заказы делятся на

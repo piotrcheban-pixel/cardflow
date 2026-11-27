@@ -182,17 +182,23 @@ DoD-команда — 7 тестов в `test/unit/api/generation/quote_offsets
 ## S8 — Persistence: журнал принятого
 
 **Цель.** Журнал запуска пишется по ходу: принятые карточки, решения дедупа,
-пометки валидации, долг. Хранение — JSON в `generation_jobs` (схема БД не
-меняется); staging-таблица — только отдельным ADR. Импорт идемпотентен:
-повторный импорт того же журнала не создаёт дублей и не «съедает» карточки
-молча — скип попадает в журнал с причиной.
+пометки валидации, долг. Импорт идемпотентен: повторный импорт того же журнала
+не создаёт дублей и не «съедает» карточки молча — скип попадает в журнал с
+причиной.
 
-**Write-scope.** `lib/data/generation/generation_ledger_store.dart` (новый),
-`GenerationJobRepository`/`drift_generation_card_store.dart` — чтение/запись
-журнала; `generation_jobs.*_json` через `files_json`-совместимый pattern.
+**Сделано (срез 8, 2026-11-28).** Расхождение с планом: TASK.txt требует
+**схему БД v2** с пятью таблицами (`generation_runs`, `generation_units`,
+`generation_batches`, `card_drafts`, `knowledge_maps`) вместо JSON-поля в
+`generation_jobs` — приоритет TASK.txt, решение и последствия — ADR-051,
+толкование — `journal/QUESTIONS.md` Q18. Реализация: `drift_generation_run_store.dart`
+(`CardSink` пишет черновик в момент принятия), `importRunCards` в
+`drift_generation_card_store.dart` (одна транзакция, ключ `(run_id, content_hash)`
+уникальным индексом), восстановление — `generation_run_snapshot.dart` +
+`run_resume.dart`, кэш карты знаний — `drift_knowledge_map_cache.dart`.
+Детали — `journal/generation-v3/verify-s8.md`; к конвейеру и UI — S9.
 
 **DoD-команда (одна):**
-`.fvm\versions\3.47.9\bin\flutter.bat test --no-pub test/unit/data/generation/generation_ledger_store_test.dart`
+`.fvm\versions\3.47.9\bin\flutter.bat test --no-pub test/unit/data/generation/drift_generation_run_store_test.dart`
 
 ## S9 — Completion: ложный успех запрещён
 

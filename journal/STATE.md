@@ -1,5 +1,80 @@
 # STATE — текущее состояние CardFlow
 
+## Генерация v3 — срез 8: Persistence — черновики, миграция, идемпотентный импорт (2026-11-28)
+
+**Срез:** `TASK.txt` «Срез 8. Persistence: черновики, миграция, идемпотентный
+импорт» (план этапов — `docs/generation/ARCH.md` уточнение среза 8, BACKLOG S8,
+ADR-051; расхождение с BACKLOG и толкование — `journal/QUESTIONS.md` Q18).
+**Факты старта:** ветка `main`, `HEAD = 44073be` (docs среза 7); baseline
+`flutter test --no-pub --exclude-tags golden` — **3073 passed + 17 skipped**.
+
+**Сделано (TDD, red → green):**
+- `lib/data/db/tables.dart` + `app_database.dart` — **схема v2** (ADR-051):
+  `generation_runs`, `generation_units`, `generation_batches`, `card_drafts`,
+  `knowledge_maps`; таблицы SPEC A5 не менялись. Миграция 1 → 2 шаговая
+  (`createTable` + явный `createIndex`: `Migrator.createTable` индексы не
+  создаёт — это поймал `SchemaVerifier`, а не ревью); понижение версии и
+  апгрейд на неизвестную — fail-fast `StateError` (ADR-005). Снимки схемы —
+  `drift_schemas/drift_schema_v1.json`/`_v2.json`, генерация —
+  `test/unit/data/db/migrations/generated/` и `test/migrations/generated/`.
+- `lib/data/db/database_opener.dart` — `backupBeforeMigration`:
+  `cardflow.sqlite.bak` перед первой миграцией (ADR-005 §5), копия только если
+  `PRAGMA user_version` старее текущей схемы.
+- `lib/data/generation/drift_generation_run_store.dart` —
+  `DriftGenerationRunStore` (`openRun` идемпотентен по `runId`, `saveStage`,
+  `saveBatch`, `saveDraft`, `saveDeckId`, `loadRun`, `unitsOfRun`,
+  `latestResumableRunId`) + `GenerationRunCardSink implements CardSink`:
+  принятая карточка пишется **в момент принятия**, сбой на 5-м батче не теряет
+  первые 4. `generation_jobs` продолжает заполняться (совместимое
+  представление для UI, поля не удалены).
+- `lib/domain/generation/generation_run_snapshot.dart` + `run_resume.dart` —
+  `GenerationBatchStatus`, `GenerationBatchRecord`, `RunCardDraft`,
+  `GenerationRunSnapshot` (журнал, `resumeBatchIndex`, `resumeStage`) и
+  `planGenerationResume`: выполненные партии в план не попадают, снимок без
+  единиц карты продолжается с `understanding`, все партии выполнены →
+  `replenishing`; завершённый прогон не восстанавливается.
+- `lib/data/generation/drift_knowledge_map_cache.dart` —
+  `DriftKnowledgeMapCache implements KnowledgeMapCache<KnowledgeMap>`: повторный
+  материал не платит за Understanding после перезапуска; повреждённая запись —
+  промах. Форматы хранения — `lib/domain/generation/knowledge_map_json.dart` и
+  `generated_card_json.dart` (v1, строгий разбор, `FormatException`).
+- `lib/data/generation/drift_generation_card_store.dart` — `importRunCards`:
+  импорт черновиков **одной транзакцией**, идемпотентно по
+  (`run_id`, `content_hash`) — уникальный индекс `idx_card_drafts_run_hash`;
+  отметки `imported_card_id`/`imported_at` в той же транзакции; второй рубеж —
+  дедупликация по хешу колоды. `_resolveDeck` общий с `importGeneratedCards`.
+- Старый конвейер, UI и флаг `generationV3` **не менялись**: новый путь не
+  подключён (S9, протокол §9).
+
+**Тесты (+36 к baseline):** `test/unit/data/db/migrations/schema_migration_v2_test.dart`
+(4: миграция пустой БД, миграция заполненной БД через `SchemaVerifier` с
+сохранением `decks`/`cards`/`review_logs`, политика версий),
+`test/migrations/migration_test.dart` (5: dump-версии v1/v2),
+`test/unit/data/db/schema_test.dart` (27: 15 таблиц, колонки новых таблиц,
+уникальный индекс, `.bak` перед миграцией, отсутствие повторного копирования),
+`drift_generation_run_store_test.dart` (12: черновик в момент принятия,
+«упал после четырёх батчей → восстановление с пятого», журнал партии,
+`latestResumableRunId`, совместимость `generation_jobs`),
+`drift_run_import_test.dart` (5: двойной импорт, второй прогон с тем же
+содержимым, сбой без полуимпорта), `drift_knowledge_map_cache_test.dart` (12:
+кэш на БД + сквозной `UnderstandingService`). Красная фаза — падение
+`SchemaVerifier` на `idx_card_drafts_run_hash` (assertion-level «The actual
+schema does not contain anything with this name») и `Too many elements` на
+неверном ожидании теста; оба исправлены правкой кода/теста, не ослаблением.
+
+**Гейты итогового снимка:** `flutter analyze --no-pub lib test` → **0 issues**;
+`dart format --set-exit-if-changed lib test` → **681 файл, 0 changed**;
+`flutter test --no-pub --exclude-tags golden` → **3109 passed + 17 skipped**,
+`exit 0`. Подробно — `journal/generation-v3/verify-s8.md`.
+
+**Ограничения:** к конвейеру и UI не подключено (S9); отчёт дедупликации
+(`DedupReport`) не персистится — в БД только счётчик (L219); байты изображений
+черновиков не пишутся, после перезапуска картинка разрешается заново (L220);
+кэш карты знаний без TTL/GC (L221); старые прогоны (до v2) не «дорисовываются»
+в новые таблицы; `salience` ограничен доменом, а не SQL-CHECK.
+
+---
+
 ## Генерация v3 — срез 7: Replenish и partial (2026-11-28)
 
 **Срез:** `TASK.txt` «Срез 7. Replenish и partial» (план этапов —
@@ -890,7 +965,7 @@ Windows smoke — **All tests passed!** (11 с). Живых API-запросов
 - Совместимость: legacy-массив → сторона вопроса; старые архивы без сторон;
   экспорт/импорт с `question_media_ids`/`answer_media_ids`; перезапуск приложения.
 
-**Тесты (+60):** `image_sides_7_19_test.dart` (5), `image_placeholder_red_7_19_test.dart`
+**Тесты (+36 к baseline):** `image_sides_7_19_test.dart` (5), `image_placeholder_red_7_19_test.dart`
 (1, регрессия production-проводки), `image_side_selection_test.dart` (12),
 `card_media_sides_test.dart` (13), `card_media_sides_data_test.dart` (10),
 `media_integrity_test.dart` (8), `card_sides_display_test.dart` (8),

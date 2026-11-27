@@ -103,6 +103,23 @@ offsets `ContentModel`, `section_id`/`unit_id` из партии) дают од�
 подключено (S9, протокол §9); prompt-only отвечает `no_unit_plan` без запросов.
 Толкования — Q17.
 
+**Уточнение среза 8 (TASK.txt):** Persistence реализуется как **схема БД v2**
+(ADR-051): `generation_runs`, `generation_units`, `generation_batches`,
+`card_drafts`, `knowledge_maps`; `generation_jobs` остаётся совместимым
+представлением для UI (его поля не удаляются и синхронизируются).
+`DriftGenerationRunStore` + `GenerationRunCardSink` (`lib/data/generation/`)
+пишут принятую карточку **в момент принятия** (`ARCH §3.5`), поэтому сбой на
+пятом батче не теряет первые четыре; импорт черновиков в колоду —
+`DriftGenerationCardStore.importRunCards` одной транзакцией и идемпотентно по
+(`run_id`, `content_hash`) уникальным индексом. Восстановление —
+`GenerationRunSnapshot` + `planGenerationResume`
+(`lib/domain/generation/`): выполненные партии не перезапрашиваются, снимок без
+единиц карты продолжается с `understanding`. Кэш карты знаний —
+`DriftKnowledgeMapCache` (`knowledge_maps`), повторный материал не платит за
+Understanding. Форматы хранения — `knowledge_map_json.dart` и
+`generated_card_json.dart` (версия 1, строгий разбор). К конвейеру и UI не
+подключено (S9, протокол §9). Толкование расхождения с BACKLOG S8 — Q18.
+
 **Поток данных.** `MaterialUnit` несут offsets — единственный источник истины о
 тексте; `KnowledgeMap` ссылается на них, а не копирует текст; партия несёт id
 пунктов, поэтому ответ модели привязан к материалу; `CardCandidate` сохраняет
