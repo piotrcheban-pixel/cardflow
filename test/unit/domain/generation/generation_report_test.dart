@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/generation/allocation.dart';
+import 'package:cardflow/domain/generation/card_reason_code.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
 import 'package:cardflow/domain/generation/generation_report.dart';
 import 'package:cardflow/domain/generation/generation_ledger.dart';
@@ -82,11 +83,21 @@ void main() {
       expect(report.unitCoverage[2].accepted, 0);
       expect(
         report.unitCoverage[2],
-        const UnitCoverage(unitId: 'U2', planned: 6, accepted: 0),
+        UnitCoverage(
+          unitId: 'U2',
+          planned: 6,
+          accepted: 0,
+          salience: _unit('U2').salience,
+        ),
       );
       expect(
         report.unitCoverage[2].hashCode,
-        const UnitCoverage(unitId: 'U2', planned: 6, accepted: 0).hashCode,
+        UnitCoverage(
+          unitId: 'U2',
+          planned: 6,
+          accepted: 0,
+          salience: _unit('U2').salience,
+        ).hashCode,
       );
       expect(report.unitCoverage[2].toString(), 'UnitCoverage(U2, 0/6)');
       expect(report.toString(), contains('принято 12/40'));
@@ -274,6 +285,65 @@ void main() {
       );
 
       expect(report.shortfallReasons, isEmpty);
+    });
+  });
+
+  group('срез 12 — cleanRate, коды принятых и время батчей', () {
+    test('пометка принятой карточки видна кодом, cleanRate из отчёта', () {
+      final AllocationPlan plan = _plan(<int>[2]);
+      final List<GeneratedCard> cards = _cardsOf(plan, <int>[0]);
+      final List<GeneratedCard> accepted = <GeneratedCard>[
+        cards.first,
+        cards[1].copyWith(
+          gateReasons: <CardReasonCode>[CardReasonCode.notAtomic],
+        ),
+      ];
+      final GenerationReport report = GenerationReport.fromReplenish(
+        plan: plan,
+        outcome: _outcome(
+          stage: GenerationStage.ready,
+          reason: ReplenishStopReason.complete,
+          requested: 2,
+          acceptedCards: accepted,
+          requests: 3,
+          usage: const TokenUsage(promptTokens: 400, completionTokens: 100),
+        ),
+        understandingUsage: const TokenUsage(
+          promptTokens: 100,
+          completionTokens: 20,
+        ),
+        batchDurations: const <Duration>[
+          Duration(milliseconds: 800),
+          Duration(milliseconds: 1200),
+        ],
+      );
+
+      expect(report.accepted, 2);
+      expect(report.acceptedWithWarnings, 1);
+      expect(report.cleanAccepted, 1);
+      expect(report.cleanRate, 0.5);
+      expect(report.warningCodes, <String, int>{'not_atomic': 1});
+      expect(report.generated, 2);
+      expect(report.batchDurations, hasLength(2));
+      expect(
+        report.unitCoverage.single.salience,
+        plan.units.single.unit.salience,
+      );
+    });
+
+    test('cleanRate без принятых — null, а не ноль', () {
+      final GenerationReport report = GenerationReport.fromReplenish(
+        plan: _plan(<int>[2]),
+        outcome: _outcome(
+          stage: GenerationStage.partial,
+          reason: ReplenishStopReason.providerError,
+          requested: 2,
+          unfilledSlots: 2,
+        ),
+      );
+
+      expect(report.accepted, 0);
+      expect(report.cleanRate, isNull);
     });
   });
 }

@@ -259,13 +259,16 @@ class GenerationV3PathRunner {
     required int requestedCards,
   }) {
     final GenerationReport report = run.report;
+    final CompletionVerdict verdict = CompletionVerdict.fromReport(report);
     final int tokensUsed = <int>[
       for (final TokenUsage usage in report.tokensByStage.values)
         ?usage.totalTokens,
     ].fold<int>(0, (int sum, int value) => sum + value);
     return GenerationRunResult(
       jobId: run.runId,
-      status: report.stage.jobStatus,
+      // Статус — из вердикта, а не из этапа: 299 из 300 с `ready` остаётся
+      // `partial`, иначе задание показывало бы ложный `done` (S9/S12).
+      status: verdict.jobStatus,
       cards: run.acceptedCards,
       // Причины отсутствия карты знаний — в отчёте (`understandingFailures`):
       // предпросмотр показывает их отдельной строкой, а не как «упавший
@@ -278,7 +281,7 @@ class GenerationV3PathRunner {
       cancelled: report.stage == GenerationStage.cancelled,
       rejectedCards: report.invalid,
       shortfallCards: report.remaining,
-      verdict: CompletionVerdict.fromReport(report),
+      verdict: verdict,
       report: report,
     );
   }

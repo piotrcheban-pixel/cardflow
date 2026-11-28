@@ -1858,6 +1858,66 @@ abstract class AppLocalizations {
   /// **'В тексте есть разметка выделения'**
   String get generationIssueMarkdownInText;
 
+  /// Код причины среза 12: перечисление больше трёх пунктов (not_atomic).
+  ///
+  /// In ru, this message translates to:
+  /// **'Не атомарна: больше трёх пунктов'**
+  String get generationReasonNotAtomic;
+
+  /// Код причины среза 12: вопрос со ссылкой «этот/выше» (question_not_self_contained).
+  ///
+  /// In ru, this message translates to:
+  /// **'Вопрос несамостоятелен: непонятен без материала'**
+  String get generationReasonQuestionNotSelfContained;
+
+  /// Код причины среза 12: цитата найдена только после нормализации (quote_not_literal).
+  ///
+  /// In ru, this message translates to:
+  /// **'Цитата совпала не дословно'**
+  String get generationReasonQuoteNotLiteral;
+
+  /// Код причины среза 12: цитата не найдена в материале (quote_out_of_range).
+  ///
+  /// In ru, this message translates to:
+  /// **'Цитата вне материала'**
+  String get generationReasonQuoteOutOfRange;
+
+  /// Код причины среза 12: карточка не на языке колоды (wrong_language).
+  ///
+  /// In ru, this message translates to:
+  /// **'Текст не на русском'**
+  String get generationReasonWrongLanguage;
+
+  /// Код причины среза 12: пустая сторона после нормализации (empty_after_normalization).
+  ///
+  /// In ru, this message translates to:
+  /// **'После нормализации не осталось текста'**
+  String get generationReasonEmptyAfterNormalization;
+
+  /// Код причины среза 12: пропуск cloze без контекста (cloze_meaningless).
+  ///
+  /// In ru, this message translates to:
+  /// **'Пропуск cloze бессмысленный'**
+  String get generationReasonClozeMeaningless;
+
+  /// Код причины среза 12: section_id вне материала (section_unknown).
+  ///
+  /// In ru, this message translates to:
+  /// **'Раздел не из материала'**
+  String get generationReasonSectionUnknown;
+
+  /// Код причины среза 12: unit_id вне партии (unit_unknown).
+  ///
+  /// In ru, this message translates to:
+  /// **'Единица знания не из плана'**
+  String get generationReasonUnitUnknown;
+
+  /// Пометка предпросмотра среза 12: текст причины из ARB.
+  ///
+  /// In ru, this message translates to:
+  /// **'Предупреждение: {reason}'**
+  String generationReasonWarningMark(String reason);
+
   /// Сколько карточек отброшено поштучно из-за схемы/структуры (fix-gen).
   ///
   /// In ru, this message translates to:

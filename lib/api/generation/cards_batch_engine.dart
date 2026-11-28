@@ -39,8 +39,10 @@ class CardsBatchRun {
     this.usage = const TokenUsage(),
     required this.promptVersion,
     this.cancelled = false,
+    List<Duration> batchDurations = const <Duration>[],
   }) : acceptedCards = List<GeneratedCard>.unmodifiable(acceptedCards),
-       blockedCards = List<GeneratedCard>.unmodifiable(blockedCards);
+       blockedCards = List<GeneratedCard>.unmodifiable(blockedCards),
+       batchDurations = List<Duration>.unmodifiable(batchDurations);
 
   /// Пустой итог (ни одного запроса).
   factory CardsBatchRun.empty({required String promptVersion}) => CardsBatchRun(
@@ -68,6 +70,12 @@ class CardsBatchRun {
 
   /// Прогон отменён: принятое сохранено ([acceptedCards]), остальное не заказано.
   final bool cancelled;
+
+  /// Отметки времени успешных вызовов модели (TASK «Срез 12», п. 6).
+  ///
+  /// p50/p95 батча считаются из этого списка, а не «на глаз»; повторы и
+  /// деление обрыва дают отдельные отметки — это фактические запросы.
+  final List<Duration> batchDurations;
 
   /// Принято карточек.
   int get accepted => acceptedCards.length;
@@ -155,6 +163,7 @@ class CardsBatchEngine {
     );
     final List<GeneratedCard> acceptedCards = <GeneratedCard>[];
     final List<GeneratedCard> blockedCards = <GeneratedCard>[];
+    final List<Duration> batchDurations = <Duration>[];
     final Map<int, List<AcceptedCard>> acceptedByBatch =
         <int, List<AcceptedCard>>{};
     var usage = const TokenUsage();
@@ -179,6 +188,7 @@ class CardsBatchEngine {
             usage,
             blockedCards: blockedCards,
             cancelled: true,
+            batchDurations: batchDurations,
           );
         }
         final CardsBatch slice = queue.removeAt(0);
@@ -197,11 +207,17 @@ class CardsBatchEngine {
         final CardsBatch request = slice.withAcceptedContext(context);
         while (true) {
           try {
-            result = await port.generate(
-              request,
-              account: account,
-              maxOutputTokens: batch.outputTokens,
-            );
+            final Stopwatch callWatch = Stopwatch()..start();
+            try {
+              result = await port.generate(
+                request,
+                account: account,
+                maxOutputTokens: batch.outputTokens,
+              );
+            } finally {
+              callWatch.stop();
+              batchDurations.add(callWatch.elapsed);
+            }
             break;
           } on GenerationException catch (error) {
             if (error.code == GenerationErrorCode.cancelled ||
@@ -238,6 +254,7 @@ class CardsBatchEngine {
             usage,
             blockedCards: blockedCards,
             cancelled: true,
+            batchDurations: batchDurations,
           );
         }
         if (result == null) {
@@ -259,12 +276,19 @@ class CardsBatchEngine {
         for (final GeneratedCard card in result.cards) {
           final String? unitId = card.unitId;
           if (unitId == null || slice.unit(unitId) == null) continue;
-          if (gate != null && gate.evaluate(card) == CardGateVerdict.blocked) {
+          final CardGateResult verdict =
+              gate?.evaluate(card) ??
+              CardGateResult(verdict: CardGateVerdict.accepted);
+          if (verdict.verdict == CardGateVerdict.blocked) {
             blockedCards.add(card);
             blockedNow++;
             continue;
           }
-          acceptedNow.add(card);
+          acceptedNow.add(
+            verdict.verdict == CardGateVerdict.warning
+                ? card.copyWith(gateReasons: verdict.reasons)
+                : card,
+          );
         }
         if (blockedNow > 0) {
           ledger = ledger.record(slice.index, invalid: blockedNow);
@@ -318,6 +342,7 @@ class CardsBatchEngine {
       usage,
       blockedCards: blockedCards,
       cancelled: false,
+      batchDurations: batchDurations,
     );
   }
 
@@ -338,6 +363,7 @@ class CardsBatchEngine {
     TokenUsage usage, {
     required List<GeneratedCard> blockedCards,
     required bool cancelled,
+    List<Duration> batchDurations = const <Duration>[],
   }) => CardsBatchRun(
     ledger: ledger,
     acceptedCards: acceptedCards,
@@ -345,6 +371,7 @@ class CardsBatchEngine {
     usage: usage,
     promptVersion: promptVersion,
     cancelled: cancelled,
+    batchDurations: batchDurations,
   );
 
   void _report(GenerationLedger ledger) {

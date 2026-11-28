@@ -25,6 +25,7 @@ import 'package:cardflow/api/generation/validation/card_validator.dart';
 import 'package:cardflow/api/generation/validation/card_validator_gate.dart';
 import 'package:cardflow/domain/generation/allocation.dart';
 import 'package:cardflow/domain/generation/card_gate.dart';
+import 'package:cardflow/domain/generation/dedup_report.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
 import 'package:cardflow/domain/generation/generation_report.dart';
 import 'package:cardflow/domain/generation/generation_result.dart';
@@ -176,6 +177,9 @@ class GenerationV3Facade {
       understandingUsage: understood.usage,
       promptVersions: promptVersions,
       understandingFailures: understood.failures,
+      batchDurations: gated.generation?.batchDurations ?? const <Duration>[],
+      duplicatesByLevel:
+          gated.generation?.ledger.dedup.byLevel ?? const <DedupLevel, int>{},
     );
     final int imported = importer == null ? 0 : await importer!(runId);
     return GenerationV3Run(

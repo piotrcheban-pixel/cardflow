@@ -1,5 +1,5 @@
 /// Реализация порта [CardGate] поверх существующего [CardValidator]
-/// (TASK «Срез 11», часть 1).
+/// (TASK «Срез 11», часть 1; срез 12 — коды причин).
 ///
 /// Новой логики проверок здесь нет: гейт вызывает тот же `validate` с тем же
 /// контекстом (материал, единицы партии, единицы без якорей), что и срез 10,
@@ -9,9 +9,11 @@
 /// - `warning` — `CardVerdict.warning`: карточка принимается с пометками;
 /// - `accepted` — без пометок.
 ///
-/// Заблокированные карточки собираются в [blockedCards] (по одной на прогон —
-/// гейт создаётся на прогон), чтобы предпросмотр мог показать «отброшенные»,
-/// не теряя сам факт блокировки.
+/// Коды причин (`CardCandidate.reasons`, `RejectedCard.code`) возвращаются
+/// вместе с вердиктом (TASK «Срез 12», п. 1): их читают журнал/отчёт
+/// (`cleanRate`) и предпросмотр. Заблокированные карточки собираются в
+/// [blockedCards] (по одной на прогон — гейт создаётся на прогон), чтобы
+/// предпросмотр мог показать «отброшенные», не теряя сам факт блокировки.
 library;
 
 import 'package:cardflow/api/generation/content_model.dart';
@@ -49,7 +51,7 @@ class CardValidatorGate implements CardGate {
       List<GeneratedCard>.unmodifiable(_blocked);
 
   @override
-  CardGateVerdict evaluate(GeneratedCard card) {
+  CardGateResult evaluate(GeneratedCard card) {
     final CardValidationReport report = validator.validate(
       <String, Object?>{
         'cards': <Object?>[responseJson(card)],
@@ -60,10 +62,33 @@ class CardValidatorGate implements CardGate {
     );
     if (report.blockedCount > 0 || report.rejected.isNotEmpty) {
       _blocked.add(card);
-      return CardGateVerdict.blocked;
+      return CardGateResult(
+        verdict: CardGateVerdict.blocked,
+        reasons: _reasonsOf(report),
+      );
     }
-    if (report.warningCount > 0) return CardGateVerdict.warning;
-    return CardGateVerdict.accepted;
+    final List<CardReasonCode> reasons = _reasonsOf(report);
+    return CardGateResult(
+      verdict: report.warningCount > 0
+          ? CardGateVerdict.warning
+          : CardGateVerdict.accepted,
+      reasons: reasons,
+    );
+  }
+
+  /// Коды причин отчёта: у отброшенной записи — её код, иначе — причины
+  /// кандидатов (структурные и семантические проверки).
+  static List<CardReasonCode> _reasonsOf(CardValidationReport report) {
+    if (report.candidates.isNotEmpty) {
+      final List<CardReasonCode> reasons = <CardReasonCode>[
+        for (final CardCandidate candidate in report.candidates)
+          ...candidate.reasons,
+      ];
+      if (reasons.isNotEmpty) return reasons;
+    }
+    return <CardReasonCode>[
+      for (final RejectedCard rejected in report.rejected) rejected.code,
+    ];
   }
 
   /// Карточка домена в форме ответа модели (A8.4 + поля v3).

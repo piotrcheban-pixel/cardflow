@@ -12,6 +12,7 @@ import 'package:cardflow/domain/text/parsed_document.dart';
 
 /// Срез 11, часть 1: порт `CardGate` на существующем `CardValidator` —
 /// три вердикта без новой логики проверок; заблокированное не исчезает.
+/// Срез 12, п. 1: коды причин возвращаются вместе с вердиктом, а не теряются.
 void main() {
   const String statement = 'Момент силы равен произведению силы на плечо.';
 
@@ -43,30 +44,52 @@ void main() {
     knownUnitIds: const <String>{'ku:1'},
   );
 
-  test('чистая карточка с дословной цитатой — accepted', () {
+  test('чистая карточка с дословной цитатой — accepted без кодов', () {
     final CardValidatorGate gate = gateOf(documentOf(statement));
 
-    expect(gate.evaluate(cardOf()), CardGateVerdict.accepted);
+    final CardGateResult result = gate.evaluate(cardOf());
+    expect(result.verdict, CardGateVerdict.accepted);
+    expect(result.reasons, isEmpty);
     expect(gate.blockedCards, isEmpty);
   });
 
-  test('содержательная пометка — warning, карточка остаётся', () {
+  test('содержательная пометка — warning с кодом причины', () {
     final CardValidatorGate gate = gateOf(documentOf(statement));
 
-    expect(
-      gate.evaluate(cardOf(front: 'Что описано выше?')),
-      CardGateVerdict.warning,
+    final CardGateResult result = gate.evaluate(
+      cardOf(front: 'Что описано выше?'),
     );
+    expect(result.verdict, CardGateVerdict.warning);
+    expect(result.reasons, contains(CardReasonCode.questionNotSelfContained));
     expect(gate.blockedCards, isEmpty);
   });
 
-  test('цитата вне материала — blocked и запоминается', () {
+  test(
+    'перечисление из 5 пунктов принято, но помечено not_atomic (DoD S12)',
+    () {
+      final CardValidatorGate gate = gateOf(documentOf(statement));
+
+      final CardGateResult result = gate.evaluate(
+        cardOf(
+          front:
+              '1) атом; 2) молекула; 3) давление; 4) энергия; 5) импульс — '
+              'что из этого?',
+        ),
+      );
+      expect(result.verdict, CardGateVerdict.warning);
+      expect(result.reasons, contains(CardReasonCode.notAtomic));
+      expect(gate.blockedCards, isEmpty);
+    },
+  );
+
+  test('цитата вне материала — blocked, код и запоминание карточки', () {
     final CardValidatorGate gate = gateOf(documentOf(statement));
 
-    expect(
-      gate.evaluate(cardOf(quoteRef: 'цитаты нет в материале')),
-      CardGateVerdict.blocked,
+    final CardGateResult result = gate.evaluate(
+      cardOf(quoteRef: 'цитаты нет в материале'),
     );
+    expect(result.verdict, CardGateVerdict.blocked);
+    expect(result.reasons, contains(CardReasonCode.quoteOutOfRange));
     expect(gate.blockedCards, hasLength(1));
     expect(gate.blockedCards.single.quoteRef, 'цитаты нет в материале');
   });
@@ -76,7 +99,9 @@ void main() {
     () {
       final CardValidatorGate gate = gateOf(documentOf(statement));
 
-      expect(gate.evaluate(cardOf(front: '   ')), CardGateVerdict.blocked);
+      final CardGateResult result = gate.evaluate(cardOf(front: '   '));
+      expect(result.verdict, CardGateVerdict.blocked);
+      expect(result.reasons, isNotEmpty);
       expect(gate.blockedCards, hasLength(1));
     },
   );

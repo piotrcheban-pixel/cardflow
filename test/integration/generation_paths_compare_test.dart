@@ -190,6 +190,23 @@ void main() {
           'req10=${result.metrics.requestsPerTenCards?.toStringAsFixed(2) ?? '-'}, '
           'p50=${result.metrics.p50BatchDuration?.inMilliseconds}ms',
         );
+        // Срез 12, п. 4: отчёт есть у **обоих** путей, и cleanRate считается
+        // из него (иначе «было → стало» сравнивает разные источники чисел).
+        expect(
+          result.report,
+          isNotNull,
+          reason: 'отчёт доезжает до результата',
+        );
+        expect(result.report!.accepted, result.cards.length);
+        expect(
+          result.report!.accepted +
+              result.report!.invalid +
+              result.report!.duplicates,
+          result.report!.generated,
+        );
+        if (result.cards.isNotEmpty) {
+          expect(result.report!.cleanRate, isNotNull);
+        }
         if (!v3) {
           // Старый путь не знает пометок: всё, что почти-дубль, отброшено.
           if (scenario.duplicates) {

@@ -1405,6 +1405,51 @@
   "@generationIssueMarkdownInText": {
     "description": "Пометка качества A8.1: Markdown-разметка в тексте карточки."
   },
+  "generationReasonNotAtomic": "Не атомарна: больше трёх пунктов",
+  "@generationReasonNotAtomic": {
+    "description": "Код причины среза 12: перечисление больше трёх пунктов (not_atomic)."
+  },
+  "generationReasonQuestionNotSelfContained": "Вопрос несамостоятелен: непонятен без материала",
+  "@generationReasonQuestionNotSelfContained": {
+    "description": "Код причины среза 12: вопрос со ссылкой «этот/выше» (question_not_self_contained)."
+  },
+  "generationReasonQuoteNotLiteral": "Цитата совпала не дословно",
+  "@generationReasonQuoteNotLiteral": {
+    "description": "Код причины среза 12: цитата найдена только после нормализации (quote_not_literal)."
+  },
+  "generationReasonQuoteOutOfRange": "Цитата вне материала",
+  "@generationReasonQuoteOutOfRange": {
+    "description": "Код причины среза 12: цитата не найдена в материале (quote_out_of_range)."
+  },
+  "generationReasonWrongLanguage": "Текст не на русском",
+  "@generationReasonWrongLanguage": {
+    "description": "Код причины среза 12: карточка не на языке колоды (wrong_language)."
+  },
+  "generationReasonEmptyAfterNormalization": "После нормализации не осталось текста",
+  "@generationReasonEmptyAfterNormalization": {
+    "description": "Код причины среза 12: пустая сторона после нормализации (empty_after_normalization)."
+  },
+  "generationReasonClozeMeaningless": "Пропуск cloze бессмысленный",
+  "@generationReasonClozeMeaningless": {
+    "description": "Код причины среза 12: пропуск cloze без контекста (cloze_meaningless)."
+  },
+  "generationReasonSectionUnknown": "Раздел не из материала",
+  "@generationReasonSectionUnknown": {
+    "description": "Код причины среза 12: section_id вне материала (section_unknown)."
+  },
+  "generationReasonUnitUnknown": "Единица знания не из плана",
+  "@generationReasonUnitUnknown": {
+    "description": "Код причины среза 12: unit_id вне партии (unit_unknown)."
+  },
+  "generationReasonWarningMark": "Предупреждение: {reason}",
+  "@generationReasonWarningMark": {
+    "description": "Пометка предпросмотра среза 12: текст причины из ARB.",
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
   "generationRejectedCards": "{count, plural, one{{count} карточка отброшена} few{{count} карточки отброшены} many{{count} карточек отброшено} other{{count} карточки отброшено}}",
   "@generationRejectedCards": {
     "description": "Сколько карточек отброшено поштучно из-за схемы/структуры (fix-gen).",

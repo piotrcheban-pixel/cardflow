@@ -377,9 +377,11 @@ class ReplenishOutcome {
     this.duration = Duration.zero,
     this.unfilledSlots = 0,
     this.guards,
+    List<Duration> batchDurations = const <Duration>[],
   }) : acceptedCards = List<GeneratedCard>.unmodifiable(acceptedCards),
        blockedCards = List<GeneratedCard>.unmodifiable(blockedCards),
-       passes = List<ReplenishPass>.unmodifiable(passes);
+       passes = List<ReplenishPass>.unmodifiable(passes),
+       batchDurations = List<Duration>.unmodifiable(batchDurations);
 
   /// Терминальный этап прогона: [GenerationStage.ready] — только при закрытых
   /// слотах, [GenerationStage.partial] — недобор, [GenerationStage.cancelled] —
@@ -416,6 +418,10 @@ class ReplenishOutcome {
 
   /// Длительность операции от [ReplenishStage.run].
   final Duration duration;
+
+  /// Отметки времени запросов добора (TASK «Срез 12», п. 6): p50/p95 считаются
+  /// из фактов, а не из «среднего на глаз». Пустой список — запросов не было.
+  final List<Duration> batchDurations;
 
   /// Сколько слотов заказа осталось без принятой карточки.
   final int unfilledSlots;
@@ -593,6 +599,7 @@ class ReplenishStage {
         ? math.max(0, plan.requested - accepted.length)
         : _unfilledSlots(plan, satisfied);
     final List<ReplenishPass> passes = <ReplenishPass>[];
+    final List<Duration> batchDurations = <Duration>[];
     ReplenishStopReason reason = ReplenishStopReason.complete;
 
     if (unfilled > 0) {
@@ -652,6 +659,7 @@ class ReplenishStage {
             rejectedSlots: rejectedSlots,
           );
           passes.add(result.pass);
+          batchDurations.addAll(result.batchDurations);
           requests = result.requests;
           spent = result.spent;
           usage = _addUsage(usage, result.usage);
@@ -706,6 +714,7 @@ class ReplenishStage {
       duration: clock.now().difference(start),
       unfilledSlots: unfilled,
       guards: guards.withHit(reason),
+      batchDurations: batchDurations,
     );
   }
 
@@ -752,6 +761,7 @@ class ReplenishStage {
     ]);
     final List<GeneratedCard> accepted = <GeneratedCard>[];
     final List<GeneratedCard> blocked = <GeneratedCard>[];
+    final List<Duration> batchDurations = <Duration>[];
     var usage = const TokenUsage();
     var requestsNow = requests;
     var spentNow = spent;
@@ -796,6 +806,7 @@ class ReplenishStage {
       passLedger = passLedger.attempt(batch.index);
       requestsNow++;
       GenerationResult result;
+      final Stopwatch callWatch = Stopwatch()..start();
       try {
         result = await port.generate(
           request,
@@ -803,6 +814,8 @@ class ReplenishStage {
           maxOutputTokens: batch.outputTokens,
         );
       } on GenerationException catch (error) {
+        callWatch.stop();
+        batchDurations.add(callWatch.elapsed);
         final bool cancelledNow =
             error.code == GenerationErrorCode.cancelled ||
             (cancellation?.isCancelled ?? false);
@@ -815,6 +828,8 @@ class ReplenishStage {
             : ReplenishStopReason.providerError;
         break;
       }
+      callWatch.stop();
+      batchDurations.add(callWatch.elapsed);
       spentNow += _requestCost(result.usage, batch);
       usage = _addUsage(usage, result.usage);
 
@@ -827,10 +842,12 @@ class ReplenishStage {
         final String slot = _slot(unitId, _normalizeAngle(card.angle));
         final bool requested = requestedSlots.contains(slot);
         // Гейт — до закрытия слота: заблокированная карточка слот не закрывает
-        // и в принятое не идёт (TASK «Срез 11», п. 2).
-        if (requested &&
-            gate != null &&
-            gate.evaluate(card) == CardGateVerdict.blocked) {
+        // и в принятое не идёт (TASK «Срез 11», п. 2). Коды пометок принятой
+        // карточки сохраняются (TASK «Срез 12», п. 1).
+        final CardGateResult verdict =
+            gate?.evaluate(card) ??
+            CardGateResult(verdict: CardGateVerdict.accepted);
+        if (requested && verdict.verdict == CardGateVerdict.blocked) {
           blocked.add(card);
           blockedNow++;
           final int attempts = (blockedAttempts[slot] ?? 0) + 1;
@@ -842,7 +859,11 @@ class ReplenishStage {
           satisfied.add(slot);
           filled++;
           produced++;
-          accepted.add(card);
+          accepted.add(
+            verdict.verdict == CardGateVerdict.warning
+                ? card.copyWith(gateReasons: verdict.reasons)
+                : card,
+          );
           context
               .putIfAbsent(unit.id, () => <AcceptedCard>[])
               .add(AcceptedCard(front: card.front, statement: unit.statement));
@@ -874,6 +895,7 @@ class ReplenishStage {
       requests: requestsNow,
       spent: spentNow,
       usage: usage,
+      batchDurations: batchDurations,
     );
   }
 
@@ -1007,9 +1029,13 @@ class _PassRun {
     required this.requests,
     required this.spent,
     required this.usage,
+    this.batchDurations = const <Duration>[],
   });
 
   final ReplenishPass pass;
+
+  /// Отметки времени запросов прохода (TASK «Срез 12», п. 6).
+  final List<Duration> batchDurations;
 
   /// Причина остановки внутри прохода; `null` — план прохода пройден целиком.
   final ReplenishStopReason? stop;

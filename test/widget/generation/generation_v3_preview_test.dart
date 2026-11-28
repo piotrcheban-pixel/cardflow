@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'package:cardflow/domain/cards/card.dart';
+import 'package:cardflow/domain/generation/card_reason_code.dart';
 import 'package:cardflow/domain/generation/completion_verdict.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
 import 'package:cardflow/domain/generation/generation_job.dart';
@@ -53,6 +54,7 @@ void main() {
       cardType: CardType.basicReversed,
       tags: <String>['статика'],
       issues: <CardIssueCode>[CardIssueCode.answerInFront],
+      gateReasons: <CardReasonCode>[CardReasonCode.notAtomic],
     ),
     GeneratedCard(
       front: 'Что такое давление?',
@@ -161,6 +163,18 @@ void main() {
       find.byKey(const ValueKey<String>('generation-mark-warning')),
       findsOneWidget,
     );
+  });
+
+  testWidgets('код причины гейта доезжает до предпросмотра текстом ARB', (
+    WidgetTester tester,
+  ) async {
+    await pumpPreview(tester);
+    final AppLocalizations l10n = l10nOf(tester);
+    expect(
+      find.byKey(const ValueKey<String>('generation-reason-not_atomic-1')),
+      findsOneWidget,
+    );
+    expect(find.text(l10n.generationReasonNotAtomic), findsOneWidget);
   });
 
   testWidgets('«Почему?» показывает блок источника, а не выдержку', (

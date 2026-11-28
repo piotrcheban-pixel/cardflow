@@ -44,6 +44,7 @@ import 'package:cardflow/domain/generation/generation_job.dart';
 import 'package:cardflow/domain/generation/generation_ledger.dart';
 import 'package:cardflow/domain/generation/generation_metrics.dart';
 import 'package:cardflow/domain/generation/generation_plan.dart';
+import 'package:cardflow/domain/generation/generation_report.dart';
 import 'package:cardflow/domain/generation/generation_request.dart';
 import 'package:cardflow/domain/generation/generation_request_budget.dart';
 import 'package:cardflow/domain/generation/input_planner.dart';
@@ -55,6 +56,7 @@ import 'package:cardflow/domain/generation/image_query.dart';
 import 'package:cardflow/domain/generation/model_capabilities.dart';
 import 'package:cardflow/domain/generation/model_capability_cache.dart';
 import 'package:cardflow/domain/generation/output_batch_planner.dart';
+import 'package:cardflow/domain/generation/replenish_stage.dart';
 import 'package:cardflow/domain/text/parsed_document.dart';
 import 'package:cardflow/domain/generation/provider_account.dart';
 import 'package:cardflow/domain/generation/provider_protocol.dart';
@@ -1348,6 +1350,80 @@ class GenerationPipeline implements GenerationRunner {
       exhaustedSections: exhaustedSections.length,
     );
     diagnostics.runMetrics(metrics.toJson());
+    // TASK «Срез 12», п. 4: отчёт — единственный источник правды и для
+    // legacy-пути. Иначе «было → стало» сравнивает отчёт v3 с ручными
+    // счётчиками, а cleanRate/coverage у legacy вовсе не считаются.
+    final Map<String, int> warningCodes = <String, int>{};
+    var acceptedWithWarnings = 0;
+    for (final GeneratedCard card in cards) {
+      if (card.issues.isEmpty) continue;
+      acceptedWithWarnings++;
+      for (final CardIssueCode issue in card.issues) {
+        warningCodes[issue.name] = (warningCodes[issue.name] ?? 0) + 1;
+      }
+    }
+    final GenerationStage reportStage = switch (status) {
+      GenerationJobStatus.done => GenerationStage.ready,
+      GenerationJobStatus.cancelled => GenerationStage.cancelled,
+      GenerationJobStatus.error => GenerationStage.failed,
+      _ => GenerationStage.partial,
+    };
+    final int remainingCards = requestedTotal > cards.length
+        ? requestedTotal - cards.length
+        : 0;
+    final ShortfallKind? stopKind = verdict.reasons.isEmpty
+        ? null
+        : verdict.reasons.first;
+    final GenerationReport report = GenerationReport(
+      requested: requestedTotal,
+      accepted: cards.length,
+      stage: reportStage,
+      reason: switch (reportStage) {
+        GenerationStage.ready => ReplenishStopReason.complete,
+        GenerationStage.cancelled => ReplenishStopReason.cancelled,
+        GenerationStage.failed => ReplenishStopReason.providerError,
+        _ =>
+          failures.isNotEmpty
+              ? ReplenishStopReason.providerError
+              : ReplenishStopReason.exhaustedMaterial,
+      },
+      reasons: <String>[
+        for (final ShortfallKind kind in verdict.reasons) kind.wireName,
+      ],
+      unitCoverage: <UnitCoverage>[
+        for (final GenerationSectionCoverage coverage in sectionCoverage)
+          UnitCoverage(
+            unitId: coverage.sectionId,
+            planned: coverage.allocated,
+            accepted: coverage.produced,
+          ),
+      ],
+      tokensByStage: <GenerationStage, TokenUsage>{
+        GenerationStage.generating: TokenUsage(
+          promptTokens: promptTokens,
+          completionTokens: completionTokens,
+          totalTokens: tokensUsed,
+        ),
+      },
+      promptVersions: <String, String>{'generating': systemPromptVersion},
+      duration: operationWatch.elapsed,
+      passes: 1 + topUpRounds,
+      requests: processed + recoveryRequests,
+      invalid: rejected,
+      duplicates: duplicates,
+      generated: producedTotal,
+      acceptedWithWarnings: acceptedWithWarnings,
+      warningCodes: warningCodes,
+      duplicatesByLevel: metrics.duplicatesByLevel,
+      batchDurations: batchDurations,
+      materialCapacity: activePlan?.materialCapacity,
+      unfilledSlots: remainingCards,
+      shortfallReasons: remainingCards > 0
+          ? <ShortfallKind, int>{
+              stopKind ?? ShortfallKind.exhaustedMaterial: remainingCards,
+            }
+          : const <ShortfallKind, int>{},
+    );
     return GenerationRunResult(
       jobId: job.id,
       status: status,
@@ -1379,6 +1455,7 @@ class GenerationPipeline implements GenerationRunner {
       verdict: verdict,
       metrics: metrics,
       possibleDuplicates: possibleDuplicates,
+      report: report,
     );
   }
 

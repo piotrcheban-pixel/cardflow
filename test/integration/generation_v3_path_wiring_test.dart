@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cardflow/api/generation/generation_cancellation.dart';
 import 'package:cardflow/api/generation/generation_v3_path.dart';
+import 'package:cardflow/api/generation/generation_v3_facade.dart';
 import 'package:cardflow/api/http/generation_http_client.dart';
 import 'package:cardflow/api/prompts/cards_prompt.dart';
 import 'package:cardflow/api/prompts/understanding_prompt.dart';
@@ -12,8 +13,18 @@ import 'package:cardflow/api/providers/generation_provider_adapter.dart';
 import 'package:cardflow/data/db/app_database.dart';
 import 'package:cardflow/data/generation/drift_generation_run_store.dart';
 import 'package:cardflow/data/generation/drift_knowledge_map_cache.dart';
+import 'package:cardflow/domain/cards/card.dart';
+import 'package:cardflow/domain/generation/allocation.dart';
+import 'package:cardflow/domain/generation/completion_verdict.dart';
+import 'package:cardflow/domain/generation/generated_card.dart';
+import 'package:cardflow/domain/generation/generation_job.dart';
+import 'package:cardflow/domain/generation/generation_report.dart';
+import 'package:cardflow/domain/generation/generation_result.dart';
 import 'package:cardflow/domain/generation/generation_run.dart';
+import 'package:cardflow/domain/generation/knowledge_map.dart';
+import 'package:cardflow/domain/generation/model_profile.dart';
 import 'package:cardflow/domain/generation/ports.dart';
+import 'package:cardflow/domain/generation/replenish_stage.dart';
 import 'package:cardflow/domain/text/document_format.dart';
 import 'package:cardflow/domain/text/parsed_document.dart';
 
@@ -64,6 +75,60 @@ void main() {
       requestedCards: 1,
     );
   }
+
+  test('299 из 300 при stage ready — статус partial, а не ложный done', () {
+    const ModelProfile profile = ModelProfile(
+      id: 'deepseek-flash',
+      provider: 'deepseek',
+      contextWindow: 1000000,
+      maxOutputTokens: 384000,
+      supportsJsonSchema: true,
+      supportsVision: true,
+      concurrency: 1,
+    );
+    final GenerationV3Run run = GenerationV3Run(
+      runId: 'run-partial',
+      map: KnowledgeMap(documentId: 'материал.txt'),
+      plan: AllocationPlan(
+        requested: 2,
+        profile: profile,
+        units: const <UnitBudget>[],
+        cards: const <AllocatedCard>[],
+        batches: const <AllocationBatch>[],
+      ),
+      report: GenerationReport(
+        requested: 2,
+        accepted: 1,
+        stage: GenerationStage.ready,
+        reason: ReplenishStopReason.complete,
+        reasons: const <String>[],
+        unitCoverage: const <UnitCoverage>[],
+        tokensByStage: const <GenerationStage, TokenUsage>{},
+        promptVersions: const <String, String>{},
+        duration: Duration.zero,
+        passes: 0,
+        requests: 1,
+      ),
+      acceptedCards: const <GeneratedCard>[
+        GeneratedCard(
+          front: 'Вопрос?',
+          back: 'Ответ',
+          cardType: CardType.basic,
+        ),
+      ],
+      blockedCards: const <GeneratedCard>[],
+      imported: 0,
+    );
+
+    final GenerationRunResult result = runner().runResultOf(
+      run: run,
+      requestedCards: 2,
+    );
+
+    expect(result.status, GenerationJobStatus.partial);
+    expect(result.verdict!.outcome, CompletionOutcome.partial);
+    expect(result.report!.isComplete, isFalse);
+  });
 
   test(
     'второй прогон не платит за Understanding, отчёт в результате',

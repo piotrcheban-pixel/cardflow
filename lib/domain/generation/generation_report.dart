@@ -10,6 +10,8 @@
 library;
 
 import 'package:cardflow/domain/generation/allocation.dart';
+import 'package:cardflow/domain/generation/card_reason_code.dart';
+import 'package:cardflow/domain/generation/dedup_report.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
 import 'package:cardflow/domain/generation/generation_ledger.dart';
 import 'package:cardflow/domain/generation/generation_result.dart';
@@ -30,8 +32,13 @@ class UnitCoverage {
     required this.unitId,
     required this.planned,
     required this.accepted,
+    this.salience,
   }) : assert(planned >= 0, 'Заказ по единице не может быть отрицательным'),
-       assert(accepted >= 0, 'Принятое по единице не может быть отрицательным');
+       assert(accepted >= 0, 'Принятое по единице не может быть отрицательным'),
+       assert(
+         salience == null || (salience >= 0 && salience <= 1),
+         'Значимость единицы — в диапазоне 0..1',
+       );
 
   /// id единицы карты знаний.
   final String unitId;
@@ -42,6 +49,10 @@ class UnitCoverage {
   /// Сколько карточек по единице принято.
   final int accepted;
 
+  /// Значимость единицы карты (`KnowledgeUnit.salience`); `null` — у пути нет
+  /// карты знаний (legacy-разделы): средняя значимость не выдумывается.
+  final double? salience;
+
   /// true — по единице есть хотя бы одна принятая карточка.
   bool get isCovered => accepted > 0;
 
@@ -51,10 +62,11 @@ class UnitCoverage {
       other is UnitCoverage &&
           other.unitId == unitId &&
           other.planned == planned &&
-          other.accepted == accepted;
+          other.accepted == accepted &&
+          other.salience == salience;
 
   @override
-  int get hashCode => Object.hash(unitId, planned, accepted);
+  int get hashCode => Object.hash(unitId, planned, accepted, salience);
 
   @override
   String toString() => 'UnitCoverage($unitId, $accepted/$planned)';
@@ -77,6 +89,11 @@ class GenerationReport {
     required this.requests,
     this.invalid = 0,
     this.duplicates = 0,
+    this.generated = 0,
+    this.acceptedWithWarnings = 0,
+    Map<String, int> warningCodes = const <String, int>{},
+    Map<DedupLevel, int> duplicatesByLevel = const <DedupLevel, int>{},
+    List<Duration> batchDurations = const <Duration>[],
     this.materialCapacity,
     this.unfilledSlots = 0,
     Map<ShortfallKind, int> shortfallReasons = const <ShortfallKind, int>{},
@@ -90,6 +107,9 @@ class GenerationReport {
        shortfallReasons = Map<ShortfallKind, int>.unmodifiable(
          shortfallReasons,
        ),
+       warningCodes = Map<String, int>.unmodifiable(warningCodes),
+       duplicatesByLevel = Map<DedupLevel, int>.unmodifiable(duplicatesByLevel),
+       batchDurations = List<Duration>.unmodifiable(batchDurations),
        understandingFailures = List<String>.unmodifiable(understandingFailures),
        promptVersions = Map<String, String>.unmodifiable(promptVersions);
 
@@ -107,6 +127,8 @@ class GenerationReport {
     Duration initialDuration = Duration.zero,
     Map<String, String> promptVersions = const <String, String>{},
     List<String> understandingFailures = const <String>[],
+    List<Duration> batchDurations = const <Duration>[],
+    Map<DedupLevel, int> duplicatesByLevel = const <DedupLevel, int>{},
   }) {
     final List<String> reasons = <String>[];
     if (!outcome.isComplete) {
@@ -123,10 +145,18 @@ class GenerationReport {
       plannedByUnit[card.unitId] = (plannedByUnit[card.unitId] ?? 0) + 1;
     }
     final Map<String, int> acceptedByUnit = <String, int>{};
+    final Map<String, int> warningCodes = <String, int>{};
+    var acceptedWithWarnings = 0;
     for (final GeneratedCard card in outcome.acceptedCards) {
       final String? unitId = card.unitId;
-      if (unitId == null) continue;
-      acceptedByUnit[unitId] = (acceptedByUnit[unitId] ?? 0) + 1;
+      if (unitId != null) {
+        acceptedByUnit[unitId] = (acceptedByUnit[unitId] ?? 0) + 1;
+      }
+      if (card.gateReasons.isEmpty) continue;
+      acceptedWithWarnings++;
+      for (final CardReasonCode code in card.gateReasons) {
+        warningCodes[code.wireName] = (warningCodes[code.wireName] ?? 0) + 1;
+      }
     }
 
     return GenerationReport(
@@ -141,6 +171,7 @@ class GenerationReport {
             unitId: budget.unit.id,
             planned: plannedByUnit[budget.unit.id] ?? budget.cards,
             accepted: acceptedByUnit[budget.unit.id] ?? 0,
+            salience: budget.unit.salience,
           ),
       ],
       tokensByStage: <GenerationStage, TokenUsage>{
@@ -154,6 +185,11 @@ class GenerationReport {
       requests: outcome.requests,
       invalid: outcome.invalid,
       duplicates: outcome.duplicates,
+      generated: outcome.accepted + outcome.invalid + outcome.duplicates,
+      acceptedWithWarnings: acceptedWithWarnings,
+      warningCodes: warningCodes,
+      duplicatesByLevel: duplicatesByLevel,
+      batchDurations: <Duration>[...batchDurations, ...outcome.batchDurations],
       materialCapacity: outcome.materialCapacity,
       unfilledSlots: outcome.unfilledSlots,
       shortfallReasons: _shortfallReasonsOf(outcome),
@@ -239,6 +275,27 @@ class GenerationReport {
   /// Отброшено как дубли.
   final int duplicates;
 
+  /// Произведено моделью: принято + отброшено валидацией/схемой + дубли
+  /// (TASK «Срез 12», п. 4: числитель/знаменатель acceptanceRate).
+  final int generated;
+
+  /// Принято карточек с пометками гейта (warning) — «грязное» принятое.
+  final int acceptedWithWarnings;
+
+  /// Коды пометок принятых карточек с числами (`not_atomic`: 2, …).
+  ///
+  /// v3 — wire-коды `CardReasonCode`, legacy — `CardIssueCode.name`. Текстов
+  /// материалов здесь нет, только машинные коды (протокол §10).
+  final Map<String, int> warningCodes;
+
+  /// Дубли по уровням каскада (точный/нормализованный/семантический).
+  ///
+  /// Пустая карта — дублей не было; счётчик [duplicates] остаётся.
+  final Map<DedupLevel, int> duplicatesByLevel;
+
+  /// Отметки времени запросов модели (успешных и ошибочных), TASK п. 6.
+  final List<Duration> batchDurations;
+
   /// «Материала достаточно примерно на N качественных карточек»; `null` —
   /// материал не признан исчерпанным.
   final int? materialCapacity;
@@ -268,6 +325,14 @@ class GenerationReport {
       stage == GenerationStage.ready &&
       unfilledSlots == 0 &&
       accepted >= requested;
+
+  /// Принято без пометок гейта (`accepted − acceptedWithWarnings`).
+  int get cleanAccepted => accepted - acceptedWithWarnings;
+
+  /// cleanRate = принято без warning / принято (TASK «Срез 12», п. 3).
+  ///
+  /// `null` — принятых нет: «0 из 0» не является качеством.
+  double? get cleanRate => accepted <= 0 ? null : cleanAccepted / accepted;
 
   /// Долг: `max(0, requested − accepted)`.
   int get remaining => requested > accepted ? requested - accepted : 0;

@@ -1115,6 +1115,40 @@ class AppLocalizationsRu extends AppLocalizations {
       'В тексте есть разметка выделения';
 
   @override
+  String get generationReasonNotAtomic => 'Не атомарна: больше трёх пунктов';
+
+  @override
+  String get generationReasonQuestionNotSelfContained =>
+      'Вопрос несамостоятелен: непонятен без материала';
+
+  @override
+  String get generationReasonQuoteNotLiteral => 'Цитата совпала не дословно';
+
+  @override
+  String get generationReasonQuoteOutOfRange => 'Цитата вне материала';
+
+  @override
+  String get generationReasonWrongLanguage => 'Текст не на русском';
+
+  @override
+  String get generationReasonEmptyAfterNormalization =>
+      'После нормализации не осталось текста';
+
+  @override
+  String get generationReasonClozeMeaningless => 'Пропуск cloze бессмысленный';
+
+  @override
+  String get generationReasonSectionUnknown => 'Раздел не из материала';
+
+  @override
+  String get generationReasonUnitUnknown => 'Единица знания не из плана';
+
+  @override
+  String generationReasonWarningMark(String reason) {
+    return 'Предупреждение: $reason';
+  }
+
+  @override
   String generationRejectedCards(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

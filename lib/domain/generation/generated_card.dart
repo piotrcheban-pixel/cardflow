@@ -1,5 +1,6 @@
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/generation/card_image_kind.dart';
+import 'package:cardflow/domain/generation/card_reason_code.dart';
 import 'package:cardflow/domain/generation/generated_card_image.dart';
 import 'package:cardflow/domain/generation/generated_card_image_side.dart';
 
@@ -112,6 +113,7 @@ class GeneratedCard {
     this.quoteRef,
     this.sourceAnchorText,
     this.sourceAnchorSection,
+    this.gateReasons = const <CardReasonCode>[],
   });
 
   /// Лицевая сторона (вопрос).
@@ -166,6 +168,14 @@ class GeneratedCard {
 
   /// Заголовок раздела блока [sourceAnchorText] (если у раздела он есть).
   final String? sourceAnchorSection;
+
+  /// Коды пометок гейта (TASK «Срез 12», п. 1–2): у принятой с пометками
+  /// карточки — причины качества, у принятой без пометок — пусто.
+  ///
+  /// Список заполняется на этапе проверки (первый проход и добор) и переживает
+  /// передачу в `ReplenishStage`, предпросмотр и отчёт; в БД/экспорт не
+  /// пишется — это представление прогона, а не свойство карточки колоды.
+  final List<CardReasonCode> gateReasons;
 
   /// Краткий поисковый запрос на английском (`image.query`, v9).
   final String? imageQuery;
@@ -238,6 +248,7 @@ class GeneratedCard {
     String? quoteRef,
     String? sourceAnchorText,
     String? sourceAnchorSection,
+    List<CardReasonCode>? gateReasons,
   }) {
     return GeneratedCard(
       front: front ?? this.front,
@@ -263,6 +274,7 @@ class GeneratedCard {
       quoteRef: quoteRef ?? this.quoteRef,
       sourceAnchorText: sourceAnchorText ?? this.sourceAnchorText,
       sourceAnchorSection: sourceAnchorSection ?? this.sourceAnchorSection,
+      gateReasons: gateReasons ?? this.gateReasons,
     );
   }
 
@@ -283,6 +295,7 @@ class GeneratedCard {
       imageSide: GeneratedCardImageSide.none,
       isOcclusion: isOcclusion,
       occlusionJson: occlusionJson,
+      gateReasons: gateReasons,
     );
   }
 
@@ -312,7 +325,8 @@ class GeneratedCard {
         other.angle == angle &&
         other.quoteRef == quoteRef &&
         other.sourceAnchorText == sourceAnchorText &&
-        other.sourceAnchorSection == sourceAnchorSection;
+        other.sourceAnchorSection == sourceAnchorSection &&
+        _listEquals(other.gateReasons, gateReasons);
   }
 
   @override
@@ -336,7 +350,11 @@ class GeneratedCard {
     isOcclusion,
     occlusionJson,
     Object.hash(unitId, angle, quoteRef),
-    Object.hash(sourceAnchorText, sourceAnchorSection),
+    Object.hash(
+      sourceAnchorText,
+      sourceAnchorSection,
+      Object.hashAll(gateReasons),
+    ),
   );
 
   @override

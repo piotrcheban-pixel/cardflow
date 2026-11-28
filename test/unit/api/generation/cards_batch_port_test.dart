@@ -174,6 +174,37 @@ void main() {
   });
 
   test(
+    '400 на strict-схеме: лестница ADR-021 (3 ступени), затем карточки',
+    () async {
+      var calls = 0;
+      final _FakeTransport transport = _FakeTransport((
+        ProviderRequest request,
+      ) {
+        calls++;
+        if (calls < 3) {
+          throw const GenerationException(GenerationErrorCode.badRequest);
+        }
+        return _openAiResponse(<Map<String, Object?>>[_card()]);
+      });
+      final AdapterCardsBatchPort port = _port(transport);
+
+      final GenerationResult result = await port.generate(
+        _batch(),
+        account: account,
+      );
+
+      expect(result.cards, hasLength(1));
+      expect(transport.requests, hasLength(3));
+      expect(transport.requests[0].body['response_format'], isNotNull);
+      expect(transport.requests[0].body['max_tokens'], isNotNull);
+      expect(transport.requests[1].body['response_format'], isNull);
+      expect(transport.requests[1].body['max_tokens'], isNotNull);
+      expect(transport.requests[2].body['response_format'], isNull);
+      expect(transport.requests[2].body['max_tokens'], isNull);
+    },
+  );
+
+  test(
     'ответ без choices — GenerationException(invalidResponse), а не пусто',
     () async {
       final AdapterCardsBatchPort port = _port(

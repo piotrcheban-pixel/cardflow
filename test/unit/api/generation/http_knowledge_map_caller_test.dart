@@ -7,6 +7,7 @@ import 'package:cardflow/api/prompts/understanding_prompt.dart';
 import 'package:cardflow/api/providers/generation_provider_adapter.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
 import 'package:cardflow/domain/generation/provider_account.dart';
+import 'package:cardflow/domain/generation/provider_protocol.dart';
 
 import '../../../helpers/generation_fakes.dart';
 
@@ -107,6 +108,73 @@ void main() {
     await mapCaller.extract(request(maxOutputTokens: 128));
 
     expect(transport.requests.single.body['max_tokens'], 128);
+  });
+
+  test(
+    '400 на strict-схеме: лестница ADR-021 упрощает запрос (3 ступени)',
+    () async {
+      transport = FakeGenerationTransport(
+        response: openAiResponse('{"units": []}'),
+        errorsBeforeResponse: <Object?>[
+          const GenerationException(GenerationErrorCode.badRequest),
+          const GenerationException(GenerationErrorCode.badRequest),
+        ],
+      );
+      final HttpKnowledgeMapCaller mapCaller = HttpKnowledgeMapCaller(
+        transport: transport,
+        apiKeyStore: keyStore,
+        account: account,
+        retryPolicy: RetryPolicy(jitter: () => 0),
+        delay: (Duration duration) async => delays.add(duration),
+      );
+
+      await mapCaller.extract(request());
+
+      expect(transport.calls, 3);
+      expect(transport.requests[0].body['response_format'], isNotNull);
+      expect(transport.requests[0].body['max_tokens'], 4096);
+      expect(transport.requests[1].body['response_format'], isNull);
+      expect(transport.requests[1].body['max_tokens'], 4096);
+      expect(transport.requests[2].body['response_format'], isNull);
+      expect(transport.requests[2].body['max_tokens'], isNull);
+      expect(delays, isEmpty, reason: '400 — не повтор, а следующая ступень');
+    },
+  );
+
+  test('нативный протокол 400 не упрощает: ошибка как есть', () async {
+    final ProviderAccount native = testProviderAccount(modelId: 'gpt-4o');
+    final ProviderAccount accountNative = ProviderAccount(
+      id: native.id,
+      label: native.label,
+      presetId: native.presetId,
+      protocol: ProviderProtocol.openai,
+      baseUrl: native.baseUrl,
+      modelId: native.modelId,
+      contextTokens: native.contextTokens,
+      requiresApiKey: native.requiresApiKey,
+    );
+    transport = FakeGenerationTransport(
+      error: const GenerationException(GenerationErrorCode.badRequest),
+    );
+    final HttpKnowledgeMapCaller mapCaller = HttpKnowledgeMapCaller(
+      transport: transport,
+      apiKeyStore: keyStore,
+      account: accountNative,
+      retryPolicy: RetryPolicy(jitter: () => 0),
+      delay: (Duration duration) async => delays.add(duration),
+    );
+
+    await expectLater(
+      mapCaller.extract(request()),
+      throwsA(
+        isA<GenerationException>().having(
+          (GenerationException error) => error.code,
+          'code',
+          GenerationErrorCode.badRequest,
+        ),
+      ),
+    );
+    expect(transport.calls, 1);
   });
 
   test('429 с Retry-After: пауза из заголовка, повтор, затем ответ', () async {

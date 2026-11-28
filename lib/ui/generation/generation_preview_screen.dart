@@ -12,6 +12,7 @@ import 'package:material_ui/material_ui.dart';
 
 import 'package:cardflow/domain/cards/card.dart' show CardType;
 import 'package:cardflow/domain/cards/card_draft.dart';
+import 'package:cardflow/domain/generation/card_reason_code.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
 import 'package:cardflow/domain/cards/media_metadata.dart';
 import 'package:cardflow/domain/generation/generated_card_image.dart';
@@ -1101,6 +1102,23 @@ class _PreviewCardTile extends StatelessWidget {
                 border: _fieldBorder,
               ),
             ),
+            if (card.original.gateReasons.isNotEmpty) ...<Widget>[
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                children: <Widget>[
+                  for (final CardReasonCode reason in card.original.gateReasons)
+                    Chip(
+                      key: ValueKey<String>(
+                        'generation-reason-${reason.wireName}-$index',
+                      ),
+                      label: Text(reasonLabel(l10n, reason)),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                ],
+              ),
+            ],
             if (card.original.issues
                 .where(
                   (CardIssueCode issue) =>
@@ -1247,6 +1265,36 @@ class _PreviewSide extends StatelessWidget {
 /// Подпись секции стороны с числом изображений (без литералов в UI).
 String titleWithCount(String title, int count) => '$title ($count)';
 
+/// Подпись причины гейта для предпросмотра (TASK «Срез 12», п. 2).
+///
+/// Текст — только из ARB: код `CardReasonCode` переводится в строку на слое UI,
+/// в отчёте и журнале остаётся машинный `wireName`.
+String reasonLabel(AppLocalizations l10n, CardReasonCode reason) {
+  return switch (reason) {
+    CardReasonCode.missingRequiredField => l10n.generationIssueEmptyFront,
+    CardReasonCode.unknownCardType => l10n.generationIssueEmptyFront,
+    CardReasonCode.emptyFront => l10n.generationIssueEmptyFront,
+    CardReasonCode.frontTooLong => l10n.generationIssueFrontTooLong,
+    CardReasonCode.backTooLong => l10n.generationIssueBackTooLong,
+    CardReasonCode.clozeMissing => l10n.generationIssueClozeMissing,
+    CardReasonCode.tagsAdjusted => l10n.generationIssueTagsAdjusted,
+    CardReasonCode.unparseableLatex => l10n.generationIssueLatexBroken,
+    CardReasonCode.answerInQuestion => l10n.generationIssueAnswerInFront,
+    CardReasonCode.questionNotSelfContained =>
+      l10n.generationReasonQuestionNotSelfContained,
+    CardReasonCode.notAtomic => l10n.generationReasonNotAtomic,
+    CardReasonCode.clozeMeaningless => l10n.generationReasonClozeMeaningless,
+    CardReasonCode.wrongLanguage => l10n.generationReasonWrongLanguage,
+    CardReasonCode.emptyAfterNormalization =>
+      l10n.generationReasonEmptyAfterNormalization,
+    CardReasonCode.quoteUnverified => l10n.generationMarkNoSource,
+    CardReasonCode.quoteOutOfRange => l10n.generationReasonQuoteOutOfRange,
+    CardReasonCode.quoteNotLiteral => l10n.generationReasonQuoteNotLiteral,
+    CardReasonCode.sectionUnknown => l10n.generationReasonSectionUnknown,
+    CardReasonCode.unitUnknown => l10n.generationReasonUnitUnknown,
+  };
+}
+
 /// Подпись пометки A8.4 для предпросмотра.
 String issueLabel(AppLocalizations l10n, CardIssueCode issue) {
   return switch (issue) {
@@ -1306,11 +1354,12 @@ List<Widget> previewMarks(AppLocalizations l10n, GeneratedCard card) {
   final int warnings = card.issues
       .where((CardIssueCode issue) => issue != CardIssueCode.possibleDuplicate)
       .length;
-  if (warnings > 0) {
+  final int reasons = card.gateReasons.length;
+  if (warnings + reasons > 0) {
     marks.add(
       AppStatusChip(
         key: const ValueKey<String>('generation-mark-warning'),
-        label: l10n.generationMarkWarning(warnings),
+        label: l10n.generationMarkWarning(warnings + reasons),
         tone: AppStatusTone.warning,
         dense: true,
       ),

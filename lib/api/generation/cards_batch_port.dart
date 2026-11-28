@@ -76,18 +76,45 @@ class AdapterCardsBatchPort implements LlmPort {
   }) async {
     final GenerationProviderAdapter adapter = adapterFor(account.protocol);
     final String apiKey = await apiKeyStore.read(account.id) ?? '';
-    final ProviderRequest request = adapter.buildRequest(
-      apiKey: apiKey,
-      model: account.modelId,
-      systemPrompt: cardsSystemPromptGenCardsV3,
-      userContent: buildCardsUserContent(batch),
-      maxOutputTokens:
-          maxOutputTokens ?? batch.budget * kDefaultOutputTokensPerCard,
-      baseUrl: account.baseUrl,
-      responseSchema: cardSchemaV3For(_flavorOf(account.protocol)),
-    );
-
-    final Map<String, Object?> json = await transport.postJson(request);
+    final int outputTokens =
+        maxOutputTokens ?? batch.budget * kDefaultOutputTokensPerCard;
+    // Лестница совместимости ADR-021 — та же, что в `CardGenerationService`:
+    // strict `json_schema` → без схемы → без схемы и `max_tokens`. Только
+    // `badRequest`, не больше трёх запросов; нативные протоколы — один.
+    final bool tolerantFallback =
+        account.protocol == ProviderProtocol.openaiCompletions;
+    final List<({bool strictSchema, bool sendMaxTokens})> attempts =
+        <({bool strictSchema, bool sendMaxTokens})>[
+          (strictSchema: true, sendMaxTokens: true),
+          if (tolerantFallback) (strictSchema: false, sendMaxTokens: true),
+          if (tolerantFallback) (strictSchema: false, sendMaxTokens: false),
+        ];
+    Map<String, Object?>? json;
+    GenerationException? lastError;
+    for (final ({bool strictSchema, bool sendMaxTokens}) attempt in attempts) {
+      final ProviderRequest request = adapter.buildRequest(
+        apiKey: apiKey,
+        model: account.modelId,
+        systemPrompt: cardsSystemPromptGenCardsV3,
+        userContent: buildCardsUserContent(batch),
+        maxOutputTokens: outputTokens,
+        baseUrl: account.baseUrl,
+        strictSchema: attempt.strictSchema,
+        sendMaxTokens: attempt.sendMaxTokens,
+        responseSchema: cardSchemaV3For(_flavorOf(account.protocol)),
+      );
+      try {
+        json = await transport.postJson(request);
+        break;
+      } on GenerationException catch (error) {
+        lastError = error;
+        if (tolerantFallback && error.code == GenerationErrorCode.badRequest) {
+          continue;
+        }
+        rethrow;
+      }
+    }
+    if (json == null) throw lastError!;
     final ProviderResult normalized = normalizer.normalize(adapter, json);
 
     if (normalized.isTruncated) {

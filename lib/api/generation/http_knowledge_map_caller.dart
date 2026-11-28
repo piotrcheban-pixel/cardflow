@@ -93,56 +93,80 @@ class HttpKnowledgeMapCaller implements KnowledgeMapCaller {
   Future<KnowledgeMapRawResponse> extract(KnowledgeMapRequest request) async {
     final GenerationProviderAdapter adapter = _adapterFor(account.protocol);
     final String apiKey = await apiKeyStore.read(account.id) ?? '';
-    final ProviderRequest providerRequest = adapter.buildRequest(
-      apiKey: apiKey,
-      model: account.modelId,
-      systemPrompt: request.systemPrompt,
-      userContent: request.userContent,
-      maxOutputTokens: request.maxOutputTokens ?? maxOutputTokens,
-      baseUrl: account.baseUrl,
-      responseSchema: knowledgeMapSchemaFor(_flavorOf(account.protocol)),
-    );
-
-    var attempt = 1;
-    while (true) {
-      try {
-        final Map<String, Object?> json = await transport.postJson(
-          providerRequest,
-        );
-        final ProviderResult result = normalizer.normalize(adapter, json);
-        if (result.isTruncated) {
-          // Оборванный ответ — не сбой: сервис Understanding делит фрагмент по
-          // блокам в пределах max_tokens (TASK п. 5), а не теряет весь раздел.
+    // Лестница совместимости ADR-021 — та же, что у карточек: OpenAI-
+    // совместимые серверы (DeepSeek) могут не знать strict `json_schema` или
+    // требовать другой лимит вывода. Только `badRequest` упрощает запрос, не
+    // больше трёх попыток; нативные протоколы контракт не меняют.
+    final bool tolerantFallback =
+        account.protocol == ProviderProtocol.openaiCompletions;
+    final List<({bool strictSchema, bool sendMaxTokens})> attempts =
+        <({bool strictSchema, bool sendMaxTokens})>[
+          (strictSchema: true, sendMaxTokens: true),
+          if (tolerantFallback) (strictSchema: false, sendMaxTokens: true),
+          if (tolerantFallback) (strictSchema: false, sendMaxTokens: false),
+        ];
+    GenerationException? lastError;
+    for (final ({bool strictSchema, bool sendMaxTokens}) attempt in attempts) {
+      final ProviderRequest providerRequest = adapter.buildRequest(
+        apiKey: apiKey,
+        model: account.modelId,
+        systemPrompt: request.systemPrompt,
+        userContent: request.userContent,
+        maxOutputTokens: request.maxOutputTokens ?? maxOutputTokens,
+        baseUrl: account.baseUrl,
+        strictSchema: attempt.strictSchema,
+        sendMaxTokens: attempt.sendMaxTokens,
+        responseSchema: knowledgeMapSchemaFor(_flavorOf(account.protocol)),
+      );
+      var retry = 1;
+      while (true) {
+        try {
+          final Map<String, Object?> json = await transport.postJson(
+            providerRequest,
+          );
+          final ProviderResult result = normalizer.normalize(adapter, json);
+          if (result.isTruncated) {
+            // Оборванный ответ — не сбой: сервис Understanding делит фрагмент по
+            // блокам в пределах max_tokens (TASK п. 5), а не теряет весь раздел.
+            return KnowledgeMapRawResponse(
+              json: result.content,
+              usage: result.usage,
+              truncated: true,
+            );
+          }
+          if (result.isError) {
+            throw GenerationException(
+              result.rawError ?? GenerationErrorCode.invalidResponse,
+              details: result.detail,
+            );
+          }
           return KnowledgeMapRawResponse(
             json: result.content,
             usage: result.usage,
-            truncated: true,
           );
-        }
-        if (result.isError) {
-          throw GenerationException(
-            result.rawError ?? GenerationErrorCode.invalidResponse,
-            details: result.detail,
+        } on GenerationException catch (error) {
+          lastError = error;
+          if (error.code == GenerationErrorCode.cancelled) rethrow;
+          // Отказ от strict-схемы/поля лимита — следующая ступень лестницы,
+          // а не 400 пользователю (ADR-021).
+          if (tolerantFallback &&
+              error.code == GenerationErrorCode.badRequest) {
+            break;
+          }
+          final RetryDecision decision = retryPolicy.decide(
+            attempt: retry,
+            statusCode: CardsBatchEngine.statusFor(error.code),
+            isTimeout: error.code == GenerationErrorCode.timeout,
+            isConnectionError: error.code == GenerationErrorCode.network,
+            retryAfter: error.retryAfter,
           );
+          if (!decision.shouldRetry) rethrow;
+          await delay(decision.delay);
+          retry++;
         }
-        return KnowledgeMapRawResponse(
-          json: result.content,
-          usage: result.usage,
-        );
-      } on GenerationException catch (error) {
-        if (error.code == GenerationErrorCode.cancelled) rethrow;
-        final RetryDecision decision = retryPolicy.decide(
-          attempt: attempt,
-          statusCode: CardsBatchEngine.statusFor(error.code),
-          isTimeout: error.code == GenerationErrorCode.timeout,
-          isConnectionError: error.code == GenerationErrorCode.network,
-          retryAfter: error.retryAfter,
-        );
-        if (!decision.shouldRetry) rethrow;
-        await delay(decision.delay);
-        attempt++;
       }
     }
+    throw lastError!;
   }
 
   /// Адаптер протокола аккаунта.
