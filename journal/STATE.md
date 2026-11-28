@@ -1,5 +1,51 @@
 # STATE — текущее состояние CardFlow
 
+## Генерация v3 — срез 18: промпт gen-cards-v4, квота и разные углы (2026-11-28)
+
+**Срез:** owner-note «ФИНАЛ ТЕМЫ ГЕНЕРАЦИИ» + TASK «Срез 18. Промпт
+gen-cards-v4 (Жесткая квота + Разные углы)». Решения —
+`docs/decisions/ADR-056-cards-prompt-v4-quota-angles.md`; толкования —
+`journal/QUESTIONS.md` Q31; отчёт — `journal/generation-v3/verify-s18.md`;
+ограничения — L240 (снят), L242, L243.
+
+**Факты старта:** ветка `main`, `HEAD = 48e21a6` (срез 17B); baseline — 3302
+passed + 21 skipped, покрытие 90,9 %, `cardsPromptVersion = 'gen-cards-v3'`,
+`gen-cards-v3` заморожен ADR-053/054/055.
+
+**Сделано:**
+
+- **`gen-cards-v4` — дефолт.** Текст (`cardsSystemPromptGenCardsV4`) содержит
+  четыре жёстких правила: ровно `<budget cards>` карточек (строгая квота); при
+  нехватке фактов — разные углы (определение → применение → cloze), а не
+  обрезка; категорический запрет двух карточек с одинаковым `front`; для
+  `card_type 'cloze'` обязательна разметка `{{c1::пропуск}}`, иначе `'basic'`.
+  `cardsPromptVersion = 'gen-cards-v4'`, `cardsSystemPrompt` — v4; порт
+  `AdapterCardsBatchPort` шлёт дефолтный промпт. `gen-cards-v3` **не удалён**:
+  текст, `docs/prompts/gen-cards-v3.txt` и байтовая сверка на месте.
+- **Версия v4 — в журнале и отчёте:** `generation_jobs.prompt_version` и
+  `GenerationReport.promptVersions` берут `cardsPromptVersion`; старые записи
+  `gen-cards-v3` читаются как строки.
+- **L240 закрыт в домене.** `clozeQuestionText` (`cloze_markup.dart`) заменяет
+  пропуск на `[…]`; `tool/blind_sample_s17b.dart` использует её вместо
+  приватной копии; `cloze_markup_test` +4.
+- **Границы (Q31, ADR-056):** квота действует в пределах бюджета
+  `AllocationPlan`; заказ сверх различимой ёмкости материала остаётся
+  `materialLimited` (L242). Аллокация, схема, валидатор, пороги и метрики не
+  менялись. v4 не измерен живым прогоном — бюджета на замер TASK не даёт (L243).
+  `auto` по-прежнему = legacy: v4 — промпт пути v3, а не основание переключать
+  путь по умолчанию.
+- **Версия приложения:** `1.0.2+3` (patch-релиз), `appVersion` = `1.0.2`.
+
+**Чем проверено:** `analyze --no-pub lib test tool` → **No issues found!**
+(`analyze-s18.txt`); `dart format --set-exit-if-changed lib test tool` →
+**0 changed** (754 файла); полный прогон —
+`green-s18-full.txt` (**3310 passed + 21 skipped, exit 0**), покрытие — 90,9 %
+(27544/30314, `coverage-s18.txt`); красная фаза — `red-s18.txt` (**44 passed /
+11 failed**, assertion-level), целевая — `green-s18-targeted.txt` (**55
+passed**). CI и релизный билд — см. `journal/generation-v3/verify-s18.md` §4.
+
+**Следующий шаг:** _(заполняется после релиза)_.
+
 ## Генерация v3 — срез 17B: контекст «уже создано» и один замер гипотезы (2026-11-28)
 
 **Срез:** `TASK.txt` «СРЕЗ 17B. Контекст „уже создано“ в v3, затем один замер».
