@@ -1,0 +1,400 @@
+{
+  "schema": "s15",
+  "cell_id": "textbook-v3-80",
+  "provider": "deepseek",
+  "model": "deepseek-flash",
+  "material": "учебный текст, 12 разделов",
+  "material_sections": 12,
+  "requested": 80,
+  "path": "v3",
+  "status": "ran",
+  "reason": null,
+  "duration_ms": 123674,
+  "error_code": null,
+  "stage": "partial",
+  "report_accepted": 47,
+  "report_requested": 80,
+  "understanding_failures": [],
+  "code_version": "ade25b33",
+  "prompt_versions": {
+    "understanding": "gen-map-v1",
+    "generating": "gen-cards-v3",
+    "replenishing": "gen-cards-v3"
+  },
+  "metrics": {
+    "requested": 80,
+    "accepted": 47,
+    "generated": 71,
+    "invalid": 0,
+    "duplicates": 24,
+    "clean_accepted": 47,
+    "absolute_clean": 47,
+    "accepted_with_warnings": 0,
+    "warning_codes": {},
+    "requests": 2,
+    "covered_units": 33,
+    "total_units": 33,
+    "input_tokens": 20331,
+    "output_tokens": 28474,
+    "input_tokens_by_stage": {
+      "understanding": 12157,
+      "generating": 4967,
+      "replenishing": 3207
+    },
+    "output_tokens_by_stage": {
+      "understanding": 13992,
+      "generating": 10885,
+      "replenishing": 3597
+    },
+    "duplicates_by_level": {
+      "semantic": 24
+    },
+    "unit_coverage": [
+      {
+        "unit_id": "ku:doc:material.txt#1#0",
+        "section_id": "doc:material.txt#1",
+        "salience": 1.0,
+        "planned": 2,
+        "accepted": 2,
+        "produced": 2,
+        "clean": 2,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#1#1",
+        "section_id": "doc:material.txt#1",
+        "salience": 0.9,
+        "planned": 2,
+        "accepted": 1,
+        "produced": 1,
+        "clean": 1,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#1#2",
+        "section_id": "doc:material.txt#1",
+        "salience": 0.8,
+        "planned": 2,
+        "accepted": 1,
+        "produced": 1,
+        "clean": 1,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#1#3",
+        "section_id": "doc:material.txt#1",
+        "salience": 0.7,
+        "planned": 1,
+        "accepted": 1,
+        "produced": 1,
+        "clean": 1,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#2#0",
+        "section_id": "doc:material.txt#2",
+        "salience": 1.0,
+        "planned": 2,
+        "accepted": 1,
+        "produced": 1,
+        "clean": 1,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#2#1",
+        "section_id": "doc:material.txt#2",
+        "salience": 0.5,
+        "planned": 1,
+        "accepted": 1,
+        "produced": 1,
+        "clean": 1,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#2#2",
+        "section_id": "doc:material.txt#2",
+        "salience": 0.9,
+        "planned": 2,
+        "accepted": 2,
+        "produced": 2,
+        "clean": 2,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#2#3",
+        "section_id": "doc:material.txt#2",
+        "salience": 0.7,
+        "planned": 1,
+        "accepted": 1,
+        "produced": 1,
+        "clean": 1,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#4#0",
+        "section_id": "doc:material.txt#4",
+        "salience": 1.0,
+        "planned": 2,
+        "accepted": 1,
+        "produced": 1,
+        "clean": 1,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#4#1",
+        "section_id": "doc:material.txt#4",
+        "salience": 0.8,
+        "planned": 2,
+        "accepted": 1,
+        "produced": 1,
+        "clean": 1,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#4#2",
+        "section_id": "doc:material.txt#4",
+        "salience": 0.9,
+        "planned": 3,
+        "accepted": 3,
+        "produced": 3,
+        "clean": 3,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#4#3",
+        "section_id": "doc:material.txt#4",
+        "salience": 0.7,
+        "planned": 1,
+        "accepted": 1,
+        "produced": 1,
+        "clean": 1,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#6#0",
+        "section_id": "doc:material.txt#6",
+        "salience": 0.8,
+        "planned": 2,
+        "accepted": 2,
+        "produced": 2,
+        "clean": 2,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#6#1",
+        "section_id": "doc:material.txt#6",
+        "salience": 0.8,
+        "planned": 2,
+        "accepted": 2,
+        "produced": 2,
+        "clean": 2,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#6#2",
+        "section_id": "doc:material.txt#6",
+        "salience": 0.9,
+        "planned": 2,
+        "accepted": 2,
+        "produced": 2,
+        "clean": 2,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#6#3",
+        "section_id": "doc:material.txt#6",
+        "salience": 0.7,
+        "planned": 1,
+        "accepted": 1,
+        "produced": 1,
+        "clean": 1,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#7#0",
+        "section_id": "doc:material.txt#7",
+        "salience": 1.0,
+        "planned": 3,
+        "accepted": 3,
+        "produced": 3,
+        "clean": 3,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#7#1",
+        "section_id": "doc:material.txt#7",
+        "salience": 0.7,
+        "planned": 1,
+        "accepted": 1,
+        "produced": 1,
+        "clean": 1,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#7#2",
+        "section_id": "doc:material.txt#7",
+        "salience": 0.5,
+        "planned": 1,
+        "accepted": 1,
+        "produced": 1,
+        "clean": 1,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#7#3",
+        "section_id": "doc:material.txt#7",
+        "salience": 0.5,
+        "planned": 1,
+        "accepted": 1,
+        "produced": 1,
+        "clean": 1,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#8#0",
+        "section_id": "doc:material.txt#8",
+        "salience": 1.0,
+        "planned": 2,
+        "accepted": 2,
+        "produced": 2,
+        "clean": 2,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#8#1",
+        "section_id": "doc:material.txt#8",
+        "salience": 0.8,
+        "planned": 2,
+        "accepted": 1,
+        "produced": 1,
+        "clean": 1,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#8#2",
+        "section_id": "doc:material.txt#8",
+        "salience": 0.5,
+        "planned": 1,
+        "accepted": 1,
+        "produced": 1,
+        "clean": 1,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#8#3",
+        "section_id": "doc:material.txt#8",
+        "salience": 0.8,
+        "planned": 2,
+        "accepted": 2,
+        "produced": 2,
+        "clean": 2,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#10#0",
+        "section_id": "doc:material.txt#10",
+        "salience": 1.0,
+        "planned": 2,
+        "accepted": 2,
+        "produced": 2,
+        "clean": 2,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#10#1",
+        "section_id": "doc:material.txt#10",
+        "salience": 0.9,
+        "planned": 3,
+        "accepted": 3,
+        "produced": 3,
+        "clean": 3,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#10#2",
+        "section_id": "doc:material.txt#10",
+        "salience": 0.7,
+        "planned": 1,
+        "accepted": 1,
+        "produced": 1,
+        "clean": 1,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#10#3",
+        "section_id": "doc:material.txt#10",
+        "salience": 0.7,
+        "planned": 1,
+        "accepted": 1,
+        "produced": 1,
+        "clean": 1,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#10#4",
+        "section_id": "doc:material.txt#10",
+        "salience": 0.8,
+        "planned": 2,
+        "accepted": 1,
+        "produced": 1,
+        "clean": 1,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#11#0",
+        "section_id": "doc:material.txt#11",
+        "salience": 0.8,
+        "planned": 2,
+        "accepted": 1,
+        "produced": 1,
+        "clean": 1,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#11#1",
+        "section_id": "doc:material.txt#11",
+        "salience": 0.9,
+        "planned": 2,
+        "accepted": 1,
+        "produced": 1,
+        "clean": 1,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#11#2",
+        "section_id": "doc:material.txt#11",
+        "salience": 0.5,
+        "planned": 1,
+        "accepted": 1,
+        "produced": 1,
+        "clean": 1,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#11#3",
+        "section_id": "doc:material.txt#11",
+        "salience": 0.6,
+        "planned": 1,
+        "accepted": 1,
+        "produced": 1,
+        "clean": 1,
+        "warning_codes": {}
+      }
+    ],
+    "yield_per_1k_input_tokens": 2.3117406915547685,
+    "acceptance_rate": 0.6619718309859155,
+    "clean_rate": 0.6619718309859155,
+    "duplicate_rate": 0.0,
+    "attempted": 71,
+    "accepted_final": 47,
+    "unique": 47,
+    "clean": 47,
+    "dup_rate": 0.3380281690140845,
+    "block_rate": 0.0,
+    "coverage": 1.0,
+    "mean_covered_salience": 0.7818181818181819,
+    "requests_per_10_cards": 0.425531914893617,
+    "batch_p50_ms": 13351,
+    "batch_p95_ms": 35203
+  }
+}

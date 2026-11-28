@@ -1,0 +1,92 @@
+{
+  "schema": "s15",
+  "cell_id": "article-legacy-150",
+  "provider": "deepseek",
+  "model": "deepseek-flash",
+  "material": "статья, 3 раздела",
+  "material_sections": 3,
+  "requested": 150,
+  "path": "legacy",
+  "status": "ran",
+  "reason": null,
+  "duration_ms": 46100,
+  "error_code": null,
+  "stage": "partial",
+  "report_accepted": 16,
+  "report_requested": 150,
+  "understanding_failures": [],
+  "code_version": "ade25b33",
+  "prompt_versions": {
+    "generating": "gen-ru-v9"
+  },
+  "metrics": {
+    "requested": 150,
+    "accepted": 16,
+    "generated": 16,
+    "invalid": 0,
+    "duplicates": 0,
+    "clean_accepted": 16,
+    "absolute_clean": 16,
+    "accepted_with_warnings": 0,
+    "warning_codes": {},
+    "requests": 3,
+    "covered_units": 3,
+    "total_units": 3,
+    "input_tokens": 20603,
+    "output_tokens": 9080,
+    "input_tokens_by_stage": {
+      "generating": 20603
+    },
+    "output_tokens_by_stage": {
+      "generating": 9080
+    },
+    "duplicates_by_level": {},
+    "unit_coverage": [
+      {
+        "unit_id": "s1",
+        "section_id": "doc:material.txt#0",
+        "salience": null,
+        "planned": 53,
+        "accepted": 6,
+        "produced": 6,
+        "clean": 6,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "s2",
+        "section_id": "doc:material.txt#1",
+        "salience": null,
+        "planned": 50,
+        "accepted": 5,
+        "produced": 5,
+        "clean": 5,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "s3",
+        "section_id": "doc:material.txt#2",
+        "salience": null,
+        "planned": 47,
+        "accepted": 5,
+        "produced": 5,
+        "clean": 5,
+        "warning_codes": {}
+      }
+    ],
+    "yield_per_1k_input_tokens": 0.7765859340872688,
+    "acceptance_rate": 1.0,
+    "clean_rate": 1.0,
+    "duplicate_rate": 0.0,
+    "attempted": 16,
+    "accepted_final": 16,
+    "unique": 16,
+    "clean": 16,
+    "dup_rate": 0.0,
+    "block_rate": 0.0,
+    "coverage": 1.0,
+    "mean_covered_salience": null,
+    "requests_per_10_cards": 1.875,
+    "batch_p50_ms": 13343,
+    "batch_p95_ms": 20888
+  }
+}

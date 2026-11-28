@@ -2,6 +2,34 @@
 
 ## Сделано
 
+**Срез 16 (2026-11-28) — дубль не закрывает слот, углы по богатству, честная метрика.**
+- **Dedup до принятия, а не после генерации.** `CandidateDeduper` /
+  `CascadeDeduper` (`lib/domain/generation/candidate_deduper.dart`) — тот же
+  каскад `SemanticMatcher`, что у S13, но спрашивается в момент приёма:
+  `CardsBatchEngine.run(..., deduper:)` и `ReplenishStage.run(..., deduper:)`.
+  Отложенный дубль не идёт в `CardSink`/журнал, слот остаётся открытым, а
+  `duplicates` журнала его считает. Пост-хунтовый этап `_dedup` фасада удалён;
+  `GenerationV3Run.dedup` — пары отложенных кандидатов.
+- **Повтор с другим углом, две коллизии → duplicate.** `retryAngles` в
+  `ReplenishStage`: после коллизии слот запрашивается с первым свободным углом
+  `angleCycleFor` (alias «слот запроса → слот заказа»); `maxAttemptsPerSlot = 2`
+  распространён на дубли, вторая коллизия закрывает слот
+  `ReplenishStopReason.duplicates` (класс `ShortfallKind.duplicates`) и
+  `shortfallReasons` считает **незакрытые слоты**, а не отложенные карточки.
+- **Ёмкость по богатству.** `unitCapacity` = 1 + salience ≥ 0,8 + ≥ 3
+  утверждений/клауз в якорях + вид formula/procedure (потолок 4);
+  `allocateUnits`/`allocationCapacity`/`materialCapacity` — той же функцией.
+  Короткий факт статьи получает 1–2 карточки, а не 4 (TASK ч. 3).
+- **Метрика попыток.** `OutcomeCounts` (`outcome_counts.dart`) из одного
+  `GenerationReport` для обоих путей: `attempted/accepted/unique/clean`,
+  `cleanRate = clean/attempted`, `dupRate = duplicates/attempted`,
+  `blockRate`; `GenerationReport.outcome`, поля в `MetricsCollector.toJson`
+  (`attempted/accepted_final/unique/clean/dup_rate/block_rate`). Legacy-путь
+  отдаёт в `duplicates` то, что удаляет `_acceptCard` (поведение то же).
+- **ADR-053**, Q28, L233–L234 — решения и толкования.
+- **Перемер и вердикт** — `journal/generation-v3/live-s16/` (12 ячеек, потолок
+  1,00 USD), пересчёт `matrix-s16.md`, `verify-s16.md`.
+
 **Срез 15 (2026-11-28) — пер-юнитные данные, честный перемер, флаг выключен.**
 - **Флаг вернулся в выключенное состояние (часть 0).** Критерий S14 выведен из
   агрегата `coverage`, а не измерен пер-юнитными данными (L230). Тест фиксирует
@@ -453,6 +481,24 @@
 
 ## Проверено
 
+**Срез 16.** Гейты: `.fvm\versions\3.47.9\bin\flutter.bat analyze --no-pub lib
+test tool` → **No issues found!**; `dart format --set-exit-if-changed lib test
+tool` → **0 changed** (739 файлов); `flutter test --no-pub --coverage
+--exclude-tags golden` → **3276 passed + 20 skipped, exit 0**
+(`green-s16-full.txt`), покрытие рукописного кода **90,9 % (27318/30059)** при
+пороге 80 % (`coverage-s16.txt`); guards зелёные в полном прогоне. Живой
+перемер: `flutter test test/live/generation_matrix_s16_live_test.dart` с
+`CARDFLOW_LIVE_TESTS=1` → **exit 0**, **12/12 ячеек ran**, 0 not_run/failed,
+40 логических / 113 HTTP запросов, 16:00, **0,347353 USD** из 1,00
+(`live-s16/run.json`, `code_version ade25b33`, `code_dirty: false`). Пересчёт —
+`dart run tool/recompute_matrix_s16.dart` → `live-s16/matrix-s16.md`: 6 решающих
+пар, критерий **0 выполнено / 6 не выполнено** → флаг выключен. DoD-тесты:
+`candidate_deduper_test` 5/5, `outcome_counts_test` 6/6,
+`replenish_stage_test` (+2: дубль не закрывает слот, вторая коллизия →
+duplicate), `generation_v3_facade_flow_test` (+2: 8/8 принято без пометок,
+вторая коллизия → 2 запроса), `allocation_test` (+5: ёмкость по богатству),
+`generation_pipeline_test` (+1: legacy `dupRate = 1/3`).
+
 **Срез 13.** Гейты: `.fvm\versions\3.47.9\bin\flutter.bat analyze --no-pub lib
 test tool` → **No issues found!**; `dart format --set-exit-if-changed lib test`
 → **0 changed** (725 files); `flutter test --no-pub --coverage --exclude-tags
@@ -641,6 +687,22 @@ DoD-тесты: property «Σ бюджетов == requested» на 200 случ�
 
 ## НЕ ПОВТОРЯТЬ
 
+- **Контрактный тест dedup-в-цикле писать ДО проводки и снимать red-лог.**
+  В S16 тесты `CandidateDeduper`/«дубль не закрывает слот» добавлены вместе с
+  реализацией: падения, которые я видел, были дефектами проводки (deduper не
+  запоминал карточки до конца цикла → пары внутри одного ответа не ловились;
+  повтор шёл тем же углом → слот закрывался второй коллизией), а не
+  зафиксированной красной фазой. Правило: сначала тест + `red-s16.txt`, затем
+  код; красная фаза должна падать в assertion-level, а не только компиляцией.
+- **Проверять, что тестовый порт сохраняет поля карточки.** `_FakeLlmPort`
+  в facade-тестах при `overrideCard` терял `angle`, и «повтор с другим углом»
+  выглядел как незапрошенный угол: слот не потреблял попытку, добор зацикливался
+  (3 запроса вместо 2). При подмене карточки в фейке копировать все поля,
+  включая `angle`.
+- **Колода для dedup загружается ДО первого запроса.** В тесте «пара уже в
+  колоде» забыт `targetDeckId` в `run(...)` — deduper получил пустую колоду, и
+  карточка-дубль принялась. Проверять, что аргумент дошёл до `CascadeDeduper`,
+  а не только что loader передан в фасад.
 - **Dedup в фасаде — после приёма, но до импорта; строки черновиков уже есть.**
   Инвариант S11 (пишем по ходу) не ломается, если пометка — `UPDATE`
   `card_drafts` после этапа Dedup (`is_duplicate_of`/`dedup_level`), а не поле
@@ -954,57 +1016,8 @@ DoD-тесты: property «Σ бюджетов == requested» на 200 случ�
 
 ## СЛЕДУЮЩЕЕ ДЕЙСТВИЕ
 
-Срез 15 закрыт: пер-юнитные `produced/clean/salience/warningCodes` и
-`code_version` пишутся в `matrix.jsonl` (L230 снят), 12 решающих ячеек
-перемерены честно на `5dc3cb11` (12/12 ran, 0,431622 USD из 1,00), сопоставимая
-база построена из данных (9 разд./37 ед. и 2 разд./10 ед.), критерий флага
-**не выполнен на 6 из 6** → `generationPipelineV3` выключен по умолчанию.
-Толкования — Q27, ограничения — L231/L232, отчёт — `verify-s15.md`, числа —
-`live-s15/matrix-s15.md`.
+Срез 16 закрыт: dedup до закрытия слота (дубль отложен, повтор с другим углом, вторая коллизия → `duplicates`), ёмкость по богатству (`unitCapacity` вместо константы 4), метрика попыток (`OutcomeCounts`: cleanRate/dupRate/blockRate от attempted) на обоих путях. Перемер 12 решающих ячеек на `ade25b33`: 12/12 ran, 0,347353 USD из 1,00; критерий флага не выполнен на 6 из 6 (dupRate v3 0–33,8 % против legacy 0–3,4 %, absoluteClean ниже legacy на статье, cleanRate 66,2–100 % < 95 % на трёх ячейках) → `generationPipelineV3` выключен. Толкования — Q28, ограничения — L233/L234, отчёт — `verify-s16.md`, числа — `live-s16/matrix-s16.md`.
 
-Следующий прогон (S16 — работа над расхождением): `read TASK.txt` (верхний блок)
-→ верхний блок `journal/STATE.md` («срез 15») → `journal/QUESTIONS.md` Q27 →
-`journal/generation-v3/verify-s15.md` §5–§6; числа — `live-s15/matrix-s15.md`.
+Следующий прогон (S17 — расхождения «почему нет»): `read TASK.txt` (верхний блок) → верхний блок `journal/STATE.md` («срез 16») → `journal/QUESTIONS.md` Q28 → `journal/generation-v3/verify-s16.md` §5 (симметрия dupRate, ёмкость против объёма, дубли модели); решения — ADR-053; числа — `live-s16/matrix-s16.md`.
 
-Не делать без нового среза:
-- **не менять критерий флага задним числом** (порог 95 % + объём на 80/150/300):
-  он зафиксирован в S14; если `possible_duplicate` не должен входить в
-  «грязные» — это отдельное решение владельца и новый TASK, а не тихая правка;
-- **не удалять legacy** и не переписывать его вывод: он остаётся рабочим путём
-  при выключенном флаге; тесты legacy-пути задают флаг явно
-  (`legacyGenerationSettings` + override `effectiveAppSettingsProvider`);
-- **не снимать инвариант ёмкости** (`kMaxCardsPerUnit = 4`, уникальность
-  `slotKey`) и не «добирать» заказ повторами слотов;
-- **не перемерять матрицу** ради «другого результата»: S15-пересчёт сделан из
-  `cells/*.json`; новый платный прогон — только при изменении промптов/порогов/
-  проводки и в пределах потолка;
-- **не подменять `partial` на `done`**: честный исход ставит
-  `verdict.jobStatus`;
-- **пер-юнитные данные не выдумывать**: legacy-разделы — распределение (L231),
-  база по разделам, id единиц путей не пересекаются (L232);
-- **живые прогоны — только с `CARDFLOW_LIVE_TESTS=1`**, реальным ключом и
-  потолками (L225); значение ключа не печатать.
 
-Baseline снимка: `flutter test --no-pub --exclude-tags golden` — см.
-`journal/generation-v3/green-s15-full.txt`; `analyze` 0, `dart format` 0 changed;
-схема БД — **v3** (не менялась).
-
----
-
-**Архив прежнего прогона среза 14:** ниже — состояние на 2026-11-28 до S15
-(флаг был включён по умолчанию; S15 это решение отменил после честного замера).
-
-Срез 14 закрыт: ёмкость различимых слотов стала инвариантом конструктора
-плана (300/47 → 188, без повторов), прогон честно завершается `partial` +
-`exhausted_material` с числом 188 и без запросов добора, сопоставимая база и
-`absoluteClean` добавлены, критерий флага выполнен на 6/6 решающих пар —
-`generationPipelineV3` включён по умолчанию, legacy доступен выключением флага.
-Толкования — Q26, ограничение — L230, отчёт — `verify-s14.md`, таблица —
-`live-s12/matrix-s14.md`. Run’ы S14: `green-s14-full.txt`, `coverage-s14.txt`,
-3244 passed + 18 skipped, покрытие 90,9 %.
-
----
-
-**Архив прежнего (незавершённого, другой заход) прогона:**
-`PROGRESS_slow_20261122.md` (120 КБ) — читать целиком не нужно, к срезам 0–1
-отношения не имеет.

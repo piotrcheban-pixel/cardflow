@@ -1,5 +1,60 @@
 # STATE — текущее состояние CardFlow
 
+## Генерация v3 — срез 16: дубль не закрывает слот, углы по богатству, честный dupRate (2026-11-28)
+
+**Срез:** `TASK.txt` «Срез 16. Углы по богатству единицы, дубль не закрывает
+слот, симметричная метрика». Толкования — `journal/QUESTIONS.md` Q28; решения —
+`docs/decisions/ADR-053-generation-dedup-slot-and-outcome-metrics.md`; отчёт —
+`journal/generation-v3/verify-s16.md`; числа — пересчёт
+`journal/generation-v3/live-s16/matrix-s16.md` из пер-ячеечных `cells/*.json`.
+
+**Факты старта:** ветка `main`, `HEAD = ade25b33` (коммит кода среза 16, дерево
+чистое); baseline — 3255 passed + 19 skipped, покрытие 90,9 %, схема БД v3,
+флаг `generationPipelineV3` выключен (S15).
+
+**Сделано (части 1–4):**
+- **Dedup до принятия.** `CandidateDeduper`/`CascadeDeduper` (каскад S13, новых
+  правил нет) спрашивается в `CardsBatchEngine` и `ReplenishStage` **до**
+  закрытия слота: дубль откладывается, не идёт в `CardSink`/журнал и не
+  закрывает слот. Пост-хунтовый этап `_dedup` фасада удалён; пометки
+  `possibleDuplicate` в принятом больше не появляются.
+- **Повтор с другим углом, две коллизии → duplicate.** `retryAngles` +
+  alias «слот запроса → слот заказа», `maxAttemptsPerSlot = 2` распространён на
+  дубли; вторая коллизия закрывает слот `ReplenishStopReason.duplicates`,
+  `shortfallReasons` считает незакрытые слоты, а не отложенные карточки.
+- **Ёмкость по богатству.** `unitCapacity` = 1 + salience ≥ 0,8 + ≥ 3
+  утверждений/клауз + вид formula/procedure (потолок 4); `allocationCapacity`
+  и `materialCapacity` — той же функцией. Короткий факт получает 1–2 карточки.
+- **Метрика попыток.** `OutcomeCounts` из одного `GenerationReport` на оба пути:
+  `attempted/accepted/unique/clean`, `cleanRate=clean/attempted`,
+  `dupRate=duplicates/attempted`, `blockRate`; JSON стенда пополнился. Legacy
+  отдаёт в `duplicates` то, что удаляет `_acceptCard` (поведение то же).
+- **Перемер 12 решающих ячеек** (`ade25b33`, дерево чистое): **12/12 ran**, 0
+  `not_run`/`failed`, расход **0,347353 USD** из 1,00, 40 логических / 113 HTTP
+  запросов, 16:00. Все ячейки — `partial` (заказ больше ёмкости материала).
+- **Критерий флага НЕ выполнен на 6 из 6:** `dupRate(v3)` 0–33,8 % против
+  legacy 0–3,4 % (метрики путей несимметричны: legacy считает только точные
+  удалённые дубли, v3 — все смысловые отложенные), `absoluteClean` ниже legacy
+  на статье (13/13/12 против 17/16/16) из-за ёмкости, `cleanRate` 66,2–100 %
+  (< 95 % на трёх ячейках учебного текста). **Флаг остаётся выключенным**;
+  расхождения — S17 (verify-s16 §5).
+
+**Чем проверено:** `flutter analyze --no-pub lib test tool` → **No issues
+found!**; `dart format --set-exit-if-changed lib test tool` → **0 changed**
+(739 файлов); `flutter test --no-pub --coverage --exclude-tags golden` →
+**3276 passed + 20 skipped, exit 0** (`green-s16-full.txt`), покрытие
+рукописного кода **90,9 % (27318/30059)** при пороге 80 % (`coverage-s16.txt`); guards зелёные в полном
+прогоне. Замер: `live-s16/run.json` (`spentUsd: 0.347353`, `code_dirty: false`);
+пересчёт — `tool/recompute_matrix_s16.dart` → `live-s16/matrix-s16.md`.
+
+**Ограничения (осознанные):** ёмкость — эвристика по salience/клаузам/виду
+(L233); у legacy нет отдельного `blocked` (L234); живые числа — только
+`deepseek/deepseek-flash` (L222); `matchedSubset` — по разделам (L232). Legacy не
+удалён и по поведению не менялся; промпты `gen-cards-v3`/`gen-map-v1` не
+менялись; схема БД не менялась (v3).
+
+---
+
 ## Генерация v3 — срез 15: пер-юнитные данные, честный перемер, флаг выключен (2026-11-28)
 
 **Срез:** `TASK.txt` «Срез 15. Пер-юнитные данные, честный перемер,
@@ -3160,3 +3215,5 @@ production-рендерами и widget-тестами). Push не выполн�
 **Следующее.** S1 (BACKLOG): `MaterialUnit` с offsets +
 `test/unit/domain/generation/material_unit_test.dart`. Старый путь нарезки не
 трогать.
+
+

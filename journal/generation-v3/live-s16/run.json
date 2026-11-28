@@ -1,0 +1,28 @@
+{
+  "provider": "deepseek",
+  "model": "deepseek-flash",
+  "srez": 16,
+  "code_version": "ade25b33",
+  "code_dirty": false,
+  "started_at": "2026-11-28T11:10:13.794114Z",
+  "finished_at": "2026-11-28T11:26:14.446780Z",
+  "matrix_duration_ms": 960651,
+  "logical_requests": 40,
+  "http_requests": 113,
+  "attempts": 113,
+  "attempts_rejected": 0,
+  "cost_guard": {
+    "label": "deepseek/deepseek-flash",
+    "maxCostUsd": 1.0,
+    "spentUsd": 0.34735320000000003,
+    "reservedUsd": 0.0,
+    "blocked": 0,
+    "inputPerMillion": 0.3,
+    "outputPerMillion": 1.2,
+    "currency": "USD",
+    "pricingSource": "https://api-docs.deepseek.com/quick_start/pricing",
+    "pricingDate": "2026-11-19"
+  },
+  "deadline_minutes": 45,
+  "cells": 12
+}

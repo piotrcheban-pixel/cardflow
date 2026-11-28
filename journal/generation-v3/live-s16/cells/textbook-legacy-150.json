@@ -1,0 +1,182 @@
+{
+  "schema": "s15",
+  "cell_id": "textbook-legacy-150",
+  "provider": "deepseek",
+  "model": "deepseek-flash",
+  "material": "учебный текст, 12 разделов",
+  "material_sections": 12,
+  "requested": 150,
+  "path": "legacy",
+  "status": "ran",
+  "reason": null,
+  "duration_ms": 174119,
+  "error_code": null,
+  "stage": "partial",
+  "report_accepted": 50,
+  "report_requested": 150,
+  "understanding_failures": [],
+  "code_version": "ade25b33",
+  "prompt_versions": {
+    "generating": "gen-ru-v9"
+  },
+  "metrics": {
+    "requested": 150,
+    "accepted": 50,
+    "generated": 50,
+    "invalid": 0,
+    "duplicates": 0,
+    "clean_accepted": 50,
+    "absolute_clean": 50,
+    "accepted_with_warnings": 0,
+    "warning_codes": {},
+    "requests": 8,
+    "covered_units": 12,
+    "total_units": 12,
+    "input_tokens": 53598,
+    "output_tokens": 25486,
+    "input_tokens_by_stage": {
+      "generating": 53598
+    },
+    "output_tokens_by_stage": {
+      "generating": 25486
+    },
+    "duplicates_by_level": {},
+    "unit_coverage": [
+      {
+        "unit_id": "s1",
+        "section_id": "doc:material.txt#0",
+        "salience": null,
+        "planned": 12,
+        "accepted": 4,
+        "produced": 4,
+        "clean": 4,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "s2",
+        "section_id": "doc:material.txt#1",
+        "salience": null,
+        "planned": 13,
+        "accepted": 4,
+        "produced": 4,
+        "clean": 4,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "s3",
+        "section_id": "doc:material.txt#2",
+        "salience": null,
+        "planned": 12,
+        "accepted": 4,
+        "produced": 4,
+        "clean": 4,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "s4",
+        "section_id": "doc:material.txt#3",
+        "salience": null,
+        "planned": 13,
+        "accepted": 4,
+        "produced": 4,
+        "clean": 4,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "s5",
+        "section_id": "doc:material.txt#4",
+        "salience": null,
+        "planned": 13,
+        "accepted": 4,
+        "produced": 4,
+        "clean": 4,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "s6",
+        "section_id": "doc:material.txt#5",
+        "salience": null,
+        "planned": 12,
+        "accepted": 4,
+        "produced": 4,
+        "clean": 4,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "s7",
+        "section_id": "doc:material.txt#6",
+        "salience": null,
+        "planned": 14,
+        "accepted": 4,
+        "produced": 4,
+        "clean": 4,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "s8",
+        "section_id": "doc:material.txt#7",
+        "salience": null,
+        "planned": 16,
+        "accepted": 4,
+        "produced": 4,
+        "clean": 4,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "s9",
+        "section_id": "doc:material.txt#8",
+        "salience": null,
+        "planned": 12,
+        "accepted": 4,
+        "produced": 4,
+        "clean": 4,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "s10",
+        "section_id": "doc:material.txt#9",
+        "salience": null,
+        "planned": 11,
+        "accepted": 5,
+        "produced": 5,
+        "clean": 5,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "s11",
+        "section_id": "doc:material.txt#10",
+        "salience": null,
+        "planned": 11,
+        "accepted": 4,
+        "produced": 4,
+        "clean": 4,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "s12",
+        "section_id": "doc:material.txt#11",
+        "salience": null,
+        "planned": 11,
+        "accepted": 5,
+        "produced": 5,
+        "clean": 5,
+        "warning_codes": {}
+      }
+    ],
+    "yield_per_1k_input_tokens": 0.9328706295011008,
+    "acceptance_rate": 1.0,
+    "clean_rate": 1.0,
+    "duplicate_rate": 0.0,
+    "attempted": 50,
+    "accepted_final": 50,
+    "unique": 50,
+    "clean": 50,
+    "dup_rate": 0.0,
+    "block_rate": 0.0,
+    "coverage": 1.0,
+    "mean_covered_salience": null,
+    "requests_per_10_cards": 1.6,
+    "batch_p50_ms": 18086,
+    "batch_p95_ms": 28183
+  }
+}
