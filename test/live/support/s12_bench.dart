@@ -41,6 +41,9 @@ class BenchCell {
     this.reportAccepted,
     this.reportRequested,
     this.understandingFailures = const <String>[],
+    this.cellId,
+    this.codeVersion,
+    this.promptVersions = const <String, String>{},
   });
 
   /// Имя материала (`учебный текст 12 разделов`, `статья 3 раздела`, `скан`).
@@ -82,6 +85,18 @@ class BenchCell {
   /// Причины отсутствия карты знаний (например, `no_text_layer`).
   final List<String> understandingFailures;
 
+  /// Идентификатор ячейки для пер-ячеечного `run.json` (срез 15); `null` —
+  /// файл не пишется (матрица среза 12).
+  final String? cellId;
+
+  /// Короткий хеш коммита, на котором снята ячейка (срез 15).
+  ///
+  /// `null` — строка старой схемы: в сравнение такие строки не идут (TASK).
+  final String? codeVersion;
+
+  /// Версии промптов прогона (проверка «промпты заморожены»).
+  final Map<String, String> promptVersions;
+
   /// JSON-строка для `matrix.jsonl`.
   Map<String, Object?> toJson() => <String, Object?>{
     'material': material,
@@ -96,6 +111,8 @@ class BenchCell {
     'report_accepted': reportAccepted,
     'report_requested': reportRequested,
     'understanding_failures': understandingFailures,
+    'code_version': codeVersion,
+    'prompt_versions': promptVersions,
     'metrics': metrics?.toJson(),
   };
 }
@@ -108,10 +125,14 @@ class S12Bench {
     required this.outputDir,
     required this.provider,
     required this.model,
+    this.title = 'Срез 12 — матрица живых прогонов',
   });
 
   /// Каталог отчёта.
   final String outputDir;
+
+  /// Заголовок markdown-таблицы (срез 12 по умолчанию).
+  final String title;
 
   /// Провайдер прогона (id пресета).
   final String provider;
@@ -138,7 +159,28 @@ class S12Bench {
       mode: FileMode.append,
       flush: true,
     );
+    await writeCellRun(cell);
     await writeMarkdown();
+  }
+
+  /// Пишет `cells/<cellId>.json` — снимок ячейки для пересчёта без повторных
+  /// запросов (TASK срез 15, часть 2, п. 6). Пишется и для `not_run`/`failed`:
+  /// у ячейки всегда есть статус и причина.
+  Future<void> writeCellRun(BenchCell cell) async {
+    final String? id = cell.cellId;
+    if (id == null) return;
+    final Directory directory = Directory('$outputDir/cells');
+    await directory.create(recursive: true);
+    final String payload = const JsonEncoder.withIndent('  ').convert(
+      <String, Object?>{
+        'schema': 's15',
+        'cell_id': id,
+        'provider': provider,
+        'model': model,
+        ...cell.toJson(),
+      },
+    );
+    await File('${directory.path}/$id.json').writeAsString(payload, flush: true);
   }
 
   /// Пишет markdown-таблицу из накопленных ячеек (без ручных чисел).
@@ -164,7 +206,7 @@ class S12Bench {
 
   String _markdown() {
     final StringBuffer buffer = StringBuffer()
-      ..writeln('# Срез 12 — матрица живых прогонов')
+      ..writeln('# $title')
       ..writeln()
       ..writeln('**Провайдер:** $provider · **Модель:** $model')
       ..writeln()
