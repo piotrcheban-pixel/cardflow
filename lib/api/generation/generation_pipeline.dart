@@ -89,6 +89,18 @@ typedef GenerationPlanFactory = GenerationPlan Function(
   ModelCapabilities capabilities,
 );
 
+/// Путь генерации v3 (TASK «Срез 11», п. 8): тонкий фасад этапов, собранный
+/// production-проводкой (`GenerationV3PathRunner`).
+///
+/// Раннер выбирает его **только** при включённом флаге `generationPipelineV3`;
+/// выключенный флаг — прежний legacy-путь без изменений (протокол §9).
+typedef GenerationV3Path = Future<GenerationRunResult> Function(
+  GenerationRunRequest request, {
+  required String runId,
+  GenerationProgressCallback? onProgress,
+  GenerationCancellation? cancellation,
+});
+
 /// Оркестратор генерации (контракт для UI).
 abstract interface class GenerationRunner {
   /// Запускает генерацию.
@@ -137,6 +149,7 @@ class GenerationPipeline implements GenerationRunner {
     this.maxOperationTokens = 0,
     this.maxOperationSeconds = 0,
     this.pipelineV3 = false,
+    this.v3Path,
   }) : assert(maxRecoveryRequests >= 0);
 
   /// Путь генерации v3 (TASK «Срез 9», флаг `generationPipelineV3` в
@@ -144,6 +157,12 @@ class GenerationPipeline implements GenerationRunner {
   /// завершения по журналу и метрики прогона. **Выключен** — прежнее поведение
   /// не меняется (протокол §9).
   final bool pipelineV3;
+
+  /// production-путь v3 (срез 11): фасад этапов и отчёт прогона.
+  ///
+  /// Работает только при включённом [pipelineV3]; `null` — флаг не включает
+  /// проводку, путь остаётся legacy (совместимость тестов среза 9).
+  final GenerationV3Path? v3Path;
 
   /// Вызов модели на фрагмент.
   final GenerationCaller caller;
@@ -232,6 +251,17 @@ class GenerationPipeline implements GenerationRunner {
     _usedImageUrls.clear();
     _resetImageBudget();
     final String jobId = jobIdFactory();
+    // Путь v3: фасад этапов вместо монолита, только при включённом флаге и
+    // наличии production-проводки (п. 8 среза 11). Выключен — legacy ниже.
+    final GenerationV3Path? v3 = v3Path;
+    if (pipelineV3 && v3 != null) {
+      return v3(
+        request,
+        runId: jobId,
+        onProgress: onProgress,
+        cancellation: cancellation,
+      );
+    }
     final DateTime createdAt = now();
     final GenerationJob initialJob = GenerationJob(
       id: jobId,

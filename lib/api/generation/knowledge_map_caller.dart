@@ -17,6 +17,7 @@ class KnowledgeMapRequest {
     required this.promptVersion,
     required this.systemPrompt,
     required this.userContent,
+    this.maxOutputTokens,
   });
 
   /// id фрагмента: раздел `ContentModel` (`doc:<файл>#<раздел>`).
@@ -33,6 +34,12 @@ class KnowledgeMapRequest {
 
   /// Пользовательское сообщение: раздел и блоки с id.
   final String userContent;
+
+  /// Лимит вывода запроса (`max_tokens`); `null` — лимит реализации.
+  ///
+  /// По этому лимиту Understanding делит обрезанный ответ на части **целыми
+  /// блоками раздела**, а не пополам (TASK «Срез 11», п. 5).
+  final int? maxOutputTokens;
 
   @override
   String toString() => 'KnowledgeMapRequest($fragmentId, $promptVersion)';

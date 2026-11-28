@@ -18,6 +18,7 @@ import 'package:cardflow/api/generation/batch_job_recorder.dart';
 import 'package:cardflow/api/http/retry_policy.dart';
 import 'package:cardflow/api/prompts/cards_prompt.dart';
 import 'package:cardflow/domain/generation/allocation.dart';
+import 'package:cardflow/domain/generation/card_gate.dart';
 import 'package:cardflow/domain/generation/cards_batch.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
@@ -34,10 +35,12 @@ class CardsBatchRun {
   CardsBatchRun({
     required this.ledger,
     List<GeneratedCard> acceptedCards = const <GeneratedCard>[],
+    List<GeneratedCard> blockedCards = const <GeneratedCard>[],
     this.usage = const TokenUsage(),
     required this.promptVersion,
     this.cancelled = false,
-  }) : acceptedCards = List<GeneratedCard>.unmodifiable(acceptedCards);
+  }) : acceptedCards = List<GeneratedCard>.unmodifiable(acceptedCards),
+       blockedCards = List<GeneratedCard>.unmodifiable(blockedCards);
 
   /// Пустой итог (ни одного запроса).
   factory CardsBatchRun.empty({required String promptVersion}) => CardsBatchRun(
@@ -50,6 +53,12 @@ class CardsBatchRun {
 
   /// Принятые карточки в порядке принятия.
   final List<GeneratedCard> acceptedCards;
+
+  /// Карточки, заблокированные гейтом первого прохода (TASK «Срез 11», п. 2).
+  ///
+  /// В журнал «принято» не входят; хранятся для «показать отброшенные» и для
+  /// учёта попыток на слот в доборе.
+  final List<GeneratedCard> blockedCards;
 
   /// Фактический расход токенов принятых ответов.
   final TokenUsage usage;
@@ -122,8 +131,14 @@ class CardsBatchEngine {
   final String promptVersion;
 
   /// Выполняет план Allocation по партиям.
+  ///
+  /// [gate] — гейт карточки (TASK «Срез 11», п. 4): первый проход и добор
+  /// спрашивают его, поэтому в принятое и в [CardSink] попадает только карточка
+  /// после проверки. `null` — прогон без проверки (совместимость тестов пути
+  /// без гейта; production-фасад передаёт гейт всегда).
   Future<CardsBatchRun> run(
     AllocationPlan plan, {
+    CardGate? gate,
     CancellationSignal? cancellation,
   }) async {
     final BatchJobRecorder? recorder = jobRecorder;
@@ -139,6 +154,7 @@ class CardsBatchEngine {
       plan.batches.map((AllocationBatch batch) => batch.cards.length),
     );
     final List<GeneratedCard> acceptedCards = <GeneratedCard>[];
+    final List<GeneratedCard> blockedCards = <GeneratedCard>[];
     final Map<int, List<AcceptedCard>> acceptedByBatch =
         <int, List<AcceptedCard>>{};
     var usage = const TokenUsage();
@@ -157,7 +173,13 @@ class CardsBatchEngine {
       while (queue.isNotEmpty) {
         if (cancellation?.isCancelled ?? false) {
           ledger = ledger.markCause(batch.index, ShortfallKind.cancelled);
-          return _finish(ledger, acceptedCards, usage, cancelled: true);
+          return _finish(
+            ledger,
+            acceptedCards,
+            usage,
+            blockedCards: blockedCards,
+            cancelled: true,
+          );
         }
         final CardsBatch slice = queue.removeAt(0);
         ledger = ledger.attempt(slice.index);
@@ -210,7 +232,13 @@ class CardsBatchEngine {
         }
         if (cancelledNow) {
           ledger = ledger.markCause(slice.index, ShortfallKind.cancelled);
-          return _finish(ledger, acceptedCards, usage, cancelled: true);
+          return _finish(
+            ledger,
+            acceptedCards,
+            usage,
+            blockedCards: blockedCards,
+            cancelled: true,
+          );
         }
         if (result == null) {
           break; // партия не сгенерирована — причина в журнале
@@ -223,10 +251,24 @@ class CardsBatchEngine {
         );
         usage = _addUsage(usage, result.usage);
 
-        final List<GeneratedCard> acceptedNow = <GeneratedCard>[
-          for (final GeneratedCard card in result.cards)
-            if (card.unitId != null && slice.unit(card.unitId!) != null) card,
-        ];
+        // Гейт — до принятия: журнал увеличивает accepted только после
+        // проверки (TASK «Срез 11», п. 2). Заблокированная карточка не идёт ни
+        // в принятое, ни в контекст партии, ни в [CardSink].
+        final List<GeneratedCard> acceptedNow = <GeneratedCard>[];
+        var blockedNow = 0;
+        for (final GeneratedCard card in result.cards) {
+          final String? unitId = card.unitId;
+          if (unitId == null || slice.unit(unitId) == null) continue;
+          if (gate != null && gate.evaluate(card) == CardGateVerdict.blocked) {
+            blockedCards.add(card);
+            blockedNow++;
+            continue;
+          }
+          acceptedNow.add(card);
+        }
+        if (blockedNow > 0) {
+          ledger = ledger.record(slice.index, invalid: blockedNow);
+        }
         for (final GeneratedCard card in acceptedNow) {
           acceptedCards.add(card);
           final KnowledgeUnit unit = unitsById[card.unitId!]!;
@@ -245,7 +287,9 @@ class CardsBatchEngine {
           if (debt.isNotEmpty) {
             ledger = ledger.markCause(
               batch.index,
-              ShortfallKind.exhaustedMaterial,
+              blockedNow > 0
+                  ? ShortfallKind.validationRejects
+                  : ShortfallKind.exhaustedMaterial,
             );
           }
           continue;
@@ -268,7 +312,13 @@ class CardsBatchEngine {
     }
 
     _report(ledger);
-    return _finish(ledger, acceptedCards, usage, cancelled: false);
+    return _finish(
+      ledger,
+      acceptedCards,
+      usage,
+      blockedCards: blockedCards,
+      cancelled: false,
+    );
   }
 
   /// HTTP-статус для [RetryPolicy] по коду ошибки генерации.
@@ -286,10 +336,12 @@ class CardsBatchEngine {
     GenerationLedger ledger,
     List<GeneratedCard> acceptedCards,
     TokenUsage usage, {
+    required List<GeneratedCard> blockedCards,
     required bool cancelled,
   }) => CardsBatchRun(
     ledger: ledger,
     acceptedCards: acceptedCards,
+    blockedCards: blockedCards,
     usage: usage,
     promptVersion: promptVersion,
     cancelled: cancelled,

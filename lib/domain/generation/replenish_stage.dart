@@ -30,6 +30,7 @@ library;
 import 'dart:math' as math;
 
 import 'package:cardflow/domain/generation/allocation.dart';
+import 'package:cardflow/domain/generation/card_gate.dart';
 import 'package:cardflow/domain/generation/cards_batch.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
@@ -106,6 +107,10 @@ enum ReplenishStopReason {
   /// Провайдер не ответил или ответил ошибкой: партия добора не сгенерирована.
   providerError('provider_error'),
 
+  /// Слот закрыт: обе попытки (`ReplenishPolicy.maxAttemptsPerSlot`) дали
+  /// карточку, которую гейт заблокировал (TASK «Срез 11», п. 3).
+  validationRejects('validation_rejects'),
+
   /// Прогон отменён пользователем; принятое сохранено.
   cancelled('cancelled'),
 
@@ -144,10 +149,12 @@ class ReplenishPolicy {
   /// Создаёт политику; неположительные пределы — ошибка программиста.
   const ReplenishPolicy({
     this.maxPasses = defaultMaxPasses,
+    this.maxAttemptsPerSlot = defaultMaxAttemptsPerSlot,
     this.maxRequests,
     this.tokenBudget,
     this.wallClock,
   }) : assert(maxPasses > 0, 'Число проходов положительно'),
+       assert(maxAttemptsPerSlot > 0, 'Число попыток на слот положительно'),
        assert(
          maxRequests == null || maxRequests > 0,
          'Предел запросов положителен',
@@ -159,6 +166,15 @@ class ReplenishPolicy {
 
   /// Число проходов добора по умолчанию (TASK: `maxPasses = 3`).
   static const int defaultMaxPasses = 3;
+
+  /// Сколько всего попыток даётся одному слоту заказа (TASK «Срез 11», п. 3).
+  ///
+  /// Две: первая — первый проход Generation, вторая — одна повторная попытка в
+  /// доборе. Вторая блокировка того же слота закрывает его как
+  /// [ReplenishStopReason.validationRejects], и число попадает в
+  /// `GenerationReport.shortfallReasons`. «Третья блокировка» тем самым
+  /// невозможна: слот закрыт раньше (`journal/QUESTIONS.md` Q23).
+  static const int defaultMaxAttemptsPerSlot = 2;
 
   /// Минимальный предел времени операции.
   static const Duration defaultWallClock = Duration(minutes: 10);
@@ -176,6 +192,9 @@ class ReplenishPolicy {
 
   /// Сколько проходов добора допускается после первого прохода Generation.
   final int maxPasses;
+
+  /// Сколько всего попыток даётся слоту заказа (включая первый проход).
+  final int maxAttemptsPerSlot;
 
   /// Предел запросов операции; `null` — [maxRequestsForRequested].
   final int? maxRequests;
@@ -206,17 +225,24 @@ class ReplenishPolicy {
       identical(this, other) ||
       other is ReplenishPolicy &&
           other.maxPasses == maxPasses &&
+          other.maxAttemptsPerSlot == maxAttemptsPerSlot &&
           other.maxRequests == maxRequests &&
           other.tokenBudget == tokenBudget &&
           other.wallClock == wallClock;
 
   @override
-  int get hashCode =>
-      Object.hash(maxPasses, maxRequests, tokenBudget, wallClock);
+  int get hashCode => Object.hash(
+    maxPasses,
+    maxAttemptsPerSlot,
+    maxRequests,
+    tokenBudget,
+    wallClock,
+  );
 
   @override
   String toString() =>
-      'ReplenishPolicy(проходов $maxPasses, запросов '
+      'ReplenishPolicy(проходов $maxPasses, попыток на слот '
+      '$maxAttemptsPerSlot, запросов '
       '${maxRequests ?? 'от заказа'}, токенов '
       '${tokenBudget ?? 'от плана'}, время '
       '${wallClock ?? 'от заказа (max(10 мин, 2 с × N))'})';
@@ -281,10 +307,12 @@ class ReplenishPass {
     required this.plan,
     required this.ledger,
     List<GeneratedCard> accepted = const <GeneratedCard>[],
+    List<GeneratedCard> blocked = const <GeneratedCard>[],
     this.usage = const TokenUsage(),
     this.filledSlots = 0,
     this.surplus = 0,
-  }) : accepted = List<GeneratedCard>.unmodifiable(accepted);
+  }) : accepted = List<GeneratedCard>.unmodifiable(accepted),
+       blocked = List<GeneratedCard>.unmodifiable(blocked);
 
   /// Номер прохода с 1 (первый проход Generation не считается).
   final int index;
@@ -297,6 +325,9 @@ class ReplenishPass {
 
   /// Принятые в проходе карточки (порядок ответов модели).
   final List<GeneratedCard> accepted;
+
+  /// Карточки, заблокированные гейтом в проходе (слот не закрыт).
+  final List<GeneratedCard> blocked;
 
   /// Фактический расход токенов прохода.
   final TokenUsage usage;
@@ -337,6 +368,7 @@ class ReplenishOutcome {
     required this.reason,
     required this.requested,
     List<GeneratedCard> acceptedCards = const <GeneratedCard>[],
+    List<GeneratedCard> blockedCards = const <GeneratedCard>[],
     List<ReplenishPass> passes = const <ReplenishPass>[],
     this.requests = 0,
     this.invalid = 0,
@@ -346,6 +378,7 @@ class ReplenishOutcome {
     this.unfilledSlots = 0,
     this.guards,
   }) : acceptedCards = List<GeneratedCard>.unmodifiable(acceptedCards),
+       blockedCards = List<GeneratedCard>.unmodifiable(blockedCards),
        passes = List<ReplenishPass>.unmodifiable(passes);
 
   /// Терминальный этап прогона: [GenerationStage.ready] — только при закрытых
@@ -361,6 +394,10 @@ class ReplenishOutcome {
 
   /// Принятые карточки всей операции (первый проход и добор).
   final List<GeneratedCard> acceptedCards;
+
+  /// Карточки, заблокированные гейтом **в доборе** (первый проход отдаёт свои
+  /// через `CardsBatchRun.blockedCards`; вызывающий слой складывает оба списка).
+  final List<GeneratedCard> blockedCards;
 
   /// Проходы добора в порядке выполнения.
   final List<ReplenishPass> passes;
@@ -407,6 +444,7 @@ class ReplenishOutcome {
       ReplenishStopReason.cancelled => ShortfallKind.cancelled,
       ReplenishStopReason.providerError => ShortfallKind.providerError,
       ReplenishStopReason.exhaustedMaterial => ShortfallKind.exhaustedMaterial,
+      ReplenishStopReason.validationRejects => ShortfallKind.validationRejects,
       _ => null,
     };
   }
@@ -459,13 +497,18 @@ class ReplenishStage {
   /// Запускает добор долга по плану [plan] и журналу первого прохода [ledger].
   ///
   /// [acceptedCards] — принятое первого прохода (то же, что считает [ledger]);
+  /// [initialBlockedCards] — карточки, заблокированные гейтом первого прохода:
+  /// они уже израсходовали попытку своего слота (TASK «Срез 11», п. 3);
   /// [initialUsage] — расход первого прохода (входит в бюджет токенов);
+  /// [gate] — тот же гейт, что был у первого прохода (один путь, не два);
   /// [startedAt] — начало операции для [ReplenishPolicy.wallClock] (по
   /// умолчанию — текущий момент по [clock]); [cancellation] — сигнал отмены.
   Future<ReplenishOutcome> run({
     required AllocationPlan plan,
     required GenerationLedger ledger,
     List<GeneratedCard> acceptedCards = const <GeneratedCard>[],
+    List<GeneratedCard> initialBlockedCards = const <GeneratedCard>[],
+    CardGate? gate,
     TokenUsage initialUsage = const TokenUsage(),
     DateTime? startedAt,
     CancellationSignal? cancellation,
@@ -499,6 +542,27 @@ class ReplenishStage {
         if (card.unitId != null)
           _slot(card.unitId!, _normalizeAngle(card.angle)),
     };
+    // Попытки слотов, которые уже потратил первый проход: блокированная
+    // карточка не закрыла слот, но израсходовала попытку (TASK «Срез 11», п. 3).
+    final Map<String, int> blockedAttempts = <String, int>{};
+    final Set<String> planSlots = <String>{
+      for (final AllocatedCard card in plan.cards)
+        _slot(card.unitId, card.angle?.wireName),
+    };
+    for (final GeneratedCard card in initialBlockedCards) {
+      final String? unitId = card.unitId;
+      if (unitId == null) continue;
+      final String slot = _slot(unitId, _normalizeAngle(card.angle));
+      if (!planSlots.contains(slot)) continue;
+      blockedAttempts[slot] = (blockedAttempts[slot] ?? 0) + 1;
+    }
+    // Слот, которому попытки уже не осталось, закрывается как
+    // `validation_rejects` — модель может возвращать тот же дефект бесконечно.
+    final Set<String> rejectedSlots = <String>{
+      for (final MapEntry<String, int> entry in blockedAttempts.entries)
+        if (entry.value >= policy.maxAttemptsPerSlot) entry.key,
+    };
+    final List<GeneratedCard> blockedCards = <GeneratedCard>[];
     final Map<String, List<AcceptedCard>> context =
         <String, List<AcceptedCard>>{};
     for (final GeneratedCard card in accepted) {
@@ -532,7 +596,12 @@ class ReplenishStage {
     ReplenishStopReason reason = ReplenishStopReason.complete;
 
     if (unfilled > 0) {
-      List<AllocatedCard> debt = _debtOf(plan, satisfied, exhaustedUnits);
+      List<AllocatedCard> debt = _debtOf(
+        plan,
+        satisfied,
+        exhaustedUnits,
+        rejectedSlots,
+      );
       if (cancellation?.isCancelled ?? false) {
         reason = ReplenishStopReason.cancelled;
       } else if (ledger.shortfall == ShortfallKind.cancelled) {
@@ -540,7 +609,9 @@ class ReplenishStage {
       } else if (plan.cards.isEmpty || plan.units.isEmpty) {
         reason = ReplenishStopReason.noUnitPlan;
       } else if (debt.isEmpty) {
-        reason = ReplenishStopReason.exhaustedMaterial;
+        reason = rejectedSlots.isEmpty
+            ? ReplenishStopReason.exhaustedMaterial
+            : ReplenishStopReason.validationRejects;
       } else {
         while (true) {
           if (passes.length >= policy.maxPasses) {
@@ -576,6 +647,9 @@ class ReplenishStage {
             wallClock: wallClock,
             startedAt: start,
             cancellation: cancellation,
+            gate: gate,
+            blockedAttempts: blockedAttempts,
+            rejectedSlots: rejectedSlots,
           );
           passes.add(result.pass);
           requests = result.requests;
@@ -584,6 +658,7 @@ class ReplenishStage {
           invalid += result.pass.ledger.invalid;
           duplicates += result.pass.ledger.duplicates;
           accepted.addAll(result.pass.accepted);
+          blockedCards.addAll(result.pass.blocked);
 
           final ReplenishStopReason? stop = result.stop;
           if (stop != null) {
@@ -591,17 +666,22 @@ class ReplenishStage {
             break;
           }
           unfilled = _unfilledSlots(plan, satisfied);
-          if (result.pass.filledSlots == 0) {
+          final bool blockedNow = result.pass.blocked.isNotEmpty;
+          if (result.pass.filledSlots == 0 && !blockedNow) {
             // Ответ не закрыл ни одного слота: материал по этим вопросам
             // исчерпан, добирать перефразированием запрещено (TASK п. 3).
             reason = ReplenishStopReason.exhaustedMaterial;
             break;
           }
-          debt = _debtOf(plan, satisfied, exhaustedUnits);
+          debt = _debtOf(plan, satisfied, exhaustedUnits, rejectedSlots);
           if (debt.isEmpty) {
-            reason = unfilled == 0
-                ? ReplenishStopReason.complete
-                : ReplenishStopReason.exhaustedMaterial;
+            if (unfilled == 0) {
+              reason = ReplenishStopReason.complete;
+            } else {
+              reason = rejectedSlots.isEmpty
+                  ? ReplenishStopReason.exhaustedMaterial
+                  : ReplenishStopReason.validationRejects;
+            }
             break;
           }
         }
@@ -617,6 +697,7 @@ class ReplenishStage {
       reason: reason,
       requested: plan.requested,
       acceptedCards: accepted,
+      blockedCards: blockedCards,
       passes: passes,
       requests: requests,
       invalid: invalid,
@@ -642,6 +723,11 @@ class ReplenishStage {
   }
 
   /// Один проход добора: партии из карточек [debt] с контекстом принятого.
+  ///
+  /// [gate] — гейт карточки (тот же, что у первого прохода): заблокированная
+  /// карточка не закрывает слот и тратит попытку [blockedAttempts]; после
+  /// [ReplenishPolicy.maxAttemptsPerSlot] попыток слот попадает в
+  /// [rejectedSlots] и больше не запрашивается.
   Future<_PassRun> _runPass({
     required int index,
     required List<AllocatedCard> debt,
@@ -656,12 +742,16 @@ class ReplenishStage {
     required Duration wallClock,
     required DateTime startedAt,
     required CancellationSignal? cancellation,
+    required CardGate? gate,
+    required Map<String, int> blockedAttempts,
+    required Set<String> rejectedSlots,
   }) async {
     final AllocationPlan passPlan = _passPlan(debt, plan);
     GenerationLedger passLedger = GenerationLedger.fromBudgets(<int>[
       for (final AllocationBatch batch in passPlan.batches) batch.cards.length,
     ]);
     final List<GeneratedCard> accepted = <GeneratedCard>[];
+    final List<GeneratedCard> blocked = <GeneratedCard>[];
     var usage = const TokenUsage();
     var requestsNow = requests;
     var spentNow = spent;
@@ -729,12 +819,26 @@ class ReplenishStage {
       usage = _addUsage(usage, result.usage);
 
       var produced = 0;
+      var blockedNow = 0;
       for (final GeneratedCard card in result.cards) {
         final String? unitId = card.unitId;
         if (unitId == null || !batchUnitIds.contains(unitId)) continue;
         final KnowledgeUnit unit = unitsById[unitId]!;
         final String slot = _slot(unitId, _normalizeAngle(card.angle));
-        if (!satisfied.contains(slot) && requestedSlots.contains(slot)) {
+        final bool requested = requestedSlots.contains(slot);
+        // Гейт — до закрытия слота: заблокированная карточка слот не закрывает
+        // и в принятое не идёт (TASK «Срез 11», п. 2).
+        if (requested &&
+            gate != null &&
+            gate.evaluate(card) == CardGateVerdict.blocked) {
+          blocked.add(card);
+          blockedNow++;
+          final int attempts = (blockedAttempts[slot] ?? 0) + 1;
+          blockedAttempts[slot] = attempts;
+          if (attempts >= policy.maxAttemptsPerSlot) rejectedSlots.add(slot);
+          continue;
+        }
+        if (!satisfied.contains(slot) && requested) {
           satisfied.add(slot);
           filled++;
           produced++;
@@ -750,8 +854,8 @@ class ReplenishStage {
       }
       passLedger = passLedger.record(
         batch.index,
-        generated: produced + result.rejectedCards,
-        invalid: result.rejectedCards,
+        generated: produced + result.rejectedCards + blockedNow,
+        invalid: result.rejectedCards + blockedNow,
       );
     }
 
@@ -761,6 +865,7 @@ class ReplenishStage {
         plan: passPlan,
         ledger: passLedger,
         accepted: accepted,
+        blocked: blocked,
         usage: usage,
         filledSlots: filled,
         surplus: surplus,
@@ -803,14 +908,19 @@ class ReplenishStage {
   }
 
   /// Карточки заказа, которым не нашлось принятой пары и которые можно добрать.
+  ///
+  /// Слоты, закрытые как `validation_rejects` (исчерпаны попытки), и единицы,
+  /// объявленные исчерпанными материалом, не запрашиваются снова.
   static List<AllocatedCard> _debtOf(
     AllocationPlan plan,
     Set<String> satisfied,
     Set<String> exhaustedUnits,
+    Set<String> rejectedSlots,
   ) => <AllocatedCard>[
     for (final AllocatedCard card in plan.cards)
       if (!satisfied.contains(_slot(card.unitId, card.angle?.wireName)) &&
-          !exhaustedUnits.contains(card.unitId))
+          !exhaustedUnits.contains(card.unitId) &&
+          !rejectedSlots.contains(_slot(card.unitId, card.angle?.wireName)))
         card,
   ];
 

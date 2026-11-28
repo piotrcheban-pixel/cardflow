@@ -11,6 +11,7 @@
 library;
 
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:crypto/crypto.dart';
 
@@ -135,6 +136,23 @@ class UnderstandingResult {
   );
 }
 
+/// Оценка вывода одного пункта карты (утверждение, якоря, JSON-обвязка).
+///
+/// По этой оценке Understanding делит обрезанный ответ на части **целыми
+/// блоками раздела** в пределах `max_tokens`, а не пополам (TASK «Срез 11»,
+/// п. 5): деление задаёт лимит вывода, а не длина фрагмента.
+const int kTokensPerMapUnit = 96;
+
+/// Сколько блоков раздела просить в одном запросе при лимите [maxOutputTokens].
+int blocksPerMapRequest(int maxOutputTokens) =>
+    math.max(1, maxOutputTokens ~/ kTokensPerMapUnit);
+
+/// Глубина деления обрезанного фрагмента (защита от бесконечной рекурсии).
+const int maxUnderstandingSplits = 8;
+
+/// Лимит вывода запроса Understanding по умолчанию (`max_tokens`).
+const int kDefaultMapOutputTokens = 4096;
+
 /// Сервис этапа Understanding.
 class UnderstandingService {
   /// Создаёт сервис; [tolerant] — разрешить markdown-ограждение вокруг JSON.
@@ -143,7 +161,14 @@ class UnderstandingService {
     required this.cache,
     this.parser = const KnowledgeMapParser(),
     this.tolerant = false,
+    this.maxOutputTokens = kDefaultMapOutputTokens,
   });
+
+  /// Лимит вывода одного запроса (`max_tokens`).
+  ///
+  /// Он же задаёт размер частей при делении обрезанного ответа: части — целые
+  /// блоки раздела, сколько их влезает в лимит ([blocksPerMapRequest]).
+  final int maxOutputTokens;
 
   /// Вызов модели на понимание фрагмента.
   final KnowledgeMapCaller caller;
@@ -190,71 +215,16 @@ class UnderstandingService {
 
     for (final Section section in sections) {
       final List<Block> blocks = _contentBlocks(document, section);
-      final KnowledgeMapRequest request = KnowledgeMapRequest(
+      final _FragmentOutcome fragment = await _extract(
         fragmentId: section.id,
         sectionId: section.id,
-        promptVersion: understandingPromptVersion,
-        systemPrompt: understandingSystemPromptGenMapV1,
-        userContent: buildUnderstandingUserContent(
-          sectionId: section.id,
-          sectionTitle: section.title,
-          blocks: blocks,
-        ),
+        sectionTitle: section.title,
+        blocks: blocks,
+        sectionIds: sectionIds,
+        usages: usages,
       );
-
-      final KnowledgeMapRawResponse response;
-      try {
-        response = await caller.extract(request);
-      } on GenerationException catch (error) {
-        if (error.code == GenerationErrorCode.cancelled) rethrow;
-        outcomes.add(
-          KnowledgeMapFragmentOutcome.failed(
-            fragmentId: section.id,
-            reason: KnowledgeMapFailureReason.providerError,
-          ),
-        );
-        continue;
-      }
-
-      usages.add(response.usage);
-      if (response.truncated) {
-        outcomes.add(
-          KnowledgeMapFragmentOutcome.failed(
-            fragmentId: section.id,
-            reason: KnowledgeMapFailureReason.truncated,
-          ),
-        );
-        continue;
-      }
-
-      final KnowledgeMapParseOutcome parsed = parser.parse(
-        response.json,
-        context: KnowledgeMapFragmentContext(
-          fragmentId: section.id,
-          sectionId: section.id,
-          blockIds: <String>{for (final Block block in blocks) block.id},
-          sectionIds: sectionIds,
-        ),
-        tolerant: tolerant,
-      );
-      if (!parsed.isSuccess) {
-        outcomes.add(
-          KnowledgeMapFragmentOutcome.failed(
-            fragmentId: section.id,
-            reason: parsed.failureReason!,
-          ),
-        );
-        continue;
-      }
-
-      units.addAll(parsed.units);
-      outcomes.add(
-        KnowledgeMapFragmentOutcome.understood(
-          fragmentId: section.id,
-          unitCount: parsed.units.length,
-          rejectedUnits: parsed.rejectedUnits,
-        ),
-      );
+      units.addAll(fragment.units);
+      outcomes.add(fragment.toPublic(section.id));
     }
 
     final KnowledgeMap map = KnowledgeMap(
@@ -275,6 +245,91 @@ class UnderstandingService {
       map: map,
       fragments: List<KnowledgeMapFragmentOutcome>.unmodifiable(outcomes),
       usage: _sumUsage(usages),
+    );
+  }
+
+  /// Понимание одного фрагмента (или его частей после обрезки по `max_tokens`).
+  ///
+  /// Обрезанный ответ не теряет раздел целиком: блоки делятся на части по
+  /// [blocksPerMapRequest] (сколько пунктов карты влезает в лимит вывода), а не
+  /// пополам, и каждая часть запрашивается отдельно. Часть, обрезанная снова, —
+  /// помеченный фрагмент (`truncated`), как в срезе 3: прогон продолжается.
+  Future<_FragmentOutcome> _extract({
+    required String fragmentId,
+    required String sectionId,
+    required String? sectionTitle,
+    required List<Block> blocks,
+    required Set<String> sectionIds,
+    required List<TokenUsage> usages,
+    int depth = 0,
+  }) async {
+    final KnowledgeMapRequest request = KnowledgeMapRequest(
+      fragmentId: fragmentId,
+      sectionId: sectionId,
+      promptVersion: understandingPromptVersion,
+      systemPrompt: understandingSystemPromptGenMapV1,
+      userContent: buildUnderstandingUserContent(
+        sectionId: sectionId,
+        sectionTitle: sectionTitle,
+        blocks: blocks,
+      ),
+      maxOutputTokens: maxOutputTokens,
+    );
+
+    final KnowledgeMapRawResponse response;
+    try {
+      response = await caller.extract(request);
+    } on GenerationException catch (error) {
+      if (error.code == GenerationErrorCode.cancelled) rethrow;
+      return const _FragmentOutcome(
+        failureReason: KnowledgeMapFailureReason.providerError,
+      );
+    }
+
+    usages.add(response.usage);
+    if (response.truncated) {
+      final int perPart = blocksPerMapRequest(maxOutputTokens);
+      if (blocks.length <= perPart || depth >= maxUnderstandingSplits) {
+        return const _FragmentOutcome(
+          failureReason: KnowledgeMapFailureReason.truncated,
+        );
+      }
+      final List<_FragmentOutcome> parts = <_FragmentOutcome>[];
+      var partIndex = 0;
+      for (var start = 0; start < blocks.length; start += perPart) {
+        partIndex++;
+        final int end = math.min(start + perPart, blocks.length);
+        parts.add(
+          await _extract(
+            fragmentId: '$fragmentId#$partIndex',
+            sectionId: sectionId,
+            sectionTitle: sectionTitle,
+            blocks: blocks.sublist(start, end),
+            sectionIds: sectionIds,
+            usages: usages,
+            depth: depth + 1,
+          ),
+        );
+      }
+      return _FragmentOutcome.merged(parts);
+    }
+
+    final KnowledgeMapParseOutcome parsed = parser.parse(
+      response.json,
+      context: KnowledgeMapFragmentContext(
+        fragmentId: fragmentId,
+        sectionId: sectionId,
+        blockIds: <String>{for (final Block block in blocks) block.id},
+        sectionIds: sectionIds,
+      ),
+      tolerant: tolerant,
+    );
+    if (!parsed.isSuccess) {
+      return _FragmentOutcome(failureReason: parsed.failureReason!);
+    }
+    return _FragmentOutcome(
+      units: parsed.units,
+      rejectedUnits: parsed.rejectedUnits,
     );
   }
 
@@ -314,4 +369,48 @@ class UnderstandingService {
       totalTokens: sum((TokenUsage usage) => usage.totalTokens),
     );
   }
+}
+
+/// Итог понимания фрагмента (или объединения его частей после обрезки).
+class _FragmentOutcome {
+  const _FragmentOutcome({
+    this.units = const <KnowledgeUnit>[],
+    this.rejectedUnits = 0,
+    this.failureReason,
+  });
+
+  /// Объединяет части разрезанного фрагмента: единицы успешных частей
+  /// сохраняются, помеченные части дают причину пометки всего фрагмента.
+  factory _FragmentOutcome.merged(List<_FragmentOutcome> parts) {
+    KnowledgeMapFailureReason? failure;
+    final List<KnowledgeUnit> units = <KnowledgeUnit>[];
+    var rejected = 0;
+    for (final _FragmentOutcome part in parts) {
+      units.addAll(part.units);
+      rejected += part.rejectedUnits;
+      failure ??= part.failureReason;
+    }
+    return _FragmentOutcome(
+      units: units,
+      rejectedUnits: rejected,
+      failureReason: failure,
+    );
+  }
+
+  final List<KnowledgeUnit> units;
+  final int rejectedUnits;
+  final KnowledgeMapFailureReason? failureReason;
+
+  /// Публичный статус фрагмента для [UnderstandingResult.fragments].
+  KnowledgeMapFragmentOutcome toPublic(String fragmentId) =>
+      failureReason != null
+      ? KnowledgeMapFragmentOutcome.failed(
+          fragmentId: fragmentId,
+          reason: failureReason!,
+        )
+      : KnowledgeMapFragmentOutcome.understood(
+          fragmentId: fragmentId,
+          unitCount: units.length,
+          rejectedUnits: rejectedUnits,
+        );
 }

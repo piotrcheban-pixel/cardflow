@@ -154,6 +154,29 @@ Understanding (порт `UnderstandingStage` или единственная е�
 К production-раннеру фасад не подключён: нет HTTP-реализации
 `KnowledgeMapCaller`; ограничения — `journal/QUESTIONS.md` Q22 и
 `journal/generation-v3/verify-s10.md` §4.
+**Уточнение среза 11 (TASK.txt):** гейт, HTTP-карта и проводка фасада.
+Гейт — порт `CardGate` (`lib/domain/generation/card_gate.dart`, один метод
+`evaluate → accepted|warning|blocked`) на существующем `CardValidator`
+(`CardValidatorGate`); его спрашивают **оба** этапа до принятия: `CardsBatchEngine`
+(первый проход) и `ReplenishStage` (добор), поэтому в `accepted`, `CardSink` и
+`<already_accepted>` попадает только проверенная карточка (ARCH §3.2/§3.5).
+`ReplenishPolicy.maxAttemptsPerSlot = 2` — всего попыток слота: вторая блокировка
+закрывает слот как `validation_rejects`, число — в
+`GenerationReport.shortfallReasons`. Understanding получил HTTP-реализацию порта
+`KnowledgeMapCaller` (`HttpKnowledgeMapCaller`: `gen-map-v1`, схема карты,
+`usage`, `RetryPolicy` — 429 `Retry-After`/5xx/таймаут, без повторов на 400/401)
+и деление обрыва по `max_tokens` целыми блоками раздела
+(`blocksPerMapRequest`), а срез 8 подключён к проводке:
+`DriftKnowledgeMapCache` в `GenerationV3PathRunner` — повторный материал не платит
+за Understanding. Проводка — `GenerationV3PathRunner`
+(`lib/api/generation/generation_v3_path.dart`): материалы → `Document`
+(`ContentModelBuilder`), Understanding → Allocation → Generation → Validation
+(гейт) → Replenish → журнал/импорт, `GenerationPipeline.v3Path` вызывается
+только при включённом `generationPipelineV3` (выключен — legacy без изменений).
+`GenerationRunResult.report` несёт `GenerationReport`: UI берёт из него «принято
+N из M», причины с числами, покрытие единиц и расход токенов, а `report.
+understandingFailures` — причину отсутствия карты (`no_text_layer`, помеченные
+фрагменты). Толкования — Q23; ограничения — `journal/generation-v3/verify-s11.md` §4.
 **Поток данных.** `MaterialUnit` несут offsets — единственный источник истины о
 тексте; `KnowledgeMap` ссылается на них, а не копирует текст; партия несёт id
 пунктов, поэтому ответ модели привязан к материалу; `CardCandidate` сохраняет

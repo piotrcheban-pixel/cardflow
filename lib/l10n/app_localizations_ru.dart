@@ -1049,6 +1049,30 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String generationReportShortfall(String reason, int count) {
+    return '$reason: $count';
+  }
+
+  @override
+  String generationReportCoverage(int covered, int total) {
+    return 'Покрыто единиц знания: $covered из $total';
+  }
+
+  @override
+  String generationReportTokens(int tokens) {
+    return 'Израсходовано токенов: $tokens';
+  }
+
+  @override
+  String get generationUnderstandingNoText =>
+      'В материале нет текстового слоя — понимание невозможно';
+
+  @override
+  String generationUnderstandingFailed(int count) {
+    return 'Часть материала не удалось понять: фрагментов $count';
+  }
+
+  @override
   String get settingsGenerationPipelineV3Title => 'Новый путь генерации';
 
   @override

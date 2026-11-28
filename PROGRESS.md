@@ -2,6 +2,39 @@
 
 ## Сделано
 
+**Срез 11 (2026-11-28) — гейт в доборе, HTTP-карта знаний, проводка фасада.**
+- `lib/domain/generation/card_gate.dart` — порт `CardGate` (один метод
+  `evaluate → accepted|warning|blocked`) и `CardValidatorGate`
+  (`lib/api/generation/validation/`) поверх существующего `CardValidator`:
+  `blocked` — жёсткий дефект или структурно отброшенная запись, `warning` —
+  пометка, новой логики проверок нет.
+- Гейт стоит **до принятия** в первом проходе (`cards_batch_engine.dart`) и в
+  доборе (`replenish_stage.dart`): блокированное не идёт в `CardSink`, в контекст
+  партии и в `accepted` (журнал пишет его как `invalid`). Добор не закрывает слот
+  такой карточкой; `ReplenishPolicy.maxAttemptsPerSlot = 2` (всего попыток,
+  включая первый проход), вторая блокировка слота закрывает его как
+  `validation_rejects`, причина — в `GenerationReport.shortfallReasons`.
+  Фасад создаёт один гейт на прогон и передаёт обоим этапам; пост-валидация
+  удалена (один путь, не два).
+- `lib/api/generation/http_knowledge_map_caller.dart` — HTTP-реализация
+  `KnowledgeMapCaller` поверх существующих адаптеров, `GenerationTransport` и
+  `RetryPolicy`: промпт `gen-map-v1`, схема карты (`canonicalKnowledgeMapSchema`
+  → проекция протокола), `usage` каждого ответа. Обрыв по `max_tokens` →
+  `truncated`, а `UnderstandingService` делит фрагмент **целыми блоками по
+  лимиту вывода** (`blocksPerMapRequest`), не пополам; повторный обрыв части —
+  фолбэк среза 3 (фрагмент помечен, прогон продолжается).
+- `lib/api/generation/generation_v3_path.dart` — production-проводка:
+  `UnderstandingService` + `DriftKnowledgeMapCache`, `CardsBatchEngine` +
+  `AdapterCardsBatchPort`, `ReplenishStage` с гейтом, `GenerationRunCardSink`/
+  `importRunCards`; `GenerationPipeline.v3Path` вызывается только при
+  включённом `generationPipelineV3` (выключен — legacy без изменений),
+  `app_providers.dart` собирает путь реальными реализациями.
+- `GenerationRunResult.report` — `GenerationReport` доезжает до результата:
+  предпросмотр берёт «принято N из M», причины недобора **с числами**, покрытие
+  единиц и расход токенов из отчёта, а не из вердикта/счётчиков; причина
+  отсутствия карты (`no_text_layer`, помеченные фрагменты) — строкой ARB.
+  ARB: `generationReportShortfall/Coverage/Tokens`, `generationUnderstandingNoText/Failed`.
+
 **Срез 10 (2026-11-28) — сквозное включение v3 и правки по решениям владельца.**
 - `ShortfallKind.duplicates` — шестой класс недобора: долг только из-за дублей
   даёт `duplicates`, а не `validationRejects` (`generation_ledger.dart`).
@@ -294,6 +327,22 @@
 
 ## Проверено
 
+**Срез 11.** Красная фаза — `journal/generation-v3/red-s11.txt` (**4 прошло /
+3 упало**, assertion-level, ровно DoD-тесты: `Expected: an object with length
+of <1> Actual: []`, `Expected: <0> Actual: <1>`, `Expected: <2> Actual: <1>`;
+гейт отключался у первого прохода и возвращён). Гейты:
+`.fvm\versions\3.47.9\bin\flutter.bat analyze --no-pub lib test` → **No issues
+found!**; `dart format --set-exit-if-changed lib test` → **706 files, 0
+changed**; `flutter test --no-pub --coverage --exclude-tags golden` →
+**3200 passed + 17 skipped**, exit 0 (+26 к baseline 3174 + 17); покрытие
+рукописного кода **90.8 % (26627/29311)** при пороге 80 %; guards в полном
+прогоне. Новые тесты: `card_validator_gate_test` (4),
+`http_knowledge_map_caller_test` (8), `understanding_split_test` (3),
+`understanding_cache_wiring_test` (2), `generation_v3_path_wiring_test` (1),
+`generation_pipeline_v3_path_test` (2), `generation_preview_report_test` (3),
+`generation_v3_facade_flow_test` (+3). Полный лог —
+`green-s11-full.txt`, покрытие — `coverage-s11.txt`, итоги — `verify-s11.md`.
+
 **Срез 9.** Гейты: `.fvm\versions\3.47.9\bin\flutter.bat analyze --no-pub lib
 test` → **No issues found!**; `.fvm\versions\3.47.9\bin\dart.bat format
 --set-exit-if-changed lib test` → **0 changed**; `.fvm\versions\3.47.9\bin\flutter.bat
@@ -433,6 +482,35 @@ DoD-тесты: property «Σ бюджетов == requested» на 200 случ�
   модель без исключения. Итоги — `journal/generation-v3/verify-s1.md`.
 
 ## НЕ ПОВТОРЯТЬ
+
+- **Гейт — до принятия, а не «валидация после».** Если закрывать слот карточкой,
+  а блокировать её потом, `accepted` растёт и вердикт добора врёт (S10).
+  В срезе 11 `CardValidatorGate` спрашивают оба этапа до `CardSink`/`satisfied`;
+  пост-валидация фасада удалена — двух путей быть не должно.
+- **`maxAttemptsPerSlot` — всего попыток слота, включая первый проход.** Вторая
+  блокировка закрывает слот как `validation_rejects`; «третья блокировка» из
+  TASK.txt недостижима, DoD «две попытки на слот» и есть это правило (Q23).
+  В фасаде счётчик попыток инициализируется `CardsBatchRun.blockedCards` —
+  иначе добор не знает, что слот уже тратил попытку.
+- **`shortfallReasons` при `validation_rejects` считать по `remaining`, а не по
+  `invalid`.** На один закрытый слот пришлось две отброшенные записи модели;
+  число `invalid` (2) объяснило бы одну потерю дважды. Счётчик `report.invalid`
+  остаётся числом отброшенных записей и с `shortfallReasons` не смешивается.
+- **`Gateway`/путь v3 — `understanding` возвращает `UnderstandingResult`, а не
+  `KnowledgeMap`.** Иначе `usage` Understanding и коды помеченных фрагментов не
+  доезжают до отчёта (п. 5/10), и «скан без текста» выглядит пустым прогоном.
+- **Не звать модель в prompt-only/скане без единиц.** `plan.cards.isEmpty` →
+  отчёт собирается без запросов (`unfilledSlots = requested`), а не падение
+  `planAllocation`.
+- **`GenerationV3PathRunner` не должен строить `MediaStore` заранее.**
+  `mediaStoreProvider` в тестах — `UnimplementedError`; импортёр читает его
+  лениво в момент импорта. Иначе проводка ломает тесты, где runner нужен без
+  импорта.
+- **Не сравнивать `GenerationRunResult.report` и вердикт в UI «на глаз».** Тест
+  предпросмотра намеренно даёт расходящиеся числа (вердикт 9 из 10, отчёт 6 из 8):
+  UI обязан показывать отчёт — иначе источник незаметно вернётся к счётчикам.
+- **`dart format` применять до полного прогона.** В этом прогоне формат шёл
+  отдельной командой после кода и до теста — 15 файлов, 0 changed на проверке.
 
 - **Флаг «переключает путь» проверять на одной проводке и в двух прогонах.**
   Сценарии среза 9 сравнивают `pipelineV3: false/true` на одном `GenerationPipeline`
@@ -661,30 +739,30 @@ DoD-тесты: property «Σ бюджетов == requested» на 200 случ�
 
 ## СЛЕДУЮЩЕЕ ДЕЙСТВИЕ
 
-Срез 10 закрыт: контракты (duplicates/blocked/quoteUnverified/wallClock/
-shortfallReasons), тонкий фасад `GenerationV3Facade` и четыре сквозных теста.
+Срез 11 закрыт: гейт в первом проходе и доборе, HTTP-`KnowledgeMapCaller`,
+кэш карты в проводке, фасад за флагом, отчёт в `GenerationRunResult` и UI.
 Следующий прогон: `read TASK.txt` (верхний блок) → верхний блок
-`journal/STATE.md` («срез 10») → `journal/QUESTIONS.md` Q22 →
-`journal/generation-v3/verify-s10.md`.
+`journal/STATE.md` («срез 11») → `journal/QUESTIONS.md` Q23 →
+`journal/generation-v3/verify-s11.md` §4.
 
 Не делать без нового среза:
 - **не включать `generationPipelineV3` по умолчанию** и не удалять legacy:
-  флаг выключен, старый путь — production (Q21);
-- **не подключать `GenerationV3Facade` к `GenerationPipeline`** без HTTP
-  `KnowledgeMapCaller`: у Understanding нет реализации порта, а флаг,
-  включающий несуществующую проводку, — мёртвая заглушка (Q19/Q22);
-- **`CardValidator` в доборе.** Сейчас фасад проверяет и карточки добора, но
-  `ReplenishStage` закрывает слот карточкой, которую потом заблокирует
-  валидация: слот остаётся незакрытым, хотя вердикт добора этого не видит
-  (в тесте blocked-карточка заменяется на следующем проходе). Правильное
-  место — валидация внутри добора (отдельный срез, нужен порт `CardGate`).
-- **UI из `GenerationReport`.** «Принято N из M» в предпросмотре по-прежнему из
-  `CompletionVerdict`: отчёта в `GenerationRunResult` нет, пока фасад не
-  подключён к раннеру (см. выше). Строки и пометки под отчёт готовы.
+  флаг выключен, путь v3 — проверенная проводка, production по умолчанию —
+  legacy (Q19/Q21);
+- **не запускать живые прогоны** (`CARDFLOW_LIVE_TESTS=1`) — это S12 и отдельное
+  разрешение владельца; путь v3 проверен фейковым транспортом без сети;
+- **порт `CardGate` не расширять причинами** (сейчас только вердикт): пометки
+  `CardValidationReport` в предпросмотр пути v3 не доходят — это следующий
+  контракт, а не правка «на месте»;
+- **отмена в пути v3 — между запросами**: `LlmPort` не принимает сигнал отмены
+  в полёт; прерывание HTTP — отдельный срез;
+- **`source_file` карточек пути v3 не заполняется** (черновик его не несёт) —
+  не считать это регрессией legacy-пути.
 
 Baseline снимка: `flutter test --no-pub --exclude-tags golden` —
-**см. `journal/generation-v3/green-s10-full.txt`**; `analyze` 0, `dart format`
-0 changed; схема БД — **v2** (не менялась).
+**3200 passed + 17 skipped** (`journal/generation-v3/green-s11-full.txt`);
+`analyze` 0, `dart format` 0 changed, покрытие 90.8 %; схема БД — **v2**
+(не менялась).
 
 ---
 

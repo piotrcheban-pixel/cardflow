@@ -73,6 +73,15 @@ abstract interface class Clock {
   DateTime now();
 }
 
+/// Часы production: текущее локальное время.
+class SystemClock implements Clock {
+  /// Создаёт часы.
+  const SystemClock();
+
+  @override
+  DateTime now() => DateTime.now();
+}
+
 /// Порт кэша понимания материала (этап Understanding).
 ///
 /// Ключ — документ и хеш его содержимого: правка файла даёт новый ключ, и

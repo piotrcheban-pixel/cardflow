@@ -1,4 +1,5 @@
-/// Сквозной путь генерации v3 (TASK «Срез 10», п. 6–7; ARCH §2, ADR-050).
+/// Сквозной путь генерации v3 (TASK «Срез 10», п. 6–7; срез 11 — гейт,
+/// HTTP-карта и проводка; ARCH §2, ADR-050).
 ///
 /// Фасад **собирает этапы из портов** и не содержит собственной политики:
 /// ни бюджетов, ни калибровок, ни recovery-логики. Он делает ровно четыре
@@ -7,30 +8,40 @@
 ///    `kind=topic` для prompt-only);
 /// 2) план заказа — `planAllocation` (этап Allocation);
 /// 3) генерация — [CardsBatchEngine] (партии, повторы — внутри движка);
-/// 4) проверка, добор и журнал — [CardValidator], [ReplenishStage],
-///    [CardSink]/`importRun`.
+/// 4) проверка, добор и журнал — гейт [CardGate] (тот же, что у добора),
+///    [ReplenishStage], [CardSink]/импорт.
 ///
 /// Итог — [GenerationReport]: «заказано/принято», причины недобора с числами,
-/// покрытие единиц и предохранители операции. Легаси-конвейер
-/// (`generation_pipeline.dart`) не меняется: флаг `generationPipelineV3`
-/// остаётся выключенным по умолчанию (протокол §9), поэтому проводка
-/// production-провайдеров — следующий шаг (`journal/QUESTIONS.md` Q22).
+/// покрытие единиц, расход по этапам (включая Understanding) и предохранители
+/// операции. Легаси-конвейер (`generation_pipeline.dart`) не меняется: флаг
+/// `generationPipelineV3` остаётся выключенным по умолчанию (протокол §9),
+/// проводка — `GenerationV3Path` (срез 11, часть 3).
 library;
 
 import 'package:cardflow/api/generation/cards_batch_engine.dart';
 import 'package:cardflow/api/generation/content_model.dart';
+import 'package:cardflow/api/generation/understanding_service.dart';
 import 'package:cardflow/api/generation/validation/card_validator.dart';
+import 'package:cardflow/api/generation/validation/card_validator_gate.dart';
 import 'package:cardflow/domain/generation/allocation.dart';
+import 'package:cardflow/domain/generation/card_gate.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
-import 'package:cardflow/domain/generation/generation_ledger.dart';
 import 'package:cardflow/domain/generation/generation_report.dart';
+import 'package:cardflow/domain/generation/generation_result.dart';
+import 'package:cardflow/domain/generation/generation_run.dart';
 import 'package:cardflow/domain/generation/knowledge_map.dart';
 import 'package:cardflow/domain/generation/model_profile.dart';
 import 'package:cardflow/domain/generation/ports.dart';
 import 'package:cardflow/domain/generation/replenish_stage.dart';
 
-/// Этап Understanding: материал → карта знаний (без сети внутри фасада).
-typedef UnderstandingStage = Future<KnowledgeMap> Function(Document document);
+/// Этап Understanding: материал → карта знаний и статусы фрагментов.
+///
+/// Тип результата — [UnderstandingResult] (срез 11): фасаду нужен не только
+/// `map`, но и фактический `usage` этапа и коды помеченных фрагментов, иначе
+/// расход Understanding и причина «карты нет» не доезжают до отчёта (п. 5/10).
+typedef UnderstandingStage = Future<UnderstandingResult> Function(
+  Document document,
+);
 
 /// Импорт черновиков прогона в колоду (реализация — `importRunCards`, срез 8).
 typedef RunImporter = Future<int> Function(String runId);
@@ -97,7 +108,7 @@ class GenerationV3Facade {
   /// Этап Understanding; `null` — только prompt-only (тема одной единицей).
   final UnderstandingStage? understanding;
 
-  /// Этап Validation.
+  /// Этап Validation (та же реализация, что за [CardValidatorGate]).
   final CardValidator validator;
 
   /// Запись принятого по ходу (этап Persistence); `null` — прогон без журнала.
@@ -113,84 +124,58 @@ class GenerationV3Facade {
   final int outputTokensPerCard;
 
   /// Запускает прогон: материал или тема → карточки в колоде + отчёт.
+  ///
+  /// [requestedCards] `null` — авто-режим пользователя: заказ равен числу
+  /// единиц карты (по одной карточке на утверждение), минимум одна. Явный
+  /// заказ не режется и не «дотягивается»: его выполнимость показывает отчёт.
   Future<GenerationV3Run> run({
     required String runId,
-    required int requestedCards,
+    required int? requestedCards,
     Document? document,
     String? theme,
     CancellationSignal? cancellation,
     DateTime? startedAt,
   }) async {
-    final List<KnowledgeUnit> units = await _unitsOf(document, theme);
+    final _Understood understood = await _understand(document, theme);
+    final int requested =
+        requestedCards ??
+        (understood.units.isEmpty ? 1 : understood.units.length);
     final KnowledgeMap map = KnowledgeMap(
       documentId: document?.fileName ?? 'prompt',
-      units: units,
+      units: understood.units,
     );
     final AllocationPlan plan = planAllocation(
       map: map,
-      requestedCards: requestedCards,
+      requestedCards: requested,
       profile: profile,
       outputTokensPerCard: outputTokensPerCard,
     );
 
-    final CardsBatchRun generation = await engine.run(
-      plan,
-      cancellation: cancellation,
-    );
-    final ({
-      List<GeneratedCard> accepted,
-      List<GeneratedCard> blocked,
-      GenerationLedger ledger,
-    })
-    checked = _validate(
-      generation.acceptedCards,
-      run: generation,
+    final _GateRun gated = await _generate(
       plan: plan,
       map: map,
       document: document,
-    );
-
-    final ReplenishOutcome outcome = await replenish.run(
-      plan: plan,
-      ledger: checked.ledger,
-      acceptedCards: checked.accepted,
+      cancellation: cancellation,
       startedAt: startedAt,
-      cancellation: cancellation,
     );
 
-    // Добор тоже проходит проверку: иначе жёсткий дефект вернулся бы в колоду
-    // «через чёрный ход» (в тесте — повторно сгенерированный blocked-карточкой).
-    final List<GeneratedCard> fresh = <GeneratedCard>[
-      for (final GeneratedCard card in outcome.acceptedCards)
-        if (!checked.accepted.contains(card)) card,
-    ];
-    final ({
-      List<GeneratedCard> accepted,
-      List<GeneratedCard> blocked,
-      GenerationLedger ledger,
-    })
-    replenished = _validate(
-      fresh,
-      run: null,
-      plan: plan,
-      map: map,
-      document: document,
-    );
-    final List<GeneratedCard> accepted = <GeneratedCard>[
-      ...checked.accepted,
-      ...replenished.accepted,
-    ];
-    await _persist(accepted, _batchOfUnit(plan));
+    final ReplenishOutcome outcome = gated.outcome;
+    final List<GeneratedCard> accepted = outcome.acceptedCards;
+    // Первый проход пишет принятое в **свой** [CardSink] по ходу (инвариант
+    // ARCH §3.5). Если у движка приёмника нет (тесты пути без журнала),
+    // фасад пишет всё принятое сам; иначе — только карточки добора.
+    final int alreadyWritten = engine.sink == null
+        ? 0
+        : (gated.generation?.acceptedCards.length ?? 0);
+    await _persist(accepted.skip(alreadyWritten).toList(), _batchOfUnit(plan));
 
     final GenerationReport report = GenerationReport.fromReplenish(
       plan: plan,
-      outcome: _withAccepted(
-        outcome,
-        accepted,
-        invalid: outcome.invalid + replenished.blocked.length,
-      ),
-      initialUsage: generation.usage,
+      outcome: outcome,
+      initialUsage: gated.generation?.usage ?? const TokenUsage(),
+      understandingUsage: understood.usage,
       promptVersions: promptVersions,
+      understandingFailures: understood.failures,
     );
     final int imported = importer == null ? 0 : await importer!(runId);
     return GenerationV3Run(
@@ -199,39 +184,116 @@ class GenerationV3Facade {
       plan: plan,
       report: report,
       acceptedCards: List<GeneratedCard>.unmodifiable(accepted),
-      blockedCards: List<GeneratedCard>.unmodifiable(<GeneratedCard>[
-        ...checked.blocked,
-        ...replenished.blocked,
-      ]),
+      blockedCards: List<GeneratedCard>.unmodifiable(gated.blocked),
       imported: imported,
     );
   }
 
-  Future<List<KnowledgeUnit>> _unitsOf(
-    Document? document,
-    String? theme,
-  ) async {
+  /// Понимание материала или единственная единица темы (prompt-only).
+  Future<_Understood> _understand(Document? document, String? theme) async {
     if (document != null) {
       final UnderstandingStage? stage = understanding;
       if (stage == null) {
         throw ArgumentError('Без этапа Understanding материал не понять');
       }
-      return (await stage(document)).units;
+      final UnderstandingResult result = await stage(document);
+      final List<String> failures = <String>[
+        for (final KnowledgeMapFragmentOutcome fragment in result.failures)
+          if (fragment.failureReason != null) fragment.failureReason!.code,
+      ];
+      if (result.map.units.isEmpty &&
+          failures.isEmpty &&
+          (document.sections.isEmpty || document.contentLength == 0)) {
+        // Скан без текстового слоя: Understanding не звал модель, и «ноль
+        // единиц» — не недобор модели, а свойство материала (п. 10 среза 11).
+        failures.add(kNoTextLayerCode);
+      }
+      return _Understood(
+        units: result.map.units,
+        usage: result.fromCache
+            ? const TokenUsage(
+                promptTokens: 0,
+                completionTokens: 0,
+                totalTokens: 0,
+              )
+            : result.usage,
+        failures: failures,
+      );
     }
     final String topic = theme?.trim() ?? '';
     if (topic.isEmpty) {
       throw ArgumentError('Нужен материал или тема: иначе нечего генерировать');
     }
-    return <KnowledgeUnit>[
-      KnowledgeUnit(
-        id: 'ku:prompt#0',
-        sectionId: 'prompt',
-        topic: topic,
-        kind: KnowledgeUnitKind.topic,
-        statement: topic,
-        salience: 1,
-      ),
-    ];
+    return _Understood(
+      units: <KnowledgeUnit>[
+        KnowledgeUnit(
+          id: 'ku:prompt#0',
+          sectionId: 'prompt',
+          topic: topic,
+          kind: KnowledgeUnitKind.topic,
+          statement: topic,
+          salience: 1,
+        ),
+      ],
+    );
+  }
+
+  /// Генерация, гейт и добор: один гейт на оба прохода (п. 4 среза 11).
+  Future<_GateRun> _generate({
+    required AllocationPlan plan,
+    required KnowledgeMap map,
+    required Document? document,
+    required CancellationSignal? cancellation,
+    required DateTime? startedAt,
+  }) async {
+    if (plan.cards.isEmpty) {
+      // Плана по единицам нет (скан без текстового слоя, пустая карта): модель
+      // не зовём, но отчёт обязан объяснить нулевой результат, а не упасть.
+      return _GateRun(
+        generation: null,
+        outcome: ReplenishOutcome(
+          stage: GenerationStage.partial,
+          reason: ReplenishStopReason.exhaustedMaterial,
+          requested: plan.requested,
+          unfilledSlots: plan.requested,
+        ),
+        blocked: const <GeneratedCard>[],
+      );
+    }
+
+    final CardValidatorGate gate = CardValidatorGate(
+      validator: validator,
+      document: document,
+      knownUnitIds: <String>{
+        for (final UnitBudget budget in plan.units) budget.unit.id,
+      },
+      unanchoredUnitIds: map.unanchoredUnitIds,
+    );
+    final CardsBatchRun generation = await engine.run(
+      plan,
+      gate: gate,
+      cancellation: cancellation,
+    );
+    final ReplenishOutcome outcome = await replenish.run(
+      plan: plan,
+      ledger: generation.ledger,
+      acceptedCards: generation.acceptedCards,
+      // Карточки первого прохода уже израсходовали попытку своего слота: вторая
+      // блокировка закрывает слот как validation_rejects (п. 3 среза 11).
+      initialBlockedCards: generation.blockedCards,
+      gate: gate,
+      initialUsage: generation.usage,
+      startedAt: startedAt,
+      cancellation: cancellation,
+    );
+    return _GateRun(
+      generation: generation,
+      outcome: outcome,
+      blocked: <GeneratedCard>[
+        ...generation.blockedCards,
+        ...outcome.blockedCards,
+      ],
+    );
   }
 
   /// Номер партии плана для каждой единицы (единица живёт в одной партии).
@@ -245,70 +307,6 @@ class GenerationV3Facade {
     return index;
   }
 
-  /// Проверка карточек: жёсткие дефекты блокируются и считаются отброшенными.
-  ///
-  /// [run] — итог первого прохода: его журнал дополняется отброшенными, чтобы
-  /// бухгалтерия (`accepted = generated − invalid − duplicates`) совпадала со
-  /// списком принятого. Для карточек добора (`run == null`) журнал не нужен.
-  ({
-    List<GeneratedCard> accepted,
-    List<GeneratedCard> blocked,
-    GenerationLedger ledger,
-  })
-  _validate(
-    List<GeneratedCard> cards, {
-    required CardsBatchRun? run,
-    required AllocationPlan plan,
-    required KnowledgeMap map,
-    required Document? document,
-  }) {
-    final Map<String, int> batchOfUnit = _batchOfUnit(plan);
-    final List<GeneratedCard> accepted = <GeneratedCard>[];
-    final List<GeneratedCard> blocked = <GeneratedCard>[];
-    final Map<int, int> blockedPerBatch = <int, int>{};
-    GenerationLedger ledger = run?.ledger ?? GenerationLedger.empty();
-
-    for (final GeneratedCard card in cards) {
-      final CardValidationReport report = validator.validate(
-        <String, Object?>{
-          'cards': <Object?>[_cardJson(card)],
-        },
-        document: document,
-        knownUnitIds: <String>{
-          for (final UnitBudget budget in plan.units) budget.unit.id,
-        },
-        unanchoredUnitIds: map.unanchoredUnitIds,
-      );
-      final int batchIndex = batchOfUnit[card.unitId] ?? 0;
-      if (report.blockedCount > 0) {
-        blocked.add(card);
-        blockedPerBatch[batchIndex] = (blockedPerBatch[batchIndex] ?? 0) + 1;
-      } else {
-        accepted.add(card);
-      }
-    }
-    if (run != null) {
-      for (final MapEntry<int, int> entry in blockedPerBatch.entries) {
-        ledger = ledger.record(entry.key, invalid: entry.value);
-      }
-    }
-    return (accepted: accepted, blocked: blocked, ledger: ledger);
-  }
-
-  static Map<String, Object?> _cardJson(GeneratedCard card) =>
-      <String, Object?>{
-        'front': card.front,
-        'back': card.back,
-        'card_type': card.cardType.wireName,
-        'hint': card.hint,
-        'tags': card.tags,
-        'unit_id': card.unitId,
-        'angle': card.angle,
-        'quote_ref': card.quoteRef,
-        'section_id': card.sectionId,
-        'source_excerpt': card.sourceExcerpt,
-      };
-
   Future<void> _persist(
     List<GeneratedCard> cards,
     Map<String, int> batchOfUnit,
@@ -319,24 +317,32 @@ class GenerationV3Facade {
       await target.save(card, batchIndex: batchOfUnit[card.unitId] ?? 0);
     }
   }
+}
 
-  /// Итог добора с принятым, включающим проверенные карточки первого прохода.
-  ReplenishOutcome _withAccepted(
-    ReplenishOutcome outcome,
-    List<GeneratedCard> accepted, {
-    required int invalid,
-  }) => ReplenishOutcome(
-    stage: outcome.stage,
-    reason: outcome.reason,
-    requested: outcome.requested,
-    acceptedCards: accepted,
-    passes: outcome.passes,
-    requests: outcome.requests,
-    invalid: invalid,
-    duplicates: outcome.duplicates,
-    usage: outcome.usage,
-    duration: outcome.duration,
-    unfilledSlots: outcome.unfilledSlots,
-    guards: outcome.guards,
-  );
+/// Понятый материал: единицы, расход этапа и коды помеченных фрагментов.
+class _Understood {
+  const _Understood({
+    required this.units,
+    this.usage,
+    this.failures = const <String>[],
+  });
+
+  final List<KnowledgeUnit> units;
+  final TokenUsage? usage;
+  final List<String> failures;
+}
+
+/// Итог генерации и добора под общим гейтом.
+class _GateRun {
+  const _GateRun({
+    required this.generation,
+    required this.outcome,
+    required this.blocked,
+  });
+
+  /// Первый проход; `null` — плана по единицам нет.
+  final CardsBatchRun? generation;
+
+  final ReplenishOutcome outcome;
+  final List<GeneratedCard> blocked;
 }

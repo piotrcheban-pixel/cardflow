@@ -1315,6 +1315,52 @@
       }
     }
   },
+  "generationReportShortfall": "{reason}: {count}",
+  "@generationReportShortfall": {
+    "description": "Причина недобора с числом потерянных карточек из GenerationReport.",
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "generationReportCoverage": "Покрыто единиц знания: {covered} из {total}",
+  "@generationReportCoverage": {
+    "description": "Покрытие единиц знания из GenerationReport (срез 11).",
+    "placeholders": {
+      "covered": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "generationReportTokens": "Израсходовано токенов: {tokens}",
+  "@generationReportTokens": {
+    "description": "Расход токенов по этапам из GenerationReport (срез 11).",
+    "placeholders": {
+      "tokens": {
+        "type": "int"
+      }
+    }
+  },
+  "generationUnderstandingNoText": "В материале нет текстового слоя — понимание невозможно",
+  "@generationUnderstandingNoText": {
+    "description": "Причина отсутствия карты знаний: скан без текстового слоя."
+  },
+  "generationUnderstandingFailed": "Часть материала не удалось понять: фрагментов {count}",
+  "@generationUnderstandingFailed": {
+    "description": "Причина отсутствия карты знаний: помеченные фрагменты Understanding.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "settingsGenerationPipelineV3Title": "Новый путь генерации",
   "@settingsGenerationPipelineV3Title": {
     "description": "Переключатель флага generationPipelineV3 в настройках генерации."

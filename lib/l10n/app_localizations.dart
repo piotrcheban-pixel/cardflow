@@ -1762,6 +1762,36 @@ abstract class AppLocalizations {
   /// **'Создано карточек: {accepted}'**
   String generationVerdictAuto(int accepted);
 
+  /// Причина недобора с числом потерянных карточек из GenerationReport.
+  ///
+  /// In ru, this message translates to:
+  /// **'{reason}: {count}'**
+  String generationReportShortfall(String reason, int count);
+
+  /// Покрытие единиц знания из GenerationReport (срез 11).
+  ///
+  /// In ru, this message translates to:
+  /// **'Покрыто единиц знания: {covered} из {total}'**
+  String generationReportCoverage(int covered, int total);
+
+  /// Расход токенов по этапам из GenerationReport (срез 11).
+  ///
+  /// In ru, this message translates to:
+  /// **'Израсходовано токенов: {tokens}'**
+  String generationReportTokens(int tokens);
+
+  /// Причина отсутствия карты знаний: скан без текстового слоя.
+  ///
+  /// In ru, this message translates to:
+  /// **'В материале нет текстового слоя — понимание невозможно'**
+  String get generationUnderstandingNoText;
+
+  /// Причина отсутствия карты знаний: помеченные фрагменты Understanding.
+  ///
+  /// In ru, this message translates to:
+  /// **'Часть материала не удалось понять: фрагментов {count}'**
+  String generationUnderstandingFailed(int count);
+
   /// Переключатель флага generationPipelineV3 в настройках генерации.
   ///
   /// In ru, this message translates to:

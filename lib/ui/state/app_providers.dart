@@ -7,6 +7,7 @@ import 'package:cardflow/api/generation/api_key_verifier.dart';
 import 'package:cardflow/api/generation/card_generation_service.dart';
 import 'package:cardflow/api/generation/generation_diagnostics.dart';
 import 'package:cardflow/api/generation/generation_pipeline.dart';
+import 'package:cardflow/api/generation/generation_v3_path.dart';
 import 'package:cardflow/api/generation/request_token_counter.dart';
 import 'package:cardflow/api/http/generation_http_client.dart';
 import 'package:cardflow/api/http/redacting_log_interceptor.dart';
@@ -28,7 +29,9 @@ import 'package:cardflow/data/db/app_database.dart';
 import 'package:cardflow/data/decks/drift_deck_repository.dart';
 import 'package:cardflow/data/generation/drift_generation_card_store.dart';
 import 'package:cardflow/data/generation/drift_generation_job_repository.dart';
+import 'package:cardflow/data/generation/drift_generation_run_store.dart';
 import 'package:cardflow/data/generation/drift_generation_settings_store.dart';
+import 'package:cardflow/data/generation/drift_knowledge_map_cache.dart';
 import 'package:cardflow/domain/generation/model_capability_cache.dart';
 import 'package:cardflow/domain/generation/token_calibration.dart';
 import 'package:cardflow/data/generation/drift_model_capability_cache.dart';
@@ -486,7 +489,40 @@ final generationRunnerProvider = Provider<GenerationRunner>((ref) {
     capabilityCache: ref.watch(modelCapabilityCacheProvider),
     calibrationStore: ref.watch(tokenCalibrationStoreProvider),
     pipelineV3: settings.generationPipelineV3,
+    // production-проводка пути v3 (срез 11): фасад включается тем же флагом.
+    v3Path: ref.watch(generationV3PathProvider),
   );
+});
+
+/// Путь генерации v3: фасад этапов, понимание с HTTP-вызовом и кэшем на БД,
+/// добор с гейтом и отчёт прогона (TASK «Срез 11», часть 3).
+///
+/// Работает только при включённом `generationPipelineV3`; выключенный флаг —
+/// legacy-путь без изменений (`GenerationPipeline.pipelineV3`).
+final generationV3PathProvider = Provider<GenerationV3Path>((ref) {
+  final AppDatabase database = ref.watch(appDatabaseProvider);
+  final GenerationV3PathRunner runner = GenerationV3PathRunner(
+    apiKeyStore: ref.watch(apiKeyStoreProvider),
+    transport: ref.watch(generationHttpClientProvider),
+    runStore: DriftGenerationRunStore(database),
+    knowledgeMapCache: DriftKnowledgeMapCache(database),
+    importer: (String runId, String? deckId, String deckName) async {
+      // MediaStore читается в момент импорта: он не нужен ни Understanding,
+      // ни генерации, и не должен строиться при открытии экрана.
+      final GenerationImportResult result =
+          await DriftGenerationCardStore(
+            database,
+            mediaStore: ref.read(mediaStoreProvider),
+          ).importRunCards(
+            runId: runId,
+            deckId: deckId,
+            deckName: deckName,
+            now: DateTime.now(),
+          );
+      return result.importedCards;
+    },
+  );
+  return runner.run;
 });
 
 /// Кэш характеристик модели (`generation.model_capabilities`, ADR-039).

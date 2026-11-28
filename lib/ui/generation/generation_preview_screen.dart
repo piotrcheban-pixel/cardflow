@@ -22,6 +22,8 @@ import 'package:cardflow/domain/generation/generation_failure_reason.dart';
 import 'package:cardflow/domain/generation/generation_job.dart';
 import 'package:cardflow/domain/generation/generation_ledger.dart';
 import 'package:cardflow/domain/generation/completion_verdict.dart';
+import 'package:cardflow/domain/generation/generation_report.dart';
+import 'package:cardflow/domain/generation/generation_result.dart';
 import 'package:cardflow/domain/generation/generation_plan.dart';
 import 'package:cardflow/domain/generation/generation_run.dart';
 import 'package:cardflow/domain/generation/document_gateway.dart'
@@ -861,7 +863,10 @@ class _GenerationPreviewScreenState
                 ),
                 const SizedBox(height: 16),
               ],
-              if (_result.verdict != null) ...<Widget>[
+              if (_result.report != null) ...<Widget>[
+                _RunReportSummary(report: _result.report!, l10n: l10n),
+                const SizedBox(height: AppSpacing.xs),
+              ] else if (_result.verdict != null) ...<Widget>[
                 _RunVerdictSummary(verdict: _result.verdict!, l10n: l10n),
                 const SizedBox(height: AppSpacing.xs),
               ],
@@ -1340,6 +1345,101 @@ String shortfallReasonLabel(AppLocalizations l10n, ShortfallKind kind) {
   };
 }
 
+/// Отчёт прогона v3 в предпросмотре (TASK «Срез 11», п. 9).
+///
+/// Все числа — из [GenerationReport], а не из [CompletionVerdict] и не из
+/// счётчиков экрана: «принято N из M», причины недобора **с числами**, покрытие
+/// единиц знания и расход токенов по этапам. Причины, по которым Understanding
+/// не дал карту (скан без текста, битый ответ), показываются отдельной строкой —
+/// предпросмотр не остаётся пустым без объяснения (п. 10).
+class _RunReportSummary extends StatelessWidget {
+  const _RunReportSummary({required this.report, required this.l10n});
+
+  final GenerationReport report;
+  final AppLocalizations l10n;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    final ColorScheme scheme = theme.colorScheme;
+    final bool done = report.isComplete;
+    final String text = report.requested > 0
+        ? (done
+              ? l10n.generationVerdictDone(report.accepted, report.requested)
+              : l10n.generationVerdictPartial(
+                  report.accepted,
+                  report.requested,
+                ))
+        : l10n.generationVerdictAuto(report.accepted);
+    final int tokens = _tokensOf(report);
+    return Column(
+      key: const ValueKey<String>('generation-preview-report'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          text,
+          key: const ValueKey<String>('generation-preview-report-text'),
+          style: theme.textTheme.labelLarge?.copyWith(
+            color: done ? scheme.primary : scheme.onSurface,
+          ),
+        ),
+        if (report.understandingFailures.isNotEmpty)
+          _VerdictLine(
+            key: const ValueKey<String>('generation-preview-understanding'),
+            text: report.understandingFailures.contains(kNoTextLayerCode)
+                ? l10n.generationUnderstandingNoText
+                : l10n.generationUnderstandingFailed(
+                    report.understandingFailures.length,
+                  ),
+            color: scheme.error,
+          ),
+        if (report.shortfallReasons.isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.xxs),
+          Text(
+            l10n.generationShortfallReasonsTitle,
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+          for (final MapEntry<ShortfallKind, int> entry
+              in report.shortfallReasons.entries)
+            _VerdictLine(
+              text: l10n.generationReportShortfall(
+                shortfallReasonLabel(l10n, entry.key),
+                entry.value,
+              ),
+              color: scheme.onSurfaceVariant,
+            ),
+        ],
+        const SizedBox(height: AppSpacing.xxs),
+        _VerdictLine(
+          key: const ValueKey<String>('generation-preview-report-coverage'),
+          text: l10n.generationReportCoverage(
+            report.coveredUnits,
+            report.unitCoverage.length,
+          ),
+          color: scheme.onSurfaceVariant,
+        ),
+        if (tokens > 0)
+          _VerdictLine(
+            key: const ValueKey<String>('generation-preview-report-tokens'),
+            text: l10n.generationReportTokens(tokens),
+            color: scheme.onSurfaceVariant,
+          ),
+      ],
+    );
+  }
+
+  /// Известная часть расхода: неизвестное слагаемое не превращается в ноль.
+  static int _tokensOf(GenerationReport report) {
+    var total = 0;
+    for (final TokenUsage usage in report.tokensByStage.values) {
+      total += usage.totalTokens ?? 0;
+    }
+    return total;
+  }
+}
+
 /// Итог прогона v3 в предпросмотре: «принято N из M» и причины недобора.
 class _RunVerdictSummary extends StatelessWidget {
   const _RunVerdictSummary({required this.verdict, required this.l10n});
@@ -1397,7 +1497,7 @@ class _RunVerdictSummary extends StatelessWidget {
 
 /// Строка причины недобора с точкой-маркером (без литералов в UI).
 class _VerdictLine extends StatelessWidget {
-  const _VerdictLine({required this.text, required this.color});
+  const _VerdictLine({super.key, required this.text, required this.color});
 
   final String text;
   final Color color;

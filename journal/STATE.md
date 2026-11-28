@@ -1,5 +1,54 @@
 # STATE — текущее состояние CardFlow
 
+## Генерация v3 — срез 11: гейт в доборе, HTTP-карта знаний, проводка фасада (2026-11-28)
+
+**Срез:** `TASK.txt` «Срез 11. Гейт в доборе, HTTP-карта знаний, проводка
+фасада» (план — `docs/generation/ARCH.md` уточнение среза 11; толкования —
+`journal/QUESTIONS.md` Q23; отчёт — `journal/generation-v3/verify-s11.md`).
+
+**Факты старта:** ветка `main`; baseline `flutter test --no-pub
+--exclude-tags golden` — 3174 passed + 17 skipped.
+
+**Сделано (TDD):**
+- **Гейт.** `CardGate` (`lib/domain/generation/card_gate.dart`) — один метод
+  `evaluate → accepted|warning|blocked`; реализация `CardValidatorGate` поверх
+  существующего `CardValidator` (без новых проверок). Движок первого прохода и
+  `ReplenishStage` спрашивают гейт **до принятия**: блокированное не идёт в
+  `CardSink`, контекст и `accepted` (в журнале — `invalid`).
+- **Попытки слота.** `ReplenishPolicy.maxAttemptsPerSlot = 2` (всего, вместе с
+  первым проходом): вторая блокировка закрывает слот как `validation_rejects`,
+  причина — в `GenerationReport.shortfallReasons`; третьего запроса нет.
+- **HTTP-карта.** `HttpKnowledgeMapCaller` (адаптеры + `GenerationTransport` +
+  `RetryPolicy`): `gen-map-v1`, схема карты, `usage`; 429 `Retry-After`,
+  таймаут/5xx повторяются, 400/401/403 — нет; обрыв по `max_tokens` помечается.
+  `UnderstandingService` делит обрыв **целыми блоками по лимиту вывода**
+  (`blocksPerMapRequest`), повторный обрыв части — фолбэк среза 3.
+- **Проводка.** `GenerationV3PathRunner` (`generation_v3_path.dart`):
+  Understanding с `DriftKnowledgeMapCache`, Generation через
+  `AdapterCardsBatchPort`, Replenish с гейтом, `GenerationRunCardSink`/
+  `importRunCards`; `GenerationPipeline.v3Path` включается только флагом
+  `generationPipelineV3`, выключен — legacy без изменений;
+  `generationV3PathProvider` в `app_providers.dart`.
+- **Отчёт.** `GenerationRunResult.report`; UI предпросмотра берёт «принято N из
+  M», причины недобора с числами, покрытие единиц и расход токенов из отчёта;
+  `no_text_layer` и помеченные фрагменты Understanding — строкой ARB.
+
+**Чем проверено:** `flutter analyze --no-pub` → **No issues found**;
+`dart format --set-exit-if-changed lib test` → **706 files, 0 changed**;
+`flutter test --no-pub --coverage --exclude-tags golden` → **3200 passed + 17
+skipped** (+26 к baseline), exit 0, покрытие рукописного кода **90.8 %
+(26627/29311)**, guards зелёные. Красная фаза — `red-s11.txt` (4/3,
+assertion-level на DoD-тестах); полный лог — `green-s11-full.txt`; покрытие —
+`coverage-s11.txt`; итоги — `verify-s11.md` §3 (таблица «что из S10 не
+работало и чем подтверждено»).
+
+**Ограничения (осознанные):** порт гейта без кодов причин (пометки в
+предпросмотр пути v3 не доходят); отмена в пути v3 — между запросами;
+несколько файлов объединяются в один `Document` (без `source_file` карточек);
+авто-режим пути v3 — по одной карточке на единицу; живые прогоны — S12.
+Флаг по умолчанию выключен, legacy не удалён (Q19/Q21).
+
+---
 ## Генерация v3 — срез 10: сквозной фасад, blocked-карточки, причины числами (2026-11-28)
 
 **Срез:** `TASK.txt` «Срез 10. Сквозное включение v3 + правки по решениям

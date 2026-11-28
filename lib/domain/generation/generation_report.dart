@@ -16,6 +16,13 @@ import 'package:cardflow/domain/generation/generation_result.dart';
 import 'package:cardflow/domain/generation/generation_run.dart';
 import 'package:cardflow/domain/generation/replenish_stage.dart';
 
+/// Машинный код причины «в материале нет текстового слоя» (срез 11, п. 10).
+///
+/// Не ошибка Understanding, а свойство материала: скан без текста не даёт
+/// карту знаний. Код живёт в отчёте (`understandingFailures`) и переводится в
+/// ARB на слое UI.
+const String kNoTextLayerCode = 'no_text_layer';
+
 /// Покрытие единицы знания: сколько карточек заказано и сколько принято.
 class UnitCoverage {
   /// Создаёт запись покрытия.
@@ -73,6 +80,7 @@ class GenerationReport {
     this.materialCapacity,
     this.unfilledSlots = 0,
     Map<ShortfallKind, int> shortfallReasons = const <ShortfallKind, int>{},
+    List<String> understandingFailures = const <String>[],
     this.guards,
   }) : reasons = List<String>.unmodifiable(reasons),
        unitCoverage = List<UnitCoverage>.unmodifiable(unitCoverage),
@@ -82,6 +90,7 @@ class GenerationReport {
        shortfallReasons = Map<ShortfallKind, int>.unmodifiable(
          shortfallReasons,
        ),
+       understandingFailures = List<String>.unmodifiable(understandingFailures),
        promptVersions = Map<String, String>.unmodifiable(promptVersions);
 
   /// Собирает отчёт по итогу добора и плану заказа.
@@ -94,8 +103,10 @@ class GenerationReport {
     required AllocationPlan plan,
     required ReplenishOutcome outcome,
     TokenUsage initialUsage = const TokenUsage(),
+    TokenUsage? understandingUsage,
     Duration initialDuration = Duration.zero,
     Map<String, String> promptVersions = const <String, String>{},
+    List<String> understandingFailures = const <String>[],
   }) {
     final List<String> reasons = <String>[];
     if (!outcome.isComplete) {
@@ -133,6 +144,7 @@ class GenerationReport {
           ),
       ],
       tokensByStage: <GenerationStage, TokenUsage>{
+        GenerationStage.understanding: ?understandingUsage,
         GenerationStage.generating: initialUsage,
         GenerationStage.replenishing: outcome.usage,
       },
@@ -145,6 +157,7 @@ class GenerationReport {
       materialCapacity: outcome.materialCapacity,
       unfilledSlots: outcome.unfilledSlots,
       shortfallReasons: _shortfallReasonsOf(outcome),
+      understandingFailures: understandingFailures,
       guards: outcome.guards,
     );
   }
@@ -159,13 +172,21 @@ class GenerationReport {
   static Map<ShortfallKind, int> _shortfallReasonsOf(ReplenishOutcome outcome) {
     if (outcome.remaining <= 0) return const <ShortfallKind, int>{};
     final Map<ShortfallKind, int> found = <ShortfallKind, int>{};
+    final ShortfallKind? stopKind = outcome.shortfall;
+    // Слот закрыт как «обе попытки заблокированы»: потерянные карточки — это
+    // незакрытые слоты (remaining), а не число отброшенных записей модели:
+    // на один слот их пришлось две, и считать их «карточками недобора» значит
+    // дважды объяснять одну потерю (TASK «Срез 11», п. 3).
+    if (stopKind == ShortfallKind.validationRejects) {
+      found[ShortfallKind.validationRejects] = outcome.remaining;
+      return found;
+    }
     if (outcome.duplicates > 0) {
       found[ShortfallKind.duplicates] = outcome.duplicates;
     }
     if (outcome.invalid > 0) {
       found[ShortfallKind.validationRejects] = outcome.invalid;
     }
-    final ShortfallKind? stopKind = outcome.shortfall;
     final int explained = outcome.invalid + outcome.duplicates;
     if (stopKind != null && outcome.remaining > explained) {
       found[stopKind] = outcome.remaining;
@@ -232,6 +253,14 @@ class GenerationReport {
   /// Фактические предохранители операции добора (п. 4 среза 10); `null` —
   /// операция шла мимо [ReplenishStage] и пределов не объявляла.
   final ReplenishGuards? guards;
+
+  /// Машинные коды причин, по которым Understanding не дал карту (срез 11,
+  /// п. 10): `no_text_layer` — в материале нет текстового слоя, `json_parse`/
+  /// `schema_invalid`/`truncated`/`provider_error` — помеченные фрагменты.
+  ///
+  /// Список непустой не делает прогон исключением: карточки просто не
+  /// появляются, а причина видна числом/кодом в отчёте и предпросмотре.
+  final List<String> understandingFailures;
 
   /// true — заказ выполнен: этап [GenerationStage.ready], все слоты заполнены и
   /// принято не меньше запрошенного (недобор успехом не считается).

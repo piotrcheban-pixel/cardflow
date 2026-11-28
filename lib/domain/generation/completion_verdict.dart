@@ -1,5 +1,7 @@
 import 'generation_job.dart';
 import 'generation_ledger.dart';
+import 'generation_report.dart';
+import 'generation_run.dart';
 
 /// Итог прогона генерации (ARCH §2, этап 9 Completion).
 ///
@@ -110,8 +112,42 @@ class CompletionVerdict {
     );
   }
 
-  /// Вердикт для авто-режима: заказ не задан, долг — упавшие запросы.
+  /// Вердикт по отчёту прогона v3 (срез 11).
   ///
+  /// Отчёт — снимок заказа (принято/заказано, причины с числами, слоты), а не
+  /// счётчики экрана; `done` возможен только при [GenerationReport.isComplete].
+  factory CompletionVerdict.fromReport(GenerationReport report) {
+    final CompletionOutcome outcome = switch (report.stage) {
+      GenerationStage.ready =>
+        report.isComplete ? CompletionOutcome.done : CompletionOutcome.partial,
+      GenerationStage.failed =>
+        report.accepted > 0
+            ? CompletionOutcome.partial
+            : CompletionOutcome.failed,
+      GenerationStage.cancelled =>
+        report.accepted > 0
+            ? CompletionOutcome.partial
+            : CompletionOutcome.cancelled,
+      _ => CompletionOutcome.partial,
+    };
+    final List<ShortfallKind> reasons = <ShortfallKind>[
+      if (outcome == CompletionOutcome.failed) ShortfallKind.providerError,
+      if (outcome == CompletionOutcome.cancelled) ShortfallKind.cancelled,
+      for (final ShortfallKind kind in report.shortfallReasons.keys)
+        if (!(outcome == CompletionOutcome.failed &&
+            kind == ShortfallKind.providerError))
+          kind,
+    ];
+    return CompletionVerdict(
+      outcome: outcome,
+      requested: report.requested,
+      accepted: report.accepted,
+      reasons: List<ShortfallKind>.unmodifiable(reasons),
+      materialCapacity: report.materialCapacity ?? 0,
+    );
+  }
+
+  /// Вердикт для авто-режима: заказ не задан, долг — упавшие запросы.  ///
   /// `done` требует отсутствия долга **и** хотя бы одной карточки: пустой ответ
   /// — не успех, но и не ошибка провайдера (`generationNoCardsFound`).
   factory CompletionVerdict.auto({

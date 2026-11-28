@@ -4,11 +4,14 @@ import 'package:cardflow/api/generation/cards_batch_engine.dart';
 import 'package:cardflow/api/generation/content_model.dart';
 import 'package:cardflow/api/generation/content_model_builder.dart';
 import 'package:cardflow/api/generation/generation_v3_facade.dart';
+import 'package:cardflow/api/generation/understanding_service.dart';
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/generation/allocation.dart';
 import 'package:cardflow/domain/generation/cards_batch.dart';
+import 'package:cardflow/domain/generation/completion_verdict.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
 import 'package:cardflow/domain/generation/generation_ledger.dart';
+import 'package:cardflow/domain/generation/generation_report.dart';
 import 'package:cardflow/domain/generation/generation_provider.dart';
 import 'package:cardflow/domain/generation/generation_result.dart';
 import 'package:cardflow/domain/generation/knowledge_map.dart';
@@ -55,7 +58,7 @@ void main() {
   ].join('\n');
 
   /// Understanding без сети: блок → единица с якорем на этот блок.
-  Future<KnowledgeMap> understand(Document document) async {
+  Future<UnderstandingResult> understand(Document document) async {
     final List<KnowledgeUnit> units = <KnowledgeUnit>[];
     final List<Block> blocks = document.contentBlocks.toList();
     for (var index = 0; index < blocks.length; index++) {
@@ -74,7 +77,10 @@ void main() {
         ),
       );
     }
-    return KnowledgeMap(documentId: document.fileName, units: units);
+    return UnderstandingResult(
+      map: KnowledgeMap(documentId: document.fileName, units: units),
+      usage: const TokenUsage(promptTokens: 120, completionTokens: 80),
+    );
   }
 
   GenerationV3Facade facade({
@@ -218,6 +224,120 @@ void main() {
       expect(deck.written, 3);
     },
   );
+
+  test('гейт добора: quoteOutOfRange не увеличивает accepted, слот открыт, '
+      'вердикт не done', () async {
+    final Document document = ContentModelBuilder().build(
+      docOf('Момент силы равен произведению силы на плечо.'),
+    );
+    // Модель всегда возвращает карточку с цитатой вне материала: гейт
+    // блокирует её и в первом проходе, и в доборе.
+    final _FakeLlmPort port = _FakeLlmPort(
+      cardsFor: (CardsBatch batch) => batch.cards,
+      overrideCard: (GeneratedCard card) => GeneratedCard(
+        front: card.front,
+        back: card.back,
+        cardType: card.cardType,
+        unitId: card.unitId,
+        quoteRef: 'цитата, которой нет в материале',
+      ),
+    );
+    final _FakeDeck deck = _FakeDeck();
+
+    final GenerationV3Run run = await facade(
+      port: port,
+      deck: deck,
+      understanding: understand,
+    ).run(runId: 'run-gate', requestedCards: 1, document: document);
+
+    expect(
+      run.report.accepted,
+      0,
+      reason: 'accepted растёт только после гейта',
+    );
+    expect(run.acceptedCards, isEmpty);
+    expect(deck.written, 0, reason: 'в журнал запуска блокированное не идёт');
+    expect(deck.accepted, isEmpty);
+    expect(run.report.unfilledSlots, 1, reason: 'слот остался открытым');
+    expect(run.report.isComplete, isFalse);
+    expect(
+      run.blockedCards,
+      hasLength(2),
+      reason: 'две попытки — две блокировки',
+    );
+    final CompletionVerdict verdict = CompletionVerdict.fromReport(run.report);
+    expect(verdict.isDone, isFalse);
+    expect(verdict.outcome, CompletionOutcome.partial);
+  });
+
+  test(
+    'две попытки на слот: третьего запроса нет, причина — validation_rejects',
+    () async {
+      final Document document = ContentModelBuilder().build(
+        docOf(
+          <String>[
+            'Момент силы равен произведению силы на плечо.',
+            'Импульс тела равен произведению массы на скорость.',
+          ].join('\n'),
+        ),
+      );
+      final _FakeLlmPort port = _FakeLlmPort(
+        cardsFor: (CardsBatch batch) => batch.cards,
+        overrideCard: (GeneratedCard card) => card.unitId == 'ku:0'
+            ? GeneratedCard(
+                front: card.front,
+                back: card.back,
+                cardType: card.cardType,
+                unitId: card.unitId,
+                quoteRef: 'нет такой цитаты',
+              )
+            : null,
+      );
+      final _FakeDeck deck = _FakeDeck();
+
+      final GenerationV3Run run = await facade(
+        port: port,
+        deck: deck,
+        understanding: understand,
+      ).run(runId: 'run-attempts', requestedCards: 2, document: document);
+
+      expect(ReplenishPolicy.defaultMaxAttemptsPerSlot, 2);
+      expect(
+        port.calls,
+        2,
+        reason:
+            'первый проход и одна повторная попытка: третьей блокировки нет',
+      );
+      expect(run.report.accepted, 1, reason: 'второй слот принят');
+      expect(run.report.unfilledSlots, 1);
+      expect(run.report.reason, ReplenishStopReason.validationRejects);
+      expect(run.report.shortfallReasons[ShortfallKind.validationRejects], 1);
+      expect(deck.accepted.single.unitId, 'ku:1');
+    },
+  );
+
+  test('скан без текстового слоя: отчёт с причиной, а не падение', () async {
+    final Document empty = Document.empty(fileName: 'скан.pdf');
+    final _FakeLlmPort port = _FakeLlmPort(
+      cardsFor: (CardsBatch batch) => batch.cards,
+    );
+    final _FakeDeck deck = _FakeDeck();
+
+    final GenerationV3Run run = await facade(
+      port: port,
+      deck: deck,
+      understanding: (Document document) async =>
+          UnderstandingResult(map: KnowledgeMap(documentId: document.fileName)),
+    ).run(runId: 'run-scan', requestedCards: 3, document: empty);
+
+    expect(run.report.requested, 3);
+    expect(run.report.accepted, 0);
+    expect(run.report.unfilledSlots, 3);
+    expect(run.report.understandingFailures, contains(kNoTextLayerCode));
+    expect(run.report.isComplete, isFalse);
+    expect(port.calls, 0, reason: 'модель не зовём: понимать нечего');
+    expect(deck.written, 0);
+  });
 }
 
 /// Фейковый `LlmPort`: карточки строятся по партиям плана, без сети.
@@ -229,12 +349,16 @@ class _FakeLlmPort implements LlmPort {
   final List<AllocatedCard> Function(CardsBatch batch) cardsFor;
   final GeneratedCard? Function(GeneratedCard card)? overrideCard;
 
+  /// Сколько вызовов модели сделал порт (для теста попыток на слот).
+  int calls = 0;
+
   @override
   Future<GenerationResult> generate(
     CardsBatch batch, {
     required ProviderAccount account,
     int? maxOutputTokens,
   }) async {
+    calls++;
     final Map<String, KnowledgeUnit> units = <String, KnowledgeUnit>{
       for (final KnowledgeUnit unit in batch.units) unit.id: unit,
     };

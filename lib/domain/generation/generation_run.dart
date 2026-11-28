@@ -13,6 +13,7 @@ import 'package:cardflow/domain/generation/generation_failure_reason.dart';
 import 'package:cardflow/domain/generation/generation_job.dart';
 import 'package:cardflow/domain/generation/generation_metrics.dart';
 import 'package:cardflow/domain/generation/generation_plan.dart';
+import 'package:cardflow/domain/generation/generation_report.dart';
 import 'package:cardflow/domain/generation/provider_account.dart';
 import 'package:cardflow/domain/generation/token_accounting.dart';
 import 'package:cardflow/domain/text/parsed_document.dart';
@@ -233,6 +234,7 @@ class GenerationRunResult {
     this.verdict,
     this.metrics = GenerationMetrics.empty,
     this.possibleDuplicates = 0,
+    this.report,
   });
 
   /// Идентификатор задания `generation_jobs`.
@@ -297,6 +299,13 @@ class GenerationRunResult {
 
   /// Сколько почти-дублей помечено и **оставлено** (путь v3, ARCH §3.4).
   final int possibleDuplicates;
+
+  /// Отчёт прогона v3 (TASK «Срез 11», п. 9): заказ/принято, причины недобора
+  /// с числами, покрытие единиц, расход по этапам и причины отсутствия карты.
+  ///
+  /// `null` — legacy-путь и результаты старых тестов: предпросмотр берёт
+  /// «принято N из M» из [verdict], а не из отчёта.
+  final GenerationReport? report;
 
   /// Сколько фрагментов обработано.
   final int chunkCount;
