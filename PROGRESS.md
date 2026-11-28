@@ -2,6 +2,33 @@
 
 ## Сделано
 
+**Срез 14 (2026-11-28) — ёмкость плана, честный статус, решение о флаге.**
+- **Ёмкость различимых слотов — инвариант плана.** `kMaxCardsPerUnit = 4`
+  (`null | reverse | cloze | application`); `allocateUnits` больше четырёх
+  карточек на единицу не раскидывает, излишек распределяется с ограничением
+  (доли сверх 4 обрезаются, остаток — по убыванию веса). `AllocationPlan`
+  проверяет конструктором: `cards.length == allocationCapacity(units)` и нет
+  двух одинаковых `slotKey`; `materialLimited` = «заказ больше ёмкости»,
+  `capacity` — отдельный геттер. 47 единиц × 4 = 188: `planned == 188`,
+  `requested == 300`, `shortfall == 112`, повторов слотов нет.
+- **Честный итог 188/300.** `ReplenishStage` при `materialLimited` и закрытых
+  слотах меняет `complete` на `exhausted_material`, `materialCapacity` = ёмкость
+  плана (188), `remaining` = 112; вердикт `partial`, `jobStatus == partial`,
+  добор не делает ни одного запроса. Регресс-тест на фасаде до фикса падал
+  `Expected: partial, Actual: done` (`red-s14.txt`).
+- **Сопоставимая база.** `MatchedSubset` (пересечение единиц, `cleanRate_matched`,
+  «топ-N по salience»), `GenerationReport.absoluteClean`,
+  `CollectedMetrics.absoluteClean`/`absolute_clean`. Пересчёт существующей
+  матрицы — `tool/recompute_matrix_s14.dart` → `matrix-s14.md` (новых платных
+  прогонов 0).
+- **Критерий флага — окончательный:** `cleanRate_matched(v3) ≥ 95 %` и
+  `absoluteClean(v3) ≥ absoluteClean(legacy)` на всех решающих ячейках
+  80/150/300. Выполнено на 6 из 6 → `generationPipelineV3` по умолчанию `true`,
+  legacy — выключением флага. Тесты, проверяющие legacy-путь, теперь задают
+  флаг **явно** (`legacyGenerationSettings()` + override
+  `effectiveAppSettingsProvider` — иначе первый синхронный `read` видит
+  `defaults`). Предпросмотр показывает «Материала примерно на 188 карточек».
+
 **Срез 13 (2026-11-28) — Dedup в цепи, стоимость Understanding, честная база.**
 - **Dedup в фасаде.** `GenerationV3Facade._dedup` вызывает существующий
   `SemanticMatcher` (каскад exact → normalized → semantic → embeddings) по
@@ -889,47 +916,54 @@ DoD-тесты: property «Σ бюджетов == requested» на 200 случ�
   `Select-Object -First` закрывает пайплайн и обрывает запись лога (в срезе 4
   лог обрезался на 201 строке из 358). Полный вывод — редиректом в файл
   (`flutter test ... > file 2>&1`), хвост — отдельной командой.
-- **Инвариант «Σ бюджетов == заказ» — `assert` в `AllocationPlan`, а не
-  проверка в сервисе.** План с недобором при непустых единицах
-  неконструируем; «материала нет вовсе» — только `units.isEmpty`
-  (`materialLimited`). Не добавлять «мягкий» путь, который разрешит
-  `cards.length < requested`.
+- **Ёмкость плана — предел, а не заказ (S14 переопределил S4).** Инвариант
+  `AllocationPlan` теперь `cards.length == allocationCapacity(units)` (Σ
+  min(бюджет единицы, 4)) и «нет двух одинаковых `slotKey`»; `materialLimited`
+  значит «заказ больше различимой ёмкости», а не «единиц нет вовсе». План с
+  `cards.length < requested` при непустых единицах **легален** — это и есть
+  `materialLimited`; «мягкий» путь без ёмкости, наоборот, запрещён.
+  Итог прогона — `partial` + `exhausted_material`, число — `capacity`.
 - **Срез 4 не подключает `AllocationPlan` к `GenerationChunkPlanner`.** Старый
   путь планирования остаётся до этапов Generation/Replenish (BACKLOG S4/S7):
   подключение раньше создаст два расходящихся плана.
 
 ## СЛЕДУЮЩЕЕ ДЕЙСТВИЕ
 
-Срез 13 закрыт: Dedup в фасаде (сквозной тест на 3 парах + «уже в колоде»),
-персист пар в схеме v3, проба strict-схемы один раз на прогон (12 разделов →
-13 запросов), honest-пересчёт матрицы и разбор 188/300. Флаг
-`generationPipelineV3` остаётся выключенным: на решающих ячейках 80/150/300
-v3 хуже legacy по cleanRate (к произведённым) на двух ячейках 300.
+Срез 14 закрыт: ёмкость различимых слотов стала инвариантом конструктора
+плана (300/47 → 188, без повторов), прогон честно завершается `partial` +
+`exhausted_material` с числом 188 и без запросов добора, сопоставимая база и
+`absoluteClean` добавлены, критерий флага выполнен на 6/6 решающих пар —
+`generationPipelineV3` включён по умолчанию, legacy доступен выключением флага.
+Толкования — Q26, ограничение — L230, отчёт — `verify-s14.md`, таблица —
+`live-s12/matrix-s14.md`.
 
 Следующий прогон: `read TASK.txt` (верхний блок) → верхний блок
-`journal/STATE.md` («срез 13») → `journal/QUESTIONS.md` Q25 →
-`journal/generation-v3/verify-s13.md`; отчёт по матрице —
-`journal/generation-v3/live-s12/matrix-s13.md`.
+`journal/STATE.md` («срез 14») → `journal/QUESTIONS.md` Q26 →
+`journal/generation-v3/verify-s14.md`; числа — `live-s12/matrix-s14.md`.
 
 Не делать без нового среза:
-- **не включать `generationPipelineV3` по умолчанию** и не удалять legacy:
-  cleanRate v3 ниже legacy на решающих ячейках 300 (учебный 97,3 vs 98,6,
-  статья 97,9 vs 100 — база «к произведённым»);
-- **не перемерять матрицу** ради «другого результата»: пересчёт среза 13
+- **не менять критерий флага задним числом** (6/6 по 80/150/300: порог 95 %
+  и объём чистых) и не выключать v3 «для наблюдения»: решение окончательное;
+- **не удалять legacy**: он остаётся рабочим путём при выключенном флаге;
+  тесты legacy-пути обязаны задавать флаг явно
+  (`legacyGenerationSettings` + override `effectiveAppSettingsProvider`);
+- **не снимать инвариант ёмкости** (`kMaxCardsPerUnit = 4`, уникальность
+  `slotKey`) и не «добирать» заказ повторами слотов: это и был баг S12/S13;
+- **не перемерять матрицу** ради «другого результата»: пересчёт среза 14
   сделан из существующих run-файлов; новый платный прогон — только при
   изменении промптов/порогов/проводки;
 - **не подменять `partial` на `done`**: `ready` при 188/300 — `complete` по
   слотам, честный исход ставит `verdict.jobStatus`;
-- **не менять аллокацию/пороги**, чтобы «добрать» 112 повторных слотов: это
-  отдельный срез (L229), TASK среза 13 запрещал;
-- **не расширять `CardGate` обратно до вердикта без кодов**: коды причин —
-  контракт S12/S13 (`cleanRate`, предпросмотр);
+- **пер-юнитные данные для matchedSubset не выдумывать**: при `coverage < 1`
+  пересчёт обязан давать `—`; сохранять produced/clean/salience единиц —
+  работа S15 (L230);
 - **живые прогоны — только с `CARDFLOW_LIVE_TESTS=1`**, реальным ключом и
   потолками (L225); значение ключа не печатать.
 
 Baseline снимка: `flutter test --no-pub --exclude-tags golden` —
-**3234 passed + 18 skipped** (`journal/generation-v3/green-s13-full.txt`);
-`analyze` 0, `dart format` 0 changed, покрытие 90,9 %; схема БД — **v3**.
+**3244 passed + 18 skipped** (`journal/generation-v3/green-s14-full.txt`);
+`analyze` 0, `dart format` 0 changed, покрытие 90,9 % (27103/29824);
+схема БД — **v3** (не менялась).
 
 ---
 

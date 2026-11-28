@@ -1,5 +1,70 @@
 # STATE — текущее состояние CardFlow
 
+## Генерация v3 — срез 14: ёмкость плана, честный статус, решение о флаге (2026-11-28)
+
+**Срез:** `TASK.txt` «Срез 14. Ёмкость плана, честный статус, решение о флаге».
+Толкования — `journal/QUESTIONS.md` Q26; отчёт —
+`journal/generation-v3/verify-s14.md`; пересчёт матрицы и вердикт —
+`journal/generation-v3/live-s12/matrix-s14.md`.
+
+**Факты старта:** ветка `main`, `HEAD = 34fc911` (док среза 13); baseline —
+3234 passed + 18 skipped, покрытие 90,9 %, схема БД v3, флаг
+`generationPipelineV3` выключен.
+
+**Сделано (TDD):**
+- **Ёмкость различимых слотов — инвариант плана.** `kMaxCardsPerUnit = 4`
+  (основная карточка и углы `reverse | cloze | application`);
+  `allocateUnits` не раскидывает больше четырёх карточек на единицу, остаток
+  распределяется с ограничением (доли сверх 4 обрезаются, излишек — по убыванию
+  веса). `AllocationPlan` проверяет **конструктором**: `cards.length == capacity`
+  (Σ min(бюджет, 4)) и нет двух одинаковых `slotKey` (`unit_id + angle`).
+  `materialLimited` теперь «заказ больше ёмкости», `capacity` — отдельный
+  геттер. Тест 300/47: `planned == capacity == 188`, `requested == 300`,
+  `shortfall == 112`, ни одного повторного слота.
+- **Честный итог 188/300.** При `materialLimited` и закрытых слотах
+  `ReplenishStage` меняет `complete` на `exhausted_material`; `materialCapacity`
+  берётся из ёмкости плана (188, а не принятое), `remaining` — по заказу (112).
+  Вердикт — `partial`, `jobStatus == partial`; добор не делает ни одного запроса
+  (свободных слотов нет). Красная фаза до фикса падала на `done`
+  (`Expected: partial, Actual: done`).
+- **Сопоставимая база и абсолютное число.** `MatchedSubset` (matrix_comparison):
+  пересечение единиц, где оба пути произвели карточку, `cleanRate_matched`,
+  ограничение «топ-N по salience» (для 150/300 — 80). `GenerationReport.
+  absoluteClean` — число чистых рядом с `cleanRate`; `CollectedMetrics.
+  absoluteClean` и `absolute_clean` в JSON стенда. Тест на фикстуре с известным
+  пересечением (u1/u2 общие, u3 только legacy, u4 только v3).
+- **Пересчёт без платных прогонов.** `tool/recompute_matrix_s14.dart` читает
+  существующий `matrix.jsonl`, пишет `matrix-s14.md`: absoluteClean,
+  cleanRate_matched (при `coverage == 100 %` база равна произведённому; при
+  неполном покрытии — `null`, не догадка), критерий по каждой решающей ячейке.
+- **Критерий флага — окончательный (не пересматривать):**
+  `cleanRate_matched(v3) ≥ 95 %` **и** `absoluteClean(v3) ≥
+  absoluteClean(legacy)` на всех решающих ячейках 80/150/300. По
+  `matrix-s14.md` выполнено на **6 из 6** решающих пар (худшая ячейка —
+  учебный 300: 97,3 % / 292 чистых против 98,6 % / 73; статья 300: 97,9 % / 185
+  против 100 % / 15) → **`generationPipelineV3` включён по умолчанию**,
+  legacy остаётся доступен выключением флага в настройках, старый JSON без
+  ключа читается как `true`.
+- **Предпросмотр показывает ёмкость числом.** В отчёте прогона — строка
+  `generationReportMaterialCapacity` («Материала примерно на 188 карточек»)
+  рядом с причиной недобора; виджет-тест `generation_preview_report_test`.
+
+**Чем проверено:** `flutter analyze --no-pub lib test tool` → **No issues
+found!**; `dart format --set-exit-if-changed lib test tool` → **0 changed**;
+`flutter test --no-pub --coverage --exclude-tags golden` → **3244 passed + 18 skipped**, покрытие **90,9 % (27103/29824)**; guards (`ru_strings`, `architecture`,
+`no_webview`, `no_secrets`, `contrast`, `ci_pdfium`) — зелёные в полном
+прогоне. Логи: `red-s14.txt`, `green-s14-full.txt`, `coverage-s14.txt`;
+матрица — `live-s12/matrix-s14.md`.
+
+**Ограничения (осознанные):** `SchemaCompatProfile` живёт в памяти прогона
+(L227); Dedup сверяет только стороны текста (L228); пер-юнитных карточек в
+`matrix.jsonl` нет, поэтому «топ-80 по salience» на реальных ячейках не
+применён — база `matched` выведена из `coverage == 100 %` (L230); живые числа —
+только `deepseek/deepseek-flash` (L222); мультифайл не в матрице. Legacy не
+удалён и не менялся.
+
+---
+
 ## Генерация v3 — срез 13: Dedup в цепи, стоимость Understanding, честная база (2026-11-28)
 
 **Срез:** `TASK.txt` «Срез 13. Dedup в цепи, стоимость Understanding, честная
