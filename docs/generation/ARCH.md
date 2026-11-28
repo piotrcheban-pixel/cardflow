@@ -177,6 +177,28 @@ Understanding (порт `UnderstandingStage` или единственная е�
 N из M», причины с числами, покрытие единиц и расход токенов, а `report.
 understandingFailures` — причину отсутствия карты (`no_text_layer`, помеченные
 фрагменты). Толкования — Q23; ограничения — `journal/generation-v3/verify-s11.md` §4.
+**Уточнение среза 12 (TASK.txt):** живой измерительный стенд и «было → стало».
+Гейт отдаёт **вердикт вместе с кодами причин** (`CardGateResult`, доменный
+`CardReasonCode`): пометки принятой карточки живут в `GeneratedCard.gateReasons`
+и доезжают до `GenerationReport.warningCodes`/`cleanRate` и предпросмотра
+(текст — ARB). `GenerationReport` расширен тем, что нужно стенду и чего в нём
+не было: `generated`, `acceptedWithWarnings`, `warningCodes`,
+`duplicatesByLevel`, `batchDurations` (отметки времени каждого запроса
+модели — первый проход и добор) и `salience` покрытых единиц. Legacy-путь
+**тоже собирает `GenerationReport`** из своих же чисел: иначе сравнение путей
+шло бы по разным источникам, а `cleanRate` у legacy не существовал бы.
+`MetricsCollector` (`lib/domain/generation/metrics_collector.dart`) читает
+**только отчёт** и даёт yield/1000 входа, acceptanceRate, cleanRate,
+duplicateRate по уровням, coverage, meanSalience покрытых, запросов на 10,
+p50/p95 и расход токенов по этапам; JSON пишется в
+`journal/generation-v3/live-s12/`, таблица строится из тех же записей, без
+ручных чисел. Живая матрица — 2 однофайловых материала (учебный текст
+12 разделов, статья 3 раздела) × 20/40/80/150/300 × legacy/v3 на одном
+провайдере/модели, с потолками запросов/стоимости/времени; исчерпание —
+`not_run` с причиной. Скан без текстового слоя проверяется офлайн-smoke
+(Understanding не делает запросов). Флаг по умолчанию включается только при
+`cleanRate v3 ≥ legacy` и `coverage v3 ≥ legacy` на всех ячейках, где прогнаны
+оба пути; иначе остаётся выключенным, расхождения — в S13.
 **Поток данных.** `MaterialUnit` несут offsets — единственный источник истины о
 тексте; `KnowledgeMap` ссылается на них, а не копирует текст; партия несёт id
 пунктов, поэтому ответ модели привязан к материалу; `CardCandidate` сохраняет

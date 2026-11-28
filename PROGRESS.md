@@ -2,6 +2,41 @@
 
 ## Сделано
 
+**Срез 12 (2026-11-28) — живые прогоны и метрики «было → стало».**
+- **Коды гейта в отчёте и UI.** `CardGateResult` (`verdict` + `List<CardReasonCode>`),
+  `CardReasonCode` — доменный тип (`lib/domain/generation/card_reason_code.dart`,
+  `card_validator.dart` реэкспортирует для старых импортов). `CardValidatorGate`
+  пробрасывает коды существующего валидатора без новых проверок; принятая с
+  пометкой карточка несёт `GeneratedCard.gateReasons`. `GenerationReport`
+  получил `generated`, `acceptedWithWarnings`, `warningCodes`, `cleanRate`,
+  `duplicatesByLevel`, `batchDurations`, `salience` единиц; предпросмотр
+  показывает код причины чипом с ARB-текстом (`generationReason*`).
+- **Единый источник метрик.** `MetricsCollector`
+  (`lib/domain/generation/metrics_collector.dart`) читает **только**
+  `GenerationReport`: yield/1000 входа, acceptanceRate, cleanRate,
+  duplicateRate по уровням, coverage, meanSalience покрытых, запросов на 10,
+  p50/p95, расход токенов по этапам. Legacy-путь теперь тоже собирает
+  `GenerationReport` из своих чисел (`generation_pipeline.dart`); p50/p95 —
+  из новых отметок времени батчей (`CardsBatchRun`/`ReplenishOutcome`).
+- **Стенд и матрица.** `test/live/generation_matrix_s12_live_test.dart` +
+  `test/live/support/s12_bench.dart`: 2 материала (12/3 раздела) ×
+  20/40/80/150/300 × legacy/v3, реальные ключи, `live-s12/{matrix.jsonl,
+  matrix.md,run.json}`. Итог: **20/20 ran**, 148 HTTP, 43 legacy-вызова,
+  29,6 мин, **0,66 USD** при потолке 2,50; v3 — 20/40/80/150 полностью,
+  299/300 (учебный) и 188/300 (статья) — честный `partial`; coverage 100 %
+  у обоих путей.
+- **Две лестницы ADR-021, найденные живым прогоном.** `HttpKnowledgeMapCaller`
+  и `AdapterCardsBatchPort` строили strict-запрос без упрощения: DeepSeek
+  отвечал 400, v3 давал `provider_error`/0 карточек. Добавлены те же три
+  ступени (strict+`max_tokens` → без схемы+`max_tokens` → без схемы и
+  `max_tokens`, ≤3 запроса, только `badRequest`); `runResultOf` теперь берёт
+  статус из `verdict.jobStatus`, а не из `report.stage` (299/300 — `partial`,
+  не ложный `done`).
+- **Флаг не включён.** Строгий критерий TASK не выполнен: cleanRate v3 ниже
+  legacy на 3 ячейках (учебный 300: 97,7 vs 100; статья 20: 95 vs 100; статья
+  300: 98,4 vs 100), coverage равен 100 % везде. Расхождения — `verify-s12.md`
+  §4–§5, `journal/generation-v3/s13-handoff.md`.
+
 **Срез 11 (2026-11-28) — гейт в доборе, HTTP-карта знаний, проводка фасада.**
 - `lib/domain/generation/card_gate.dart` — порт `CardGate` (один метод
   `evaluate → accepted|warning|blocked`) и `CardValidatorGate`
@@ -327,6 +362,19 @@
 
 ## Проверено
 
+**Срез 12.** Гейты: `.fvm\versions\3.47.9\bin\flutter.bat analyze --no-pub lib
+test` → **No issues found!**; `dart format --set-exit-if-changed lib test` →
+**0 changed**; `flutter test --no-pub --coverage --exclude-tags golden` →
+**3214 passed + 18 skipped**, `exit 0` (+14 к baseline 3200 + 17), покрытие
+рукописного кода **90,4 % (26849/29694)** при пороге 80 % (`coverage-s12.txt`,
+`green-s12-full.txt`). Живая матрица — `flutter test
+test/live/generation_matrix_s12_live_test.dart` с `CARDFLOW_LIVE_TESTS=1`:
+**exit 0**, 20/20 ячеек `ran`, 148 HTTP, 29:34, **0,6589 USD** при потолке
+2,50 (`live-s12/run.json`); таблица — `live-s12/matrix.md`; `REQUIRE_300=1`
+подтвердил живой прогон на 300 карточек (v3 299/300 — `partial`). Найденные
+живьём дефекты закрыты тестами: `http_knowledge_map_caller_test` 10/10,
+`cards_batch_port_test` 7/7, `generation_v3_path_wiring_test` 2/2.
+
 **Срез 11.** Красная фаза — `journal/generation-v3/red-s11.txt` (**4 прошло /
 3 упало**, assertion-level, ровно DoD-тесты: `Expected: an object with length
 of <1> Actual: []`, `Expected: <0> Actual: <1>`, `Expected: <2> Actual: <1>`;
@@ -482,6 +530,32 @@ DoD-тесты: property «Σ бюджетов == requested» на 200 случ�
   модель без исключения. Итоги — `journal/generation-v3/verify-s1.md`.
 
 ## НЕ ПОВТОРЯТЬ
+
+- **Лестница ADR-021 нужна в КАЖДОМ HTTP-вызове модели, а не только в
+  `CardGenerationService`.** В S12 живой v3 сначала дал 12 × `provider_error`
+  (Understanding), затем 0/20 (Generation): `HttpKnowledgeMapCaller` и
+  `AdapterCardsBatchPort` строили strict `json_schema`, DeepSeek отвечал 400.
+  Лестница добавлена в оба места; unit-тесты на фейковом транспорте это ловят,
+  но **обязательно проверять новый вызов живым прогоном** — оба дефекта нашлись
+  только на реальном провайдере.
+- **Статус v3 — из вердикта, а не из этапа.** `runResultOf` ставил
+  `status: report.stage.jobStatus`, и 299/300 с этапом `ready` показывался как
+  `done` — ложный успех. Теперь `status: verdict.jobStatus`; тест
+  `generation_v3_path_wiring_test` («299 из 300 — partial»).
+- **`cleanRate` legacy и v3 считает не одно и то же.** У legacy в `issues`
+  попадает `imageQueryAdjusted` (коррекция поиска картинки), у v3 внешнего
+  поиска в фасаде нет; на учебном 20 legacy дал 75 % без содержательных
+  дефектов. Сравнивать «в лоб» можно только с оговоркой в отчёте (§4), а не
+  делать вывод «legacy качественнее».
+- **Матрицу не запускать без потолков и дедлайна.** 260 запросов / 2,50 USD /
+  75 мин дали 20/20 ячеек, 0,66 USD и 29,6 мин; без дедлайна маленький бюджет
+  (60 запросов) обрывал матрицу на 7/20. Исчерпание — `not_run` с причиной.
+- **Не записывать `started_at` в `run.json` в `finally` как «начало».** Первый
+  прогон записал туда время окончания; поле исправлено механически
+  (`finished_at` + вычисленный `started_at`), тест теперь хранит старт до прогона.
+- **Не читать `matrix.jsonl` через `Test-Path` в другой оболочке при
+  параллельном прогоне**: файл дописывается по ячейке; для отчёта брать
+  `matrix.md`/`run.json` после `exit 0`.
 
 - **Гейт — до принятия, а не «валидация после».** Если закрывать слот карточкой,
   а блокировать её потом, `accepted` растёт и вердикт добора врёт (S10).
@@ -739,30 +813,31 @@ DoD-тесты: property «Σ бюджетов == requested» на 200 случ�
 
 ## СЛЕДУЮЩЕЕ ДЕЙСТВИЕ
 
-Срез 11 закрыт: гейт в первом проходе и доборе, HTTP-`KnowledgeMapCaller`,
-кэш карты в проводке, фасад за флагом, отчёт в `GenerationRunResult` и UI.
-Следующий прогон: `read TASK.txt` (верхний блок) → верхний блок
-`journal/STATE.md` («срез 11») → `journal/QUESTIONS.md` Q23 →
-`journal/generation-v3/verify-s11.md` §4.
+Срез 12 закрыт: стенд из отчёта, живая матрица 20/20, флаг по строгому
+критерию оставлен выключенным, расхождения — в S13. Следующий прогон:
+`read TASK.txt` (верхний блок) → верхний блок `journal/STATE.md` («срез 12») →
+`journal/QUESTIONS.md` Q24 → `journal/generation-v3/verify-s12.md` §4–§5 →
+`journal/generation-v3/s13-handoff.md`.
 
 Не делать без нового среза:
 - **не включать `generationPipelineV3` по умолчанию** и не удалять legacy:
-  флаг выключен, путь v3 — проверенная проводка, production по умолчанию —
-  legacy (Q19/Q21);
-- **не запускать живые прогоны** (`CARDFLOW_LIVE_TESTS=1`) — это S12 и отдельное
-  разрешение владельца; путь v3 проверен фейковым транспортом без сети;
-- **порт `CardGate` не расширять причинами** (сейчас только вердикт): пометки
-  `CardValidationReport` в предпросмотр пути v3 не доходят — это следующий
-  контракт, а не правка «на месте»;
-- **отмена в пути v3 — между запросами**: `LlmPort` не принимает сигнал отмены
-  в полёт; прерывание HTTP — отдельный срез;
-- **`source_file` карточек пути v3 не заполняется** (черновик его не несёт) —
-  не считать это регрессией legacy-пути.
+  cleanRate v3 ниже legacy на трёх живых ячейках (S12 §5), production по
+  умолчанию — legacy;
+- **не перемерять матрицу** без изменения промптов/порогов/проводки: она уже
+  стоит 0,66 USD и 29,6 мин, ячеек `not_run` нет; повтор — только по задаче S13;
+- **не подменять `partial` на `done`**: статус v3 берётся из
+  `verdict.jobStatus`, 299/300 и 188/300 — честный partial;
+- **не расширять `CardGate` обратно до вердикта без кодов**: коды причин нужны
+  отчёту (`cleanRate`) и предпросмотру, это контракт S12;
+- **смысловой дедуп в фасаде не подключён** (L224) — `duplicateRate` v3 = 0 не
+  означает «v3 не дублирует»;
+- **живые прогоны — только с `CARDFLOW_LIVE_TESTS=1`**, реальным ключом и
+  потолками (L225); значение ключа не печатать.
 
 Baseline снимка: `flutter test --no-pub --exclude-tags golden` —
-**3200 passed + 17 skipped** (`journal/generation-v3/green-s11-full.txt`);
-`analyze` 0, `dart format` 0 changed, покрытие 90.8 %; схема БД — **v2**
-(не менялась).
+**3214 passed + 18 skipped** (`journal/generation-v3/green-s12-full.txt`);
+`analyze` 0, `dart format` 0 changed, покрытие 90,4 %; схема БД — **v2** (не
+менялась).
 
 ---
 

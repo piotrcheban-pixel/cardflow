@@ -1,5 +1,64 @@
 # STATE — текущее состояние CardFlow
 
+## Генерация v3 — срез 12: живые прогоны и метрики «было → стало» (2026-11-28)
+
+**Срез:** `TASK.txt` «Срез 12. Живые прогоны и метрики «было → стало»».
+Толкования — `journal/QUESTIONS.md` Q24; отчёт — `journal/generation-v3/verify-s12.md`;
+матрица и сырые записи — `journal/generation-v3/live-s12/`.
+
+**Факты старта:** ветка `main`, `HEAD = 330dca7` (срез 11); baseline
+`flutter test --no-pub --exclude-tags golden` — **3200 passed + 17 skipped**.
+
+**Сделано (TDD):**
+- **Коды гейта.** `CardGateResult {verdict, reasons}` (`CardReasonCode` переехал
+  в домен, `card_validator.dart` реэкспортирует); `CardValidatorGate` отдаёт
+  коды существующего валидатора. Принятая с пометкой карточка несёт
+  `GeneratedCard.gateReasons`; коды — в `GenerationReport.warningCodes`, в
+  предпросмотре — чипы с текстом ARB (`generationReason*`). `cleanRate` =
+  принято без warning / принято — геттер отчёта.
+- **Отчёт как единственный источник.** `GenerationReport` пополнен
+  `generated`, `acceptedWithWarnings`, `warningCodes`, `duplicatesByLevel`,
+  `batchDurations`, `salience` единиц; legacy-путь (`GenerationPipeline`) теперь
+  тоже собирает отчёт из своих чисел. `MetricsCollector`
+  (`lib/domain/generation/metrics_collector.dart`) читает **только отчёт**:
+  yield/1000 входа, acceptanceRate, cleanRate, duplicateRate по уровням,
+  coverage, meanSalience покрытых, запросов на 10, p50/p95, расход по этапам.
+  Отметки времени батчей добавлены в первый проход и добор.
+- **Живая матрица.** 2 однофайловых материала (учебный текст 12 разделов;
+  статья 3 раздела) × 20/40/80/150/300 × legacy/v3 на `deepseek/deepseek-flash`:
+  **20/20 ячеек `ran`**, `not_run`/`failed` — 0; 148 HTTP-запросов, 43 логических
+  legacy-вызова, **29,6 мин**, стоимость **0,66 USD** при потолке 2,50 USD.
+  v3: 20/20, 40/40, 80/80, 150/150, 299/300 (учебный) и 188/300 (статья) —
+  последние два честный `partial` по вердикту; legacy на тех же ячейках —
+  73/300 и 15/300. `coverage` 100 % у обоих путей на всех ячейках.
+- **Лестница ADR-021 в двух местах, найденных живым прогоном.**
+  `HttpKnowledgeMapCaller` и `AdapterCardsBatchPort` не упрощали strict-запрос,
+  и DeepSeek отвечал 400 (`provider_error`/0 карточек). Лестница strict+
+  `max_tokens` → без схемы+`max_tokens` → без схемы и `max_tokens` (≤3 запроса,
+  только `badRequest`) добавлена; `generation_v3_path_wiring_test` ловит и
+  ложный `done` у 299/300 (статус — `verdict.jobStatus`, не `report.stage`).
+- **Флаг остаётся выключенным.** Условие TASK (`cleanRate v3 ≥ legacy` И
+  `coverage не хуже`) не выполнено: v3 ниже legacy на трёх ячейках (учебный 300:
+  97,7 % vs 100 %; статья 20: 95 % vs 100 %; статья 300: 98,4 % vs 100 %).
+  Расхождения списком — `verify-s12.md` §5 и `journal/generation-v3/s13-handoff.md`.
+
+**Чем проверено:** `flutter analyze --no-pub lib test` → **No issues found**;
+`dart format --set-exit-if-changed lib test` → **0 changed**;
+`flutter test --no-pub --coverage --exclude-tags golden` → **3214 passed + 18
+skipped**, `exit 0` (+14 к baseline), покрытие рукописного кода **90,4 %
+(26849/29694)** при пороге 80 %. Живой прогон — exit 0
+(`live-run.log`, 29:34); таблица — `live-s12/matrix.md`, JSON —
+`live-s12/matrix.jsonl`, бюджет/стоимость — `live-s12/run.json`. Полные логи —
+`journal/generation-v3/green-s12-full.txt`, `coverage-s12.txt`.
+
+**Ограничения (осознанные, не маскируются):** один провайдер/модель (других
+ключей нет, L222); `coverage` путей — разные знаменатели (L223); `duplicateRate`
+v3 неполон без этапа Dedup в фасаде (L224); потолки матрицы 260 запросов /
+2,50 USD / 75 мин (L225); DeepSeek требует двух ступеней лестницы на запрос
+(L226); отмена — между запросами; мультифайл не в матрице.
+
+---
+
 ## Генерация v3 — срез 11: гейт в доборе, HTTP-карта знаний, проводка фасада (2026-11-28)
 
 **Срез:** `TASK.txt` «Срез 11. Гейт в доборе, HTTP-карта знаний, проводка
