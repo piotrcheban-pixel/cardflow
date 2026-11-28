@@ -2,6 +2,37 @@
 
 ## Сделано
 
+**Срез 17 (2026-11-28) — заморозка метрики, сопоставимый объём, правило пути,
+слепая выборка (инструмент).**
+- **Метрика заморожена (часть 0).** `OutcomeCounts`: `cleanRate = clean/unique`,
+  `dupRate = duplicates/unique`, `blockRate = blocked/attempted`, новая
+  `acceptanceRate = accepted/attempted`; `GenerationReport.cleanRate`/
+  `duplicateRate` делегируют замороженным определениям (историческое
+  `clean/generated` убрано из живого кода). DoD-тест «дубль не двигает
+  cleanRate» падал в красной фазе (`Expected: <0.4> Actual: <0.307…>`).
+- **Сопоставимый объём.** `path_rule.dart`: `comparableVolume` (отношение
+  принятых ≥ 0,8), `volume_mismatch`; пересчёт `tool/recompute_matrix_s17.dart`
+  → `matrix-s17.md`: 4 сопоставимых пары, v3 не ниже legacy по чистым на 0 из 4,
+  `volume_mismatch` — статья 80 и 300.
+- **N* данные не дают.** `derivePathThreshold` + `MaterialPathPoint`: v3 не
+  выигрывает ни на 10, ни на 33 единицах (dupRate 35,9 % против 1,2 % на
+  учебном тексте, absoluteClean ниже) → `kGenerationPathV3MinUnits = null`,
+  авто = legacy, решение несёт `boundaryNotDetermined`.
+- **Путь — функция от материала (п. 11).** `GenerationPathMode {auto, v3,
+  legacy}` вместо булева флага (`app_settings` JSON `generation_path_mode`,
+  старый `generation_pipeline_v3` читается), `selectGenerationPath`,
+  `generationPathDecisionProvider`/`generationUsesV3Provider`, настройка —
+  три чипа (ARB `settingsGenerationPath*`), ручное переопределение работает.
+- **Слепая выборка — инструмент, измерение `not_measured`.** `blind_sample.dart`
+  (30+30, seed-перемешивание, в выборке только номер и тексты, ключ отдельно),
+  `tool/blind_sample_s17.dart`, `S12Bench` пишет карточки ячейки ключом `cards`
+  (следующий замер сохранит их для обоих путей). У существующих ячеек текстов
+  карточек нет → `blind-sample-17.md`/`blind-key-17.json` = `not_measured` с
+  причиной; выдуманных карточек нет.
+- **Legacy `dupRate` офлайн** — `not_measured` (TASK часть 0, п. 2):
+  сохранённых карточек в `cells/*.json` нет; числа не додумывались.
+- **ADR-054**, Q29, L235–L237, `verify-s17.md`, `matrix-s17.md`.
+
 **Срез 16 (2026-11-28) — дубль не закрывает слот, углы по богатству, честная метрика.**
 - **Dedup до принятия, а не после генерации.** `CandidateDeduper` /
   `CascadeDeduper` (`lib/domain/generation/candidate_deduper.dart`) — тот же
@@ -481,6 +512,22 @@
 
 ## Проверено
 
+**Срез 17.** Гейты: `.fvm\versions\3.47.9\bin\flutter.bat analyze --no-pub lib
+test tool` → **No issues found!**; `.fvm\versions\3.47.9\bin\dart.bat format
+--set-exit-if-changed lib test tool` → **0 changed** (747 файлов);
+`flutter test --no-pub --coverage --exclude-tags golden` → **3295 passed +
+20 skipped, exit 0** (`green-s17-full.txt`), покрытие рукописного кода
+**90,9 % (27463/30218)** при пороге 80 % (`coverage-s17.txt`, `tool/coverage_check.dart`);
+guards зелёные в полном прогоне. Красная фаза — `red-s17.txt`: assertion-level
+`Expected: <0.4> Actual: <0.3076923076923077>` (дубль двигал cleanRate) и
+`Expected: <0.666…> Actual: <0.4>`; новые модули сначала не компилировались
+(новое API). Пересчёт ячеек — `dart run tool/recompute_matrix_s17.dart` →
+`matrix-s17.md` (12 ячеек, 0 новых запросов); выборка — `dart run
+tool/blind_sample_s17.dart` → `blind-sample-17.md` + `blind-key-17.json`
+(`not_measured`). DoD-тесты: `outcome_counts_test` 7/7 (в т. ч. «дубль не
+двигает cleanRate»), `path_rule_test` 7/7, `generation_path_test` 5/5,
+`blind_sample_test` 6/6, `app_settings_pipeline_flag_test` 5/5.
+
 **Срез 16.** Гейты: `.fvm\versions\3.47.9\bin\flutter.bat analyze --no-pub lib
 test tool` → **No issues found!**; `dart format --set-exit-if-changed lib test
 tool` → **0 changed** (739 файлов); `flutter test --no-pub --coverage
@@ -687,6 +734,24 @@ DoD-тесты: property «Σ бюджетов == requested» на 200 случ�
 
 ## НЕ ПОВТОРЯТЬ
 
+- **Не считать «слепую выборку сделанной», если карточек нет в сохранённом.**
+  В S17 TASK требовал 60 карточек из `cells/*.json`, а ячейки среза 16 несут
+  только метрики: текстов карточек нет. Правильный ответ — `not_measured` с
+  причиной плюс инструмент и запись карточек в следующий замер
+  (`S12Bench` → `cards`), а не выдуманные карточки и не «пустой, но
+  заполненный» файл. Проверять наличие данных **до** планирования среза.
+- **Определение метрики менять только в одном месте.** В S17 `cleanRate` жил в
+  трёх местах (`OutcomeCounts`, `GenerationReport`, `MetricsCollector`) и после
+  смены знаменателя давал бы разные числа в одной таблице. Правило: одно
+  определение + делегирование (`report.cleanRate => outcome.cleanRate`),
+  пересчёт старых ячеек — только из счётчиков, сохранённые доли не читать.
+- **Не писать `expect` на `null`-намеренный геттер, не проверив пустой ввод.**
+  `OutcomeCounts.cleanRate` при `unique == 0` — `null`; тест «нет попыток»
+  проверяет все четыре доли, иначе «0 из 0» превращается в ноль.
+- **PowerShell `-replace` с обратными кавычками и кириллицей в одном
+  выражении ломается на парсере.** В S17 правка строки с `` `kPathThresholdReason `` в
+  `tool/recompute_matrix_s17.dart` упала `ParserError`; такие строки править
+  `edit`-инструментом, а не `-replace`.
 - **Контрактный тест dedup-в-цикле писать ДО проводки и снимать red-лог.**
   В S16 тесты `CandidateDeduper`/«дубль не закрывает слот» добавлены вместе с
   реализацией: падения, которые я видел, были дефектами проводки (deduper не
@@ -1016,8 +1081,23 @@ DoD-тесты: property «Σ бюджетов == requested» на 200 случ�
 
 ## СЛЕДУЮЩЕЕ ДЕЙСТВИЕ
 
-Срез 16 закрыт: dedup до закрытия слота (дубль отложен, повтор с другим углом, вторая коллизия → `duplicates`), ёмкость по богатству (`unitCapacity` вместо константы 4), метрика попыток (`OutcomeCounts`: cleanRate/dupRate/blockRate от attempted) на обоих путях. Перемер 12 решающих ячеек на `ade25b33`: 12/12 ran, 0,347353 USD из 1,00; критерий флага не выполнен на 6 из 6 (dupRate v3 0–33,8 % против legacy 0–3,4 %, absoluteClean ниже legacy на статье, cleanRate 66,2–100 % < 95 % на трёх ячейках) → `generationPipelineV3` выключен. Толкования — Q28, ограничения — L233/L234, отчёт — `verify-s16.md`, числа — `live-s16/matrix-s16.md`.
+Срез 17 закрыт (части 0, 2, 3 + инструмент части 1): метрика заморожена
+(ADR-054), сопоставимость объёма и N* посчитаны из оплаченных ячеек, путь —
+функция от материала с ручным переопределением, слепая выборка и legacy
+`dupRate` — `not_measured` с причиной (нет сохранённых текстов карточек).
+Вердикт: правило п. 10 по умолчанию **не включено**, авто = legacy, v3 — ручной
+режим. Отчёт — `journal/generation-v3/verify-s17.md`, числа —
+`journal/generation-v3/matrix-s17.md`, толкования — Q29, ограничения — L235–L237.
 
-Следующий прогон (S17 — расхождения «почему нет»): `read TASK.txt` (верхний блок) → верхний блок `journal/STATE.md` («срез 16») → `journal/QUESTIONS.md` Q28 → `journal/generation-v3/verify-s16.md` §5 (симметрия dupRate, ёмкость против объёма, дубли модели); решения — ADR-053; числа — `live-s16/matrix-s16.md`.
+Следующий прогон (S17B — только измерение, кода не трогать): `read TASK.txt`
+(верхний блок) → верхний блок `journal/STATE.md` («срез 17») →
+`journal/generation-v3/verify-s17.md` §2 → `blind-sample-17.md`/`blind-key-17.json`.
+Порядок: один живой замер (`test/live/generation_matrix_s16_live_test.dart` уже
+пишет `cards` в `cells/*.json`, но потребует `CARDFLOW_LIVE_TESTS=1` и бюджет
+владельца) → `dart run tool/blind_sample_s17.dart` (файл выборки заполнится
+30+30 автоматически, ключ останется отдельным) → владелец заполняет файл → после
+заполнения посчитать долю годных v3/legacy, совпадение с автометрикой и
+систематические дефекты (TASK п. 8) и пересмотреть вердикт п. 12 **без нового
+замера**.
 
 

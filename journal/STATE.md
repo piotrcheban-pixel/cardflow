@@ -1,5 +1,75 @@
 # STATE — текущее состояние CardFlow
 
+## Генерация v3 — срез 17: заморозка метрики, сопоставимый объём, правило пути, слепая выборка (2026-11-28)
+
+**Срез:** `TASK.txt` «Срез 17. Слепая человеческая выборка, сопоставимая метрика,
+правило выбора пути». Решения — `docs/decisions/ADR-054-metric-freeze-path-rule-blind-sample.md`;
+толкования — `journal/QUESTIONS.md` Q29; отчёт — `journal/generation-v3/verify-s17.md`;
+числа — пересчёт `journal/generation-v3/matrix-s17.md` (существующие
+`live-s16/cells/*.json`, новых платных прогонов **0**); слепая выборка —
+`journal/generation-v3/blind-sample-17.md` + `blind-key-17.json` (`not_measured`).
+
+**Факты старта:** ветка `main`, `HEAD = ade25b33` (срез 16), дерево чистое;
+baseline — 3276 passed + 20 skipped, покрытие 90,9 %, схема БД v3, флаг
+`generationPipelineV3` выключен (S16).
+
+**Сделано (части 0, 2, 3 + инструмент части 1):**
+- **Метрика заморожена (часть 0).** Четыре независимые величины в
+  `OutcomeCounts`: `cleanRate = clean/unique` (качество сохранённого),
+  `dupRate = duplicates/unique`, `blockRate = blocked/attempted`,
+  `acceptanceRate = accepted/attempted`. `GenerationReport.cleanRate`/
+  `duplicateRate` делегируют им — в живом коде одно определение. DoD-тест
+  «дубль не двигает cleanRate» падал в красной фазе assertion-level
+  (`Expected: <0.4> Actual: <0.307…>`).
+- **Сопоставимый объём.** `path_rule.dart`: `absoluteClean` сравнивается только
+  при отношении принятых ≥ 0,8, иначе `volume_mismatch`. Пересчёт 12 ячеек:
+  4 пары сопоставимы, v3 не ниже legacy по чистым на 0 из 4.
+- **N* данные не дают.** v3 не выигрывает ни на 10, ни на 33 единицах
+  (учебный текст: `dupRate` 35,9 % против 1,2 %, `absoluteClean` ниже) →
+  `kGenerationPathV3MinUnits = null`, `derivePathThreshold` → `noCrossover`,
+  авто = legacy с пометкой «на границе выбор не определён данными».
+- **Путь — функция от материала (п. 11).** `GenerationPathMode {auto, v3,
+  legacy}` в `app_settings` (`generation_path_mode`; старый
+  `generation_pipeline_v3` читается как v3/legacy), `selectGenerationPath`,
+  `generationPathDecisionProvider`/`generationUsesV3Provider`, настройка —
+  три чипа в «Провайдерах» (ARB, без литералов). Ручное переопределение
+  работает; значение по умолчанию — `auto`.
+- **Слепая выборка: инструмент готов, измерение `not_measured`.** В сохранённых
+  ячейках нет текстов карточек (стенд до среза 17 писал только метрики), а
+  TASK запрещает новые платные прогоны → `blind-sample-17.md` и
+  `blind-key-17.json` записаны со статусом `not_measured` и причиной;
+  выдуманных карточек нет. `S12Bench` с среза 17 пишет ключ `cards`
+  (`BenchSavedCard.fromGeneratedCard`), `buildBlindSample` собирает 30+30 с
+  seed-перемешиванием и отдельным ключом, `tool/blind_sample_s17.dart` пишет
+  оба файла — следующий замер даёт выборку без ручной работы.
+- **Legacy `dupRate` офлайн** — `not_measured` по той же причине (TASK часть 0,
+  п. 2 разрешает пометку); числа не додумывались.
+- **ADR-054**, Q29, L235–L237, `verify-s17.md`, `matrix-s17.md`.
+
+**Чем проверено:** `.fvm\versions\3.47.9\bin\flutter.bat analyze --no-pub lib
+test tool` → **No issues found!**; `dart format --set-exit-if-changed lib test
+tool` → **0 changed** (747 файлов); `flutter test --no-pub --coverage
+--exclude-tags golden` → **3295 passed + 20 skipped, exit 0**
+(`green-s17-full.txt`), покрытие рукописного кода **90,9 % (27463/30218)** при
+пороге 80 % (`coverage-s17.txt`); guards зелёные в полном прогоне. Красная
+фаза — `red-s17.txt` (assertion-level для метрики, compile-level для новых
+API-модулей). Инструменты: `tool/recompute_matrix_s17.dart` → `matrix-s17.md`
+(12 ячеек, 0 запросов), `tool/blind_sample_s17.dart` → `blind-sample-17.md` +
+`blind-key-17.json` (`not_measured`).
+
+**Вердикт (часть 3):** правило п. 10 **не включено по умолчанию** — N* данные
+не дают, а доля годных из слепой выборки не измерена; v3 остаётся ручным
+режимом, legacy — путь авто. Разница, видимая числами (дубли v3 до 51,1 %),
+уходит задачей на промпт S18, без нового замера.
+
+**Ограничения (осознанные):** L235 (N* не определён: два материала, один
+провайдер), L236 (объём материала до Understanding неизвестен — при появлении
+N* его передаёт вызывающий слой), L237 (слепая выборка `not_measured`);
+`blockRate` у legacy — отброшенные проверкой, у v3 — жёсткие блокировки (L234
+не снят). Промпты не менялись, схема БД не менялась (v3), legacy не удалён.
+
+---
+
 ## Генерация v3 — срез 16: дубль не закрывает слот, углы по богатству, честный dupRate (2026-11-28)
 
 **Срез:** `TASK.txt` «Срез 16. Углы по богатству единицы, дубль не закрывает

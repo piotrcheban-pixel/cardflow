@@ -1,0 +1,1126 @@
+00:00 +0: loading C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/outcome_counts_test.dart
+test/unit/domain/generation/outcome_counts_test.dart:89:20: Error: The getter 'acceptanceRate' isn't defined for the type 'OutcomeCounts'.
+ - 'OutcomeCounts' is from 'package:cardflow/domain/generation/outcome_counts.dart' ('lib/domain/generation/outcome_counts.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'acceptanceRate'.
+    expect(outcome.acceptanceRate, closeTo(6 / 10, 1e-12));
+                   ^^^^^^^^^^^^^^
+test/unit/domain/generation/outcome_counts_test.dart:136:20: Error: The getter 'acceptanceRate' isn't defined for the type 'OutcomeCounts'.
+ - 'OutcomeCounts' is from 'package:cardflow/domain/generation/outcome_counts.dart' ('lib/domain/generation/outcome_counts.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'acceptanceRate'.
+    expect(outcome.acceptanceRate, isNull);
+                   ^^^^^^^^^^^^^^
+00:00 +0 -1: loading C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/outcome_counts_test.dart [E]
+  Failed to load "C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/outcome_counts_test.dart":
+  Compilation failed for testPath=C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/outcome_counts_test.dart: test/unit/domain/generation/outcome_counts_test.dart:89:20: Error: The getter 'acceptanceRate' isn't defined for the type 'OutcomeCounts'.
+   - 'OutcomeCounts' is from 'package:cardflow/domain/generation/outcome_counts.dart' ('lib/domain/generation/outcome_counts.dart').
+  Try correcting the name to the name of an existing getter, or defining a getter or field named 'acceptanceRate'.
+      expect(outcome.acceptanceRate, closeTo(6 / 10, 1e-12));
+                     ^^^^^^^^^^^^^^
+  test/unit/domain/generation/outcome_counts_test.dart:136:20: Error: The getter 'acceptanceRate' isn't defined for the type 'OutcomeCounts'.
+   - 'OutcomeCounts' is from 'package:cardflow/domain/generation/outcome_counts.dart' ('lib/domain/generation/outcome_counts.dart').
+  Try correcting the name to the name of an existing getter, or defining a getter or field named 'acceptanceRate'.
+      expect(outcome.acceptanceRate, isNull);
+                     ^^^^^^^^^^^^^^
+  .
+  Error: The Dart compiler exited unexpectedly.
+  package:flutter_tools/src/base/common.dart 34:3  throwToolExit
+  package:flutter_tools/src/compile.dart 1024:11   DefaultResidentCompiler._compile.<fn>
+  dart:async/zone_root.dart 48:47                  _rootRunUnary
+  dart:async/zone.dart 816:35                      _CustomZone.runUnary
+  dart:async/future_impl.dart 948:45               Future._propagateToListeners.handleValueCallback
+  dart:async/future_impl.dart 977:13               Future._propagateToListeners
+  dart:async/future_impl.dart 862:9                Future._propagateToListeners
+  dart:async/future_impl.dart 720:5                Future._completeWithValue
+  dart:async/future_impl.dart 804:7                Future._asyncCompleteWithValue.<fn>
+  dart:async/zone_root.dart 35:13                  _rootRun
+  dart:async/zone.dart 810:35                      _CustomZone.run
+  dart:async/zone.dart 702:7                       _CustomZone.runGuarded
+  dart:async/zone.dart 743:23                      _CustomZone.bindCallbackGuarded.<fn>
+  dart:async/schedule_microtask.dart 40:35         _microtaskLoop
+  dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
+  dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
+  dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
+  
+test/unit/domain/generation/generation_path_test.dart:3:8: Error: Error when reading 'lib/domain/generation/generation_path.dart': Не удается найти указанный файл
+import 'package:cardflow/domain/generation/generation_path.dart';
+       ^
+test/unit/domain/generation/generation_path_test.dart:13:17: Error: Undefined name 'GenerationPathMode'.
+          mode: GenerationPathMode.v3,
+                ^^^^^^^^^^^^^^^^^^
+test/unit/domain/generation/generation_path_test.dart:12:9: Error: Method not found: 'selectGenerationPath'.
+        selectGenerationPath(
+        ^^^^^^^^^^^^^^^^^^^^
+test/unit/domain/generation/generation_path_test.dart:16:9: Error: Undefined name 'GenerationPath'.
+        GenerationPath.v3,
+        ^^^^^^^^^^^^^^
+test/unit/domain/generation/generation_path_test.dart:20:17: Error: Undefined name 'GenerationPathMode'.
+          mode: GenerationPathMode.legacy,
+                ^^^^^^^^^^^^^^^^^^
+test/unit/domain/generation/generation_path_test.dart:19:9: Error: Method not found: 'selectGenerationPath'.
+        selectGenerationPath(
+        ^^^^^^^^^^^^^^^^^^^^
+test/unit/domain/generation/generation_path_test.dart:23:9: Error: Undefined name 'GenerationPath'.
+        GenerationPath.legacy,
+        ^^^^^^^^^^^^^^
+test/unit/domain/generation/generation_path_test.dart:29:12: Error: Undefined name 'kGenerationPathV3MinUnits'.
+    expect(kGenerationPathV3MinUnits, isNull, reason: 'данные не дают разрыва');
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+test/unit/domain/generation/generation_path_test.dart:31:13: Error: 'GenerationPathDecision' isn't a type.
+      final GenerationPathDecision decision = selectGenerationPath(
+            ^^^^^^^^^^^^^^^^^^^^^^
+test/unit/domain/generation/generation_path_test.dart:32:15: Error: Undefined name 'GenerationPathMode'.
+        mode: GenerationPathMode.auto,
+              ^^^^^^^^^^^^^^^^^^
+test/unit/domain/generation/generation_path_test.dart:31:47: Error: Method not found: 'selectGenerationPath'.
+      final GenerationPathDecision decision = selectGenerationPath(
+                                              ^^^^^^^^^^^^^^^^^^^^
+test/unit/domain/generation/generation_path_test.dart:35:29: Error: Undefined name 'GenerationPath'.
+      expect(decision.path, GenerationPath.legacy);
+                            ^^^^^^^^^^^^^^
+test/unit/domain/generation/generation_path_test.dart:47:11: Error: 'GenerationPathDecision' isn't a type.
+    final GenerationPathDecision below = selectGenerationPath(
+          ^^^^^^^^^^^^^^^^^^^^^^
+test/unit/domain/generation/generation_path_test.dart:48:13: Error: Undefined name 'GenerationPathMode'.
+      mode: GenerationPathMode.auto,
+            ^^^^^^^^^^^^^^^^^^
+test/unit/domain/generation/generation_path_test.dart:47:42: Error: Method not found: 'selectGenerationPath'.
+    final GenerationPathDecision below = selectGenerationPath(
+                                         ^^^^^^^^^^^^^^^^^^^^
+test/unit/domain/generation/generation_path_test.dart:52:11: Error: 'GenerationPathDecision' isn't a type.
+    final GenerationPathDecision at = selectGenerationPath(
+          ^^^^^^^^^^^^^^^^^^^^^^
+test/unit/domain/generation/generation_path_test.dart:53:13: Error: Undefined name 'GenerationPathMode'.
+      mode: GenerationPathMode.auto,
+            ^^^^^^^^^^^^^^^^^^
+test/unit/domain/generation/generation_path_test.dart:52:39: Error: Method not found: 'selectGenerationPath'.
+    final GenerationPathDecision at = selectGenerationPath(
+                                      ^^^^^^^^^^^^^^^^^^^^
+test/unit/domain/generation/generation_path_test.dart:57:11: Error: 'GenerationPathDecision' isn't a type.
+    final GenerationPathDecision above = selectGenerationPath(
+          ^^^^^^^^^^^^^^^^^^^^^^
+test/unit/domain/generation/generation_path_test.dart:58:13: Error: Undefined name 'GenerationPathMode'.
+      mode: GenerationPathMode.auto,
+            ^^^^^^^^^^^^^^^^^^
+test/unit/domain/generation/generation_path_test.dart:57:42: Error: Method not found: 'selectGenerationPath'.
+    final GenerationPathDecision above = selectGenerationPath(
+                                         ^^^^^^^^^^^^^^^^^^^^
+test/unit/domain/generation/generation_path_test.dart:62:24: Error: Undefined name 'GenerationPath'.
+    expect(below.path, GenerationPath.legacy);
+                       ^^^^^^^^^^^^^^
+test/unit/domain/generation/generation_path_test.dart:63:21: Error: Undefined name 'GenerationPath'.
+    expect(at.path, GenerationPath.v3);
+                    ^^^^^^^^^^^^^^
+test/unit/domain/generation/generation_path_test.dart:64:24: Error: Undefined name 'GenerationPath'.
+    expect(above.path, GenerationPath.v3);
+                       ^^^^^^^^^^^^^^
+test/unit/domain/generation/generation_path_test.dart:70:11: Error: 'GenerationPathDecision' isn't a type.
+    final GenerationPathDecision decision = selectGenerationPath(
+          ^^^^^^^^^^^^^^^^^^^^^^
+test/unit/domain/generation/generation_path_test.dart:71:13: Error: Undefined name 'GenerationPathMode'.
+      mode: GenerationPathMode.v3,
+            ^^^^^^^^^^^^^^^^^^
+test/unit/domain/generation/generation_path_test.dart:70:45: Error: Method not found: 'selectGenerationPath'.
+    final GenerationPathDecision decision = selectGenerationPath(
+                                            ^^^^^^^^^^^^^^^^^^^^
+test/unit/domain/generation/generation_path_test.dart:74:27: Error: Undefined name 'GenerationPathMode'.
+    expect(decision.mode, GenerationPathMode.v3);
+                          ^^^^^^^^^^^^^^^^^^
+test/unit/domain/generation/generation_path_test.dart:81:12: Error: Undefined name 'GenerationPathMode'.
+    expect(GenerationPathMode.auto.wireName, 'auto');
+           ^^^^^^^^^^^^^^^^^^
+test/unit/domain/generation/generation_path_test.dart:82:12: Error: Undefined name 'GenerationPathMode'.
+    expect(GenerationPathMode.v3.wireName, 'v3');
+           ^^^^^^^^^^^^^^^^^^
+test/unit/domain/generation/generation_path_test.dart:83:12: Error: Undefined name 'GenerationPathMode'.
+    expect(GenerationPathMode.legacy.wireName, 'legacy');
+           ^^^^^^^^^^^^^^^^^^
+test/unit/domain/generation/generation_path_test.dart:84:16: Error: 'GenerationPathMode' isn't a type.
+    for (final GenerationPathMode mode in GenerationPathMode.values) {
+               ^^^^^^^^^^^^^^^^^^
+test/unit/domain/generation/generation_path_test.dart:84:43: Error: Undefined name 'GenerationPathMode'.
+    for (final GenerationPathMode mode in GenerationPathMode.values) {
+                                          ^^^^^^^^^^^^^^^^^^
+test/unit/domain/generation/generation_path_test.dart:85:14: Error: Undefined name 'GenerationPathMode'.
+      expect(GenerationPathMode.fromWire(mode.wireName), mode);
+             ^^^^^^^^^^^^^^^^^^
+test/unit/domain/generation/generation_path_test.dart:87:12: Error: Undefined name 'GenerationPathMode'.
+    expect(GenerationPathMode.fromWire(null), GenerationPathMode.auto);
+           ^^^^^^^^^^^^^^^^^^
+test/unit/domain/generation/generation_path_test.dart:87:47: Error: Undefined name 'GenerationPathMode'.
+    expect(GenerationPathMode.fromWire(null), GenerationPathMode.auto);
+                                              ^^^^^^^^^^^^^^^^^^
+test/unit/domain/generation/generation_path_test.dart:88:12: Error: Undefined name 'GenerationPathMode'.
+    expect(GenerationPathMode.fromWire('unknown'), GenerationPathMode.auto);
+           ^^^^^^^^^^^^^^^^^^
+test/unit/domain/generation/generation_path_test.dart:88:52: Error: Undefined name 'GenerationPathMode'.
+    expect(GenerationPathMode.fromWire('unknown'), GenerationPathMode.auto);
+                                                   ^^^^^^^^^^^^^^^^^^
+00:00 +0 -2: loading C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_path_test.dart [E]
+  Failed to load "C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_path_test.dart":
+  Compilation failed for testPath=C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_path_test.dart: test/unit/domain/generation/generation_path_test.dart:3:8: Error: Error when reading 'lib/domain/generation/generation_path.dart': Не удается найти указанный файл
+  import 'package:cardflow/domain/generation/generation_path.dart';
+         ^
+  test/unit/domain/generation/generation_path_test.dart:13:17: Error: Undefined name 'GenerationPathMode'.
+            mode: GenerationPathMode.v3,
+                  ^^^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/generation_path_test.dart:12:9: Error: Method not found: 'selectGenerationPath'.
+          selectGenerationPath(
+          ^^^^^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/generation_path_test.dart:16:9: Error: Undefined name 'GenerationPath'.
+          GenerationPath.v3,
+          ^^^^^^^^^^^^^^
+  test/unit/domain/generation/generation_path_test.dart:20:17: Error: Undefined name 'GenerationPathMode'.
+            mode: GenerationPathMode.legacy,
+                  ^^^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/generation_path_test.dart:19:9: Error: Method not found: 'selectGenerationPath'.
+          selectGenerationPath(
+          ^^^^^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/generation_path_test.dart:23:9: Error: Undefined name 'GenerationPath'.
+          GenerationPath.legacy,
+          ^^^^^^^^^^^^^^
+  test/unit/domain/generation/generation_path_test.dart:29:12: Error: Undefined name 'kGenerationPathV3MinUnits'.
+      expect(kGenerationPathV3MinUnits, isNull, reason: 'данные не дают разрыва');
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/generation_path_test.dart:31:13: Error: 'GenerationPathDecision' isn't a type.
+        final GenerationPathDecision decision = selectGenerationPath(
+              ^^^^^^^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/generation_path_test.dart:32:15: Error: Undefined name 'GenerationPathMode'.
+          mode: GenerationPathMode.auto,
+                ^^^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/generation_path_test.dart:31:47: Error: Method not found: 'selectGenerationPath'.
+        final GenerationPathDecision decision = selectGenerationPath(
+                                                ^^^^^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/generation_path_test.dart:35:29: Error: Undefined name 'GenerationPath'.
+        expect(decision.path, GenerationPath.legacy);
+                              ^^^^^^^^^^^^^^
+  test/unit/domain/generation/generation_path_test.dart:47:11: Error: 'GenerationPathDecision' isn't a type.
+      final GenerationPathDecision below = selectGenerationPath(
+            ^^^^^^^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/generation_path_test.dart:48:13: Error: Undefined name 'GenerationPathMode'.
+        mode: GenerationPathMode.auto,
+              ^^^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/generation_path_test.dart:47:42: Error: Method not found: 'selectGenerationPath'.
+      final GenerationPathDecision below = selectGenerationPath(
+                                           ^^^^^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/generation_path_test.dart:52:11: Error: 'GenerationPathDecision' isn't a type.
+      final GenerationPathDecision at = selectGenerationPath(
+            ^^^^^^^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/generation_path_test.dart:53:13: Error: Undefined name 'GenerationPathMode'.
+        mode: GenerationPathMode.auto,
+              ^^^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/generation_path_test.dart:52:39: Error: Method not found: 'selectGenerationPath'.
+      final GenerationPathDecision at = selectGenerationPath(
+                                        ^^^^^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/generation_path_test.dart:57:11: Error: 'GenerationPathDecision' isn't a type.
+      final GenerationPathDecision above = selectGenerationPath(
+            ^^^^^^^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/generation_path_test.dart:58:13: Error: Undefined name 'GenerationPathMode'.
+        mode: GenerationPathMode.auto,
+              ^^^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/generation_path_test.dart:57:42: Error: Method not found: 'selectGenerationPath'.
+      final GenerationPathDecision above = selectGenerationPath(
+                                           ^^^^^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/generation_path_test.dart:62:24: Error: Undefined name 'GenerationPath'.
+      expect(below.path, GenerationPath.legacy);
+                         ^^^^^^^^^^^^^^
+  test/unit/domain/generation/generation_path_test.dart:63:21: Error: Undefined name 'GenerationPath'.
+      expect(at.path, GenerationPath.v3);
+                      ^^^^^^^^^^^^^^
+  test/unit/domain/generation/generation_path_test.dart:64:24: Error: Undefined name 'GenerationPath'.
+      expect(above.path, GenerationPath.v3);
+                         ^^^^^^^^^^^^^^
+  test/unit/domain/generation/generation_path_test.dart:70:11: Error: 'GenerationPathDecision' isn't a type.
+      final GenerationPathDecision decision = selectGenerationPath(
+            ^^^^^^^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/generation_path_test.dart:71:13: Error: Undefined name 'GenerationPathMode'.
+        mode: GenerationPathMode.v3,
+              ^^^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/generation_path_test.dart:70:45: Error: Method not found: 'selectGenerationPath'.
+      final GenerationPathDecision decision = selectGenerationPath(
+                                              ^^^^^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/generation_path_test.dart:74:27: Error: Undefined name 'GenerationPathMode'.
+      expect(decision.mode, GenerationPathMode.v3);
+                            ^^^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/generation_path_test.dart:81:12: Error: Undefined name 'GenerationPathMode'.
+      expect(GenerationPathMode.auto.wireName, 'auto');
+             ^^^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/generation_path_test.dart:82:12: Error: Undefined name 'GenerationPathMode'.
+      expect(GenerationPathMode.v3.wireName, 'v3');
+             ^^^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/generation_path_test.dart:83:12: Error: Undefined name 'GenerationPathMode'.
+      expect(GenerationPathMode.legacy.wireName, 'legacy');
+             ^^^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/generation_path_test.dart:84:16: Error: 'GenerationPathMode' isn't a type.
+      for (final GenerationPathMode mode in GenerationPathMode.values) {
+                 ^^^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/generation_path_test.dart:84:43: Error: Undefined name 'GenerationPathMode'.
+      for (final GenerationPathMode mode in GenerationPathMode.values) {
+                                            ^^^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/generation_path_test.dart:85:14: Error: Undefined name 'GenerationPathMode'.
+        expect(GenerationPathMode.fromWire(mode.wireName), mode);
+               ^^^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/generation_path_test.dart:87:12: Error: Undefined name 'GenerationPathMode'.
+      expect(GenerationPathMode.fromWire(null), GenerationPathMode.auto);
+             ^^^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/generation_path_test.dart:87:47: Error: Undefined name 'GenerationPathMode'.
+      expect(GenerationPathMode.fromWire(null), GenerationPathMode.auto);
+                                                ^^^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/generation_path_test.dart:88:12: Error: Undefined name 'GenerationPathMode'.
+      expect(GenerationPathMode.fromWire('unknown'), GenerationPathMode.auto);
+             ^^^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/generation_path_test.dart:88:52: Error: Undefined name 'GenerationPathMode'.
+      expect(GenerationPathMode.fromWire('unknown'), GenerationPathMode.auto);
+                                                     ^^^^^^^^^^^^^^^^^^
+  .
+00:00 +0 -2: loading C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/outcome_counts_test.dart [E]
+  Error: The Dart compiler exited unexpectedly.
+  package:flutter_tools/src/base/common.dart 34:3  throwToolExit
+  package:flutter_tools/src/compile.dart 1024:11   DefaultResidentCompiler._compile.<fn>
+  dart:async/zone_root.dart 48:47                  _rootRunUnary
+  dart:async/zone.dart 816:35                      _CustomZone.runUnary
+  dart:async/future_impl.dart 948:45               Future._propagateToListeners.handleValueCallback
+  dart:async/future_impl.dart 977:13               Future._propagateToListeners
+  dart:async/future_impl.dart 862:9                Future._propagateToListeners
+  dart:async/future_impl.dart 720:5                Future._completeWithValue
+  dart:async/future_impl.dart 804:7                Future._asyncCompleteWithValue.<fn>
+  dart:async/zone_root.dart 35:13                  _rootRun
+  dart:async/zone.dart 810:35                      _CustomZone.run
+  dart:async/zone.dart 702:7                       _CustomZone.runGuarded
+  dart:async/zone.dart 743:23                      _CustomZone.bindCallbackGuarded.<fn>
+  dart:async/schedule_microtask.dart 40:35         _microtaskLoop
+  dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
+  dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
+  dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
+  
+test/unit/domain/generation/path_rule_test.dart:3:8: Error: Error when reading 'lib/domain/generation/path_rule.dart': Не удается найти указанный файл
+import 'package:cardflow/domain/generation/path_rule.dart';
+       ^
+test/unit/domain/generation/path_rule_test.dart:12:3: Error: 'PathOutcome' isn't a type.
+  PathOutcome outcome({
+  ^^^^^^^^^^^
+test/unit/domain/generation/path_rule_test.dart:19:9: Error: Method not found: 'PathOutcome'.
+  }) => PathOutcome(
+        ^^^^^^^^^^^
+test/unit/domain/generation/path_rule_test.dart:29:11: Error: 'PathOutcome' isn't a type.
+    final PathOutcome legacy = outcome(
+          ^^^^^^^^^^^
+test/unit/domain/generation/path_rule_test.dart:44:12: Error: Method not found: 'comparableVolumeRatio'.
+    expect(comparableVolumeRatio(acceptedA: 13, acceptedB: 16), closeTo(13 / 16, 1e-12));
+           ^^^^^^^^^^^^^^^^^^^^^
+test/unit/domain/generation/path_rule_test.dart:45:12: Error: Method not found: 'comparableVolume'.
+    expect(comparableVolume(acceptedA: 13, acceptedB: 16), isTrue);
+           ^^^^^^^^^^^^^^^^
+test/unit/domain/generation/path_rule_test.dart:46:12: Error: Method not found: 'comparableVolume'.
+    expect(comparableVolume(acceptedA: 12, acceptedB: 16), isFalse);
+           ^^^^^^^^^^^^^^^^
+test/unit/domain/generation/path_rule_test.dart:47:12: Error: Method not found: 'comparableVolume'.
+    expect(comparableVolume(acceptedA: 47, acceptedB: 57), isTrue);
+           ^^^^^^^^^^^^^^^^
+test/unit/domain/generation/path_rule_test.dart:48:12: Error: Method not found: 'comparableVolume'.
+    expect(comparableVolume(acceptedA: 0, acceptedB: 0), isFalse);
+           ^^^^^^^^^^^^^^^^
+test/unit/domain/generation/path_rule_test.dart:49:12: Error: Method not found: 'comparableVolumeRatio'.
+    expect(comparableVolumeRatio(acceptedA: 0, acceptedB: 0), isNull);
+           ^^^^^^^^^^^^^^^^^^^^^
+test/unit/domain/generation/path_rule_test.dart:53:11: Error: 'PathThresholdResult' isn't a type.
+    final PathThresholdResult result = derivePathThreshold(
+          ^^^^^^^^^^^^^^^^^^^
+test/unit/domain/generation/path_rule_test.dart:54:8: Error: 'MaterialPathPoint' isn't a type.
+      <MaterialPathPoint>[
+       ^^^^^^^^^^^^^^^^^
+test/unit/domain/generation/path_rule_test.dart:55:9: Error: Method not found: 'MaterialPathPoint'.
+        MaterialPathPoint(
+        ^^^^^^^^^^^^^^^^^
+test/unit/domain/generation/path_rule_test.dart:60:9: Error: Method not found: 'MaterialPathPoint'.
+        MaterialPathPoint(
+        ^^^^^^^^^^^^^^^^^
+test/unit/domain/generation/path_rule_test.dart:65:9: Error: Method not found: 'MaterialPathPoint'.
+        MaterialPathPoint(
+        ^^^^^^^^^^^^^^^^^
+test/unit/domain/generation/path_rule_test.dart:53:40: Error: Method not found: 'derivePathThreshold'.
+    final PathThresholdResult result = derivePathThreshold(
+                                       ^^^^^^^^^^^^^^^^^^^
+test/unit/domain/generation/path_rule_test.dart:73:27: Error: Undefined name 'PathThresholdReason'.
+    expect(result.reason, PathThresholdReason.crossover);
+                          ^^^^^^^^^^^^^^^^^^^
+test/unit/domain/generation/path_rule_test.dart:78:11: Error: 'PathThresholdResult' isn't a type.
+    final PathThresholdResult result = derivePathThreshold(
+          ^^^^^^^^^^^^^^^^^^^
+test/unit/domain/generation/path_rule_test.dart:79:8: Error: 'MaterialPathPoint' isn't a type.
+      <MaterialPathPoint>[
+       ^^^^^^^^^^^^^^^^^
+test/unit/domain/generation/path_rule_test.dart:80:9: Error: Method not found: 'MaterialPathPoint'.
+        MaterialPathPoint(
+        ^^^^^^^^^^^^^^^^^
+test/unit/domain/generation/path_rule_test.dart:85:9: Error: Method not found: 'MaterialPathPoint'.
+        MaterialPathPoint(
+        ^^^^^^^^^^^^^^^^^
+test/unit/domain/generation/path_rule_test.dart:78:40: Error: Method not found: 'derivePathThreshold'.
+    final PathThresholdResult result = derivePathThreshold(
+                                       ^^^^^^^^^^^^^^^^^^^
+test/unit/domain/generation/path_rule_test.dart:93:27: Error: Undefined name 'PathThresholdReason'.
+    expect(result.reason, PathThresholdReason.noCrossover);
+                          ^^^^^^^^^^^^^^^^^^^
+test/unit/domain/generation/path_rule_test.dart:98:11: Error: 'PathThresholdResult' isn't a type.
+    final PathThresholdResult result = derivePathThreshold(
+          ^^^^^^^^^^^^^^^^^^^
+test/unit/domain/generation/path_rule_test.dart:99:8: Error: 'MaterialPathPoint' isn't a type.
+      <MaterialPathPoint>[
+       ^^^^^^^^^^^^^^^^^
+test/unit/domain/generation/path_rule_test.dart:100:9: Error: Method not found: 'MaterialPathPoint'.
+        MaterialPathPoint(
+        ^^^^^^^^^^^^^^^^^
+test/unit/domain/generation/path_rule_test.dart:105:9: Error: Method not found: 'MaterialPathPoint'.
+        MaterialPathPoint(
+        ^^^^^^^^^^^^^^^^^
+test/unit/domain/generation/path_rule_test.dart:98:40: Error: Method not found: 'derivePathThreshold'.
+    final PathThresholdResult result = derivePathThreshold(
+                                       ^^^^^^^^^^^^^^^^^^^
+test/unit/domain/generation/path_rule_test.dart:113:27: Error: Undefined name 'PathThresholdReason'.
+    expect(result.reason, PathThresholdReason.notMonotonic);
+                          ^^^^^^^^^^^^^^^^^^^
+test/unit/domain/generation/path_rule_test.dart:117:11: Error: 'PathThresholdResult' isn't a type.
+    final PathThresholdResult result = derivePathThreshold(
+          ^^^^^^^^^^^^^^^^^^^
+test/unit/domain/generation/path_rule_test.dart:118:8: Error: 'MaterialPathPoint' isn't a type.
+      <MaterialPathPoint>[
+       ^^^^^^^^^^^^^^^^^
+test/unit/domain/generation/path_rule_test.dart:119:9: Error: Method not found: 'MaterialPathPoint'.
+        MaterialPathPoint(
+        ^^^^^^^^^^^^^^^^^
+test/unit/domain/generation/path_rule_test.dart:117:40: Error: Method not found: 'derivePathThreshold'.
+    final PathThresholdResult result = derivePathThreshold(
+                                       ^^^^^^^^^^^^^^^^^^^
+test/unit/domain/generation/path_rule_test.dart:126:27: Error: Undefined name 'PathThresholdReason'.
+    expect(result.reason, PathThresholdReason.noCrossover);
+                          ^^^^^^^^^^^^^^^^^^^
+test/unit/domain/generation/path_rule_test.dart:130:11: Error: 'PathThresholdResult' isn't a type.
+    final PathThresholdResult result = derivePathThreshold(
+          ^^^^^^^^^^^^^^^^^^^
+test/unit/domain/generation/path_rule_test.dart:131:14: Error: 'MaterialPathPoint' isn't a type.
+      const <MaterialPathPoint>[],
+             ^^^^^^^^^^^^^^^^^
+test/unit/domain/generation/path_rule_test.dart:130:40: Error: Method not found: 'derivePathThreshold'.
+    final PathThresholdResult result = derivePathThreshold(
+                                       ^^^^^^^^^^^^^^^^^^^
+test/unit/domain/generation/path_rule_test.dart:134:27: Error: Undefined name 'PathThresholdReason'.
+    expect(result.reason, PathThresholdReason.noCrossover);
+                          ^^^^^^^^^^^^^^^^^^^
+00:00 +0 -3: loading C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/path_rule_test.dart [E]
+  Failed to load "C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/path_rule_test.dart":
+  Compilation failed for testPath=C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/path_rule_test.dart: test/unit/domain/generation/path_rule_test.dart:3:8: Error: Error when reading 'lib/domain/generation/path_rule.dart': Не удается найти указанный файл
+  import 'package:cardflow/domain/generation/path_rule.dart';
+         ^
+  test/unit/domain/generation/path_rule_test.dart:12:3: Error: 'PathOutcome' isn't a type.
+    PathOutcome outcome({
+    ^^^^^^^^^^^
+  test/unit/domain/generation/path_rule_test.dart:19:9: Error: Method not found: 'PathOutcome'.
+    }) => PathOutcome(
+          ^^^^^^^^^^^
+  test/unit/domain/generation/path_rule_test.dart:29:11: Error: 'PathOutcome' isn't a type.
+      final PathOutcome legacy = outcome(
+            ^^^^^^^^^^^
+  test/unit/domain/generation/path_rule_test.dart:44:12: Error: Method not found: 'comparableVolumeRatio'.
+      expect(comparableVolumeRatio(acceptedA: 13, acceptedB: 16), closeTo(13 / 16, 1e-12));
+             ^^^^^^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/path_rule_test.dart:45:12: Error: Method not found: 'comparableVolume'.
+      expect(comparableVolume(acceptedA: 13, acceptedB: 16), isTrue);
+             ^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/path_rule_test.dart:46:12: Error: Method not found: 'comparableVolume'.
+      expect(comparableVolume(acceptedA: 12, acceptedB: 16), isFalse);
+             ^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/path_rule_test.dart:47:12: Error: Method not found: 'comparableVolume'.
+      expect(comparableVolume(acceptedA: 47, acceptedB: 57), isTrue);
+             ^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/path_rule_test.dart:48:12: Error: Method not found: 'comparableVolume'.
+      expect(comparableVolume(acceptedA: 0, acceptedB: 0), isFalse);
+             ^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/path_rule_test.dart:49:12: Error: Method not found: 'comparableVolumeRatio'.
+      expect(comparableVolumeRatio(acceptedA: 0, acceptedB: 0), isNull);
+             ^^^^^^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/path_rule_test.dart:53:11: Error: 'PathThresholdResult' isn't a type.
+      final PathThresholdResult result = derivePathThreshold(
+            ^^^^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/path_rule_test.dart:54:8: Error: 'MaterialPathPoint' isn't a type.
+        <MaterialPathPoint>[
+         ^^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/path_rule_test.dart:55:9: Error: Method not found: 'MaterialPathPoint'.
+          MaterialPathPoint(
+          ^^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/path_rule_test.dart:60:9: Error: Method not found: 'MaterialPathPoint'.
+          MaterialPathPoint(
+          ^^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/path_rule_test.dart:65:9: Error: Method not found: 'MaterialPathPoint'.
+          MaterialPathPoint(
+          ^^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/path_rule_test.dart:53:40: Error: Method not found: 'derivePathThreshold'.
+      final PathThresholdResult result = derivePathThreshold(
+                                         ^^^^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/path_rule_test.dart:73:27: Error: Undefined name 'PathThresholdReason'.
+      expect(result.reason, PathThresholdReason.crossover);
+                            ^^^^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/path_rule_test.dart:78:11: Error: 'PathThresholdResult' isn't a type.
+      final PathThresholdResult result = derivePathThreshold(
+            ^^^^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/path_rule_test.dart:79:8: Error: 'MaterialPathPoint' isn't a type.
+        <MaterialPathPoint>[
+         ^^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/path_rule_test.dart:80:9: Error: Method not found: 'MaterialPathPoint'.
+          MaterialPathPoint(
+          ^^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/path_rule_test.dart:85:9: Error: Method not found: 'MaterialPathPoint'.
+          MaterialPathPoint(
+          ^^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/path_rule_test.dart:78:40: Error: Method not found: 'derivePathThreshold'.
+      final PathThresholdResult result = derivePathThreshold(
+                                         ^^^^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/path_rule_test.dart:93:27: Error: Undefined name 'PathThresholdReason'.
+      expect(result.reason, PathThresholdReason.noCrossover);
+                            ^^^^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/path_rule_test.dart:98:11: Error: 'PathThresholdResult' isn't a type.
+      final PathThresholdResult result = derivePathThreshold(
+            ^^^^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/path_rule_test.dart:99:8: Error: 'MaterialPathPoint' isn't a type.
+        <MaterialPathPoint>[
+         ^^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/path_rule_test.dart:100:9: Error: Method not found: 'MaterialPathPoint'.
+          MaterialPathPoint(
+          ^^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/path_rule_test.dart:105:9: Error: Method not found: 'MaterialPathPoint'.
+          MaterialPathPoint(
+          ^^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/path_rule_test.dart:98:40: Error: Method not found: 'derivePathThreshold'.
+      final PathThresholdResult result = derivePathThreshold(
+                                         ^^^^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/path_rule_test.dart:113:27: Error: Undefined name 'PathThresholdReason'.
+      expect(result.reason, PathThresholdReason.notMonotonic);
+                            ^^^^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/path_rule_test.dart:117:11: Error: 'PathThresholdResult' isn't a type.
+      final PathThresholdResult result = derivePathThreshold(
+            ^^^^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/path_rule_test.dart:118:8: Error: 'MaterialPathPoint' isn't a type.
+        <MaterialPathPoint>[
+         ^^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/path_rule_test.dart:119:9: Error: Method not found: 'MaterialPathPoint'.
+          MaterialPathPoint(
+          ^^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/path_rule_test.dart:117:40: Error: Method not found: 'derivePathThreshold'.
+      final PathThresholdResult result = derivePathThreshold(
+                                         ^^^^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/path_rule_test.dart:126:27: Error: Undefined name 'PathThresholdReason'.
+      expect(result.reason, PathThresholdReason.noCrossover);
+                            ^^^^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/path_rule_test.dart:130:11: Error: 'PathThresholdResult' isn't a type.
+      final PathThresholdResult result = derivePathThreshold(
+            ^^^^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/path_rule_test.dart:131:14: Error: 'MaterialPathPoint' isn't a type.
+        const <MaterialPathPoint>[],
+               ^^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/path_rule_test.dart:130:40: Error: Method not found: 'derivePathThreshold'.
+      final PathThresholdResult result = derivePathThreshold(
+                                         ^^^^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/path_rule_test.dart:134:27: Error: Undefined name 'PathThresholdReason'.
+      expect(result.reason, PathThresholdReason.noCrossover);
+                            ^^^^^^^^^^^^^^^^^^^
+  .
+00:00 +0 -3: loading C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/outcome_counts_test.dart [E]
+  Error: The Dart compiler exited unexpectedly.
+  package:flutter_tools/src/base/common.dart 34:3  throwToolExit
+  package:flutter_tools/src/compile.dart 1024:11   DefaultResidentCompiler._compile.<fn>
+  dart:async/zone_root.dart 48:47                  _rootRunUnary
+  dart:async/zone.dart 816:35                      _CustomZone.runUnary
+  dart:async/future_impl.dart 948:45               Future._propagateToListeners.handleValueCallback
+  dart:async/future_impl.dart 977:13               Future._propagateToListeners
+  dart:async/future_impl.dart 862:9                Future._propagateToListeners
+  dart:async/future_impl.dart 720:5                Future._completeWithValue
+  dart:async/future_impl.dart 804:7                Future._asyncCompleteWithValue.<fn>
+  dart:async/zone_root.dart 35:13                  _rootRun
+  dart:async/zone.dart 810:35                      _CustomZone.run
+  dart:async/zone.dart 702:7                       _CustomZone.runGuarded
+  dart:async/zone.dart 743:23                      _CustomZone.bindCallbackGuarded.<fn>
+  dart:async/schedule_microtask.dart 40:35         _microtaskLoop
+  dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
+  dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
+  dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
+  
+test/unit/domain/generation/blind_sample_test.dart:3:8: Error: Error when reading 'lib/domain/generation/blind_sample.dart': Не удается найти указанный файл
+import 'package:cardflow/domain/generation/blind_sample.dart';
+       ^
+test/unit/domain/generation/blind_sample_test.dart:4:8: Error: Error when reading 'lib/domain/generation/generation_path.dart': Не удается найти указанный файл
+import 'package:cardflow/domain/generation/generation_path.dart';
+       ^
+test/unit/domain/generation/blind_sample_test.dart:12:8: Error: 'BlindSourceCard' isn't a type.
+  List<BlindSourceCard> cardsOf(
+       ^^^^^^^^^^^^^^^
+test/unit/domain/generation/blind_sample_test.dart:13:5: Error: 'GenerationPath' isn't a type.
+    GenerationPath path,
+    ^^^^^^^^^^^^^^
+test/unit/domain/generation/blind_sample_test.dart:16:9: Error: 'BlindSourceCard' isn't a type.
+  ) => <BlindSourceCard>[
+        ^^^^^^^^^^^^^^^
+test/unit/domain/generation/blind_sample_test.dart:18:7: Error: Method not found: 'BlindSourceCard'.
+      BlindSourceCard(
+      ^^^^^^^^^^^^^^^
+test/unit/domain/generation/blind_sample_test.dart:27:11: Error: 'BlindSample' isn't a type.
+    final BlindSample sample = buildBlindSample(
+          ^^^^^^^^^^^
+test/unit/domain/generation/blind_sample_test.dart:28:15: Error: 'BlindSourceCard' isn't a type.
+      cards: <BlindSourceCard>[
+              ^^^^^^^^^^^^^^^
+test/unit/domain/generation/blind_sample_test.dart:29:20: Error: Undefined name 'GenerationPath'.
+        ...cardsOf(GenerationPath.v3, 'textbook-v3-80', 34),
+                   ^^^^^^^^^^^^^^
+test/unit/domain/generation/blind_sample_test.dart:30:20: Error: Undefined name 'GenerationPath'.
+        ...cardsOf(GenerationPath.legacy, 'textbook-legacy-80', 34),
+                   ^^^^^^^^^^^^^^
+test/unit/domain/generation/blind_sample_test.dart:27:32: Error: Method not found: 'buildBlindSample'.
+    final BlindSample sample = buildBlindSample(
+                               ^^^^^^^^^^^^^^^^
+test/unit/domain/generation/blind_sample_test.dart:38:27: Error: 'BlindEntry' isn't a type.
+      sample.entries.map((BlindEntry entry) => entry.number),
+                          ^^^^^^^^^^
+test/unit/domain/generation/blind_sample_test.dart:45:16: Error: 'BlindEntry' isn't a type.
+    for (final BlindEntry entry in sample.entries) {
+               ^^^^^^^^^^
+test/unit/domain/generation/blind_sample_test.dart:54:11: Error: 'BlindSample' isn't a type.
+    final BlindSample sample = buildBlindSample(
+          ^^^^^^^^^^^
+test/unit/domain/generation/blind_sample_test.dart:55:15: Error: 'BlindSourceCard' isn't a type.
+      cards: <BlindSourceCard>[
+              ^^^^^^^^^^^^^^^
+test/unit/domain/generation/blind_sample_test.dart:56:20: Error: Undefined name 'GenerationPath'.
+        ...cardsOf(GenerationPath.v3, 'article-v3-80', 30),
+                   ^^^^^^^^^^^^^^
+test/unit/domain/generation/blind_sample_test.dart:57:20: Error: Undefined name 'GenerationPath'.
+        ...cardsOf(GenerationPath.legacy, 'article-legacy-80', 30),
+                   ^^^^^^^^^^^^^^
+test/unit/domain/generation/blind_sample_test.dart:54:32: Error: Method not found: 'buildBlindSample'.
+    final BlindSample sample = buildBlindSample(
+                               ^^^^^^^^^^^^^^^^
+test/unit/domain/generation/blind_sample_test.dart:63:23: Error: 'BlindKeyEntry' isn't a type.
+      sample.key.map((BlindKeyEntry entry) => entry.number),
+                      ^^^^^^^^^^^^^
+test/unit/domain/generation/blind_sample_test.dart:64:27: Error: 'BlindEntry' isn't a type.
+      sample.entries.map((BlindEntry entry) => entry.number),
+                          ^^^^^^^^^^
+test/unit/domain/generation/blind_sample_test.dart:66:16: Error: 'BlindKeyEntry' isn't a type.
+    for (final BlindKeyEntry entry in sample.key) {
+               ^^^^^^^^^^^^^
+test/unit/domain/generation/blind_sample_test.dart:68:32: Error: Undefined name 'GenerationPath'.
+      expect(entry.path, anyOf(GenerationPath.v3, GenerationPath.legacy));
+                               ^^^^^^^^^^^^^^
+test/unit/domain/generation/blind_sample_test.dart:68:51: Error: Undefined name 'GenerationPath'.
+      expect(entry.path, anyOf(GenerationPath.v3, GenerationPath.legacy));
+                                                  ^^^^^^^^^^^^^^
+test/unit/domain/generation/blind_sample_test.dart:71:25: Error: 'BlindKeyEntry' isn't a type.
+      sample.key.where((BlindKeyEntry entry) => entry.path == GenerationPath.v3),
+                        ^^^^^^^^^^^^^
+test/unit/domain/generation/blind_sample_test.dart:71:63: Error: Undefined name 'GenerationPath'.
+      sample.key.where((BlindKeyEntry entry) => entry.path == GenerationPath.v3),
+                                                              ^^^^^^^^^^^^^^
+test/unit/domain/generation/blind_sample_test.dart:76:19: Error: 'BlindKeyEntry' isn't a type.
+          .where((BlindKeyEntry entry) => entry.path == GenerationPath.legacy),
+                  ^^^^^^^^^^^^^
+test/unit/domain/generation/blind_sample_test.dart:76:57: Error: Undefined name 'GenerationPath'.
+          .where((BlindKeyEntry entry) => entry.path == GenerationPath.legacy),
+                                                        ^^^^^^^^^^^^^^
+test/unit/domain/generation/blind_sample_test.dart:82:11: Error: 'BlindSample' isn't a type.
+    final BlindSample sample = buildBlindSample(
+          ^^^^^^^^^^^
+test/unit/domain/generation/blind_sample_test.dart:83:15: Error: 'BlindSourceCard' isn't a type.
+      cards: <BlindSourceCard>[
+              ^^^^^^^^^^^^^^^
+test/unit/domain/generation/blind_sample_test.dart:84:20: Error: Undefined name 'GenerationPath'.
+        ...cardsOf(GenerationPath.v3, 'textbook-v3-150', 30),
+                   ^^^^^^^^^^^^^^
+test/unit/domain/generation/blind_sample_test.dart:85:20: Error: Undefined name 'GenerationPath'.
+        ...cardsOf(GenerationPath.legacy, 'textbook-legacy-150', 30),
+                   ^^^^^^^^^^^^^^
+test/unit/domain/generation/blind_sample_test.dart:82:32: Error: Method not found: 'buildBlindSample'.
+    final BlindSample sample = buildBlindSample(
+                               ^^^^^^^^^^^^^^^^
+test/unit/domain/generation/blind_sample_test.dart:90:16: Error: 'BlindKeyEntry' isn't a type.
+    for (final BlindKeyEntry entry in sample.key) {
+               ^^^^^^^^^^^^^
+test/unit/domain/generation/blind_sample_test.dart:100:16: Error: 'BlindSourceCard' isn't a type.
+    final List<BlindSourceCard> cards = <BlindSourceCard>[
+               ^^^^^^^^^^^^^^^
+test/unit/domain/generation/blind_sample_test.dart:100:42: Error: 'BlindSourceCard' isn't a type.
+    final List<BlindSourceCard> cards = <BlindSourceCard>[
+                                         ^^^^^^^^^^^^^^^
+test/unit/domain/generation/blind_sample_test.dart:101:18: Error: Undefined name 'GenerationPath'.
+      ...cardsOf(GenerationPath.v3, 'textbook-v3-300', 32),
+                 ^^^^^^^^^^^^^^
+test/unit/domain/generation/blind_sample_test.dart:102:18: Error: Undefined name 'GenerationPath'.
+      ...cardsOf(GenerationPath.legacy, 'textbook-legacy-300', 32),
+                 ^^^^^^^^^^^^^^
+test/unit/domain/generation/blind_sample_test.dart:104:11: Error: 'BlindSample' isn't a type.
+    final BlindSample first = buildBlindSample(cards: cards, seed: 17);
+          ^^^^^^^^^^^
+test/unit/domain/generation/blind_sample_test.dart:104:31: Error: Method not found: 'buildBlindSample'.
+    final BlindSample first = buildBlindSample(cards: cards, seed: 17);
+                              ^^^^^^^^^^^^^^^^
+test/unit/domain/generation/blind_sample_test.dart:105:11: Error: 'BlindSample' isn't a type.
+    final BlindSample second = buildBlindSample(cards: cards, seed: 17);
+          ^^^^^^^^^^^
+test/unit/domain/generation/blind_sample_test.dart:105:32: Error: Method not found: 'buildBlindSample'.
+    final BlindSample second = buildBlindSample(cards: cards, seed: 17);
+                               ^^^^^^^^^^^^^^^^
+test/unit/domain/generation/blind_sample_test.dart:107:26: Error: 'BlindEntry' isn't a type.
+      first.entries.map((BlindEntry entry) => entry.front),
+                         ^^^^^^^^^^
+test/unit/domain/generation/blind_sample_test.dart:108:27: Error: 'BlindEntry' isn't a type.
+      second.entries.map((BlindEntry entry) => entry.front),
+                          ^^^^^^^^^^
+test/unit/domain/generation/blind_sample_test.dart:111:18: Error: 'BlindSourceCard' isn't a type.
+      for (final BlindSourceCard card in cards) card.front,
+                 ^^^^^^^^^^^^^^^
+test/unit/domain/generation/blind_sample_test.dart:114:35: Error: 'BlindEntry' isn't a type.
+      first.entries.take(10).map((BlindEntry entry) => entry.front),
+                                  ^^^^^^^^^^
+test/unit/domain/generation/blind_sample_test.dart:121:11: Error: 'BlindSample' isn't a type.
+    final BlindSample sample = buildBlindSample(
+          ^^^^^^^^^^^
+test/unit/domain/generation/blind_sample_test.dart:122:15: Error: 'BlindSourceCard' isn't a type.
+      cards: <BlindSourceCard>[
+              ^^^^^^^^^^^^^^^
+test/unit/domain/generation/blind_sample_test.dart:123:20: Error: Undefined name 'GenerationPath'.
+        ...cardsOf(GenerationPath.v3, 'article-v3-80', 13),
+                   ^^^^^^^^^^^^^^
+test/unit/domain/generation/blind_sample_test.dart:124:20: Error: Undefined name 'GenerationPath'.
+        ...cardsOf(GenerationPath.legacy, 'article-legacy-80', 17),
+                   ^^^^^^^^^^^^^^
+test/unit/domain/generation/blind_sample_test.dart:121:32: Error: Method not found: 'buildBlindSample'.
+    final BlindSample sample = buildBlindSample(
+                               ^^^^^^^^^^^^^^^^
+test/unit/domain/generation/blind_sample_test.dart:136:11: Error: 'BlindSample' isn't a type.
+    final BlindSample sample = buildBlindSample(
+          ^^^^^^^^^^^
+test/unit/domain/generation/blind_sample_test.dart:137:21: Error: 'BlindSourceCard' isn't a type.
+      cards: const <BlindSourceCard>[],
+                    ^^^^^^^^^^^^^^^
+test/unit/domain/generation/blind_sample_test.dart:136:32: Error: Method not found: 'buildBlindSample'.
+    final BlindSample sample = buildBlindSample(
+                               ^^^^^^^^^^^^^^^^
+00:00 +0 -4: loading C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/blind_sample_test.dart [E]
+  Failed to load "C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/blind_sample_test.dart":
+  Compilation failed for testPath=C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/blind_sample_test.dart: test/unit/domain/generation/blind_sample_test.dart:3:8: Error: Error when reading 'lib/domain/generation/blind_sample.dart': Не удается найти указанный файл
+  import 'package:cardflow/domain/generation/blind_sample.dart';
+         ^
+  test/unit/domain/generation/blind_sample_test.dart:4:8: Error: Error when reading 'lib/domain/generation/generation_path.dart': Не удается найти указанный файл
+  import 'package:cardflow/domain/generation/generation_path.dart';
+         ^
+  test/unit/domain/generation/blind_sample_test.dart:12:8: Error: 'BlindSourceCard' isn't a type.
+    List<BlindSourceCard> cardsOf(
+         ^^^^^^^^^^^^^^^
+  test/unit/domain/generation/blind_sample_test.dart:13:5: Error: 'GenerationPath' isn't a type.
+      GenerationPath path,
+      ^^^^^^^^^^^^^^
+  test/unit/domain/generation/blind_sample_test.dart:16:9: Error: 'BlindSourceCard' isn't a type.
+    ) => <BlindSourceCard>[
+          ^^^^^^^^^^^^^^^
+  test/unit/domain/generation/blind_sample_test.dart:18:7: Error: Method not found: 'BlindSourceCard'.
+        BlindSourceCard(
+        ^^^^^^^^^^^^^^^
+  test/unit/domain/generation/blind_sample_test.dart:27:11: Error: 'BlindSample' isn't a type.
+      final BlindSample sample = buildBlindSample(
+            ^^^^^^^^^^^
+  test/unit/domain/generation/blind_sample_test.dart:28:15: Error: 'BlindSourceCard' isn't a type.
+        cards: <BlindSourceCard>[
+                ^^^^^^^^^^^^^^^
+  test/unit/domain/generation/blind_sample_test.dart:29:20: Error: Undefined name 'GenerationPath'.
+          ...cardsOf(GenerationPath.v3, 'textbook-v3-80', 34),
+                     ^^^^^^^^^^^^^^
+  test/unit/domain/generation/blind_sample_test.dart:30:20: Error: Undefined name 'GenerationPath'.
+          ...cardsOf(GenerationPath.legacy, 'textbook-legacy-80', 34),
+                     ^^^^^^^^^^^^^^
+  test/unit/domain/generation/blind_sample_test.dart:27:32: Error: Method not found: 'buildBlindSample'.
+      final BlindSample sample = buildBlindSample(
+                                 ^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/blind_sample_test.dart:38:27: Error: 'BlindEntry' isn't a type.
+        sample.entries.map((BlindEntry entry) => entry.number),
+                            ^^^^^^^^^^
+  test/unit/domain/generation/blind_sample_test.dart:45:16: Error: 'BlindEntry' isn't a type.
+      for (final BlindEntry entry in sample.entries) {
+                 ^^^^^^^^^^
+  test/unit/domain/generation/blind_sample_test.dart:54:11: Error: 'BlindSample' isn't a type.
+      final BlindSample sample = buildBlindSample(
+            ^^^^^^^^^^^
+  test/unit/domain/generation/blind_sample_test.dart:55:15: Error: 'BlindSourceCard' isn't a type.
+        cards: <BlindSourceCard>[
+                ^^^^^^^^^^^^^^^
+  test/unit/domain/generation/blind_sample_test.dart:56:20: Error: Undefined name 'GenerationPath'.
+          ...cardsOf(GenerationPath.v3, 'article-v3-80', 30),
+                     ^^^^^^^^^^^^^^
+  test/unit/domain/generation/blind_sample_test.dart:57:20: Error: Undefined name 'GenerationPath'.
+          ...cardsOf(GenerationPath.legacy, 'article-legacy-80', 30),
+                     ^^^^^^^^^^^^^^
+  test/unit/domain/generation/blind_sample_test.dart:54:32: Error: Method not found: 'buildBlindSample'.
+      final BlindSample sample = buildBlindSample(
+                                 ^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/blind_sample_test.dart:63:23: Error: 'BlindKeyEntry' isn't a type.
+        sample.key.map((BlindKeyEntry entry) => entry.number),
+                        ^^^^^^^^^^^^^
+  test/unit/domain/generation/blind_sample_test.dart:64:27: Error: 'BlindEntry' isn't a type.
+        sample.entries.map((BlindEntry entry) => entry.number),
+                            ^^^^^^^^^^
+  test/unit/domain/generation/blind_sample_test.dart:66:16: Error: 'BlindKeyEntry' isn't a type.
+      for (final BlindKeyEntry entry in sample.key) {
+                 ^^^^^^^^^^^^^
+  test/unit/domain/generation/blind_sample_test.dart:68:32: Error: Undefined name 'GenerationPath'.
+        expect(entry.path, anyOf(GenerationPath.v3, GenerationPath.legacy));
+                                 ^^^^^^^^^^^^^^
+  test/unit/domain/generation/blind_sample_test.dart:68:51: Error: Undefined name 'GenerationPath'.
+        expect(entry.path, anyOf(GenerationPath.v3, GenerationPath.legacy));
+                                                    ^^^^^^^^^^^^^^
+  test/unit/domain/generation/blind_sample_test.dart:71:25: Error: 'BlindKeyEntry' isn't a type.
+        sample.key.where((BlindKeyEntry entry) => entry.path == GenerationPath.v3),
+                          ^^^^^^^^^^^^^
+  test/unit/domain/generation/blind_sample_test.dart:71:63: Error: Undefined name 'GenerationPath'.
+        sample.key.where((BlindKeyEntry entry) => entry.path == GenerationPath.v3),
+                                                                ^^^^^^^^^^^^^^
+  test/unit/domain/generation/blind_sample_test.dart:76:19: Error: 'BlindKeyEntry' isn't a type.
+            .where((BlindKeyEntry entry) => entry.path == GenerationPath.legacy),
+                    ^^^^^^^^^^^^^
+  test/unit/domain/generation/blind_sample_test.dart:76:57: Error: Undefined name 'GenerationPath'.
+            .where((BlindKeyEntry entry) => entry.path == GenerationPath.legacy),
+                                                          ^^^^^^^^^^^^^^
+  test/unit/domain/generation/blind_sample_test.dart:82:11: Error: 'BlindSample' isn't a type.
+      final BlindSample sample = buildBlindSample(
+            ^^^^^^^^^^^
+  test/unit/domain/generation/blind_sample_test.dart:83:15: Error: 'BlindSourceCard' isn't a type.
+        cards: <BlindSourceCard>[
+                ^^^^^^^^^^^^^^^
+  test/unit/domain/generation/blind_sample_test.dart:84:20: Error: Undefined name 'GenerationPath'.
+          ...cardsOf(GenerationPath.v3, 'textbook-v3-150', 30),
+                     ^^^^^^^^^^^^^^
+  test/unit/domain/generation/blind_sample_test.dart:85:20: Error: Undefined name 'GenerationPath'.
+          ...cardsOf(GenerationPath.legacy, 'textbook-legacy-150', 30),
+                     ^^^^^^^^^^^^^^
+  test/unit/domain/generation/blind_sample_test.dart:82:32: Error: Method not found: 'buildBlindSample'.
+      final BlindSample sample = buildBlindSample(
+                                 ^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/blind_sample_test.dart:90:16: Error: 'BlindKeyEntry' isn't a type.
+      for (final BlindKeyEntry entry in sample.key) {
+                 ^^^^^^^^^^^^^
+  test/unit/domain/generation/blind_sample_test.dart:100:16: Error: 'BlindSourceCard' isn't a type.
+      final List<BlindSourceCard> cards = <BlindSourceCard>[
+                 ^^^^^^^^^^^^^^^
+  test/unit/domain/generation/blind_sample_test.dart:100:42: Error: 'BlindSourceCard' isn't a type.
+      final List<BlindSourceCard> cards = <BlindSourceCard>[
+                                           ^^^^^^^^^^^^^^^
+  test/unit/domain/generation/blind_sample_test.dart:101:18: Error: Undefined name 'GenerationPath'.
+        ...cardsOf(GenerationPath.v3, 'textbook-v3-300', 32),
+                   ^^^^^^^^^^^^^^
+  test/unit/domain/generation/blind_sample_test.dart:102:18: Error: Undefined name 'GenerationPath'.
+        ...cardsOf(GenerationPath.legacy, 'textbook-legacy-300', 32),
+                   ^^^^^^^^^^^^^^
+  test/unit/domain/generation/blind_sample_test.dart:104:11: Error: 'BlindSample' isn't a type.
+      final BlindSample first = buildBlindSample(cards: cards, seed: 17);
+            ^^^^^^^^^^^
+  test/unit/domain/generation/blind_sample_test.dart:104:31: Error: Method not found: 'buildBlindSample'.
+      final BlindSample first = buildBlindSample(cards: cards, seed: 17);
+                                ^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/blind_sample_test.dart:105:11: Error: 'BlindSample' isn't a type.
+      final BlindSample second = buildBlindSample(cards: cards, seed: 17);
+            ^^^^^^^^^^^
+  test/unit/domain/generation/blind_sample_test.dart:105:32: Error: Method not found: 'buildBlindSample'.
+      final BlindSample second = buildBlindSample(cards: cards, seed: 17);
+                                 ^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/blind_sample_test.dart:107:26: Error: 'BlindEntry' isn't a type.
+        first.entries.map((BlindEntry entry) => entry.front),
+                           ^^^^^^^^^^
+  test/unit/domain/generation/blind_sample_test.dart:108:27: Error: 'BlindEntry' isn't a type.
+        second.entries.map((BlindEntry entry) => entry.front),
+                            ^^^^^^^^^^
+  test/unit/domain/generation/blind_sample_test.dart:111:18: Error: 'BlindSourceCard' isn't a type.
+        for (final BlindSourceCard card in cards) card.front,
+                   ^^^^^^^^^^^^^^^
+  test/unit/domain/generation/blind_sample_test.dart:114:35: Error: 'BlindEntry' isn't a type.
+        first.entries.take(10).map((BlindEntry entry) => entry.front),
+                                    ^^^^^^^^^^
+  test/unit/domain/generation/blind_sample_test.dart:121:11: Error: 'BlindSample' isn't a type.
+      final BlindSample sample = buildBlindSample(
+            ^^^^^^^^^^^
+  test/unit/domain/generation/blind_sample_test.dart:122:15: Error: 'BlindSourceCard' isn't a type.
+        cards: <BlindSourceCard>[
+                ^^^^^^^^^^^^^^^
+  test/unit/domain/generation/blind_sample_test.dart:123:20: Error: Undefined name 'GenerationPath'.
+          ...cardsOf(GenerationPath.v3, 'article-v3-80', 13),
+                     ^^^^^^^^^^^^^^
+  test/unit/domain/generation/blind_sample_test.dart:124:20: Error: Undefined name 'GenerationPath'.
+          ...cardsOf(GenerationPath.legacy, 'article-legacy-80', 17),
+                     ^^^^^^^^^^^^^^
+  test/unit/domain/generation/blind_sample_test.dart:121:32: Error: Method not found: 'buildBlindSample'.
+      final BlindSample sample = buildBlindSample(
+                                 ^^^^^^^^^^^^^^^^
+  test/unit/domain/generation/blind_sample_test.dart:136:11: Error: 'BlindSample' isn't a type.
+      final BlindSample sample = buildBlindSample(
+            ^^^^^^^^^^^
+  test/unit/domain/generation/blind_sample_test.dart:137:21: Error: 'BlindSourceCard' isn't a type.
+        cards: const <BlindSourceCard>[],
+                      ^^^^^^^^^^^^^^^
+  test/unit/domain/generation/blind_sample_test.dart:136:32: Error: Method not found: 'buildBlindSample'.
+      final BlindSample sample = buildBlindSample(
+                                 ^^^^^^^^^^^^^^^^
+  .
+00:00 +0 -4: loading C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/outcome_counts_test.dart [E]
+  Error: The Dart compiler exited unexpectedly.
+  package:flutter_tools/src/base/common.dart 34:3  throwToolExit
+  package:flutter_tools/src/compile.dart 1024:11   DefaultResidentCompiler._compile.<fn>
+  dart:async/zone_root.dart 48:47                  _rootRunUnary
+  dart:async/zone.dart 816:35                      _CustomZone.runUnary
+  dart:async/future_impl.dart 948:45               Future._propagateToListeners.handleValueCallback
+  dart:async/future_impl.dart 977:13               Future._propagateToListeners
+  dart:async/future_impl.dart 862:9                Future._propagateToListeners
+  dart:async/future_impl.dart 720:5                Future._completeWithValue
+  dart:async/future_impl.dart 804:7                Future._asyncCompleteWithValue.<fn>
+  dart:async/zone_root.dart 35:13                  _rootRun
+  dart:async/zone.dart 810:35                      _CustomZone.run
+  dart:async/zone.dart 702:7                       _CustomZone.runGuarded
+  dart:async/zone.dart 743:23                      _CustomZone.bindCallbackGuarded.<fn>
+  dart:async/schedule_microtask.dart 40:35         _microtaskLoop
+  dart:async/schedule_microtask.dart 49:5          _startMicrotaskLoop
+  dart:isolate-patch/isolate_patch.dart 127:13     _runPendingImmediateCallback
+  dart:isolate-patch/isolate_patch.dart 193:5      _RawReceivePort._handleMessage
+  
+test/unit/domain/settings/app_settings_pipeline_flag_test.dart:3:8: Error: Error when reading 'lib/domain/generation/generation_path.dart': Не удается найти указанный файл
+import 'package:cardflow/domain/generation/generation_path.dart';
+       ^
+test/unit/domain/settings/app_settings_pipeline_flag_test.dart:15:53: Error: Undefined name 'GenerationPathMode'.
+    expect(AppSettings.defaults.generationPathMode, GenerationPathMode.auto);
+                                                    ^^^^^^^^^^^^^^^^^^
+test/unit/domain/settings/app_settings_pipeline_flag_test.dart:16:52: Error: Undefined name 'GenerationPathMode'.
+    expect(const AppSettings().generationPathMode, GenerationPathMode.auto);
+                                                   ^^^^^^^^^^^^^^^^^^
+test/unit/domain/settings/app_settings_pipeline_flag_test.dart:18:7: Error: Method not found: 'selectGenerationPath'.
+      selectGenerationPath(
+      ^^^^^^^^^^^^^^^^^^^^
+test/unit/domain/settings/app_settings_pipeline_flag_test.dart:22:7: Error: Undefined name 'GenerationPath'.
+      GenerationPath.legacy,
+      ^^^^^^^^^^^^^^
+test/unit/domain/settings/app_settings_pipeline_flag_test.dart:27:16: Error: 'GenerationPathMode' isn't a type.
+    for (final GenerationPathMode mode in <GenerationPathMode>[
+               ^^^^^^^^^^^^^^^^^^
+test/unit/domain/settings/app_settings_pipeline_flag_test.dart:27:44: Error: 'GenerationPathMode' isn't a type.
+    for (final GenerationPathMode mode in <GenerationPathMode>[
+                                           ^^^^^^^^^^^^^^^^^^
+test/unit/domain/settings/app_settings_pipeline_flag_test.dart:28:7: Error: Undefined name 'GenerationPathMode'.
+      GenerationPathMode.v3,
+      ^^^^^^^^^^^^^^^^^^
+test/unit/domain/settings/app_settings_pipeline_flag_test.dart:29:7: Error: Undefined name 'GenerationPathMode'.
+      GenerationPathMode.legacy,
+      ^^^^^^^^^^^^^^^^^^
+test/unit/domain/settings/app_settings_pipeline_flag_test.dart:51:7: Error: Undefined name 'GenerationPathMode'.
+      GenerationPathMode.v3,
+      ^^^^^^^^^^^^^^^^^^
+test/unit/domain/settings/app_settings_pipeline_flag_test.dart:56:7: Error: Undefined name 'GenerationPathMode'.
+      GenerationPathMode.legacy,
+      ^^^^^^^^^^^^^^^^^^
+test/unit/domain/settings/app_settings_pipeline_flag_test.dart:65:61: Error: Undefined name 'GenerationPathMode'.
+    expect(AppSettings.fromJson(legacy).generationPathMode, GenerationPathMode.auto);
+                                                            ^^^^^^^^^^^^^^^^^^
+test/unit/domain/settings/app_settings_pipeline_flag_test.dart:70:27: Error: Undefined name 'GenerationPathMode'.
+      generationPathMode: GenerationPathMode.v3,
+                          ^^^^^^^^^^^^^^^^^^
+test/unit/domain/settings/app_settings_pipeline_flag_test.dart:72:62: Error: Undefined name 'GenerationPathMode'.
+    expect(v3.copyWith(dailyNewLimit: 5).generationPathMode, GenerationPathMode.v3);
+                                                             ^^^^^^^^^^^^^^^^^^
+test/unit/domain/settings/app_settings_pipeline_flag_test.dart:74:39: Error: Undefined name 'GenerationPathMode'.
+      v3.copyWith(generationPathMode: GenerationPathMode.legacy).generationPathMode,
+                                      ^^^^^^^^^^^^^^^^^^
+test/unit/domain/settings/app_settings_pipeline_flag_test.dart:75:7: Error: Undefined name 'GenerationPathMode'.
+      GenerationPathMode.legacy,
+      ^^^^^^^^^^^^^^^^^^
+test/unit/domain/settings/app_settings_pipeline_flag_test.dart:15:33: Error: The getter 'generationPathMode' isn't defined for the type 'AppSettings'.
+ - 'AppSettings' is from 'package:cardflow/domain/settings/app_settings.dart' ('lib/domain/settings/app_settings.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'generationPathMode'.
+    expect(AppSettings.defaults.generationPathMode, GenerationPathMode.auto);
+                                ^^^^^^^^^^^^^^^^^^
+test/unit/domain/settings/app_settings_pipeline_flag_test.dart:16:32: Error: The getter 'generationPathMode' isn't defined for the type 'AppSettings'.
+ - 'AppSettings' is from 'package:cardflow/domain/settings/app_settings.dart' ('lib/domain/settings/app_settings.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'generationPathMode'.
+    expect(const AppSettings().generationPathMode, GenerationPathMode.auto);
+                               ^^^^^^^^^^^^^^^^^^
+test/unit/domain/settings/app_settings_pipeline_flag_test.dart:32:9: Error: No named parameter with the name 'generationPathMode'.
+        generationPathMode: mode,
+        ^^^^^^^^^^^^^^^^^^
+test/unit/domain/settings/app_settings_pipeline_flag_test.dart:37:41: Error: The getter 'generationPathMode' isn't defined for the type 'AppSettings'.
+ - 'AppSettings' is from 'package:cardflow/domain/settings/app_settings.dart' ('lib/domain/settings/app_settings.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'generationPathMode'.
+      expect(AppSettings.fromJson(json).generationPathMode, mode);
+                                        ^^^^^^^^^^^^^^^^^^
+test/unit/domain/settings/app_settings_pipeline_flag_test.dart:50:32: Error: The getter 'generationPathMode' isn't defined for the type 'AppSettings'.
+ - 'AppSettings' is from 'package:cardflow/domain/settings/app_settings.dart' ('lib/domain/settings/app_settings.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'generationPathMode'.
+      AppSettings.fromJson(on).generationPathMode,
+                               ^^^^^^^^^^^^^^^^^^
+test/unit/domain/settings/app_settings_pipeline_flag_test.dart:55:33: Error: The getter 'generationPathMode' isn't defined for the type 'AppSettings'.
+ - 'AppSettings' is from 'package:cardflow/domain/settings/app_settings.dart' ('lib/domain/settings/app_settings.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'generationPathMode'.
+      AppSettings.fromJson(off).generationPathMode,
+                                ^^^^^^^^^^^^^^^^^^
+test/unit/domain/settings/app_settings_pipeline_flag_test.dart:65:41: Error: The getter 'generationPathMode' isn't defined for the type 'AppSettings'.
+ - 'AppSettings' is from 'package:cardflow/domain/settings/app_settings.dart' ('lib/domain/settings/app_settings.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'generationPathMode'.
+    expect(AppSettings.fromJson(legacy).generationPathMode, GenerationPathMode.auto);
+                                        ^^^^^^^^^^^^^^^^^^
+test/unit/domain/settings/app_settings_pipeline_flag_test.dart:70:7: Error: No named parameter with the name 'generationPathMode'.
+      generationPathMode: GenerationPathMode.v3,
+      ^^^^^^^^^^^^^^^^^^
+test/unit/domain/settings/app_settings_pipeline_flag_test.dart:72:42: Error: The getter 'generationPathMode' isn't defined for the type 'AppSettings'.
+ - 'AppSettings' is from 'package:cardflow/domain/settings/app_settings.dart' ('lib/domain/settings/app_settings.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'generationPathMode'.
+    expect(v3.copyWith(dailyNewLimit: 5).generationPathMode, GenerationPathMode.v3);
+                                         ^^^^^^^^^^^^^^^^^^
+test/unit/domain/settings/app_settings_pipeline_flag_test.dart:74:19: Error: No named parameter with the name 'generationPathMode'.
+      v3.copyWith(generationPathMode: GenerationPathMode.legacy).generationPathMode,
+                  ^^^^^^^^^^^^^^^^^^
+00:00 +0 -5: loading C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/settings/app_settings_pipeline_flag_test.dart [E]
+  Failed to load "C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/settings/app_settings_pipeline_flag_test.dart":
+  Compilation failed for testPath=C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/settings/app_settings_pipeline_flag_test.dart: test/unit/domain/settings/app_settings_pipeline_flag_test.dart:3:8: Error: Error when reading 'lib/domain/generation/generation_path.dart': Не удается найти указанный файл
+  import 'package:cardflow/domain/generation/generation_path.dart';
+         ^
+  test/unit/domain/settings/app_settings_pipeline_flag_test.dart:15:53: Error: Undefined name 'GenerationPathMode'.
+      expect(AppSettings.defaults.generationPathMode, GenerationPathMode.auto);
+                                                      ^^^^^^^^^^^^^^^^^^
+  test/unit/domain/settings/app_settings_pipeline_flag_test.dart:16:52: Error: Undefined name 'GenerationPathMode'.
+      expect(const AppSettings().generationPathMode, GenerationPathMode.auto);
+                                                     ^^^^^^^^^^^^^^^^^^
+  test/unit/domain/settings/app_settings_pipeline_flag_test.dart:18:7: Error: Method not found: 'selectGenerationPath'.
+        selectGenerationPath(
+        ^^^^^^^^^^^^^^^^^^^^
+  test/unit/domain/settings/app_settings_pipeline_flag_test.dart:22:7: Error: Undefined name 'GenerationPath'.
+        GenerationPath.legacy,
+        ^^^^^^^^^^^^^^
+  test/unit/domain/settings/app_settings_pipeline_flag_test.dart:27:16: Error: 'GenerationPathMode' isn't a type.
+      for (final GenerationPathMode mode in <GenerationPathMode>[
+                 ^^^^^^^^^^^^^^^^^^
+  test/unit/domain/settings/app_settings_pipeline_flag_test.dart:27:44: Error: 'GenerationPathMode' isn't a type.
+      for (final GenerationPathMode mode in <GenerationPathMode>[
+                                             ^^^^^^^^^^^^^^^^^^
+  test/unit/domain/settings/app_settings_pipeline_flag_test.dart:28:7: Error: Undefined name 'GenerationPathMode'.
+        GenerationPathMode.v3,
+        ^^^^^^^^^^^^^^^^^^
+  test/unit/domain/settings/app_settings_pipeline_flag_test.dart:29:7: Error: Undefined name 'GenerationPathMode'.
+        GenerationPathMode.legacy,
+        ^^^^^^^^^^^^^^^^^^
+  test/unit/domain/settings/app_settings_pipeline_flag_test.dart:51:7: Error: Undefined name 'GenerationPathMode'.
+        GenerationPathMode.v3,
+        ^^^^^^^^^^^^^^^^^^
+  test/unit/domain/settings/app_settings_pipeline_flag_test.dart:56:7: Error: Undefined name 'GenerationPathMode'.
+        GenerationPathMode.legacy,
+        ^^^^^^^^^^^^^^^^^^
+  test/unit/domain/settings/app_settings_pipeline_flag_test.dart:65:61: Error: Undefined name 'GenerationPathMode'.
+      expect(AppSettings.fromJson(legacy).generationPathMode, GenerationPathMode.auto);
+                                                              ^^^^^^^^^^^^^^^^^^
+  test/unit/domain/settings/app_settings_pipeline_flag_test.dart:70:27: Error: Undefined name 'GenerationPathMode'.
+        generationPathMode: GenerationPathMode.v3,
+                            ^^^^^^^^^^^^^^^^^^
+  test/unit/domain/settings/app_settings_pipeline_flag_test.dart:72:62: Error: Undefined name 'GenerationPathMode'.
+      expect(v3.copyWith(dailyNewLimit: 5).generationPathMode, GenerationPathMode.v3);
+                                                               ^^^^^^^^^^^^^^^^^^
+  test/unit/domain/settings/app_settings_pipeline_flag_test.dart:74:39: Error: Undefined name 'GenerationPathMode'.
+        v3.copyWith(generationPathMode: GenerationPathMode.legacy).generationPathMode,
+                                        ^^^^^^^^^^^^^^^^^^
+  test/unit/domain/settings/app_settings_pipeline_flag_test.dart:75:7: Error: Undefined name 'GenerationPathMode'.
+        GenerationPathMode.legacy,
+        ^^^^^^^^^^^^^^^^^^
+  test/unit/domain/settings/app_settings_pipeline_flag_test.dart:15:33: Error: The getter 'generationPathMode' isn't defined for the type 'AppSettings'.
+   - 'AppSettings' is from 'package:cardflow/domain/settings/app_settings.dart' ('lib/domain/settings/app_settings.dart').
+  Try correcting the name to the name of an existing getter, or defining a getter or field named 'generationPathMode'.
+      expect(AppSettings.defaults.generationPathMode, GenerationPathMode.auto);
+                                  ^^^^^^^^^^^^^^^^^^
+  test/unit/domain/settings/app_settings_pipeline_flag_test.dart:16:32: Error: The getter 'generationPathMode' isn't defined for the type 'AppSettings'.
+   - 'AppSettings' is from 'package:cardflow/domain/settings/app_settings.dart' ('lib/domain/settings/app_settings.dart').
+  Try correcting the name to the name of an existing getter, or defining a getter or field named 'generationPathMode'.
+      expect(const AppSettings().generationPathMode, GenerationPathMode.auto);
+                                 ^^^^^^^^^^^^^^^^^^
+  test/unit/domain/settings/app_settings_pipeline_flag_test.dart:32:9: Error: No named parameter with the name 'generationPathMode'.
+          generationPathMode: mode,
+          ^^^^^^^^^^^^^^^^^^
+  test/unit/domain/settings/app_settings_pipeline_flag_test.dart:37:41: Error: The getter 'generationPathMode' isn't defined for the type 'AppSettings'.
+   - 'AppSettings' is from 'package:cardflow/domain/settings/app_settings.dart' ('lib/domain/settings/app_settings.dart').
+  Try correcting the name to the name of an existing getter, or defining a getter or field named 'generationPathMode'.
+        expect(AppSettings.fromJson(json).generationPathMode, mode);
+                                          ^^^^^^^^^^^^^^^^^^
+  test/unit/domain/settings/app_settings_pipeline_flag_test.dart:50:32: Error: The getter 'generationPathMode' isn't defined for the type 'AppSettings'.
+   - 'AppSettings' is from 'package:cardflow/domain/settings/app_settings.dart' ('lib/domain/settings/app_settings.dart').
+  Try correcting the name to the name of an existing getter, or defining a getter or field named 'generationPathMode'.
+        AppSettings.fromJson(on).generationPathMode,
+                                 ^^^^^^^^^^^^^^^^^^
+  test/unit/domain/settings/app_settings_pipeline_flag_test.dart:55:33: Error: The getter 'generationPathMode' isn't defined for the type 'AppSettings'.
+   - 'AppSettings' is from 'package:cardflow/domain/settings/app_settings.dart' ('lib/domain/settings/app_settings.dart').
+  Try correcting the name to the name of an existing getter, or defining a getter or field named 'generationPathMode'.
+        AppSettings.fromJson(off).generationPathMode,
+                                  ^^^^^^^^^^^^^^^^^^
+  test/unit/domain/settings/app_settings_pipeline_flag_test.dart:65:41: Error: The getter 'generationPathMode' isn't defined for the type 'AppSettings'.
+   - 'AppSettings' is from 'package:cardflow/domain/settings/app_settings.dart' ('lib/domain/settings/app_settings.dart').
+  Try correcting the name to the name of an existing getter, or defining a getter or field named 'generationPathMode'.
+      expect(AppSettings.fromJson(legacy).generationPathMode, GenerationPathMode.auto);
+                                          ^^^^^^^^^^^^^^^^^^
+  test/unit/domain/settings/app_settings_pipeline_flag_test.dart:70:7: Error: No named parameter with the name 'generationPathMode'.
+        generationPathMode: GenerationPathMode.v3,
+        ^^^^^^^^^^^^^^^^^^
+  test/unit/domain/settings/app_settings_pipeline_flag_test.dart:72:42: Error: The getter 'generationPathMode' isn't defined for the type 'AppSettings'.
+   - 'AppSettings' is from 'package:cardflow/domain/settings/app_settings.dart' ('lib/domain/settings/app_settings.dart').
+  Try correcting the name to the name of an existing getter, or defining a getter or field named 'generationPathMode'.
+      expect(v3.copyWith(dailyNewLimit: 5).generationPathMode, GenerationPathMode.v3);
+                                           ^^^^^^^^^^^^^^^^^^
+  test/unit/domain/settings/app_settings_pipeline_flag_test.dart:74:19: Error: No named parameter with the name 'generationPathMode'.
+        v3.copyWith(generationPathMode: GenerationPathMode.legacy).generationPathMode,
+                    ^^^^^^^^^^^^^^^^^^
+  .
+00:00 +0 -5: Some tests failed.
+
+Failing tests:
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/blind_sample_test.dart: loading C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/blind_sample_test.dart
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_path_test.dart: loading C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/generation_path_test.dart
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/outcome_counts_test.dart: loading C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/outcome_counts_test.dart
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/path_rule_test.dart: loading C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/path_rule_test.dart
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/settings/app_settings_pipeline_flag_test.dart: loading C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/settings/app_settings_pipeline_flag_test.dart
+
+=== assertion-level: заморозка метрики (после добавления только acceptanceRate) ===
+
+00:00 +0: loading C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/outcome_counts_test.dart
+00:00 +0: определения: attempted / accepted / unique / clean
+00:00 +1: доли замороженного набора: сохранённое — знаменатель качества
+00:00 +1 -1: доли замороженного набора: сохранённое — знаменатель качества [E]
+  Expected: a numeric value within <1e-12> of <0.6666666666666666>
+    Actual: <0.4>
+     Which:  differs by <0.2666666666666666>
+  cleanRate = чистые / уникальные, а не / все попытки
+  
+  package:matcher                                            expect
+  package:flutter_test/src/widget_tester.dart 473:18         expect
+  test\unit\domain\generation\outcome_counts_test.dart 74:5  main.<fn>
+  
+00:00 +1 -1: дубль не двигает cleanRate (DoD части 0, п. 1)
+00:00 +1 -2: дубль не двигает cleanRate (DoD части 0, п. 1) [E]
+  Expected: <0.4>
+    Actual: <0.3076923076923077>
+  качество сохранённого не зависит от того, сколько дублей отложено/удалено
+  
+  package:matcher                                             expect
+  package:flutter_test/src/widget_tester.dart 473:18          expect
+  test\unit\domain\generation\outcome_counts_test.dart 104:5  main.<fn>
+  
+00:00 +1 -2: unique вычитает принятые с пометкой дубля
+00:00 +2 -2: нет попыток — доли null, а не ноль
+00:00 +3 -2: отчёт прогона отдаёт те же счётчики (единый код путей)
+00:00 +3 -3: отчёт прогона отдаёт те же счётчики (единый код путей) [E]
+  Expected: a numeric value within <1e-12> of <1.0>
+    Actual: <0.7272727272727273>
+     Which:  differs by <0.2727272727272727>
+  
+  package:matcher                                             expect
+  package:flutter_test/src/widget_tester.dart 473:18          expect
+  test\unit\domain\generation\outcome_counts_test.dart 146:5  main.<fn>
+  
+00:00 +3 -3: отрицательные счётчики — ошибка программиста
+00:00 +4 -3: Some tests failed.
+
+Failing tests:
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/outcome_counts_test.dart: доли замороженного набора: сохранённое — знаменатель качества
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/outcome_counts_test.dart: дубль не двигает cleanRate (DoD части 0, п. 1)
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/outcome_counts_test.dart: отчёт прогона отдаёт те же счётчики (единый код путей)
