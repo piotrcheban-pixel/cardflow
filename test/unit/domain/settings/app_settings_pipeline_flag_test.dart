@@ -2,12 +2,28 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cardflow/domain/settings/app_settings.dart';
 
-/// Срез 14: критерий флага выполнен (`journal/generation-v3/verify-s14.md`),
-/// поэтому путь v3 включён по умолчанию, а legacy включается выключением флага.
+/// Срез 15, часть 0: флаг `generationPipelineV3` снова **выключен** по
+/// умолчанию. Причина — в `journal/STATE.md`: критерий среза 14 выведен из
+/// `coverage`, а не измерен пер-юнитными данными (L230); вернуть после
+/// честного замера среза 15.
+///
+/// Тест фиксирует **значение по умолчанию**: смена дефолта обязана быть видна
+/// в диффе, а не проходить молча.
 void main() {
-  test('по умолчанию включён: новый путь — основной, legacy — флагом', () {
-    expect(AppSettings.defaults.generationPipelineV3, isTrue);
-    expect(const AppSettings().generationPipelineV3, isTrue);
+  test('по умолчанию выключен: v3 включается только после замера', () {
+    expect(AppSettings.defaults.generationPipelineV3, isFalse);
+    expect(const AppSettings().generationPipelineV3, isFalse);
+  });
+
+  test('explicit true включает v3 (флаг работает в обе стороны)', () {
+    final AppSettings on = AppSettings.defaults.copyWith(
+      generationPipelineV3: true,
+    );
+    expect(on.generationPipelineV3, isTrue);
+    expect(
+      AppSettings.fromJson(on.toJson()).generationPipelineV3,
+      isTrue,
+    );
   });
 
   test('JSON round-trip сохраняет выключенный флаг (legacy доступен)', () {
@@ -21,20 +37,20 @@ void main() {
     expect(AppSettings.fromJson(json), settings);
   });
 
-  test('старый JSON без ключа читается как «включено» (ADR-019 §1)', () {
+  test('старый JSON без ключа читается как значение по умолчанию', () {
     final Map<String, Object?> legacy = AppSettings.defaults.toJson()
       ..remove('generation_pipeline_v3');
-    expect(AppSettings.fromJson(legacy).generationPipelineV3, isTrue);
+    expect(AppSettings.fromJson(legacy).generationPipelineV3, isFalse);
   });
 
   test('copyWith без флага его не меняет', () {
-    final AppSettings off = AppSettings.defaults.copyWith(
-      generationPipelineV3: false,
+    final AppSettings on = AppSettings.defaults.copyWith(
+      generationPipelineV3: true,
     );
-    expect(off.copyWith(dailyNewLimit: 5).generationPipelineV3, isFalse);
+    expect(on.copyWith(dailyNewLimit: 5).generationPipelineV3, isTrue);
     expect(
-      off.copyWith(generationPipelineV3: true).generationPipelineV3,
-      isTrue,
+      on.copyWith(generationPipelineV3: false).generationPipelineV3,
+      isFalse,
     );
   });
 }

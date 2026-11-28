@@ -67,7 +67,7 @@ class AppSettings {
     this.learningSteps = defaultLearningSteps,
     this.dailyNewLimit = 20,
     this.dailyReviewLimit = 200,
-    this.generationPipelineV3 = true,
+    this.generationPipelineV3 = false,
   });
 
   /// Версия контракта JSON.
@@ -142,10 +142,11 @@ class AppSettings {
   /// Путь генерации v3 (TASK «Срез 9», ADR-050): этапы, вердикт по журналу,
   /// пометки дублей вместо удаления и метрики прогона.
   ///
-  /// С среза 14 включён по умолчанию: критерий флага выполнен на решающих
-  /// ячейках 80/150/300 (`journal/generation-v3/verify-s14.md`). Старый путь
-  /// остаётся доступным: его включает **выключенный** флаг в настройках —
-  /// legacy не удалён и не меняется.
+  /// Срез 15 (часть 0): флаг снова **выключен по умолчанию**. Критерий среза 14
+  /// был выведен из агрегата `coverage`, а не измерен пер-юнитными данными
+  /// (L230), поэтому решение не считается доказанным; включение — только после
+  /// честного замера `journal/generation-v3/verify-s15.md`. Старый путь
+  /// остаётся доступным и не удалён.
   final bool generationPipelineV3;
 
   /// Сериализация в `app_settings.value_json`.
