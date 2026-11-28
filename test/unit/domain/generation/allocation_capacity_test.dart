@@ -48,20 +48,27 @@ void main() {
   String slotOf(AllocatedCard card) =>
       '${card.unitId}\u0000${card.angle?.wireName ?? 'primary'}';
 
-  test('300 запрошено, 47 единиц → planned 188, requested 300, без повторов '
-      'слотов', () {
+  test('300 запрошено, 47 единиц → planned == ёмкость по богатству, без '
+      'повторов слотов', () {
     final List<KnowledgeUnit> units = <KnowledgeUnit>[
       for (var index = 0; index < 47; index++) unit(index),
     ];
+    // Срез 16: ёмкость — Σ unitCapacity, а не 4 × 47 = 188. У короткого факта
+    // один-два различимых вопроса, и больше не заказывается.
+    final int capacity = units.fold<int>(
+      0,
+      (int sum, KnowledgeUnit unit) => sum + unitCapacity(unit),
+    );
+    expect(capacity, lessThan(47 * kMaxCardsPerUnit));
 
     final AllocationPlan plan = planFor(units: units, requested: 300);
 
     expect(plan.requested, 300, reason: 'заказ пользователя не меняется');
-    expect(plan.plannedCards, 188);
-    expect(plan.capacity, 188);
-    expect(plan.shortfall, 112);
+    expect(plan.plannedCards, capacity);
+    expect(plan.capacity, capacity);
+    expect(plan.shortfall, 300 - capacity);
     expect(plan.materialLimited, isTrue);
-    expect(plan.cards, hasLength(188));
+    expect(plan.cards, hasLength(capacity));
 
     final Set<String> slots = <String>{};
     for (final AllocatedCard card in plan.cards) {
@@ -71,19 +78,36 @@ void main() {
         reason: 'слот ${slotOf(card)} повторён в плане',
       );
     }
-    expect(slots, hasLength(188), reason: '188 различимых слотов');
+    expect(slots, hasLength(capacity), reason: '$capacity различимых слотов');
     for (final UnitBudget budget in plan.units) {
       expect(
         budget.cards,
-        lessThanOrEqualTo(kMaxCardsPerUnit),
+        lessThanOrEqualTo(unitCapacity(budget.unit)),
         reason: 'у единицы не больше углов, чем различимых вопросов',
       );
     }
   });
 
   test('заказ в пределах ёмкости не обрезается', () {
+    // Богатые единицы: по четыре различимых вопроса — ёмкости хватает.
     final List<KnowledgeUnit> units = <KnowledgeUnit>[
-      for (var index = 0; index < 10; index++) unit(index),
+      for (var index = 0; index < 10; index++)
+        KnowledgeUnit(
+          id: 'ku:$index',
+          sectionId: 'doc:test#0',
+          topic: 'тема $index',
+          kind: KnowledgeUnitKind.procedure,
+          statement: 'Утверждение материала номер $index',
+          anchors: <KnowledgeAnchor>[
+            KnowledgeAnchor(
+              blockId: 'doc:test#0#$index',
+              quote:
+                  'Первое верное утверждение. Второе верное утверждение. '
+                  'Третье верное утверждение.',
+            ),
+          ],
+          salience: 1,
+        ),
     ];
 
     final AllocationPlan plan = planFor(units: units, requested: 30);

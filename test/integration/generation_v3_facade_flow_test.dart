@@ -125,7 +125,35 @@ void main() {
     );
   }
 
-  test('happy-path «40 из 40»: от файла до колоды и отчёта', () async {
+  test('happy-path «24 из 24»: ёмкость по богатству 12 × 2, колода, отчёт',
+      () async {
+    final Document document = ContentModelBuilder().build(docOf(material()));
+    final _FakeLlmPort port = _FakeLlmPort(
+      cardsFor: (CardsBatch batch) => batch.cards,
+    );
+    final _FakeDeck deck = _FakeDeck();
+
+    // Срез 16: 12 коротких фактов дают 12 × 2 = 24 различимых слота, а не 48.
+    final GenerationV3Run run = await facade(
+      port: port,
+      deck: deck,
+      understanding: understand,
+    ).run(runId: 'run-24', requestedCards: 24, document: document);
+
+    expect(run.report.requested, 24);
+    expect(run.plan.capacity, 24);
+    expect(run.report.accepted, 24);
+    expect(run.report.isComplete, isTrue, reason: 'заказ закрыт полностью');
+    expect(run.report.shortfallReasons, isEmpty);
+    expect(run.blockedCards, isEmpty);
+    expect(deck.written, 24, reason: 'журнал запуска пишется по ходу');
+    expect(run.imported, 24, reason: 'importRun импортировал всё');
+    expect(run.report.guards, isNotNull);
+    expect(run.report.guards!.maxPasses, ReplenishPolicy.defaultMaxPasses);
+    expect(run.report.guards!.wallClock, const Duration(minutes: 10));
+  });
+
+  test('40 при 12 коротких единицах: ёмкость 24, честный partial', () async {
     final Document document = ContentModelBuilder().build(docOf(material()));
     final _FakeLlmPort port = _FakeLlmPort(
       cardsFor: (CardsBatch batch) => batch.cards,
@@ -136,18 +164,14 @@ void main() {
       port: port,
       deck: deck,
       understanding: understand,
-    ).run(runId: 'run-40', requestedCards: 40, document: document);
+    ).run(runId: 'run-capacity', requestedCards: 40, document: document);
 
-    expect(run.report.requested, 40);
-    expect(run.report.accepted, 40);
-    expect(run.report.isComplete, isTrue, reason: 'заказ закрыт полностью');
-    expect(run.report.shortfallReasons, isEmpty);
-    expect(run.blockedCards, isEmpty);
-    expect(deck.written, 40, reason: 'журнал запуска пишется по ходу');
-    expect(run.imported, 40, reason: 'importRun импортировал всё');
-    expect(run.report.guards, isNotNull);
-    expect(run.report.guards!.maxPasses, ReplenishPolicy.defaultMaxPasses);
-    expect(run.report.guards!.wallClock, const Duration(minutes: 10));
+    expect(run.plan.plannedCards, 24, reason: '12 единиц × 2 слота');
+    expect(run.report.accepted, 24);
+    expect(run.report.reason, ReplenishStopReason.exhaustedMaterial);
+    expect(run.report.materialCapacity, 24);
+    expect(run.report.shortfallReasons[ShortfallKind.exhaustedMaterial], 16);
+    expect(run.report.isComplete, isFalse);
   });
 
   test('partial «12 из 40 exhausted_material»: долг виден числом', () async {
@@ -175,10 +199,11 @@ void main() {
     expect(run.imported, 12);
   });
 
-  test('300 при 47 единицах: planned 188, exhausted_material, partial, добора '
+  test('300 при 47 единицах: planned 94, exhausted_material, partial, добора '
       'нет', () async {
     // Регресс S12: план повторял слоты и прогон выглядел как полный успех.
-    // 47 единиц × 4 различимых слота = 188; 112 слотов заказа не существует.
+    // Срез 16: 47 коротких единиц × 2 ёмкости = 94; прежние 188 заказывали
+    // вопросы, которых в материале нет.
     final Document document = ContentModelBuilder().build(
       docOf(materialOf(47)),
     );
@@ -196,16 +221,16 @@ void main() {
     expect(
       CompletionVerdict.fromReport(run.report).jobStatus,
       GenerationJobStatus.partial,
-      reason: 'ready при 188/300 — не done',
+      reason: 'ready при 94/300 — не done',
     );
     expect(run.plan.requested, 300, reason: 'заказ не подменяется ёмкостью');
-    expect(run.plan.plannedCards, 188);
-    expect(run.plan.capacity, 188);
+    expect(run.plan.plannedCards, 94);
+    expect(run.plan.capacity, 94);
     expect(run.plan.materialLimited, isTrue);
-    expect(run.report.accepted, 188);
+    expect(run.report.accepted, 94);
     expect(run.report.reason, ReplenishStopReason.exhaustedMaterial);
-    expect(run.report.materialCapacity, 188);
-    expect(run.report.shortfallReasons[ShortfallKind.exhaustedMaterial], 112);
+    expect(run.report.materialCapacity, 94);
+    expect(run.report.shortfallReasons[ShortfallKind.exhaustedMaterial], 206);
     expect(run.report.isComplete, isFalse);
     expect(run.report.passes, 0, reason: 'добор не запускался: слотов нет');
     expect(
@@ -217,8 +242,8 @@ void main() {
       for (final AllocatedCard card in run.plan.cards)
         '${card.unitId}\u0000${card.angle?.wireName ?? 'primary'}',
     };
-    expect(slots, hasLength(188));
-    expect(deck.written, 188);
+    expect(slots, hasLength(94));
+    expect(deck.written, 94);
   });
 
   test('blocked-карточка не попадает в колоду, но не исчезает', () async {
@@ -259,8 +284,8 @@ void main() {
       isEmpty,
       reason: 'blocked-карточка в колоду не попала',
     );
-    expect(run.report.accepted, 40, reason: 'добор заменил блокированную');
-    expect(run.imported, 40);
+    expect(run.report.accepted, 24, reason: 'добор заменил блокированную');
+    expect(run.imported, 24);
     expect(run.report.invalid, 1, reason: 'одна карточка отброшена проверкой');
   });
 
@@ -280,8 +305,9 @@ void main() {
       expect(run.map.units.single.kind, KnowledgeUnitKind.topic);
       expect(run.map.units.single.hasAnchors, isFalse);
       expect(run.map.unanchoredUnitIds, <String>{'ku:prompt#0'});
-      expect(run.report.accepted, 3);
-      expect(deck.written, 3);
+      // Срез 16: единица темы — один короткий факт, ёмкость 2, а не 4.
+      expect(run.report.accepted, 2);
+      expect(deck.written, 2);
     },
   );
 

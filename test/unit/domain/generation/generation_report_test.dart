@@ -432,18 +432,22 @@ GeneratedCard _cardFor(AllocationPlan plan, AllocatedCard planned) {
   );
 }
 
+/// Единица фикстуры с полной ёмкостью (срез 16: углы по богатству).
 KnowledgeUnit _unit(String id) => KnowledgeUnit(
   id: id,
   sectionId: 'doc:материал.md#0',
   topic: 'тема $id',
-  kind: KnowledgeUnitKind.definition,
+  kind: KnowledgeUnitKind.procedure,
   statement: 'Утверждение единицы $id о моменте силы.',
   anchors: <KnowledgeAnchor>[
     KnowledgeAnchor(
       blockId: 'doc:материал.md#0#0',
-      quote: 'Цитата материала $id.',
+      quote:
+          'Цитата материала $id. Второе верное утверждение. '
+          'Третье верное утверждение.',
     ),
   ],
+  salience: 1,
 );
 
 ReplenishOutcome _outcome({

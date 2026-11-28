@@ -126,12 +126,69 @@ const Set<String> _stopWords = <String>{
 /// Слово утверждения: буквы и цифры (формулы вида `PV`, `nRT` — тоже слова).
 final RegExp _wordPattern = RegExp(r'[A-Za-zА-Яа-яЁё0-9]+');
 
-/// Различимых слотов на единицу: основная карточка (`null`) и три угла.
+/// Потолок различимых слотов единицы: основная карточка (`null`) и три угла.
 ///
 /// Больше четырёх вопросов об одном утверждении план не заказывает: повтор
 /// слота `unit_id + angle` — не новая карточка, а тот же вопрос (TASK «Срез 14»,
-/// часть 1). Ёмкость плана считается по этому пределу, а не по заказу.
+/// часть 1). Это **потолок**, а не норма: сколько углов единица выдерживает,
+/// решает [unitCapacity] по её богатству (TASK «Срез 16», часть 3).
 const int kMaxCardsPerUnit = 4;
+
+/// Порог значимости «богатой» единицы: одна значимая мысль стоит второго угла.
+const double kRichSalience = 0.8;
+
+/// Порог числа утверждений/клауз в якорях: составное утверждение стоит угла.
+const int kRichClaims = 3;
+
+/// Минимум слов в клаузе, чтобы считать её отдельным утверждением.
+const int kMinClaimWords = 3;
+
+/// Число утверждений/клауз в тексте: предложения и части через `;`, `,`.
+///
+/// Считаются только содержательные клаузы (≥ [kMinClaimWords] слов): запятая в
+/// перечислении и короткая вставка утверждением не являются. Это признак
+/// богатства единицы, а не длины текста.
+int claimCountOf(String text) {
+  final List<String> segments = text.split(RegExp(r'[.!?…;]|,(?=\s)'));
+  var count = 0;
+  for (final String segment in segments) {
+    if (_wordPattern.allMatches(segment).length >= kMinClaimWords) count++;
+  }
+  return count;
+}
+
+/// Число утверждений в якорях единицы (или в её утверждении, если якорей нет).
+int unitClaimCount(KnowledgeUnit unit) {
+  var claims = 0;
+  for (final KnowledgeAnchor anchor in unit.anchors) {
+    claims += claimCountOf(anchor.quote);
+  }
+  if (claims == 0) claims = claimCountOf(unit.statement);
+  return claims;
+}
+
+/// Ёмкость единицы по богатству утверждения (TASK «Срез 16», часть 3).
+///
+/// Одна карточка — всегда; второй-четвёртый угол заказываются только за
+/// признак богатства, а не «за объём»:
+/// - значимость ≥ [kRichSalience] — утверждение стоит отдельного вопроса;
+/// - составной якорь (≥ [kRichClaims] утверждений/клауз) — из него выходит
+///   больше одного вопроса без повтора;
+/// - формула или процедура — есть что применять и что пропускать.
+///
+/// Короткий факт (одна клауза, средняя значимость) получает 1–2 карточки, а не
+/// четыре: прежняя константа 4 заказывала вопросы, которых в материале нет, и
+/// модель отвечала дублями.
+int unitCapacity(KnowledgeUnit unit) {
+  var capacity = 1;
+  if (unit.salience >= kRichSalience) capacity++;
+  if (unitClaimCount(unit) >= kRichClaims) capacity++;
+  if (unit.kind == KnowledgeUnitKind.formula ||
+      unit.kind == KnowledgeUnitKind.procedure) {
+    capacity++;
+  }
+  return math.min(capacity, kMaxCardsPerUnit);
+}
 
 /// Угол доборной карточки: та же единица знания, другой вопрос.
 ///
@@ -235,25 +292,29 @@ List<UnitBudget> allocateUnits({
     ];
   }
   final int extra = requestedCards - selected.length;
-  final int capacityExtra = selected.length * (kMaxCardsPerUnit - 1);
+  final List<int> caps = <int>[
+    for (final KnowledgeUnit unit in selected) unitCapacity(unit) - 1,
+  ];
+  final int capacityExtra = caps.fold<int>(0, (int sum, int cap) => sum + cap);
   final int sharesTotal = math.min(extra, capacityExtra);
-  final List<int> shares = _largestRemainderCapped(sharesTotal, <double>[
+  final List<int> shares = _largestRemainderBounded(sharesTotal, <double>[
     for (final KnowledgeUnit unit in selected) unitWeight(unit),
-  ], kMaxCardsPerUnit - 1);
+  ], caps);
   return <UnitBudget>[
     for (var index = 0; index < selected.length; index++)
       UnitBudget(unit: selected[index], cards: 1 + shares[index]),
   ];
 }
 
-/// Ёмкость плана по различимым слотам: `Σ min(карточек единицы, предел)`.
+/// Ёмкость плана по различимым слотам: `Σ min(карточек единицы, её ёмкость)`.
 ///
 /// Это верхняя граница числа карточек, которое план может заказать: у единицы
-/// не больше [kMaxCardsPerUnit] различных вопросов (`unit_id + angle`).
+/// не больше [unitCapacity] различных вопросов (`unit_id + angle`), и «богатая»
+/// единица их не растягивает до [kMaxCardsPerUnit] по умолчанию (срез 16).
 int allocationCapacity(Iterable<UnitBudget> units) => units.fold<int>(
   0,
   (int sum, UnitBudget budget) =>
-      sum + math.min(budget.cards, kMaxCardsPerUnit),
+      sum + math.min(budget.cards, unitCapacity(budget.unit)),
 );
 
 /// Разворачивает бюджеты в карточки: основная (`angle == null`) и доборные
@@ -411,20 +472,24 @@ bool _slotsAreUnique(List<AllocatedCard> cards) {
   return true;
 }
 
-/// Делит [total] по [weights] методом наибольших остатков, не больше [cap] на
-/// элемент.
+/// Делит [total] по [weights] методом наибольших остатков, не больше
+/// `caps[index]` на элемент.
 ///
-/// Сначала считается обычная раздача наибольших остатков; превысившие [cap]
-/// доли обрезаются, а остаток раздаётся по одной карточке в порядке убывания
-/// веса (при равном весе — раньше в карте). Детерминизм сохраняется: один вход —
-/// один результат. Нужен, чтобы добор «вторым углом» не повторял занятые слоты
-/// единицы ([kMaxCardsPerUnit]).
-List<int> _largestRemainderCapped(int total, List<double> weights, int cap) {
+/// Сначала считается обычная раздача наибольших остатков; превысившие свой
+/// предел доли обрезаются, а остаток раздаётся по одной карточке в порядке
+/// убывания веса (при равном весе — раньше в карте). Детерминизм сохраняется:
+/// один вход — один результат. Нужен, чтобы добор «вторым углом» не повторял
+/// занятые слоты единицы и не превышал её ёмкость ([unitCapacity]).
+List<int> _largestRemainderBounded(
+  int total,
+  List<double> weights,
+  List<int> caps,
+) {
   final List<int> shares = _largestRemainder(total, weights);
   var capped = false;
   for (var index = 0; index < shares.length; index++) {
-    if (shares[index] > cap) {
-      shares[index] = cap;
+    if (shares[index] > caps[index]) {
+      shares[index] = caps[index];
       capped = true;
     }
   }
@@ -440,7 +505,7 @@ List<int> _largestRemainderCapped(int total, List<double> weights, int cap) {
     var placed = false;
     for (final int index in order) {
       if (left == 0) break;
-      if (shares[index] >= cap) continue;
+      if (shares[index] >= caps[index]) continue;
       shares[index]++;
       left--;
       placed = true;

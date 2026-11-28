@@ -129,7 +129,10 @@ KnowledgeUnit _unit(_UnitSpec spec) => KnowledgeUnit(
   anchors: <KnowledgeAnchor>[
     KnowledgeAnchor(
       blockId: '${spec.sectionId}#0',
-      quote: 'Цитата материала ${spec.id}.',
+      // Срез 16: составной якорь даёт ёмкость 2 даже у малозначимой единицы.
+      quote:
+          'Цитата материала ${spec.id}. Второе верное утверждение. '
+          'Третье верное утверждение.',
     ),
   ],
 );

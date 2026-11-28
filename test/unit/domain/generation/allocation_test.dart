@@ -26,6 +26,7 @@ void main() {
     KnowledgeUnitKind kind = KnowledgeUnitKind.fact,
     double salience = 1,
     String statement = 'Фотосинтез',
+    String? quote,
     String? sectionId,
   }) => KnowledgeUnit(
     id: id,
@@ -34,9 +35,26 @@ void main() {
     kind: kind,
     statement: statement,
     anchors: <KnowledgeAnchor>[
-      KnowledgeAnchor(blockId: 'doc:test#0#0', quote: 'цитата $id'),
+      KnowledgeAnchor(blockId: 'doc:test#0#0', quote: quote ?? 'цитата $id'),
     ],
     salience: salience,
+  );
+
+  /// Единица с ёмкостью `kMaxCardsPerUnit`: значимая, с составным якорем и
+  /// видом, который выдерживает применение (срез 16 — углы по богатству).
+  KnowledgeUnit richUnit({
+    String id = 'ku:unit',
+    KnowledgeUnitKind kind = KnowledgeUnitKind.formula,
+    double salience = 1,
+    String statement = 'Фотосинтез',
+  }) => unit(
+    id: id,
+    kind: kind,
+    salience: salience,
+    statement: statement,
+    quote:
+        'Первое верное утверждение. Второе верное утверждение. '
+        'Третье верное утверждение.',
   );
 
   KnowledgeMap mapOf(List<KnowledgeUnit> units) =>
@@ -134,6 +152,110 @@ void main() {
     });
   });
 
+  group('Ёмкость единицы по богатству (TASK «Срез 16», часть 3)', () {
+    test('короткий факт — 1 карточка, значимый — 2', () {
+      expect(
+        unitCapacity(unit(salience: 0.5)),
+        1,
+        reason: 'Одна короткая клауза со средней значимостью — один вопрос',
+      );
+      expect(unitCapacity(unit(salience: 0.9)), 2);
+    });
+
+    test('формула и процедура получают не меньше двух', () {
+      expect(
+        unitCapacity(
+          unit(kind: KnowledgeUnitKind.formula, salience: 0.2, statement: 'PV = nRT'),
+        ),
+        greaterThanOrEqualTo(2),
+      );
+      expect(
+        unitCapacity(
+          unit(kind: KnowledgeUnitKind.procedure, salience: 0.2),
+        ),
+        greaterThanOrEqualTo(2),
+      );
+    });
+
+    test('составной якорь добавляет угол, потолок — kMaxCardsPerUnit', () {
+      final KnowledgeUnit rich = unit(
+        salience: 0.3,
+        quote:
+            'Первое утверждение материала. Второе утверждение материала. '
+            'Третье утверждение материала.',
+      );
+      expect(unitClaimCount(rich), 3);
+      expect(unitCapacity(rich), 2);
+      final KnowledgeUnit richest = unit(
+        kind: KnowledgeUnitKind.formula,
+        salience: 1,
+        quote:
+            'Один два три. Четыре пять шесть. Семь восемь девять.',
+      );
+      expect(unitCapacity(richest), kMaxCardsPerUnit);
+    });
+
+    test('клауза короче kMinClaimWords утверждением не считается', () {
+      expect(claimCountOf('и в'), 0);
+      expect(claimCountOf('Фотосинтез'), 0);
+      expect(
+        claimCountOf(
+          'Первое верное утверждение. Второе верное утверждение.',
+        ),
+        2,
+      );
+    });
+
+    test(
+      'единица с одним коротким утверждением не получает reverse+cloze+'
+      'application',
+      () {
+        final List<UnitBudget> budgets = allocateUnits(
+          units: <KnowledgeUnit>[unit(id: 'ku:1', salience: 0.5)],
+          requestedCards: 4,
+        );
+        expect(budgets.single.cards, 1);
+        final List<AllocatedCard> cards = allocateCards(budgets);
+        expect(cards, hasLength(1));
+        expect(cards.single.angle, isNull, reason: 'Ни одного угла сверх основы');
+      },
+    );
+
+    test('единица с формулой получает не меньше двух карточек', () {
+      final List<UnitBudget> budgets = allocateUnits(
+        units: <KnowledgeUnit>[
+          unit(
+            id: 'ku:1',
+            kind: KnowledgeUnitKind.formula,
+            salience: 0.2,
+            statement: 'PV = nRT',
+          ),
+        ],
+        requestedCards: 4,
+      );
+      expect(budgets.single.cards, greaterThanOrEqualTo(2));
+      final List<AllocatedCard> cards = allocateCards(budgets);
+      expect(cards.length, greaterThanOrEqualTo(2));
+      expect(cards.where((AllocatedCard card) => !card.isPrimary), isNotEmpty);
+    });
+
+    test('ёмкость плана — Σ unitCapacity, а не 4 × число единиц', () {
+      final List<KnowledgeUnit> units = <KnowledgeUnit>[
+        for (var index = 0; index < 3; index++)
+          unit(id: 'ku:$index', salience: 0.5),
+      ];
+      final AllocationPlan plan = planAllocation(
+        map: mapOf(units),
+        requestedCards: 12,
+        profile: bigProfile,
+      );
+      expect(plan.capacity, 3, reason: '3 короткие единицы × 1 карточке');
+      expect(plan.plannedCards, 3);
+      expect(plan.materialLimited, isTrue);
+      expect(plan.shortfall, 9);
+    });
+  });
+
   group('Распределение наибольшими остатками', () {
     test('по одной карточке, когда заказ равен числу единиц', () {
       final List<KnowledgeUnit> units = <KnowledgeUnit>[
@@ -154,9 +276,9 @@ void main() {
 
     test('остаток делится пропорционально весам, сумма равна заказу', () {
       final List<KnowledgeUnit> units = <KnowledgeUnit>[
-        unit(id: 'ku:1', salience: 1),
-        unit(id: 'ku:2', salience: 0.5),
-        unit(id: 'ku:3', salience: 0.25),
+        richUnit(id: 'ku:1', salience: 1),
+        richUnit(id: 'ku:2', salience: 0.5),
+        richUnit(id: 'ku:3', salience: 0.25),
       ];
       final List<UnitBudget> budgets = allocateUnits(
         units: units,
@@ -164,10 +286,10 @@ void main() {
       );
       expect(
         <int>[for (final UnitBudget budget in budgets) budget.cards],
-        <int>[4, 4, 2],
+        <int>[4, 3, 3],
         reason:
-            'Минимум 1 + остаток 7 по весам 1 : 0,5 : 0,25, но у единицы '
-            'не больше $kMaxCardsPerUnit различимых слотов (срез 14)',
+            'Минимум 1 + остаток 7 по весам 1 : 0,5 : 0,25, но ёмкость по '
+            'богатству — 4, 3, 3 (срез 16); сумма всё равно заказ',
       );
       expect(
         budgets.fold<int>(0, (int sum, UnitBudget b) => sum + b.cards),
@@ -226,9 +348,9 @@ void main() {
 
     test('большой заказ упирается в ёмкость слотов, а не теряет карточки', () {
       final List<KnowledgeUnit> units = <KnowledgeUnit>[
-        unit(id: 'ku:1'),
-        unit(id: 'ku:2'),
-        unit(id: 'ku:3'),
+        richUnit(id: 'ku:1'),
+        richUnit(id: 'ku:2'),
+        richUnit(id: 'ku:3'),
       ];
       final List<UnitBudget> budgets = allocateUnits(
         units: units,
@@ -238,8 +360,8 @@ void main() {
         <int>[for (final UnitBudget budget in budgets) budget.cards],
         <int>[4, 4, 4],
         reason:
-            '3 единицы × $kMaxCardsPerUnit различимых слота = 12 карточек, '
-            'дальше заказ не раздувается повторами (срез 14)',
+            '3 богатые единицы × $kMaxCardsPerUnit различимых слота = 12 '
+            'карточек, дальше заказ не раздувается повторами (срез 16)',
       );
       expect(
         budgets.fold<int>(0, (int sum, UnitBudget b) => sum + b.cards),
@@ -249,7 +371,7 @@ void main() {
 
     test('крошечный вес не обнуляется и не съедает заказ', () {
       final List<KnowledgeUnit> units = <KnowledgeUnit>[
-        unit(id: 'ku:1', salience: 1),
+        richUnit(id: 'ku:1', salience: 1),
         unit(id: 'ku:2', salience: 1e-9),
       ];
       final List<UnitBudget> budgets = allocateUnits(
@@ -326,8 +448,8 @@ void main() {
 
     test('единиц меньше заказа — добор только флагами angle', () {
       final List<KnowledgeUnit> units = <KnowledgeUnit>[
-        unit(id: 'ku:d', kind: KnowledgeUnitKind.definition),
-        unit(id: 'ku:p', kind: KnowledgeUnitKind.procedure),
+        richUnit(id: 'ku:d', kind: KnowledgeUnitKind.definition),
+        richUnit(id: 'ku:p', kind: KnowledgeUnitKind.procedure),
       ];
       final AllocationPlan plan = planAllocation(
         map: mapOf(units),
@@ -372,7 +494,7 @@ void main() {
 
     test('углы идут по одному разу, а не повторяют слот', () {
       final List<KnowledgeUnit> units = <KnowledgeUnit>[
-        unit(id: 'ku:a', kind: KnowledgeUnitKind.definition),
+        richUnit(id: 'ku:a', kind: KnowledgeUnitKind.definition),
       ];
       final AllocationPlan plan = planAllocation(
         map: mapOf(units),
@@ -386,13 +508,11 @@ void main() {
         'reverse',
         'ku:a',
         'cloze',
-        'ku:a',
-        'application',
       ]);
-      expect(plan.plannedCards, 4, reason: 'у единицы четыре слота');
-      expect(plan.capacity, 4);
+      expect(plan.plannedCards, 3, reason: 'у единицы три слота по богатству');
+      expect(plan.capacity, 3);
       expect(plan.materialLimited, isTrue);
-      expect(plan.angledCards, 3);
+      expect(plan.angledCards, 2);
       expect(plan.distinctStatements, 1);
     });
   });
@@ -409,7 +529,7 @@ void main() {
     );
 
     test('батч ограничен пределом вывода профиля', () {
-      final List<KnowledgeUnit> units = <KnowledgeUnit>[unit(id: 'ku:1')];
+      final List<KnowledgeUnit> units = <KnowledgeUnit>[richUnit(id: 'ku:1')];
       final AllocationPlan plan = planAllocation(
         map: mapOf(units),
         requestedCards: 10,
@@ -420,7 +540,7 @@ void main() {
         <int>[3, 1],
         reason:
             '900 / 300 = 3 карточки на ответ; у единицы всего 4 слота '
-            '(срез 14), поэтому 10 карточек не заказываются',
+            'по богатству (срез 16), поэтому 10 карточек не заказываются',
       );
       final int input = kRequestOverheadTokens + unitInputTokens(units.single);
       for (final AllocationBatch batch in plan.batches) {
@@ -448,7 +568,7 @@ void main() {
         supportsVision: false,
         concurrency: 1,
       );
-      final List<KnowledgeUnit> units = <KnowledgeUnit>[unit(id: 'ku:1')];
+      final List<KnowledgeUnit> units = <KnowledgeUnit>[richUnit(id: 'ku:1')];
       final AllocationPlan plan = planAllocation(
         map: mapOf(units),
         requestedCards: 10,
@@ -459,8 +579,8 @@ void main() {
         <int>[for (final AllocationBatch b in plan.batches) b.cards.length],
         <int>[2, 2],
         reason:
-            'Вход 1234 + 2 × 300 = 1834 ≤ 2000, три карточки — уже 2134; '
-            'у единицы четыре слота (срез 14), пятая не заказывается',
+            'Вход + 2 × 300 ≤ 2000, три карточки — уже больше; у единицы '
+            'четыре слота по богатству (срез 16)',
       );
       for (final AllocationBatch batch in plan.batches) {
         expect(
@@ -489,7 +609,7 @@ void main() {
         supportsVision: false,
         concurrency: 1,
       );
-      final List<KnowledgeUnit> units = <KnowledgeUnit>[unit(id: 'ku:1')];
+      final List<KnowledgeUnit> units = <KnowledgeUnit>[richUnit(id: 'ku:1')];
       final AllocationPlan without = planAllocation(
         map: mapOf(units),
         requestedCards: 10,
@@ -542,7 +662,7 @@ void main() {
     });
 
     test('карточки одной единицы переиспользуют вход батча', () {
-      final List<KnowledgeUnit> units = <KnowledgeUnit>[unit(id: 'ku:1')];
+      final List<KnowledgeUnit> units = <KnowledgeUnit>[richUnit(id: 'ku:1')];
       final AllocationPlan plan = planAllocation(
         map: mapOf(units),
         requestedCards: 3,
@@ -839,7 +959,7 @@ void main() {
       expect(small.shortfall, 3);
       expect(small.materialLimited, isTrue);
       // Карточек меньше ёмкости единиц — такой план неконструируем.
-      final UnitBudget four = UnitBudget(unit: unit(id: 'ku:1'), cards: 4);
+      final UnitBudget four = UnitBudget(unit: richUnit(id: 'ku:1'), cards: 4);
       expect(
         () => AllocationPlan(
           requested: 4,
@@ -911,9 +1031,14 @@ void main() {
           expect(plan.batches, isEmpty);
           continue;
         }
-        // Ёмкость различимых слотов: у единицы не больше kMaxCardsPerUnit,
-        // поэтому заказ больше ёмкости не конструируется повторами (срез 14).
-        final int expected = math.min(target, unitCount * kMaxCardsPerUnit);
+        // Ёмкость различимых слотов: у единицы не больше её ёмкости по
+        // богатству (срез 16), поэтому заказ больше ёмкости не конструируется
+        // повторами (срез 14).
+        final int capacity = units.fold<int>(
+          0,
+          (int sum, KnowledgeUnit unit) => sum + unitCapacity(unit),
+        );
+        final int expected = math.min(target, capacity);
         expect(
           plan.plannedCards,
           expected,
@@ -947,8 +1072,8 @@ void main() {
           );
           expect(
             budget.cards,
-            lessThanOrEqualTo(kMaxCardsPerUnit),
-            reason: 'У единицы не больше различимых слотов',
+            lessThanOrEqualTo(unitCapacity(budget.unit)),
+            reason: 'У единицы не больше её ёмкости по богатству',
           );
           expect(
             plan.cards.where(
@@ -1001,7 +1126,7 @@ void main() {
       }
     });
 
-    test('полный план: бюджет единиц == заказ, добор углами', () {
+    test('полный план: бюджет единиц == ёмкость, добор углами', () {
       final List<KnowledgeUnit> units = <KnowledgeUnit>[
         for (var i = 0; i < 12; i++)
           unit(
@@ -1016,16 +1141,23 @@ void main() {
         requestedCards: 40,
         profile: bigProfile,
       );
+      final int capacity = units.fold<int>(
+        0,
+        (int sum, KnowledgeUnit unit) => sum + unitCapacity(unit),
+      );
+      expect(capacity, lessThan(40), reason: 'Короткие единицы не тянут 40');
       expect(plan.requested, 40);
-      expect(plan.plannedCards, 40);
+      expect(plan.plannedCards, capacity);
       expect(
         plan.units.fold<int>(0, (int sum, UnitBudget b) => sum + b.cards),
-        40,
-        reason: 'Σ бюджетов == заказ (инвариант ARCH.md §3)',
+        capacity,
+        reason: 'Σ бюджетов == ёмкость различимых слотов (ARCH.md §3)',
       );
+      expect(plan.materialLimited, isTrue);
+      expect(plan.shortfall, 40 - capacity);
       expect(plan.distinctStatements, 12);
       expect(plan.unitsBelowRequested, isTrue);
-      expect(plan.angledCards, 28);
+      expect(plan.angledCards, capacity - 12);
       expect(
         plan.cards.where((AllocatedCard card) => card.isPrimary),
         hasLength(12),
