@@ -1,0 +1,487 @@
+{
+  "schema": "s15",
+  "cell_id": "textbook-v3-80",
+  "provider": "deepseek",
+  "model": "deepseek-flash",
+  "material": "учебный текст, 12 разделов",
+  "material_sections": 12,
+  "requested": 80,
+  "path": "v3",
+  "status": "ran",
+  "reason": null,
+  "duration_ms": 113939,
+  "error_code": null,
+  "stage": "ready",
+  "report_accepted": 80,
+  "report_requested": 80,
+  "understanding_failures": [],
+  "code_version": "5dc3cb11",
+  "prompt_versions": {
+    "understanding": "gen-map-v1",
+    "generating": "gen-cards-v3",
+    "replenishing": "gen-cards-v3"
+  },
+  "metrics": {
+    "requested": 80,
+    "accepted": 80,
+    "generated": 80,
+    "invalid": 0,
+    "duplicates": 0,
+    "clean_accepted": 25,
+    "absolute_clean": 25,
+    "accepted_with_warnings": 55,
+    "warning_codes": {
+      "possible_duplicate": 55
+    },
+    "requests": 1,
+    "covered_units": 37,
+    "total_units": 37,
+    "input_tokens": 17960,
+    "output_tokens": 38816,
+    "input_tokens_by_stage": {
+      "understanding": 12157,
+      "generating": 5803
+    },
+    "output_tokens_by_stage": {
+      "understanding": 15092,
+      "generating": 23724
+    },
+    "duplicates_by_level": {
+      "exact": 0,
+      "normalized": 0,
+      "semantic": 34,
+      "embeddings": 0
+    },
+    "unit_coverage": [
+      {
+        "unit_id": "ku:doc:material.txt#0#0",
+        "section_id": "doc:material.txt#0",
+        "salience": 0.8,
+        "planned": 2,
+        "accepted": 2,
+        "produced": 2,
+        "clean": 2,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#0#1",
+        "section_id": "doc:material.txt#0",
+        "salience": 1.0,
+        "planned": 3,
+        "accepted": 3,
+        "produced": 3,
+        "clean": 0,
+        "warning_codes": {
+          "possible_duplicate": 3
+        }
+      },
+      {
+        "unit_id": "ku:doc:material.txt#0#2",
+        "section_id": "doc:material.txt#0",
+        "salience": 0.7,
+        "planned": 2,
+        "accepted": 2,
+        "produced": 2,
+        "clean": 0,
+        "warning_codes": {
+          "possible_duplicate": 2
+        }
+      },
+      {
+        "unit_id": "ku:doc:material.txt#0#3",
+        "section_id": "doc:material.txt#0",
+        "salience": 0.7,
+        "planned": 2,
+        "accepted": 2,
+        "produced": 2,
+        "clean": 0,
+        "warning_codes": {
+          "possible_duplicate": 2
+        }
+      },
+      {
+        "unit_id": "ku:doc:material.txt#1#0",
+        "section_id": "doc:material.txt#1",
+        "salience": 0.9,
+        "planned": 2,
+        "accepted": 2,
+        "produced": 2,
+        "clean": 2,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#1#1",
+        "section_id": "doc:material.txt#1",
+        "salience": 0.8,
+        "planned": 2,
+        "accepted": 2,
+        "produced": 2,
+        "clean": 0,
+        "warning_codes": {
+          "possible_duplicate": 2
+        }
+      },
+      {
+        "unit_id": "ku:doc:material.txt#1#2",
+        "section_id": "doc:material.txt#1",
+        "salience": 0.8,
+        "planned": 2,
+        "accepted": 2,
+        "produced": 2,
+        "clean": 2,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#1#3",
+        "section_id": "doc:material.txt#1",
+        "salience": 0.6,
+        "planned": 2,
+        "accepted": 2,
+        "produced": 2,
+        "clean": 0,
+        "warning_codes": {
+          "possible_duplicate": 2
+        }
+      },
+      {
+        "unit_id": "ku:doc:material.txt#2#0",
+        "section_id": "doc:material.txt#2",
+        "salience": 1.0,
+        "planned": 2,
+        "accepted": 2,
+        "produced": 2,
+        "clean": 0,
+        "warning_codes": {
+          "possible_duplicate": 2
+        }
+      },
+      {
+        "unit_id": "ku:doc:material.txt#2#1",
+        "section_id": "doc:material.txt#2",
+        "salience": 0.5,
+        "planned": 2,
+        "accepted": 2,
+        "produced": 2,
+        "clean": 0,
+        "warning_codes": {
+          "possible_duplicate": 2
+        }
+      },
+      {
+        "unit_id": "ku:doc:material.txt#2#2",
+        "section_id": "doc:material.txt#2",
+        "salience": 0.5,
+        "planned": 2,
+        "accepted": 2,
+        "produced": 2,
+        "clean": 0,
+        "warning_codes": {
+          "possible_duplicate": 2
+        }
+      },
+      {
+        "unit_id": "ku:doc:material.txt#2#3",
+        "section_id": "doc:material.txt#2",
+        "salience": 0.5,
+        "planned": 2,
+        "accepted": 2,
+        "produced": 2,
+        "clean": 2,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#3#0",
+        "section_id": "doc:material.txt#3",
+        "salience": 1.0,
+        "planned": 3,
+        "accepted": 3,
+        "produced": 3,
+        "clean": 0,
+        "warning_codes": {
+          "possible_duplicate": 3
+        }
+      },
+      {
+        "unit_id": "ku:doc:material.txt#3#1",
+        "section_id": "doc:material.txt#3",
+        "salience": 1.0,
+        "planned": 3,
+        "accepted": 3,
+        "produced": 3,
+        "clean": 0,
+        "warning_codes": {
+          "possible_duplicate": 3
+        }
+      },
+      {
+        "unit_id": "ku:doc:material.txt#3#2",
+        "section_id": "doc:material.txt#3",
+        "salience": 0.5,
+        "planned": 2,
+        "accepted": 2,
+        "produced": 2,
+        "clean": 2,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#3#3",
+        "section_id": "doc:material.txt#3",
+        "salience": 0.5,
+        "planned": 2,
+        "accepted": 2,
+        "produced": 2,
+        "clean": 0,
+        "warning_codes": {
+          "possible_duplicate": 2
+        }
+      },
+      {
+        "unit_id": "ku:doc:material.txt#4#0",
+        "section_id": "doc:material.txt#4",
+        "salience": 1.0,
+        "planned": 3,
+        "accepted": 3,
+        "produced": 3,
+        "clean": 0,
+        "warning_codes": {
+          "possible_duplicate": 3
+        }
+      },
+      {
+        "unit_id": "ku:doc:material.txt#4#1",
+        "section_id": "doc:material.txt#4",
+        "salience": 0.8,
+        "planned": 2,
+        "accepted": 2,
+        "produced": 2,
+        "clean": 0,
+        "warning_codes": {
+          "possible_duplicate": 2
+        }
+      },
+      {
+        "unit_id": "ku:doc:material.txt#4#2",
+        "section_id": "doc:material.txt#4",
+        "salience": 0.8,
+        "planned": 2,
+        "accepted": 2,
+        "produced": 2,
+        "clean": 0,
+        "warning_codes": {
+          "possible_duplicate": 2
+        }
+      },
+      {
+        "unit_id": "ku:doc:material.txt#4#3",
+        "section_id": "doc:material.txt#4",
+        "salience": 0.6,
+        "planned": 2,
+        "accepted": 2,
+        "produced": 2,
+        "clean": 2,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#6#0",
+        "section_id": "doc:material.txt#6",
+        "salience": 0.8,
+        "planned": 2,
+        "accepted": 2,
+        "produced": 2,
+        "clean": 2,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#6#1",
+        "section_id": "doc:material.txt#6",
+        "salience": 0.8,
+        "planned": 2,
+        "accepted": 2,
+        "produced": 2,
+        "clean": 0,
+        "warning_codes": {
+          "possible_duplicate": 2
+        }
+      },
+      {
+        "unit_id": "ku:doc:material.txt#6#2",
+        "section_id": "doc:material.txt#6",
+        "salience": 0.8,
+        "planned": 2,
+        "accepted": 2,
+        "produced": 2,
+        "clean": 2,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#6#3",
+        "section_id": "doc:material.txt#6",
+        "salience": 0.6,
+        "planned": 2,
+        "accepted": 2,
+        "produced": 2,
+        "clean": 0,
+        "warning_codes": {
+          "possible_duplicate": 2
+        }
+      },
+      {
+        "unit_id": "ku:doc:material.txt#8#0",
+        "section_id": "doc:material.txt#8",
+        "salience": 0.8,
+        "planned": 2,
+        "accepted": 2,
+        "produced": 2,
+        "clean": 0,
+        "warning_codes": {
+          "possible_duplicate": 2
+        }
+      },
+      {
+        "unit_id": "ku:doc:material.txt#8#1",
+        "section_id": "doc:material.txt#8",
+        "salience": 0.7,
+        "planned": 2,
+        "accepted": 2,
+        "produced": 2,
+        "clean": 0,
+        "warning_codes": {
+          "possible_duplicate": 2
+        }
+      },
+      {
+        "unit_id": "ku:doc:material.txt#8#2",
+        "section_id": "doc:material.txt#8",
+        "salience": 0.5,
+        "planned": 2,
+        "accepted": 2,
+        "produced": 2,
+        "clean": 0,
+        "warning_codes": {
+          "possible_duplicate": 2
+        }
+      },
+      {
+        "unit_id": "ku:doc:material.txt#8#3",
+        "section_id": "doc:material.txt#8",
+        "salience": 0.7,
+        "planned": 2,
+        "accepted": 2,
+        "produced": 2,
+        "clean": 2,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#10#0",
+        "section_id": "doc:material.txt#10",
+        "salience": 1.0,
+        "planned": 2,
+        "accepted": 2,
+        "produced": 2,
+        "clean": 2,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#10#1",
+        "section_id": "doc:material.txt#10",
+        "salience": 0.9,
+        "planned": 3,
+        "accepted": 3,
+        "produced": 3,
+        "clean": 1,
+        "warning_codes": {
+          "possible_duplicate": 2
+        }
+      },
+      {
+        "unit_id": "ku:doc:material.txt#10#2",
+        "section_id": "doc:material.txt#10",
+        "salience": 0.8,
+        "planned": 2,
+        "accepted": 2,
+        "produced": 2,
+        "clean": 2,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#10#3",
+        "section_id": "doc:material.txt#10",
+        "salience": 0.8,
+        "planned": 2,
+        "accepted": 2,
+        "produced": 2,
+        "clean": 2,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#10#4",
+        "section_id": "doc:material.txt#10",
+        "salience": 0.7,
+        "planned": 2,
+        "accepted": 2,
+        "produced": 2,
+        "clean": 0,
+        "warning_codes": {
+          "possible_duplicate": 2
+        }
+      },
+      {
+        "unit_id": "ku:doc:material.txt#11#0",
+        "section_id": "doc:material.txt#11",
+        "salience": 0.8,
+        "planned": 2,
+        "accepted": 2,
+        "produced": 2,
+        "clean": 0,
+        "warning_codes": {
+          "possible_duplicate": 2
+        }
+      },
+      {
+        "unit_id": "ku:doc:material.txt#11#1",
+        "section_id": "doc:material.txt#11",
+        "salience": 0.9,
+        "planned": 3,
+        "accepted": 3,
+        "produced": 3,
+        "clean": 0,
+        "warning_codes": {
+          "possible_duplicate": 3
+        }
+      },
+      {
+        "unit_id": "ku:doc:material.txt#11#2",
+        "section_id": "doc:material.txt#11",
+        "salience": 0.6,
+        "planned": 2,
+        "accepted": 2,
+        "produced": 2,
+        "clean": 0,
+        "warning_codes": {
+          "possible_duplicate": 2
+        }
+      },
+      {
+        "unit_id": "ku:doc:material.txt#11#3",
+        "section_id": "doc:material.txt#11",
+        "salience": 0.7,
+        "planned": 2,
+        "accepted": 2,
+        "produced": 2,
+        "clean": 0,
+        "warning_codes": {
+          "possible_duplicate": 2
+        }
+      }
+    ],
+    "yield_per_1k_input_tokens": 4.4543429844097995,
+    "acceptance_rate": 1.0,
+    "clean_rate": 0.3125,
+    "duplicate_rate": 0.6875,
+    "coverage": 1.0,
+    "mean_covered_salience": 0.7540540540540541,
+    "requests_per_10_cards": 0.125,
+    "batch_p50_ms": 55470,
+    "batch_p95_ms": 55470
+  }
+}

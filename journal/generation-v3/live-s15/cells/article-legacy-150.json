@@ -1,0 +1,86 @@
+{
+  "schema": "s15",
+  "cell_id": "article-legacy-150",
+  "provider": "deepseek",
+  "model": "deepseek-flash",
+  "material": "статья, 3 раздела",
+  "material_sections": 3,
+  "requested": 150,
+  "path": "legacy",
+  "status": "ran",
+  "reason": null,
+  "duration_ms": 19816,
+  "error_code": null,
+  "stage": "partial",
+  "report_accepted": 15,
+  "report_requested": 150,
+  "understanding_failures": [],
+  "code_version": "5dc3cb11",
+  "prompt_versions": {
+    "generating": "gen-ru-v9"
+  },
+  "metrics": {
+    "requested": 150,
+    "accepted": 15,
+    "generated": 15,
+    "invalid": 0,
+    "duplicates": 0,
+    "clean_accepted": 15,
+    "absolute_clean": 15,
+    "accepted_with_warnings": 0,
+    "warning_codes": {},
+    "requests": 3,
+    "covered_units": 3,
+    "total_units": 3,
+    "input_tokens": 20549,
+    "output_tokens": 4312,
+    "input_tokens_by_stage": {
+      "generating": 20549
+    },
+    "output_tokens_by_stage": {
+      "generating": 4312
+    },
+    "duplicates_by_level": {},
+    "unit_coverage": [
+      {
+        "unit_id": "s1",
+        "section_id": "doc:material.txt#0",
+        "salience": null,
+        "planned": 53,
+        "accepted": 5,
+        "produced": 5,
+        "clean": 5,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "s2",
+        "section_id": "doc:material.txt#1",
+        "salience": null,
+        "planned": 50,
+        "accepted": 5,
+        "produced": 5,
+        "clean": 5,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "s3",
+        "section_id": "doc:material.txt#2",
+        "salience": null,
+        "planned": 47,
+        "accepted": 5,
+        "produced": 5,
+        "clean": 5,
+        "warning_codes": {}
+      }
+    ],
+    "yield_per_1k_input_tokens": 0.7299625285901991,
+    "acceptance_rate": 1.0,
+    "clean_rate": 1.0,
+    "duplicate_rate": 0.0,
+    "coverage": 1.0,
+    "mean_covered_salience": null,
+    "requests_per_10_cards": 2.0,
+    "batch_p50_ms": 5816,
+    "batch_p95_ms": 8463
+  }
+}

@@ -1,0 +1,178 @@
+{
+  "schema": "s15",
+  "cell_id": "textbook-legacy-80",
+  "provider": "deepseek",
+  "model": "deepseek-flash",
+  "material": "учебный текст, 12 разделов",
+  "material_sections": 12,
+  "requested": 80,
+  "path": "legacy",
+  "status": "ran",
+  "reason": null,
+  "duration_ms": 216049,
+  "error_code": null,
+  "stage": "partial",
+  "report_accepted": 79,
+  "report_requested": 80,
+  "understanding_failures": [],
+  "code_version": "5dc3cb11",
+  "prompt_versions": {
+    "generating": "gen-ru-v9"
+  },
+  "metrics": {
+    "requested": 80,
+    "accepted": 79,
+    "generated": 99,
+    "invalid": 0,
+    "duplicates": 20,
+    "clean_accepted": 79,
+    "absolute_clean": 79,
+    "accepted_with_warnings": 0,
+    "warning_codes": {},
+    "requests": 14,
+    "covered_units": 12,
+    "total_units": 12,
+    "input_tokens": 61653,
+    "output_tokens": 47879,
+    "input_tokens_by_stage": {
+      "generating": 61653
+    },
+    "output_tokens_by_stage": {
+      "generating": 47879
+    },
+    "duplicates_by_level": {
+      "exact": 20
+    },
+    "unit_coverage": [
+      {
+        "unit_id": "s1",
+        "section_id": "doc:material.txt#0",
+        "salience": null,
+        "planned": 6,
+        "accepted": 8,
+        "produced": 8,
+        "clean": 8,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "s2",
+        "section_id": "doc:material.txt#1",
+        "salience": null,
+        "planned": 7,
+        "accepted": 8,
+        "produced": 8,
+        "clean": 8,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "s3",
+        "section_id": "doc:material.txt#2",
+        "salience": null,
+        "planned": 7,
+        "accepted": 8,
+        "produced": 8,
+        "clean": 8,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "s4",
+        "section_id": "doc:material.txt#3",
+        "salience": null,
+        "planned": 7,
+        "accepted": 9,
+        "produced": 9,
+        "clean": 9,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "s5",
+        "section_id": "doc:material.txt#4",
+        "salience": null,
+        "planned": 7,
+        "accepted": 6,
+        "produced": 6,
+        "clean": 6,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "s6",
+        "section_id": "doc:material.txt#5",
+        "salience": null,
+        "planned": 6,
+        "accepted": 5,
+        "produced": 5,
+        "clean": 5,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "s7",
+        "section_id": "doc:material.txt#6",
+        "salience": null,
+        "planned": 7,
+        "accepted": 7,
+        "produced": 7,
+        "clean": 7,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "s8",
+        "section_id": "doc:material.txt#7",
+        "salience": null,
+        "planned": 9,
+        "accepted": 5,
+        "produced": 5,
+        "clean": 5,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "s9",
+        "section_id": "doc:material.txt#8",
+        "salience": null,
+        "planned": 6,
+        "accepted": 5,
+        "produced": 5,
+        "clean": 5,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "s10",
+        "section_id": "doc:material.txt#9",
+        "salience": null,
+        "planned": 6,
+        "accepted": 8,
+        "produced": 8,
+        "clean": 8,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "s11",
+        "section_id": "doc:material.txt#10",
+        "salience": null,
+        "planned": 6,
+        "accepted": 6,
+        "produced": 6,
+        "clean": 6,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "s12",
+        "section_id": "doc:material.txt#11",
+        "salience": null,
+        "planned": 6,
+        "accepted": 4,
+        "produced": 4,
+        "clean": 4,
+        "warning_codes": {}
+      }
+    ],
+    "yield_per_1k_input_tokens": 1.2813650592834087,
+    "acceptance_rate": 0.797979797979798,
+    "clean_rate": 0.797979797979798,
+    "duplicate_rate": 0.20202020202020202,
+    "coverage": 1.0,
+    "mean_covered_salience": null,
+    "requests_per_10_cards": 1.7721518987341771,
+    "batch_p50_ms": 15818,
+    "batch_p95_ms": 28125
+  }
+}
