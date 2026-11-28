@@ -5,6 +5,8 @@
 /// нормализуются в допустимые диапазоны, неверные типы отвергаются.
 library;
 
+import 'package:cardflow/domain/generation/generation_path.dart';
+
 /// Тема приложения (A6.6, «Внешний вид»).
 enum AppThemePreference {
   /// Следовать системной теме.
@@ -67,7 +69,7 @@ class AppSettings {
     this.learningSteps = defaultLearningSteps,
     this.dailyNewLimit = 20,
     this.dailyReviewLimit = 200,
-    this.generationPipelineV3 = false,
+    this.generationPathMode = GenerationPathMode.auto,
   });
 
   /// Версия контракта JSON.
@@ -139,15 +141,14 @@ class AppSettings {
   /// Дневной лимит повторных карточек (0 — без лимита).
   final int dailyReviewLimit;
 
-  /// Путь генерации v3 (TASK «Срез 9», ADR-050): этапы, вердикт по журналу,
-  /// пометки дублей вместо удаления и метрики прогона.
+  /// Режим выбора пути генерации (TASK «Срез 17», часть 2, п. 11, ADR-054).
   ///
-  /// Срез 15 (часть 0): флаг снова **выключен по умолчанию**. Критерий среза 14
-  /// был выведен из агрегата `coverage`, а не измерен пер-юнитными данными
-  /// (L230), поэтому решение не считается доказанным; включение — только после
-  /// честного замера `journal/generation-v3/verify-s15.md`. Старый путь
-  /// остаётся доступным и не удалён.
-  final bool generationPipelineV3;
+  /// Срез 16 и раньше здесь был булев флаг `generationPipelineV3`: он
+  /// перекладывал инженерное решение на пользователя. Теперь путь — функция от
+  /// материала ([selectGenerationPath]): `auto` решает по порогу N*, а `v3`/
+  /// `legacy` — ручное переопределение. Старый JSON с
+  /// `generation_pipeline_v3` читается как соответствующий режим (см. [fromJson]).
+  final GenerationPathMode generationPathMode;
 
   /// Сериализация в `app_settings.value_json`.
   Map<String, Object?> toJson() => <String, Object?>{
@@ -165,7 +166,7 @@ class AppSettings {
     ],
     'daily_new_limit': dailyNewLimit,
     'daily_review_limit': dailyReviewLimit,
-    'generation_pipeline_v3': generationPipelineV3,
+    'generation_path_mode': generationPathMode.wireName,
   };
 
   /// Разбирает JSON; неизвестные ключи игнорируются (ADR-019 §1).
@@ -215,11 +216,28 @@ class AppSettings {
         0,
         maxDailyLimit,
       ),
-      generationPipelineV3: _bool(
-        json['generation_pipeline_v3'],
-        AppSettings.defaults.generationPipelineV3,
-      ),
+      generationPathMode: _generationPathMode(json),
     );
+  }
+
+  /// Режим пути генерации с обратной совместимостью (срез 17, ADR-054).
+  ///
+  /// 1. Новый ключ `generation_path_mode` — если он есть и валиден;
+  /// 2. иначе старый `generation_pipeline_v3`: `true` → [GenerationPathMode.v3],
+  ///    `false` → [GenerationPathMode.legacy] (ровно то поведение, что было);
+  /// 3. иначе — [GenerationPathMode.auto] (значение по умолчанию).
+  static GenerationPathMode _generationPathMode(Map<String, Object?> json) {
+    final Object? wire = json['generation_path_mode'];
+    if (wire is String) {
+      for (final GenerationPathMode mode in GenerationPathMode.values) {
+        if (mode.wireName == wire) return mode;
+      }
+    }
+    final Object? legacyFlag = json['generation_pipeline_v3'];
+    if (legacyFlag is bool) {
+      return legacyFlag ? GenerationPathMode.v3 : GenerationPathMode.legacy;
+    }
+    return AppSettings.defaults.generationPathMode;
   }
 
   /// Копия с заменой полей.
@@ -235,7 +253,7 @@ class AppSettings {
     List<Duration>? learningSteps,
     int? dailyNewLimit,
     int? dailyReviewLimit,
-    bool? generationPipelineV3,
+    GenerationPathMode? generationPathMode,
   }) {
     return AppSettings(
       theme: theme ?? this.theme,
@@ -267,7 +285,7 @@ class AppSettings {
         0,
         maxDailyLimit,
       ),
-      generationPipelineV3: generationPipelineV3 ?? this.generationPipelineV3,
+      generationPathMode: generationPathMode ?? this.generationPathMode,
     );
   }
 
@@ -375,7 +393,7 @@ class AppSettings {
       _stepsEqual(other.learningSteps) &&
       other.dailyNewLimit == dailyNewLimit &&
       other.dailyReviewLimit == dailyReviewLimit &&
-      other.generationPipelineV3 == generationPipelineV3;
+      other.generationPathMode == generationPathMode;
 
   bool _stepsEqual(List<Duration> other) {
     if (other.length != learningSteps.length) return false;
@@ -398,7 +416,7 @@ class AppSettings {
     Object.hashAll(learningSteps),
     dailyNewLimit,
     dailyReviewLimit,
-    generationPipelineV3,
+    generationPathMode,
   );
 
   @override

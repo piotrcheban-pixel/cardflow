@@ -32,6 +32,7 @@ import 'package:cardflow/data/generation/drift_generation_job_repository.dart';
 import 'package:cardflow/data/generation/drift_generation_run_store.dart';
 import 'package:cardflow/data/generation/drift_generation_settings_store.dart';
 import 'package:cardflow/data/generation/drift_knowledge_map_cache.dart';
+import 'package:cardflow/domain/generation/generation_path.dart';
 import 'package:cardflow/domain/generation/model_capability_cache.dart';
 import 'package:cardflow/domain/generation/token_calibration.dart';
 import 'package:cardflow/data/generation/drift_model_capability_cache.dart';
@@ -471,12 +472,13 @@ final matchBestStoreProvider = Provider<MatchBestStore>((ref) {
 
 /// Пайплайн генерации: чанкинг, вызовы, прогресс/отмена, дедупликация.
 ///
-/// Флаг `generationPipelineV3` читается из настроек (срез 9): включённый путь
-/// помечает возможные дубли вместо удаления, считает вердикт по журналу и
-/// собирает метрики; выключенный — прежнее поведение без изменений.
+/// Путь выбирает **функция от материала** (TASK «Срез 17», п. 11, ADR-054):
+/// `generationPathDecisionProvider` переводит режим настройки (`auto`/`v3`/
+/// `legacy`) в решение; `auto` при неопределённом пороге N* честно остаётся на
+/// legacy. Выключенный v3 — прежнее поведение без изменений.
 final generationRunnerProvider = Provider<GenerationRunner>((ref) {
   final ApiKeyStore keyStore = ref.watch(apiKeyStoreProvider);
-  final AppSettings settings = ref.watch(effectiveAppSettingsProvider);
+  final GenerationPathDecision path = ref.watch(generationPathDecisionProvider);
   return GenerationPipeline(
     caller: ref.watch(cardGenerationServiceProvider),
     // Нативный подсчёт входа: только Anthropic/Gemini (ADR-040 §3.5.1).
@@ -490,17 +492,36 @@ final generationRunnerProvider = Provider<GenerationRunner>((ref) {
     diagnostics: ref.watch(generationDiagnosticsProvider),
     capabilityCache: ref.watch(modelCapabilityCacheProvider),
     calibrationStore: ref.watch(tokenCalibrationStoreProvider),
-    pipelineV3: settings.generationPipelineV3,
-    // production-проводка пути v3 (срез 11): фасад включается тем же флагом.
+    pipelineV3: path.path == GenerationPath.v3,
+    // production-проводка пути v3 (срез 11): фасад включается тем же решением.
     v3Path: ref.watch(generationV3PathProvider),
   );
+});
+
+/// Решение о пути генерации по материалу и режиму из настроек (ADR-054).
+///
+/// Объём материала до первого запроса неизвестен (карты единиц ещё нет),
+/// поэтому вызывающий слой передаёт 0 — при неопределённом пороге N* это не
+/// влияет на решение; когда порог появится из данных, объём будет передан
+/// здесь (L236).
+final generationPathDecisionProvider = Provider<GenerationPathDecision>((
+  Ref ref,
+) {
+  final AppSettings settings = ref.watch(effectiveAppSettingsProvider);
+  return selectGenerationPath(mode: settings.generationPathMode);
+});
+
+/// true — решением выбран путь v3 (для прогресса и экрана генерации).
+final generationUsesV3Provider = Provider<bool>((Ref ref) {
+  return ref.watch(generationPathDecisionProvider).path == GenerationPath.v3;
 });
 
 /// Путь генерации v3: фасад этапов, понимание с HTTP-вызовом и кэшем на БД,
 /// добор с гейтом и отчёт прогона (TASK «Срез 11», часть 3).
 ///
-/// Работает только при включённом `generationPipelineV3`; выключенный флаг —
-/// legacy-путь без изменений (`GenerationPipeline.pipelineV3`).
+/// Работает только при выборе пути v3 (`GenerationPathDecision`,
+/// `generationPathDecisionProvider`); legacy — путь без изменений
+/// (`GenerationPipeline.pipelineV3`).
 final generationV3PathProvider = Provider<GenerationV3Path>((ref) {
   final AppDatabase database = ref.watch(appDatabaseProvider);
   final GenerationV3PathRunner runner = GenerationV3PathRunner(

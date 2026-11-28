@@ -6,9 +6,16 @@ import 'package:cardflow/domain/generation/generation_run.dart';
 import 'package:cardflow/domain/generation/outcome_counts.dart';
 import 'package:cardflow/domain/generation/replenish_stage.dart';
 
-/// Контракт среза 16, часть 1: attempted / accepted / unique / clean и
-/// производные. Один код для обоих путей — отчёт прогона; знаменатель у всех
-/// долей один (все попытки), иначе доля растёт от собственной строгости.
+/// Срез 17, часть 0: определения метрики **заморожены** (ADR-054).
+///
+/// Четыре величины, каждая отвечает на один вопрос и не входит в другую:
+/// - `cleanRate = clean / unique` — качество **сохранённой** карточки;
+/// - `dupRate = duplicates / unique` — доля сохранённого, оказавшегося повтором;
+/// - `blockRate = blocked / attempted` — сколько попыток отсек жёсткий гейт;
+/// - `acceptanceRate = accepted / attempted` — сколько попыток дошло до колоды.
+///
+/// DoD: дубль **не двигает** `cleanRate` — иначе дубли дважды штрафовали бы
+/// качество (и в доле чистых, и в собственной доле).
 void main() {
   GenerationReport reportOf({
     required int generated,
@@ -54,7 +61,7 @@ void main() {
     expect(outcome.blocked, 1);
   });
 
-  test('производные доли — от всех попыток, а не от принятого', () {
+  test('доли замороженного набора: сохранённое — знаменатель качества', () {
     final OutcomeCounts outcome = OutcomeCounts.fromReport(
       reportOf(
         generated: 10,
@@ -64,17 +71,67 @@ void main() {
         blocked: 1,
       ),
     );
-    expect(outcome.cleanRate, closeTo(0.4, 1e-12));
-    expect(outcome.dupRate, closeTo(0.3, 1e-12));
-    expect(outcome.blockRate, closeTo(0.1, 1e-12));
+    expect(
+      outcome.cleanRate,
+      closeTo(4 / 6, 1e-12),
+      reason: 'cleanRate = чистые / уникальные, а не / все попытки',
+    );
+    expect(
+      outcome.dupRate,
+      closeTo(3 / 6, 1e-12),
+      reason: 'dupRate = дубли / уникальные',
+    );
+    expect(
+      outcome.blockRate,
+      closeTo(1 / 10, 1e-12),
+      reason: 'blockRate = блокированные / попытки (единственная от попыток)',
+    );
+    expect(outcome.acceptanceRate, closeTo(6 / 10, 1e-12));
+  });
+
+  test('дубль не двигает cleanRate (DoD части 0, п. 1)', () {
+    final OutcomeCounts base = OutcomeCounts.fromReport(
+      reportOf(generated: 10, accepted: 6, acceptedWithWarnings: 2),
+    );
+    final OutcomeCounts withDuplicates = OutcomeCounts.fromReport(
+      reportOf(
+        generated: 13,
+        accepted: 6,
+        acceptedWithWarnings: 2,
+        duplicates: 3,
+      ),
+    );
+    expect(
+      withDuplicates.cleanRate,
+      base.cleanRate,
+      reason:
+          'качество сохранённого не зависит от того, сколько дублей '
+          'отложено/удалено',
+    );
+    expect(base.cleanRate, closeTo(4 / 6, 1e-12));
+    expect(base.dupRate, closeTo(0, 1e-12));
+    expect(withDuplicates.dupRate, closeTo(3 / 6, 1e-12));
+    expect(
+      withDuplicates.blockRate,
+      base.blockRate,
+      reason: 'и blockRate от дублей не зависит',
+    );
   });
 
   test('unique вычитает принятые с пометкой дубля', () {
     final OutcomeCounts outcome = OutcomeCounts.fromReport(
-      reportOf(generated: 8, accepted: 8, acceptedDuplicates: 2, duplicates: 2),
+      reportOf(
+        generated: 8,
+        accepted: 8,
+        acceptedWithWarnings: 2,
+        acceptedDuplicates: 2,
+        duplicates: 2,
+      ),
     );
     expect(outcome.unique, 6);
     expect(outcome.accepted, 8);
+    expect(outcome.clean, 6);
+    expect(outcome.cleanRate, closeTo(1, 1e-12));
   });
 
   test('нет попыток — доли null, а не ноль', () {
@@ -84,6 +141,7 @@ void main() {
     expect(outcome.cleanRate, isNull);
     expect(outcome.dupRate, isNull);
     expect(outcome.blockRate, isNull);
+    expect(outcome.acceptanceRate, isNull);
   });
 
   test('отчёт прогона отдаёт те же счётчики (единый код путей)', () {
@@ -93,8 +151,13 @@ void main() {
       duplicates: 3,
     );
     expect(report.outcome.attempted, 11);
-    expect(report.outcome.cleanRate, closeTo(8 / 11, 1e-12));
-    expect(report.outcome.dupRate, closeTo(3 / 11, 1e-12));
+    expect(report.outcome.cleanRate, closeTo(8 / 8, 1e-12));
+    expect(report.outcome.dupRate, closeTo(3 / 8, 1e-12));
+    expect(
+      report.cleanRate,
+      closeTo(8 / 8, 1e-12),
+      reason: 'доля качества в отчёте — замороженное определение, не срез 13',
+    );
   });
 
   test('отрицательные счётчики — ошибка программиста', () {

@@ -135,10 +135,11 @@ class CollectedMetrics {
   /// Доля принятых от произведённых; `null` — модель ничего не произвела.
   final double? acceptanceRate;
 
-  /// Доля принятых без пометок от принятых; `null` — принятых нет.
+  /// Качество сохранённого (заморожено срезом 17, ADR-054):
+  /// чистые / уникальные принятые; `null` — сохранённых нет.
   final double? cleanRate;
 
-  /// Доля дублей от произведённых; `null` — нет данных.
+  /// Доля дублей от уникальных (заморожено срезом 17, ADR-054); `null` — нет.
   final double? duplicateRate;
 
   /// Доля единиц с принятой карточкой; `null` — единиц нет.
@@ -207,6 +208,7 @@ class CollectedMetrics {
     'accepted_final': outcome.accepted,
     'unique': outcome.unique,
     'clean': outcome.clean,
+    'blocked': outcome.blocked,
     'dup_rate': outcome.dupRate,
     'block_rate': outcome.blockRate,
     'coverage': coverage,

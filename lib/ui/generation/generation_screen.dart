@@ -1157,9 +1157,7 @@ class _GenerationScreenState extends ConsumerState<GenerationScreen> {
           _ProgressView(
             progress: _progress,
             l10n: l10n,
-            pipelineV3: ref
-                .watch(effectiveAppSettingsProvider)
-                .generationPipelineV3,
+            pipelineV3: ref.watch(generationUsesV3Provider),
           ),
           const SizedBox(height: AppSpacing.sm),
           // Во время генерации главное на экране — прогресс; «Отмена» —

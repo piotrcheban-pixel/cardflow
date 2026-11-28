@@ -1370,13 +1370,25 @@
       }
     }
   },
-  "settingsGenerationPipelineV3Title": "Новый путь генерации",
+  "settingsGenerationPipelineV3Title": "Путь генерации",
   "@settingsGenerationPipelineV3Title": {
-    "description": "Переключатель флага generationPipelineV3 в настройках генерации."
+    "description": "Режим выбора пути генерации (авто / новый путь / прежний путь)."
   },
-  "settingsGenerationPipelineV3Hint": "Этапы, вердикт по журналу, пометки дублей и метрики. Выключено — прежний путь.",
+  "settingsGenerationPipelineV3Hint": "Авто выбирает путь по объёму материала. Пока данных для порога нет, авто — прежний путь.",
   "@settingsGenerationPipelineV3Hint": {
-    "description": "Пояснение к переключателю нового пути генерации."
+    "description": "Пояснение к выбору пути генерации; честно говорит, что порог ещё не определён данными."
+  },
+  "settingsGenerationPathAuto": "Авто",
+  "@settingsGenerationPathAuto": {
+    "description": "Вариант режима пути генерации: выбирать по объёму материала."
+  },
+  "settingsGenerationPathV3": "Новый путь",
+  "@settingsGenerationPathV3": {
+    "description": "Вариант режима пути генерации: всегда новый путь (этапы, вердикт, метрики)."
+  },
+  "settingsGenerationPathLegacy": "Прежний путь",
+  "@settingsGenerationPathLegacy": {
+    "description": "Вариант режима пути генерации: всегда прежний (legacy) путь."
   },
   "generationIssueImageIdUnknown": "Изображение не найдено в файлах — карточка без картинки",
   "@generationIssueImageIdUnknown": {

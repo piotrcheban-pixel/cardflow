@@ -550,8 +550,8 @@ void main() {
     expect(metrics.outcome.attempted, 11);
     expect(metrics.outcome.accepted, 8);
     expect(metrics.outcome.duplicates, 3);
-    expect(metrics.outcome.dupRate, closeTo(3 / 11, 1e-9));
-    expect(metrics.outcome.cleanRate, closeTo(8 / 11, 1e-9));
+    expect(metrics.outcome.dupRate, closeTo(3 / 8, 1e-9));
+    expect(metrics.outcome.cleanRate, closeTo(8 / 8, 1e-9));
     expect(metrics.outcome.unique, 8);
   });
 

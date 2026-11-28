@@ -1078,11 +1078,20 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get settingsGenerationPipelineV3Title => 'Новый путь генерации';
+  String get settingsGenerationPipelineV3Title => 'Путь генерации';
 
   @override
   String get settingsGenerationPipelineV3Hint =>
-      'Этапы, вердикт по журналу, пометки дублей и метрики. Выключено — прежний путь.';
+      'Авто выбирает путь по объёму материала. Пока данных для порога нет, авто — прежний путь.';
+
+  @override
+  String get settingsGenerationPathAuto => 'Авто';
+
+  @override
+  String get settingsGenerationPathV3 => 'Новый путь';
+
+  @override
+  String get settingsGenerationPathLegacy => 'Прежний путь';
 
   @override
   String get generationIssueImageIdUnknown =>

@@ -9,6 +9,7 @@ library;
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:cardflow/domain/generation/generated_card.dart';
 import 'package:cardflow/domain/generation/generation_report.dart';
 import 'package:cardflow/domain/generation/metrics_collector.dart';
 
@@ -44,6 +45,7 @@ class BenchCell {
     this.cellId,
     this.codeVersion,
     this.promptVersions = const <String, String>{},
+    this.savedCards = const <BenchSavedCard>[],
   });
 
   /// Имя материала (`учебный текст 12 разделов`, `статья 3 раздела`, `скан`).
@@ -97,6 +99,13 @@ class BenchCell {
   /// Версии промптов прогона (проверка «промпты заморожены»).
   final Map<String, String> promptVersions;
 
+  /// Сохранённые карточки ячейки (срез 17, часть 1): из них строится слепая
+  /// человеческая выборка без новых платных прогонов.
+  ///
+  /// Пустая у ячеек до среза 17 — живые стенды тогда писали только метрики,
+  /// поэтому у них слепая выборка честно `not_measured`.
+  final List<BenchSavedCard> savedCards;
+
   /// JSON-строка для `matrix.jsonl`.
   Map<String, Object?> toJson() => <String, Object?>{
     'material': material,
@@ -114,6 +123,59 @@ class BenchCell {
     'code_version': codeVersion,
     'prompt_versions': promptVersions,
     'metrics': metrics?.toJson(),
+    'cards': <Map<String, Object?>>[
+      for (final BenchSavedCard card in savedCards) card.toJson(),
+    ],
+  };
+}
+
+/// Карточка, сохранённая в ячейке живого замера (срез 17, часть 1).
+///
+/// Пишется в `cells/<cellId>.json` ключом `cards`; из сохранённого строится
+/// слепая выборка (`tool/blind_sample_s17.dart`). Текстов материалов и ключей
+/// здесь нет — только стороны карточки и источник единицы.
+class BenchSavedCard {
+  /// Создаёт запись сохранённой карточки.
+  const BenchSavedCard({
+    required this.front,
+    required this.back,
+    this.unitId,
+    this.angle,
+    this.tags = const <String>[],
+  });
+
+  /// Карточка из результата прогона (то, что принято в колоду).
+  factory BenchSavedCard.fromGeneratedCard(GeneratedCard card) =>
+      BenchSavedCard(
+        front: card.front,
+        back: card.back,
+        unitId: card.unitId,
+        angle: card.angle,
+        tags: card.tags,
+      );
+
+  /// Вопрос.
+  final String front;
+
+  /// Ответ.
+  final String back;
+
+  /// Единица карты знаний (`null` у legacy).
+  final String? unitId;
+
+  /// Угол карточки (`null` — основная карточка).
+  final String? angle;
+
+  /// Теги.
+  final List<String> tags;
+
+  /// JSON-запись карточки в ячейке.
+  Map<String, Object?> toJson() => <String, Object?>{
+    'front': front,
+    'back': back,
+    if (unitId != null) 'unit_id': unitId,
+    if (angle != null) 'angle': angle,
+    if (tags.isNotEmpty) 'tags': tags,
   };
 }
 

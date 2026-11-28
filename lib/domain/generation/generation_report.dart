@@ -490,19 +490,20 @@ class GenerationReport {
   /// разные величины качества прогона, и видеть это нужно числом.
   int get absoluteClean => cleanAccepted;
 
-  /// cleanRate = принято без warning / **произведено** (TASK «Срез 13», п. 8).
+  /// Качество **сохранённой** карточки: чистые / уникальные принятые.
   ///
-  /// Знаменатель — [generated], а не [accepted]: иначе путь, отбрасывающий
-  /// сомнительное (`accepted` меньше при том же числе произведённых), выглядел
-  /// бы чище. `null` — модель ничего не произвела: «0 из 0» не качество.
-  double? get cleanRate => generated <= 0 ? null : cleanAccepted / generated;
+  /// Определение **заморожено** срезом 17 (ADR-054, часть 0): знаменатель —
+  /// [OutcomeCounts.unique], а не [generated]. Дубль не двигает эту величину —
+  /// он считается отдельно в [duplicateRate]. `null` — сохранённых нет:
+  /// «0 из 0» не качество.
+  double? get cleanRate => outcome.cleanRate;
 
-  /// duplicateRate = помечено/отброшено как дубли / произведено.
+  /// Доля дублей от уникальных (замороженное определение среза 17).
   ///
-  /// `null` — модель ничего не произвела. Знаменатель тот же, что у
-  /// [cleanRate]: метрики сравниваются на сопоставимой базе (срез 13, п. 8).
-  double? get duplicateRate =>
-      generated <= 0 ? null : duplicateMarked / generated;
+  /// `null` — сохранённых нет. Раньше (срез 13) здесь был
+  /// `duplicateMarked / generated`; сменить это снова можно только ADR (TASK
+  /// «Срез 17», п. 4).
+  double? get duplicateRate => outcome.dupRate;
 
   /// Долг: `max(0, requested − accepted)`.
   int get remaining => requested > accepted ? requested - accepted : 0;

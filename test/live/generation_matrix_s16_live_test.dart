@@ -26,6 +26,7 @@ import 'package:cardflow/api/generation/generation_cancellation.dart';
 import 'package:cardflow/api/generation/generation_diagnostics.dart';
 import 'package:cardflow/api/generation/generation_pipeline.dart';
 import 'package:cardflow/api/generation/generation_v3_path.dart';
+import 'package:cardflow/domain/generation/generated_card.dart';
 import 'package:cardflow/api/http/generation_http_client.dart';
 import 'package:cardflow/api/http/retry_policy.dart';
 import 'package:cardflow/api/providers/generation_adapters.dart';
@@ -234,6 +235,10 @@ void main() {
                   result.report?.understandingFailures ?? const <String>[],
               promptVersions:
                   result.report?.promptVersions ?? const <String, String>{},
+              savedCards: <BenchSavedCard>[
+                for (final GeneratedCard card in result.cards)
+                  BenchSavedCard.fromGeneratedCard(card),
+              ],
               metrics: result.report == null
                   ? null
                   : const MetricsCollector().collect(result.report!),

@@ -15,6 +15,7 @@ import 'package:material_ui/material_ui.dart';
 
 import 'package:cardflow/api/generation/api_key_verifier.dart';
 import 'package:cardflow/domain/generation/api_key_store.dart';
+import 'package:cardflow/domain/generation/generation_path.dart';
 import 'package:cardflow/domain/generation/provider_account.dart';
 import 'package:cardflow/domain/settings/app_settings.dart';
 import 'package:cardflow/l10n/app_localizations.dart';
@@ -524,7 +525,7 @@ class _GenerationSettingsScreenState
               ),
             ],
             const SizedBox(height: AppSpacing.md),
-            const _PipelineSwitch(),
+            const _GenerationPathField(),
           ],
         ),
       ),
@@ -532,28 +533,61 @@ class _GenerationSettingsScreenState
   }
 }
 
-/// Переключатель пути генерации v3 (TASK «Срез 9», флаг `generationPipelineV3`).
+/// Выбор пути генерации (TASK «Срез 17», часть 2, п. 11, ADR-054).
 ///
-/// Настройка живёт в `app_settings` (ADR-019): включение не требует пересборки,
+/// Путь — не булев флаг, а **режим**: `auto` решает функция от материала
+/// (`selectGenerationPath`), `v3`/`legacy` — ручное переопределение. Настройка
+/// живёт в `app_settings` (ADR-019): включение не требует пересборки,
 /// выключение возвращает прежнее поведение без изменений (протокол §9).
-class _PipelineSwitch extends ConsumerWidget {
-  const _PipelineSwitch();
+class _GenerationPathField extends ConsumerWidget {
+  const _GenerationPathField();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final AppLocalizations l10n = AppLocalizations.of(context);
     final AppSettings settings = ref.watch(effectiveAppSettingsProvider);
-    return SwitchListTile(
-      key: const ValueKey<String>('settings-generation-pipeline-v3'),
-      contentPadding: EdgeInsets.zero,
-      title: Text(l10n.settingsGenerationPipelineV3Title),
-      subtitle: Text(l10n.settingsGenerationPipelineV3Hint),
-      value: settings.generationPipelineV3,
-      onChanged: (bool value) async {
-        await ref
-            .read(appSettingsProvider.notifier)
-            .save(settings.copyWith(generationPipelineV3: value));
-      },
+    final ThemeData theme = Theme.of(context);
+    String labelOf(GenerationPathMode mode) => switch (mode) {
+      GenerationPathMode.auto => l10n.settingsGenerationPathAuto,
+      GenerationPathMode.v3 => l10n.settingsGenerationPathV3,
+      GenerationPathMode.legacy => l10n.settingsGenerationPathLegacy,
+    };
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          l10n.settingsGenerationPipelineV3Title,
+          style: theme.textTheme.titleMedium,
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        Text(
+          l10n.settingsGenerationPipelineV3Hint,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Wrap(
+          spacing: AppSpacing.sm,
+          runSpacing: AppSpacing.xs,
+          children: <Widget>[
+            for (final GenerationPathMode mode in GenerationPathMode.values)
+              ChoiceChip(
+                key: ValueKey<String>(
+                  'settings-generation-path-${mode.wireName}',
+                ),
+                label: Text(labelOf(mode)),
+                selected: settings.generationPathMode == mode,
+                onSelected: (bool selected) async {
+                  if (!selected) return;
+                  await ref
+                      .read(appSettingsProvider.notifier)
+                      .save(settings.copyWith(generationPathMode: mode));
+                },
+              ),
+          ],
+        ),
+      ],
     );
   }
 }

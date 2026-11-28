@@ -1,53 +1,86 @@
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cardflow/domain/generation/generation_path.dart';
 import 'package:cardflow/domain/settings/app_settings.dart';
 
-/// Срез 15, часть 0: флаг `generationPipelineV3` снова **выключен** по
-/// умолчанию. Причина — в `journal/STATE.md`: критерий среза 14 выведен из
-/// `coverage`, а не измерен пер-юнитными данными (L230); вернуть после
-/// честного замера среза 15.
+/// Срез 17, часть 2, п. 11: путь генерации — не булев флаг в настройках, а
+/// **режим** `auto / v3 / legacy`; `auto` решает функцию от материала
+/// (`selectGenerationPath`). Ручное переопределение остаётся явным значением
+/// режима, поэтому пользователь видит выбор, а не скрытый флаг.
 ///
-/// Тест фиксирует **значение по умолчанию**: смена дефолта обязана быть видна
-/// в диффе, а не проходить молча.
+/// Тест фиксирует **значение по умолчанию** и совместимость со старым JSON:
+/// смена дефолта обязана быть видна в диффе, а не проходить молча.
 void main() {
-  test('по умолчанию выключен: v3 включается только после замера', () {
-    expect(AppSettings.defaults.generationPipelineV3, isFalse);
-    expect(const AppSettings().generationPipelineV3, isFalse);
-  });
-
-  test('explicit true включает v3 (флаг работает в обе стороны)', () {
-    final AppSettings on = AppSettings.defaults.copyWith(
-      generationPipelineV3: true,
-    );
-    expect(on.generationPipelineV3, isTrue);
-    expect(AppSettings.fromJson(on.toJson()).generationPipelineV3, isTrue);
-  });
-
-  test('JSON round-trip сохраняет выключенный флаг (legacy доступен)', () {
-    final AppSettings settings = AppSettings.defaults.copyWith(
-      generationPipelineV3: false,
-    );
-    final Map<String, Object?> json = settings.toJson();
-    expect(json['generation_pipeline_v3'], isFalse);
-    expect(json['version'], AppSettings.version);
-    expect(AppSettings.fromJson(json).generationPipelineV3, isFalse);
-    expect(AppSettings.fromJson(json), settings);
-  });
-
-  test('старый JSON без ключа читается как значение по умолчанию', () {
-    final Map<String, Object?> legacy = AppSettings.defaults.toJson()
-      ..remove('generation_pipeline_v3');
-    expect(AppSettings.fromJson(legacy).generationPipelineV3, isFalse);
-  });
-
-  test('copyWith без флага его не меняет', () {
-    final AppSettings on = AppSettings.defaults.copyWith(
-      generationPipelineV3: true,
-    );
-    expect(on.copyWith(dailyNewLimit: 5).generationPipelineV3, isTrue);
+  test('по умолчанию авто, и авто по данным S17 = legacy', () {
+    expect(AppSettings.defaults.generationPathMode, GenerationPathMode.auto);
+    expect(const AppSettings().generationPathMode, GenerationPathMode.auto);
     expect(
-      on.copyWith(generationPipelineV3: false).generationPipelineV3,
-      isFalse,
+      selectGenerationPath(
+        mode: AppSettings.defaults.generationPathMode,
+        materialUnits: 33,
+      ).path,
+      GenerationPath.legacy,
+    );
+  });
+
+  test('ручное переопределение сохраняется в JSON и читается обратно', () {
+    for (final GenerationPathMode mode in <GenerationPathMode>[
+      GenerationPathMode.v3,
+      GenerationPathMode.legacy,
+    ]) {
+      final AppSettings settings = AppSettings.defaults.copyWith(
+        generationPathMode: mode,
+      );
+      final Map<String, Object?> json = settings.toJson();
+      expect(json['generation_path_mode'], mode.wireName);
+      expect(json['version'], AppSettings.version);
+      expect(AppSettings.fromJson(json).generationPathMode, mode);
+      expect(AppSettings.fromJson(json), settings);
+    }
+  });
+
+  test('старый JSON с generation_pipeline_v3 читается как режим', () {
+    final Map<String, Object?> on = AppSettings.defaults.toJson()
+      ..remove('generation_path_mode')
+      ..['generation_pipeline_v3'] = true;
+    final Map<String, Object?> off = AppSettings.defaults.toJson()
+      ..remove('generation_path_mode')
+      ..['generation_pipeline_v3'] = false;
+    expect(
+      AppSettings.fromJson(on).generationPathMode,
+      GenerationPathMode.v3,
+      reason: 'раньше включённый флаг означал путь v3',
+    );
+    expect(
+      AppSettings.fromJson(off).generationPathMode,
+      GenerationPathMode.legacy,
+      reason: 'раньше выключенный флаг означал legacy-путь',
+    );
+  });
+
+  test('старый JSON без обоих ключей читается как авто', () {
+    final Map<String, Object?> legacy = AppSettings.defaults.toJson()
+      ..remove('generation_path_mode')
+      ..remove('generation_pipeline_v3');
+    expect(
+      AppSettings.fromJson(legacy).generationPathMode,
+      GenerationPathMode.auto,
+    );
+  });
+
+  test('copyWith без режима его не меняет', () {
+    final AppSettings v3 = AppSettings.defaults.copyWith(
+      generationPathMode: GenerationPathMode.v3,
+    );
+    expect(
+      v3.copyWith(dailyNewLimit: 5).generationPathMode,
+      GenerationPathMode.v3,
+    );
+    expect(
+      v3
+          .copyWith(generationPathMode: GenerationPathMode.legacy)
+          .generationPathMode,
+      GenerationPathMode.legacy,
     );
   });
 }

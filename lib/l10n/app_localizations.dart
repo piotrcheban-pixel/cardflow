@@ -1798,17 +1798,35 @@ abstract class AppLocalizations {
   /// **'Часть материала не удалось понять: фрагментов {count}'**
   String generationUnderstandingFailed(int count);
 
-  /// Переключатель флага generationPipelineV3 в настройках генерации.
+  /// Режим выбора пути генерации (авто / новый путь / прежний путь).
   ///
   /// In ru, this message translates to:
-  /// **'Новый путь генерации'**
+  /// **'Путь генерации'**
   String get settingsGenerationPipelineV3Title;
 
-  /// Пояснение к переключателю нового пути генерации.
+  /// Пояснение к выбору пути генерации; честно говорит, что порог ещё не определён данными.
   ///
   /// In ru, this message translates to:
-  /// **'Этапы, вердикт по журналу, пометки дублей и метрики. Выключено — прежний путь.'**
+  /// **'Авто выбирает путь по объёму материала. Пока данных для порога нет, авто — прежний путь.'**
   String get settingsGenerationPipelineV3Hint;
+
+  /// Вариант режима пути генерации: выбирать по объёму материала.
+  ///
+  /// In ru, this message translates to:
+  /// **'Авто'**
+  String get settingsGenerationPathAuto;
+
+  /// Вариант режима пути генерации: всегда новый путь (этапы, вердикт, метрики).
+  ///
+  /// In ru, this message translates to:
+  /// **'Новый путь'**
+  String get settingsGenerationPathV3;
+
+  /// Вариант режима пути генерации: всегда прежний (legacy) путь.
+  ///
+  /// In ru, this message translates to:
+  /// **'Прежний путь'**
+  String get settingsGenerationPathLegacy;
 
   /// Пометка fix-gen: image_id модели не найден в каталоге <images>.
   ///

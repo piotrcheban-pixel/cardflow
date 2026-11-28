@@ -219,7 +219,7 @@ void main() {
     final GenerationReport report = result.report!;
     expect(report.duplicates, 1);
     expect(report.outcome.attempted, 3, reason: 'принято 2 + дубль 1');
-    expect(report.outcome.dupRate, closeTo(1 / 3, 1e-9));
+    expect(report.outcome.dupRate, closeTo(1 / 2, 1e-9));
     expect(report.outcome.accepted, 2);
     expect(report.outcome.unique, 2, reason: 'удалённые дубли не приняты');
   });
