@@ -265,6 +265,14 @@ class AppLocalizationsRu extends AppLocalizations {
       'Не удалось открыть базу данных. Перезапустите приложение.';
 
   @override
+  String get databaseOpenAccessHint =>
+      'Приложению не удалось записать файл базы данных. Проверьте права на папку данных и запустите приложение ещё раз.';
+
+  @override
+  String get databaseRecoveredNotice =>
+      'Файл базы данных был повреждён. Его копия сохранена в папке данных, создана новая база.';
+
+  @override
   String get reviewTitle => 'Повторение';
 
   @override

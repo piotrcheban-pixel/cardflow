@@ -203,5 +203,69 @@ void main() {
       expect(Localizations.localeOf(context), const Locale('ru'));
       expect(find.text(l10n.appTitle), findsNothing);
     });
+
+    testWidgets('причина «нет доступа» объясняется подсказкой (ADR-057)', (
+      tester,
+    ) async {
+      await tester.pumpWidget(const StartupErrorApp(accessDenied: true));
+      await tester.pumpAndSettle();
+
+      final context = tester.element(find.byType(Scaffold));
+      final l10n = AppLocalizations.of(context);
+      expect(find.text(l10n.databaseOpenError), findsOneWidget);
+      expect(find.text(l10n.databaseOpenAccessHint), findsOneWidget);
+    });
+
+    testWidgets('без сбоя доступа подсказки нет', (tester) async {
+      await tester.pumpWidget(const StartupErrorApp());
+      await tester.pumpAndSettle();
+
+      final context = tester.element(find.byType(Scaffold));
+      final l10n = AppLocalizations.of(context);
+      expect(find.text(l10n.databaseOpenAccessHint), findsNothing);
+    });
+  });
+
+  group('восстановление БД (ADR-057)', () {
+    testWidgets('после повреждения файла показывается уведомление', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: decksOverrides(
+            deckRepository: FakeDeckRepository(
+              summaries: const <DeckSummary>[],
+            ),
+          ),
+          child: const CardFlowApp(
+            recoveredDatabaseFileName:
+                '/data/cardflow/cardflow.sqlite.corrupted_20261128_204005',
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+
+      final l10n = l10nOf(tester);
+      expect(find.text(l10n.databaseRecoveredNotice), findsOneWidget);
+    });
+
+    testWidgets('обычный старт уведомления не показывает', (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: decksOverrides(
+            deckRepository: FakeDeckRepository(
+              summaries: const <DeckSummary>[],
+            ),
+          ),
+          child: const CardFlowApp(),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+
+      final l10n = l10nOf(tester);
+      expect(find.text(l10n.databaseRecoveredNotice), findsNothing);
+    });
   });
 }

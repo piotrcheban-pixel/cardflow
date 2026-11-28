@@ -493,6 +493,96 @@ void main() {
       },
     );
 
+    test('файл-мусор вместо БД: приложение открывает пустую БД, файл сохранён рядом', () async {
+      final tempDir = await Directory.systemTemp.createTemp(
+        'cardflow-db-garbage',
+      );
+      addTearDown(() async {
+        await tempDir.delete(recursive: true);
+      });
+      final Directory dataDirectory = Directory(
+        '${tempDir.path}${Platform.pathSeparator}cardflow',
+      )..createSync(recursive: true);
+      final File dbFile = File(
+        '${dataDirectory.path}${Platform.pathSeparator}cardflow.sqlite',
+      );
+      const String garbage = 'это не база данных, а обычный текстовый файл';
+      dbFile.writeAsStringSync(garbage);
+
+      final AppDatabase recovered = await openAppDatabase(
+        baseDirectory: tempDir,
+      );
+      addTearDown(recovered.close);
+
+      // Новая база работоспособна, актуальной версии и пуста.
+      expect(await recovered.select(recovered.decks).get(), isEmpty);
+      final QueryRow version = await recovered
+          .customSelect('PRAGMA user_version')
+          .getSingle();
+      expect(
+        version.read<int>('user_version'),
+        AppDatabase.currentSchemaVersion,
+      );
+
+      // Мусорный файл не удалён, а отложен рядом с датой восстановления.
+      final List<File> quarantined = dataDirectory
+          .listSync()
+          .whereType<File>()
+          .where(
+            (File file) => file.path.contains('cardflow.sqlite.corrupted_'),
+          )
+          .toList();
+      expect(quarantined, hasLength(1), reason: 'файл сохранён рядом');
+      expect(quarantined.single.readAsStringSync(), garbage);
+    });
+
+    test(
+      'сбой копии .bak не блокирует открытие БД (бэкап — страховка)',
+      () async {
+        final tempDir = await Directory.systemTemp.createTemp(
+          'cardflow-db-bak-fail',
+        );
+        addTearDown(() async {
+          await tempDir.delete(recursive: true);
+        });
+        final Directory dataDirectory = Directory(
+          '${tempDir.path}${Platform.pathSeparator}cardflow',
+        )..createSync(recursive: true);
+        final File dbFile = File(
+          '${dataDirectory.path}${Platform.pathSeparator}cardflow.sqlite',
+        );
+        final Database v1 = sqlite3.open(dbFile.path);
+        v1.execute('''
+        CREATE TABLE decks (
+          id TEXT NOT NULL PRIMARY KEY,
+          name TEXT NOT NULL,
+          settings_json TEXT NOT NULL DEFAULT '{}',
+          archived_at INTEGER,
+          created_at INTEGER NOT NULL,
+          updated_at INTEGER NOT NULL
+        )
+      ''');
+        v1.execute('''
+        INSERT INTO decks (id, name, created_at, updated_at)
+        VALUES ('deck-old', 'Колода версии 1', 1, 1)
+      ''');
+        v1.execute('PRAGMA user_version = 1');
+        v1.close();
+        // Путь копии занят каталогом: File.copy падает (PathExistsException).
+        Directory('${dbFile.path}$appDatabaseBackupSuffix').createSync();
+
+        final AppDatabase opened = await openAppDatabase(
+          baseDirectory: tempDir,
+        );
+        addTearDown(opened.close);
+
+        final List<DeckRow> decks = await opened.select(opened.decks).get();
+        expect(decks.map((DeckRow deck) => deck.name), <String>[
+          'Колода версии 1',
+        ]);
+      },
+    );
+
     test('актуальная БД не копируется повторно при каждом старте', () async {
       final tempDir = await Directory.systemTemp.createTemp('cardflow-db-v2');
       addTearDown(() async {

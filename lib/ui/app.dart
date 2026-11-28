@@ -16,9 +16,14 @@ import 'package:cardflow/ui/theme/app_tokens.dart';
 ///
 /// Показывается вместо приложения, если инициализация БД/хранилища упала:
 /// пользователю — только сообщение из ARB, без сырых исключений (SPEC A8.6).
+/// Если причина — недоступная папка данных, добавляется подсказка о правах
+/// (ADR-057): «перезапустите» в этом случае не помогает.
 class StartupErrorApp extends StatelessWidget {
   /// Создаёт экран ошибки старта.
-  const StartupErrorApp({super.key});
+  const StartupErrorApp({super.key, this.accessDenied = false});
+
+  /// `true` — открытие упало из-за прав на файл/каталог данных.
+  final bool accessDenied;
 
   @override
   Widget build(BuildContext context) {
@@ -41,10 +46,23 @@ class StartupErrorApp extends StatelessWidget {
             body: Center(
               child: Padding(
                 padding: const EdgeInsets.all(24),
-                child: Text(
-                  l10n.databaseOpenError,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodyLarge,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    Text(
+                      l10n.databaseOpenError,
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodyLarge,
+                    ),
+                    if (accessDenied) ...<Widget>[
+                      const SizedBox(height: 12),
+                      Text(
+                        l10n.databaseOpenAccessHint,
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ],
+                  ],
                 ),
               ),
             ),
@@ -69,10 +87,15 @@ class CardFlowApp extends ConsumerStatefulWidget {
   /// Создаёт корневое приложение.
   ///
   /// [router] — override для widget-тестов (по умолчанию [createAppRouter]).
-  const CardFlowApp({super.key, this.router});
+  /// [recoveredDatabaseFileName] — путь отложенного повреждённого файла БД
+  /// (ADR-057): после первого кадра показывается уведомление о восстановлении.
+  const CardFlowApp({super.key, this.router, this.recoveredDatabaseFileName});
 
   /// Маршрутизатор приложения (если не задан — создаётся стандартный).
   final GoRouter? router;
+
+  /// Файл повреждённой БД, отложенный при аварийном восстановлении.
+  final String? recoveredDatabaseFileName;
 
   @override
   ConsumerState<CardFlowApp> createState() => _CardFlowAppState();
@@ -101,6 +124,26 @@ class _CardFlowAppState extends ConsumerState<CardFlowApp>
     _scale = AppAdaptive.factorForCurrentWindow();
     // Первый кадр: размер окна может появиться только после метрик.
     WidgetsBinding.instance.addPostFrameCallback((_) => _updateScale());
+    // Уведомление о восстановлении БД (ADR-057) — после первого кадра, когда у
+    // навигатора уже есть контекст с локализацией и мессенджером Scaffold.
+    if (widget.recoveredDatabaseFileName != null) {
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _showRecoveryNotice(),
+      );
+    }
+  }
+
+  /// Сообщает, что повреждённый файл БД сохранён, а работа продолжается с новой
+  /// базой: молча терять данные пользователя нельзя (ADR-057).
+  void _showRecoveryNotice() {
+    if (!mounted || widget.recoveredDatabaseFileName == null) return;
+    final BuildContext? context = _navigatorKey.currentContext;
+    if (context == null) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(AppLocalizations.of(context).databaseRecoveredNotice),
+      ),
+    );
   }
 
   @override

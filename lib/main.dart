@@ -20,24 +20,38 @@ import 'ui/state/app_providers.dart';
 /// Открывает файловую БД (ADR-005) и медиа-хранилище, передаёт их в граф
 /// провайдеров через `ProviderScope.overrides`, затем запускает приложение.
 ///
-/// Если инициализация упала (битый/несовместимый файл БД, нет прав, fail-fast
+/// Если инициализация упала (несовместимый файл БД, нет прав, fail-fast
 /// миграции по ADR-005) — показывается экран ошибки с сообщением из ARB,
-/// без сырых исключений (SPEC A8.6).
+/// без сырых исключений (SPEC A8.6). Повреждённый файл БД приложение не теряет:
+/// он откладывается рядом (`cardflow.sqlite.corrupted_<дата>`), а запуск
+/// продолжается с новой базой (ADR-057); об этом сообщает уведомление.
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   final AppDatabase database;
   final MediaStore mediaStore;
+  final String? recoveredFileName;
   try {
-    final baseDirectory = await getApplicationSupportDirectory();
-    database = await openAppDatabase(baseDirectory: baseDirectory);
+    final Directory baseDirectory = await getApplicationSupportDirectory();
+    final OpenedDatabase opened = await openAppDatabaseWithRecovery(
+      baseDirectory: baseDirectory,
+    );
+    database = opened.database;
+    recoveredFileName = opened.corruptedFile?.path;
     // Корень медиа-хранилища — каталог данных приложения: относительные пути
     // медиа имеют вид `media/<id>.<ext>` (ADR-006), без двойного вложения.
     mediaStore = MediaStore(
       Directory(p.join(baseDirectory.path, appDataDirectoryName)),
     );
-  } catch (_) {
-    runApp(const StartupErrorApp());
+  } on Object catch (error, stackTrace) {
+    // В release — только тип сбоя (ни путей, ни данных пользователя); полный
+    // текст и стек доступны в debug-сборке для диагностики.
+    debugPrint('CardFlow: база данных не открыта (${error.runtimeType})');
+    assert(() {
+      debugPrint('$error\n$stackTrace');
+      return true;
+    }());
+    runApp(StartupErrorApp(accessDenied: isDatabaseAccessFailure(error)));
     return;
   }
 
@@ -62,6 +76,9 @@ Future<void> main() async {
   );
 
   runApp(
-    UncontrolledProviderScope(container: container, child: const CardFlowApp()),
+    UncontrolledProviderScope(
+      container: container,
+      child: CardFlowApp(recoveredDatabaseFileName: recoveredFileName),
+    ),
   );
 }
