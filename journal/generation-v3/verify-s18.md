@@ -74,7 +74,29 @@ gen-cards-v4». Решения — `docs/decisions/ADR-056-cards-prompt-v4-quota
 
 ## 4. CI и релизный билд (TASK ч. 3)
 
-_(заполняется после push/CI и сборки)_
+**Push:** `9f1693b..4493209` (58 коммитов, в т. ч. 4 коммита среза 18) в
+`origin/main` 2026-11-28.
+
+**CI:** run
+[`46166046368`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/46166046368)
+(`4493209`) — **9/9 job success** за 24:19: `format + analyze`, `test` × 3 ОС
+(Debian/Windows/macOS), `build desktop` × 3 (Linux/Windows/macOS),
+`build mobile` Android + iOS. Artifact `cardflow-android-release-apk` —
+50 758 357 Б (zip); `coverage-lcov` — 101 107 Б.
+
+**Релизный билд `1.0.2+3`** (собран из того же коммита):
+
+| Артефакт | Команда | Результат |
+|---|---|---|
+| Windows EXE | `fvm flutter build windows --release` | `build\windows\x64\runner\Release\cardflow.exe`, 91 648 Б, `FileVersion 1.0.2+3` (`build-windows-s18.log`) |
+| Android APK | `fvm flutter build apk --release` | `build\app\outputs\flutter-apk\app-release.apk`, 107 668 650 Б, `versionName 1.0.2`, `versionCode 3` (`build-apk-s18.log`) |
+| Упаковка | `build/release-s18/` | `cardflow-1.0.2-android.apk` (107 668 650 Б) и `cardflow-1.0.2-windows.zip` (22 796 135 Б, весь `Release`-каталог) |
+
+Локальная Android-сборка воспроизвела CI-артефакт без подписи (debug-ключ, как
+и в CI); `GeneratedPluginRegistrant.java` удалён перед сборкой — известный
+локальный нюанс из журнала 1.0.1, в CI не воспроизводится. Версия в
+`pubspec.yaml` (`1.0.2+3`) и `appVersion` (`1.0.2`) сверена тестом
+`about_links_test`.
 
 ## 5. Ограничения
 

@@ -33,7 +33,11 @@
   требует отдельного замера). v4 живым прогоном не измерен — бюджета на замер
   TASK не даёт (L243). `auto` по-прежнему = legacy.
 - **ADR-056**, Q31, L240 (снят), L242–L243, `verify-s18.md`. Версия приложения
-  `1.0.2+3` (`appVersion` = `1.0.2`) — новый релизный билд.
+  `1.0.2+3` (`appVersion` = `1.0.2`) — новый релизный билд: Windows EXE
+  (`build\windows\x64\runner\Release\cardflow.exe`, 91 648 Б, `FileVersion
+  1.0.2+3`) и Android APK (`build\app\outputs\flutter-apk\app-release.apk`,
+  107 668 650 Б, `versionName 1.0.2`/`versionCode 3`), упакованы в
+  `build/release-s18/cardflow-1.0.2-{android.apk,windows.zip}`.
 
 **Срез 17B (2026-11-28) — контекст «уже создано» в v3 и один замер гипотезы.**
 - **Диагноз (до платных прогонов).** В запрос v3 попадало только принятое
@@ -601,6 +605,13 @@ cloze, байтовая сверка; v3 — сохранён), `cards_batch_por
 промптом, `promptVersion` v4), `request_ledger_test` (v4 в
 `generation_jobs.prompt_version`), `generation_v3_path_wiring_test` (проводка),
 `cloze_markup_test` (+4, L240). Живого замера нет — TASK его не требует (L243).
+Push `9f1693b..4493209` (58 коммитов) → CI run
+[`46166046368`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/46166046368)
+(`4493209`) — **9/9 job success** (24:19; `format + analyze`, `test` × 3 ОС,
+`build desktop` × 3, `build mobile` Android + iOS), artifact
+`cardflow-android-release-apk` 50 758 357 Б. Релизный билд: Windows EXE
+91 648 Б (`FileVersion 1.0.2+3`), Android APK 107 668 650 Б (`versionName
+1.0.2`, `versionCode 3`); упаковка — `build/release-s18/`.
 
 **Срез 17B.** Гейты: `.fvm\versions\3.47.9\bin\flutter.bat analyze --no-pub lib
 test tool` → **No issues found!**; `dart format --set-exit-if-changed lib test

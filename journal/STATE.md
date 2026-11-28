@@ -42,9 +42,20 @@ passed + 21 skipped, покрытие 90,9 %, `cardsPromptVersion = 'gen-cards-v
 `green-s18-full.txt` (**3310 passed + 21 skipped, exit 0**), покрытие — 90,9 %
 (27544/30314, `coverage-s18.txt`); красная фаза — `red-s18.txt` (**44 passed /
 11 failed**, assertion-level), целевая — `green-s18-targeted.txt` (**55
-passed**). CI и релизный билд — см. `journal/generation-v3/verify-s18.md` §4.
+passed**). Push `9f1693b..4493209` → CI run
+[`46166046368`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/46166046368)
+(`4493209`) — **9/9 job success** (24:19), artifact
+`cardflow-android-release-apk` 50 758 357 Б. Релизный билд `1.0.2+3`:
+Windows EXE `build\windows\x64\runner\Release\cardflow.exe` (91 648 Б,
+`FileVersion 1.0.2+3`), Android APK `build\app\outputs\flutter-apk\app-release.apk`
+(107 668 650 Б, `versionName 1.0.2`, `versionCode 3`); упаковка —
+`build/release-s18/cardflow-1.0.2-{android.apk,windows.zip}`. Подробности —
+`journal/generation-v3/verify-s18.md` §4.
 
-**Следующий шаг:** _(заполняется после релиза)_.
+**Следующий шаг:** тема генерации закрыта. Продуктовые (не генерационные)
+работы — L242 (квота-first аллокация), L243 (живой замер v4), L241 (выборка S19
+на разных материалах). Владельцу передан релизный билд 1.0.2+3; больше срезов
+про генерацию не планируется.
 
 ## Генерация v3 — срез 17B: контекст «уже создано» и один замер гипотезы (2026-11-28)
 
