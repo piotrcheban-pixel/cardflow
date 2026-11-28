@@ -39,7 +39,7 @@
 
 ## 4. Слепая выборка (TASK ч. 3)
 
-Файл `journal/generation-v3/blind-sample-17b.md` собран, но **не заполнен владельцем**: доля годных по путям = `not_measured` до разметки. Ключ — `journal/generation-v3/blind-key-17b.json` (открывать после заполнения). Расчёт — `dart run tool/blind_score_s17b.dart`.
+Файл `journal/generation-v3/blind-sample-17b.md` размечен (60 отметок). Доля годных по путям — `dart run tool/blind_score_s17b.dart` → `journal/generation-v3/blind-score-17b.md`.
 
 ## 5. Вердикт
 

@@ -17,6 +17,7 @@ library;
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:cardflow/domain/cards/cloze_markup.dart';
 import 'package:cardflow/domain/generation/blind_sample.dart';
 import 'package:cardflow/domain/generation/generation_path.dart';
 
@@ -40,10 +41,45 @@ const String kNoSavedCardsReason =
     'в ячейках замера 17B нет текстов карточек (ключ cards пуст или '
     'отсутствует): карточки не выдумываются, выборка не заполняется';
 
-void main() {
-  final Directory dir = Directory(kCellsDir);
+/// Флаг перезаписи уже размеченной выборки.
+const String kForceFlag = '--force';
+
+/// Переопределения путей для проверки инструмента (каталог-проба, не замер).
+const String kCellsDirVariable = 'CARDFLOW_BLIND_CELLS';
+const String kSamplePathVariable = 'CARDFLOW_BLIND_SAMPLE';
+const String kKeyPathVariable = 'CARDFLOW_BLIND_KEY';
+
+void main(List<String> args) {
+  final Map<String, String> env = Platform.environment;
+  // Пути переопределяемы, чтобы проверить сборку на копии ячеек, не задевая
+  // размеченный файл замера.
+  final String cellsDir = env[kCellsDirVariable] ?? kCellsDir;
+  final String samplePath = env[kSamplePathVariable] ?? kSamplePath;
+  final String keyPath = env[kKeyPathVariable] ?? kKeyPath;
+  final bool force = args.contains(kForceFlag);
+  final File sampleFile = File(samplePath);
+  // Разметка владельца — данные, а не шаблон: пересборка по умолчанию её не
+  // затирает. Замер 17B показал цену ошибки: 3 из 5 «негодных» v3 оказались
+  // cloze-карточками, у которых в файле была видна сырая разметка `{{c1::…}}`.
+  if (!force && sampleFile.existsSync()) {
+    final String existing = sampleFile.readAsStringSync();
+    if (RegExp(r'\[x\]', caseSensitive: false).hasMatch(existing)) {
+      stderr
+        ..writeln(
+          'Выборка уже размечена владельцем: $samplePath. Пересборка '
+          'затрёт оценки.',
+        )
+        ..writeln(
+          'Если это осознанно — повторить с $kForceFlag '
+          '(`.fvm\\versions\\3.47.9\\bin\\dart.bat run '
+          'tool/blind_sample_s17b.dart $kForceFlag`).',
+        );
+      exit(3);
+    }
+  }
+  final Directory dir = Directory(cellsDir);
   if (!dir.existsSync()) {
-    stderr.writeln('Нет каталога ячеек: $kCellsDir');
+    stderr.writeln('Нет каталога ячеек: $cellsDir');
     exit(2);
   }
   final List<BlindSourceCard> cards = <BlindSourceCard>[];
@@ -79,9 +115,9 @@ void main() {
     seed: kSeed,
   );
 
-  File(kSamplePath).parent.createSync(recursive: true);
-  File(kSamplePath).writeAsStringSync(_markdown(sample), flush: true);
-  File(kKeyPath).writeAsStringSync(
+  File(samplePath).parent.createSync(recursive: true);
+  File(samplePath).writeAsStringSync(_markdown(sample), flush: true);
+  File(keyPath).writeAsStringSync(
     const JsonEncoder.withIndent('  ').convert(_keyJson(sample)),
     flush: true,
   );
@@ -91,7 +127,7 @@ void main() {
       '(v3 ${sample.v3Sampled}, legacy ${sample.legacySampled}); '
       'статус ${sample.measured ? 'измерено' : 'not_measured'}',
     )
-    ..writeln('Записано: $kSamplePath и $kKeyPath');
+    ..writeln('Записано: $samplePath и $keyPath');
 }
 
 String _markdown(BlindSample sample) {
@@ -133,6 +169,19 @@ String _markdown(BlindSample sample) {
     )
     ..writeln()
     ..writeln(
+      '**Cloze.** У cloze-карточек вопрос показан так, как его видно при '
+      'повторении: пропуск заменён на `[…]`, ответ под ним — это и есть '
+      'пропущенный термин. Сырая разметка `{{c1::…}}` в вопрос не попадает.',
+    )
+    ..writeln()
+    ..writeln(
+      '**Про повторы.** В наборе две выборки карточек по **одному и тому же** '
+      'материалу (30 + 30). Поэтому похожий вопрос может прийти из второй '
+      'выборки: оценивая повтор, отметь его как «негодная», но знай, что '
+      'внутри одной выборки это могло быть единственным вопросом о факте.',
+    )
+    ..writeln()
+    ..writeln(
       'Карточек: **${sample.entries.length}** (запрошено '
       '${sample.requestedPerPath * 2}; доступно v3 — ${sample.v3Available}, '
       'legacy — ${sample.legacyAvailable}; недобор — ${sample.shortfall}). '
@@ -143,7 +192,7 @@ String _markdown(BlindSample sample) {
     out
       ..writeln('### ${entry.number}')
       ..writeln()
-      ..writeln('**Вопрос.** ${entry.front}')
+      ..writeln('**Вопрос.** ${_questionText(entry.front)}')
       ..writeln()
       ..writeln('**Ответ.** ${entry.back}')
       ..writeln()
@@ -153,6 +202,23 @@ String _markdown(BlindSample sample) {
       ..writeln();
   }
   return out.toString();
+}
+
+/// Вопрос карточки для человека: cloze-пропуск показан пустым, а не сырой
+/// разметкой.
+///
+/// Замер 17B выявил цену сырого вида: три cloze-карточки владелец оценил как
+/// «ответ в вопросе», увидев `{{c1::дискретные}}`, — дефект представления
+/// выборки, а не карточки. Формат пропуска — `[…]` (в приложении это
+/// подчёркнутая пустая строка).
+String _questionText(String front) {
+  final ClozeMarkup markup = ClozeMarkup.parse(front);
+  if (!markup.hasGaps) return front;
+  final StringBuffer buffer = StringBuffer();
+  for (final ClozeSegment segment in markup.segments) {
+    buffer.write(segment.isGap ? '[…]' : (segment.text ?? ''));
+  }
+  return buffer.toString();
 }
 
 Map<String, Object?> _keyJson(BlindSample sample) => <String, Object?>{

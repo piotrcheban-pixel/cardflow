@@ -164,11 +164,18 @@ String _row(String label, Cell cell) {
 }
 
 /// Сколько карточек в выборке размечено владельцем.
+///
+/// Считаются только строки оценки (`- … [x] годная/спорная/негодная`): шапка
+/// файла содержит те же подписи как пример и в счёт не входит.
 int countMarks(String path) {
   final File file = File(path);
   if (!file.existsSync()) return 0;
   final String text = file.readAsStringSync();
-  return RegExp(r'- \[x\]').allMatches(text.toLowerCase()).length;
+  return RegExp(
+    r'^-[^\n]*\[x\]\s*(?:годная|спорная|негодная)',
+    caseSensitive: false,
+    multiLine: true,
+  ).allMatches(text).length;
 }
 
 void main() {

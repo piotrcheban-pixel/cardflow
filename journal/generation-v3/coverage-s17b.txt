@@ -184,7 +184,7 @@
    84.0%  (330/393)  lib\domain\generation\input_planner.dart
    82.4%  (56/68)  lib\domain\generation\knowledge_map.dart
    89.2%  (74/83)  lib\domain\generation\knowledge_map_json.dart
-   97.1%  (99/102)  lib\domain\generation\matrix_comparison.dart
+   98.0%  (100/102)  lib\domain\generation\matrix_comparison.dart
    98.3%  (113/115)  lib\domain\generation\metrics_collector.dart
   100.0%  (66/66)  lib\domain\generation\model_capabilities.dart
    90.0%  (54/60)  lib\domain\generation\model_capability_cache.dart
@@ -326,7 +326,7 @@
    87.5%  (112/128)  lib\ui\theme\app_tokens.dart
   100.0%  (37/37)  lib\ui\theme\app_typography.dart
 
-Итого: 90.9% (27537/30307), порог 80.0%
+Итого: 90.9% (27538/30307), порог 80.0%
 
 Не измерены (нет в lcov): lib/api/generation/generation_caller.dart, lib/api/generation/system_prompt.dart, lib/api/parsers/document_parser.dart, lib/api/prompts/system_prompt.dart, lib/api/providers/generation_adapters.dart, lib/domain/cards/card_image_refresh_result.dart, lib/domain/cards/card_media_repository.dart, lib/domain/cards/card_repository.dart, lib/domain/decks/deck_repository.dart, lib/domain/generation/api_key_store.dart, lib/domain/generation/card_image_finder.dart, lib/domain/generation/generation_settings_store.dart, lib/domain/generation/provider_accounts_store.dart, lib/domain/review/daily_usage_repository.dart, lib/domain/review/practice_repository.dart, lib/domain/review/review_repository.dart, lib/domain/session/leech_repository.dart, lib/domain/session/session_preset_repository.dart, lib/domain/settings/app_settings_store.dart, lib/domain/statistics/statistics_repository.dart, lib/domain/study/match_best_store.dart, lib/domain/transfer/archive_codec.dart, lib/domain/transfer/deck_transfer_service.dart, lib/domain/transfer/file_gateway.dart, lib/main.dart, lib/ui/m3e/m3e.dart
 ПОРОГ ПРОЙДЕН
