@@ -74,7 +74,7 @@
   `green-full-final.txt`.
 - Покрытие рукописного кода — **90,9 % (27613/30386)**, порог 80 % пройден,
   `coverage-final.txt` (baseline — 90,9 %, 27544/30314).
-- CI — run (см. STATE.md).
+- CI — run [`46176470373`](https://github.com/piotrcheban-pixel/cardflow/actions/runs/46176470373) (`4e67b37`) — **9/9 job success**: format+analyze, test × 3 ОС, build desktop × 3, build mobile (Android + iOS).
 
 ## 5. Проверка на Windows (реальная машина)
 
