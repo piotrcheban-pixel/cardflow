@@ -1,5 +1,66 @@
 # STATE — текущее состояние CardFlow
 
+## Генерация v3 — срез 13: Dedup в цепи, стоимость Understanding, честная база (2026-11-28)
+
+**Срез:** `TASK.txt` «Срез 13. Dedup в цепи, стоимость Understanding, честная
+база сравнения». Толкования — `journal/QUESTIONS.md` Q25; отчёт —
+`journal/generation-v3/verify-s13.md`; пересчёт матрицы —
+`journal/generation-v3/live-s12/matrix-s13.md`.
+
+**Факты старта:** ветка `main`, `HEAD = 92943da` (док среза 12); baseline —
+3214 passed + 18 skipped, покрытие 90,4 %, схема БД v2.
+
+**Сделано (TDD):**
+- **Dedup в фасаде.** `GenerationV3Facade._dedup` — существующий
+  `SemanticMatcher` (каскад exact → normalized → semantic → embeddings) по
+  принятым прогона и целевой колоде (`deckCards` из `DriftCardRepository`);
+  новых правил нет. Дубль **не удаляется**: карточка помечается
+  `CardIssueCode.possibleDuplicate` (чип предпросмотра) и
+  `CardReasonCode.possibleDuplicate` (отчёт/`cleanRate`, ARB-текст),
+  `DedupReport` — в итоге прогона, `duplicatesByLevel` — в отчёте.
+  Проверено сквозным тестом на фикстуре 3 пар и парой «уже в колоде».
+- **Персист пар (L219 снят).** Схема **v3** (`schemaVersion = 3`):
+  `card_drafts.is_duplicate_of` + `dedup_level`, миграция 2 → 3
+  (`addColumn`, только при `from >= 2` — при апгрейде с v1 таблица создаётся
+  сразу с колонками); `DriftGenerationRunStore.saveDedupMarks` (UPDATE по
+  `run_id + content_hash`), `GenerationRunSnapshot.dedup` восстанавливает пары
+  (одинаковое содержимое — пара-маркер `same:`), импорт пометки не теряет.
+  Снимки: `drift_schemas/drift_schema_v3.json`, `generated/schema_v3.dart`,
+  `schema_versions.dart` перегенерированы.
+- **Проба strict-схемы один раз на прогон.** `SchemaCompatProfile` (ключ
+  провайдер + модель + схема) передаётся Understanding и порту карточек:
+  первая `400` запоминается, следующие разделы/батчи идут сразу без strict.
+  **12 разделов → 13 запросов вместо 24; 10 батчей → 11 вместо 20.** Запросы
+  Understanding считаются HTTP-обменами (`KnowledgeMapRawResponse.attempts` →
+  `UnderstandingResult.requests` → `GenerationReport.understandingRequests`).
+- **Честная база.** `cleanRate` = принято без пометок / **произведено**
+  (было / принято); `duplicateRate` — тоже к произведённому; `duplicateMarked`
+  в отчёте. Правила ячеек — `matrix_comparison.dart`: 20/40 нерешающие,
+  решение по 80/150/300. Пересчёт из существующего `matrix.jsonl`
+  (`tool/recompute_matrix_s13.dart`) — **новых платных прогонов 0**; на честной
+  базе v3 хуже legacy на 2 решающих ячейках (учебный 300: 97,3 vs 98,6;
+  статья 300: 97,9 vs 100) → флаг остаётся выключенным.
+- **Partial 188/300 на статье.** Ответ числом: `stage = ready` ⇒ остановка
+  `complete`, не `max_passes`/`exhausted_material` — 188 различимых слотов
+  (`unit_id + angle`), 112 карточек плана повторяют занятые; 188 / 4 = 47
+  единиц при полном наборе углов. Причина — повтор слотов в плане, L229.
+
+**Чем проверено:** `flutter analyze --no-pub lib test tool` → **No issues
+found!**; `dart format --set-exit-if-changed lib test` → **0 changed**
+(725 files); `flutter test --no-pub --coverage --exclude-tags golden` →
+**3234 passed + 18 skipped**, `exit 0` (+20 к baseline), покрытие рукописного
+кода **90,9 % (27019/29740)** при пороге 80 %. Миграции — `SchemaVerifier`
+1 → 3 и 2 → 3 (пустая и заполненная БД, NULL-пометки). Логи: `red-s13.txt`,
+`green-s13-full.txt`, `coverage-s13.txt`; матрица — `live-s12/matrix-s13.md`.
+
+**Ограничения (осознанные):** `SchemaCompatProfile` живёт в памяти прогона
+(L227); Dedup сверяет только стороны текста, без типа/картинок (L228); план
+допускает повтор слотов сверх 4 на единицу (L229); живые числа — только
+`deepseek/deepseek-flash` (L222); мультифайл не в матрице. Флаг
+`generationPipelineV3` по умолчанию **выключен**, legacy не удалён.
+
+---
+
 ## Генерация v3 — срез 12: живые прогоны и метрики «было → стало» (2026-11-28)
 
 **Срез:** `TASK.txt` «Срез 12. Живые прогоны и метрики «было → стало»».

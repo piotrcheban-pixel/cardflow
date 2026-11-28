@@ -123,13 +123,17 @@ CardFlow — кроссплатформенное нативное Flutter-пр�
   упавших фрагментах, невалидные карточки пропускает, картинку можно убрать/заменить; ошибки фрагментов —
   списком «Фрагмент K из M: причина» + «Повторить неудавшиеся»; при невыполнимом заказе видно
   «запрошено/достижимо».
-  **Журнал прогона v3 и схема БД v2 (срез 8, ADR-051):** `schemaVersion = 2`,
-  новые таблицы `generation_runs`, `generation_units`, `generation_batches`,
-  `card_drafts`, `knowledge_maps`; `generation_jobs` — по-прежнему живое
+  **Журнал прогона v3 и схема БД (срез 8, ADR-051; v3 — срез 13):**
+  `schemaVersion = 3` (v2 — таблицы прогона: `generation_runs`,
+  `generation_units`, `generation_batches`, `card_drafts`, `knowledge_maps`;
+  v3 — пометки Dedup `card_drafts.is_duplicate_of` + `dedup_level` для L219);
+  `generation_jobs` — по-прежнему живое
   совместимое представление для UI (поля не удаляются и синхронизируются).
   Миграция 1 → 2 — `onUpgrade` в `app_database.dart` (`createTable` **и**
-  `createIndex`: `Migrator` индексы сам не создаёт), снимки схемы —
-  `drift_schemas/drift_schema_v{1,2}.json`, перед миграцией файл БД копируется
+  `createIndex`: `Migrator` индексы сам не создаёт), 2 → 3 — `addColumn`
+  (шаг только при `from >= 2`: при апгрейде с v1 таблица создаётся сразу с
+  колонками), снимки схемы —
+  `drift_schemas/drift_schema_v{1,2,3}.json`, перед миграцией файл БД копируется
   в `cardflow.sqlite.bak` (`backupBeforeMigration`). Принятая карточка пишется в
   момент принятия (`DriftGenerationRunStore` + `GenerationRunCardSink`, порт
   `CardSink`) — сбой на 5-м батче не теряет первые 4; импорт — одной

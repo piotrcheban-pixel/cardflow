@@ -2,6 +2,45 @@
 
 ## Сделано
 
+**Срез 13 (2026-11-28) — Dedup в цепи, стоимость Understanding, честная база.**
+- **Dedup в фасаде.** `GenerationV3Facade._dedup` вызывает существующий
+  `SemanticMatcher` (каскад exact → normalized → semantic → embeddings) по
+  принятым прогона и целевой колоде (`deckCards` в
+  `GenerationV3PathRunner`, production-проводка — `DriftCardRepository
+  .cardsByDeck`). Новых правил нет. Дубль **не удаляется**: `GeneratedCard`
+  получает `CardIssueCode.possibleDuplicate` (чип предпросмотра
+  `generation-mark-possible-duplicate` уже существовал) и
+  `CardReasonCode.possibleDuplicate` (новый код, ARB
+  `generationReasonPossibleDuplicate`, `cleanRate` считает пометку «грязной»).
+  `DedupReport` — в `GenerationV3Run.dedup`, `duplicatesByLevel` — в отчёте,
+  `duplicateMarked` — число помеченных карточек (не пар).
+- **Персист пар (L219 снят).** Схема **v3** (`schemaVersion = 3`):
+  `card_drafts.is_duplicate_of` + `dedup_level` (nullable), миграция 2 → 3;
+  `DriftGenerationRunStore.saveDedupMarks` пишет `UPDATE` по
+  `run_id + content_hash` после этапа Dedup; `GenerationRunSnapshot.dedup`
+  восстанавливает пары (одинаковое содержимое — маркер `same:`),
+  `importRunCards` пометки не теряет. Снимки: `drift_schemas/
+  drift_schema_v3.json`, `test/**/generated/schema_v3.dart`.
+- **Проба strict-схемы один раз на прогон.** `lib/domain/generation/
+  schema_compat_profile.dart` (ключ провайдер + модель + схема) передаётся
+  `HttpKnowledgeMapCaller` и `AdapterCardsBatchPort`: первая `400`
+  запоминается, остальные разделы/батчи идут сразу без strict. DoD:
+  **12 разделов → 13 запросов** (было 24), **10 батчей → 11** (было 20).
+  Запросы Understanding — `KnowledgeMapRawResponse.attempts` →
+  `UnderstandingResult.requests` → `GenerationReport.understandingRequests`.
+- **Честная база сравнения.** `cleanRate` = принято без пометок /
+  **произведено** (не / принято); `duplicateRate` — тоже; `duplicateMarked`
+  в отчёте; `lib/domain/generation/matrix_comparison.dart` — правила
+  «20/40 нерешающие, решение по 80/150/300», `tool/recompute_matrix_s13.dart`
+  пересчитывает `live-s12/matrix-s13.md` из **существующего** `matrix.jsonl`
+  (новых платных прогонов 0). На честной базе v3 хуже legacy на 2 решающих
+  ячейках (учебный 300: 97,3 vs 98,6; статья 300: 97,9 vs 100) → флаг
+  выключен.
+- **Разбор 188/300 статьи.** Остановка `complete` (не `max_passes` и не
+  `exhausted_material`): 188 различимых слотов `unit_id + angle`, 112
+  карточек плана повторяют занятые (188 / 4 = 47 единиц при полном наборе
+  углов). Повтор слотов в плане — L229, аллокацию/пороги срез не менял.
+
 **Срез 12 (2026-11-28) — живые прогоны и метрики «было → стало».**
 - **Коды гейта в отчёте и UI.** `CardGateResult` (`verdict` + `List<CardReasonCode>`),
   `CardReasonCode` — доменный тип (`lib/domain/generation/card_reason_code.dart`,
@@ -362,6 +401,25 @@
 
 ## Проверено
 
+**Срез 13.** Гейты: `.fvm\versions\3.47.9\bin\flutter.bat analyze --no-pub lib
+test tool` → **No issues found!**; `dart format --set-exit-if-changed lib test`
+→ **0 changed** (725 files); `flutter test --no-pub --coverage --exclude-tags
+golden` → **3234 passed + 18 skipped**, `exit 0` (+20 к baseline 3214 + 18),
+покрытие рукописного кода **90,9 % (27019/29740)** при пороге 80 %
+(`green-s13-full.txt`, `coverage-s13.txt`); guards зелёные в полном прогоне.
+Красная фаза — `red-s13.txt` (+55 / −5, assertion-level: `Expected: <13>
+Actual: <12>`, `Expected: an object with length of <5> Actual: [4 DedupMark]`,
+миграция 1 → 3 падала на дубле колонок). Миграции — `SchemaVerifier` 1 → 3 и
+2 → 3, схема v3 (dump = onCreate), `schema_test` 27/27.
+DoD-тесты: `generation_v3_facade_flow_test` («3 пары помечены своими
+уровнями, ни одна не удалена», «пара уже в колоде ловится до импорта»),
+`http_knowledge_map_caller_test` («12 разделов = 13 запросов»),
+`cards_batch_port_test` («10 батчей = 11 запросов»),
+`drift_generation_run_store_test` (+3: перезапуск, одинаковое содержимое,
+неизвестный уровень), `drift_run_import_test` (+1), `matrix_comparison_test`
+(9), `schema_compat_profile_test` (1). Пересчёт матрицы —
+`journal/generation-v3/live-s12/matrix-s13.md` (6 решающих пар, v3 хуже на 2).
+
 **Срез 12.** Гейты: `.fvm\versions\3.47.9\bin\flutter.bat analyze --no-pub lib
 test` → **No issues found!**; `dart format --set-exit-if-changed lib test` →
 **0 changed**; `flutter test --no-pub --coverage --exclude-tags golden` →
@@ -530,6 +588,35 @@ DoD-тесты: property «Σ бюджетов == requested» на 200 случ�
   модель без исключения. Итоги — `journal/generation-v3/verify-s1.md`.
 
 ## НЕ ПОВТОРЯТЬ
+
+- **Dedup в фасаде — после приёма, но до импорта; строки черновиков уже есть.**
+  Инвариант S11 (пишем по ходу) не ломается, если пометка — `UPDATE`
+  `card_drafts` после этапа Dedup (`is_duplicate_of`/`dedup_level`), а не поле
+  в `card_json`. Импорт вызывать **после** Dedup — иначе «уже в колоде»
+  ловится после записи (тест `events == ['dedup', 'import']`).
+- **Одинаковое содержимое в прогоне — один `content_hash`.** `DedupMark`
+  нельзя хранить парой с тем же hash: `DedupPair` требует разные id, и
+  `loadRun` упал бы на assert. Для точного дубля внутри прогона
+  восстанавливается пара-маркер `same:<hash>`.
+- **Миграция `addColumn` — только для `from >= 2`.** При апгрейде с v1
+  `m.createTable(cardDrafts)` берёт актуальное определение таблицы (уже с
+  новыми колонками), и безусловный `addColumn` даёт «duplicate column name».
+- **`cleanRate` теперь к `generated`, а не к `accepted`.** Тесты
+  `metrics_collector_test` — 8/14, не 0.8; `generation_report_test` с
+  `generated = 2` остаётся 1/2. Колонку «было» считать отдельной функцией
+  (`cleanRateOfAccepted`), не подменять метрику.
+- **Профиль совместимости — на прогон, а не на вызов.** `attempts`-список
+  лестницы строится один раз в `extract`/`generate`: запоминание отказа внутри
+  текущей лестницы не должно обрывать уже начатые ступени (тест «3 ступени»
+  остаётся 3 запроса). Запросы Understanding считать `attempts` ответа, а не
+  вызовом `extract` — иначе лестница исчезает из отчёта.
+- **`stage == ready` при `accepted < requested` — это `complete` по слотам,
+  а не потолок материала.** `_unfilledSlots` считает повторы слотов
+  удовлетворёнными; 188/300 статьи = 188 слотов, 112 повторных карточек плана
+  (L229). Не «чинить» пороги добора, не выдавать за `exhausted_material`.
+- **Пересчёт матрицы — из `matrix.jsonl`, не новым платным прогоном.** Скрипт
+  `tool/recompute_matrix_s13.dart` читает существующие 20 ячеек; в отчёте
+  колонка «было» показывает разницу баз, «нерешающая» — 20/40.
 
 - **Лестница ADR-021 нужна в КАЖДОМ HTTP-вызове модели, а не только в
   `CardGenerationService`.** В S12 живой v3 сначала дал 12 × `provider_error`
@@ -813,31 +900,36 @@ DoD-тесты: property «Σ бюджетов == requested» на 200 случ�
 
 ## СЛЕДУЮЩЕЕ ДЕЙСТВИЕ
 
-Срез 12 закрыт: стенд из отчёта, живая матрица 20/20, флаг по строгому
-критерию оставлен выключенным, расхождения — в S13. Следующий прогон:
-`read TASK.txt` (верхний блок) → верхний блок `journal/STATE.md` («срез 12») →
-`journal/QUESTIONS.md` Q24 → `journal/generation-v3/verify-s12.md` §4–§5 →
-`journal/generation-v3/s13-handoff.md`.
+Срез 13 закрыт: Dedup в фасаде (сквозной тест на 3 парах + «уже в колоде»),
+персист пар в схеме v3, проба strict-схемы один раз на прогон (12 разделов →
+13 запросов), honest-пересчёт матрицы и разбор 188/300. Флаг
+`generationPipelineV3` остаётся выключенным: на решающих ячейках 80/150/300
+v3 хуже legacy по cleanRate (к произведённым) на двух ячейках 300.
+
+Следующий прогон: `read TASK.txt` (верхний блок) → верхний блок
+`journal/STATE.md` («срез 13») → `journal/QUESTIONS.md` Q25 →
+`journal/generation-v3/verify-s13.md`; отчёт по матрице —
+`journal/generation-v3/live-s12/matrix-s13.md`.
 
 Не делать без нового среза:
 - **не включать `generationPipelineV3` по умолчанию** и не удалять legacy:
-  cleanRate v3 ниже legacy на трёх живых ячейках (S12 §5), production по
-  умолчанию — legacy;
-- **не перемерять матрицу** без изменения промптов/порогов/проводки: она уже
-  стоит 0,66 USD и 29,6 мин, ячеек `not_run` нет; повтор — только по задаче S13;
-- **не подменять `partial` на `done`**: статус v3 берётся из
-  `verdict.jobStatus`, 299/300 и 188/300 — честный partial;
-- **не расширять `CardGate` обратно до вердикта без кодов**: коды причин нужны
-  отчёту (`cleanRate`) и предпросмотру, это контракт S12;
-- **смысловой дедуп в фасаде не подключён** (L224) — `duplicateRate` v3 = 0 не
-  означает «v3 не дублирует»;
+  cleanRate v3 ниже legacy на решающих ячейках 300 (учебный 97,3 vs 98,6,
+  статья 97,9 vs 100 — база «к произведённым»);
+- **не перемерять матрицу** ради «другого результата»: пересчёт среза 13
+  сделан из существующих run-файлов; новый платный прогон — только при
+  изменении промптов/порогов/проводки;
+- **не подменять `partial` на `done`**: `ready` при 188/300 — `complete` по
+  слотам, честный исход ставит `verdict.jobStatus`;
+- **не менять аллокацию/пороги**, чтобы «добрать» 112 повторных слотов: это
+  отдельный срез (L229), TASK среза 13 запрещал;
+- **не расширять `CardGate` обратно до вердикта без кодов**: коды причин —
+  контракт S12/S13 (`cleanRate`, предпросмотр);
 - **живые прогоны — только с `CARDFLOW_LIVE_TESTS=1`**, реальным ключом и
   потолками (L225); значение ключа не печатать.
 
 Baseline снимка: `flutter test --no-pub --exclude-tags golden` —
-**3214 passed + 18 skipped** (`journal/generation-v3/green-s12-full.txt`);
-`analyze` 0, `dart format` 0 changed, покрытие 90,4 %; схема БД — **v2** (не
-менялась).
+**3234 passed + 18 skipped** (`journal/generation-v3/green-s13-full.txt`);
+`analyze` 0, `dart format` 0 changed, покрытие 90,9 %; схема БД — **v3**.
 
 ---
 
