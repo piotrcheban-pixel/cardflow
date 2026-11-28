@@ -8,6 +8,7 @@ library;
 
 import 'package:cardflow/domain/generation/cards_batch.dart';
 import 'package:cardflow/domain/generation/knowledge_map.dart';
+import 'package:cardflow/domain/generation/run_card_context.dart';
 
 /// Версия системного промпта этапа Generation.
 const String cardsPromptVersion = 'gen-cards-v3';
@@ -50,6 +51,11 @@ const String cardsSystemPromptGenCardsV3 = r'''РОЛЬ
 /// ([CardsBatch.unitIds]): единица без карточек не должна занимать запрос.
 /// Контекст `<already_accepted>` — только принятое **этого** батча и только
 /// `front` + утверждение единицы (TASK «Срез 5», п. 4).
+///
+/// `<already_created>` (срез 17B) — «уже создано» прогона: занятые `unit_id` и
+/// краткие утверждения принятых единиц. Формулировка системного промпта
+/// `gen-cards-v3` не меняется — блок собирается здесь и усечён по числу
+/// ([RunCardContext.limited]).
 String buildCardsUserContent(CardsBatch batch) {
   final StringBuffer buffer = StringBuffer()..writeln('<units>');
   for (final String unitId in batch.unitIds) {
@@ -89,5 +95,34 @@ String buildCardsUserContent(CardsBatch batch) {
     }
     buffer.write('</already_accepted>');
   }
+  final RunCardContext runContext = _limitedRunContext(batch);
+  if (runContext.isNotEmpty) {
+    buffer
+      ..writeln()
+      ..writeln('<already_created>');
+    if (runContext.takenUnitIds.isNotEmpty) {
+      buffer.writeln('<taken units="${runContext.takenUnitIds.join(' ')}"/>');
+    }
+    for (final CreatedStatement statement in runContext.statements) {
+      buffer.writeln(
+        '<statement unit_id="${statement.unitId}">'
+        '${statement.text}</statement>',
+      );
+    }
+    buffer.write('</already_created>');
+  }
   return buffer.toString();
+}
+
+/// Срез контекста «уже создано» под эту партию.
+///
+/// Усечение (по числу, с приоритетом разделов партии) делает сборщик, а не
+/// вызывающий: предел payload нельзя обойти, передав в партию длинный контекст.
+RunCardContext _limitedRunContext(CardsBatch batch) {
+  if (batch.runContext.isEmpty) return batch.runContext;
+  return batch.runContext.limited(
+    sectionIds: <String>{
+      for (final KnowledgeUnit unit in batch.units) unit.sectionId,
+    },
+  );
 }

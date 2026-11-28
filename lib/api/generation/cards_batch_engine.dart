@@ -12,6 +12,12 @@
 ///
 /// Контекст «уже принято» — только принятое **текущего** батча
 /// ([CardsBatch.accepted]): между партиями он не переносится.
+///
+/// Отдельно собирается «уже создано» **прогона** (срез 17B, TASK ч. 1):
+/// утверждения принятых единиц и занятые `unit_id` предыдущих партий
+/// ([CardsBatch.runContext]). Это не полные тексты карточек, а краткие
+/// утверждения; предел — по числу ([kRunContextMaxStatements]), поэтому запрос
+/// не растёт с заказом.
 library;
 
 import 'package:cardflow/api/generation/batch_job_recorder.dart';
@@ -29,6 +35,7 @@ import 'package:cardflow/domain/generation/generation_run.dart';
 import 'package:cardflow/domain/generation/knowledge_map.dart';
 import 'package:cardflow/domain/generation/ports.dart';
 import 'package:cardflow/domain/generation/provider_account.dart';
+import 'package:cardflow/domain/generation/run_card_context.dart';
 
 /// Итог этапа Generation: журнал, принятые карточки и версия промпта.
 class CardsBatchRun {
@@ -182,6 +189,10 @@ class CardsBatchEngine {
     final List<Duration> batchDurations = <Duration>[];
     final Map<int, List<AcceptedCard>> acceptedByBatch =
         <int, List<AcceptedCard>>{};
+    // «Уже создано» прогона: утверждения и занятые единицы **предыдущих**
+    // партий. Принятое текущей партии живёт в `<already_accepted>` и здесь не
+    // дублируется — контекст пополняется, когда партия закончена.
+    RunCardContext runContext = const RunCardContext.empty();
     var usage = const TokenUsage();
 
     for (final AllocationBatch batch in plan.batches) {
@@ -194,6 +205,9 @@ class CardsBatchEngine {
       final List<CardsBatch> queue = <CardsBatch>[
         CardsBatch(index: batch.index, units: batchUnits, cards: batch.cards),
       ];
+      // Утверждения, принятые этой партией: пополнят «уже создано» только для
+      // следующих партий (внутри партии контекст — `<already_accepted>`).
+      final List<CreatedStatement> batchStatements = <CreatedStatement>[];
 
       while (queue.isNotEmpty) {
         if (cancellation?.isCancelled ?? false) {
@@ -221,7 +235,9 @@ class CardsBatchEngine {
           batch.index,
           () => <AcceptedCard>[],
         );
-        final CardsBatch request = slice.withAcceptedContext(context);
+        final CardsBatch request = slice
+            .withAcceptedContext(context)
+            .withRunContext(runContext);
         while (true) {
           try {
             final Stopwatch callWatch = Stopwatch()..start();
@@ -330,6 +346,13 @@ class CardsBatchEngine {
           context.add(
             AcceptedCard(front: card.front, statement: unit.statement),
           );
+          batchStatements.add(
+            CreatedStatement(
+              unitId: unit.id,
+              statement: unit.statement,
+              sectionId: unit.sectionId,
+            ),
+          );
           final CardSink? sink = this.sink;
           if (sink != null) {
             await sink.save(card, batchIndex: batch.index);
@@ -367,6 +390,11 @@ class CardsBatchEngine {
           continue;
         }
         queue.insert(0, rest.slice(rest.cards, accepted: context, topUp: true));
+      }
+      // Партия закончена: её утверждения становятся «уже создано» для
+      // следующих партий этого прогона.
+      for (final CreatedStatement statement in batchStatements) {
+        runContext = runContext.withStatement(statement);
       }
     }
 

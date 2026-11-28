@@ -7,10 +7,17 @@
 /// Контекст «уже принято» — только **этого** батча ([accepted]): чужой батч не
 /// подсказывает модели, что отвечать, и не растит запрос с числом батчей
 /// (TASK: «Контекст „уже принято“ — только front + statement текущего батча»).
+///
+/// Второй, отдельный контекст — «уже создано» прогона ([runContext], срез 17B):
+/// краткие утверждения принятых единиц и занятые `unit_id`. Он собирается по
+/// партиям, но усечён **по числу** ([RunCardContext.limited]), поэтому запрос не
+/// растёт с заказом. Промпт `gen-cards-v3` при этом не менялся: блок
+/// `<already_created>` — данные, а не формулировка.
 library;
 
 import 'package:cardflow/domain/generation/allocation.dart';
 import 'package:cardflow/domain/generation/knowledge_map.dart';
+import 'package:cardflow/domain/generation/run_card_context.dart';
 
 /// Уже принятая карточка текущего батча: front и утверждение её единицы.
 ///
@@ -53,6 +60,7 @@ class CardsBatch {
     required List<KnowledgeUnit> units,
     required List<AllocatedCard> cards,
     List<AcceptedCard> accepted = const <AcceptedCard>[],
+    this.runContext = const RunCardContext.empty(),
     this.topUp = false,
   }) : units = List<KnowledgeUnit>.unmodifiable(units),
        cards = List<AllocatedCard>.unmodifiable(cards),
@@ -81,6 +89,12 @@ class CardsBatch {
 
   /// Уже принятое **этого** батча (front + утверждение единицы).
   final List<AcceptedCard> accepted;
+
+  /// «Уже создано» прогона: утверждения принятых единиц и занятые `unit_id`.
+  ///
+  /// В запрос уходит только усечённый по числу срез ([RunCardContext.limited]) —
+  /// его выбирает сборщик сообщения, поэтому контекст не растёт с заказом.
+  final RunCardContext runContext;
 
   /// true — это добор после обрезки ответа (`finish_reason: length`).
   ///
@@ -129,6 +143,7 @@ class CardsBatch {
       ],
       cards: cards,
       accepted: accepted ?? this.accepted,
+      runContext: runContext,
       topUp: topUp,
     );
   }
@@ -139,6 +154,7 @@ class CardsBatch {
     units: units,
     cards: cards,
     accepted: <AcceptedCard>[...accepted, ...more],
+    runContext: runContext,
     topUp: topUp,
   );
 
@@ -152,6 +168,17 @@ class CardsBatch {
     units: units,
     cards: cards,
     accepted: context,
+    runContext: runContext,
+    topUp: topUp,
+  );
+
+  /// Копия с контекстом «уже создано» прогона (срез 17B).
+  CardsBatch withRunContext(RunCardContext context) => CardsBatch(
+    index: index,
+    units: units,
+    cards: cards,
+    accepted: accepted,
+    runContext: context,
     topUp: topUp,
   );
 

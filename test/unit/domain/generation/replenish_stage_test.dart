@@ -213,6 +213,38 @@ void main() {
       );
     });
 
+    test('запрос добора несёт «уже создано» принятых единиц прогона', () async {
+      final AllocationPlan plan = _plan(<int>[3]);
+      final List<GeneratedCard> accepted = <GeneratedCard>[
+        _cardFor(plan, plan.cards.first),
+      ];
+      final GenerationLedger ledger = _ledgerFor(
+        plan,
+        acceptedByBatch: <int, int>{0: 1},
+      );
+      final _FakeLlmPort port = _FakeLlmPort();
+
+      await _stage(port)
+          .run(plan: plan, ledger: ledger, acceptedCards: accepted);
+
+      final CardsBatch request = port.calls.single;
+      // Срез 17B, часть 1: добор видит утверждения всех принятых единиц, а не
+      // только принятое своей единицы (`<already_accepted>`).
+      expect(request.runContext.isNotEmpty, isTrue);
+      expect(
+        request.runContext.statements.single.unitId,
+        plan.cards.first.unitId,
+      );
+      expect(
+        request.runContext.statements.single.statement,
+        _unit('U0').statement,
+      );
+      expect(
+        request.runContext.takenUnitIds,
+        contains(plan.cards.first.unitId),
+      );
+    });
+
     test('ответ перефразированием принятого не даёт прогресса', () async {
       final AllocationPlan plan = _plan(<int>[3]);
       final List<GeneratedCard> accepted = <GeneratedCard>[

@@ -41,6 +41,7 @@ import 'package:cardflow/domain/generation/generation_run.dart';
 import 'package:cardflow/domain/generation/knowledge_map.dart';
 import 'package:cardflow/domain/generation/ports.dart';
 import 'package:cardflow/domain/generation/provider_account.dart';
+import 'package:cardflow/domain/generation/run_card_context.dart';
 import 'package:cardflow/domain/generation/token_estimator.dart';
 
 /// Предел запросов операции добора: `f(requested)` (TASK «Срез 7», п. 2).
@@ -893,6 +894,10 @@ class ReplenishStage {
         units: batchUnits,
         cards: batch.cards,
         accepted: requestContext,
+        // Срез 17B: добор видит не только своё принятое, но и «уже создано»
+        // всего прогона — иначе повтор слота с другим углом не знает, что
+        // утверждение уже закрыто другой карточкой.
+        runContext: _runContextOf(context, unitsById),
         topUp: true,
       );
       final Set<String> requestedSlots = <String>{
@@ -1149,6 +1154,31 @@ class ReplenishStage {
       }
     }
     return count;
+  }
+
+  /// «Уже создано» прогона из накопленного контекста принятого по единицам.
+  ///
+  /// [context] пополняется по ходу добора, поэтому перед каждым запросом
+  /// контекст пересобирается: модель видит утверждения всех принятых единиц, а
+  /// не только тех, чьи слоты остались открытыми.
+  static RunCardContext _runContextOf(
+    Map<String, List<AcceptedCard>> context,
+    Map<String, KnowledgeUnit> unitsById,
+  ) {
+    var runContext = const RunCardContext.empty();
+    for (final MapEntry<String, List<AcceptedCard>> entry in context.entries) {
+      if (entry.value.isEmpty) continue;
+      final KnowledgeUnit? unit = unitsById[entry.key];
+      if (unit == null) continue;
+      runContext = runContext.withStatement(
+        CreatedStatement(
+          unitId: unit.id,
+          statement: unit.statement,
+          sectionId: unit.sectionId,
+        ),
+      );
+    }
+    return runContext;
   }
 
   /// Предохранители, проверяемые перед каждым запросом.
