@@ -4,6 +4,12 @@ import 'package:cardflow/domain/statistics/statistics.dart';
 import 'package:cardflow/domain/statistics/statistics_repository.dart';
 import 'package:cardflow/ui/settings/external_link_launcher.dart';
 
+/// Настройки legacy-пути генерации: с среза 14 флаг v3 включён по умолчанию,
+/// поэтому тесты старого пути задают флаг **явно** (TASK «Срез 14», п. 9:
+/// legacy остаётся доступен выключением флага).
+AppSettings legacyGenerationSettings() =>
+    AppSettings.defaults.copyWith(generationPipelineV3: false);
+
 /// In-memory store настроек приложения для widget-тестов (без drift).
 class FakeAppSettingsStore implements AppSettingsStore {
   /// Создаёт store с настройками [settings] (по умолчанию — дефолты).

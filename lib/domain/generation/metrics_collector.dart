@@ -25,6 +25,7 @@ class CollectedMetrics {
     required this.invalid,
     required this.duplicates,
     required this.cleanAccepted,
+    required this.absoluteClean,
     required this.acceptedWithWarnings,
     required Map<String, int> warningCodes,
     required this.requests,
@@ -70,6 +71,10 @@ class CollectedMetrics {
 
   /// Принято без пометок гейта.
   final int cleanAccepted;
+
+  /// Число чистых карточек рядом с [cleanRate] (срез 14): доля без объёма
+  /// вводит в заблуждение.
+  final int absoluteClean;
 
   /// Принято с пометками гейта.
   final int acceptedWithWarnings;
@@ -136,6 +141,7 @@ class CollectedMetrics {
     'invalid': invalid,
     'duplicates': duplicates,
     'clean_accepted': cleanAccepted,
+    'absolute_clean': absoluteClean,
     'accepted_with_warnings': acceptedWithWarnings,
     'warning_codes': warningCodes,
     'requests': requests,
@@ -209,6 +215,7 @@ class MetricsCollector {
       invalid: report.invalid,
       duplicates: report.duplicates,
       cleanAccepted: report.cleanAccepted,
+      absoluteClean: report.absoluteClean,
       acceptedWithWarnings: report.acceptedWithWarnings,
       warningCodes: report.warningCodes,
       requests: report.requests,

@@ -19,6 +19,7 @@ import 'package:cardflow/ui/state/app_providers.dart';
 
 import '../helpers/fake_http_adapter.dart';
 import '../helpers/generation_fakes.dart';
+import '../helpers/settings_fakes.dart';
 import '../unit/api/parsers/fixtures/document_fixtures.dart';
 
 /// Сквозной путь «PDF → изображение → модель → карточка → MediaStore»
@@ -77,6 +78,9 @@ void main() {
     container = ProviderContainer(
       overrides: <Override>[
         appDatabaseProvider.overrideWithValue(database),
+        effectiveAppSettingsProvider.overrideWithValue(
+          legacyGenerationSettings(),
+        ),
         mediaStoreProvider.overrideWithValue(MediaStore(mediaDirectory)),
         generationDioProvider.overrideWithValue(dioWithAdapter(httpAdapter)),
         apiKeyStoreProvider.overrideWithValue(

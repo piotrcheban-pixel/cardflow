@@ -18,12 +18,14 @@ import 'package:cardflow/domain/generation/replenish_stage.dart';
 void main() {
   group('GenerationReport', () {
     test('недобор: причины, покрытие единиц, расход по этапам, время', () {
-      final AllocationPlan plan = _plan(<int>[6, 6, 6, 6, 6, 6, 4]);
+      // 10 единиц × 4 различимых слота = 40 карточек (срез 14: у единицы не
+      // больше четырёх слотов, поэтому заказ 40 — это ровно ёмкость плана).
+      final AllocationPlan plan = _plan(<int>[4, 4, 4, 4, 4, 4, 4, 4, 4, 4]);
       final ReplenishOutcome outcome = _outcome(
         stage: GenerationStage.partial,
         reason: ReplenishStopReason.exhaustedMaterial,
         requested: 40,
-        acceptedCards: _cardsOf(plan, <int>[0, 1]),
+        acceptedCards: _cardsOf(plan, <int>[0, 1, 2]),
         requests: 7,
         usage: const TokenUsage(
           promptTokens: 0,
@@ -59,7 +61,7 @@ void main() {
       expect(report.reasons, <String>['exhausted_material']);
       expect(report.materialCapacity, 12);
 
-      expect(report.unitCoverage.length, 7);
+      expect(report.unitCoverage.length, 10);
       expect(
         report.unitCoverage.fold<int>(
           0,
@@ -74,19 +76,19 @@ void main() {
         ),
         12,
       );
-      expect(report.coveredUnits, 2);
-      expect(report.uncoveredUnits, 5);
+      expect(report.coveredUnits, 3);
+      expect(report.uncoveredUnits, 7);
       expect(report.unitCoverage.first.isCovered, isTrue);
-      expect(report.unitCoverage[2].isCovered, isFalse);
+      expect(report.unitCoverage[2].isCovered, isTrue);
       expect(report.unitCoverage[2].unitId, 'U2');
-      expect(report.unitCoverage[2].planned, 6);
-      expect(report.unitCoverage[2].accepted, 0);
+      expect(report.unitCoverage[2].planned, 4);
+      expect(report.unitCoverage[2].accepted, 4);
       expect(
         report.unitCoverage[2],
         UnitCoverage(
           unitId: 'U2',
-          planned: 6,
-          accepted: 0,
+          planned: 4,
+          accepted: 4,
           salience: _unit('U2').salience,
         ),
       );
@@ -94,12 +96,12 @@ void main() {
         report.unitCoverage[2].hashCode,
         UnitCoverage(
           unitId: 'U2',
-          planned: 6,
-          accepted: 0,
+          planned: 4,
+          accepted: 4,
           salience: _unit('U2').salience,
         ).hashCode,
       );
-      expect(report.unitCoverage[2].toString(), 'UnitCoverage(U2, 0/6)');
+      expect(report.unitCoverage[2].toString(), 'UnitCoverage(U2, 4/4)');
       expect(report.toString(), contains('принято 12/40'));
       expect(report.toString(), contains('exhausted_material'));
 
@@ -187,14 +189,14 @@ void main() {
 
   group('срез 10 — причины недобора с числами и предохранители', () {
     test('долг только из-за дублей — причина duplicates, а не validation', () {
-      final AllocationPlan plan = _plan(<int>[4, 6]);
+      final AllocationPlan plan = _plan(<int>[4, 4, 2]);
       final GenerationReport report = GenerationReport.fromReplenish(
         plan: plan,
         outcome: _outcome(
           stage: GenerationStage.partial,
           reason: ReplenishStopReason.exhaustedMaterial,
           requested: 10,
-          acceptedCards: _cardsOf(plan, <int>[0, 1]).take(8).toList(),
+          acceptedCards: _cardsOf(plan, <int>[0, 1]),
           duplicates: 2,
           unfilledSlots: 2,
         ),
@@ -206,14 +208,14 @@ void main() {
     });
 
     test('валидация и дубли считаются отдельно, каждая своим числом', () {
-      final AllocationPlan plan = _plan(<int>[4, 6]);
+      final AllocationPlan plan = _plan(<int>[4, 4, 2]);
       final GenerationReport report = GenerationReport.fromReplenish(
         plan: plan,
         outcome: _outcome(
           stage: GenerationStage.partial,
           reason: ReplenishStopReason.exhaustedMaterial,
           requested: 10,
-          acceptedCards: _cardsOf(plan, <int>[0, 1]).take(8).toList(),
+          acceptedCards: _cardsOf(plan, <int>[0, 1]),
           invalid: 1,
           duplicates: 1,
           unfilledSlots: 2,
@@ -227,14 +229,14 @@ void main() {
     });
 
     test('исчерпанный материал — число недобора', () {
-      final AllocationPlan plan = _plan(<int>[6, 6, 6, 6, 6, 6, 4]);
+      final AllocationPlan plan = _plan(<int>[4, 4, 4, 4, 4, 4, 4, 4, 4, 4]);
       final GenerationReport report = GenerationReport.fromReplenish(
         plan: plan,
         outcome: _outcome(
           stage: GenerationStage.partial,
           reason: ReplenishStopReason.exhaustedMaterial,
           requested: 40,
-          acceptedCards: _cardsOf(plan, <int>[0, 1]),
+          acceptedCards: _cardsOf(plan, <int>[0, 1, 2]),
           unfilledSlots: 28,
         ),
       );
@@ -245,7 +247,7 @@ void main() {
     });
 
     test('предохранители операции попадают в отчёт', () {
-      final AllocationPlan plan = _plan(<int>[4, 6]);
+      final AllocationPlan plan = _plan(<int>[4, 4, 2]);
       const ReplenishGuards guards = ReplenishGuards(
         maxPasses: 3,
         maxRequests: 10,
@@ -273,14 +275,14 @@ void main() {
     });
 
     test('успех не имеет причин недобора', () {
-      final AllocationPlan plan = _plan(<int>[10]);
+      final AllocationPlan plan = _plan(<int>[4, 3, 3]);
       final GenerationReport report = GenerationReport.fromReplenish(
         plan: plan,
         outcome: _outcome(
           stage: GenerationStage.ready,
           reason: ReplenishStopReason.complete,
           requested: 10,
-          acceptedCards: _cardsOf(plan, <int>[0]),
+          acceptedCards: _cardsOf(plan, <int>[0, 1, 2]),
         ),
       );
 
@@ -321,6 +323,7 @@ void main() {
       expect(report.accepted, 2);
       expect(report.acceptedWithWarnings, 1);
       expect(report.cleanAccepted, 1);
+      expect(report.absoluteClean, 1);
       expect(report.cleanRate, 0.5);
       expect(report.warningCodes, <String, int>{'not_atomic': 1});
       expect(report.generated, 2);
@@ -343,6 +346,7 @@ void main() {
       );
 
       expect(report.accepted, 0);
+      expect(report.absoluteClean, 0);
       expect(report.cleanRate, isNull);
     });
   });

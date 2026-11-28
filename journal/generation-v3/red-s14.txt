@@ -1,0 +1,47 @@
+00:00 +0: loading C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_capacity_test.dart
+00:00 +0: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_capacity_test.dart: 300 запрошено, 47 единиц → planned 188, requested 300, без повторов слотов
+00:00 +0 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_capacity_test.dart: 300 запрошено, 47 единиц → planned 188, requested 300, без повторов слотов [E]
+  Expected: <188>
+    Actual: <300>
+  
+  package:matcher                                                 expect
+  package:flutter_test/src/widget_tester.dart 473:18              expect
+  test\unit\domain\generation\allocation_capacity_test.dart 60:5  main.<fn>
+  
+00:00 +0 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_capacity_test.dart: заказ в пределах ёмкости не обрезается
+00:00 +1 -1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_capacity_test.dart: конструктор плана отвергает повтор слота, а не тест постфактум
+00:00 +1 -2: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_capacity_test.dart: конструктор плана отвергает повтор слота, а не тест постфактум [E]
+  Expected: throws <Instance of 'AssertionError'>
+    Actual: <Closure: () => AllocationPlan>
+     Which: returned AllocationPlan:<AllocationPlan(2, 2 карт., 0 батч.)>
+  две основные карточки одной единицы — один и тот же слот
+  
+  package:matcher                                                  expect
+  package:flutter_test/src/widget_tester.dart 473:18               expect
+  test\unit\domain\generation\allocation_capacity_test.dart 100:5  main.<fn>
+  
+00:00 +1 -2: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_capacity_test.dart: конструктор плана отвергает карточки сверх ёмкости единиц
+00:00 +2 -2: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/integration/generation_v3_facade_flow_test.dart: happy-path «40 из 40»: от файла до колоды и отчёта
+00:00 +3 -2: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/integration/generation_v3_facade_flow_test.dart: partial «12 из 40 exhausted_material»: долг виден числом
+00:00 +4 -2: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/integration/generation_v3_facade_flow_test.dart: 300 при 47 единицах: planned 188, exhausted_material, partial, добора нет
+00:04 +4 -3: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/integration/generation_v3_facade_flow_test.dart: 300 при 47 единицах: planned 188, exhausted_material, partial, добора нет [E]
+  Expected: <188>
+    Actual: <300>
+  
+  package:matcher                                             expect
+  package:flutter_test/src/widget_tester.dart 473:18          expect
+  test\integration\generation_v3_facade_flow_test.dart 197:5  main.<fn>
+  
+00:04 +4 -3: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/integration/generation_v3_facade_flow_test.dart: blocked-карточка не попадает в колоду, но не исчезает
+00:05 +5 -3: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/integration/generation_v3_facade_flow_test.dart: prompt-only: единица темы без якорей — карточки «без источника»
+00:05 +6 -3: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/integration/generation_v3_facade_flow_test.dart: гейт добора: quoteOutOfRange не увеличивает accepted, слот открыт, вердикт не done
+00:05 +7 -3: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/integration/generation_v3_facade_flow_test.dart: две попытки на слот: третьего запроса нет, причина — validation_rejects
+00:05 +8 -3: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/integration/generation_v3_facade_flow_test.dart: Dedup в фасаде: 3 известные пары помечены своими уровнями, не удалены
+00:05 +9 -3: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/integration/generation_v3_facade_flow_test.dart: Dedup: пара «уже в колоде» ловится до импорта
+00:05 +10 -3: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/integration/generation_v3_facade_flow_test.dart: скан без текстового слоя: отчёт с причиной, а не падение
+00:05 +11 -3: Some tests failed.
+
+Failing tests:
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/integration/generation_v3_facade_flow_test.dart: 300 при 47 единицах: planned 188, exhausted_material, partial, добора нет
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_capacity_test.dart: 300 запрошено, 47 единиц → planned 188, requested 300, без повторов слотов
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/domain/generation/allocation_capacity_test.dart: конструктор плана отвергает повтор слота, а не тест постфактум

@@ -1461,6 +1461,17 @@ class _RunReportSummary extends StatelessWidget {
               color: scheme.onSurfaceVariant,
             ),
         ],
+        // Заказ больше различимой ёмкости материала (срез 14): число — из
+        // плана, а не «догадка по принятому». Рядом с причиной, чтобы
+        // «материал исчерпан» не читалось как сбой.
+        if (report.materialCapacity != null && report.materialCapacity! > 0)
+          _VerdictLine(
+            key: const ValueKey<String>('generation-preview-material-capacity'),
+            text: l10n.generationReportMaterialCapacity(
+              report.materialCapacity!,
+            ),
+            color: scheme.onSurfaceVariant,
+          ),
         const SizedBox(height: AppSpacing.xxs),
         _VerdictLine(
           key: const ValueKey<String>('generation-preview-report-coverage'),

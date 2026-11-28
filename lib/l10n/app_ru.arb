@@ -1348,6 +1348,15 @@
       }
     }
   },
+  "generationReportMaterialCapacity": "Материала примерно на {capacity} карточек",
+  "@generationReportMaterialCapacity": {
+    "description": "Ёмкость различимых слотов из GenerationReport: заказ больше неё (срез 14).",
+    "placeholders": {
+      "capacity": {
+        "type": "int"
+      }
+    }
+  },
   "generationUnderstandingNoText": "В материале нет текстового слоя — понимание невозможно",
   "@generationUnderstandingNoText": {
     "description": "Причина отсутствия карты знаний: скан без текстового слоя."

@@ -16,6 +16,9 @@ library;
 /// С какого заказа ячейка матрицы считается решающей.
 const int kDecisiveRequestedFrom = 80;
 
+/// Порог критерия флага среза 14: `cleanRate_matched` v3 не ниже 95 %.
+const double kFlagCleanRateThreshold = 0.95;
+
 /// true — по ячейке заказа [requested] можно делать вывод о флаге.
 ///
 /// 20 и 40 — нерешающие (малый знаменатель); 80/150/300 — решающие.
@@ -81,3 +84,161 @@ bool looksLikeSlotCapacity(int accepted) =>
 
 /// Сколько единиц карты могло дать [accepted] различимых слотов.
 int unitsOfSlots(int accepted) => accepted ~/ kSlotsPerUnit;
+
+/// Одна произведённая карточка на сопоставимой базе: единица, чистота и
+/// значимость единицы (для отбора «топ-80 по salience»).
+class ProducedCardRef {
+  /// Создаёт ссылку на произведённую карточку.
+  const ProducedCardRef({
+    required this.unitId,
+    required this.clean,
+    this.salience,
+  });
+
+  /// id единицы знания, к которой относится карточка.
+  final String unitId;
+
+  /// true — карточка без пометок гейта (чистая).
+  final bool clean;
+
+  /// Значимость единицы; `null` — у пути нет карты знаний.
+  final double? salience;
+}
+
+/// Сопоставимая база: единицы, по которым **оба** пути произвели хотя бы одну
+/// карточку (TASK «Срез 14», часть 2).
+///
+/// Смысл: путь, произведший карточки только на «лёгкой» части материала, не
+/// должен выглядеть чище из-за меньшего знаменателя. Поэтому `cleanRate_matched`
+/// считается только по карточкам пересечения единиц, а `absoluteClean` —
+/// рядом числом чистых карточек (доля без объёма вводит в заблуждение).
+///
+/// [topUnits] ограничивает базу верхом материала по значимости (для ячеек
+/// заказа 150/300 — «топ-80 по salience»): при равной значимости порядок —
+/// по id единицы, поэтому результат детерминирован.
+class MatchedSubset {
+  MatchedSubset._({
+    required this.unitIds,
+    required this.legacyProduced,
+    required this.v3Produced,
+  });
+
+  /// Строит сопоставимую базу из произведённых карточек двух путей.
+  factory MatchedSubset.of({
+    required Iterable<ProducedCardRef> legacy,
+    required Iterable<ProducedCardRef> v3,
+    int? topUnits,
+  }) {
+    final List<ProducedCardRef> legacyAll = List<ProducedCardRef>.of(legacy);
+    final List<ProducedCardRef> v3All = List<ProducedCardRef>.of(v3);
+    final Set<String> matched =
+        <String>{for (final ProducedCardRef ref in legacyAll) ref.unitId}
+            .intersection(<String>{
+              for (final ProducedCardRef ref in v3All) ref.unitId,
+            });
+    Set<String> selected = matched;
+    if (topUnits != null && matched.length > topUnits) {
+      final Map<String, double> salience = <String, double>{};
+      for (final ProducedCardRef ref in <ProducedCardRef>[
+        ...legacyAll,
+        ...v3All,
+      ]) {
+        if (!matched.contains(ref.unitId)) continue;
+        final double value = ref.salience ?? 0;
+        if (value > (salience[ref.unitId] ?? double.negativeInfinity)) {
+          salience[ref.unitId] = value;
+        }
+      }
+      final List<String> ordered = matched.toList()
+        ..sort((String a, String b) {
+          final int bySalience = (salience[b] ?? 0).compareTo(salience[a] ?? 0);
+          return bySalience != 0 ? bySalience : a.compareTo(b);
+        });
+      selected = ordered.take(topUnits).toSet();
+    }
+    return MatchedSubset._(
+      unitIds: selected,
+      legacyProduced: List<ProducedCardRef>.unmodifiable(
+        legacyAll.where((ProducedCardRef ref) => selected.contains(ref.unitId)),
+      ),
+      v3Produced: List<ProducedCardRef>.unmodifiable(
+        v3All.where((ProducedCardRef ref) => selected.contains(ref.unitId)),
+      ),
+    );
+  }
+
+  /// Единицы пересечения, вошедшие в базу.
+  final Set<String> unitIds;
+
+  /// Произведённые карточки legacy на этой базе.
+  final List<ProducedCardRef> legacyProduced;
+
+  /// Произведённые карточки v3 на этой базе.
+  final List<ProducedCardRef> v3Produced;
+
+  /// Произведено карточек legacy на базе.
+  int get legacyGenerated => legacyProduced.length;
+
+  /// Произведено карточек v3 на базе.
+  int get v3Generated => v3Produced.length;
+
+  /// Чистых карточек legacy на базе.
+  int get legacyClean =>
+      legacyProduced.where((ProducedCardRef ref) => ref.clean).length;
+
+  /// Чистых карточек v3 на базе.
+  int get v3Clean =>
+      v3Produced.where((ProducedCardRef ref) => ref.clean).length;
+
+  /// cleanRate legacy на сопоставимой базе; `null` — произведённых нет.
+  double? get legacyCleanRate =>
+      legacyGenerated <= 0 ? null : legacyClean / legacyGenerated;
+
+  /// cleanRate v3 на сопоставимой базе; `null` — произведённых нет.
+  double? get v3CleanRate => v3Generated <= 0 ? null : v3Clean / v3Generated;
+}
+
+/// cleanRate на сопоставимой базе из **агрегатов** `matrix.jsonl`.
+///
+/// В существующей матрице нет пер-юнитных карточек, но есть `coverage`
+/// (доля единиц с произведённой карточкой). При `coverage == 1` у пути нет
+/// единиц без карточки, поэтому из сопоставимой базы не выпадает ни одна
+/// произведённая карточка: `matched = произведено`. При `coverage < 1` база
+/// невосстановима из агрегатов — возвращается `null`, а не догадка.
+double? cleanRateMatchedFromCoverage({
+  required int clean,
+  required int generated,
+  required double? coverage,
+}) {
+  if (coverage == null || coverage < 1) return null;
+  return cleanRateOfGenerated(cleanAccepted: clean, generated: generated);
+}
+
+/// Итог критерия флага среза 14 по одной решающей ячейке (TASK, п. 8).
+enum FlagCriterionVerdict {
+  /// Критерий по ячейке выполнен.
+  met,
+
+  /// Критерий по ячейке не выполнен.
+  notMet,
+
+  /// Ячейка нерешающая (20/40) или данных нет.
+  notDecisive,
+}
+
+/// Критерий флага: `cleanRate_matched` v3 ≥ 95 % И `absoluteClean` v3 не
+/// меньше legacy — на решающей ячейке.
+FlagCriterionVerdict flagCriterion({
+  required int requested,
+  required double? v3CleanRateMatched,
+  required int v3AbsoluteClean,
+  required int legacyAbsoluteClean,
+}) {
+  if (!isDecisiveCell(requested)) return FlagCriterionVerdict.notDecisive;
+  if (v3CleanRateMatched == null) return FlagCriterionVerdict.notMet;
+  final bool clean = v3CleanRateMatched >= kFlagCleanRateThreshold;
+  final bool volume = v3AbsoluteClean >= legacyAbsoluteClean;
+  return clean && volume
+      ? FlagCriterionVerdict.met
+      : FlagCriterionVerdict.notMet;
+}

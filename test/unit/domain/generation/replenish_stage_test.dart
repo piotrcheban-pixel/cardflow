@@ -247,18 +247,21 @@ void main() {
     test(
       '40 запрошено, материал на 12 → partial, accepted=12, exhausted_material',
       () async {
-        // 40 карточек из семи батчей; принято 12 (два батча), остальные батчи
-        // первый проход уже объявил исчерпанными.
-        final AllocationPlan plan = _plan(<int>[6, 6, 6, 6, 6, 6, 4]);
+        // 40 карточек из десяти батчей по 4 (ёмкость единицы — срез 14);
+        // принято 12 (три батча), остальные батчи первый проход уже объявил
+        // исчерпанными.
+        final AllocationPlan plan = _plan(<int>[4, 4, 4, 4, 4, 4, 4, 4, 4, 4]);
         final GenerationLedger ledger = _ledgerFor(
           plan,
-          acceptedByBatch: <int, int>{0: 6, 1: 6},
+          acceptedByBatch: <int, int>{0: 4, 1: 4, 2: 4},
           causes: <int, ShortfallKind>{
-            2: ShortfallKind.exhaustedMaterial,
             3: ShortfallKind.exhaustedMaterial,
             4: ShortfallKind.exhaustedMaterial,
             5: ShortfallKind.exhaustedMaterial,
             6: ShortfallKind.exhaustedMaterial,
+            7: ShortfallKind.exhaustedMaterial,
+            8: ShortfallKind.exhaustedMaterial,
+            9: ShortfallKind.exhaustedMaterial,
           },
         );
         final _FakeLlmPort port = _FakeLlmPort();
@@ -266,7 +269,7 @@ void main() {
         final ReplenishOutcome outcome = await _stage(port).run(
           plan: plan,
           ledger: ledger,
-          acceptedCards: _cardsOf(plan, <int>[0, 1]),
+          acceptedCards: _cardsOf(plan, <int>[0, 1, 2]),
         );
 
         expect(outcome.requested, 40);

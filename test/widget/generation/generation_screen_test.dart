@@ -101,7 +101,16 @@ void main() {
       apiKeyStoreProvider.overrideWithValue(keyStore),
       providerAccountsStoreProvider.overrideWithValue(accountsStore),
       deckRepositoryProvider.overrideWithValue(deckRepository),
-      appSettingsStoreProvider.overrideWithValue(FakeAppSettingsStore()),
+      appSettingsStoreProvider.overrideWithValue(
+        // Экран проверяется на legacy-пути: с среза 14 флаг v3 включён по
+        // умолчанию, старый путь доступен выключением флага (TASK п. 9).
+        FakeAppSettingsStore(settings: legacyGenerationSettings()),
+      ),
+      // Синхронный снимок настроек: иначе первый `read` видит `defaults` до
+      // загрузки стора и включает v3 вопреки тесту.
+      effectiveAppSettingsProvider.overrideWithValue(
+        legacyGenerationSettings(),
+      ),
     ];
   }
 

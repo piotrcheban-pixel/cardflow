@@ -13,6 +13,7 @@ import 'package:cardflow/domain/generation/completion_verdict.dart';
 import 'package:cardflow/domain/generation/dedup_mark.dart';
 import 'package:cardflow/domain/generation/dedup_report.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
+import 'package:cardflow/domain/generation/generation_job.dart';
 import 'package:cardflow/domain/generation/generation_ledger.dart';
 import 'package:cardflow/domain/generation/generation_report.dart';
 import 'package:cardflow/domain/generation/generation_provider.dart';
@@ -56,11 +57,14 @@ void main() {
     sections: <ParsedSection>[ParsedSection(start: 0, end: text.length)],
   );
 
-  /// Материал: 12 блоков, каждый — отдельная единица знания.
-  String material() => <String>[
-    for (var index = 0; index < 12; index++)
+  /// Материал: [count] блоков, каждый — отдельная единица знания.
+  String materialOf(int count) => <String>[
+    for (var index = 0; index < count; index++)
       'Утверждение $index: момент силы равен произведению силы на плечо.',
   ].join('\n');
+
+  /// Материал среза 9–13: 12 блоков.
+  String material() => materialOf(12);
 
   /// Understanding без сети: блок → единица с якорем на этот блок.
   Future<UnderstandingResult> understand(Document document) async {
@@ -169,6 +173,52 @@ void main() {
     expect(run.report.shortfallReasons[ShortfallKind.exhaustedMaterial], 28);
     expect(run.report.isComplete, isFalse);
     expect(run.imported, 12);
+  });
+
+  test('300 при 47 единицах: planned 188, exhausted_material, partial, добора '
+      'нет', () async {
+    // Регресс S12: план повторял слоты и прогон выглядел как полный успех.
+    // 47 единиц × 4 различимых слота = 188; 112 слотов заказа не существует.
+    final Document document = ContentModelBuilder().build(
+      docOf(materialOf(47)),
+    );
+    final _FakeLlmPort port = _FakeLlmPort(
+      cardsFor: (CardsBatch batch) => batch.cards,
+    );
+    final _FakeDeck deck = _FakeDeck();
+
+    final GenerationV3Run run = await facade(
+      port: port,
+      deck: deck,
+      understanding: understand,
+    ).run(runId: 'run-188', requestedCards: 300, document: document);
+
+    expect(
+      CompletionVerdict.fromReport(run.report).jobStatus,
+      GenerationJobStatus.partial,
+      reason: 'ready при 188/300 — не done',
+    );
+    expect(run.plan.requested, 300, reason: 'заказ не подменяется ёмкостью');
+    expect(run.plan.plannedCards, 188);
+    expect(run.plan.capacity, 188);
+    expect(run.plan.materialLimited, isTrue);
+    expect(run.report.accepted, 188);
+    expect(run.report.reason, ReplenishStopReason.exhaustedMaterial);
+    expect(run.report.materialCapacity, 188);
+    expect(run.report.shortfallReasons[ShortfallKind.exhaustedMaterial], 112);
+    expect(run.report.isComplete, isFalse);
+    expect(run.report.passes, 0, reason: 'добор не запускался: слотов нет');
+    expect(
+      port.calls,
+      run.plan.batches.length,
+      reason: 'после первого прохода модель не звали ни разу',
+    );
+    final Set<String> slots = <String>{
+      for (final AllocatedCard card in run.plan.cards)
+        '${card.unitId}\u0000${card.angle?.wireName ?? 'primary'}',
+    };
+    expect(slots, hasLength(188));
+    expect(deck.written, 188);
   });
 
   test('blocked-карточка не попадает в колоду, но не исчезает', () async {

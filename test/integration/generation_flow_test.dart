@@ -31,6 +31,7 @@ import 'package:cardflow/ui/state/app_providers.dart';
 
 import '../helpers/fake_http_adapter.dart';
 import '../helpers/generation_fakes.dart';
+import '../helpers/settings_fakes.dart';
 
 /// Интеграционный срез 3c на production-проводке (урок H1 итерации 2):
 /// `app_providers` → `GenerationPipeline` → `CardGenerationService` → fake HTTP →
@@ -79,6 +80,9 @@ void main() {
     container = ProviderContainer(
       overrides: <Override>[
         appDatabaseProvider.overrideWithValue(database),
+        effectiveAppSettingsProvider.overrideWithValue(
+          legacyGenerationSettings(),
+        ),
         mediaStoreProvider.overrideWithValue(MediaStore(mediaDirectory)),
         generationDioProvider.overrideWithValue(dioWithAdapter(httpAdapter)),
         apiKeyStoreProvider.overrideWithValue(
@@ -168,6 +172,9 @@ void main() {
       final ProviderContainer local = ProviderContainer(
         overrides: <Override>[
           appDatabaseProvider.overrideWithValue(database),
+          effectiveAppSettingsProvider.overrideWithValue(
+            legacyGenerationSettings(),
+          ),
           mediaStoreProvider.overrideWithValue(MediaStore(mediaDirectory)),
           generationDioProvider.overrideWithValue(dioWithAdapter(adapter)),
           apiKeyStoreProvider.overrideWithValue(
@@ -531,6 +538,9 @@ void main() {
       final ProviderContainer local = ProviderContainer(
         overrides: <Override>[
           appDatabaseProvider.overrideWithValue(database),
+          effectiveAppSettingsProvider.overrideWithValue(
+            legacyGenerationSettings(),
+          ),
           mediaStoreProvider.overrideWithValue(MediaStore(mediaDirectory)),
           generationDioProvider.overrideWithValue(dioWithAdapter(adapter)),
           apiKeyStoreProvider.overrideWithValue(
@@ -643,6 +653,9 @@ void main() {
     final ProviderContainer local = ProviderContainer(
       overrides: <Override>[
         appDatabaseProvider.overrideWithValue(database),
+        effectiveAppSettingsProvider.overrideWithValue(
+          legacyGenerationSettings(),
+        ),
         mediaStoreProvider.overrideWithValue(MediaStore(mediaDirectory)),
         generationDioProvider.overrideWithValue(dioWithAdapter(adapter)),
         apiKeyStoreProvider.overrideWithValue(
@@ -746,6 +759,9 @@ void main() {
       final ProviderContainer local = ProviderContainer(
         overrides: <Override>[
           appDatabaseProvider.overrideWithValue(database),
+          effectiveAppSettingsProvider.overrideWithValue(
+            legacyGenerationSettings(),
+          ),
           mediaStoreProvider.overrideWithValue(MediaStore(mediaDirectory)),
           generationDioProvider.overrideWithValue(dioWithAdapter(adapter)),
           apiKeyStoreProvider.overrideWithValue(

@@ -78,4 +78,104 @@ void main() {
       expect(looksLikeSlotCapacity(0), isFalse);
     });
   });
+
+  group('сопоставимая база (срез 14, часть 2)', () {
+    // Известное пересечение: u1 и u2 есть у обоих путей, u3 — только у
+    // legacy, u4 — только у v3.
+    const List<ProducedCardRef> legacy = <ProducedCardRef>[
+      ProducedCardRef(unitId: 'u1', clean: true, salience: 0.9),
+      ProducedCardRef(unitId: 'u2', clean: false, salience: 0.4),
+      ProducedCardRef(unitId: 'u3', clean: true, salience: 0.1),
+    ];
+    const List<ProducedCardRef> v3 = <ProducedCardRef>[
+      ProducedCardRef(unitId: 'u1', clean: false, salience: 0.9),
+      ProducedCardRef(unitId: 'u2', clean: true, salience: 0.4),
+      ProducedCardRef(unitId: 'u2', clean: true, salience: 0.4),
+      ProducedCardRef(unitId: 'u4', clean: true, salience: 0.3),
+    ];
+
+    test('matchedSubset — только единицы, где оба пути дали карточку', () {
+      final MatchedSubset matched = MatchedSubset.of(legacy: legacy, v3: v3);
+
+      expect(matched.unitIds, <String>{'u1', 'u2'});
+      expect(matched.legacyGenerated, 2, reason: 'u3 выпадает: у v3 её нет');
+      expect(matched.v3Generated, 3, reason: 'u4 выпадает: у legacy её нет');
+      expect(matched.legacyClean, 1);
+      expect(matched.v3Clean, 2);
+      expect(matched.legacyCleanRate, closeTo(1 / 2, 1e-9));
+      expect(matched.v3CleanRate, closeTo(2 / 3, 1e-9));
+    });
+
+    test('топ-80 по salience отбирает верх материала детерминированно', () {
+      final MatchedSubset top = MatchedSubset.of(
+        legacy: legacy,
+        v3: v3,
+        topUnits: 1,
+      );
+
+      expect(top.unitIds, <String>{'u1'}, reason: 'u1 значимее u2');
+      expect(top.legacyGenerated, 1);
+      expect(top.v3Generated, 1);
+      expect(top.v3CleanRate, 0, reason: 'единственная карточка v3 — грязная');
+    });
+
+    test('агрегаты: coverage == 1 — база равна произведённому', () {
+      expect(
+        cleanRateMatchedFromCoverage(clean: 185, generated: 189, coverage: 1),
+        closeTo(185 / 189, 1e-9),
+      );
+      expect(
+        cleanRateMatchedFromCoverage(clean: 8, generated: 10, coverage: 0.6),
+        isNull,
+        reason:
+            'при неполном покрытии пер-юнитная база из агрегатов '
+            'невосстановима — это не догадка',
+      );
+      expect(
+        cleanRateMatchedFromCoverage(clean: 0, generated: 0, coverage: 1),
+        isNull,
+      );
+    });
+
+    test('критерий флага: 95 % и объём на решающих ячейках', () {
+      expect(
+        flagCriterion(
+          requested: 300,
+          v3CleanRateMatched: 0.979,
+          v3AbsoluteClean: 185,
+          legacyAbsoluteClean: 15,
+        ),
+        FlagCriterionVerdict.met,
+      );
+      expect(
+        flagCriterion(
+          requested: 300,
+          v3CleanRateMatched: 0.949,
+          v3AbsoluteClean: 185,
+          legacyAbsoluteClean: 15,
+        ),
+        FlagCriterionVerdict.notMet,
+        reason: 'доля ниже порога 95 %',
+      );
+      expect(
+        flagCriterion(
+          requested: 150,
+          v3CleanRateMatched: 1.0,
+          v3AbsoluteClean: 10,
+          legacyAbsoluteClean: 15,
+        ),
+        FlagCriterionVerdict.notMet,
+        reason: 'чистых меньше legacy — доли недостаточно',
+      );
+      expect(
+        flagCriterion(
+          requested: 20,
+          v3CleanRateMatched: 1.0,
+          v3AbsoluteClean: 20,
+          legacyAbsoluteClean: 10,
+        ),
+        FlagCriterionVerdict.notDecisive,
+      );
+    });
+  });
 }

@@ -126,6 +126,13 @@ const Set<String> _stopWords = <String>{
 /// Слово утверждения: буквы и цифры (формулы вида `PV`, `nRT` — тоже слова).
 final RegExp _wordPattern = RegExp(r'[A-Za-zА-Яа-яЁё0-9]+');
 
+/// Различимых слотов на единицу: основная карточка (`null`) и три угла.
+///
+/// Больше четырёх вопросов об одном утверждении план не заказывает: повтор
+/// слота `unit_id + angle` — не новая карточка, а тот же вопрос (TASK «Срез 14»,
+/// часть 1). Ёмкость плана считается по этому пределу, а не по заказу.
+const int kMaxCardsPerUnit = 4;
+
 /// Угол доборной карточки: та же единица знания, другой вопрос.
 ///
 /// Угол — директива плана, а не текст карточки: модель формулирует её иначе,
@@ -192,7 +199,10 @@ AllocationAngle preferredAngleForKind(KnowledgeUnitKind kind) => switch (kind) {
 ///
 /// Когда заказ больше числа единиц, остаток — добор «вторым углом»; когда
 /// меньше, отбираются самые весомые единицы (при равенстве — раньше в карте).
-/// Сумма карточек равна заказу, если есть хотя бы одна единица с весом.
+/// Добор ограничен ёмкостью единицы ([kMaxCardsPerUnit]): сумма карточек равна
+/// `min(заказ, ёмкость)`, а не заказу — повторять занятый слот план не может
+/// (TASK «Срез 14», часть 1). Недобор до заказа показывается планом, а не
+/// прячется в повторе вопросов.
 List<UnitBudget> allocateUnits({
   required List<KnowledgeUnit> units,
   required int requestedCards,
@@ -225,14 +235,26 @@ List<UnitBudget> allocateUnits({
     ];
   }
   final int extra = requestedCards - selected.length;
-  final List<int> shares = _largestRemainder(extra, <double>[
+  final int capacityExtra = selected.length * (kMaxCardsPerUnit - 1);
+  final int sharesTotal = math.min(extra, capacityExtra);
+  final List<int> shares = _largestRemainderCapped(sharesTotal, <double>[
     for (final KnowledgeUnit unit in selected) unitWeight(unit),
-  ]);
+  ], kMaxCardsPerUnit - 1);
   return <UnitBudget>[
     for (var index = 0; index < selected.length; index++)
       UnitBudget(unit: selected[index], cards: 1 + shares[index]),
   ];
 }
+
+/// Ёмкость плана по различимым слотам: `Σ min(карточек единицы, предел)`.
+///
+/// Это верхняя граница числа карточек, которое план может заказать: у единицы
+/// не больше [kMaxCardsPerUnit] различных вопросов (`unit_id + angle`).
+int allocationCapacity(Iterable<UnitBudget> units) => units.fold<int>(
+  0,
+  (int sum, UnitBudget budget) =>
+      sum + math.min(budget.cards, kMaxCardsPerUnit),
+);
 
 /// Разворачивает бюджеты в карточки: основная (`angle == null`) и доборные
 /// «вторым углом».
@@ -380,6 +402,54 @@ AllocationPlan planAllocation({
   );
 }
 
+/// true — у карточек плана нет двух одинаковых ключей слота.
+bool _slotsAreUnique(List<AllocatedCard> cards) {
+  final Set<String> seen = <String>{};
+  for (final AllocatedCard card in cards) {
+    if (!seen.add(card.slotKey)) return false;
+  }
+  return true;
+}
+
+/// Делит [total] по [weights] методом наибольших остатков, не больше [cap] на
+/// элемент.
+///
+/// Сначала считается обычная раздача наибольших остатков; превысившие [cap]
+/// доли обрезаются, а остаток раздаётся по одной карточке в порядке убывания
+/// веса (при равном весе — раньше в карте). Детерминизм сохраняется: один вход —
+/// один результат. Нужен, чтобы добор «вторым углом» не повторял занятые слоты
+/// единицы ([kMaxCardsPerUnit]).
+List<int> _largestRemainderCapped(int total, List<double> weights, int cap) {
+  final List<int> shares = _largestRemainder(total, weights);
+  var capped = false;
+  for (var index = 0; index < shares.length; index++) {
+    if (shares[index] > cap) {
+      shares[index] = cap;
+      capped = true;
+    }
+  }
+  if (!capped) return shares;
+  var left = total - shares.fold<int>(0, (int sum, int share) => sum + share);
+  if (left <= 0) return shares;
+  final List<int> order = List<int>.generate(weights.length, (int a) => a)
+    ..sort((int a, int b) {
+      final int byWeight = weights[b].compareTo(weights[a]);
+      return byWeight != 0 ? byWeight : a.compareTo(b);
+    });
+  while (left > 0) {
+    var placed = false;
+    for (final int index in order) {
+      if (left == 0) break;
+      if (shares[index] >= cap) continue;
+      shares[index]++;
+      left--;
+      placed = true;
+    }
+    if (!placed) break;
+  }
+  return shares;
+}
+
 /// Делит [total] по [weights] методом наибольших остатков.
 ///
 /// Точная арифметика: вес масштабируется до `BigInt`, поэтому произведение
@@ -474,6 +544,12 @@ final class AllocatedCard {
   /// true — основная карточка (несёт statement единицы).
   bool get isPrimary => angle == null;
 
+  /// Ключ различимого слота: единица и угол (`primary` — основная карточка).
+  ///
+  /// Два вопроса с одним ключом — один и тот же слот, даже если план заказал
+  /// его дважды (TASK «Срез 14», часть 1).
+  String get slotKey => '$unitId\u0000${angle?.wireName ?? 'primary'}';
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -537,8 +613,12 @@ final class AllocationBatch {
 
 /// План этапа Allocation: заказ, бюджеты единиц, карточки и батчи.
 final class AllocationPlan {
-  /// Создаёт план; пустые единицы — только когда материала нет вовсе, и тогда
-  /// карточек тоже нет. Иначе сумма бюджетов равна заказу (ARCH.md §3).
+  /// Создаёт план; инварианты проверяются здесь, а не тестом постфактум:
+  /// - два одинаковых слота (`unit_id + angle`) невозможны;
+  /// - карточек ровно столько, сколько различимых слотов у единиц
+  ///   ([capacity]); повтор слота «для объёма» не конструируем;
+  /// - пустые единицы — только пустой план (материала нет вовсе), иначе сумма
+  ///   бюджетов единиц равна числу карточек.
   AllocationPlan({
     required this.requested,
     required this.profile,
@@ -547,12 +627,21 @@ final class AllocationPlan {
     required List<AllocationBatch> batches,
   }) : units = List<UnitBudget>.unmodifiable(units),
        cards = List<AllocatedCard>.unmodifiable(cards),
-       batches = List<AllocationBatch>.unmodifiable(batches),
-       assert(requested > 0, 'Заказ положителен'),
-       assert(
-         units.isEmpty || cards.length == requested,
-         'Σ бюджетов единиц равен заказу',
-       );
+       batches = List<AllocationBatch>.unmodifiable(batches) {
+    assert(requested > 0, 'Заказ положителен');
+    assert(
+      this.cards.length <= requested,
+      'Карточек не больше заказа: повтор слотов не увеличивает план',
+    );
+    assert(
+      this.cards.length == allocationCapacity(this.units),
+      'Число карточек равно ёмкости различимых слотов единиц',
+    );
+    assert(
+      _slotsAreUnique(this.cards),
+      'План не может содержать два одинаковых слота (unit_id + angle)',
+    );
+  }
 
   /// Заказ карточек.
   final int requested;
@@ -572,6 +661,12 @@ final class AllocationPlan {
   /// Сколько карточек запланировано.
   int get plannedCards => cards.length;
 
+  /// Различимая ёмкость плана: `Σ min(карточек единицы, kMaxCardsPerUnit)`.
+  ///
+  /// Совпадает с [plannedCards]; отдельный геттер нужен отчёту и вердикту —
+  /// «материала примерно на N карточек», где N — ёмкость, а не заказ.
+  int get capacity => allocationCapacity(units);
+
   /// Недобор до заказа (0 — заказ покрыт).
   int get shortfall => math.max(0, requested - cards.length);
 
@@ -581,8 +676,12 @@ final class AllocationPlan {
   /// Единиц меньше заказа — остальные карточки добраны вторым углом.
   bool get unitsBelowRequested => units.length < requested;
 
-  /// Материала нет вовсе (все единицы карты получили нулевой вес).
-  bool get materialLimited => units.isEmpty;
+  /// Заказ больше различимой ёмкости материала (TASK «Срез 14», часть 1).
+  ///
+  /// Это не «материала нет вовсе»: карточки есть, но их меньше заказа, потому
+  /// что слоты `unit_id + angle` кончились. `planned == capacity < requested`,
+  /// `requested` не меняется, а итог прогона — `partial` с `exhausted_material`.
+  bool get materialLimited => cards.length < requested;
 
   /// Сколько карточек добрано вторым углом.
   int get angledCards =>

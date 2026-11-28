@@ -84,6 +84,8 @@ void main() {
     // Срез 13, п. 8: cleanRate — доля от **произведённых**, не от принятых.
     expect(metrics.cleanRate, closeTo(8 / 14, 1e-9));
     expect(metrics.cleanAccepted, 8);
+    // Срез 14, п. 6: рядом с долей — абсолютное число чистых карточек.
+    expect(metrics.absoluteClean, 8);
     expect(metrics.acceptedWithWarnings, 2);
     expect(metrics.warningCodes, <String, int>{'not_atomic': 2});
     expect(metrics.duplicateRate, closeTo(2 / 14, 1e-9));
@@ -129,6 +131,7 @@ void main() {
         .toJson();
 
     expect(json['clean_rate'], closeTo(8 / 14, 1e-9));
+    expect(json['absolute_clean'], 8);
     expect(json['yield_per_1k_input_tokens'], closeTo(6.6667, 1e-4));
     expect(json['batch_p50_ms'], 5000);
     expect(json['warning_codes'], <String, int>{'not_atomic': 2});

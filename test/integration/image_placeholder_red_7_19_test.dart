@@ -16,6 +16,7 @@ import 'package:cardflow/ui/state/app_providers.dart';
 
 import '../helpers/fake_http_adapter.dart';
 import '../helpers/generation_fakes.dart';
+import '../helpers/settings_fakes.dart';
 
 /// Красная фаза 7.19 (группа A, дефект D1/D2): если поиск не дал результата,
 /// карточка остаётся **без** изображения; декоративная заглушка не создаётся и
@@ -73,6 +74,9 @@ void main() {
     container = ProviderContainer(
       overrides: <Override>[
         appDatabaseProvider.overrideWithValue(database),
+        effectiveAppSettingsProvider.overrideWithValue(
+          legacyGenerationSettings(),
+        ),
         mediaStoreProvider.overrideWithValue(MediaStore(mediaDirectory)),
         generationDioProvider.overrideWithValue(dioWithAdapter(httpAdapter)),
         apiKeyStoreProvider.overrideWithValue(

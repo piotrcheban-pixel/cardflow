@@ -30,6 +30,7 @@ void main() {
 
   GenerationReport reportOf({
     List<String> understandingFailures = const <String>[],
+    int? materialCapacity,
   }) => GenerationReport(
     requested: 8,
     accepted: 6,
@@ -50,6 +51,7 @@ void main() {
     passes: 1,
     requests: 2,
     invalid: 2,
+    materialCapacity: materialCapacity,
     unfilledSlots: 2,
     shortfallReasons: const <ShortfallKind, int>{
       ShortfallKind.exhaustedMaterial: 2,
@@ -157,6 +159,36 @@ void main() {
       findsOneWidget,
     );
     expect(find.text(l10n.generationUnderstandingNoText), findsOneWidget);
+  });
+
+  testWidgets('ёмкость материала видна числом рядом с причиной недобора', (
+    tester,
+  ) async {
+    await pumpPreview(
+      tester,
+      resultWith(report: reportOf(materialCapacity: 188)),
+    );
+    final l10n = l10nOf(tester);
+
+    expect(
+      find.byKey(
+        const ValueKey<String>('generation-preview-material-capacity'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.text(l10n.generationReportMaterialCapacity(188)),
+      findsOneWidget,
+    );
+    expect(
+      find.text(
+        l10n.generationReportShortfall(
+          l10n.generationShortfallExhaustedMaterial,
+          2,
+        ),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('без отчёта: прежний вердикт (legacy-путь не меняется)', (

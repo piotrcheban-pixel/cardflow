@@ -377,11 +377,13 @@ class ReplenishOutcome {
     this.duration = Duration.zero,
     this.unfilledSlots = 0,
     this.guards,
+    int? declaredCapacity,
     List<Duration> batchDurations = const <Duration>[],
   }) : acceptedCards = List<GeneratedCard>.unmodifiable(acceptedCards),
        blockedCards = List<GeneratedCard>.unmodifiable(blockedCards),
        passes = List<ReplenishPass>.unmodifiable(passes),
-       batchDurations = List<Duration>.unmodifiable(batchDurations);
+       batchDurations = List<Duration>.unmodifiable(batchDurations),
+       _materialCapacity = declaredCapacity;
 
   /// Терминальный этап прогона: [GenerationStage.ready] — только при закрытых
   /// слотах, [GenerationStage.partial] — недобор, [GenerationStage.cancelled] —
@@ -457,8 +459,16 @@ class ReplenishOutcome {
 
   /// «Материала достаточно примерно на N качественных карточек» (TASK п. 3);
   /// `null` — материал не признан исчерпанным.
+  ///
+  /// Для плана, упёршегося в ёмкость различимых слотов (срез 14), N — ёмкость
+  /// плана (`AllocationPlan.capacity`), а не принятое: несколько слотов могли
+  /// остаться незакрытыми, но материала всё равно было ровно на ёмкость.
   int? get materialCapacity =>
-      reason == ReplenishStopReason.exhaustedMaterial ? accepted : null;
+      _materialCapacity ??
+      (reason == ReplenishStopReason.exhaustedMaterial ? accepted : null);
+
+  /// Явная ёмкость плана (`null` — этап шёл без ограничения слотов).
+  final int? _materialCapacity;
 
   @override
   String toString() =>
@@ -520,9 +530,11 @@ class ReplenishStage {
     CancellationSignal? cancellation,
   }) async {
     final DateTime start = startedAt ?? clock.now();
+    // План может заказать меньше заказанного пользователем: слоты `unit_id +
+    // angle` кончились (срез 14). Журнал считает карточки плана, не заказ.
     assert(
-      plan.cards.isEmpty || ledger.requested == plan.requested,
-      'Журнал и план обязаны говорить об одном заказе',
+      plan.cards.isEmpty || ledger.requested == plan.cards.length,
+      'Журнал и план обязаны говорить об одном числе карточек',
     );
     assert(
       ledger.accepted == acceptedCards.length,
@@ -699,6 +711,12 @@ class ReplenishStage {
     if (plan.cards.isEmpty) {
       unfilled = math.max(0, plan.requested - accepted.length);
     }
+    // Заказ больше различимой ёмкости плана: все слоты закрыты, но `complete`
+    // здесь значил бы «заказ закрыт». Материала хватило ровно на ёмкость —
+    // причина `exhausted_material`, число в отчёте — ёмкость (срез 14, ч. 1).
+    if (reason == ReplenishStopReason.complete && plan.materialLimited) {
+      reason = ReplenishStopReason.exhaustedMaterial;
+    }
     final GenerationStage stage = _stageOf(reason, accepted.length);
     return ReplenishOutcome(
       stage: stage,
@@ -714,6 +732,7 @@ class ReplenishStage {
       duration: clock.now().difference(start),
       unfilledSlots: unfilled,
       guards: guards.withHit(reason),
+      declaredCapacity: plan.materialLimited ? plan.capacity : null,
       batchDurations: batchDurations,
     );
   }

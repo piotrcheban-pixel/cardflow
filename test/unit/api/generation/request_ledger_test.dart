@@ -439,10 +439,16 @@ CardsBatchEngine _engine(
   jobId: jobId,
 );
 
-/// Заказ: карта из 8 единиц и полный план Allocation.
+/// Заказ: карта из достаточного числа единиц и полный план Allocation.
+///
+/// У единицы не больше [kMaxCardsPerUnit] различимых слотов (срез 14), поэтому
+/// для заказа 40/80 нужно минимум 10/20 единиц — иначе план честно упрётся в
+/// ёмкость, и «принято полностью» проверяло бы не то.
 AllocationPlan _plannedOrder(int requested, ModelProfile profile) {
+  final int needed = (requested + kMaxCardsPerUnit - 1) ~/ kMaxCardsPerUnit;
+  final int unitCount = needed < 8 ? 8 : needed;
   final List<KnowledgeUnit> units = <KnowledgeUnit>[
-    for (var index = 0; index < 8; index++) _unit('U$index'),
+    for (var index = 0; index < unitCount; index++) _unit('U$index'),
   ];
   return planAllocation(
     map: KnowledgeMap(documentId: 'doc:материал.md', units: units),

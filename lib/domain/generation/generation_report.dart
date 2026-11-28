@@ -363,6 +363,12 @@ class GenerationReport {
   /// Принято без пометок гейта (`accepted − acceptedWithWarnings`).
   int get cleanAccepted => accepted - acceptedWithWarnings;
 
+  /// Число чистых карточек рядом с [cleanRate] (TASK «Срез 14», часть 2).
+  ///
+  /// Доля без объёма вводит в заблуждение: «100 % из 15» и «97 % из 189» —
+  /// разные величины качества прогона, и видеть это нужно числом.
+  int get absoluteClean => cleanAccepted;
+
   /// cleanRate = принято без warning / **произведено** (TASK «Срез 13», п. 8).
   ///
   /// Знаменатель — [generated], а не [accepted]: иначе путь, отбрасывающий

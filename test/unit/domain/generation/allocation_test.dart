@@ -164,8 +164,10 @@ void main() {
       );
       expect(
         <int>[for (final UnitBudget budget in budgets) budget.cards],
-        <int>[5, 3, 2],
-        reason: 'Минимум 1 + остаток 7 по весам 1 : 0,5 : 0,25',
+        <int>[4, 4, 2],
+        reason:
+            'Минимум 1 + остаток 7 по весам 1 : 0,5 : 0,25, но у единицы '
+            'не больше $kMaxCardsPerUnit различимых слотов (срез 14)',
       );
       expect(
         budgets.fold<int>(0, (int sum, UnitBudget b) => sum + b.cards),
@@ -222,7 +224,7 @@ void main() {
       );
     });
 
-    test('большой заказ не теряет карточки (BigInt-арифметика)', () {
+    test('большой заказ упирается в ёмкость слотов, а не теряет карточки', () {
       final List<KnowledgeUnit> units = <KnowledgeUnit>[
         unit(id: 'ku:1'),
         unit(id: 'ku:2'),
@@ -233,12 +235,15 @@ void main() {
         requestedCards: 1000000,
       );
       expect(
-        budgets.fold<int>(0, (int sum, UnitBudget b) => sum + b.cards),
-        1000000,
+        <int>[for (final UnitBudget budget in budgets) budget.cards],
+        <int>[4, 4, 4],
+        reason:
+            '3 единицы × $kMaxCardsPerUnit различимых слота = 12 карточек, '
+            'дальше заказ не раздувается повторами (срез 14)',
       );
       expect(
-        <int>[for (final UnitBudget b in budgets) b.cards],
-        <int>[333334, 333333, 333333],
+        budgets.fold<int>(0, (int sum, UnitBudget b) => sum + b.cards),
+        12,
       );
     });
 
@@ -365,7 +370,7 @@ void main() {
       }
     });
 
-    test('углы идут циклом, а не повторяют основную карточку', () {
+    test('углы идут по одному разу, а не повторяют слот', () {
       final List<KnowledgeUnit> units = <KnowledgeUnit>[
         unit(id: 'ku:a', kind: KnowledgeUnitKind.definition),
       ];
@@ -383,10 +388,11 @@ void main() {
         'cloze',
         'ku:a',
         'application',
-        'ku:a',
-        'reverse',
       ]);
-      expect(plan.angledCards, 4);
+      expect(plan.plannedCards, 4, reason: 'у единицы четыре слота');
+      expect(plan.capacity, 4);
+      expect(plan.materialLimited, isTrue);
+      expect(plan.angledCards, 3);
       expect(plan.distinctStatements, 1);
     });
   });
@@ -411,8 +417,10 @@ void main() {
       );
       expect(
         <int>[for (final AllocationBatch b in plan.batches) b.cards.length],
-        <int>[3, 3, 3, 1],
-        reason: '900 / 300 = 3 карточки на ответ',
+        <int>[3, 1],
+        reason:
+            '900 / 300 = 3 карточки на ответ; у единицы всего 4 слота '
+            '(срез 14), поэтому 10 карточек не заказываются',
       );
       final int input = kRequestOverheadTokens + unitInputTokens(units.single);
       for (final AllocationBatch batch in plan.batches) {
@@ -426,7 +434,7 @@ void main() {
       }
       expect(
         <int>[for (final AllocationBatch b in plan.batches) b.outputTokens],
-        <int>[900, 900, 900, 300],
+        <int>[900, 300],
       );
     });
 
@@ -449,8 +457,10 @@ void main() {
       expect(windowLimited.batchTokenBudget, 2000);
       expect(
         <int>[for (final AllocationBatch b in plan.batches) b.cards.length],
-        <int>[2, 2, 2, 2, 2],
-        reason: 'Вход 1234 + 2 × 300 = 1834 ≤ 2000, три карточки — уже 2134',
+        <int>[2, 2],
+        reason:
+            'Вход 1234 + 2 × 300 = 1834 ≤ 2000, три карточки — уже 2134; '
+            'у единицы четыре слота (срез 14), пятая не заказывается',
       );
       for (final AllocationBatch batch in plan.batches) {
         expect(
@@ -484,23 +494,25 @@ void main() {
         map: mapOf(units),
         requestedCards: 10,
         profile: withoutSchema,
+        outputTokensPerCard: 1000,
       );
       final AllocationPlan withSchemaPlan = planAllocation(
         map: mapOf(units),
         requestedCards: 10,
         profile: withSchema,
+        outputTokensPerCard: 1000,
       );
       expect(
         <int>[for (final AllocationBatch b in without.batches) b.cards.length],
-        <int>[9, 1],
+        <int>[2, 2],
       );
       expect(
         <int>[
           for (final AllocationBatch b in withSchemaPlan.batches)
             b.cards.length,
         ],
-        <int>[6, 4],
-        reason: 'Схема съедает 900 токенов входа',
+        <int>[1, 1, 1, 1],
+        reason: 'Схема съедает 900 токенов входа: в бюджет влезает меньше',
       );
       expect(
         without.batches.first.inputTokens + kSchemaOverheadTokens,
@@ -780,7 +792,7 @@ void main() {
       );
     });
 
-    test('AllocationPlan: заказ положителен, сумма карточек равна заказу', () {
+    test('AllocationPlan: заказ положителен, ёмкость равна числу карточек', () {
       final UnitBudget budget = UnitBudget(unit: unit(id: 'ku:1'), cards: 2);
       final AllocationBatch batch = AllocationBatch(
         index: 0,
@@ -797,7 +809,9 @@ void main() {
         batches: <AllocationBatch>[batch],
       );
       expect(plan.plannedCards, 2);
+      expect(plan.capacity, 2);
       expect(plan.shortfall, 0);
+      expect(plan.materialLimited, isFalse);
       expect(plan.distinctStatements, 1);
       expect(plan.angledCards, 1);
       expect(plan.toString(), contains('2 карт.'));
@@ -811,22 +825,52 @@ void main() {
         ),
         throwsAssertionError,
       );
+      // Заказ больше ёмкости — не ошибка: план честно помечен `materialLimited`
+      // (срез 14), а не подменяет заказ повторами слотов.
+      final AllocationPlan small = AllocationPlan(
+        requested: 5,
+        profile: bigProfile,
+        units: <UnitBudget>[budget],
+        cards: allocateCards(<UnitBudget>[budget]),
+        batches: <AllocationBatch>[batch],
+      );
+      expect(small.plannedCards, 2);
+      expect(small.capacity, 2);
+      expect(small.shortfall, 3);
+      expect(small.materialLimited, isTrue);
+      // Карточек меньше ёмкости единиц — такой план неконструируем.
+      final UnitBudget four = UnitBudget(unit: unit(id: 'ku:1'), cards: 4);
       expect(
         () => AllocationPlan(
-          requested: 5,
+          requested: 4,
           profile: bigProfile,
-          units: <UnitBudget>[budget],
+          units: <UnitBudget>[four],
           cards: allocateCards(<UnitBudget>[budget]),
           batches: <AllocationBatch>[batch],
         ),
         throwsAssertionError,
-        reason: '2 карточки на заказ 5 — недопустимый план (сумма ≠ заказ)',
+        reason: '2 карточки на ёмкость 4 — недопустимый план',
+      );
+      // Два одинаковых слота — недопустимый план, а не «две карточки».
+      expect(
+        () => AllocationPlan(
+          requested: 2,
+          profile: bigProfile,
+          units: <UnitBudget>[budget],
+          cards: const <AllocatedCard>[
+            AllocatedCard(unitId: 'ku:1'),
+            AllocatedCard(unitId: 'ku:1'),
+          ],
+          batches: <AllocationBatch>[batch],
+        ),
+        throwsAssertionError,
+        reason: 'две основные карточки одной единицы — один слот',
       );
     });
   });
 
   group('DoD: property-тесты плана', () {
-    test('сумма == цель, минимум 1, детерминизм, профиль соблюдён', () {
+    test('min(заказ, ёмкость), минимум 1, детерминизм, профиль соблюдён', () {
       final math.Random random = math.Random(20261127);
       const List<KnowledgeUnitKind> kinds = KnowledgeUnitKind.values;
       const List<String> statements = <String>[
@@ -867,27 +911,44 @@ void main() {
           expect(plan.batches, isEmpty);
           continue;
         }
+        // Ёмкость различимых слотов: у единицы не больше kMaxCardsPerUnit,
+        // поэтому заказ больше ёмкости не конструируется повторами (срез 14).
+        final int expected = math.min(target, unitCount * kMaxCardsPerUnit);
         expect(
           plan.plannedCards,
-          target,
-          reason: 'Сумма карточек равна заказу (итерация $iteration)',
+          expected,
+          reason: 'План равен min(заказ, ёмкость слотов) (итерация $iteration)',
         );
-        expect(plan.shortfall, 0);
-        expect(plan.materialLimited, isFalse);
+        expect(plan.capacity, expected);
+        expect(plan.shortfall, target - expected);
+        expect(plan.materialLimited, expected < target);
         expect(
           plan.units.fold<int>(0, (int sum, UnitBudget b) => sum + b.cards),
-          target,
+          expected,
         );
         expect(
           plan.units,
           hasLength(math.min(unitCount, target)),
           reason: 'Отобрано ровно столько единиц, сколько покрывает заказ',
         );
+        final Set<String> slots = <String>{
+          for (final AllocatedCard card in plan.cards) card.slotKey,
+        };
+        expect(
+          slots,
+          hasLength(plan.cards.length),
+          reason: 'Ни одного повторного слота (итерация $iteration)',
+        );
         for (final UnitBudget budget in plan.units) {
           expect(
             budget.cards,
             greaterThanOrEqualTo(1),
             reason: 'Минимум 1 карточка на отобранную единицу',
+          );
+          expect(
+            budget.cards,
+            lessThanOrEqualTo(kMaxCardsPerUnit),
+            reason: 'У единицы не больше различимых слотов',
           );
           expect(
             plan.cards.where(

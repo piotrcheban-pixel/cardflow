@@ -1780,6 +1780,12 @@ abstract class AppLocalizations {
   /// **'Израсходовано токенов: {tokens}'**
   String generationReportTokens(int tokens);
 
+  /// Ёмкость различимых слотов из GenerationReport: заказ больше неё (срез 14).
+  ///
+  /// In ru, this message translates to:
+  /// **'Материала примерно на {capacity} карточек'**
+  String generationReportMaterialCapacity(int capacity);
+
   /// Причина отсутствия карты знаний: скан без текстового слоя.
   ///
   /// In ru, this message translates to:

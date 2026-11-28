@@ -1064,6 +1064,11 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String generationReportMaterialCapacity(int capacity) {
+    return 'Материала примерно на $capacity карточек';
+  }
+
+  @override
   String get generationUnderstandingNoText =>
       'В материале нет текстового слоя — понимание невозможно';
 
