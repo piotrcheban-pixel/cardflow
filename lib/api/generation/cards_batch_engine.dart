@@ -18,6 +18,7 @@ import 'package:cardflow/api/generation/batch_job_recorder.dart';
 import 'package:cardflow/api/http/retry_policy.dart';
 import 'package:cardflow/api/prompts/cards_prompt.dart';
 import 'package:cardflow/domain/generation/allocation.dart';
+import 'package:cardflow/domain/generation/candidate_deduper.dart';
 import 'package:cardflow/domain/generation/card_gate.dart';
 import 'package:cardflow/domain/generation/cards_batch.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
@@ -36,12 +37,14 @@ class CardsBatchRun {
     required this.ledger,
     List<GeneratedCard> acceptedCards = const <GeneratedCard>[],
     List<GeneratedCard> blockedCards = const <GeneratedCard>[],
+    List<GeneratedCard> deferredCards = const <GeneratedCard>[],
     this.usage = const TokenUsage(),
     required this.promptVersion,
     this.cancelled = false,
     List<Duration> batchDurations = const <Duration>[],
   }) : acceptedCards = List<GeneratedCard>.unmodifiable(acceptedCards),
        blockedCards = List<GeneratedCard>.unmodifiable(blockedCards),
+       deferredCards = List<GeneratedCard>.unmodifiable(deferredCards),
        batchDurations = List<Duration>.unmodifiable(batchDurations);
 
   /// Пустой итог (ни одного запроса).
@@ -61,6 +64,13 @@ class CardsBatchRun {
   /// В журнал «принято» не входят; хранятся для «показать отброшенные» и для
   /// учёта попыток на слот в доборе.
   final List<GeneratedCard> blockedCards;
+
+  /// Отложенные кандидаты: смысловые дубли уже принятого/колоды (срез 16).
+  ///
+  /// Не идут ни в принятое, ни в журнал; их слот остался открытым, и добор
+  /// повторит его с другим углом. Счётчики таких карточек — в журнале
+  /// (`duplicates`), уровни — у [CandidateDeduper].
+  final List<GeneratedCard> deferredCards;
 
   /// Фактический расход токенов принятых ответов.
   final TokenUsage usage;
@@ -144,9 +154,14 @@ class CardsBatchEngine {
   /// спрашивают его, поэтому в принятое и в [CardSink] попадает только карточка
   /// после проверки. `null` — прогон без проверки (совместимость тестов пути
   /// без гейта; production-фасад передаёт гейт всегда).
+  ///
+  /// [deduper] — проверка кандидата на смысловой дубль **до** принятия (срез
+  /// 16): отложенная карточка не закрывает слот и не пишется в журнал запуска,
+  /// поэтому добор повторит слот с другим углом.
   Future<CardsBatchRun> run(
     AllocationPlan plan, {
     CardGate? gate,
+    CandidateDeduper? deduper,
     CancellationSignal? cancellation,
   }) async {
     final BatchJobRecorder? recorder = jobRecorder;
@@ -163,6 +178,7 @@ class CardsBatchEngine {
     );
     final List<GeneratedCard> acceptedCards = <GeneratedCard>[];
     final List<GeneratedCard> blockedCards = <GeneratedCard>[];
+    final List<GeneratedCard> deferredCards = <GeneratedCard>[];
     final List<Duration> batchDurations = <Duration>[];
     final Map<int, List<AcceptedCard>> acceptedByBatch =
         <int, List<AcceptedCard>>{};
@@ -187,6 +203,7 @@ class CardsBatchEngine {
             acceptedCards,
             usage,
             blockedCards: blockedCards,
+            deferredCards: deferredCards,
             cancelled: true,
             batchDurations: batchDurations,
           );
@@ -253,6 +270,7 @@ class CardsBatchEngine {
             acceptedCards,
             usage,
             blockedCards: blockedCards,
+            deferredCards: deferredCards,
             cancelled: true,
             batchDurations: batchDurations,
           );
@@ -270,9 +288,11 @@ class CardsBatchEngine {
 
         // Гейт — до принятия: журнал увеличивает accepted только после
         // проверки (TASK «Срез 11», п. 2). Заблокированная карточка не идёт ни
-        // в принятое, ни в контекст партии, ни в [CardSink].
+        // в принятое, ни в контекст партии, ни в [CardSink]. Смысловой дубль
+        // (срез 16) тоже не принят: он откладывается, слот остаётся открытым.
         final List<GeneratedCard> acceptedNow = <GeneratedCard>[];
         var blockedNow = 0;
+        var duplicatesNow = 0;
         for (final GeneratedCard card in result.cards) {
           final String? unitId = card.unitId;
           if (unitId == null || slice.unit(unitId) == null) continue;
@@ -284,14 +304,25 @@ class CardsBatchEngine {
             blockedNow++;
             continue;
           }
+          if (deduper?.check(card) != null) {
+            deferredCards.add(card);
+            duplicatesNow++;
+            continue;
+          }
           acceptedNow.add(
             verdict.verdict == CardGateVerdict.warning
                 ? card.copyWith(gateReasons: verdict.reasons)
                 : card,
           );
+          // Запомнили сразу: следующая карточка того же ответа сверяется с ней,
+          // иначе пары внутри одного ответа не ловятся.
+          deduper?.remember(card);
         }
         if (blockedNow > 0) {
           ledger = ledger.record(slice.index, invalid: blockedNow);
+        }
+        if (duplicatesNow > 0) {
+          ledger = ledger.record(slice.index, duplicates: duplicatesNow);
         }
         for (final GeneratedCard card in acceptedNow) {
           acceptedCards.add(card);
@@ -309,9 +340,13 @@ class CardsBatchEngine {
         final List<AllocatedCard> debt = _debtOf(slice, acceptedNow);
         if (!result.truncated) {
           if (debt.isNotEmpty) {
+            // Дубль-отложенная карточка оставляет слот открытым — единицу
+            // нельзя объявлять исчерпанной, иначе добор не повторит слот.
             ledger = ledger.markCause(
               batch.index,
-              blockedNow > 0
+              duplicatesNow > 0
+                  ? ShortfallKind.duplicates
+                  : blockedNow > 0
                   ? ShortfallKind.validationRejects
                   : ShortfallKind.exhaustedMaterial,
             );
@@ -341,6 +376,7 @@ class CardsBatchEngine {
       acceptedCards,
       usage,
       blockedCards: blockedCards,
+      deferredCards: deferredCards,
       cancelled: false,
       batchDurations: batchDurations,
     );
@@ -362,12 +398,14 @@ class CardsBatchEngine {
     List<GeneratedCard> acceptedCards,
     TokenUsage usage, {
     required List<GeneratedCard> blockedCards,
+    required List<GeneratedCard> deferredCards,
     required bool cancelled,
     List<Duration> batchDurations = const <Duration>[],
   }) => CardsBatchRun(
     ledger: ledger,
     acceptedCards: acceptedCards,
     blockedCards: blockedCards,
+    deferredCards: deferredCards,
     usage: usage,
     promptVersion: promptVersion,
     cancelled: cancelled,

@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cardflow/api/generation/generation_cancellation.dart';
 import 'package:cardflow/api/generation/generation_diagnostics.dart';
 import 'package:cardflow/api/generation/generation_pipeline.dart';
+import 'package:cardflow/domain/generation/generation_report.dart';
 import 'package:cardflow/api/generation/system_prompt.dart';
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/cards/content_hash.dart';
@@ -213,6 +214,14 @@ void main() {
     );
     expect(result.cards, hasLength(2));
     expect(result.duplicatesRemoved, 1);
+    // Срез 16, часть 1: legacy считает дубли, которые удаляет `_acceptCard`, и
+    // отдаёт их в dupRate; поведение приёма не меняется — только счётчик.
+    final GenerationReport report = result.report!;
+    expect(report.duplicates, 1);
+    expect(report.outcome.attempted, 3, reason: 'принято 2 + дубль 1');
+    expect(report.outcome.dupRate, closeTo(1 / 3, 1e-9));
+    expect(report.outcome.accepted, 2);
+    expect(report.outcome.unique, 2, reason: 'удалённые дубли не приняты');
   });
 
   test('дедупликация с существующей колодой (content_hash)', () async {

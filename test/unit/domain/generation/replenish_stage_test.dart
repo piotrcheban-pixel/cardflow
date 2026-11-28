@@ -2,7 +2,9 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/generation/allocation.dart';
+import 'package:cardflow/domain/generation/candidate_deduper.dart';
 import 'package:cardflow/domain/generation/cards_batch.dart';
+import 'package:cardflow/domain/generation/dedup_report.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
 import 'package:cardflow/domain/generation/generation_ledger.dart';
@@ -754,6 +756,68 @@ void main() {
       );
     });
   });
+
+  group('срез 16: дубль не закрывает слот', () {
+    test('отложенный дубль оставляет слот открытым, повтор идёт с другим '
+        'углом', () async {
+      final AllocationPlan plan = _plan(<int>[1]);
+      final GenerationLedger ledger = _ledgerFor(plan);
+      // Первый кандидат — дубль; повтор того же слота модель уже не повторяет.
+      final _FakeDeduper deduper = _FakeDeduper(duplicateChecks: 1);
+      final _FakeLlmPort port = _FakeLlmPort();
+
+      final ReplenishOutcome outcome = await _stage(port)
+          .run(plan: plan, ledger: ledger, deduper: deduper);
+
+      expect(port.calls, hasLength(2), reason: 'первый проход и один повтор');
+      expect(
+        port.calls.first.cards.single.angle,
+        isNull,
+        reason: 'первый запрос — основная карточка плана',
+      );
+      expect(
+        port.calls.last.cards.single.angle?.wireName,
+        'application',
+        reason:
+            'повтор просит другой угол (у процедуры предпочтителен '
+            'application), а не тот же вопрос',
+      );
+      expect(outcome.accepted, 1, reason: 'повтор закрыл слот');
+      expect(outcome.duplicates, 1);
+      expect(outcome.reason, ReplenishStopReason.complete);
+      expect(outcome.isComplete, isTrue);
+    });
+
+    test(
+      'вторая коллизия по тому же слоту → duplicate, долг не растёт',
+      () async {
+        final AllocationPlan plan = _plan(<int>[1]);
+        final GenerationLedger ledger = _ledgerFor(plan);
+        final _FakeDeduper deduper = _FakeDeduper(duplicateChecks: 0x7fffffff);
+        final _FakeLlmPort port = _FakeLlmPort();
+
+        final ReplenishOutcome outcome = await _stage(port)
+            .run(plan: plan, ledger: ledger, deduper: deduper);
+
+        expect(
+          port.calls,
+          hasLength(2),
+          reason: 'две попытки слота: третьего запроса нет',
+        );
+        expect(
+          port.calls[1].cards.single.angle?.wireName,
+          isNot(port.calls[0].cards.single.angle?.wireName),
+          reason: 'повтор с другим углом',
+        );
+        expect(outcome.accepted, 0);
+        expect(outcome.duplicates, 2, reason: 'две коллизии по одному слоту');
+        expect(outcome.reason, ReplenishStopReason.duplicates);
+        expect(outcome.unfilledSlots, 1);
+        expect(outcome.remaining, 1, reason: 'долг не вырос от дублей');
+        expect(outcome.shortfall, ShortfallKind.duplicates);
+      },
+    );
+  });
 }
 
 // --- Помощники и фейки -----------------------------------------------------
@@ -935,6 +999,36 @@ KnowledgeUnit _unit(String id) => KnowledgeUnit(
   ],
   salience: 1,
 );
+
+/// Фейк проверки кандидатов: первые [duplicateChecks] проверок — «дубль».
+class _FakeDeduper implements CandidateDeduper {
+  _FakeDeduper({this.duplicateChecks = 0});
+
+  /// Сколько проверок ещё ответят «дубль» (0 — кандидаты уникальны).
+  int duplicateChecks;
+
+  /// Счётчик проверок: столько кандидатов путь спросил.
+  int checks = 0;
+
+  @override
+  DuplicateHit? check(GeneratedCard card) {
+    checks++;
+    if (checks > duplicateChecks) return null;
+    return const DuplicateHit(
+      level: DedupLevel.semantic,
+      otherId: 'accepted:#0',
+    );
+  }
+
+  @override
+  void remember(GeneratedCard card) {}
+
+  @override
+  Map<DedupLevel, int> get levels => const <DedupLevel, int>{};
+
+  @override
+  List<DedupPair> get pairs => const <DedupPair>[];
+}
 
 class _FakeLlmPort implements LlmPort {
   _FakeLlmPort({this.onGenerate});

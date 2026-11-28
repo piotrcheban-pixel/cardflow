@@ -40,9 +40,9 @@ import 'package:cardflow/data/generation/drift_knowledge_map_cache.dart';
 import 'package:cardflow/domain/generation/allocation.dart';
 import 'package:cardflow/domain/generation/api_key_store.dart';
 import 'package:cardflow/domain/generation/completion_verdict.dart';
-import 'package:cardflow/domain/generation/dedup_mark.dart';
 import 'package:cardflow/domain/generation/generation_card_limit.dart';
 import 'package:cardflow/domain/generation/generation_report.dart';
+import 'package:cardflow/domain/generation/dedup_mark.dart';
 import 'package:cardflow/domain/generation/generation_result.dart';
 import 'package:cardflow/domain/generation/generation_run.dart';
 import 'package:cardflow/domain/generation/model_profile.dart';
@@ -188,10 +188,6 @@ class GenerationV3PathRunner {
         promptVersions: promptVersions,
         outputTokensPerCard: outputTokensPerCard,
         deckCards: deckCards,
-        // Пометки Dedup — в строки `card_drafts` (L219): после перезапуска
-        // прогона пары восстанавливаются из журнала, а не считаются заново.
-        dedupMarks: (String id, List<DedupMark> marks) =>
-            runStore.saveDedupMarks(id, marks: marks, now: clock.now()),
       );
 
       final Document? document = documentOf(request);

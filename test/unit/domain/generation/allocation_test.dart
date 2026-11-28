@@ -165,14 +165,16 @@ void main() {
     test('формула и процедура получают не меньше двух', () {
       expect(
         unitCapacity(
-          unit(kind: KnowledgeUnitKind.formula, salience: 0.2, statement: 'PV = nRT'),
+          unit(
+            kind: KnowledgeUnitKind.formula,
+            salience: 0.2,
+            statement: 'PV = nRT',
+          ),
         ),
         greaterThanOrEqualTo(2),
       );
       expect(
-        unitCapacity(
-          unit(kind: KnowledgeUnitKind.procedure, salience: 0.2),
-        ),
+        unitCapacity(unit(kind: KnowledgeUnitKind.procedure, salience: 0.2)),
         greaterThanOrEqualTo(2),
       );
     });
@@ -189,8 +191,7 @@ void main() {
       final KnowledgeUnit richest = unit(
         kind: KnowledgeUnitKind.formula,
         salience: 1,
-        quote:
-            'Один два три. Четыре пять шесть. Семь восемь девять.',
+        quote: 'Один два три. Четыре пять шесть. Семь восемь девять.',
       );
       expect(unitCapacity(richest), kMaxCardsPerUnit);
     });
@@ -199,27 +200,22 @@ void main() {
       expect(claimCountOf('и в'), 0);
       expect(claimCountOf('Фотосинтез'), 0);
       expect(
-        claimCountOf(
-          'Первое верное утверждение. Второе верное утверждение.',
-        ),
+        claimCountOf('Первое верное утверждение. Второе верное утверждение.'),
         2,
       );
     });
 
-    test(
-      'единица с одним коротким утверждением не получает reverse+cloze+'
-      'application',
-      () {
-        final List<UnitBudget> budgets = allocateUnits(
-          units: <KnowledgeUnit>[unit(id: 'ku:1', salience: 0.5)],
-          requestedCards: 4,
-        );
-        expect(budgets.single.cards, 1);
-        final List<AllocatedCard> cards = allocateCards(budgets);
-        expect(cards, hasLength(1));
-        expect(cards.single.angle, isNull, reason: 'Ни одного угла сверх основы');
-      },
-    );
+    test('единица с одним коротким утверждением не получает reverse+cloze+'
+        'application', () {
+      final List<UnitBudget> budgets = allocateUnits(
+        units: <KnowledgeUnit>[unit(id: 'ku:1', salience: 0.5)],
+        requestedCards: 4,
+      );
+      expect(budgets.single.cards, 1);
+      final List<AllocatedCard> cards = allocateCards(budgets);
+      expect(cards, hasLength(1));
+      expect(cards.single.angle, isNull, reason: 'Ни одного угла сверх основы');
+    });
 
     test('единица с формулой получает не меньше двух карточек', () {
       final List<UnitBudget> budgets = allocateUnits(

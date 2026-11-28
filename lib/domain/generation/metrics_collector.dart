@@ -14,6 +14,7 @@ import 'package:cardflow/domain/generation/dedup_report.dart';
 import 'package:cardflow/domain/generation/generation_report.dart';
 import 'package:cardflow/domain/generation/generation_result.dart';
 import 'package:cardflow/domain/generation/generation_run.dart';
+import 'package:cardflow/domain/generation/outcome_counts.dart';
 
 /// Снимок метрик одного прогона, собранный только из [GenerationReport].
 class CollectedMetrics {
@@ -37,6 +38,7 @@ class CollectedMetrics {
     required Map<GenerationStage, int> outputTokensByStage,
     required Map<DedupLevel, int> duplicatesByLevel,
     List<UnitCoverage> units = const <UnitCoverage>[],
+    OutcomeCounts? outcome,
     this.yieldPer1kInputTokens,
     this.acceptanceRate,
     this.cleanRate,
@@ -54,7 +56,17 @@ class CollectedMetrics {
        outputTokensByStage = Map<GenerationStage, int>.unmodifiable(
          outputTokensByStage,
        ),
-       duplicatesByLevel = Map<DedupLevel, int>.unmodifiable(duplicatesByLevel);
+       duplicatesByLevel = Map<DedupLevel, int>.unmodifiable(duplicatesByLevel),
+       outcome =
+           outcome ??
+           OutcomeCounts(
+             attempted: generated,
+             accepted: accepted,
+             unique: accepted,
+             clean: cleanAccepted,
+             duplicates: duplicates,
+             blocked: 0,
+           );
 
   /// Запрошено карточек (0 — авто-режим).
   final int requested;
@@ -107,6 +119,10 @@ class CollectedMetrics {
 
   /// Дубли по уровням каскада.
   final Map<DedupLevel, int> duplicatesByLevel;
+
+  /// Исход попыток среза 16: attempted / accepted / unique / clean и
+  /// производные cleanRate/dupRate/blockRate — единый код для обоих путей.
+  final OutcomeCounts outcome;
 
   /// Пер-юнитные данные отчёта (срез 15, L230): unit_id, section_id,
   /// salience, produced, clean, warningCodes. Из них строится `matchedSubset`
@@ -187,6 +203,12 @@ class CollectedMetrics {
     'acceptance_rate': acceptanceRate,
     'clean_rate': cleanRate,
     'duplicate_rate': duplicateRate,
+    'attempted': outcome.attempted,
+    'accepted_final': outcome.accepted,
+    'unique': outcome.unique,
+    'clean': outcome.clean,
+    'dup_rate': outcome.dupRate,
+    'block_rate': outcome.blockRate,
     'coverage': coverage,
     'mean_covered_salience': meanCoveredSalience,
     'requests_per_10_cards': requestsPer10Cards,
@@ -247,6 +269,7 @@ class MetricsCollector {
       outputTokensByStage: outputByStage,
       duplicatesByLevel: duplicatesByLevel,
       units: report.unitCoverage,
+      outcome: report.outcome,
       yieldPer1kInputTokens: inputTokens <= 0
           ? null
           : report.accepted * 1000 / inputTokens,

@@ -251,6 +251,20 @@ AllocationAngle preferredAngleForKind(KnowledgeUnitKind kind) => switch (kind) {
   KnowledgeUnitKind.topic => AllocationAngle.reverse,
 };
 
+/// Порядок углов единицы: предпочтительный по виду, затем остальные.
+///
+/// Нужен повтору на слот, у которого кандидат оказался смысловым дублем (срез
+/// 16): следующий запрос идёт с первым свободным углом этого порядка, а не с
+/// тем же вопросом.
+List<AllocationAngle> angleCycleFor(KnowledgeUnit unit) {
+  final AllocationAngle preferred = preferredAngleForKind(unit.kind);
+  return <AllocationAngle>[
+    preferred,
+    for (final AllocationAngle angle in AllocationAngle.values)
+      if (angle != preferred) angle,
+  ];
+}
+
 /// Распределение заказа по единицам: минимум 1 карточка каждой отобранной,
 /// остаток — методом наибольших остатков по весам.
 ///

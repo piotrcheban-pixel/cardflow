@@ -30,6 +30,7 @@ library;
 import 'dart:math' as math;
 
 import 'package:cardflow/domain/generation/allocation.dart';
+import 'package:cardflow/domain/generation/candidate_deduper.dart';
 import 'package:cardflow/domain/generation/card_gate.dart';
 import 'package:cardflow/domain/generation/cards_batch.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
@@ -110,6 +111,12 @@ enum ReplenishStopReason {
   /// Слот закрыт: обе попытки (`ReplenishPolicy.maxAttemptsPerSlot`) дали
   /// карточку, которую гейт заблокировал (TASK «Срез 11», п. 3).
   validationRejects('validation_rejects'),
+
+  /// Слот закрыт: обе попытки (`ReplenishPolicy.maxAttemptsPerSlot`) дали
+  /// смысловой дубль уже принятого (TASK «Срез 16», п. 6). Дубль не закрывает
+  /// слот, но два дубля подряд по одному слоту означают, что другого вопроса по
+  /// этому утверждению модель не даёт.
+  duplicates('duplicates'),
 
   /// Прогон отменён пользователем; принятое сохранено.
   cancelled('cancelled'),
@@ -453,6 +460,7 @@ class ReplenishOutcome {
       ReplenishStopReason.providerError => ShortfallKind.providerError,
       ReplenishStopReason.exhaustedMaterial => ShortfallKind.exhaustedMaterial,
       ReplenishStopReason.validationRejects => ShortfallKind.validationRejects,
+      ReplenishStopReason.duplicates => ShortfallKind.duplicates,
       _ => null,
     };
   }
@@ -524,7 +532,9 @@ class ReplenishStage {
     required GenerationLedger ledger,
     List<GeneratedCard> acceptedCards = const <GeneratedCard>[],
     List<GeneratedCard> initialBlockedCards = const <GeneratedCard>[],
+    List<GeneratedCard> initialDuplicateCards = const <GeneratedCard>[],
     CardGate? gate,
+    CandidateDeduper? deduper,
     TokenUsage initialUsage = const TokenUsage(),
     DateTime? startedAt,
     CancellationSignal? cancellation,
@@ -580,6 +590,39 @@ class ReplenishStage {
       for (final MapEntry<String, int> entry in blockedAttempts.entries)
         if (entry.value >= policy.maxAttemptsPerSlot) entry.key,
     };
+    // Смысловые дубли (срез 16): карточка-дубль слот не закрывает и тратит
+    // попытку; после второй коллизии по тому же слоту он закрывается как
+    // `duplicates`, а повтор идёт с **другим** углом ([retryAngles]).
+    final Map<String, int> duplicateAttempts = <String, int>{};
+    final Set<String> duplicateClosedSlots = <String>{};
+    final Map<String, AllocationAngle> retryAngles =
+        <String, AllocationAngle>{};
+    for (final GeneratedCard card in initialDuplicateCards) {
+      final String? unitId = card.unitId;
+      if (unitId == null) continue;
+      final String slot = _slot(unitId, _normalizeAngle(card.angle));
+      if (!planSlots.contains(slot)) continue;
+      final int attempts = (duplicateAttempts[slot] ?? 0) + 1;
+      duplicateAttempts[slot] = attempts;
+      if (attempts >= policy.maxAttemptsPerSlot) {
+        duplicateClosedSlots.add(slot);
+        continue;
+      }
+      final KnowledgeUnit? unit = unitsById[unitId];
+      if (unit == null) continue;
+      // Первый повтор после коллизии первого прохода — сразу с другим углом:
+      // тот же вопрос модель повторит тем же дублем.
+      retryAngles[slot] = _nextRetryAngle(
+        unit,
+        _normalizeAngle(card.angle),
+        <String>{
+          for (final MapEntry<String, AllocationAngle> entry
+              in retryAngles.entries)
+            if (entry.key != slot && _unitOfSlot(entry.key) == unit.id)
+              entry.value.wireName,
+        },
+      );
+    }
     final List<GeneratedCard> blockedCards = <GeneratedCard>[];
     final Map<String, List<AcceptedCard>> context =
         <String, List<AcceptedCard>>{};
@@ -620,6 +663,7 @@ class ReplenishStage {
         satisfied,
         exhaustedUnits,
         rejectedSlots,
+        duplicateClosedSlots,
       );
       if (cancellation?.isCancelled ?? false) {
         reason = ReplenishStopReason.cancelled;
@@ -628,9 +672,11 @@ class ReplenishStage {
       } else if (plan.cards.isEmpty || plan.units.isEmpty) {
         reason = ReplenishStopReason.noUnitPlan;
       } else if (debt.isEmpty) {
-        reason = rejectedSlots.isEmpty
-            ? ReplenishStopReason.exhaustedMaterial
-            : ReplenishStopReason.validationRejects;
+        reason = rejectedSlots.isNotEmpty
+            ? ReplenishStopReason.validationRejects
+            : duplicateClosedSlots.isNotEmpty
+            ? ReplenishStopReason.duplicates
+            : ReplenishStopReason.exhaustedMaterial;
       } else {
         while (true) {
           if (passes.length >= policy.maxPasses) {
@@ -652,9 +698,14 @@ class ReplenishStage {
             break;
           }
 
+          final _DebtRequest request = _requestFor(
+            debt,
+            unitsById,
+            retryAngles,
+          );
           final _PassRun result = await _runPass(
             index: passes.length + 1,
-            debt: debt,
+            debt: request.cards,
             plan: plan,
             unitsById: unitsById,
             context: context,
@@ -667,8 +718,13 @@ class ReplenishStage {
             startedAt: start,
             cancellation: cancellation,
             gate: gate,
+            deduper: deduper,
             blockedAttempts: blockedAttempts,
             rejectedSlots: rejectedSlots,
+            duplicateAttempts: duplicateAttempts,
+            duplicateClosedSlots: duplicateClosedSlots,
+            retryAngles: retryAngles,
+            slotAliases: request.aliases,
           );
           passes.add(result.pass);
           batchDurations.addAll(result.batchDurations);
@@ -687,20 +743,31 @@ class ReplenishStage {
           }
           unfilled = _unfilledSlots(plan, satisfied);
           final bool blockedNow = result.pass.blocked.isNotEmpty;
-          if (result.pass.filledSlots == 0 && !blockedNow) {
+          final bool duplicatesNow = result.pass.ledger.duplicates > 0;
+          if (result.pass.filledSlots == 0 && !blockedNow && !duplicatesNow) {
             // Ответ не закрыл ни одного слота: материал по этим вопросам
             // исчерпан, добирать перефразированием запрещено (TASK п. 3).
             reason = ReplenishStopReason.exhaustedMaterial;
             break;
           }
-          debt = _debtOf(plan, satisfied, exhaustedUnits, rejectedSlots);
+          debt = _debtOf(
+            plan,
+            satisfied,
+            exhaustedUnits,
+            rejectedSlots,
+            duplicateClosedSlots,
+          );
           if (debt.isEmpty) {
             if (unfilled == 0) {
               reason = ReplenishStopReason.complete;
+            } else if (rejectedSlots.isNotEmpty) {
+              reason = ReplenishStopReason.validationRejects;
+            } else if (duplicateClosedSlots.isNotEmpty) {
+              // Обе попытки слота дали смысловой дубль: другого вопроса по
+              // этому утверждению модель не выдаёт (TASK «Срез 16», п. 6).
+              reason = ReplenishStopReason.duplicates;
             } else {
-              reason = rejectedSlots.isEmpty
-                  ? ReplenishStopReason.exhaustedMaterial
-                  : ReplenishStopReason.validationRejects;
+              reason = ReplenishStopReason.exhaustedMaterial;
             }
             break;
           }
@@ -756,6 +823,12 @@ class ReplenishStage {
   /// карточка не закрывает слот и тратит попытку [blockedAttempts]; после
   /// [ReplenishPolicy.maxAttemptsPerSlot] попыток слот попадает в
   /// [rejectedSlots] и больше не запрашивается.
+  ///
+  /// [deduper] — проверка кандидата до закрытия слота (срез 16): дубль не
+  /// принят, слот открыт; вторая коллизия закрывает его через
+  /// [duplicateClosedSlots], первый повтор идёт с другим углом ([retryAngles]).
+  /// [slotAliases] переводит слот запроса (угол повтора) в слот заказа — в
+  /// [satisfied] живут слоты плана, а не директивы повтора.
   Future<_PassRun> _runPass({
     required int index,
     required List<AllocatedCard> debt,
@@ -771,8 +844,13 @@ class ReplenishStage {
     required DateTime startedAt,
     required CancellationSignal? cancellation,
     required CardGate? gate,
+    required CandidateDeduper? deduper,
     required Map<String, int> blockedAttempts,
     required Set<String> rejectedSlots,
+    required Map<String, int> duplicateAttempts,
+    required Set<String> duplicateClosedSlots,
+    required Map<String, AllocationAngle> retryAngles,
+    required Map<String, String> slotAliases,
   }) async {
     final AllocationPlan passPlan = _passPlan(debt, plan);
     GenerationLedger passLedger = GenerationLedger.fromBudgets(<int>[
@@ -854,12 +932,15 @@ class ReplenishStage {
 
       var produced = 0;
       var blockedNow = 0;
+      var duplicatesNow = 0;
       for (final GeneratedCard card in result.cards) {
         final String? unitId = card.unitId;
         if (unitId == null || !batchUnitIds.contains(unitId)) continue;
         final KnowledgeUnit unit = unitsById[unitId]!;
         final String slot = _slot(unitId, _normalizeAngle(card.angle));
+        final String originalSlot = slotAliases[slot] ?? slot;
         final bool requested = requestedSlots.contains(slot);
+        final bool open = !satisfied.contains(originalSlot);
         // Гейт — до закрытия слота: заблокированная карточка слот не закрывает
         // и в принятое не идёт (TASK «Срез 11», п. 2). Коды пометок принятой
         // карточки сохраняются (TASK «Срез 12», п. 1).
@@ -869,15 +950,44 @@ class ReplenishStage {
         if (requested && verdict.verdict == CardGateVerdict.blocked) {
           blocked.add(card);
           blockedNow++;
-          final int attempts = (blockedAttempts[slot] ?? 0) + 1;
-          blockedAttempts[slot] = attempts;
-          if (attempts >= policy.maxAttemptsPerSlot) rejectedSlots.add(slot);
+          final int attempts = (blockedAttempts[originalSlot] ?? 0) + 1;
+          blockedAttempts[originalSlot] = attempts;
+          if (attempts >= policy.maxAttemptsPerSlot) {
+            rejectedSlots.add(originalSlot);
+          }
           continue;
         }
-        if (!satisfied.contains(slot) && requested) {
-          satisfied.add(slot);
+        // Смысловой дубль (TASK «Срез 16», п. 5): до закрытия слота и до
+        // принятия. Слот остаётся открытым, повтор пойдёт с другим углом; две
+        // коллизии подряд закрывают слот как `duplicates` (п. 6).
+        if (open && deduper?.check(card) != null) {
+          duplicatesNow++;
+          if (requested) {
+            final int attempts = (duplicateAttempts[originalSlot] ?? 0) + 1;
+            duplicateAttempts[originalSlot] = attempts;
+            if (attempts >= policy.maxAttemptsPerSlot) {
+              duplicateClosedSlots.add(originalSlot);
+            } else {
+              retryAngles[originalSlot] = _nextRetryAngle(
+                unit,
+                _normalizeAngle(card.angle),
+                <String>{
+                  for (final MapEntry<String, AllocationAngle> entry
+                      in retryAngles.entries)
+                    if (entry.key != originalSlot &&
+                        _unitOfSlot(entry.key) == unit.id)
+                      entry.value.wireName,
+                },
+              );
+            }
+          }
+          continue;
+        }
+        if (open && requested) {
+          satisfied.add(originalSlot);
           filled++;
           produced++;
+          deduper?.remember(card);
           accepted.add(
             verdict.verdict == CardGateVerdict.warning
                 ? card.copyWith(gateReasons: verdict.reasons)
@@ -894,8 +1004,9 @@ class ReplenishStage {
       }
       passLedger = passLedger.record(
         batch.index,
-        generated: produced + result.rejectedCards + blockedNow,
+        generated: produced + result.rejectedCards + blockedNow + duplicatesNow,
         invalid: result.rejectedCards + blockedNow,
+        duplicates: duplicatesNow,
       );
     }
 
@@ -950,20 +1061,84 @@ class ReplenishStage {
 
   /// Карточки заказа, которым не нашлось принятой пары и которые можно добрать.
   ///
-  /// Слоты, закрытые как `validation_rejects` (исчерпаны попытки), и единицы,
-  /// объявленные исчерпанными материалом, не запрашиваются снова.
+  /// Слоты, закрытые как `validation_rejects` (исчерпаны попытки) или
+  /// `duplicates` (две смысловые коллизии), и единицы, объявленные исчерпанными
+  /// материалом, не запрашиваются снова.
   static List<AllocatedCard> _debtOf(
     AllocationPlan plan,
     Set<String> satisfied,
     Set<String> exhaustedUnits,
     Set<String> rejectedSlots,
+    Set<String> duplicateClosedSlots,
   ) => <AllocatedCard>[
     for (final AllocatedCard card in plan.cards)
       if (!satisfied.contains(_slot(card.unitId, card.angle?.wireName)) &&
           !exhaustedUnits.contains(card.unitId) &&
-          !rejectedSlots.contains(_slot(card.unitId, card.angle?.wireName)))
+          !rejectedSlots.contains(_slot(card.unitId, card.angle?.wireName)) &&
+          !duplicateClosedSlots.contains(
+            _slot(card.unitId, card.angle?.wireName),
+          ))
         card,
   ];
+
+  /// Директивы запроса по долгу: слот с коллизией просит **другой** угол.
+  ///
+  /// Слот заказа остаётся прежним: принятая карточка закрывает именно его
+  /// ([_DebtRequest.aliases]), а угол — лишь формулировка повторного вопроса.
+  static _DebtRequest _requestFor(
+    List<AllocatedCard> debt,
+    Map<String, KnowledgeUnit> unitsById,
+    Map<String, AllocationAngle> retryAngles,
+  ) {
+    final Map<String, Set<String>> used = <String, Set<String>>{};
+    for (final AllocatedCard card in debt) {
+      used
+          .putIfAbsent(card.unitId, () => <String>{})
+          .add(card.angle?.wireName ?? 'primary');
+    }
+    final List<AllocatedCard> cards = <AllocatedCard>[];
+    final Map<String, String> aliases = <String, String>{};
+    for (final AllocatedCard card in debt) {
+      final String originalSlot = _slot(card.unitId, card.angle?.wireName);
+      final AllocationAngle? retry = retryAngles[originalSlot];
+      final KnowledgeUnit? unit = unitsById[card.unitId];
+      if (retry == null || unit == null) {
+        cards.add(card);
+        continue;
+      }
+      final Set<String> usedAngles = used[card.unitId]!;
+      AllocationAngle angle = retry;
+      if (usedAngles.contains(angle.wireName)) {
+        angle = _nextRetryAngle(unit, card.angle?.wireName, usedAngles);
+      }
+      usedAngles.add(angle.wireName);
+      cards.add(AllocatedCard(unitId: card.unitId, angle: angle));
+      aliases[_slot(card.unitId, angle.wireName)] = originalSlot;
+    }
+    return _DebtRequest(cards: cards, aliases: aliases);
+  }
+
+  /// Угол повтора: предпочтительный порядок вида, кроме угла, давшего дубль, и
+  /// занятых другими директивами этой единицы.
+  static AllocationAngle _nextRetryAngle(
+    KnowledgeUnit unit,
+    String? collided,
+    Set<String> used,
+  ) {
+    final List<AllocationAngle> cycle = angleCycleFor(unit);
+    for (final AllocationAngle angle in cycle) {
+      if (angle.wireName == collided) continue;
+      if (used.contains(angle.wireName)) continue;
+      return angle;
+    }
+    for (final AllocationAngle angle in cycle) {
+      if (angle.wireName != collided) return angle;
+    }
+    return cycle.first;
+  }
+
+  /// Единица по ключу слота (`unit_id\u0000angle`).
+  static String _unitOfSlot(String slot) => slot.split('\u0000').first;
 
   /// Сколько слотов заказа осталось без принятой карточки.
   static int _unfilledSlots(AllocationPlan plan, Set<String> satisfied) {
@@ -1067,4 +1242,15 @@ class _PassRun {
 
   /// Расход токенов этого прохода.
   final TokenUsage usage;
+}
+
+/// Директивы запроса прохода и слоты заказа, которые они закроют.
+class _DebtRequest {
+  const _DebtRequest({required this.cards, required this.aliases});
+
+  /// Карточки запроса: угол мог смениться на повторный.
+  final List<AllocatedCard> cards;
+
+  /// Слот запроса (угол повтора) → слот заказа (что реально закроется).
+  final Map<String, String> aliases;
 }

@@ -26,6 +26,7 @@ import 'package:cardflow/api/generation/understanding_service.dart';
 import 'package:cardflow/api/generation/validation/card_validator.dart';
 import 'package:cardflow/api/generation/validation/card_validator_gate.dart';
 import 'package:cardflow/domain/generation/allocation.dart';
+import 'package:cardflow/domain/generation/candidate_deduper.dart';
 import 'package:cardflow/domain/generation/card_gate.dart';
 import 'package:cardflow/domain/generation/dedup_mark.dart';
 import 'package:cardflow/domain/generation/dedup_report.dart';
@@ -33,7 +34,6 @@ import 'package:cardflow/domain/generation/generated_card.dart';
 import 'package:cardflow/domain/generation/generation_report.dart';
 import 'package:cardflow/domain/generation/generation_result.dart';
 import 'package:cardflow/domain/generation/generation_run.dart';
-import 'package:cardflow/domain/generation/generation_run_snapshot.dart';
 import 'package:cardflow/domain/generation/knowledge_map.dart';
 import 'package:cardflow/domain/generation/model_profile.dart';
 import 'package:cardflow/domain/generation/ports.dart';
@@ -107,7 +107,6 @@ class GenerationV3Facade {
     this.outputTokensPerCard = kDefaultOutputTokensPerCard,
     this.matcher = const SemanticMatcher(),
     this.deckCards,
-    this.dedupMarks,
   });
 
   /// Этап Generation (партии карточек поверх `LlmPort`).
@@ -140,12 +139,9 @@ class GenerationV3Facade {
   /// Матчер каскада Dedup (S6, ADR-050 §3.4). Новых правил фасад не пишет.
   final SemanticMatcher matcher;
 
-  /// Карточки целевой колоды для сверки «уже в колоде»; `null` — только
-  /// внутрипрогонная сверка.
+  /// Карточки целевой колоды для сверки «уже в колоде» перед первым запросом;
+  /// `null` — только внутрипрогонная сверка.
   final DeckCardsLoader? deckCards;
-
-  /// Запись пометок дедупа в журнал прогона (L219); `null` — без персиста.
-  final DedupMarkSink? dedupMarks;
 
   /// Запускает прогон: материал или тема → карточки в колоде + отчёт.
   ///
@@ -176,10 +172,19 @@ class GenerationV3Facade {
       outputTokensPerCard: outputTokensPerCard,
     );
 
+    // Dedup — до первого запроса (TASK «Срез 16», часть 2): кандидат
+    // проверяется в момент приёма, поэтому дубль не закрывает слот и не
+    // попадает в журнал запуска. Колода загружается один раз на прогон.
+    final CascadeDeduper deduper = CascadeDeduper(
+      matcher: matcher,
+      existing: await _deckDedupCards(targetDeckId),
+    );
+
     final _GateRun gated = await _generate(
       plan: plan,
       map: map,
       document: document,
+      deduper: deduper,
       cancellation: cancellation,
       startedAt: startedAt,
     );
@@ -193,14 +198,6 @@ class GenerationV3Facade {
         ? 0
         : (gated.generation?.acceptedCards.length ?? 0);
     await _persist(accepted.skip(alreadyWritten).toList(), _batchOfUnit(plan));
-    // Этап Dedup (TASK «Срез 13», часть 1): между валидацией и итоговым
-    // журналом/импортом. Дубль **не удаляется** — помечается парой каскада;
-    // строки черновиков уже записаны по ходу, пометки их дополняют (L219).
-    final _DedupOutcome deduped = await _dedup(
-      runId: runId,
-      cards: accepted,
-      targetDeckId: targetDeckId,
-    );
 
     final GenerationReport report = GenerationReport.fromReplenish(
       plan: plan,
@@ -210,12 +207,15 @@ class GenerationV3Facade {
       promptVersions: promptVersions,
       understandingFailures: understood.failures,
       batchDurations: gated.generation?.batchDurations ?? const <Duration>[],
-      duplicatesByLevel: deduped.report.byLevel,
-      acceptedCards: deduped.cards,
+      // Уровни отложенных дублей — из каскада, а не из пометок принятых:
+      // помеченных дублей в принятом больше нет (срез 16).
+      duplicatesByLevel: deduper.levels,
+      acceptedCards: accepted,
       // Срез 15 (L230): заблокированные гейтом карточки несут `unit_id` и
       // входят в произведённое единицы — иначе знаменатель per-unit занижен.
       blockedCards: gated.blocked,
-      duplicateMarked: deduped.markedCards,
+      duplicateMarked: 0,
+      blocked: gated.blocked.length,
       understandingRequests: understood.requests,
     );
     final int imported = importer == null ? 0 : await importer!(runId);
@@ -224,11 +224,19 @@ class GenerationV3Facade {
       map: map,
       plan: plan,
       report: report,
-      acceptedCards: List<GeneratedCard>.unmodifiable(deduped.cards),
+      acceptedCards: List<GeneratedCard>.unmodifiable(accepted),
       blockedCards: List<GeneratedCard>.unmodifiable(gated.blocked),
       imported: imported,
-      dedup: deduped.report,
+      dedup: DedupReport(pairs: deduper.pairs),
     );
+  }
+
+  /// Карточки целевой колоды для каскада; `null` — сверка только внутри прогона.
+  Future<List<DedupCard>> _deckDedupCards(String? targetDeckId) async {
+    if (targetDeckId == null || deckCards == null) {
+      return const <DedupCard>[];
+    }
+    return deckCards!(targetDeckId);
   }
 
   /// Понимание материала или единственная единица темы (prompt-only).
@@ -287,6 +295,7 @@ class GenerationV3Facade {
     required AllocationPlan plan,
     required KnowledgeMap map,
     required Document? document,
+    required CascadeDeduper deduper,
     required CancellationSignal? cancellation,
     required DateTime? startedAt,
   }) async {
@@ -316,6 +325,7 @@ class GenerationV3Facade {
     final CardsBatchRun generation = await engine.run(
       plan,
       gate: gate,
+      deduper: deduper,
       cancellation: cancellation,
     );
     final ReplenishOutcome outcome = await replenish.run(
@@ -325,7 +335,11 @@ class GenerationV3Facade {
       // Карточки первого прохода уже израсходовали попытку своего слота: вторая
       // блокировка закрывает слот как validation_rejects (п. 3 среза 11).
       initialBlockedCards: generation.blockedCards,
+      // Отложенные дубли первого прохода — тоже потраченная попытка слота
+      // (срез 16): повтор пойдёт с другим углом, вторая коллизия закроет слот.
+      initialDuplicateCards: generation.deferredCards,
       gate: gate,
+      deduper: deduper,
       initialUsage: generation.usage,
       startedAt: startedAt,
       cancellation: cancellation,
@@ -361,167 +375,6 @@ class GenerationV3Facade {
       await target.save(card, batchIndex: batchOfUnit[card.unitId] ?? 0);
     }
   }
-
-  /// Этап Dedup: каскад `SemanticMatcher` по принятым и целевой колоде.
-  ///
-  /// Дубль **не удаляется**: карточка помечается `possibleDuplicate` (пометка
-  /// гейта для отчёта и `issues` для предпросмотра), пара попадает в
-  /// [DedupReport], счётчики — в отчёт по уровням. Пометки пишутся в журнал
-  /// прогона, поэтому перезапуск их не теряет (L219).
-  Future<_DedupOutcome> _dedup({
-    required String runId,
-    required List<GeneratedCard> cards,
-    required String? targetDeckId,
-  }) async {
-    final List<DedupCard> incoming = <DedupCard>[
-      for (var index = 0; index < cards.length; index++)
-        DedupCard(
-          id: _runCardId(index),
-          front: cards[index].front,
-          back: cards[index].back,
-        ),
-    ];
-    List<DedupCard> existing = const <DedupCard>[];
-    if (targetDeckId != null && deckCards != null) {
-      existing = await deckCards!(targetDeckId);
-    }
-    if (incoming.isEmpty) {
-      return _DedupOutcome(
-        cards: cards,
-        report: DedupReport.empty(),
-        markedCards: 0,
-      );
-    }
-
-    final DedupReport report = matcher.match(incoming, existing: existing);
-    if (report.pairCount == 0) {
-      return _DedupOutcome(cards: cards, report: report, markedCards: 0);
-    }
-
-    // Сильнейшая пара каждой карточки прогона и вторая сторона пары.
-    final Map<int, ({DedupLevel level, String otherId})> strongest =
-        <int, ({DedupLevel level, String otherId})>{};
-    for (final DedupPair pair in report.pairs) {
-      final int? left = _runIndex(pair.leftId);
-      final int? right = _runIndex(pair.rightId);
-      // Пара внутри колоды — не наша работа: обе стороны уже в колоде.
-      if (left == null && right == null) continue;
-      if (left != null) {
-        _rememberStrongest(
-          strongest,
-          index: left,
-          level: pair.level,
-          otherId: pair.rightId,
-        );
-      }
-      if (right != null) {
-        _rememberStrongest(
-          strongest,
-          index: right,
-          level: pair.level,
-          otherId: pair.leftId,
-        );
-      }
-    }
-    if (strongest.isEmpty) {
-      return _DedupOutcome(cards: cards, report: report, markedCards: 0);
-    }
-
-    final List<GeneratedCard> markedCards = List<GeneratedCard>.of(cards);
-    final Map<String, DedupMark> marksByHash = <String, DedupMark>{};
-    for (final MapEntry<int, ({DedupLevel level, String otherId})> entry
-        in strongest.entries) {
-      final GeneratedCard card = cards[entry.key];
-      markedCards[entry.key] = card.copyWith(
-        issues: <CardIssueCode>[
-          ...card.issues.where(
-            (CardIssueCode issue) => issue != CardIssueCode.possibleDuplicate,
-          ),
-          CardIssueCode.possibleDuplicate,
-        ],
-        gateReasons: <CardReasonCode>[
-          ...card.gateReasons.where(
-            (CardReasonCode reason) =>
-                reason != CardReasonCode.possibleDuplicate,
-          ),
-          CardReasonCode.possibleDuplicate,
-        ],
-      );
-      final String hash = draftContentHashOf(card);
-      final DedupMark mark = DedupMark(
-        contentHash: hash,
-        duplicateOf: _persistableIdOf(entry.value.otherId, cards),
-        level: entry.value.level,
-      );
-      final DedupMark? previous = marksByHash[hash];
-      // Одинаковое содержимое — одна строка черновика: храним сильнейший уровень.
-      if (previous == null || mark.level.index < previous.level.index) {
-        marksByHash[hash] = mark;
-      }
-    }
-    if (dedupMarks != null && marksByHash.isNotEmpty) {
-      await dedupMarks!(runId, marksByHash.values.toList(growable: false));
-    }
-    return _DedupOutcome(
-      cards: markedCards,
-      report: report,
-      markedCards: strongest.length,
-    );
-  }
-
-  /// Помнит сильнейший уровень пары для карточки [index] (exact сильнее).
-  static void _rememberStrongest(
-    Map<int, ({DedupLevel level, String otherId})> found, {
-    required int index,
-    required DedupLevel level,
-    required String otherId,
-  }) {
-    final ({DedupLevel level, String otherId})? previous = found[index];
-    if (previous == null || level.index < previous.level.index) {
-      found[index] = (level: level, otherId: otherId);
-    }
-  }
-
-  /// Идентификатор карточки прогона в каскаде (индекс в списке принятых).
-  static String _runCardId(int index) => '$_runPrefix$index';
-
-  /// Индекс карточки прогона по идентификатору каскада; `null` — карточка
-  /// колоды.
-  static int? _runIndex(String id) {
-    if (!id.startsWith(_runPrefix)) return null;
-    return int.tryParse(id.substring(_runPrefix.length));
-  }
-
-  /// Вторая сторона пары в форме, пригодной для журнала прогона.
-  ///
-  /// Карточка прогона — её `content_hash` (ключ строки `card_drafts`);
-  /// карточка колоды — `deck:<cards.id>` (у неё нет черновика в этом прогоне).
-  static String _persistableIdOf(String id, List<GeneratedCard> cards) {
-    final int? index = _runIndex(id);
-    if (index == null) return DedupMark.deckKey(id);
-    return draftContentHashOf(cards[index]);
-  }
-
-  /// Префикс id карточки прогона в парах каскада.
-  static const String _runPrefix = 'run:';
-}
-
-/// Итог этапа Dedup: карточки с пометками, отчёт и число помеченных.
-class _DedupOutcome {
-  const _DedupOutcome({
-    required this.cards,
-    required this.report,
-    required this.markedCards,
-  });
-
-  /// Принятые карточки с пометками `possibleDuplicate` (ни одна не удалена).
-  final List<GeneratedCard> cards;
-
-  /// Пары каскада и счётчики по уровням.
-  final DedupReport report;
-
-  /// Сколько карточек прогона помечено (уровень — в [report]).
-  final int markedCards;
 }
 
 /// Понятый материал: единицы, расход этапа и коды помеченных фрагментов.

@@ -16,6 +16,7 @@ import 'package:cardflow/domain/generation/generated_card.dart';
 import 'package:cardflow/domain/generation/generation_ledger.dart';
 import 'package:cardflow/domain/generation/generation_result.dart';
 import 'package:cardflow/domain/generation/generation_run.dart';
+import 'package:cardflow/domain/generation/outcome_counts.dart';
 import 'package:cardflow/domain/generation/replenish_stage.dart';
 
 /// Машинный код причины «в материале нет текстового слоя» (срез 11, п. 10).
@@ -156,6 +157,8 @@ class GenerationReport {
     this.duplicates = 0,
     this.generated = 0,
     this.acceptedWithWarnings = 0,
+    this.acceptedDuplicates = 0,
+    this.blocked = 0,
     Map<String, int> warningCodes = const <String, int>{},
     Map<DedupLevel, int> duplicatesByLevel = const <DedupLevel, int>{},
     int? duplicateMarked,
@@ -207,6 +210,8 @@ class GenerationReport {
     List<GeneratedCard>? acceptedCards,
     List<GeneratedCard> blockedCards = const <GeneratedCard>[],
     int duplicateMarked = 0,
+    int blocked = 0,
+    int acceptedDuplicates = 0,
     int understandingRequests = 0,
   }) {
     final List<String> reasons = <String>[];
@@ -298,6 +303,8 @@ class GenerationReport {
       duplicates: outcome.duplicates,
       generated: outcome.accepted + outcome.invalid + outcome.duplicates,
       acceptedWithWarnings: acceptedWithWarnings,
+      acceptedDuplicates: acceptedDuplicates,
+      blocked: blocked,
       warningCodes: warningCodes,
       duplicatesByLevel: duplicatesByLevel,
       duplicateMarked: duplicateMarked,
@@ -328,6 +335,12 @@ class GenerationReport {
     // дважды объяснять одну потерю (TASK «Срез 11», п. 3).
     if (stopKind == ShortfallKind.validationRejects) {
       found[ShortfallKind.validationRejects] = outcome.remaining;
+      return found;
+    }
+    // Слот закрыт двумя смысловыми коллизиями (срез 16): потеря — незакрытые
+    // слоты, а не число отложенных карточек (на слот их пришлось две).
+    if (stopKind == ShortfallKind.duplicates) {
+      found[ShortfallKind.duplicates] = outcome.remaining;
       return found;
     }
     if (outcome.duplicates > 0) {
@@ -395,6 +408,17 @@ class GenerationReport {
   /// Принято карточек с пометками гейта (warning) — «грязное» принятое.
   final int acceptedWithWarnings;
 
+  /// Принято с пометкой смыслового дубля (`possibleDuplicate`).
+  ///
+  /// Нужен только `unique` в [OutcomeCounts]: у v3 пометок больше нет (дубль
+  /// откладывается до принятия, срез 16), у legacy — принятые почти-дубли.
+  final int acceptedDuplicates;
+
+  /// Отброшено жёстким дефектом (гейт v3) или проверкой поля (legacy).
+  ///
+  /// Отдельно от [invalid]: `blockRate` считается по этому числу.
+  final int blocked;
+
   /// Коды пометок принятых карточек с числами (`not_atomic`: 2, …).
   ///
   /// v3 — wire-коды `CardReasonCode`, legacy — `CardIssueCode.name`. Текстов
@@ -455,6 +479,10 @@ class GenerationReport {
 
   /// Принято без пометок гейта (`accepted − acceptedWithWarnings`).
   int get cleanAccepted => accepted - acceptedWithWarnings;
+
+  /// Исход попыток: attempted / accepted / unique / clean и производные
+  /// (TASK «Срез 16», часть 1). Один код для legacy и v3 — из этого отчёта.
+  OutcomeCounts get outcome => OutcomeCounts.fromReport(this);
 
   /// Число чистых карточек рядом с [cleanRate] (TASK «Срез 14», часть 2).
   ///

@@ -1462,6 +1462,10 @@ class GenerationPipeline implements GenerationRunner {
       duplicates: duplicates,
       generated: producedTotal,
       acceptedWithWarnings: acceptedWithWarnings,
+      // Срез 16, часть 1: legacy считает дубли, которые удаляет `_acceptCard`,
+      // и отдаёт их в `dupRate`; поведение приёма не меняется.
+      acceptedDuplicates: possibleDuplicates,
+      blocked: rejected,
       warningCodes: warningCodes,
       duplicatesByLevel: metrics.duplicatesByLevel,
       duplicateMarked: duplicates + possibleDuplicates,
