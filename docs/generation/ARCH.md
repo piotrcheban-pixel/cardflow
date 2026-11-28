@@ -76,9 +76,9 @@ application`, `kMaxCardsPerUnit = 4`). Поэтому `AllocationPlan` треб�
 запросы последовательные; обрезанный ответ делится по **границе единиц** и
 добирается остатком, а повторы и добор считаются в журнале
 (`GenerationBatchLedger.attempts`), а не в отдельном recovery-бюджете.
-Промпт — `gen-cards-v3` с обязательными `unit_id`/`angle`/`quote_ref`; канон
-A8.4 не изменён, расширение живёт отдельной проекцией
-(`cardsResponseSchemaV3`). Вход-выход этапа: `AllocationPlan` →
+Промпт — дефолтный `gen-cards-v4` (срез 18; `gen-cards-v3` сохранён) с
+обязательными `unit_id`/`angle`/`quote_ref`; канон A8.4 не изменён, расширение
+живёт отдельной проекцией (`cardsResponseSchemaV3`). Вход-выход этапа: `AllocationPlan` →
 `CardsBatchRun` (журнал, принятые карточки, версия промпта). «`RequestLedger`
 на запрос» из BACKLOG S4 по смыслу — журнал прогона с числом попыток
 (`lib/domain/generation/generation_ledger.dart`). Толкования — Q12–Q14.

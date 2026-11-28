@@ -383,7 +383,7 @@ class GenerationReport {
   /// в этом срезе не подключался).
   final Map<GenerationStage, TokenUsage> tokensByStage;
 
-  /// Версии промптов по этапам (например, `generating: gen-cards-v3`).
+  /// Версии промптов по этапам (например, `generating: gen-cards-v4`).
   final Map<String, String> promptVersions;
 
   /// Длительность прогона.

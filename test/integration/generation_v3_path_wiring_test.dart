@@ -190,7 +190,7 @@ class _RoutingTransport implements GenerationTransport {
       return _openAiResponse(_mapJson(messages));
     }
     cardCalls++;
-    expect(system, cardsSystemPromptGenCardsV3);
+    expect(system, cardsSystemPromptGenCardsV4);
     return _openAiResponse(_cardsJson(messages));
   }
 

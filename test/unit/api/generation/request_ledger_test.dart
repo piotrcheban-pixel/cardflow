@@ -399,8 +399,8 @@ void main() {
       ).run(_plannedOrder(3, profile));
 
       expect(run.promptVersion, cardsPromptVersion);
-      expect(cardsPromptVersion, 'gen-cards-v3');
-      expect(jobs.jobs['job-1']!.promptVersion, 'gen-cards-v3');
+      expect(cardsPromptVersion, 'gen-cards-v4');
+      expect(jobs.jobs['job-1']!.promptVersion, 'gen-cards-v4');
       expect(
         jobs.jobs['job-1']!.status,
         GenerationJobStatus.running,
@@ -415,7 +415,7 @@ void main() {
         account,
       ).run(_plannedOrder(2, profile));
 
-      expect(run.promptVersion, 'gen-cards-v3');
+      expect(run.promptVersion, 'gen-cards-v4');
     });
   });
 }

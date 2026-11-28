@@ -95,7 +95,7 @@ void main() {
       initialUsage: run.usage,
       promptVersions: <String, String>{
         'generating': run.promptVersion,
-        'replenishing': 'gen-cards-v3',
+        'replenishing': 'gen-cards-v4',
       },
     );
 
@@ -110,7 +110,7 @@ void main() {
       report.tokensByStage[GenerationStage.replenishing]!.totalTokens,
       150,
     );
-    expect(report.promptVersions['generating'], 'gen-cards-v3');
+    expect(report.promptVersions['generating'], 'gen-cards-v4');
   });
 }
 

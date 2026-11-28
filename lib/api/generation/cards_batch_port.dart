@@ -2,9 +2,9 @@
 ///
 /// Адаптеры (`lib/api/providers/`) не переписываются: порт строит запрос тем же
 /// `buildRequest`, отправляет его существующим `GenerationTransport` и
-/// нормализует исход в [ProviderResult]. Промпт — `gen-cards-v3`
-/// (`lib/api/prompts/cards_prompt.dart`): вход — единицы с якорями, выход —
-/// карточки с `unit_id`, `angle`, `quote_ref`.
+/// нормализует исход в [ProviderResult]. Промпт — дефолтный `gen-cards-v4`
+/// (`lib/api/prompts/cards_prompt.dart`, срез 18; v3 сохранён): вход — единицы
+/// с якорями, выход — карточки с `unit_id`, `angle`, `quote_ref`.
 ///
 /// Ошибки провайдера/транспорта пробрасываются `GenerationException`: решение
 /// о повторе (429 `Retry-After`, 5xx) принимает движок по коду ошибки, поэтому
@@ -112,7 +112,7 @@ class AdapterCardsBatchPort implements LlmPort {
       final ProviderRequest request = adapter.buildRequest(
         apiKey: apiKey,
         model: account.modelId,
-        systemPrompt: cardsSystemPromptGenCardsV3,
+        systemPrompt: cardsSystemPrompt,
         userContent: buildCardsUserContent(batch),
         maxOutputTokens: outputTokens,
         baseUrl: account.baseUrl,
@@ -163,7 +163,7 @@ class AdapterCardsBatchPort implements LlmPort {
     if (validation.rootInvalid) {
       throw const GenerationException(
         GenerationErrorCode.invalidResponse,
-        details: 'Ответ модели не по схеме карточек gen-cards-v3',
+        details: 'Ответ модели не по схеме карточек gen-cards-v4',
       );
     }
 

@@ -20,10 +20,11 @@ import 'package:cardflow/domain/generation/provider_account.dart';
 import 'package:cardflow/domain/generation/provider_protocol.dart';
 
 /// Срез 5, п. 1: `LlmPort` реализуется поверх **существующих** адаптеров.
-/// Порт строит запрос промптом `gen-cards-v3` (единицы с якорями), отправляет
-/// его существующим транспортом и нормализует ответ адаптера: карточки с
-/// `unit_id`/`angle`/`quote_ref`; отказ/ошибка — `GenerationException` для
-/// движка; обрезанный ответ — спасённые полные карточки.
+/// Срез 18: порт строит запрос **дефолтным** промптом `gen-cards-v4` (единицы
+/// с якорями), отправляет его существующим транспортом и нормализует ответ
+/// адаптера: карточки с `unit_id`/`angle`/`quote_ref`; отказ/ошибка —
+/// `GenerationException` для движка; обрезанный ответ — спасённые полные
+/// карточки.
 void main() {
   const ProviderAccount account = ProviderAccount(
     id: 'acc-1',
@@ -34,7 +35,7 @@ void main() {
   );
 
   test(
-    'запрос: промпт gen-cards-v3, единицы с якорями и v3-схема ответа',
+    'запрос: дефолтный промпт gen-cards-v4, единицы с якорями и v3-схема',
     () async {
       final _FakeTransport transport = _FakeTransport.success(
         _openAiResponse(<Map<String, Object?>>[_card()]),
@@ -48,7 +49,8 @@ void main() {
       final List<Object?> messages = request.body['messages']! as List<Object?>;
       final Map<String, Object?> system =
           messages.first! as Map<String, Object?>;
-      expect(system['content'], cardsSystemPromptGenCardsV3);
+      expect(system['content'], cardsSystemPrompt);
+      expect(system['content'], cardsSystemPromptGenCardsV4);
       final Map<String, Object?> user = messages.last! as Map<String, Object?>;
       final String userContent = user['content']! as String;
       expect(userContent, contains('<unit id="ku:A"'));
@@ -94,7 +96,7 @@ void main() {
 
     expect(result.provider, account.protocol.adapterProvider);
     expect(result.model, 'deepseek-chat');
-    expect(result.promptVersion, 'gen-cards-v3');
+    expect(result.promptVersion, 'gen-cards-v4');
     expect(result.cards.length, 2);
     expect(result.rejectedCards, 0);
     expect(result.truncated, isFalse);
