@@ -143,6 +143,52 @@ void main() {
     expect(json.containsKey('front'), isFalse);
   });
 
+  test('пер-юнитные данные — в JSON стенда (срез 15, L230)', () {
+    final CollectedMetrics metrics = const MetricsCollector().collect(
+      reportOf(
+        unitCoverage: const <UnitCoverage>[
+          UnitCoverage(
+            unitId: 'ku:sec1#0',
+            sectionId: 'sec1',
+            planned: 2,
+            accepted: 2,
+            produced: 2,
+            clean: 1,
+            salience: 0.9,
+            warningCodes: <String, int>{'not_atomic': 1},
+          ),
+          UnitCoverage(
+            unitId: 'ku:sec1#1',
+            sectionId: 'sec1',
+            planned: 2,
+            accepted: 0,
+            produced: 0,
+            clean: 0,
+            salience: 0.4,
+          ),
+        ],
+      ),
+    );
+    final List<Object?> units = metrics.toJson()['unit_coverage']! as List<Object?>;
+
+    expect(units, hasLength(2));
+    expect(units.first, <String, Object?>{
+      'unit_id': 'ku:sec1#0',
+      'section_id': 'sec1',
+      'salience': 0.9,
+      'planned': 2,
+      'accepted': 2,
+      'produced': 2,
+      'clean': 1,
+      'warning_codes': <String, int>{'not_atomic': 1},
+    });
+    expect(
+      (units.first! as Map<String, Object?>)['front'],
+      isNull,
+      reason: 'текстов карточек в матрице нет',
+    );
+  });
+
   test('пустые данные — null, а не ноль', () {
     final CollectedMetrics metrics = const MetricsCollector().collect(
       reportOf(

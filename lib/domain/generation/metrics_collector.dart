@@ -36,6 +36,7 @@ class CollectedMetrics {
     required Map<GenerationStage, int> inputTokensByStage,
     required Map<GenerationStage, int> outputTokensByStage,
     required Map<DedupLevel, int> duplicatesByLevel,
+    List<UnitCoverage> units = const <UnitCoverage>[],
     this.yieldPer1kInputTokens,
     this.acceptanceRate,
     this.cleanRate,
@@ -46,6 +47,7 @@ class CollectedMetrics {
     this.p50BatchDuration,
     this.p95BatchDuration,
   }) : warningCodes = Map<String, int>.unmodifiable(warningCodes),
+       units = List<UnitCoverage>.unmodifiable(units),
        inputTokensByStage = Map<GenerationStage, int>.unmodifiable(
          inputTokensByStage,
        ),
@@ -106,6 +108,11 @@ class CollectedMetrics {
   /// Дубли по уровням каскада.
   final Map<DedupLevel, int> duplicatesByLevel;
 
+  /// Пер-юнитные данные отчёта (срез 15, L230): unit_id, section_id,
+  /// salience, produced, clean, warningCodes. Из них строится `matchedSubset`
+  /// без допущений по `coverage`.
+  final List<UnitCoverage> units;
+
   /// Принято карточек на 1000 входных токенов; `null` — входа нет.
   final double? yieldPer1kInputTokens;
 
@@ -163,6 +170,19 @@ class CollectedMetrics {
       for (final MapEntry<DedupLevel, int> entry in duplicatesByLevel.entries)
         entry.key.wireName: entry.value,
     },
+    'unit_coverage': <Map<String, Object?>>[
+      for (final UnitCoverage unit in units)
+        <String, Object?>{
+          'unit_id': unit.unitId,
+          'section_id': unit.sectionId,
+          'salience': unit.salience,
+          'planned': unit.planned,
+          'accepted': unit.accepted,
+          'produced': unit.produced,
+          'clean': unit.clean,
+          'warning_codes': unit.warningCodes,
+        },
+    ],
     'yield_per_1k_input_tokens': yieldPer1kInputTokens,
     'acceptance_rate': acceptanceRate,
     'clean_rate': cleanRate,
@@ -226,6 +246,7 @@ class MetricsCollector {
       inputTokensByStage: inputByStage,
       outputTokensByStage: outputByStage,
       duplicatesByLevel: duplicatesByLevel,
+      units: report.unitCoverage,
       yieldPer1kInputTokens: inputTokens <= 0
           ? null
           : report.accepted * 1000 / inputTokens,

@@ -746,6 +746,12 @@ class GenerationPipeline implements GenerationRunner {
     var rejected = initialRejected;
     var trimmed = 0;
     final Map<String, int> producedBySection = <String, int>{};
+    // Срез 15 (L230): пер-раздельные чистые и коды пометок. Legacy не сообщает
+    // раздел конкретной карточки, поэтому чистые и коды разносятся по разделам
+    // партии тем же правилом, что и произведённое (приближение, Q27).
+    final Map<String, int> cleanBySection = <String, int>{};
+    final Map<String, Map<String, int>> codesBySection =
+        <String, Map<String, int>>{};
     var recoveryRequests = 0;
     var failedRequests = 0;
     final int recoveryBudget = _recoveryBudgetFor(plan);
@@ -1096,6 +1102,40 @@ class GenerationPipeline implements GenerationRunner {
           if (remainder > 0) remainder--;
           producedBySection[section] = (producedBySection[section] ?? 0) + add;
         }
+        // Чистые карточки партии — тем же правилом распределения: раздел у
+        // принятой карточки модель не сообщает (Q27).
+        final int cleanInChunk = <GeneratedCard>[
+          for (var i = imageStart; i < cards.length; i++) cards[i],
+        ].where((GeneratedCard card) => card.issues.isEmpty).length;
+        if (cleanInChunk > 0) {
+          final int cleanBase = cleanInChunk ~/ chunkSections.length;
+          int cleanRemainder = cleanInChunk % chunkSections.length;
+          for (final String section in chunkSections) {
+            final int add = cleanBase + (cleanRemainder > 0 ? 1 : 0);
+            if (cleanRemainder > 0) cleanRemainder--;
+            cleanBySection[section] = (cleanBySection[section] ?? 0) + add;
+          }
+        }
+        final Map<String, int> chunkCodes = <String, int>{};
+        for (var i = imageStart; i < cards.length; i++) {
+          for (final CardIssueCode code in cards[i].issues) {
+            chunkCodes[code.name] = (chunkCodes[code.name] ?? 0) + 1;
+          }
+        }
+        for (final MapEntry<String, int> entry in chunkCodes.entries) {
+          final int codeBase = entry.value ~/ chunkSections.length;
+          int codeRemainder = entry.value % chunkSections.length;
+          for (final String section in chunkSections) {
+            final int add = codeBase + (codeRemainder > 0 ? 1 : 0);
+            if (codeRemainder > 0) codeRemainder--;
+            if (add == 0) continue;
+            final Map<String, int> codes = codesBySection.putIfAbsent(
+              section,
+              () => <String, int>{},
+            );
+            codes[entry.key] = (codes[entry.key] ?? 0) + add;
+          }
+        }
       }
       if (result.usage.completionTokens != null && acceptedInChunk > 0) {
         batchFacts.add(
@@ -1231,10 +1271,16 @@ class GenerationPipeline implements GenerationRunner {
                 if ((planForCoverage.allocation?.forSection(section.id) ?? 0) >
                     0)
                   GenerationSectionCoverage(
+                    // Срез 15: короткий id — для промптов/фокуса, полный —
+                    // общий ключ сопоставления с единицами карты v3.
                     sectionId: section.promptId,
+                    fullSectionId: section.id,
                     allocated:
                         planForCoverage.allocation?.forSection(section.id) ?? 0,
                     produced: producedBySection[section.promptId] ?? 0,
+                    clean: cleanBySection[section.promptId] ?? 0,
+                    warningCodes:
+                        codesBySection[section.promptId] ?? const <String, int>{},
                     exhausted: exhaustedSections.contains(section.promptId),
                   ),
         ];
@@ -1394,8 +1440,12 @@ class GenerationPipeline implements GenerationRunner {
         for (final GenerationSectionCoverage coverage in sectionCoverage)
           UnitCoverage(
             unitId: coverage.sectionId,
+            sectionId: coverage.fullSectionId ?? coverage.sectionId,
             planned: coverage.allocated,
             accepted: coverage.produced,
+            produced: coverage.produced,
+            clean: coverage.clean,
+            warningCodes: coverage.warningCodes,
           ),
       ],
       tokensByStage: <GenerationStage, TokenUsage>{

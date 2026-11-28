@@ -25,22 +25,47 @@ import 'package:cardflow/domain/generation/replenish_stage.dart';
 /// ARB на слое UI.
 const String kNoTextLayerCode = 'no_text_layer';
 
-/// Покрытие единицы знания: сколько карточек заказано и сколько принято.
+/// Покрытие единицы знания: сколько карточек заказано, сколько произведено и
+/// принято, сколько из принятых — чистые.
+///
+/// Срез 15 (L230): кроме заказа и принятого, отчёт несёт **пер-юнитные**
+/// `produced`, `clean` и `warningCodes`, а также `sectionId` — раздел
+/// материала, по которому единицы двух путей сопоставимы (у v3 это
+/// `KnowledgeUnit.sectionId`, у legacy — сам раздел). Без этих полей
+/// `matchedSubset` строится по агрегату `coverage`, то есть по допущению.
 class UnitCoverage {
   /// Создаёт запись покрытия.
+  ///
+  /// [produced] по умолчанию равен [accepted] (legacy не различает
+  /// произведённое и принятое), [clean] — `0`: «чистых не передали» не значит
+  /// «все чистые».
   const UnitCoverage({
     required this.unitId,
     required this.planned,
     required this.accepted,
     this.salience,
-  }) : assert(planned >= 0, 'Заказ по единице не может быть отрицательным'),
+    this.sectionId,
+    int? produced,
+    int? clean,
+    this.warningCodes = const <String, int>{},
+  }) : produced = produced ?? accepted,
+       clean = clean ?? 0,
+       assert(planned >= 0, 'Заказ по единице не может быть отрицательным'),
        assert(accepted >= 0, 'Принятое по единице не может быть отрицательным'),
+       assert(
+         produced == null || produced >= 0,
+         'Произведённое по единице не может быть отрицательным',
+       ),
+       assert(
+         clean == null || (clean >= 0 && clean <= accepted),
+         'Чистых по единице не больше принятых',
+       ),
        assert(
          salience == null || (salience >= 0 && salience <= 1),
          'Значимость единицы — в диапазоне 0..1',
        );
 
-  /// id единицы карты знаний.
+  /// id единицы карты знаний (v3) или раздела (legacy).
   final String unitId;
 
   /// Сколько карточек по единице заказано в плане.
@@ -48,6 +73,22 @@ class UnitCoverage {
 
   /// Сколько карточек по единице принято.
   final int accepted;
+
+  /// Сколько карточек модели отнесено к единице: принято + заблокировано
+  /// гейтом (у legacy отброшенные раздел не называют и сюда не входят).
+  final int produced;
+
+  /// Сколько принятых карточек единицы без пометок гейта.
+  final int clean;
+
+  /// Коды пометок гейта по единице (`not_atomic`: 1, …).
+  final Map<String, int> warningCodes;
+
+  /// Раздел материала — общий ключ сопоставления путей (срез 15).
+  ///
+  /// У v3 — `KnowledgeUnit.sectionId`; у legacy — id раздела. `null` — у
+  /// единицы нет разреза (id единиц разных путей несопоставимы напрямую).
+  final String? sectionId;
 
   /// Значимость единицы карты (`KnowledgeUnit.salience`); `null` — у пути нет
   /// карты знаний (legacy-разделы): средняя значимость не выдумывается.
@@ -63,10 +104,34 @@ class UnitCoverage {
           other.unitId == unitId &&
           other.planned == planned &&
           other.accepted == accepted &&
-          other.salience == salience;
+          other.produced == produced &&
+          other.clean == clean &&
+          other.salience == salience &&
+          other.sectionId == sectionId &&
+          _sameCodes(other.warningCodes, warningCodes);
 
   @override
-  int get hashCode => Object.hash(unitId, planned, accepted, salience);
+  int get hashCode => Object.hash(
+    unitId,
+    planned,
+    accepted,
+    produced,
+    clean,
+    salience,
+    sectionId,
+    Object.hashAllUnordered(<int>[
+      for (final MapEntry<String, int> entry in warningCodes.entries)
+        Object.hash(entry.key, entry.value),
+    ]),
+  );
+
+  static bool _sameCodes(Map<String, int> left, Map<String, int> right) {
+    if (left.length != right.length) return false;
+    for (final MapEntry<String, int> entry in left.entries) {
+      if (right[entry.key] != entry.value) return false;
+    }
+    return true;
+  }
 
   @override
   String toString() => 'UnitCoverage($unitId, $accepted/$planned)';
@@ -140,6 +205,7 @@ class GenerationReport {
     List<Duration> batchDurations = const <Duration>[],
     Map<DedupLevel, int> duplicatesByLevel = const <DedupLevel, int>{},
     List<GeneratedCard>? acceptedCards,
+    List<GeneratedCard> blockedCards = const <GeneratedCard>[],
     int duplicateMarked = 0,
     int understandingRequests = 0,
   }) {
@@ -158,6 +224,10 @@ class GenerationReport {
       plannedByUnit[card.unitId] = (plannedByUnit[card.unitId] ?? 0) + 1;
     }
     final Map<String, int> acceptedByUnit = <String, int>{};
+    final Map<String, int> producedByUnit = <String, int>{};
+    final Map<String, int> cleanByUnit = <String, int>{};
+    final Map<String, Map<String, int>> codesByUnit =
+        <String, Map<String, int>>{};
     final Map<String, int> warningCodes = <String, int>{};
     var acceptedWithWarnings = 0;
     // Пометки считаются по карточкам **после** этапа Dedup (срез 13, часть 1):
@@ -169,12 +239,31 @@ class GenerationReport {
       final String? unitId = card.unitId;
       if (unitId != null) {
         acceptedByUnit[unitId] = (acceptedByUnit[unitId] ?? 0) + 1;
+        producedByUnit[unitId] = (producedByUnit[unitId] ?? 0) + 1;
+        if (card.gateReasons.isEmpty) {
+          cleanByUnit[unitId] = (cleanByUnit[unitId] ?? 0) + 1;
+        } else {
+          final Map<String, int> codes = codesByUnit.putIfAbsent(
+            unitId,
+            () => <String, int>{},
+          );
+          for (final CardReasonCode code in card.gateReasons) {
+            codes[code.wireName] = (codes[code.wireName] ?? 0) + 1;
+          }
+        }
       }
       if (card.gateReasons.isEmpty) continue;
       acceptedWithWarnings++;
       for (final CardReasonCode code in card.gateReasons) {
         warningCodes[code.wireName] = (warningCodes[code.wireName] ?? 0) + 1;
       }
+    }
+    // Заблокированные гейтом карточки произведены моделью и несут `unit_id`:
+    // в честной базе это знаменатель единицы, а не «не было» (срез 15).
+    for (final GeneratedCard card in blockedCards) {
+      final String? unitId = card.unitId;
+      if (unitId == null) continue;
+      producedByUnit[unitId] = (producedByUnit[unitId] ?? 0) + 1;
     }
 
     return GenerationReport(
@@ -187,8 +276,13 @@ class GenerationReport {
         for (final UnitBudget budget in plan.units)
           UnitCoverage(
             unitId: budget.unit.id,
+            sectionId: budget.unit.sectionId,
             planned: plannedByUnit[budget.unit.id] ?? budget.cards,
             accepted: acceptedByUnit[budget.unit.id] ?? 0,
+            produced: producedByUnit[budget.unit.id] ?? 0,
+            clean: cleanByUnit[budget.unit.id] ?? 0,
+            warningCodes:
+                codesByUnit[budget.unit.id] ?? const <String, int>{},
             salience: budget.unit.salience,
           ),
       ],

@@ -212,6 +212,9 @@ class GenerationV3Facade {
       batchDurations: gated.generation?.batchDurations ?? const <Duration>[],
       duplicatesByLevel: deduped.report.byLevel,
       acceptedCards: deduped.cards,
+      // Срез 15 (L230): заблокированные гейтом карточки несут `unit_id` и
+      // входят в произведённое единицы — иначе знаменатель per-unit занижен.
+      blockedCards: gated.blocked,
       duplicateMarked: deduped.markedCards,
       understandingRequests: understood.requests,
     );

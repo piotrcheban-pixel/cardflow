@@ -198,6 +198,178 @@ class MatchedSubset {
   double? get v3CleanRate => v3Generated <= 0 ? null : v3Clean / v3Generated;
 }
 
+/// Порог решающей базы: меньше 10 единиц — ячейка нерешающая (TASK срез 15,
+/// п. 9). При малой базе одно-два предупреждения дают десятки процентов
+/// разницы, и вывод «выполнен/не выполнен» из них не следует.
+const int kMinMatchedUnits = 10;
+
+/// Одна строка пер-юнитных данных отчёта: произведено и чисто по единице.
+///
+/// [unitId] — id единицы своего пути (v3 — единица карты `ku:…`, legacy —
+/// раздел), [sectionId] — раздел материала: общий ключ сопоставления, потому
+/// что пространства id единиц у путей разные (`journal/QUESTIONS.md` Q27).
+class ProductionUnit {
+  /// Создаёт строку; [warningCodes] копируется вызывающим слоем как есть.
+  const ProductionUnit({
+    required this.unitId,
+    required this.produced,
+    required this.clean,
+    this.sectionId,
+    this.salience,
+    this.warningCodes = const <String, int>{},
+  }) : assert(produced >= 0, 'Произведённое не может быть отрицательным'),
+       assert(clean >= 0 && clean <= produced, 'Чистых не больше произведённых'),
+       assert(
+         salience == null || (salience >= 0 && salience <= 1),
+         'Значимость единицы — в диапазоне 0..1',
+       );
+
+  /// id единицы своего пути.
+  final String unitId;
+
+  /// Раздел материала (общий ключ сопоставления); `null` — ключ по [unitId].
+  final String? sectionId;
+
+  /// Произведено карточек по единице (включая заблокированные гейтом).
+  final int produced;
+
+  /// Чистых карточек по единице (принятые без пометок).
+  final int clean;
+
+  /// Значимость единицы; `null` — у пути нет карты знаний.
+  final double? salience;
+
+  /// Коды пометок единицы (для отчёта/диагностики).
+  final Map<String, int> warningCodes;
+}
+
+/// Сопоставимая база, построенная **из пер-юнитных данных** (TASK срез 15).
+///
+/// Правило: единица входит в базу, если оба пути произвели по ней хотя бы одну
+/// карточку. Сопоставление идёт по общему ключу — разделу материала, если он
+/// известен, иначе по id единицы. Живые пути различаются пространством id
+/// единиц (v3 — единицы карты, legacy — разделы), поэтому база строится по
+/// разделу: единицей статистики остаётся единица карты v3 внутри сопоставимых
+/// разделов ([v3UnitCount]).
+///
+/// «Топ-N по salience» ([MatchedUnitBase.of] `topUnits`): значимость раздела —
+/// максимум значимости его единиц; при равенстве порядок — по ключу, поэтому
+/// результат детерминирован.
+class MatchedUnitBase {
+  MatchedUnitBase._({
+    required this.keys,
+    required this.legacyProduced,
+    required this.legacyClean,
+    required this.v3Produced,
+    required this.v3Clean,
+    required this.legacyUnitCount,
+    required this.v3UnitCount,
+  });
+
+  /// Строит базу из пер-юнитных данных обоих путей.
+  factory MatchedUnitBase.of({
+    required Iterable<ProductionUnit> legacy,
+    required Iterable<ProductionUnit> v3,
+    int? topUnits,
+  }) {
+    final List<ProductionUnit> legacyRows = List<ProductionUnit>.of(legacy);
+    final List<ProductionUnit> v3Rows = List<ProductionUnit>.of(v3);
+    final Set<String> legacyKeys = <String>{
+      for (final ProductionUnit row in legacyRows)
+        if (row.produced > 0) _keyOf(row),
+    };
+    final Set<String> v3Keys = <String>{
+      for (final ProductionUnit row in v3Rows)
+        if (row.produced > 0) _keyOf(row),
+    };
+    Set<String> selected = legacyKeys.intersection(v3Keys);
+    if (topUnits != null && selected.length > topUnits) {
+      final Map<String, double> salience = <String, double>{};
+      for (final ProductionUnit row in v3Rows) {
+        final String key = _keyOf(row);
+        if (!selected.contains(key)) continue;
+        final double value = row.salience ?? 0;
+        if (value > (salience[key] ?? double.negativeInfinity)) {
+          salience[key] = value;
+        }
+      }
+      final List<String> ordered = selected.toList()
+        ..sort((String a, String b) {
+          final int bySalience = (salience[b] ?? 0).compareTo(salience[a] ?? 0);
+          return bySalience != 0 ? bySalience : a.compareTo(b);
+        });
+      selected = ordered.take(topUnits).toSet();
+    }
+    var legacyProduced = 0;
+    var legacyClean = 0;
+    var v3Produced = 0;
+    var v3Clean = 0;
+    var legacyUnits = 0;
+    var v3Units = 0;
+    for (final ProductionUnit row in legacyRows) {
+      if (!selected.contains(_keyOf(row))) continue;
+      legacyProduced += row.produced;
+      legacyClean += row.clean;
+      legacyUnits++;
+    }
+    for (final ProductionUnit row in v3Rows) {
+      if (!selected.contains(_keyOf(row))) continue;
+      v3Produced += row.produced;
+      v3Clean += row.clean;
+      v3Units++;
+    }
+    return MatchedUnitBase._(
+      keys: Set<String>.unmodifiable(selected),
+      legacyProduced: legacyProduced,
+      legacyClean: legacyClean,
+      v3Produced: v3Produced,
+      v3Clean: v3Clean,
+      legacyUnitCount: legacyUnits,
+      v3UnitCount: v3Units,
+    );
+  }
+
+  /// Ключ сопоставления: раздел материала, иначе id единицы.
+  static String _keyOf(ProductionUnit row) => row.sectionId ?? row.unitId;
+
+  /// Ключи (разделы/единицы), вошедшие в базу.
+  final Set<String> keys;
+
+  /// Произведено карточек legacy на базе.
+  final int legacyProduced;
+
+  /// Чистых карточек legacy на базе.
+  final int legacyClean;
+
+  /// Произведено карточек v3 на базе.
+  final int v3Produced;
+
+  /// Чистых карточек v3 на базе.
+  final int v3Clean;
+
+  /// Строк legacy в базе (разделы).
+  final int legacyUnitCount;
+
+  /// Единиц карты v3 в базе — «число единиц в matchedSubset» для порога.
+  final int v3UnitCount;
+
+  /// Число сопоставимых разрезов (разделов).
+  int get sectionCount => keys.length;
+
+  /// cleanRate legacy на сопоставимой базе; `null` — произведённых нет.
+  double? get legacyCleanRate =>
+      legacyProduced <= 0 ? null : legacyClean / legacyProduced;
+
+  /// cleanRate v3 на сопоставимой базе; `null` — произведённых нет.
+  double? get v3CleanRate => v3Produced <= 0 ? null : v3Clean / v3Produced;
+
+  /// true — база решающая: единиц не меньше [kMinMatchedUnits] и числа есть.
+  bool get isDecisive =>
+      v3UnitCount >= kMinMatchedUnits &&
+      legacyCleanRate != null &&
+      v3CleanRate != null;
+}
+
 /// cleanRate на сопоставимой базе из **агрегатов** `matrix.jsonl`.
 ///
 /// В существующей матрице нет пер-юнитных карточек, но есть `coverage`
@@ -228,13 +400,20 @@ enum FlagCriterionVerdict {
 
 /// Критерий флага: `cleanRate_matched` v3 ≥ 95 % И `absoluteClean` v3 не
 /// меньше legacy — на решающей ячейке.
+///
+/// [matchedUnits] — число единиц сопоставимой базы: меньше [kMinMatchedUnits]
+/// делает ячейку нерешающей даже при наличии чисел (TASK срез 15, п. 9).
 FlagCriterionVerdict flagCriterion({
   required int requested,
   required double? v3CleanRateMatched,
   required int v3AbsoluteClean,
   required int legacyAbsoluteClean,
+  int? matchedUnits,
 }) {
   if (!isDecisiveCell(requested)) return FlagCriterionVerdict.notDecisive;
+  if (matchedUnits != null && matchedUnits < kMinMatchedUnits) {
+    return FlagCriterionVerdict.notDecisive;
+  }
   if (v3CleanRateMatched == null) return FlagCriterionVerdict.notMet;
   final bool clean = v3CleanRateMatched >= kFlagCleanRateThreshold;
   final bool volume = v3AbsoluteClean >= legacyAbsoluteClean;

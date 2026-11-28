@@ -188,18 +188,37 @@ class GenerationChunkFailure {
 /// [sectionId] — короткий id раздела (`promptId`), [allocated] — сколько
 /// карточек плану выделено, [produced] — сколько принято из ответов,
 /// [exhausted] — раздел помечен исчерпанным.
+///
+/// Срез 15 (L230): [fullSectionId] — полный id раздела (`doc:<файл>#N`, тот же,
+/// что у единиц карты v3) — общий ключ сопоставления путей; [clean] — принятые
+/// без пометок; [warningCodes] — коды пометок раздела. Legacy не сообщает
+/// раздел у отброшенной карточки, поэтому `produced`/`clean`/`warningCodes`
+/// разносятся по разделам партии равномерно — это приближение, а не догадка
+/// о конкретной карточке (см. `journal/QUESTIONS.md` Q27).
 class GenerationSectionCoverage {
   const GenerationSectionCoverage({
     required this.sectionId,
     required this.allocated,
     required this.produced,
     required this.exhausted,
+    this.fullSectionId,
+    this.clean = 0,
+    this.warningCodes = const <String, int>{},
   });
 
   final String sectionId;
   final int allocated;
   final int produced;
   final bool exhausted;
+
+  /// Полный стабильный id раздела (`doc:<файл>#N`); `null` — план без него.
+  final String? fullSectionId;
+
+  /// Принятые карточки раздела без пометок.
+  final int clean;
+
+  /// Коды пометок принятых карточек раздела.
+  final Map<String, int> warningCodes;
 }
 
 /// Результат запуска генерации.

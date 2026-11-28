@@ -87,8 +87,11 @@ void main() {
         report.unitCoverage[2],
         UnitCoverage(
           unitId: 'U2',
+          sectionId: 'doc:материал.md#0',
           planned: 4,
           accepted: 4,
+          produced: 4,
+          clean: 4,
           salience: _unit('U2').salience,
         ),
       );
@@ -96,8 +99,11 @@ void main() {
         report.unitCoverage[2].hashCode,
         UnitCoverage(
           unitId: 'U2',
+          sectionId: 'doc:материал.md#0',
           planned: 4,
           accepted: 4,
+          produced: 4,
+          clean: 4,
           salience: _unit('U2').salience,
         ).hashCode,
       );
