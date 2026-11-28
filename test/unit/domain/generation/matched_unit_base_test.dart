@@ -10,18 +10,8 @@ void main() {
   group('MatchedUnitBase: база из пер-юнитных данных', () {
     // u1/u2 — общие разделы, sec3 — только у v3: из базы выпадает.
     const List<ProductionUnit> legacy = <ProductionUnit>[
-      ProductionUnit(
-        unitId: 's1',
-        sectionId: 'sec1',
-        produced: 3,
-        clean: 2,
-      ),
-      ProductionUnit(
-        unitId: 's2',
-        sectionId: 'sec2',
-        produced: 4,
-        clean: 4,
-      ),
+      ProductionUnit(unitId: 's1', sectionId: 'sec1', produced: 3, clean: 2),
+      ProductionUnit(unitId: 's2', sectionId: 'sec2', produced: 4, clean: 4),
     ];
     const List<ProductionUnit> v3 = <ProductionUnit>[
       ProductionUnit(
@@ -70,20 +60,23 @@ void main() {
       expect(base.v3CleanRate, closeTo(4 / 5, 1e-9));
     });
 
-    test('топ-N по salience: значимость раздела — максимум значимости единиц', () {
-      final MatchedUnitBase top = MatchedUnitBase.of(
-        legacy: legacy,
-        v3: v3,
-        topUnits: 1,
-      );
+    test(
+      'топ-N по salience: значимость раздела — максимум значимости единиц',
+      () {
+        final MatchedUnitBase top = MatchedUnitBase.of(
+          legacy: legacy,
+          v3: v3,
+          topUnits: 1,
+        );
 
-      expect(top.keys, <String>{'sec1'});
-      expect(top.legacyProduced, 3);
-      expect(top.legacyClean, 2);
-      expect(top.v3Produced, 3);
-      expect(top.v3Clean, 2);
-      expect(top.v3UnitCount, 2);
-    });
+        expect(top.keys, <String>{'sec1'});
+        expect(top.legacyProduced, 3);
+        expect(top.legacyClean, 2);
+        expect(top.v3Produced, 3);
+        expect(top.v3Clean, 2);
+        expect(top.v3UnitCount, 2);
+      },
+    );
 
     test('нет общего ключа — пустая база, а не выдуманное число', () {
       final MatchedUnitBase base = MatchedUnitBase.of(

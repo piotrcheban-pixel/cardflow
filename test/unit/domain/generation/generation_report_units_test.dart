@@ -33,11 +33,9 @@ void main() {
       ]);
       final List<GeneratedCard> accepted = <GeneratedCard>[
         _card(plan, 'U0', null),
-        _card(
-          plan,
-          'U0',
-          'reverse',
-        ).copyWith(gateReasons: const <CardReasonCode>[CardReasonCode.notAtomic]),
+        _card(plan, 'U0', 'reverse').copyWith(
+          gateReasons: const <CardReasonCode>[CardReasonCode.notAtomic],
+        ),
         _card(plan, 'U1', null),
         _card(plan, 'U1', 'reverse'),
       ];
@@ -148,7 +146,8 @@ AllocationPlan _plan(List<_UnitSpec> specs) {
           unitId: spec.id,
           angle: card == 0
               ? null
-              : AllocationAngle.values[(card - 1) % AllocationAngle.values.length],
+              : AllocationAngle.values[(card - 1) %
+                    AllocationAngle.values.length],
         ),
     ];
     units.add(UnitBudget(unit: _unit(spec), cards: batchCards.length));

@@ -20,10 +20,7 @@ void main() {
       generationPipelineV3: true,
     );
     expect(on.generationPipelineV3, isTrue);
-    expect(
-      AppSettings.fromJson(on.toJson()).generationPipelineV3,
-      isTrue,
-    );
+    expect(AppSettings.fromJson(on.toJson()).generationPipelineV3, isTrue);
   });
 
   test('JSON round-trip сохраняет выключенный флаг (legacy доступен)', () {

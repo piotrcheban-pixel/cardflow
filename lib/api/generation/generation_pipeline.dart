@@ -1263,27 +1263,26 @@ class GenerationPipeline implements GenerationRunner {
     if (pipelineV3 && cards.isNotEmpty) _resolveAnchors(cards, request);
 
     final GenerationPlan? planForCoverage = activePlan;
-    final List<GenerationSectionCoverage> sectionCoverage =
-        <GenerationSectionCoverage>[
-          if (planForCoverage != null)
-            for (final InputPart part in planForCoverage.parts)
-              for (final InputSection section in part.sections)
-                if ((planForCoverage.allocation?.forSection(section.id) ?? 0) >
-                    0)
-                  GenerationSectionCoverage(
-                    // Срез 15: короткий id — для промптов/фокуса, полный —
-                    // общий ключ сопоставления с единицами карты v3.
-                    sectionId: section.promptId,
-                    fullSectionId: section.id,
-                    allocated:
-                        planForCoverage.allocation?.forSection(section.id) ?? 0,
-                    produced: producedBySection[section.promptId] ?? 0,
-                    clean: cleanBySection[section.promptId] ?? 0,
-                    warningCodes:
-                        codesBySection[section.promptId] ?? const <String, int>{},
-                    exhausted: exhaustedSections.contains(section.promptId),
-                  ),
-        ];
+    final List<GenerationSectionCoverage>
+    sectionCoverage = <GenerationSectionCoverage>[
+      if (planForCoverage != null)
+        for (final InputPart part in planForCoverage.parts)
+          for (final InputSection section in part.sections)
+            if ((planForCoverage.allocation?.forSection(section.id) ?? 0) > 0)
+              GenerationSectionCoverage(
+                // Срез 15: короткий id — для промптов/фокуса, полный —
+                // общий ключ сопоставления с единицами карты v3.
+                sectionId: section.promptId,
+                fullSectionId: section.id,
+                allocated:
+                    planForCoverage.allocation?.forSection(section.id) ?? 0,
+                produced: producedBySection[section.promptId] ?? 0,
+                clean: cleanBySection[section.promptId] ?? 0,
+                warningCodes:
+                    codesBySection[section.promptId] ?? const <String, int>{},
+                exhausted: exhaustedSections.contains(section.promptId),
+              ),
+    ];
     final bool hasCards = cards.isNotEmpty;
     final int requestedTotal = activePlan?.requestedCards ?? 0;
     final bool targetReached =

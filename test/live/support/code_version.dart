@@ -29,7 +29,8 @@ class CodeVersion {
         '--short=8',
         'HEAD',
       ]);
-      if (head.exitCode != 0) return const CodeVersion(commit: 'unknown', dirty: true);
+      if (head.exitCode != 0)
+        return const CodeVersion(commit: 'unknown', dirty: true);
       final String commit = (head.stdout as String).trim();
       final ProcessResult status = Process.runSync('git', <String>[
         'status',

@@ -97,8 +97,7 @@ class S15Cell {
   int get absoluteClean => cleanAccepted ?? 0;
 
   /// true — строка снята без `code_version`: в сравнение не идёт.
-  bool get isLegacySchema =>
-      codeVersion == null || codeVersion!.trim().isEmpty;
+  bool get isLegacySchema => codeVersion == null || codeVersion!.trim().isEmpty;
 
   /// true — отчёт есть: можно сравнивать числа.
   bool get hasMetrics => status == 'ran' && cleanRate != null;
@@ -189,7 +188,12 @@ class S15Cell {
 
 /// Пара ячеек одного материала и заказа.
 class S15Pair {
-  S15Pair({required this.material, required this.requested, this.legacy, this.v3});
+  S15Pair({
+    required this.material,
+    required this.requested,
+    this.legacy,
+    this.v3,
+  });
 
   final String material;
   final int requested;
@@ -328,9 +332,7 @@ String _report({
       'absoluteClean | cleanRate | cleanRate_matched | Разделов в базе | '
       'Единиц в базе | codeVersion | Примечание |',
     )
-    ..writeln(
-      '|---|---:|---|---|---:|---:|---:|---:|---:|---:|---:|---|---|',
-    );
+    ..writeln('|---|---:|---|---|---:|---:|---:|---:|---:|---:|---:|---|---|');
   for (final S15Cell cell in cells) {
     final S15Pair? pair = pairsByKey[cell.pairKey];
     final MatchedUnitBase? base = pair?.base;
@@ -361,9 +363,7 @@ String _report({
       'legacy cleanRate_matched | v3 cleanRate_matched | Единиц | ≥ 95 % | '
       'объём | Вердикт |',
     )
-    ..writeln(
-      '|---|---:|---:|---:|---:|---:|---:|---|---|---|',
-    );
+    ..writeln('|---|---:|---:|---:|---:|---:|---:|---|---|---|');
   var met = 0;
   var notMet = 0;
   var notDecisive = 0;
@@ -432,9 +432,13 @@ String _report({
         '${entry.key}=${entry.value}',
   }.toList()..sort();
   buffer
-    ..writeln('- Ячеек снято: ${cells.length}; с `code_version`: '
-        '${comparable.length}; legacy-schema: ${legacySchema.length}.')
-    ..writeln('- `code_version`: ${versions.isEmpty ? '—' : versions.join(', ')}.')
+    ..writeln(
+      '- Ячеек снято: ${cells.length}; с `code_version`: '
+      '${comparable.length}; legacy-schema: ${legacySchema.length}.',
+    )
+    ..writeln(
+      '- `code_version`: ${versions.isEmpty ? '—' : versions.join(', ')}.',
+    )
     ..writeln('- Промпты: ${prompts.isEmpty ? '—' : prompts.join(', ')}.')
     ..writeln(
       '- Суммарная длительность ячеек: '

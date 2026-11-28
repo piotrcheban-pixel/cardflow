@@ -218,7 +218,10 @@ class ProductionUnit {
     this.salience,
     this.warningCodes = const <String, int>{},
   }) : assert(produced >= 0, 'Произведённое не может быть отрицательным'),
-       assert(clean >= 0 && clean <= produced, 'Чистых не больше произведённых'),
+       assert(
+         clean >= 0 && clean <= produced,
+         'Чистых не больше произведённых',
+       ),
        assert(
          salience == null || (salience >= 0 && salience <= 1),
          'Значимость единицы — в диапазоне 0..1',

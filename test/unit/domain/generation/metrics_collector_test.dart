@@ -169,7 +169,8 @@ void main() {
         ],
       ),
     );
-    final List<Object?> units = metrics.toJson()['unit_coverage']! as List<Object?>;
+    final List<Object?> units =
+        metrics.toJson()['unit_coverage']! as List<Object?>;
 
     expect(units, hasLength(2));
     expect(units.first, <String, Object?>{

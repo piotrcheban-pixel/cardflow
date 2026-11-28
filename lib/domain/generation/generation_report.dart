@@ -281,8 +281,7 @@ class GenerationReport {
             accepted: acceptedByUnit[budget.unit.id] ?? 0,
             produced: producedByUnit[budget.unit.id] ?? 0,
             clean: cleanByUnit[budget.unit.id] ?? 0,
-            warningCodes:
-                codesByUnit[budget.unit.id] ?? const <String, int>{},
+            warningCodes: codesByUnit[budget.unit.id] ?? const <String, int>{},
             salience: budget.unit.salience,
           ),
       ],

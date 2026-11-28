@@ -171,16 +171,16 @@ class S12Bench {
     if (id == null) return;
     final Directory directory = Directory('$outputDir/cells');
     await directory.create(recursive: true);
-    final String payload = const JsonEncoder.withIndent('  ').convert(
-      <String, Object?>{
-        'schema': 's15',
-        'cell_id': id,
-        'provider': provider,
-        'model': model,
-        ...cell.toJson(),
-      },
-    );
-    await File('${directory.path}/$id.json').writeAsString(payload, flush: true);
+    final String payload = const JsonEncoder.withIndent('  ')
+        .convert(<String, Object?>{
+          'schema': 's15',
+          'cell_id': id,
+          'provider': provider,
+          'model': model,
+          ...cell.toJson(),
+        });
+    await File('${directory.path}/$id.json')
+        .writeAsString(payload, flush: true);
   }
 
   /// Пишет markdown-таблицу из накопленных ячеек (без ручных чисел).
