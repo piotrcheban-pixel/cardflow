@@ -1,0 +1,12 @@
+Coverage — срез 12 (flutter test --coverage --exclude-tags golden)
+Исключены сгенерированные: app_localizations*, *.g.dart, *.freezed.dart.
+Рукописный код: 26849/29694 = 90,4% (порог 80%).
+
+lib\domain\generation\metrics_collector.dart: 94/94 = 100%
+lib\domain\generation\generation_report.dart: 104/104 = 100%
+lib\api\generation\cards_batch_port.dart: 108/115 = 93,9%
+lib\api\generation\http_knowledge_map_caller.dart: 50/53 = 94,3%
+lib\api\generation\generation_pipeline.dart: 987/1036 = 95,3%
+lib\api\generation\validation\card_validator_gate.dart: 39/39 = 100%
+lib\api\generation\cards_batch_engine.dart: 132/141 = 93,6%
+lib\domain\generation\replenish_stage.dart: 306/315 = 97,1%
