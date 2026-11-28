@@ -19,6 +19,22 @@ class ClozeSegment {
 /// локализованным, а пример не дублируется в трёх местах.
 const String clozeSyntaxExample = '{{c1::…}}';
 
+/// Текст cloze-вопроса для показа человеку **вне карточки** приложения: каждый
+/// пропуск заменён на `[…]` (срез 18, ч. 2; L240).
+///
+/// Приложение рисует пропуск подчёркнутой пустой строкой; в файле слепой
+/// выборки сырая разметка `{{c1::…}}` выглядела как «ответ в вопросе» и стоила
+/// трёх ложных оценок. Текст без пропусков возвращается как есть.
+String clozeQuestionText(String source) {
+  final ClozeMarkup markup = ClozeMarkup.parse(source);
+  if (!markup.hasGaps) return source;
+  final StringBuffer buffer = StringBuffer();
+  for (final ClozeSegment segment in markup.segments) {
+    buffer.write(segment.isGap ? '[…]' : (segment.text ?? ''));
+  }
+  return buffer.toString();
+}
+
 /// Разобранная разметка `{{cN::ответ}}` (а также `{{ответ}}` — номер 1).
 ///
 /// Находка F2: пользователь, не читавший исходников, писал `{{ответ}}` и

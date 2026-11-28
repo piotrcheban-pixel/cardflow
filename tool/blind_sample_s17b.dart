@@ -192,7 +192,7 @@ String _markdown(BlindSample sample) {
     out
       ..writeln('### ${entry.number}')
       ..writeln()
-      ..writeln('**Вопрос.** ${_questionText(entry.front)}')
+      ..writeln('**Вопрос.** ${clozeQuestionText(entry.front)}')
       ..writeln()
       ..writeln('**Ответ.** ${entry.back}')
       ..writeln()
@@ -202,23 +202,6 @@ String _markdown(BlindSample sample) {
       ..writeln();
   }
   return out.toString();
-}
-
-/// Вопрос карточки для человека: cloze-пропуск показан пустым, а не сырой
-/// разметкой.
-///
-/// Замер 17B выявил цену сырого вида: три cloze-карточки владелец оценил как
-/// «ответ в вопросе», увидев `{{c1::дискретные}}`, — дефект представления
-/// выборки, а не карточки. Формат пропуска — `[…]` (в приложении это
-/// подчёркнутая пустая строка).
-String _questionText(String front) {
-  final ClozeMarkup markup = ClozeMarkup.parse(front);
-  if (!markup.hasGaps) return front;
-  final StringBuffer buffer = StringBuffer();
-  for (final ClozeSegment segment in markup.segments) {
-    buffer.write(segment.isGap ? '[…]' : (segment.text ?? ''));
-  }
-  return buffer.toString();
 }
 
 Map<String, Object?> _keyJson(BlindSample sample) => <String, Object?>{
