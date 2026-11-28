@@ -1,14 +1,15 @@
-// Тест миграции схемы БД 1 → 2 (TASK «Срез 8», ADR-005 §5, ADR-051).
+// Тест миграций схемы БД (TASK «Срез 8», ADR-005 §5, ADR-051; срез 13 —
+// пометки дедупа в `card_drafts`).
 //
-// Проверяется то, что требует DoD среза: миграция **пустой** БД и миграция
-// **заполненной** БД. Схема версии 1 берётся не из головы, а из снимка
-// `drift_schemas/drift_schema_v1.json` (сгенерированные `schema_v1.dart`/
-// `schema_v2.dart`): поэтому тест падает, если шаг миграции разошёлся с dump-ом
-// схемы, а не только с ожиданиями автора теста.
+// Проверяется то, что требует DoD: миграция **пустой** БД и миграция
+// **заполненной** БД. Схемы версий 1–3 берутся не из головы, а из снимков
+// `drift_schemas/drift_schema_v{1,2,3}.json` (сгенерированные `schema_v1.dart`/
+// `schema_v2.dart`/`schema_v3.dart`): поэтому тест падает, если шаг миграции
+// разошёлся с dump-ом схемы, а не только с ожиданиями автора теста.
 //
 // Вторая часть — политика ADR-005: понижение версии не поддерживается, а
 // апгрейд на версию без шага остаётся fail-fast (данные не теряются молча).
-import 'package:drift/drift.dart';
+import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:drift_dev/api/migrations_native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -17,6 +18,7 @@ import 'package:cardflow/data/db/app_database.dart';
 import 'generated/schema.dart';
 import 'generated/schema_v1.dart' as v1;
 import 'generated/schema_v2.dart' as v2;
+import 'generated/schema_v3.dart' as v3;
 
 /// Строка `decks` версии 1: колода, которая обязана пережить миграцию.
 const Map<String, Object?> _deck = <String, Object?>{
@@ -67,6 +69,33 @@ const Map<String, Object?> _reviewLog = <String, Object?>{
   'elapsed_ms': 4200,
 };
 
+/// Строка `generation_runs` версии 2: прогон, который обязан пережить 2 → 3.
+const Map<String, Object?> _run = <String, Object?>{
+  'id': 'run-1',
+  'stage': 'generating',
+  'status': 'running',
+  'created_at': 1000,
+  'updated_at': 2000,
+  'provider': 'deepseek',
+  'model': 'deepseek-flash',
+  'deck_id': null,
+  'prompt_versions_json': null,
+};
+
+/// Строка `card_drafts` версии 2: черновик без пометок дедупа.
+const Map<String, Object?> _draft = <String, Object?>{
+  'id': 'draft-1',
+  'run_id': 'run-1',
+  'batch_index': 0,
+  'content_hash': 'hash-draft',
+  'unit_id': 'ku:0',
+  'angle': null,
+  'card_json': '{"version":1,"front":"Вопрос","back":"Ответ"}',
+  'created_at': 1500,
+  'imported_card_id': null,
+  'imported_at': null,
+};
+
 RawValuesInsertable _raw(Map<String, Object?> values) =>
     RawValuesInsertable(<String, Expression<Object>>{
       for (final MapEntry<String, Object?> entry in values.entries)
@@ -82,13 +111,13 @@ void main() {
 
   group('миграция 1 → 2', () {
     test(
-      'пустая БД версии 1: схема доходит до 2 и содержит новые таблицы',
+      'пустая БД версии 1: схема доходит до актуальной и содержит таблицы',
       () async {
         final DatabaseConnection connection = await verifier.startAt(1);
         final AppDatabase db = AppDatabase(connection);
         addTearDown(db.close);
 
-        await verifier.migrateAndValidate(db, 2);
+        await verifier.migrateAndValidate(db, 3);
 
         // Новые таблицы прогона генерации реально созданы в БД (а не только в
         // сгенерированном коде).
@@ -115,18 +144,18 @@ void main() {
     );
 
     test('заполненная БД версии 1: данные не потеряны, новые таблицы пусты', () async {
-      await verifier.testWithDataIntegrity<v1.DatabaseAtV1, v2.DatabaseAtV2>(
+      await verifier.testWithDataIntegrity<v1.DatabaseAtV1, v3.DatabaseAtV3>(
         oldVersion: 1,
-        newVersion: 2,
+        newVersion: 3,
         createOld: v1.DatabaseAtV1.new,
-        createNew: v2.DatabaseAtV2.new,
+        createNew: v3.DatabaseAtV3.new,
         openTestedDatabase: AppDatabase.new,
         createItems: (Batch batch, v1.DatabaseAtV1 oldDb) {
           batch.insert(oldDb.decks, _raw(_deck));
           batch.insert(oldDb.cards, _raw(_card));
           batch.insert(oldDb.reviewLogs, _raw(_reviewLog));
         },
-        validateItems: (v2.DatabaseAtV2 newDb) async {
+        validateItems: (v3.DatabaseAtV3 newDb) async {
           // Чтение через `customSelect`: тест сверяет данные, а не формы
           // сгенерированных классов, поэтому формат строк не важен.
           final List<QueryRow> decks = await newDb
@@ -176,15 +205,47 @@ void main() {
     });
   });
 
+  group('миграция 2 → 3', () {
+    test(
+      'черновик версии 2 переживает миграцию, пометки дедупа — NULL',
+      () async {
+        await verifier.testWithDataIntegrity<v2.DatabaseAtV2, v3.DatabaseAtV3>(
+          oldVersion: 2,
+          newVersion: 3,
+          createOld: v2.DatabaseAtV2.new,
+          createNew: v3.DatabaseAtV3.new,
+          openTestedDatabase: AppDatabase.new,
+          createItems: (Batch batch, v2.DatabaseAtV2 oldDb) {
+            batch.insert(oldDb.generationRuns, _raw(_run));
+            batch.insert(oldDb.cardDrafts, _raw(_draft));
+          },
+          validateItems: (v3.DatabaseAtV3 newDb) async {
+            final List<QueryRow> drafts = await newDb
+                .customSelect('SELECT * FROM card_drafts')
+                .get();
+            expect(drafts, hasLength(1));
+            final QueryRow draft = drafts.single;
+            expect(draft.read<String>('content_hash'), 'hash-draft');
+            expect(draft.read<String>('unit_id'), 'ku:0');
+            // «Дублем не признана» — NULL, а не пустая строка: отчёт этапа
+            // Dedup не должен видеть фиктивную пару.
+            expect(draft.read<String?>('is_duplicate_of'), isNull);
+            expect(draft.read<String?>('dedup_level'), isNull);
+          },
+        );
+      },
+    );
+  });
+
   group('политика миграций ADR-005', () {
     test('понижение версии — StateError, данные не пересоздаются', () async {
       final AppDatabase db = AppDatabase.inMemory();
       addTearDown(db.close);
-      // Открываем БД, чтобы создать схему v2.
+      // Открываем БД, чтобы создать актуальную схему.
       await db.customSelect('SELECT 1').get();
 
       await expectLater(
-        db.migration.onUpgrade(Migrator(db), 2, 1),
+        db.migration.onUpgrade(Migrator(db), 3, 1),
         throwsA(
           isA<StateError>().having(
             (StateError error) => error.message,
@@ -201,7 +262,7 @@ void main() {
       await db.customSelect('SELECT 1').get();
 
       await expectLater(
-        db.migration.onUpgrade(Migrator(db), 2, 3),
+        db.migration.onUpgrade(Migrator(db), 3, 4),
         throwsA(
           isA<StateError>().having(
             (StateError error) => error.message,

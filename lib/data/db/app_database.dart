@@ -1,13 +1,14 @@
 // Drift-база приложения CardFlow: 10 таблиц SPEC A5 + 5 таблиц прогона
-// генерации v3 (TASK «Срез 8», ADR-051), schemaVersion = 2.
+// генерации v3 (TASK «Срез 8», ADR-051), schemaVersion = 3.
 //
 // Политика миграций — ADR-005:
 //  - onCreate: createAll() создаёт таблицы и объявленные индексы;
 //  - beforeOpen: `PRAGMA foreign_keys = ON` (иначе не работает `ON DELETE CASCADE`);
-//  - onUpgrade: шаговая миграция 1 → 2 (новые таблицы прогона генерации),
-//    снимок схемы v1 — `drift_schemas/drift_schema_v1.json`; апгрейд на версию
-//    без шага и понижение версии — fail-fast StateError (данные не теряются
-//    молча); перед миграцией файл БД копируется в `cardflow.sqlite.bak`
+//  - onUpgrade: шаговая миграция 1 → 2 (таблицы прогона генерации) и 2 → 3
+//    (пометки дедупа в `card_drafts`), снимки схемы —
+//    `drift_schemas/drift_schema_v{1,2,3}.json`; апгрейд на версию без шага и
+//    понижение версии — fail-fast StateError (данные не теряются молча); перед
+//    миграцией файл БД копируется в `cardflow.sqlite.bak`
 //    (`database_opener.dart`).
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
@@ -43,8 +44,8 @@ class AppDatabase extends _$AppDatabase {
   /// Тестовая/локальная БД в памяти (`NativeDatabase.memory()`, ADR-005).
   factory AppDatabase.inMemory() => AppDatabase(NativeDatabase.memory());
 
-  /// Версия схемы: 2 — таблицы прогона генерации v3 (ADR-051).
-  static const int currentSchemaVersion = 2;
+  /// Версия схемы: 3 — пометки дедупа `card_drafts` (TASK «Срез 13»).
+  static const int currentSchemaVersion = 3;
 
   @override
   int get schemaVersion => currentSchemaVersion;
@@ -81,6 +82,17 @@ class AppDatabase extends _$AppDatabase {
         await m.createTable(cardDrafts);
         await m.createIndex(idxCardDraftsRunHash);
         await m.createTable(knowledgeMaps);
+      }
+      if (from >= 2 && from < 3) {
+        // TASK «Срез 13»: пометки этапа Dedup переживают перезапуск прогона
+        // (L219). Обе колонки nullable — существующие черновики не меняются:
+        // «дублем не признана» остаётся `NULL`, а не пустой строкой.
+        //
+        // Шаг только для БД, где `card_drafts` уже была создана по схеме v2:
+        // при апгрейде с v1 `createTable` выше создаёт таблицу сразу с этими
+        // колонками (Migrator берёт актуальное определение таблицы).
+        await m.addColumn(cardDrafts, cardDrafts.isDuplicateOf);
+        await m.addColumn(cardDrafts, cardDrafts.dedupLevel);
       }
     },
     beforeOpen: (OpeningDetails details) async {

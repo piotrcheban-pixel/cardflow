@@ -26,6 +26,7 @@ import 'package:cardflow/api/generation/provider_result.dart';
 import 'package:cardflow/api/generation/provider_schema.dart';
 import 'package:cardflow/api/http/generation_http_client.dart';
 import 'package:cardflow/api/http/retry_policy.dart';
+import 'package:cardflow/api/prompts/understanding_prompt.dart';
 import 'package:cardflow/api/providers/generation_adapters.dart';
 import 'package:cardflow/api/providers/generation_provider_adapter.dart';
 import 'package:cardflow/domain/generation/api_key_store.dart';
@@ -34,6 +35,7 @@ import 'package:cardflow/domain/generation/generation_provider.dart';
 import 'package:cardflow/domain/generation/knowledge_map.dart';
 import 'package:cardflow/domain/generation/provider_account.dart';
 import 'package:cardflow/domain/generation/provider_protocol.dart';
+import 'package:cardflow/domain/generation/schema_compat_profile.dart';
 
 /// Схема ответа карты знаний под протокол аккаунта.
 ///
@@ -59,8 +61,10 @@ class HttpKnowledgeMapCaller implements KnowledgeMapCaller {
     RetryPolicy? retryPolicy,
     Future<void> Function(Duration duration)? delay,
     this.maxOutputTokens = defaultMaxOutputTokens,
+    SchemaCompatProfile? compat,
   }) : retryPolicy = retryPolicy ?? RetryPolicy(),
-       delay = delay ?? Future<void>.delayed;
+       delay = delay ?? Future<void>.delayed,
+       compat = compat ?? SchemaCompatProfile();
 
   /// Лимит вывода одного запроса Understanding по умолчанию.
   static const int defaultMaxOutputTokens = 4096;
@@ -89,6 +93,13 @@ class HttpKnowledgeMapCaller implements KnowledgeMapCaller {
   /// Лимит вывода, если запрос его не задал.
   final int maxOutputTokens;
 
+  /// Память о совместимости провайдера со strict-схемой (срез 13, часть 2).
+  ///
+  /// Один экземпляр на прогон: первая `400` на strict-схему записывается сюда,
+  /// и следующие разделы идут сразу без strict — лестница ADR-021 не платится
+  /// дважды за каждый фрагмент.
+  final SchemaCompatProfile compat;
+
   @override
   Future<KnowledgeMapRawResponse> extract(KnowledgeMapRequest request) async {
     final GenerationProviderAdapter adapter = _adapterFor(account.protocol);
@@ -99,14 +110,27 @@ class HttpKnowledgeMapCaller implements KnowledgeMapCaller {
     // больше трёх попыток; нативные протоколы контракт не меняют.
     final bool tolerantFallback =
         account.protocol == ProviderProtocol.openaiCompletions;
-    final List<({bool strictSchema, bool sendMaxTokens})> attempts =
+    // Профиль помнит отказ strict-схемы на весь прогон (срез 13): платить за
+    // probe на каждом из 12 разделов — 12 лишних HTTP-обменов из 24.
+    final bool strictKnownRejected =
+        tolerantFallback &&
+        compat.isRejected(
+          provider: account.protocol.name,
+          model: account.modelId,
+          schema: understandingPromptVersion,
+          rung: SchemaCompatRung.strictSchema,
+        );
+    final List<({bool strictSchema, bool sendMaxTokens})> rungs =
         <({bool strictSchema, bool sendMaxTokens})>[
-          (strictSchema: true, sendMaxTokens: true),
+          if (!strictKnownRejected) (strictSchema: true, sendMaxTokens: true),
           if (tolerantFallback) (strictSchema: false, sendMaxTokens: true),
           if (tolerantFallback) (strictSchema: false, sendMaxTokens: false),
         ];
     GenerationException? lastError;
-    for (final ({bool strictSchema, bool sendMaxTokens}) attempt in attempts) {
+    // Сколько HTTP-обменов ушло в этом вызове: ступени лестницы и повторы.
+    // Understanding суммирует это число в `UnderstandingResult.requests`.
+    var attempts = 0;
+    for (final ({bool strictSchema, bool sendMaxTokens}) attempt in rungs) {
       final ProviderRequest providerRequest = adapter.buildRequest(
         apiKey: apiKey,
         model: account.modelId,
@@ -121,6 +145,7 @@ class HttpKnowledgeMapCaller implements KnowledgeMapCaller {
       var retry = 1;
       while (true) {
         try {
+          attempts++;
           final Map<String, Object?> json = await transport.postJson(
             providerRequest,
           );
@@ -132,6 +157,7 @@ class HttpKnowledgeMapCaller implements KnowledgeMapCaller {
               json: result.content,
               usage: result.usage,
               truncated: true,
+              attempts: attempts,
             );
           }
           if (result.isError) {
@@ -143,6 +169,7 @@ class HttpKnowledgeMapCaller implements KnowledgeMapCaller {
           return KnowledgeMapRawResponse(
             json: result.content,
             usage: result.usage,
+            attempts: attempts,
           );
         } on GenerationException catch (error) {
           lastError = error;
@@ -151,6 +178,16 @@ class HttpKnowledgeMapCaller implements KnowledgeMapCaller {
           // а не 400 пользователю (ADR-021).
           if (tolerantFallback &&
               error.code == GenerationErrorCode.badRequest) {
+            // Отказ запоминается в профиле прогона (срез 13): следующий раздел
+            // пойдёт сразу без strict, а не потратит на него второй запрос.
+            if (attempt.strictSchema) {
+              compat.rememberRejected(
+                provider: account.protocol.name,
+                model: account.modelId,
+                schema: understandingPromptVersion,
+                rung: SchemaCompatRung.strictSchema,
+              );
+            }
             break;
           }
           final RetryDecision decision = retryPolicy.decide(

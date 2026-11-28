@@ -102,6 +102,7 @@ class UnderstandingResult {
     this.fragments = const <KnowledgeMapFragmentOutcome>[],
     this.usage = const TokenUsage(),
     this.fromCache = false,
+    this.requests = 0,
   });
 
   /// Карта знаний документа (только успешные фрагменты).
@@ -115,6 +116,13 @@ class UnderstandingResult {
 
   /// true — карта взята из кэша, вызовов модели не было.
   final bool fromCache;
+
+  /// Сколько HTTP-обменов Understanding стоил прогон (TASK «Срез 13», п. 7).
+  ///
+  /// Считаются вызовы `caller.extract` (включая повторы лестницы ADR-021 и
+  /// деление обрезанного фрагмента): отчёт отвечает «запросов на 10 разделов»
+  /// числом, а не «на глаз». Из кэша — 0.
+  final int requests;
 
   /// true, если хотя бы один фрагмент помечен.
   bool get hasFailures =>
@@ -212,6 +220,7 @@ class UnderstandingService {
     final List<KnowledgeMapFragmentOutcome> outcomes =
         <KnowledgeMapFragmentOutcome>[];
     final List<TokenUsage> usages = <TokenUsage>[];
+    final _RequestCounter requests = _RequestCounter();
 
     for (final Section section in sections) {
       final List<Block> blocks = _contentBlocks(document, section);
@@ -222,6 +231,7 @@ class UnderstandingService {
         blocks: blocks,
         sectionIds: sectionIds,
         usages: usages,
+        requests: requests,
       );
       units.addAll(fragment.units);
       outcomes.add(fragment.toPublic(section.id));
@@ -245,6 +255,7 @@ class UnderstandingService {
       map: map,
       fragments: List<KnowledgeMapFragmentOutcome>.unmodifiable(outcomes),
       usage: _sumUsage(usages),
+      requests: requests.value,
     );
   }
 
@@ -261,6 +272,7 @@ class UnderstandingService {
     required List<Block> blocks,
     required Set<String> sectionIds,
     required List<TokenUsage> usages,
+    required _RequestCounter requests,
     int depth = 0,
   }) async {
     final KnowledgeMapRequest request = KnowledgeMapRequest(
@@ -279,7 +291,11 @@ class UnderstandingService {
     final KnowledgeMapRawResponse response;
     try {
       response = await caller.extract(request);
+      // Ступени лестницы ADR-021 и повторы транспорта — тоже запросы: отчёт
+      // считает цену Understanding числом HTTP-обменов (срез 13, п. 7).
+      requests.value += response.attempts;
     } on GenerationException catch (error) {
+      requests.value += 1;
       if (error.code == GenerationErrorCode.cancelled) rethrow;
       return const _FragmentOutcome(
         failureReason: KnowledgeMapFailureReason.providerError,
@@ -307,6 +323,7 @@ class UnderstandingService {
             blocks: blocks.sublist(start, end),
             sectionIds: sectionIds,
             usages: usages,
+            requests: requests,
             depth: depth + 1,
           ),
         );
@@ -413,4 +430,13 @@ class _FragmentOutcome {
           unitCount: units.length,
           rejectedUnits: rejectedUnits,
         );
+}
+
+/// Счётчик запросов Understanding в пределах одного [UnderstandingService.build].
+///
+/// Мутабельный по назначению: рекурсивное деление обрезанного фрагмента
+/// добавляет запросы в тот же счётчик, а результат получает итог числом
+/// (`UnderstandingResult.requests`).
+class _RequestCounter {
+  int value = 0;
 }

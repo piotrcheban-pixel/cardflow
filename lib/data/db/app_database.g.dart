@@ -6665,6 +6665,28 @@ class $CardDraftsTable extends CardDrafts
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _isDuplicateOfMeta = const VerificationMeta(
+    'isDuplicateOf',
+  );
+  @override
+  late final GeneratedColumn<String> isDuplicateOf = GeneratedColumn<String>(
+    'is_duplicate_of',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _dedupLevelMeta = const VerificationMeta(
+    'dedupLevel',
+  );
+  @override
+  late final GeneratedColumn<String> dedupLevel = GeneratedColumn<String>(
+    'dedup_level',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -6677,6 +6699,8 @@ class $CardDraftsTable extends CardDrafts
     createdAt,
     importedCardId,
     importedAt,
+    isDuplicateOf,
+    dedupLevel,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -6765,6 +6789,21 @@ class $CardDraftsTable extends CardDrafts
         importedAt.isAcceptableOrUnknown(data['imported_at']!, _importedAtMeta),
       );
     }
+    if (data.containsKey('is_duplicate_of')) {
+      context.handle(
+        _isDuplicateOfMeta,
+        isDuplicateOf.isAcceptableOrUnknown(
+          data['is_duplicate_of']!,
+          _isDuplicateOfMeta,
+        ),
+      );
+    }
+    if (data.containsKey('dedup_level')) {
+      context.handle(
+        _dedupLevelMeta,
+        dedupLevel.isAcceptableOrUnknown(data['dedup_level']!, _dedupLevelMeta),
+      );
+    }
     return context;
   }
 
@@ -6814,6 +6853,14 @@ class $CardDraftsTable extends CardDrafts
         DriftSqlType.int,
         data['${effectivePrefix}imported_at'],
       ),
+      isDuplicateOf: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}is_duplicate_of'],
+      ),
+      dedupLevel: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}dedup_level'],
+      ),
     );
   }
 
@@ -6853,6 +6900,17 @@ class CardDraftRow extends DataClass implements Insertable<CardDraftRow> {
 
   /// Момент импорта (epoch ms), `NULL` — ещё не импортирована.
   final int? importedAt;
+
+  /// Вторая сторона пары дублей (TASK «Срез 13»): `content_hash` другого
+  /// черновика этого прогона либо `deck:<cards.id>` для карточки колоды.
+  ///
+  /// Пара не удаляет карточку: импорт её сохраняет, пометка лишь переносится
+  /// из памяти прогона в журнал (L219).
+  final String? isDuplicateOf;
+
+  /// Уровень каскада дедупа (`exact|normalized|semantic|embeddings`);
+  /// `NULL` — карточка дублем не признана.
+  final String? dedupLevel;
   const CardDraftRow({
     required this.id,
     required this.runId,
@@ -6864,6 +6922,8 @@ class CardDraftRow extends DataClass implements Insertable<CardDraftRow> {
     required this.createdAt,
     this.importedCardId,
     this.importedAt,
+    this.isDuplicateOf,
+    this.dedupLevel,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -6885,6 +6945,12 @@ class CardDraftRow extends DataClass implements Insertable<CardDraftRow> {
     }
     if (!nullToAbsent || importedAt != null) {
       map['imported_at'] = Variable<int>(importedAt);
+    }
+    if (!nullToAbsent || isDuplicateOf != null) {
+      map['is_duplicate_of'] = Variable<String>(isDuplicateOf);
+    }
+    if (!nullToAbsent || dedupLevel != null) {
+      map['dedup_level'] = Variable<String>(dedupLevel);
     }
     return map;
   }
@@ -6909,6 +6975,12 @@ class CardDraftRow extends DataClass implements Insertable<CardDraftRow> {
       importedAt: importedAt == null && nullToAbsent
           ? const Value.absent()
           : Value(importedAt),
+      isDuplicateOf: isDuplicateOf == null && nullToAbsent
+          ? const Value.absent()
+          : Value(isDuplicateOf),
+      dedupLevel: dedupLevel == null && nullToAbsent
+          ? const Value.absent()
+          : Value(dedupLevel),
     );
   }
 
@@ -6928,6 +7000,8 @@ class CardDraftRow extends DataClass implements Insertable<CardDraftRow> {
       createdAt: serializer.fromJson<int>(json['createdAt']),
       importedCardId: serializer.fromJson<String?>(json['importedCardId']),
       importedAt: serializer.fromJson<int?>(json['importedAt']),
+      isDuplicateOf: serializer.fromJson<String?>(json['isDuplicateOf']),
+      dedupLevel: serializer.fromJson<String?>(json['dedupLevel']),
     );
   }
   @override
@@ -6944,6 +7018,8 @@ class CardDraftRow extends DataClass implements Insertable<CardDraftRow> {
       'createdAt': serializer.toJson<int>(createdAt),
       'importedCardId': serializer.toJson<String?>(importedCardId),
       'importedAt': serializer.toJson<int?>(importedAt),
+      'isDuplicateOf': serializer.toJson<String?>(isDuplicateOf),
+      'dedupLevel': serializer.toJson<String?>(dedupLevel),
     };
   }
 
@@ -6958,6 +7034,8 @@ class CardDraftRow extends DataClass implements Insertable<CardDraftRow> {
     int? createdAt,
     Value<String?> importedCardId = const Value.absent(),
     Value<int?> importedAt = const Value.absent(),
+    Value<String?> isDuplicateOf = const Value.absent(),
+    Value<String?> dedupLevel = const Value.absent(),
   }) => CardDraftRow(
     id: id ?? this.id,
     runId: runId ?? this.runId,
@@ -6971,6 +7049,10 @@ class CardDraftRow extends DataClass implements Insertable<CardDraftRow> {
         ? importedCardId.value
         : this.importedCardId,
     importedAt: importedAt.present ? importedAt.value : this.importedAt,
+    isDuplicateOf: isDuplicateOf.present
+        ? isDuplicateOf.value
+        : this.isDuplicateOf,
+    dedupLevel: dedupLevel.present ? dedupLevel.value : this.dedupLevel,
   );
   CardDraftRow copyWithCompanion(CardDraftsCompanion data) {
     return CardDraftRow(
@@ -6992,6 +7074,12 @@ class CardDraftRow extends DataClass implements Insertable<CardDraftRow> {
       importedAt: data.importedAt.present
           ? data.importedAt.value
           : this.importedAt,
+      isDuplicateOf: data.isDuplicateOf.present
+          ? data.isDuplicateOf.value
+          : this.isDuplicateOf,
+      dedupLevel: data.dedupLevel.present
+          ? data.dedupLevel.value
+          : this.dedupLevel,
     );
   }
 
@@ -7007,7 +7095,9 @@ class CardDraftRow extends DataClass implements Insertable<CardDraftRow> {
           ..write('cardJson: $cardJson, ')
           ..write('createdAt: $createdAt, ')
           ..write('importedCardId: $importedCardId, ')
-          ..write('importedAt: $importedAt')
+          ..write('importedAt: $importedAt, ')
+          ..write('isDuplicateOf: $isDuplicateOf, ')
+          ..write('dedupLevel: $dedupLevel')
           ..write(')'))
         .toString();
   }
@@ -7024,6 +7114,8 @@ class CardDraftRow extends DataClass implements Insertable<CardDraftRow> {
     createdAt,
     importedCardId,
     importedAt,
+    isDuplicateOf,
+    dedupLevel,
   );
   @override
   bool operator ==(Object other) =>
@@ -7038,7 +7130,9 @@ class CardDraftRow extends DataClass implements Insertable<CardDraftRow> {
           other.cardJson == this.cardJson &&
           other.createdAt == this.createdAt &&
           other.importedCardId == this.importedCardId &&
-          other.importedAt == this.importedAt);
+          other.importedAt == this.importedAt &&
+          other.isDuplicateOf == this.isDuplicateOf &&
+          other.dedupLevel == this.dedupLevel);
 }
 
 class CardDraftsCompanion extends UpdateCompanion<CardDraftRow> {
@@ -7052,6 +7146,8 @@ class CardDraftsCompanion extends UpdateCompanion<CardDraftRow> {
   final Value<int> createdAt;
   final Value<String?> importedCardId;
   final Value<int?> importedAt;
+  final Value<String?> isDuplicateOf;
+  final Value<String?> dedupLevel;
   final Value<int> rowid;
   const CardDraftsCompanion({
     this.id = const Value.absent(),
@@ -7064,6 +7160,8 @@ class CardDraftsCompanion extends UpdateCompanion<CardDraftRow> {
     this.createdAt = const Value.absent(),
     this.importedCardId = const Value.absent(),
     this.importedAt = const Value.absent(),
+    this.isDuplicateOf = const Value.absent(),
+    this.dedupLevel = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   CardDraftsCompanion.insert({
@@ -7077,6 +7175,8 @@ class CardDraftsCompanion extends UpdateCompanion<CardDraftRow> {
     required int createdAt,
     this.importedCardId = const Value.absent(),
     this.importedAt = const Value.absent(),
+    this.isDuplicateOf = const Value.absent(),
+    this.dedupLevel = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        runId = Value(runId),
@@ -7095,6 +7195,8 @@ class CardDraftsCompanion extends UpdateCompanion<CardDraftRow> {
     Expression<int>? createdAt,
     Expression<String>? importedCardId,
     Expression<int>? importedAt,
+    Expression<String>? isDuplicateOf,
+    Expression<String>? dedupLevel,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -7108,6 +7210,8 @@ class CardDraftsCompanion extends UpdateCompanion<CardDraftRow> {
       if (createdAt != null) 'created_at': createdAt,
       if (importedCardId != null) 'imported_card_id': importedCardId,
       if (importedAt != null) 'imported_at': importedAt,
+      if (isDuplicateOf != null) 'is_duplicate_of': isDuplicateOf,
+      if (dedupLevel != null) 'dedup_level': dedupLevel,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -7123,6 +7227,8 @@ class CardDraftsCompanion extends UpdateCompanion<CardDraftRow> {
     Value<int>? createdAt,
     Value<String?>? importedCardId,
     Value<int?>? importedAt,
+    Value<String?>? isDuplicateOf,
+    Value<String?>? dedupLevel,
     Value<int>? rowid,
   }) {
     return CardDraftsCompanion(
@@ -7136,6 +7242,8 @@ class CardDraftsCompanion extends UpdateCompanion<CardDraftRow> {
       createdAt: createdAt ?? this.createdAt,
       importedCardId: importedCardId ?? this.importedCardId,
       importedAt: importedAt ?? this.importedAt,
+      isDuplicateOf: isDuplicateOf ?? this.isDuplicateOf,
+      dedupLevel: dedupLevel ?? this.dedupLevel,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -7173,6 +7281,12 @@ class CardDraftsCompanion extends UpdateCompanion<CardDraftRow> {
     if (importedAt.present) {
       map['imported_at'] = Variable<int>(importedAt.value);
     }
+    if (isDuplicateOf.present) {
+      map['is_duplicate_of'] = Variable<String>(isDuplicateOf.value);
+    }
+    if (dedupLevel.present) {
+      map['dedup_level'] = Variable<String>(dedupLevel.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -7192,6 +7306,8 @@ class CardDraftsCompanion extends UpdateCompanion<CardDraftRow> {
           ..write('createdAt: $createdAt, ')
           ..write('importedCardId: $importedCardId, ')
           ..write('importedAt: $importedAt, ')
+          ..write('isDuplicateOf: $isDuplicateOf, ')
+          ..write('dedupLevel: $dedupLevel, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -11756,6 +11872,8 @@ typedef $$CardDraftsTableCreateCompanionBuilder = CardDraftsCompanion Function({
   required int createdAt,
   Value<String?> importedCardId,
   Value<int?> importedAt,
+  Value<String?> isDuplicateOf,
+  Value<String?> dedupLevel,
   Value<int> rowid,
 });
 typedef $$CardDraftsTableUpdateCompanionBuilder = CardDraftsCompanion Function({
@@ -11769,6 +11887,8 @@ typedef $$CardDraftsTableUpdateCompanionBuilder = CardDraftsCompanion Function({
   Value<int> createdAt,
   Value<String?> importedCardId,
   Value<int?> importedAt,
+  Value<String?> isDuplicateOf,
+  Value<String?> dedupLevel,
   Value<int> rowid,
 });
 
@@ -11845,6 +11965,16 @@ class $$CardDraftsTableFilterComposer
 
   ColumnFilters<int> get importedAt => $composableBuilder(
     column: $table.importedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get isDuplicateOf => $composableBuilder(
+    column: $table.isDuplicateOf,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get dedupLevel => $composableBuilder(
+    column: $table.dedupLevel,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -11926,6 +12056,16 @@ class $$CardDraftsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get isDuplicateOf => $composableBuilder(
+    column: $table.isDuplicateOf,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get dedupLevel => $composableBuilder(
+    column: $table.dedupLevel,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$GenerationRunsTableOrderingComposer get runId {
     final $$GenerationRunsTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -11994,6 +12134,16 @@ class $$CardDraftsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<String> get isDuplicateOf => $composableBuilder(
+    column: $table.isDuplicateOf,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get dedupLevel => $composableBuilder(
+    column: $table.dedupLevel,
+    builder: (column) => column,
+  );
+
   $$GenerationRunsTableAnnotationComposer get runId {
     final $$GenerationRunsTableAnnotationComposer composer = $composerBuilder(
       composer: this,
@@ -12056,6 +12206,8 @@ class $$CardDraftsTableTableManager
                 Value<int> createdAt = const Value.absent(),
                 Value<String?> importedCardId = const Value.absent(),
                 Value<int?> importedAt = const Value.absent(),
+                Value<String?> isDuplicateOf = const Value.absent(),
+                Value<String?> dedupLevel = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CardDraftsCompanion(
                 id: id,
@@ -12068,6 +12220,8 @@ class $$CardDraftsTableTableManager
                 createdAt: createdAt,
                 importedCardId: importedCardId,
                 importedAt: importedAt,
+                isDuplicateOf: isDuplicateOf,
+                dedupLevel: dedupLevel,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -12082,6 +12236,8 @@ class $$CardDraftsTableTableManager
                 required int createdAt,
                 Value<String?> importedCardId = const Value.absent(),
                 Value<int?> importedAt = const Value.absent(),
+                Value<String?> isDuplicateOf = const Value.absent(),
+                Value<String?> dedupLevel = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => CardDraftsCompanion.insert(
                 id: id,
@@ -12094,6 +12250,8 @@ class $$CardDraftsTableTableManager
                 createdAt: createdAt,
                 importedCardId: importedCardId,
                 importedAt: importedAt,
+                isDuplicateOf: isDuplicateOf,
+                dedupLevel: dedupLevel,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

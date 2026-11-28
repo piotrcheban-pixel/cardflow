@@ -196,10 +196,6 @@ class MetricsCollector {
         : <DedupLevel, int>{
             if (report.duplicates > 0) DedupLevel.exact: report.duplicates,
           };
-    final int duplicatePairs = duplicatesByLevel.values.fold(
-      0,
-      (int sum, int value) => sum + value,
-    );
 
     final int coveredUnits = report.coveredUnits;
     final double? meanSalience = _meanCoveredSalience(report);
@@ -230,9 +226,7 @@ class MetricsCollector {
           ? null
           : report.accepted / report.generated,
       cleanRate: report.cleanRate,
-      duplicateRate: report.generated <= 0
-          ? null
-          : duplicatePairs / report.generated,
+      duplicateRate: report.duplicateRate,
       coverage: report.unitCoverage.isEmpty
           ? null
           : coveredUnits / report.unitCoverage.length,

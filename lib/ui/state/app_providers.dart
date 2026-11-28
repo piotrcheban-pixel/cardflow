@@ -50,6 +50,7 @@ import 'package:cardflow/data/transfer/drift_deck_transfer_service.dart';
 import 'package:cardflow/data/transfer/file_picker_gateway.dart';
 import 'package:cardflow/data/transfer/media_store.dart';
 import 'package:cardflow/data/transfer/zip_deck_archive_codec.dart';
+import 'package:cardflow/domain/cards/card.dart';
 import 'package:cardflow/domain/cards/card_media.dart';
 import 'package:cardflow/domain/cards/card_media_repository.dart';
 import 'package:cardflow/domain/cards/card_repository.dart';
@@ -62,6 +63,7 @@ import 'package:cardflow/domain/generation/generation_job.dart';
 import 'package:cardflow/domain/generation/generation_settings_store.dart';
 import 'package:cardflow/domain/generation/provider_account.dart';
 import 'package:cardflow/domain/generation/provider_accounts_store.dart';
+import 'package:cardflow/domain/generation/validation/semantic_matcher.dart';
 import 'package:cardflow/domain/review/daily_usage_repository.dart';
 import 'package:cardflow/domain/review/practice_repository.dart';
 import 'package:cardflow/domain/review/review_repository.dart';
@@ -506,6 +508,17 @@ final generationV3PathProvider = Provider<GenerationV3Path>((ref) {
     transport: ref.watch(generationHttpClientProvider),
     runStore: DriftGenerationRunStore(database),
     knowledgeMapCache: DriftKnowledgeMapCache(database),
+    // Этап Dedup (срез 13) сверяет принятые карточки с целевой колодой **до**
+    // импорта: пара «уже в колоде» помечается, а не обнаруживается после
+    // записи. Читаются только id и стороны — байтов и настроек не нужно.
+    deckCards: (String deckId) async {
+      final List<Card> cards = await DriftCardRepository(database)
+          .cardsByDeck(deckId);
+      return <DedupCard>[
+        for (final Card card in cards)
+          DedupCard(id: card.id, front: card.front, back: card.back),
+      ];
+    },
     importer: (String runId, String? deckId, String deckName) async {
       // MediaStore читается в момент импорта: он не нужен ни Understanding,
       // ни генерации, и не должен строиться при открытии экрана.

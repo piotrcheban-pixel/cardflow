@@ -74,7 +74,14 @@ enum CardReasonCode {
   sectionUnknown('section_unknown'),
 
   /// `unit_id` карточки не из единиц батча.
-  unitUnknown('unit_unknown');
+  unitUnknown('unit_unknown'),
+
+  /// Возможный смысловой дубль (срез 13, часть 1): этап Dedup нашёл пару
+  /// каскада `SemanticMatcher`, карточка **оставлена** и помечена.
+  ///
+  /// Это пометка, а не отбрасывание (ARCH §3.4): решение за пользователем в
+  /// предпросмотре, `duplicateRate` считает её числом, `cleanRate` — «грязной».
+  possibleDuplicate('possible_duplicate');
 
   const CardReasonCode(this.wireName);
 

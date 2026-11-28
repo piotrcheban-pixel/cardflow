@@ -40,6 +40,7 @@ import 'package:cardflow/data/generation/drift_knowledge_map_cache.dart';
 import 'package:cardflow/domain/generation/allocation.dart';
 import 'package:cardflow/domain/generation/api_key_store.dart';
 import 'package:cardflow/domain/generation/completion_verdict.dart';
+import 'package:cardflow/domain/generation/dedup_mark.dart';
 import 'package:cardflow/domain/generation/generation_card_limit.dart';
 import 'package:cardflow/domain/generation/generation_report.dart';
 import 'package:cardflow/domain/generation/generation_result.dart';
@@ -48,6 +49,7 @@ import 'package:cardflow/domain/generation/model_profile.dart';
 import 'package:cardflow/domain/generation/ports.dart';
 import 'package:cardflow/domain/generation/provider_account.dart';
 import 'package:cardflow/domain/generation/replenish_stage.dart';
+import 'package:cardflow/domain/generation/schema_compat_profile.dart';
 import 'package:cardflow/domain/text/parsed_document.dart';
 
 /// Импорт черновиков прогона в колоду: `(runId, deckId, deckName) → сколько`.
@@ -71,6 +73,7 @@ class GenerationV3PathRunner {
     this.replenishPolicy = const ReplenishPolicy(),
     this.mapOutputTokens = kDefaultMapOutputTokens,
     this.outputTokensPerCard = kDefaultOutputTokensPerCard,
+    this.deckCards,
     this.promptVersions = const <String, String>{
       'understanding': understandingPromptVersion,
       'generating': cardsPromptVersion,
@@ -108,6 +111,10 @@ class GenerationV3PathRunner {
   /// Оценка вывода карточки при упаковке батчей.
   final int outputTokensPerCard;
 
+  /// Карточки целевой колоды для этапа Dedup (срез 13): пара «уже в колоде»
+  /// ловится до импорта. `null` — сверка идёт только внутри прогона.
+  final DeckCardsLoader? deckCards;
+
   /// Версии промптов по этапам (в журнал и отчёт).
   final Map<String, String> promptVersions;
 
@@ -133,15 +140,21 @@ class GenerationV3PathRunner {
     );
 
     try {
+      // Профиль совместимости схемы — один на прогон (срез 13, часть 2):
+      // первая 400 на strict-схему запоминается, Understanding 12 разделов
+      // платит за пробу один раз, а не двенадцать.
+      final SchemaCompatProfile compat = SchemaCompatProfile();
       final AdapterCardsBatchPort port = AdapterCardsBatchPort(
         transport: transport,
         apiKeyStore: apiKeyStore,
+        compat: compat,
       );
       final HttpKnowledgeMapCaller mapCaller = HttpKnowledgeMapCaller(
         transport: transport,
         apiKeyStore: apiKeyStore,
         account: account,
         maxOutputTokens: mapOutputTokens,
+        compat: compat,
       );
       final UnderstandingService understanding = UnderstandingService(
         caller: mapCaller,
@@ -174,6 +187,11 @@ class GenerationV3PathRunner {
             importer(id, request.targetDeckId, request.deckName),
         promptVersions: promptVersions,
         outputTokensPerCard: outputTokensPerCard,
+        deckCards: deckCards,
+        // Пометки Dedup — в строки `card_drafts` (L219): после перезапуска
+        // прогона пары восстанавливаются из журнала, а не считаются заново.
+        dedupMarks: (String id, List<DedupMark> marks) =>
+            runStore.saveDedupMarks(id, marks: marks, now: clock.now()),
       );
 
       final Document? document = documentOf(request);
@@ -183,6 +201,7 @@ class GenerationV3PathRunner {
             request.requestedCards ?? requestedCardCount(request.wishes),
         document: document,
         theme: document == null ? request.wishes : null,
+        targetDeckId: request.targetDeckId,
         cancellation: cancellation == null
             ? null
             : _CancellationSignal(cancellation),
@@ -277,6 +296,9 @@ class GenerationV3PathRunner {
       tokensUsed: tokensUsed,
       estimatedTokens: 0,
       duplicatesRemoved: report.duplicates,
+      // Почти-дубли помечены и **оставлены** (срез 13): число — из отчёта, а не
+      // из счётчиков экрана. Предпросмотр видит пометки в самих карточках.
+      possibleDuplicates: report.duplicateMarked,
       chunkCount: run.plan.batches.length,
       cancelled: report.stage == GenerationStage.cancelled,
       rejectedCards: report.invalid,

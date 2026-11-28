@@ -8,10 +8,13 @@ import 'package:cardflow/data/db/app_database.dart';
 import 'package:cardflow/data/generation/drift_generation_card_store.dart';
 import 'package:cardflow/data/generation/drift_generation_run_store.dart';
 import 'package:cardflow/domain/cards/card.dart';
+import 'package:cardflow/domain/generation/dedup_mark.dart';
+import 'package:cardflow/domain/generation/dedup_report.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
 import 'package:cardflow/domain/generation/generation_card_store.dart';
 import 'package:cardflow/domain/generation/generation_ledger.dart';
 import 'package:cardflow/domain/generation/generation_run.dart';
+import 'package:cardflow/domain/generation/generation_run_snapshot.dart';
 
 void main() {
   late AppDatabase db;
@@ -184,6 +187,43 @@ void main() {
         ),
         throwsA(isA<StateError>()),
       );
+    });
+
+    test('повторный импорт не теряет пометки дедупа (срез 13)', () async {
+      await seedRun(count: 2);
+      final List<CardDraftRow> drafts = await db.select(db.cardDrafts).get();
+      final String hash = drafts.first.contentHash;
+      await runs.saveDedupMarks(
+        'run-1',
+        marks: <DedupMark>[
+          DedupMark(
+            contentHash: hash,
+            duplicateOf: DedupMark.deckKey('deck-1'),
+            level: DedupLevel.normalized,
+          ),
+        ],
+        now: fixedNow,
+      );
+
+      final GenerationImportResult imported = await cards.importRunCards(
+        runId: 'run-1',
+        deckId: null,
+        deckName: 'Сгенерированное',
+        now: fixedNow,
+      );
+      expect(
+        imported.importedCards,
+        2,
+        reason: 'дубль помечен, но импортирован',
+      );
+
+      final GenerationRunSnapshot snapshot = (await runs.loadRun('run-1'))!;
+      final RunCardDraft draft = snapshot.drafts.firstWhere(
+        (RunCardDraft item) => item.contentHash == hash,
+      );
+      expect(draft.isImported, isTrue);
+      expect(draft.duplicateOf, DedupMark.deckKey('deck-1'));
+      expect(draft.dedupLevel, DedupLevel.normalized);
     });
   });
 }

@@ -429,6 +429,17 @@ class CardDrafts extends Table {
   /// Момент импорта (epoch ms), `NULL` — ещё не импортирована.
   IntColumn get importedAt => integer().nullable()();
 
+  /// Вторая сторона пары дублей (TASK «Срез 13»): `content_hash` другого
+  /// черновика этого прогона либо `deck:<cards.id>` для карточки колоды.
+  ///
+  /// Пара не удаляет карточку: импорт её сохраняет, пометка лишь переносится
+  /// из памяти прогона в журнал (L219).
+  TextColumn get isDuplicateOf => text().nullable()();
+
+  /// Уровень каскада дедупа (`exact|normalized|semantic|embeddings`);
+  /// `NULL` — карточка дублем не признана.
+  TextColumn get dedupLevel => text().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }

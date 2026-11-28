@@ -93,6 +93,8 @@ class GenerationReport {
     this.acceptedWithWarnings = 0,
     Map<String, int> warningCodes = const <String, int>{},
     Map<DedupLevel, int> duplicatesByLevel = const <DedupLevel, int>{},
+    int? duplicateMarked,
+    this.understandingRequests = 0,
     List<Duration> batchDurations = const <Duration>[],
     this.materialCapacity,
     this.unfilledSlots = 0,
@@ -109,6 +111,14 @@ class GenerationReport {
        ),
        warningCodes = Map<String, int>.unmodifiable(warningCodes),
        duplicatesByLevel = Map<DedupLevel, int>.unmodifiable(duplicatesByLevel),
+       // Пометок не передали — дубли считаются парами каскада: прежнее
+       // поведение отчёта среза 12 не меняется молча.
+       duplicateMarked =
+           duplicateMarked ??
+           duplicatesByLevel.values.fold<int>(
+             0,
+             (int sum, int value) => sum + value,
+           ),
        batchDurations = List<Duration>.unmodifiable(batchDurations),
        understandingFailures = List<String>.unmodifiable(understandingFailures),
        promptVersions = Map<String, String>.unmodifiable(promptVersions);
@@ -129,6 +139,9 @@ class GenerationReport {
     List<String> understandingFailures = const <String>[],
     List<Duration> batchDurations = const <Duration>[],
     Map<DedupLevel, int> duplicatesByLevel = const <DedupLevel, int>{},
+    List<GeneratedCard>? acceptedCards,
+    int duplicateMarked = 0,
+    int understandingRequests = 0,
   }) {
     final List<String> reasons = <String>[];
     if (!outcome.isComplete) {
@@ -147,7 +160,12 @@ class GenerationReport {
     final Map<String, int> acceptedByUnit = <String, int>{};
     final Map<String, int> warningCodes = <String, int>{};
     var acceptedWithWarnings = 0;
-    for (final GeneratedCard card in outcome.acceptedCards) {
+    // Пометки считаются по карточкам **после** этапа Dedup (срез 13, часть 1):
+    // фасад передаёт список с пометками `possibleDuplicate`, а числа заказа и
+    // принятого остаются из итога добора — дубль не удалён.
+    final List<GeneratedCard> markedCards =
+        acceptedCards ?? outcome.acceptedCards;
+    for (final GeneratedCard card in markedCards) {
       final String? unitId = card.unitId;
       if (unitId != null) {
         acceptedByUnit[unitId] = (acceptedByUnit[unitId] ?? 0) + 1;
@@ -189,6 +207,8 @@ class GenerationReport {
       acceptedWithWarnings: acceptedWithWarnings,
       warningCodes: warningCodes,
       duplicatesByLevel: duplicatesByLevel,
+      duplicateMarked: duplicateMarked,
+      understandingRequests: understandingRequests,
       batchDurations: <Duration>[...batchDurations, ...outcome.batchDurations],
       materialCapacity: outcome.materialCapacity,
       unfilledSlots: outcome.unfilledSlots,
@@ -293,6 +313,20 @@ class GenerationReport {
   /// Пустая карта — дублей не было; счётчик [duplicates] остаётся.
   final Map<DedupLevel, int> duplicatesByLevel;
 
+  /// Карточек помечено этапом Dedup (срез 13): пары [duplicatesByLevel] в
+  /// карточках, **не удалённых** из принятого.
+  ///
+  /// У v3 — пометки `possibleDuplicate` (смысловой дубль остаётся в колоде);
+  /// у legacy — отброшенные точные дубли плюс помеченные почти-дубли, т. е.
+  /// сумма уровней каскада. Знаменатель [duplicateRate] — [generated].
+  final int duplicateMarked;
+
+  /// Запросов Understanding за прогон (TASK «Срез 13», п. 7).
+  ///
+  /// Включает повторы лестницы ADR-021 и деление обрезанных фрагментов; из
+  /// кэша карты — 0. «Запросов на 10 разделов» считает стенд.
+  final int understandingRequests;
+
   /// Отметки времени запросов модели (успешных и ошибочных), TASK п. 6.
   final List<Duration> batchDurations;
 
@@ -329,10 +363,19 @@ class GenerationReport {
   /// Принято без пометок гейта (`accepted − acceptedWithWarnings`).
   int get cleanAccepted => accepted - acceptedWithWarnings;
 
-  /// cleanRate = принято без warning / принято (TASK «Срез 12», п. 3).
+  /// cleanRate = принято без warning / **произведено** (TASK «Срез 13», п. 8).
   ///
-  /// `null` — принятых нет: «0 из 0» не является качеством.
-  double? get cleanRate => accepted <= 0 ? null : cleanAccepted / accepted;
+  /// Знаменатель — [generated], а не [accepted]: иначе путь, отбрасывающий
+  /// сомнительное (`accepted` меньше при том же числе произведённых), выглядел
+  /// бы чище. `null` — модель ничего не произвела: «0 из 0» не качество.
+  double? get cleanRate => generated <= 0 ? null : cleanAccepted / generated;
+
+  /// duplicateRate = помечено/отброшено как дубли / произведено.
+  ///
+  /// `null` — модель ничего не произвела. Знаменатель тот же, что у
+  /// [cleanRate]: метрики сравниваются на сопоставимой базе (срез 13, п. 8).
+  double? get duplicateRate =>
+      generated <= 0 ? null : duplicateMarked / generated;
 
   /// Долг: `max(0, requested − accepted)`.
   int get remaining => requested > accepted ? requested - accepted : 0;

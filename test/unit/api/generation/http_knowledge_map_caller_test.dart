@@ -1,13 +1,21 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:cardflow/api/generation/content_model.dart';
+import 'package:cardflow/api/generation/content_model_builder.dart';
 import 'package:cardflow/api/generation/http_knowledge_map_caller.dart';
 import 'package:cardflow/api/generation/knowledge_map_caller.dart';
+import 'package:cardflow/api/generation/understanding_service.dart';
+import 'package:cardflow/api/http/generation_http_client.dart';
 import 'package:cardflow/api/http/retry_policy.dart';
 import 'package:cardflow/api/prompts/understanding_prompt.dart';
 import 'package:cardflow/api/providers/generation_provider_adapter.dart';
+import 'package:cardflow/data/generation/in_memory_knowledge_map_cache.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
 import 'package:cardflow/domain/generation/provider_account.dart';
 import 'package:cardflow/domain/generation/provider_protocol.dart';
+import 'package:cardflow/domain/text/document_format.dart';
+import 'package:cardflow/domain/text/parsed_document.dart';
 
 import '../../../helpers/generation_fakes.dart';
 
@@ -314,4 +322,90 @@ void main() {
     expect(response.truncated, isTrue);
     expect(response.usage.totalTokens, 120, reason: 'usage обрыва тоже факт');
   });
+
+  test('срез 13: проба strict-схемы один раз на прогон — 12 разделов = 13 запросов', () async {
+    // 12 разделов × две ступени лестницы ADR-021 = 24 запроса (дефект S12).
+    // Профиль совместимости запоминает первую 400, и каждый следующий раздел
+    // идёт сразу без strict: 1 проба + 12 успешных = 13.
+    final _StrictRejectingTransport strictTransport =
+        _StrictRejectingTransport();
+    final UnderstandingService service = UnderstandingService(
+      caller: HttpKnowledgeMapCaller(
+        transport: strictTransport,
+        apiKeyStore: keyStore,
+        account: account,
+        retryPolicy: RetryPolicy(jitter: () => 0),
+        delay: (Duration duration) async => delays.add(duration),
+      ),
+      cache: InMemoryKnowledgeMapCache(),
+      maxOutputTokens: 512,
+    );
+
+    final UnderstandingResult result = await service.build(_document12());
+
+    expect(strictTransport.calls, 13);
+    expect(
+      strictTransport.strictCalls,
+      1,
+      reason: 'strict-вариант запрошен ровно один раз за прогон',
+    );
+    expect(result.requests, 13, reason: 'отчёт считает запросы числом');
+    expect(result.hasFailures, isFalse);
+    expect(delays, isEmpty, reason: '400 — ступень лестницы, не повтор');
+  });
+}
+
+/// Документ из 12 разделов по одному блоку: материал Understanding.
+Document _document12() {
+  final StringBuffer buffer = StringBuffer();
+  final List<ParsedSection> sections = <ParsedSection>[];
+  for (var index = 0; index < 12; index++) {
+    if (buffer.isNotEmpty) buffer.write('\n');
+    final int start = buffer.length;
+    buffer.writeln('Утверждение $index: момент силы равен произведению силы.');
+    sections.add(
+      ParsedSection(start: start, end: buffer.length, title: 'Раздел $index'),
+    );
+  }
+  final String text = buffer.toString();
+  return ContentModelBuilder().build(
+    ParsedDocument(
+      format: DocumentFormat.txt,
+      fileName: 'материал.txt',
+      text: text,
+      sections: sections,
+    ),
+  );
+}
+
+/// Транспорт DeepSeek-подобного сервера: strict `json_schema` — 400,
+/// запрос без схемы — успешный ответ карты знаний.
+class _StrictRejectingTransport implements GenerationTransport {
+  int calls = 0;
+  int strictCalls = 0;
+
+  @override
+  Future<Map<String, Object?>> postJson(
+    ProviderRequest request, {
+    CancelToken? cancelToken,
+  }) async {
+    calls++;
+    if (request.body['response_format'] != null) {
+      strictCalls++;
+      throw const GenerationException(GenerationErrorCode.badRequest);
+    }
+    return <String, Object?>{
+      'choices': <Object?>[
+        <String, Object?>{
+          'message': <String, Object?>{'content': '{"units": []}'},
+          'finish_reason': 'stop',
+        },
+      ],
+      'usage': <String, Object?>{
+        'prompt_tokens': 10,
+        'completion_tokens': 5,
+        'total_tokens': 15,
+      },
+    };
+  }
 }

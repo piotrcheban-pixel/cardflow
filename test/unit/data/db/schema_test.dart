@@ -50,8 +50,8 @@ void main() {
   });
 
   group('SPEC A5: таблицы и колонки', () {
-    test('schemaVersion == 2 (ADR-051: таблицы прогона генерации)', () {
-      expect(db.schemaVersion, 2);
+    test('schemaVersion == 3 (срез 13: пометки дедупа в card_drafts)', () {
+      expect(db.schemaVersion, 3);
     });
 
     test('созданы 10 таблиц SPEC A5 и 5 таблиц прогона генерации', () async {
@@ -244,7 +244,7 @@ void main() {
       ]);
     });
 
-    test('card_drafts: колонки соответствуют ADR-051', () async {
+    test('card_drafts: колонки соответствуют ADR-051 и срезу 13', () async {
       expect(await _columnsOf(db, 'card_drafts'), <String>[
         'id TEXT NOT NULL PK',
         'run_id TEXT NOT NULL',
@@ -256,6 +256,9 @@ void main() {
         'created_at INTEGER NOT NULL',
         'imported_card_id TEXT',
         'imported_at INTEGER',
+        // Срез 13, L219: пары дедупа переживают перезапуск прогона.
+        'is_duplicate_of TEXT',
+        'dedup_level TEXT',
       ]);
     });
 
@@ -355,10 +358,10 @@ void main() {
 
   group('открытие БД (ADR-005)', () {
     test('onUpgrade на неизвестную версию — fail-fast StateError', () async {
-      // Миграция 1 → 2 реализована (ADR-051); fail-fast остаётся для версий
-      // без шага миграции: данные не «досоздаются» молча.
+      // Миграции 1 → 2 (ADR-051) и 2 → 3 (срез 13) реализованы; fail-fast
+      // остаётся для версий без шага: данные не «досоздаются» молча.
       await expectLater(
-        db.migration.onUpgrade(Migrator(db), 2, 3),
+        db.migration.onUpgrade(Migrator(db), 3, 4),
         throwsA(
           isA<StateError>().having(
             (error) => error.message,

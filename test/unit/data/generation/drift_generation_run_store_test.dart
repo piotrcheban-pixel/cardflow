@@ -2,11 +2,14 @@
 // принятия, сбой на пятом батче не теряет первые четыре, после перезапуска
 // приложения прогон восстанавливается и продолжается с первой невыполненной
 // партии, а `generation_jobs` остаётся совместимым представлением для UI.
+import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cardflow/data/db/app_database.dart';
 import 'package:cardflow/data/generation/drift_generation_run_store.dart';
 import 'package:cardflow/domain/cards/card.dart';
+import 'package:cardflow/domain/generation/dedup_mark.dart';
+import 'package:cardflow/domain/generation/dedup_report.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
 import 'package:cardflow/domain/generation/generation_ledger.dart';
 import 'package:cardflow/domain/generation/generation_run.dart';
@@ -444,6 +447,136 @@ void main() {
       // Поля A5 не удалены: статус и счётчики остаются читаемыми.
       expect(job.status, 'done');
       expect(job.cardsCount, isNull);
+    });
+  });
+
+  group('пометки дедупа (срез 13, L219)', () {
+    test(
+      'пары и уровни переживают перезапуск, карточки остаются в журнале',
+      () async {
+        await store.openRun(
+          runId: runId,
+          stage: GenerationStage.validating,
+          now: fixedNow,
+          batches: GenerationLedger.fromBudgets(const <int>[2]).batches,
+        );
+        final GenerationRunCardSink sink = GenerationRunCardSink(
+          store: store,
+          runId: runId,
+          clock: () => fixedNow,
+        );
+        final GeneratedCard first = card('Вопрос 0');
+        final GeneratedCard second = card('Вопрос 1');
+        await sink.save(first, batchIndex: 0);
+        await sink.save(second, batchIndex: 0);
+        final String firstHash = draftContentHashOf(first);
+        final String secondHash = draftContentHashOf(second);
+
+        await store.saveDedupMarks(
+          runId,
+          marks: <DedupMark>[
+            DedupMark(
+              contentHash: firstHash,
+              duplicateOf: DedupMark.deckKey('deck-1'),
+              level: DedupLevel.exact,
+            ),
+            DedupMark(
+              contentHash: secondHash,
+              duplicateOf: firstHash,
+              level: DedupLevel.semantic,
+            ),
+          ],
+          now: fixedNow,
+        );
+
+        // «Перезапуск приложения»: новое хранилище на той же БД.
+        final DriftGenerationRunStore restarted = DriftGenerationRunStore(db);
+        final GenerationRunSnapshot snapshot = (await restarted.loadRun(
+          runId,
+        ))!;
+
+        expect(snapshot.drafts, hasLength(2), reason: 'дубль не удалён');
+        expect(snapshot.acceptedCards, hasLength(2));
+        final RunCardDraft firstDraft = snapshot.drafts.firstWhere(
+          (RunCardDraft draft) => draft.contentHash == firstHash,
+        );
+        expect(firstDraft.isDuplicate, isTrue);
+        expect(firstDraft.duplicateOf, DedupMark.deckKey('deck-1'));
+        expect(firstDraft.dedupLevel, DedupLevel.exact);
+        expect(snapshot.dedup.pairs, hasLength(2));
+        expect(snapshot.dedup.countOf(DedupLevel.semantic), 1);
+        expect(snapshot.dedup.countOf(DedupLevel.exact), 1);
+      },
+    );
+
+    test(
+      'точный дубль внутри прогона восстанавливается парой-маркером',
+      () async {
+        await store.openRun(
+          runId: runId,
+          stage: GenerationStage.validating,
+          now: fixedNow,
+          batches: GenerationLedger.fromBudgets(const <int>[1]).batches,
+        );
+        final GenerationRunCardSink sink = GenerationRunCardSink(
+          store: store,
+          runId: runId,
+          clock: () => fixedNow,
+        );
+        final GeneratedCard seed = card('Вопрос 0');
+        await sink.save(seed, batchIndex: 0);
+        final String hash = draftContentHashOf(seed);
+        // Одинаковое содержимое: вторую строку уникальный индекс не создаёт,
+        // поэтому пара хранится как «тот же content_hash».
+        await store.saveDedupMarks(
+          runId,
+          marks: <DedupMark>[
+            DedupMark(
+              contentHash: hash,
+              duplicateOf: hash,
+              level: DedupLevel.exact,
+            ),
+          ],
+          now: fixedNow,
+        );
+
+        final GenerationRunSnapshot snapshot = (await store.loadRun(runId))!;
+
+        expect(snapshot.drafts.single.isDuplicate, isTrue);
+        expect(snapshot.dedup.countOf(DedupLevel.exact), 1);
+        expect(snapshot.dedup.levelOf(hash), DedupLevel.exact);
+        expect(
+          snapshot.dedup.pairs.single.leftId,
+          startsWith(DedupMark.identicalSidePrefix),
+          reason: 'у пары разные id сторон, хотя содержимое одно',
+        );
+      },
+    );
+
+    test('неизвестный уровень дедупа в строке — FormatException', () async {
+      await store.openRun(
+        runId: runId,
+        stage: GenerationStage.validating,
+        now: fixedNow,
+        batches: GenerationLedger.fromBudgets(const <int>[1]).batches,
+      );
+      final GenerationRunCardSink sink = GenerationRunCardSink(
+        store: store,
+        runId: runId,
+        clock: () => fixedNow,
+      );
+      final GeneratedCard seed = card('Вопрос 0');
+      await sink.save(seed, batchIndex: 0);
+      await (db.update(
+        db.cardDrafts,
+      )..where(($CardDraftsTable table) => table.runId.equals(runId))).write(
+        const CardDraftsCompanion(
+          isDuplicateOf: Value<String>('deck:deck-1'),
+          dedupLevel: Value<String>('неведомый'),
+        ),
+      );
+
+      await expectLater(store.loadRun(runId), throwsFormatException);
     });
   });
 }

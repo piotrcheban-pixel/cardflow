@@ -1441,6 +1441,10 @@
   "@generationReasonUnitUnknown": {
     "description": "Код причины среза 12: unit_id вне партии (unit_unknown)."
   },
+  "generationReasonPossibleDuplicate": "Возможный смысловой дубль: карточка похожа на другую",
+  "@generationReasonPossibleDuplicate": {
+    "description": "Код пометки среза 13: этап Dedup нашёл пару каскада, карточка оставлена (possible_duplicate)."
+  },
   "generationReasonWarningMark": "Предупреждение: {reason}",
   "@generationReasonWarningMark": {
     "description": "Пометка предпросмотра среза 12: текст причины из ARB.",

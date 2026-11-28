@@ -52,6 +52,7 @@ class KnowledgeMapRawResponse {
     required this.json,
     this.usage = const TokenUsage(),
     this.truncated = false,
+    this.attempts = 1,
   });
 
   /// JSON-строка с ответом модели по канонической схеме `gen-map-v1`.
@@ -63,9 +64,17 @@ class KnowledgeMapRawResponse {
   /// Ответ оборван по лимиту вывода — карта фрагмента непригодна целиком.
   final bool truncated;
 
+  /// Сколько HTTP-обменов стоил ответ (ступени лестницы ADR-021 и повторы).
+  ///
+  /// Успех без упрощений — 1; отказ strict-схемы — 2 и больше. Отчёт
+  /// Understanding складывает это число, а не считает «один вызов на раздел»
+  /// (срез 13): иначе цена лестницы не видна.
+  final int attempts;
+
   @override
   String toString() =>
-      'KnowledgeMapRawResponse(${json.length} симв., truncated: $truncated)';
+      'KnowledgeMapRawResponse(${json.length} симв., truncated: $truncated, '
+      'attempts: $attempts)';
 }
 
 /// Вызов модели на понимание фрагмента.

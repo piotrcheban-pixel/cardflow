@@ -18,6 +18,8 @@ import 'package:uuid/uuid.dart';
 
 import 'package:cardflow/data/db/app_database.dart';
 import 'package:cardflow/data/db/epoch.dart';
+import 'package:cardflow/domain/generation/dedup_mark.dart';
+import 'package:cardflow/domain/generation/dedup_report.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
 import 'package:cardflow/domain/generation/generated_card_json.dart';
 import 'package:cardflow/domain/generation/generation_error.dart';
@@ -224,6 +226,46 @@ class DriftGenerationRunStore {
     }
   }
 
+  /// Пишет пометки этапа Dedup в строки черновиков (TASK «Срез 13», L219).
+  ///
+  /// Строка ищется по (`run_id`, `content_hash`) — тому же ключу, что у
+  /// идемпотентного импорта. Пометки не удаляют черновик и не меняют
+  /// `card_json`: после перезапуска прогона пары восстанавливаются из
+  /// [GenerationRunSnapshot.dedup].
+  Future<void> saveDedupMarks(
+    String runId, {
+    required List<DedupMark> marks,
+    required DateTime now,
+  }) async {
+    if (marks.isEmpty) return;
+    try {
+      await database.transaction(() async {
+        for (final DedupMark mark in marks) {
+          await (database.update(database.cardDrafts)..where(
+                ($CardDraftsTable table) =>
+                    table.runId.equals(runId) &
+                    table.contentHash.equals(mark.contentHash),
+              ))
+              .write(
+                CardDraftsCompanion(
+                  isDuplicateOf: Value<String>(mark.duplicateOf),
+                  dedupLevel: Value<String>(mark.level.wireName),
+                ),
+              );
+        }
+        await (database.update(
+          database.generationRuns,
+        )..where((table) => table.id.equals(runId))).write(
+          GenerationRunsCompanion(
+            updatedAt: Value<int>(toEpochMs(now.toUtc())),
+          ),
+        );
+      });
+    } on Object catch (error) {
+      throw _storageError('save dedup marks', error);
+    }
+  }
+
   /// Снимок прогона: этап, партии, черновики и число единиц карты.
   ///
   /// `null` — такого прогона нет; повреждённая запись (неизвестный этап/статус,
@@ -389,7 +431,23 @@ class DriftGenerationRunStore {
       batchIndex: row.batchIndex,
       card: decodeGeneratedCardJson(decoded),
       importedCardId: row.importedCardId,
+      duplicateOf: row.isDuplicateOf,
+      dedupLevel: row.dedupLevel == null
+          ? null
+          : _dedupLevelOf(row.dedupLevel!, row.contentHash),
     );
+  }
+
+  /// Уровень каскада из строки; неизвестный код — [FormatException], чтобы
+  /// «дубль с непонятным уровнем» не превращался молча в чистую карточку.
+  static DedupLevel _dedupLevelOf(String wire, String contentHash) {
+    final DedupLevel? level = DedupLevel.fromWire(wire);
+    if (level == null) {
+      throw FormatException(
+        'Неизвестный уровень дедупа «$wire» у черновика $contentHash',
+      );
+    }
+    return level;
   }
 
   KnowledgeUnit _unitOf(GenerationUnitRow row) {

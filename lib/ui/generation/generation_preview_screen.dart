@@ -1292,6 +1292,7 @@ String reasonLabel(AppLocalizations l10n, CardReasonCode reason) {
     CardReasonCode.quoteNotLiteral => l10n.generationReasonQuoteNotLiteral,
     CardReasonCode.sectionUnknown => l10n.generationReasonSectionUnknown,
     CardReasonCode.unitUnknown => l10n.generationReasonUnitUnknown,
+    CardReasonCode.possibleDuplicate => l10n.generationReasonPossibleDuplicate,
   };
 }
 

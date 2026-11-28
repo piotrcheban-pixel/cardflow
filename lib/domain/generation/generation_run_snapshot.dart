@@ -8,6 +8,8 @@
 library;
 
 import 'package:cardflow/domain/cards/content_hash.dart';
+import 'package:cardflow/domain/generation/dedup_mark.dart';
+import 'package:cardflow/domain/generation/dedup_report.dart';
 import 'package:cardflow/domain/generation/generated_card.dart';
 import 'package:cardflow/domain/generation/generation_ledger.dart';
 import 'package:cardflow/domain/generation/generation_run.dart';
@@ -97,6 +99,8 @@ class RunCardDraft {
     required this.batchIndex,
     required this.card,
     this.importedCardId,
+    this.duplicateOf,
+    this.dedupLevel,
   });
 
   /// Хеш содержимого `front + "\u0000" + back`.
@@ -111,13 +115,24 @@ class RunCardDraft {
   /// `cards.id`, если черновик уже импортирован; `null` — ещё нет.
   final String? importedCardId;
 
+  /// Вторая сторона пары дублей (срез 13): `content_hash` другого черновика
+  /// этого прогона или `deck:<cards.id>`; `null` — дублем не признана.
+  final String? duplicateOf;
+
+  /// Уровень каскада дедупа; `null` — дублем не признана.
+  final DedupLevel? dedupLevel;
+
   /// true — карточка уже в колоде (повторный импорт её не дублирует).
   bool get isImported => importedCardId != null;
+
+  /// true — этап Dedup пометил карточку парой.
+  bool get isDuplicate => dedupLevel != null;
 
   @override
   String toString() =>
       'RunCardDraft(партия $batchIndex, $contentHash'
-      '${isImported ? ', импортирована' : ''})';
+      '${isImported ? ', импортирована' : ''}'
+      '${dedupLevel == null ? '' : ', дубль ${dedupLevel!.wireName}'})';
 }
 
 /// Снимок сохранённого прогона: этап, партии, принятые карточки, карта.
@@ -170,12 +185,33 @@ class GenerationRunSnapshot {
 
   /// Журнал прогона по сохранённым партиям.
   ///
-  /// Отчёт дедупликации в журнал не входит: он считается заново из карточек и
-  /// колоды, а не восстанавливается из строк (пары дублей в БД не хранятся —
-  /// это ограничение среза, см. `journal/STATE.md`).
+  /// Пары дедупа восстанавливаются из строк черновиков ([dedup], срез 13):
+  /// пометки `is_duplicate_of` + `dedup_level` персистятся, поэтому после
+  /// перезапуска прогона они на месте (L219).
   GenerationLedger get ledger => GenerationLedger(
     batches: <GenerationBatchLedger>[
       for (final GenerationBatchRecord record in batches) record.ledger,
+    ],
+  );
+
+  /// Отчёт дедупа из сохранённых строк: пара (вторая сторона → черновик) с
+  /// уровнем каскада. Пустой — пометок нет.
+  ///
+  /// Точный дубль внутри прогона хранится одной строкой (уникальный индекс
+  /// `run_id + content_hash`): вторая сторона совпадает с ключом, и первой
+  /// стороной пары становится маркер [DedupMark.identicalSidePrefix] — иначе
+  /// [DedupPair] ссылался бы на одну и ту же карточку дважды.
+  DedupReport get dedup => DedupReport(
+    pairs: <DedupPair>[
+      for (final RunCardDraft draft in drafts)
+        if (draft.duplicateOf != null && draft.dedupLevel != null)
+          DedupPair(
+            leftId: draft.duplicateOf == draft.contentHash
+                ? '${DedupMark.identicalSidePrefix}${draft.contentHash}'
+                : draft.duplicateOf!,
+            rightId: draft.contentHash,
+            level: draft.dedupLevel!,
+          ),
     ],
   );
 

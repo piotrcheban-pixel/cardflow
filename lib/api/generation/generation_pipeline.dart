@@ -1415,6 +1415,7 @@ class GenerationPipeline implements GenerationRunner {
       acceptedWithWarnings: acceptedWithWarnings,
       warningCodes: warningCodes,
       duplicatesByLevel: metrics.duplicatesByLevel,
+      duplicateMarked: duplicates + possibleDuplicates,
       batchDurations: batchDurations,
       materialCapacity: activePlan?.materialCapacity,
       unfilledSlots: remainingCards,

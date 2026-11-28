@@ -1144,6 +1144,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get generationReasonUnitUnknown => 'Единица знания не из плана';
 
   @override
+  String get generationReasonPossibleDuplicate =>
+      'Возможный смысловой дубль: карточка похожа на другую';
+
+  @override
   String generationReasonWarningMark(String reason) {
     return 'Предупреждение: $reason';
   }

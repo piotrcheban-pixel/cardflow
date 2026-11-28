@@ -1912,6 +1912,12 @@ abstract class AppLocalizations {
   /// **'Единица знания не из плана'**
   String get generationReasonUnitUnknown;
 
+  /// Код пометки среза 13: этап Dedup нашёл пару каскада, карточка оставлена (possible_duplicate).
+  ///
+  /// In ru, this message translates to:
+  /// **'Возможный смысловой дубль: карточка похожа на другую'**
+  String get generationReasonPossibleDuplicate;
+
   /// Пометка предпросмотра среза 12: текст причины из ARB.
   ///
   /// In ru, this message translates to:

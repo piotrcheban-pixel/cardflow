@@ -33,6 +33,7 @@ import 'package:cardflow/domain/generation/generation_result.dart';
 import 'package:cardflow/domain/generation/ports.dart';
 import 'package:cardflow/domain/generation/provider_account.dart';
 import 'package:cardflow/domain/generation/provider_protocol.dart';
+import 'package:cardflow/domain/generation/schema_compat_profile.dart';
 
 /// Порт вызова модели поверх адаптеров провайдеров.
 class AdapterCardsBatchPort implements LlmPort {
@@ -48,7 +49,8 @@ class AdapterCardsBatchPort implements LlmPort {
     this.normalizer = const ProviderResponseNormalizer(),
     this.extractor = const CardsJsonExtractor(),
     this.tolerant = true,
-  });
+    SchemaCompatProfile? compat,
+  }) : compat = compat ?? SchemaCompatProfile();
 
   /// Транспорт запросов провайдера.
   final GenerationTransport transport;
@@ -68,6 +70,13 @@ class AdapterCardsBatchPort implements LlmPort {
   /// Разрешать markdown-ограждение вокруг JSON (OpenAI-совместимые серверы).
   final bool tolerant;
 
+  /// Память о совместимости провайдера со strict-схемой (срез 13, часть 2).
+  ///
+  /// Один экземпляр на прогон (общий с Understanding): первая `400` на strict
+  /// запоминается, и следующие батчи идут сразу без схемы — лестница ADR-021
+  /// перестаёт быть двухступенчатой на каждом запросе.
+  final SchemaCompatProfile compat;
+
   @override
   Future<GenerationResult> generate(
     CardsBatch batch, {
@@ -83,9 +92,17 @@ class AdapterCardsBatchPort implements LlmPort {
     // `badRequest`, не больше трёх запросов; нативные протоколы — один.
     final bool tolerantFallback =
         account.protocol == ProviderProtocol.openaiCompletions;
+    final bool strictKnownRejected =
+        tolerantFallback &&
+        compat.isRejected(
+          provider: account.protocol.name,
+          model: account.modelId,
+          schema: cardsPromptVersion,
+          rung: SchemaCompatRung.strictSchema,
+        );
     final List<({bool strictSchema, bool sendMaxTokens})> attempts =
         <({bool strictSchema, bool sendMaxTokens})>[
-          (strictSchema: true, sendMaxTokens: true),
+          if (!strictKnownRejected) (strictSchema: true, sendMaxTokens: true),
           if (tolerantFallback) (strictSchema: false, sendMaxTokens: true),
           if (tolerantFallback) (strictSchema: false, sendMaxTokens: false),
         ];
@@ -109,6 +126,15 @@ class AdapterCardsBatchPort implements LlmPort {
       } on GenerationException catch (error) {
         lastError = error;
         if (tolerantFallback && error.code == GenerationErrorCode.badRequest) {
+          if (attempt.strictSchema) {
+            // Проба strict-схемы — один раз на прогон, а не на батч (срез 13).
+            compat.rememberRejected(
+              provider: account.protocol.name,
+              model: account.modelId,
+              schema: cardsPromptVersion,
+              rung: SchemaCompatRung.strictSchema,
+            );
+          }
           continue;
         }
         rethrow;

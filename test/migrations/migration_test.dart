@@ -1,9 +1,9 @@
-// Тест схемы/миграций по drift-инструментам (ADR-005, ADR-051).
+// Тест схемы/миграций по drift-инструментам (ADR-005, ADR-051, срез 13).
 //
-// Проверяет, что schema dump-файлы `drift_schemas/drift_schema_v1.json` и
-// `drift_schema_v2.json` актуальны и совпадают с тем, что создаёт `AppDatabase`
-// в приложении. При изменении схемы без новой версии/dump тест краснеет —
-// это и есть fail-fast политики миграций ADR-005.
+// Проверяет, что schema dump-файлы `drift_schemas/drift_schema_v{1,2,3}.json`
+// актуальны и совпадают с тем, что создаёт `AppDatabase` в приложении. При
+// изменении схемы без новой версии/dump тест краснеет — это и есть fail-fast
+// политики миграций ADR-005.
 //
 // Тест использует `drift_dev` (`SchemaVerifier`) и работает в обычном
 // `flutter test`: sqlite3 native assets проверены спайком S3.
@@ -24,8 +24,8 @@ void main() {
   test('версия dump-файла совпадает со schemaVersion приложения', () async {
     final db = AppDatabase.inMemory();
     addTearDown(db.close);
-    expect(GeneratedHelper.versions, <int>[1, db.schemaVersion]);
-    expect(db.schemaVersion, 2);
+    expect(GeneratedHelper.versions, <int>[1, 2, db.schemaVersion]);
+    expect(db.schemaVersion, 3);
   });
 
   test('dump v1 создаёт 10 таблиц и 3 индекса SPEC A5', () async {
@@ -110,28 +110,49 @@ void main() {
     ]);
   });
 
+  test('dump v3 добавляет к card_drafts пометки дедупа (срез 13)', () async {
+    final schema = await verifier.schemaAt(3);
+    addTearDown(schema.close);
+
+    final rows = schema.rawDatabase.select('PRAGMA table_info(card_drafts)');
+    final String names = <String>[for (final row in rows) row['name'] as String]
+        .join(',');
+    expect(names, contains('is_duplicate_of'));
+    expect(names, contains('dedup_level'));
+  });
+
   test(
-    'onCreate приложения совпадает со schema dump v2 (таблицы и индексы)',
+    'onCreate приложения совпадает со schema dump v3 (таблицы и индексы)',
     () async {
       // Открываем БД «с нуля», как в приложении: работает onCreate + индексы.
       final appDb = AppDatabase.inMemory();
       addTearDown(appDb.close);
       await appDb.customSelect('SELECT 1').get();
 
-      // Семантическое сравнение фактической схемы с dump-файлом v2:
+      // Семантическое сравнение фактической схемы с dump-файлом v3:
       // `migrateAndValidate` собирает reference-схему из dump и сравнивает её
       // с текущей схемой уже открытой БД (различия форматирования SQL игнорируются).
-      await verifier.migrateAndValidate(appDb, 2);
+      await verifier.migrateAndValidate(appDb, 3);
     },
   );
 
   test(
-    'migrateAndValidate v1 → v2 проходит (схема открывается drift-классом)',
+    'migrateAndValidate v1 → v3 проходит (схема открывается drift-классом)',
     () async {
       final connection = await verifier.startAt(1);
       final db = AppDatabase(connection);
       addTearDown(db.close);
-      await verifier.migrateAndValidate(db, 2);
+      await verifier.migrateAndValidate(db, 3);
+    },
+  );
+
+  test(
+    'migrateAndValidate v2 → v3 проходит (колонки пометок добавлены)',
+    () async {
+      final connection = await verifier.startAt(2);
+      final db = AppDatabase(connection);
+      addTearDown(db.close);
+      await verifier.migrateAndValidate(db, 3);
     },
   );
 }

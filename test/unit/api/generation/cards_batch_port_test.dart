@@ -205,6 +205,38 @@ void main() {
   );
 
   test(
+    'срез 13: проба strict-схемы один раз на прогон — 10 батчей = 11 запросов',
+    () async {
+      final _FakeTransport transport = _FakeTransport((
+        ProviderRequest request,
+      ) {
+        if (request.body['response_format'] != null) {
+          throw const GenerationException(GenerationErrorCode.badRequest);
+        }
+        return _openAiResponse(<Map<String, Object?>>[_card()]);
+      });
+      final AdapterCardsBatchPort port = _port(transport);
+
+      for (var index = 0; index < 10; index++) {
+        await port.generate(_batch(), account: account);
+      }
+
+      expect(
+        transport.requests,
+        hasLength(11),
+        reason: '1 проба strict + 10 ответов без схемы, а не 20 запросов',
+      );
+      expect(
+        transport.requests.where(
+          (ProviderRequest request) => request.body['response_format'] != null,
+        ),
+        hasLength(1),
+        reason: 'strict-вариант запрошен ровно один раз за прогон',
+      );
+    },
+  );
+
+  test(
     'ответ без choices — GenerationException(invalidResponse), а не пусто',
     () async {
       final AdapterCardsBatchPort port = _port(
