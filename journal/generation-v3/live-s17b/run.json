@@ -1,0 +1,145 @@
+{
+  "provider": "deepseek",
+  "model": "deepseek-flash",
+  "srez": "17B",
+  "code_version": "ed5f0516+dirty",
+  "code_dirty": true,
+  "started_at": "2026-11-28T13:56:58.516248Z",
+  "finished_at": "2026-11-28T14:03:15.828195Z",
+  "matrix_duration_ms": 377311,
+  "logical_requests": 11,
+  "http_requests": 38,
+  "attempts": 38,
+  "attempts_rejected": 0,
+  "cost_guard": {
+    "label": "deepseek/deepseek-flash",
+    "maxCostUsd": 0.3,
+    "spentUsd": 0.142368,
+    "reservedUsd": 0.0,
+    "blocked": 0,
+    "inputPerMillion": 0.3,
+    "outputPerMillion": 1.2,
+    "currency": "USD",
+    "pricingSource": "https://api-docs.deepseek.com/quick_start/pricing",
+    "pricingDate": "2026-11-19"
+  },
+  "deadline_minutes": 40,
+  "cells": 2,
+  "request_shapes": {
+    "textbook-v3-150-context": [
+      {
+        "bytes": 6119,
+        "already_created": 0,
+        "statements": 0,
+        "taken_units": false,
+        "already_accepted": 0
+      },
+      {
+        "bytes": 5314,
+        "already_created": 0,
+        "statements": 0,
+        "taken_units": false,
+        "already_accepted": 0
+      },
+      {
+        "bytes": 5373,
+        "already_created": 0,
+        "statements": 0,
+        "taken_units": false,
+        "already_accepted": 0
+      },
+      {
+        "bytes": 5363,
+        "already_created": 0,
+        "statements": 0,
+        "taken_units": false,
+        "already_accepted": 0
+      },
+      {
+        "bytes": 5376,
+        "already_created": 0,
+        "statements": 0,
+        "taken_units": false,
+        "already_accepted": 0
+      },
+      {
+        "bytes": 5370,
+        "already_created": 0,
+        "statements": 0,
+        "taken_units": false,
+        "already_accepted": 0
+      },
+      {
+        "bytes": 5304,
+        "already_created": 0,
+        "statements": 0,
+        "taken_units": false,
+        "already_accepted": 0
+      },
+      {
+        "bytes": 5431,
+        "already_created": 0,
+        "statements": 0,
+        "taken_units": false,
+        "already_accepted": 0
+      },
+      {
+        "bytes": 5301,
+        "already_created": 0,
+        "statements": 0,
+        "taken_units": false,
+        "already_accepted": 0
+      },
+      {
+        "bytes": 5315,
+        "already_created": 0,
+        "statements": 0,
+        "taken_units": false,
+        "already_accepted": 0
+      },
+      {
+        "bytes": 5300,
+        "already_created": 0,
+        "statements": 0,
+        "taken_units": false,
+        "already_accepted": 0
+      },
+      {
+        "bytes": 5279,
+        "already_created": 0,
+        "statements": 0,
+        "taken_units": false,
+        "already_accepted": 0
+      },
+      {
+        "bytes": 5291,
+        "already_created": 0,
+        "statements": 0,
+        "taken_units": false,
+        "already_accepted": 0
+      },
+      {
+        "bytes": 28085,
+        "already_created": 0,
+        "statements": 0,
+        "taken_units": false,
+        "already_accepted": 1
+      },
+      {
+        "bytes": 26645,
+        "already_created": 0,
+        "statements": 0,
+        "taken_units": false,
+        "already_accepted": 1
+      },
+      {
+        "bytes": 21865,
+        "already_created": 1,
+        "statements": 20,
+        "taken_units": true,
+        "already_accepted": 2
+      }
+    ],
+    "textbook-legacy-150-cards": []
+  }
+}

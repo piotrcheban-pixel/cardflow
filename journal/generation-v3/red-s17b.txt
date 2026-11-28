@@ -1,0 +1,45 @@
+Microsoft (R) C/C++ Optimizing Compiler Version 19.52.37029 for x64
+(C) Р‰В®Р°Р‡В®Р°В Р¶РЃРї РЉВ В©Р„Р°В®Р±В®РґРІ (Microsoft Corporation).  вЂљР±Тђ Р‡Р°В СћВ  В§В Р№РЃР№ТђВ­Р».
+
+
+
+Microsoft (R) C/C++ Optimizing Compiler Version 19.52.37029 for x64
+(C) Р‰В®Р°Р‡В®Р°В Р¶РЃРї РЉВ В©Р„Р°В®Р±В®РґРІ (Microsoft Corporation).  вЂљР±Тђ Р‡Р°В СћВ  В§В Р№РЃР№ТђВ­Р».
+
+
+
+00:00 +0: loading C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/run_context_test.dart
+00:00 +0: контекст «уже создано» в запросе Generation шестой запрос несёт утверждения пяти принятых карточек прогона
+00:00 +0 -1: контекст «уже создано» в запросе Generation шестой запрос несёт утверждения пяти принятых карточек прогона [E]
+  Expected: contains '<already_created>'
+    Actual: '<units>\n'
+              '<unit id="U5" kind="definition" topic="момент силы" cards="1">\n'
+              '<statement>Утверждение единицы U5 о моменте силы.</statement>\n'
+              '<anchor block="doc:материал.md#0#0">Цитата материала U5 о моменте силы.</anchor>\n'
+              '</unit>\n'
+              '</units>\n'
+              '<budget cards="1">\n'
+              '<card unit_id="U5" angle="primary"/>\n'
+              '</budget>'
+     Which: does not contain '<already_created>'
+  шестой запрос обязан нести контекст «уже создано»
+  
+  package:matcher                                      expect
+  package:flutter_test/src/widget_tester.dart 473:18   expect
+  test\unit\api\generation\run_context_test.dart 65:9  main.<fn>.<fn>
+  
+00:00 +0 -1: контекст «уже создано» в запросе Generation в контекст не попадает принятое чужого содержимого: только unit_id и утверждение, без ответа и подсказок
+00:00 +1 -1: контекст «уже создано» в запросе Generation две карточки одной единицы не дублируют утверждение в контексте
+00:00 +1 -2: контекст «уже создано» в запросе Generation две карточки одной единицы не дублируют утверждение в контексте [E]
+  Expected: <2>
+    Actual: <0>
+  
+  package:matcher                                       expect
+  package:flutter_test/src/widget_tester.dart 473:18    expect
+  test\unit\api\generation\run_context_test.dart 166:7  main.<fn>.<fn>
+  
+00:00 +1 -2: Some tests failed.
+
+Failing tests:
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/run_context_test.dart: контекст «уже создано» в запросе Generation две карточки одной единицы не дублируют утверждение в контексте
+  C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/run_context_test.dart: контекст «уже создано» в запросе Generation шестой запрос несёт утверждения пяти принятых карточек прогона

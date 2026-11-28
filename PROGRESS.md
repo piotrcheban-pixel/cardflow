@@ -2,6 +2,40 @@
 
 ## Сделано
 
+**Срез 17B (2026-11-28) — контекст «уже создано» в v3 и один замер гипотезы.**
+- **Диагноз (до платных прогонов).** В запрос v3 попадало только принятое
+  **своего** батча (`<already_accepted>`); принятое других партий и занятые
+  `unit_id` — нет. У прежнего пути `<already_created>` есть с среза 13
+  (`generation_pipeline.dart:_digestOf`). Красная фаза `red-s17b.txt`:
+  `Expected: contains '<already_created>'`, `Actual: '<units>…<budget…'`.
+- **`<already_created>` у v3.** `RunCardContext`
+  (`lib/domain/generation/run_card_context.dart`): краткие утверждения принятых
+  единиц (не карточки: без `front`/`back`) + занятые `unit_id`; блок в
+  пользовательском сообщении — `<taken units="…"/>` и `<statement unit_id="…">`.
+  Движок пополняет контекст по завершении партии, `ReplenishStage` пересобирает
+  его перед каждым запросом добора. **Формулировка `gen-cards-v3` не менялась**
+  (байтовая сверка `docs/prompts/gen-cards-v3.txt` зелёная).
+- **Предел payload — по числу:** 20 утверждений, 40 `unit_id`, 160 символов на
+  утверждение, приоритет — разделы текущей партии; применяет сборщик сообщения
+  (`buildCardsUserContent`), поэтому обойти нельзя. Тест «200 единиц = 50» это
+  фиксирует.
+- **Замер (TASK ч. 2): критерий не выполнен.** 2/2 ячейки `ran`, 06:17, 38 HTTP,
+  **0,142368 USD** из 0,30. Против оплаченной `textbook-v3-150`: `dupRate`
+  24,4 % → 39,1 %, `unique` 45 → 64, `cleanRate` 93,3 % → 100,0 %, запросов на
+  10 уникальных 0,44 → 0,31. Контекст дошёл до платного запроса (1 из 3 карточных
+  запросов, 20 утверждений — `request_shapes` в `run.json`). Причина нулевого
+  эффекта структурная: на `deepseek-flash` (`maxOutputTokens = 384 000`) заказ
+  умещается в **один** запрос генерации, дубли рождаются внутри ответа (L239);
+  карта Understanding у ячеек разная — 33 → 41 единица (L238).
+- **Вердикт:** дубли — в промпт S18. Правка остаётся (паритет с legacy, тесты, не
+  меняет план/пороги), но выигрышем не объявлена; `auto` = legacy, критерий пути
+  не пересчитывался.
+- **Слепая выборка:** 60 карточек (30 v3 + 30 legacy) с текстами, статус
+  `measured`; `tool/blind_score_s17b.dart` = `not_measured`, пока владелец не
+  разметит файл (поштучное сопоставление невозможно: метки дубля у сохранённых
+  карточек нет).
+- **ADR-055**, Q30, L238–L239, `verify-s17b.md`, `matrix-s17b.md`.
+
 **Срез 17 (2026-11-28) — заморозка метрики, сопоставимый объём, правило пути,
 слепая выборка (инструмент).**
 - **Метрика заморожена (часть 0).** `OutcomeCounts`: `cleanRate = clean/unique`,
@@ -511,6 +545,24 @@
   PDF, DOCX, PPTX, MD, скан без текстового слоя).
 
 ## Проверено
+
+**Срез 17B.** Гейты: `.fvm\versions\3.47.9\bin\flutter.bat analyze --no-pub lib
+test tool` → **No issues found!**; `dart format --set-exit-if-changed lib test
+tool` → **0 changed** (754 файла); `flutter test --no-pub --coverage
+--exclude-tags golden` → **3302 passed + 21 skipped, exit 0**
+(`green-s17b-full.txt`), покрытие рукописного кода **90,9 % (27537/30307)** при
+пороге 80 % (`coverage-s17b.txt`). Красная фаза — `red-s17b.txt`
+(assertion-level: `Expected: contains '<already_created>'`,
+`Expected: <1> Actual: <0>`). Целевые прогоны — `green-s17b-targeted.txt`
+(31) и 47 (добор + фасад). Живой замер 17B: 2/2 ячейки `ran`, 38 HTTP,
+**0,142368 USD** из 0,30 (`live-s17b/run.json`), контекст дошёл до 1 из 3
+карточных запросов (20 утверждений, `request_shapes`). Пересчёт —
+`dart run tool/recompute_matrix_s17b.dart` → `matrix-s17b.md` (12 ячеек базы,
+0 новых запросов); выборка — `dart run tool/blind_sample_s17b.dart` →
+`blind-sample-17b.md` + `blind-key-17b.json` (60 карточек, `measured`);
+расчёт доли годных — `tool/blind_score_s17b.dart` → `blind-score-17b.md`
+(`not_measured` до разметки владельцем). DoD-тесты: `run_context_test` 6/6,
+`replenish_stage_test` (+1), `cards_prompt_test` (промпт не тронут).
 
 **Срез 17.** Гейты: `.fvm\versions\3.47.9\bin\flutter.bat analyze --no-pub lib
 test tool` → **No issues found!**; `.fvm\versions\3.47.9\bin\dart.bat format

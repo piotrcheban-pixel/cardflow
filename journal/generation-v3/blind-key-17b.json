@@ -1,0 +1,376 @@
+{
+  "schema": "s17b",
+  "status": "measured",
+  "seed": 17,
+  "per_path": 30,
+  "available": {
+    "v3": 64,
+    "legacy": 62
+  },
+  "sampled": {
+    "v3": 30,
+    "legacy": 30
+  },
+  "entries": [
+    {
+      "number": 1,
+      "path": "v3",
+      "cell": "textbook-v3-150-context",
+      "card_index": 0
+    },
+    {
+      "number": 2,
+      "path": "v3",
+      "cell": "textbook-v3-150-context",
+      "card_index": 18
+    },
+    {
+      "number": 3,
+      "path": "v3",
+      "cell": "textbook-v3-150-context",
+      "card_index": 12
+    },
+    {
+      "number": 4,
+      "path": "v3",
+      "cell": "textbook-v3-150-context",
+      "card_index": 14
+    },
+    {
+      "number": 5,
+      "path": "v3",
+      "cell": "textbook-v3-150-context",
+      "card_index": 9
+    },
+    {
+      "number": 6,
+      "path": "legacy",
+      "cell": "textbook-legacy-150-cards",
+      "card_index": 6
+    },
+    {
+      "number": 7,
+      "path": "legacy",
+      "cell": "textbook-legacy-150-cards",
+      "card_index": 15
+    },
+    {
+      "number": 8,
+      "path": "legacy",
+      "cell": "textbook-legacy-150-cards",
+      "card_index": 14
+    },
+    {
+      "number": 9,
+      "path": "legacy",
+      "cell": "textbook-legacy-150-cards",
+      "card_index": 22
+    },
+    {
+      "number": 10,
+      "path": "v3",
+      "cell": "textbook-v3-150-context",
+      "card_index": 24
+    },
+    {
+      "number": 11,
+      "path": "legacy",
+      "cell": "textbook-legacy-150-cards",
+      "card_index": 24
+    },
+    {
+      "number": 12,
+      "path": "v3",
+      "cell": "textbook-v3-150-context",
+      "card_index": 22
+    },
+    {
+      "number": 13,
+      "path": "v3",
+      "cell": "textbook-v3-150-context",
+      "card_index": 4
+    },
+    {
+      "number": 14,
+      "path": "v3",
+      "cell": "textbook-v3-150-context",
+      "card_index": 28
+    },
+    {
+      "number": 15,
+      "path": "v3",
+      "cell": "textbook-v3-150-context",
+      "card_index": 6
+    },
+    {
+      "number": 16,
+      "path": "v3",
+      "cell": "textbook-v3-150-context",
+      "card_index": 16
+    },
+    {
+      "number": 17,
+      "path": "legacy",
+      "cell": "textbook-legacy-150-cards",
+      "card_index": 20
+    },
+    {
+      "number": 18,
+      "path": "legacy",
+      "cell": "textbook-legacy-150-cards",
+      "card_index": 27
+    },
+    {
+      "number": 19,
+      "path": "v3",
+      "cell": "textbook-v3-150-context",
+      "card_index": 8
+    },
+    {
+      "number": 20,
+      "path": "v3",
+      "cell": "textbook-v3-150-context",
+      "card_index": 5
+    },
+    {
+      "number": 21,
+      "path": "legacy",
+      "cell": "textbook-legacy-150-cards",
+      "card_index": 10
+    },
+    {
+      "number": 22,
+      "path": "v3",
+      "cell": "textbook-v3-150-context",
+      "card_index": 27
+    },
+    {
+      "number": 23,
+      "path": "legacy",
+      "cell": "textbook-legacy-150-cards",
+      "card_index": 18
+    },
+    {
+      "number": 24,
+      "path": "legacy",
+      "cell": "textbook-legacy-150-cards",
+      "card_index": 17
+    },
+    {
+      "number": 25,
+      "path": "v3",
+      "cell": "textbook-v3-150-context",
+      "card_index": 10
+    },
+    {
+      "number": 26,
+      "path": "v3",
+      "cell": "textbook-v3-150-context",
+      "card_index": 3
+    },
+    {
+      "number": 27,
+      "path": "legacy",
+      "cell": "textbook-legacy-150-cards",
+      "card_index": 26
+    },
+    {
+      "number": 28,
+      "path": "legacy",
+      "cell": "textbook-legacy-150-cards",
+      "card_index": 25
+    },
+    {
+      "number": 29,
+      "path": "v3",
+      "cell": "textbook-v3-150-context",
+      "card_index": 19
+    },
+    {
+      "number": 30,
+      "path": "legacy",
+      "cell": "textbook-legacy-150-cards",
+      "card_index": 0
+    },
+    {
+      "number": 31,
+      "path": "legacy",
+      "cell": "textbook-legacy-150-cards",
+      "card_index": 12
+    },
+    {
+      "number": 32,
+      "path": "legacy",
+      "cell": "textbook-legacy-150-cards",
+      "card_index": 5
+    },
+    {
+      "number": 33,
+      "path": "v3",
+      "cell": "textbook-v3-150-context",
+      "card_index": 13
+    },
+    {
+      "number": 34,
+      "path": "legacy",
+      "cell": "textbook-legacy-150-cards",
+      "card_index": 8
+    },
+    {
+      "number": 35,
+      "path": "legacy",
+      "cell": "textbook-legacy-150-cards",
+      "card_index": 3
+    },
+    {
+      "number": 36,
+      "path": "legacy",
+      "cell": "textbook-legacy-150-cards",
+      "card_index": 23
+    },
+    {
+      "number": 37,
+      "path": "v3",
+      "cell": "textbook-v3-150-context",
+      "card_index": 23
+    },
+    {
+      "number": 38,
+      "path": "legacy",
+      "cell": "textbook-legacy-150-cards",
+      "card_index": 13
+    },
+    {
+      "number": 39,
+      "path": "legacy",
+      "cell": "textbook-legacy-150-cards",
+      "card_index": 4
+    },
+    {
+      "number": 40,
+      "path": "legacy",
+      "cell": "textbook-legacy-150-cards",
+      "card_index": 29
+    },
+    {
+      "number": 41,
+      "path": "legacy",
+      "cell": "textbook-legacy-150-cards",
+      "card_index": 7
+    },
+    {
+      "number": 42,
+      "path": "v3",
+      "cell": "textbook-v3-150-context",
+      "card_index": 11
+    },
+    {
+      "number": 43,
+      "path": "legacy",
+      "cell": "textbook-legacy-150-cards",
+      "card_index": 19
+    },
+    {
+      "number": 44,
+      "path": "legacy",
+      "cell": "textbook-legacy-150-cards",
+      "card_index": 16
+    },
+    {
+      "number": 45,
+      "path": "v3",
+      "cell": "textbook-v3-150-context",
+      "card_index": 15
+    },
+    {
+      "number": 46,
+      "path": "v3",
+      "cell": "textbook-v3-150-context",
+      "card_index": 7
+    },
+    {
+      "number": 47,
+      "path": "legacy",
+      "cell": "textbook-legacy-150-cards",
+      "card_index": 28
+    },
+    {
+      "number": 48,
+      "path": "v3",
+      "cell": "textbook-v3-150-context",
+      "card_index": 17
+    },
+    {
+      "number": 49,
+      "path": "legacy",
+      "cell": "textbook-legacy-150-cards",
+      "card_index": 2
+    },
+    {
+      "number": 50,
+      "path": "v3",
+      "cell": "textbook-v3-150-context",
+      "card_index": 29
+    },
+    {
+      "number": 51,
+      "path": "legacy",
+      "cell": "textbook-legacy-150-cards",
+      "card_index": 1
+    },
+    {
+      "number": 52,
+      "path": "legacy",
+      "cell": "textbook-legacy-150-cards",
+      "card_index": 11
+    },
+    {
+      "number": 53,
+      "path": "v3",
+      "cell": "textbook-v3-150-context",
+      "card_index": 26
+    },
+    {
+      "number": 54,
+      "path": "legacy",
+      "cell": "textbook-legacy-150-cards",
+      "card_index": 9
+    },
+    {
+      "number": 55,
+      "path": "v3",
+      "cell": "textbook-v3-150-context",
+      "card_index": 20
+    },
+    {
+      "number": 56,
+      "path": "v3",
+      "cell": "textbook-v3-150-context",
+      "card_index": 25
+    },
+    {
+      "number": 57,
+      "path": "v3",
+      "cell": "textbook-v3-150-context",
+      "card_index": 2
+    },
+    {
+      "number": 58,
+      "path": "legacy",
+      "cell": "textbook-legacy-150-cards",
+      "card_index": 21
+    },
+    {
+      "number": 59,
+      "path": "v3",
+      "cell": "textbook-v3-150-context",
+      "card_index": 21
+    },
+    {
+      "number": 60,
+      "path": "v3",
+      "cell": "textbook-v3-150-context",
+      "card_index": 1
+    }
+  ]
+}

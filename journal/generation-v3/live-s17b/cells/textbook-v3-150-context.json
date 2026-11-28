@@ -1,0 +1,1088 @@
+{
+  "schema": "s15",
+  "cell_id": "textbook-v3-150-context",
+  "provider": "deepseek",
+  "model": "deepseek-flash",
+  "material": "учебный текст, 12 разделов",
+  "material_sections": 12,
+  "requested": 150,
+  "path": "v3",
+  "status": "ran",
+  "reason": null,
+  "duration_ms": 122076,
+  "error_code": null,
+  "stage": "partial",
+  "report_accepted": 64,
+  "report_requested": 150,
+  "understanding_failures": [],
+  "code_version": "ed5f0516+dirty",
+  "prompt_versions": {
+    "understanding": "gen-map-v1",
+    "generating": "gen-cards-v3",
+    "replenishing": "gen-cards-v3"
+  },
+  "metrics": {
+    "requested": 150,
+    "accepted": 64,
+    "generated": 91,
+    "invalid": 2,
+    "duplicates": 25,
+    "clean_accepted": 64,
+    "absolute_clean": 64,
+    "accepted_with_warnings": 0,
+    "warning_codes": {},
+    "requests": 2,
+    "covered_units": 41,
+    "total_units": 41,
+    "input_tokens": 22725,
+    "output_tokens": 33720,
+    "input_tokens_by_stage": {
+      "understanding": 12157,
+      "generating": 5998,
+      "replenishing": 4570
+    },
+    "output_tokens_by_stage": {
+      "understanding": 15287,
+      "generating": 14176,
+      "replenishing": 4257
+    },
+    "duplicates_by_level": {
+      "semantic": 25
+    },
+    "unit_coverage": [
+      {
+        "unit_id": "ku:doc:material.txt#1#0",
+        "section_id": "doc:material.txt#1",
+        "salience": 0.9,
+        "planned": 2,
+        "accepted": 2,
+        "produced": 2,
+        "clean": 2,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#1#1",
+        "section_id": "doc:material.txt#1",
+        "salience": 0.8,
+        "planned": 2,
+        "accepted": 1,
+        "produced": 1,
+        "clean": 1,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#1#2",
+        "section_id": "doc:material.txt#1",
+        "salience": 0.7,
+        "planned": 1,
+        "accepted": 1,
+        "produced": 1,
+        "clean": 1,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#1#3",
+        "section_id": "doc:material.txt#1",
+        "salience": 0.8,
+        "planned": 2,
+        "accepted": 1,
+        "produced": 1,
+        "clean": 1,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#2#0",
+        "section_id": "doc:material.txt#2",
+        "salience": 1.0,
+        "planned": 2,
+        "accepted": 1,
+        "produced": 1,
+        "clean": 1,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#2#1",
+        "section_id": "doc:material.txt#2",
+        "salience": 0.5,
+        "planned": 1,
+        "accepted": 1,
+        "produced": 1,
+        "clean": 1,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#2#2",
+        "section_id": "doc:material.txt#2",
+        "salience": 0.9,
+        "planned": 2,
+        "accepted": 2,
+        "produced": 2,
+        "clean": 2,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#2#3",
+        "section_id": "doc:material.txt#2",
+        "salience": 0.5,
+        "planned": 1,
+        "accepted": 1,
+        "produced": 1,
+        "clean": 1,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#4#0",
+        "section_id": "doc:material.txt#4",
+        "salience": 1.0,
+        "planned": 2,
+        "accepted": 2,
+        "produced": 2,
+        "clean": 2,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#4#1",
+        "section_id": "doc:material.txt#4",
+        "salience": 1.0,
+        "planned": 2,
+        "accepted": 2,
+        "produced": 2,
+        "clean": 2,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#4#2",
+        "section_id": "doc:material.txt#4",
+        "salience": 0.8,
+        "planned": 3,
+        "accepted": 3,
+        "produced": 3,
+        "clean": 3,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#4#3",
+        "section_id": "doc:material.txt#4",
+        "salience": 0.6,
+        "planned": 1,
+        "accepted": 1,
+        "produced": 1,
+        "clean": 1,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#5#0",
+        "section_id": "doc:material.txt#5",
+        "salience": 1.0,
+        "planned": 2,
+        "accepted": 2,
+        "produced": 2,
+        "clean": 2,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#5#1",
+        "section_id": "doc:material.txt#5",
+        "salience": 1.0,
+        "planned": 2,
+        "accepted": 2,
+        "produced": 2,
+        "clean": 2,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#5#2",
+        "section_id": "doc:material.txt#5",
+        "salience": 1.0,
+        "planned": 2,
+        "accepted": 2,
+        "produced": 2,
+        "clean": 2,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#5#3",
+        "section_id": "doc:material.txt#5",
+        "salience": 1.0,
+        "planned": 2,
+        "accepted": 1,
+        "produced": 1,
+        "clean": 1,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#6#0",
+        "section_id": "doc:material.txt#6",
+        "salience": 0.8,
+        "planned": 2,
+        "accepted": 2,
+        "produced": 2,
+        "clean": 2,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#6#1",
+        "section_id": "doc:material.txt#6",
+        "salience": 0.8,
+        "planned": 2,
+        "accepted": 2,
+        "produced": 2,
+        "clean": 2,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#6#2",
+        "section_id": "doc:material.txt#6",
+        "salience": 0.8,
+        "planned": 2,
+        "accepted": 2,
+        "produced": 2,
+        "clean": 2,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#6#3",
+        "section_id": "doc:material.txt#6",
+        "salience": 0.6,
+        "planned": 1,
+        "accepted": 1,
+        "produced": 1,
+        "clean": 1,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#7#0",
+        "section_id": "doc:material.txt#7",
+        "salience": 1.0,
+        "planned": 3,
+        "accepted": 2,
+        "produced": 2,
+        "clean": 2,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#7#1",
+        "section_id": "doc:material.txt#7",
+        "salience": 0.7,
+        "planned": 1,
+        "accepted": 1,
+        "produced": 1,
+        "clean": 1,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#7#2",
+        "section_id": "doc:material.txt#7",
+        "salience": 0.5,
+        "planned": 1,
+        "accepted": 1,
+        "produced": 1,
+        "clean": 1,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#7#3",
+        "section_id": "doc:material.txt#7",
+        "salience": 0.6,
+        "planned": 1,
+        "accepted": 1,
+        "produced": 1,
+        "clean": 1,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#8#0",
+        "section_id": "doc:material.txt#8",
+        "salience": 1.0,
+        "planned": 2,
+        "accepted": 2,
+        "produced": 2,
+        "clean": 2,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#8#1",
+        "section_id": "doc:material.txt#8",
+        "salience": 0.9,
+        "planned": 2,
+        "accepted": 1,
+        "produced": 1,
+        "clean": 1,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#8#2",
+        "section_id": "doc:material.txt#8",
+        "salience": 0.6,
+        "planned": 1,
+        "accepted": 1,
+        "produced": 1,
+        "clean": 1,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#8#3",
+        "section_id": "doc:material.txt#8",
+        "salience": 0.8,
+        "planned": 2,
+        "accepted": 2,
+        "produced": 2,
+        "clean": 2,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#9#0",
+        "section_id": "doc:material.txt#9",
+        "salience": 0.8,
+        "planned": 2,
+        "accepted": 2,
+        "produced": 2,
+        "clean": 2,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#9#1",
+        "section_id": "doc:material.txt#9",
+        "salience": 0.8,
+        "planned": 2,
+        "accepted": 2,
+        "produced": 2,
+        "clean": 2,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#9#2",
+        "section_id": "doc:material.txt#9",
+        "salience": 0.7,
+        "planned": 1,
+        "accepted": 1,
+        "produced": 1,
+        "clean": 1,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#9#3",
+        "section_id": "doc:material.txt#9",
+        "salience": 0.8,
+        "planned": 2,
+        "accepted": 2,
+        "produced": 4,
+        "clean": 2,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#10#0",
+        "section_id": "doc:material.txt#10",
+        "salience": 1.0,
+        "planned": 2,
+        "accepted": 2,
+        "produced": 2,
+        "clean": 2,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#10#1",
+        "section_id": "doc:material.txt#10",
+        "salience": 0.9,
+        "planned": 3,
+        "accepted": 3,
+        "produced": 3,
+        "clean": 3,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#10#2",
+        "section_id": "doc:material.txt#10",
+        "salience": 0.8,
+        "planned": 2,
+        "accepted": 2,
+        "produced": 2,
+        "clean": 2,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#10#3",
+        "section_id": "doc:material.txt#10",
+        "salience": 0.8,
+        "planned": 2,
+        "accepted": 2,
+        "produced": 2,
+        "clean": 2,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#10#4",
+        "section_id": "doc:material.txt#10",
+        "salience": 0.9,
+        "planned": 2,
+        "accepted": 1,
+        "produced": 1,
+        "clean": 1,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#11#0",
+        "section_id": "doc:material.txt#11",
+        "salience": 0.8,
+        "planned": 2,
+        "accepted": 1,
+        "produced": 1,
+        "clean": 1,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#11#1",
+        "section_id": "doc:material.txt#11",
+        "salience": 0.9,
+        "planned": 2,
+        "accepted": 1,
+        "produced": 1,
+        "clean": 1,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#11#2",
+        "section_id": "doc:material.txt#11",
+        "salience": 0.6,
+        "planned": 1,
+        "accepted": 1,
+        "produced": 1,
+        "clean": 1,
+        "warning_codes": {}
+      },
+      {
+        "unit_id": "ku:doc:material.txt#11#3",
+        "section_id": "doc:material.txt#11",
+        "salience": 0.7,
+        "planned": 1,
+        "accepted": 1,
+        "produced": 1,
+        "clean": 1,
+        "warning_codes": {}
+      }
+    ],
+    "yield_per_1k_input_tokens": 2.8162816281628165,
+    "acceptance_rate": 0.7032967032967034,
+    "clean_rate": 1.0,
+    "duplicate_rate": 0.390625,
+    "attempted": 91,
+    "accepted_final": 64,
+    "unique": 64,
+    "clean": 64,
+    "blocked": 2,
+    "dup_rate": 0.390625,
+    "block_rate": 0.02197802197802198,
+    "coverage": 1.0,
+    "mean_covered_salience": 0.8073170731707319,
+    "requests_per_10_cards": 0.3125,
+    "batch_p50_ms": 12737,
+    "batch_p95_ms": 35727
+  },
+  "cards": [
+    {
+      "front": "От чего зависит давление газа?",
+      "back": "Давление газа пропорционально концентрации молекул и температуре.",
+      "unit_id": "ku:doc:material.txt#1#0",
+      "tags": [
+        "давление газа",
+        "МКТ"
+      ]
+    },
+    {
+      "front": "Какая величина пропорциональна концентрации молекул и температуре газа?",
+      "back": "Давление газа.",
+      "unit_id": "ku:doc:material.txt#1#0",
+      "angle": "reverse",
+      "tags": [
+        "давление газа",
+        "МКТ"
+      ]
+    },
+    {
+      "front": "От чего зависит средняя кинетическая энергия молекулы?",
+      "back": "Только от температуры.",
+      "unit_id": "ku:doc:material.txt#1#1",
+      "tags": [
+        "кинетическая энергия молекулы",
+        "температура"
+      ]
+    },
+    {
+      "front": "Какие величины связывает уравнение состояния газа?",
+      "back": "Давление, объём и температуру газа.",
+      "unit_id": "ku:doc:material.txt#1#2",
+      "tags": [
+        "уравнение состояния",
+        "идеальный газ"
+      ]
+    },
+    {
+      "front": "Что задаёт число Авогадро?",
+      "back": "Количество частиц в одном моле вещества.",
+      "unit_id": "ku:doc:material.txt#1#3",
+      "tags": [
+        "число Авогадро",
+        "моль"
+      ]
+    },
+    {
+      "front": "Что выражает первый закон термодинамики?",
+      "back": "Сохранение энергии в процессах.",
+      "unit_id": "ku:doc:material.txt#2#0",
+      "tags": [
+        "первый закон термодинамики",
+        "энергия"
+      ]
+    },
+    {
+      "front": "Чем определяется внутренняя энергия идеального газа?",
+      "back": "Его температурой.",
+      "unit_id": "ku:doc:material.txt#2#1",
+      "tags": [
+        "внутренняя энергия",
+        "идеальный газ"
+      ]
+    },
+    {
+      "front": "Как ведёт себя энтропия изолированной системы при необратимых процессах?",
+      "back": "Она не убывает.",
+      "unit_id": "ku:doc:material.txt#2#2",
+      "tags": [
+        "энтропия",
+        "изолированная система"
+      ]
+    },
+    {
+      "front": "В каком направлении переходит теплота?",
+      "back": "От более нагретого тела к менее нагретому.",
+      "unit_id": "ku:doc:material.txt#2#3",
+      "tags": [
+        "теплота",
+        "теплопередача"
+      ]
+    },
+    {
+      "front": "Как определяется сила тока?",
+      "back": "Она равна заряду, прошедшему через сечение за единицу времени.",
+      "unit_id": "ku:doc:material.txt#4#0",
+      "tags": [
+        "сила тока",
+        "заряд"
+      ]
+    },
+    {
+      "front": "Какая величина равна заряду, прошедшему через сечение за единицу времени?",
+      "back": "Сила тока.",
+      "unit_id": "ku:doc:material.txt#4#0",
+      "angle": "reverse",
+      "tags": [
+        "сила тока",
+        "заряд"
+      ]
+    },
+    {
+      "front": "Какие величины связывает закон Ома?",
+      "back": "Напряжение, силу тока и сопротивление участка.",
+      "unit_id": "ku:doc:material.txt#4#1",
+      "tags": [
+        "закон Ома",
+        "электрическая цепь"
+      ]
+    },
+    {
+      "front": "Чему равна мощность тока?",
+      "back": "Произведению напряжения на силу тока: $P = UI$.",
+      "unit_id": "ku:doc:material.txt#4#2",
+      "tags": [
+        "мощность тока",
+        "напряжение",
+        "сила тока"
+      ]
+    },
+    {
+      "front": "Какая величина равна произведению напряжения на силу тока?",
+      "back": "Мощность тока.",
+      "unit_id": "ku:doc:material.txt#4#2",
+      "angle": "reverse",
+      "tags": [
+        "мощность тока",
+        "сила тока"
+      ]
+    },
+    {
+      "front": "Какая величина одинакова во всех элементах при последовательном соединении?",
+      "back": "Сила тока.",
+      "unit_id": "ku:doc:material.txt#4#3",
+      "tags": [
+        "последовательное соединение",
+        "сила тока"
+      ]
+    },
+    {
+      "front": "Как называется сила, с которой магнитное поле действует на движущийся заряд?",
+      "back": "Сила Лоренца.",
+      "unit_id": "ku:doc:material.txt#5#0",
+      "tags": [
+        "сила Лоренца",
+        "магнитное поле"
+      ]
+    },
+    {
+      "front": "Магнитное поле действует на движущийся заряд силой {{c1::Лоренца}}.",
+      "back": "Лоренца",
+      "unit_id": "ku:doc:material.txt#5#0",
+      "angle": "cloze",
+      "tags": [
+        "сила Лоренца",
+        "магнитное поле"
+      ]
+    },
+    {
+      "front": "На что действует сила Ампера?",
+      "back": "На проводник с током в магнитном поле.",
+      "unit_id": "ku:doc:material.txt#5#1",
+      "tags": [
+        "сила Ампера",
+        "магнитное поле"
+      ]
+    },
+    {
+      "front": "При каком условии возникает индукционный ток?",
+      "back": "При изменении магнитного потока.",
+      "unit_id": "ku:doc:material.txt#5#2",
+      "tags": [
+        "индукционный ток",
+        "магнитный поток"
+      ]
+    },
+    {
+      "front": "Что определяет правило Ленца?",
+      "back": "Направление индукционного тока.",
+      "unit_id": "ku:doc:material.txt#5#3",
+      "tags": [
+        "правило Ленца",
+        "индукционный ток"
+      ]
+    },
+    {
+      "front": "От чего зависит период колебаний маятника?",
+      "back": "От его длины и ускорения свободного падения.",
+      "unit_id": "ku:doc:material.txt#6#0",
+      "tags": [
+        "маятник",
+        "период колебаний"
+      ]
+    },
+    {
+      "front": "Какая характеристика маятника зависит от его длины и ускорения свободного падения?",
+      "back": "Период колебаний.",
+      "unit_id": "ku:doc:material.txt#6#0",
+      "angle": "reverse",
+      "tags": [
+        "маятник",
+        "период колебаний"
+      ]
+    },
+    {
+      "front": "Что определяет амплитуда колебаний?",
+      "back": "Максимальное отклонение от положения равновесия.",
+      "unit_id": "ku:doc:material.txt#6#1",
+      "tags": [
+        "амплитуда колебаний",
+        "колебания"
+      ]
+    },
+    {
+      "front": "Как называется максимальное отклонение от положения равновесия?",
+      "back": "Амплитуда колебаний.",
+      "unit_id": "ku:doc:material.txt#6#1",
+      "angle": "reverse",
+      "tags": [
+        "амплитуда колебаний",
+        "колебания"
+      ]
+    },
+    {
+      "front": "При каком условии возникает резонанс?",
+      "back": "При совпадении частоты воздействия и собственной частоты.",
+      "unit_id": "ku:doc:material.txt#6#2",
+      "tags": [
+        "резонанс",
+        "частота"
+      ]
+    },
+    {
+      "front": "Что происходит при совпадении частоты воздействия и собственной частоты?",
+      "back": "Резонанс.",
+      "unit_id": "ku:doc:material.txt#6#2",
+      "angle": "reverse",
+      "tags": [
+        "резонанс",
+        "частота"
+      ]
+    },
+    {
+      "front": "Почему затухающие колебания уменьшают амплитуду?",
+      "back": "Из-за сопротивления среды.",
+      "unit_id": "ku:doc:material.txt#6#3",
+      "tags": [
+        "затухающие колебания",
+        "сопротивление среды"
+      ]
+    },
+    {
+      "front": "Чему равна скорость волны?",
+      "back": "Произведению длины волны на частоту: $v = \\lambda \\nu$.",
+      "unit_id": "ku:doc:material.txt#7#0",
+      "tags": [
+        "скорость волны",
+        "длина волны",
+        "частота"
+      ]
+    },
+    {
+      "front": "Скорость волны равна произведению {{c1::длины волны}} на частоту.",
+      "back": "длины волны",
+      "unit_id": "ku:doc:material.txt#7#0",
+      "angle": "cloze",
+      "tags": [
+        "скорость волны",
+        "длина волны"
+      ]
+    },
+    {
+      "front": "Как колеблет частицы поперечная волна?",
+      "back": "Перпендикулярно направлению движения.",
+      "unit_id": "ku:doc:material.txt#7#1",
+      "tags": [
+        "поперечная волна",
+        "волны"
+      ]
+    },
+    {
+      "front": "Какой волной распространяется звук в воздухе?",
+      "back": "Продольной.",
+      "unit_id": "ku:doc:material.txt#7#2",
+      "tags": [
+        "звук",
+        "продольная волна"
+      ]
+    },
+    {
+      "front": "При каком явлении волна огибает препятствие?",
+      "back": "При дифракции.",
+      "unit_id": "ku:doc:material.txt#7#3",
+      "tags": [
+        "дифракция",
+        "волны"
+      ]
+    },
+    {
+      "front": "Что утверждает закон отражения?",
+      "back": "Угол падения равен углу отражения.",
+      "unit_id": "ku:doc:material.txt#8#0",
+      "tags": [
+        "закон отражения",
+        "оптика"
+      ]
+    },
+    {
+      "front": "Закон отражения приравнивает угол падения и {{c1::угол отражения}}.",
+      "back": "угол отражения",
+      "unit_id": "ku:doc:material.txt#8#0",
+      "angle": "cloze",
+      "tags": [
+        "закон отражения",
+        "угол падения"
+      ]
+    },
+    {
+      "front": "Чем описывается преломление света?",
+      "back": "Отношением скоростей света в двух средах.",
+      "unit_id": "ku:doc:material.txt#8#1",
+      "tags": [
+        "преломление света",
+        "скорость света"
+      ]
+    },
+    {
+      "front": "По каким правилам линза строит изображение?",
+      "back": "По правилам геометрической оптики.",
+      "unit_id": "ku:doc:material.txt#8#2",
+      "tags": [
+        "линза",
+        "геометрическая оптика"
+      ]
+    },
+    {
+      "front": "К чему приводит интерференция?",
+      "back": "Сложение волн даёт чередование полос.",
+      "unit_id": "ku:doc:material.txt#8#3",
+      "tags": [
+        "интерференция",
+        "волны"
+      ]
+    },
+    {
+      "front": "Какое явление при сложении волн даёт чередование полос?",
+      "back": "Интерференция.",
+      "unit_id": "ku:doc:material.txt#8#3",
+      "angle": "reverse",
+      "tags": [
+        "интерференция",
+        "волны"
+      ]
+    },
+    {
+      "front": "Чему пропорциональна энергия фотона?",
+      "back": "Частоте излучения.",
+      "unit_id": "ku:doc:material.txt#9#0",
+      "tags": [
+        "энергия фотона",
+        "частота"
+      ]
+    },
+    {
+      "front": "Энергия какой частицы пропорциональна частоте излучения?",
+      "back": "Фотона.",
+      "unit_id": "ku:doc:material.txt#9#0",
+      "angle": "reverse",
+      "tags": [
+        "энергия фотона",
+        "частота"
+      ]
+    },
+    {
+      "front": "При каком условии возникает фотоэффект?",
+      "back": "Если энергия кванта превышает работу выхода.",
+      "unit_id": "ku:doc:material.txt#9#1",
+      "tags": [
+        "фотоэффект",
+        "работа выхода"
+      ]
+    },
+    {
+      "front": "Чем объясняется спектр атома водорода?",
+      "back": "Переходами между уровнями.",
+      "unit_id": "ku:doc:material.txt#9#2",
+      "tags": [
+        "спектр атома водорода",
+        "энергетические уровни"
+      ]
+    },
+    {
+      "front": "Из чего состоит ядро атома?",
+      "back": "Из протонов и нейтронов.",
+      "unit_id": "ku:doc:material.txt#10#0",
+      "tags": [
+        "состав ядра",
+        "протоны",
+        "нейтроны"
+      ]
+    },
+    {
+      "front": "Ядро атома состоит из {{c1::протонов и нейтронов}}.",
+      "back": "протонов и нейтронов",
+      "unit_id": "ku:doc:material.txt#10#0",
+      "angle": "cloze",
+      "tags": [
+        "состав ядра",
+        "нуклоны"
+      ]
+    },
+    {
+      "front": "Чему равно массовое число?",
+      "back": "Сумме числа протонов и числа нейтронов.",
+      "unit_id": "ku:doc:material.txt#10#1",
+      "tags": [
+        "массовое число",
+        "нуклоны"
+      ]
+    },
+    {
+      "front": "Какая величина равна сумме числа протонов и числа нейтронов?",
+      "back": "Массовое число.",
+      "unit_id": "ku:doc:material.txt#10#1",
+      "angle": "reverse",
+      "tags": [
+        "массовое число",
+        "протоны"
+      ]
+    },
+    {
+      "front": "Сохраняется ли заряд в ядерных реакциях?",
+      "back": "Да, заряд сохраняется.",
+      "unit_id": "ku:doc:material.txt#10#2",
+      "tags": [
+        "ядерные реакции",
+        "заряд"
+      ]
+    },
+    {
+      "front": "В ядерных реакциях сохраняется {{c1::заряд}}.",
+      "back": "заряд",
+      "unit_id": "ku:doc:material.txt#10#2",
+      "angle": "cloze",
+      "tags": [
+        "ядерные реакции",
+        "заряд"
+      ]
+    },
+    {
+      "front": "Что сохраняется в ядерных реакциях помимо заряда?",
+      "back": "Массовое число.",
+      "unit_id": "ku:doc:material.txt#10#3",
+      "tags": [
+        "ядерные реакции",
+        "массовое число"
+      ]
+    },
+    {
+      "front": "В ядерных реакциях сохраняется {{c1::массовое число}}.",
+      "back": "массовое число",
+      "unit_id": "ku:doc:material.txt#10#3",
+      "angle": "cloze",
+      "tags": [
+        "ядерные реакции",
+        "массовое число"
+      ]
+    },
+    {
+      "front": "Что объясняет дефект массы?",
+      "back": "Выделение энергии при синтезе ядра.",
+      "unit_id": "ku:doc:material.txt#10#4",
+      "tags": [
+        "дефект массы",
+        "синтез ядра"
+      ]
+    },
+    {
+      "front": "Что описывают законы Кеплера?",
+      "back": "Движение планет вокруг Солнца.",
+      "unit_id": "ku:doc:material.txt#11#0",
+      "tags": [
+        "законы Кеплера",
+        "планеты"
+      ]
+    },
+    {
+      "front": "Как убывает сила тяготения с расстоянием?",
+      "back": "Обратно пропорционально квадрату расстояния.",
+      "unit_id": "ku:doc:material.txt#11#1",
+      "tags": [
+        "сила тяготения",
+        "гравитация"
+      ]
+    },
+    {
+      "front": "Что измеряет световой год?",
+      "back": "Расстояние, а не время.",
+      "unit_id": "ku:doc:material.txt#11#2",
+      "tags": [
+        "световой год",
+        "расстояние"
+      ]
+    },
+    {
+      "front": "На что указывает красное смещение?",
+      "back": "На удаление далёких галактик.",
+      "unit_id": "ku:doc:material.txt#11#3",
+      "tags": [
+        "красное смещение",
+        "галактики"
+      ]
+    },
+    {
+      "front": "Свойство «не убывает при необратимых процессах» относится к…",
+      "back": "энтропии изолированной системы",
+      "unit_id": "ku:doc:material.txt#2#2",
+      "angle": "reverse",
+      "tags": [
+        "энтропия",
+        "необратимые процессы"
+      ]
+    },
+    {
+      "front": "Закон Ома связывает напряжение, силу тока и {{c1::сопротивление}} участка.",
+      "back": "сопротивление",
+      "unit_id": "ku:doc:material.txt#4#1",
+      "angle": "cloze",
+      "tags": [
+        "закон Ома",
+        "сопротивление"
+      ]
+    },
+    {
+      "front": "Если напряжение умножить на силу тока, получится…",
+      "back": "мощность тока",
+      "unit_id": "ku:doc:material.txt#4#2",
+      "angle": "reverse",
+      "tags": [
+        "мощность тока",
+        "напряжение",
+        "сила тока"
+      ]
+    },
+    {
+      "front": "Сила, действующая на проводник с током в магнитном поле, называется…",
+      "back": "силой Ампера",
+      "unit_id": "ku:doc:material.txt#5#1",
+      "angle": "reverse",
+      "tags": [
+        "сила Ампера",
+        "магнитное поле"
+      ]
+    },
+    {
+      "front": "Индукционный ток возникает при изменении {{c1::магнитного потока}}.",
+      "back": "магнитного потока",
+      "unit_id": "ku:doc:material.txt#5#2",
+      "angle": "cloze",
+      "tags": [
+        "индукционный ток",
+        "магнитный поток"
+      ]
+    },
+    {
+      "front": "Фотоэффект возникает при энергии кванта выше {{c1::работы выхода}}.",
+      "back": "работы выхода",
+      "unit_id": "ku:doc:material.txt#9#1",
+      "angle": "cloze",
+      "tags": [
+        "фотоэффект",
+        "работа выхода",
+        "энергия кванта"
+      ]
+    },
+    {
+      "front": "Какие значения принимает энергия уровней атома?",
+      "back": "Дискретные значения",
+      "unit_id": "ku:doc:material.txt#9#3",
+      "tags": [
+        "энергия уровня атома",
+        "дискретность"
+      ]
+    },
+    {
+      "front": "Энергия уровня атома принимает {{c1::дискретные}} значения.",
+      "back": "дискретные",
+      "unit_id": "ku:doc:material.txt#9#3",
+      "angle": "cloze",
+      "tags": [
+        "энергия уровня атома",
+        "дискретность"
+      ]
+    },
+    {
+      "front": "Сумму числа протонов и числа нейтронов в ядре называют…",
+      "back": "массовым числом",
+      "unit_id": "ku:doc:material.txt#10#1",
+      "angle": "reverse",
+      "tags": [
+        "массовое число",
+        "протоны",
+        "нейтроны"
+      ]
+    }
+  ]
+}

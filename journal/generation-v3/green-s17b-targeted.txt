@@ -1,0 +1,33 @@
+00:00 +0: loading C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/run_context_test.dart
+00:00 +0: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/run_context_test.dart: контекст «уже создано» в запросе Generation шестой запрос несёт утверждения пяти принятых карточек прогона
+00:00 +1: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/run_context_test.dart: контекст «уже создано» в запросе Generation в контекст не попадает принятое чужого содержимого: только unit_id и утверждение, без ответа и подсказок
+00:00 +2: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/run_context_test.dart: контекст «уже создано» в запросе Generation две карточки одной единицы не дублируют утверждение в контексте
+00:00 +3: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/run_context_test.dart: предел роста контекста (усечение по числу, а не по байтам) 200 принятых единиц дают тот же запрос, что 50: рост обрезан
+00:00 +4: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/run_context_test.dart: предел роста контекста (усечение по числу, а не по байтам) длинное утверждение обрезается по символам, а не тянет весь текст
+00:00 +5: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/run_context_test.dart: предел роста контекста (усечение по числу, а не по байтам) утверждения разделов текущей партии идут первыми при усечении
+00:00 +6: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/cards_prompt_test.dart: системный промпт gen-cards-v3 версия закреплена и в тексте нет подстановок Dart
+00:00 +7: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/cards_prompt_test.dart: системный промпт gen-cards-v3 константа совпадает с docs/prompts/gen-cards-v3.txt байт в байт
+00:00 +8: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/cards_prompt_test.dart: системный промпт gen-cards-v3 требует привязку к единице и угол карточки
+00:00 +9: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/cards_prompt_test.dart: системный промпт gen-cards-v3 не содержит сырых шаблонов разметки
+00:00 +10: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/cards_prompt_test.dart: пользовательское сообщение партии единицы с утверждением и якорями, бюджет и углы
+00:00 +11: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/cards_prompt_test.dart: пользовательское сообщение партии контекст «уже принято» — только front и statement этого батча
+00:00 +12: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/cards_prompt_test.dart: пользовательское сообщение партии пустое принятое — блока уже принятого нет
+00:00 +13: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/cards_prompt_test.dart: единица без карточек в партию не попадает
+00:00 +14: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/request_ledger_test.dart: журнал запросов (GenerationLedger.attempts) успешный запрос тоже попытка, события не сбрасывают счётчик
+00:00 +15: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/request_ledger_test.dart: журнал запросов (GenerationLedger.attempts) попытка не меняет бюджеты и причину партии
+00:00 +16: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/request_ledger_test.dart: журнал запросов (GenerationLedger.attempts) нулевое или отрицательное приращение — ошибка программиста
+00:00 +17: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/request_ledger_test.dart: деление партии по единицам (не пополам вслепую) две единицы: первая часть — целые единицы, карточки за единицами
+00:00 +18: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/request_ledger_test.dart: деление партии по единицам (не пополам вслепую) одна единица не делится: партия возвращается как есть
+00:00 +19: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/request_ledger_test.dart: Generation: заказ 20/40/80 карточек 20 карточек принимаются полностью, долга нет
+00:00 +20: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/request_ledger_test.dart: Generation: заказ 20/40/80 карточек 40 карточек принимаются полностью, долга нет
+00:00 +21: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/request_ledger_test.dart: Generation: заказ 20/40/80 карточек 80 карточек принимаются полностью, долга нет
+00:00 +22: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/request_ledger_test.dart: Generation: заказ 20/40/80 карточек каждая партия несёт только свои единицы и свой бюджет
+00:00 +23: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/request_ledger_test.dart: Generation: обрезка ответа truncated → деление по единицам → добор остатка
+00:00 +24: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/request_ledger_test.dart: Generation: обрезка ответа обрезка одной единицы: одна повторная попытка, затем причина
+00:00 +25: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/request_ledger_test.dart: Generation: повторы HTTP 429 → пауза Retry-After, затем успех (повтор в журнале)
+00:00 +26: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/request_ledger_test.dart: Generation: повторы HTTP badRequest → без повторов, партия помечена причиной
+00:00 +27: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/request_ledger_test.dart: Generation: повторы HTTP invalidApiKey → без повторов, партия помечена причиной
+00:00 +28: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/request_ledger_test.dart: Generation: отмена и задание отмена посреди батча сохраняет принятое
+00:00 +29: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/request_ledger_test.dart: Generation: отмена и задание версия промпта пишется в задание generation_jobs
+00:00 +30: C:/Users/piotr/OneDrive/Desktop/CardFlow/test/unit/api/generation/request_ledger_test.dart: Generation: отмена и задание без помощника версия промпта только в итоге прогона
+00:00 +31: All tests passed!
